@@ -268,12 +268,9 @@ async def test_remote_wallet_create_and_save_info_paths(wallet_environments: Wal
     assert remote_wallet.type() == WalletType.REMOTE
     assert remote_wallet.require_derivation_paths() is False
 
-    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[bytes32.zeros]))
-    assert bytes32.zeros in remote_wallet.remote_info.remote_coin_ids
-    saved_wallet_info = await wsm.user_store.get_wallet_by_id(int(remote_wallet.id()))
-    assert saved_wallet_info is not None
-    saved_remote_info = RemoteInfo.from_bytes(bytes.fromhex(saved_wallet_info.data))
-    assert bytes32.zeros in saved_remote_info.remote_coin_ids
+    await remote_wallet.register_remote_coins([bytes32.zeros])
+    stored_coin_ids = await wsm.remote_coin_store.get_coin_ids(remote_wallet.id())
+    assert bytes32.zeros in stored_coin_ids
 
     # If a remote wallet already exists, creation is rejected.
     async with wsm.lock:
@@ -302,14 +299,15 @@ async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids(
     async with wsm.lock:
         remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
 
-    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]))
+    await remote_wallet.register_remote_coins([coin_id_1, coin_id_2])
 
     wsm.interested_coin_cache.pop(coin_id_1, None)
     wsm.interested_coin_cache.pop(coin_id_2, None)
 
     reloaded_wallet = await RemoteWallet.create(wsm, wallet, remote_wallet.wallet_info)
 
-    assert reloaded_wallet.remote_info.remote_coin_ids == [coin_id_1, coin_id_2]
+    stored_coin_ids = await wsm.remote_coin_store.get_coin_ids(reloaded_wallet.id())
+    assert set(stored_coin_ids) == {coin_id_1, coin_id_2}
     assert coin_id_1 in wsm.interested_coin_cache
     assert coin_id_2 in wsm.interested_coin_cache
     assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_1]
@@ -334,7 +332,7 @@ async def test_wallet_state_manager_loads_remote_wallet_on_restart(
 
     async with wsm.lock:
         remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, env.xch_wallet, name="Remote Wallet #1")
-    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[coin_id]))
+    await remote_wallet.register_remote_coins([coin_id])
 
     env.node._close()
     await env.node._await_closed()
@@ -361,7 +359,7 @@ async def test_remote_wallet_stub_methods_and_errors() -> None:
     wallet = RemoteWallet()
     wallet.wallet_info = WalletInfo(uint32(1), "Remote Wallet #1", uint8(WalletType.REMOTE.value), "{}")
     wallet.wallet_state_manager = Mock(wallets={})
-    wallet.remote_info = RemoteInfo(remote_coin_ids=[])
+    wallet.remote_info = RemoteInfo()
     wallet.standard_wallet = Mock(spec=Wallet)
     wallet.log = Mock()
 
@@ -388,18 +386,17 @@ async def test_register_remote_coins_with_existing_ids_still_subscribes() -> Non
     coin_id_1 = bytes32(bytes([1] * 32))
     wallet = RemoteWallet()
     wallet.wallet_info = WalletInfo(
-        uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), bytes(RemoteInfo(remote_coin_ids=[])).hex()
+        uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), bytes(RemoteInfo()).hex()
     )
-    wallet.remote_info = RemoteInfo(remote_coin_ids=[coin_id_1])
+    wallet.remote_info = RemoteInfo()
     wallet.wallet_state_manager = Mock()
     wallet.wallet_state_manager.add_interested_coin_ids = AsyncMock()
-    wallet.wallet_state_manager.user_store = Mock()
-    wallet.wallet_state_manager.user_store.update_wallet = AsyncMock()
-
-    # Keep this fixture aligned with RemoteWallet persistence format.
-    assert RemoteInfo.from_bytes(bytes.fromhex(wallet.wallet_info.data)) == RemoteInfo(remote_coin_ids=[])
+    wallet.wallet_state_manager.remote_coin_store = Mock()
+    wallet.wallet_state_manager.remote_coin_store.add_coin_ids = AsyncMock(return_value=0)
 
     await wallet.register_remote_coins([coin_id_1, coin_id_1])
 
+    wallet.wallet_state_manager.remote_coin_store.add_coin_ids.assert_awaited_once_with(
+        [coin_id_1], wallet.wallet_info.id
+    )
     wallet.wallet_state_manager.add_interested_coin_ids.assert_awaited_once_with([coin_id_1], [wallet.wallet_info.id])
-    wallet.wallet_state_manager.user_store.update_wallet.assert_not_awaited()

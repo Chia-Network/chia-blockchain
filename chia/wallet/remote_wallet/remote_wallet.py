@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import G1Element
@@ -54,7 +53,7 @@ class RemoteWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        self.remote_info = RemoteInfo(remote_coin_ids=[])
+        self.remote_info = RemoteInfo()
         info_as_string = bytes(self.remote_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name=name, wallet_type=WalletType.REMOTE.value, data=info_as_string
@@ -75,12 +74,11 @@ class RemoteWallet:
         self.log = logging.getLogger(__name__)
         self.remote_info = RemoteInfo.from_bytes(bytes.fromhex(wallet_info.data))
 
-        if len(self.remote_info.remote_coin_ids) > 0:
-            # Restore interested coin wallet-id mapping on startup so remote coin updates
-            # continue to be associated with this remote wallet after restart.
-            await self.wallet_state_manager.add_interested_coin_ids(
-                self.remote_info.remote_coin_ids, [self.wallet_info.id]
-            )
+        # Restore interested-coin subscriptions from the SQL store so that
+        # remote coin updates continue to be associated with this wallet after restart.
+        coin_ids = await self.wallet_state_manager.remote_coin_store.get_coin_ids(self.wallet_info.id)
+        if len(coin_ids) > 0:
+            await self.wallet_state_manager.add_interested_coin_ids(coin_ids, [self.wallet_info.id])
 
         return self
 
@@ -101,13 +99,8 @@ class RemoteWallet:
         if len(coin_ids) == 0:
             return
 
-        # Preserve insertion order while de-duping.
         unique_coin_ids = list(dict.fromkeys(coin_ids))
-        new_unique = [coin_id for coin_id in unique_coin_ids if coin_id not in self.remote_info.remote_coin_ids]
-        if len(new_unique) > 0:
-            remote_info = replace(self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, *new_unique])
-            await self.save_info(remote_info)
-
+        await self.wallet_state_manager.remote_coin_store.add_coin_ids(unique_coin_ids, self.wallet_info.id)
         await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
 
     async def save_info(self, remote_info: RemoteInfo) -> None:
@@ -133,7 +126,6 @@ class RemoteWallet:
         return uint128(0)
 
     async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: object | None) -> None:
-        # RemoteWallet doesn't claim ownership of coins via puzzle hashes; it's a sentinel.
         return None
 
     async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
