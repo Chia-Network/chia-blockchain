@@ -1,5 +1,4 @@
 # File created by: python manage-mypy.py build-exclusions
-chia.cmds.start_funcs
 chia.daemon.server
 chia.introducer.introducer
 chia.introducer.introducer_api
@@ -32,12 +31,9 @@ chia.wallet.util.new_peak_queue
 chia.wallet.wallet_coin_store
 chia.wallet.wallet_interested_store
 chia.wallet.wallet_node_api
-chia.wallet.wallet_pool_store
 chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
 chia.wallet.wallet_user_store
-installhelper
-chia._tests.blockchain.blockchain_test_utils
 chia._tests.build-init-files
 chia._tests.clvm.coin_store
 chia._tests.clvm.test_chialisp_deserialization
@@ -50,7 +46,6 @@ chia._tests.conftest
 chia._tests.connection_utils
 chia._tests.core.cmds.test_keys
 chia._tests.core.consensus.test_pot_iterations
-chia._tests.core.custom_types.test_coin
 chia._tests.core.custom_types.test_spend_bundle
 chia._tests.core.daemon.test_daemon
 chia._tests.core.full_node.stores.test_sync_store
@@ -60,18 +55,13 @@ chia._tests.core.full_node.test_performance
 chia._tests.core.full_node.test_transactions
 chia._tests.core.ssl.test_ssl
 chia._tests.core.test_crawler_rpc
-chia._tests.core.test_daemon_rpc
 chia._tests.core.test_db_conversion
-chia._tests.core.test_filter
 chia._tests.core.util.test_config
 chia._tests.core.util.test_file_keyring_synchronization
 chia._tests.core.util.test_files
 chia._tests.core.util.test_keychain
 chia._tests.core.util.test_keyring_wrapper
-chia._tests.core.util.test_lru_cache
-chia._tests.core.util.test_significant_bits
 chia._tests.plotting.test_plot_manager
-chia._tests.pools.test_pool_config
 chia._tests.pools.test_pool_puzzles_lifecycle
 chia._tests.pools.test_wallet_pool_store
 chia._tests.simulation.test_simulation
