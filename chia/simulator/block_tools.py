@@ -78,7 +78,6 @@ from chia.plotting.util import (
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    add_plot_directory,
     parse_plot_info,
 )
 from chia.server.server import ssl_context_for_client
@@ -122,6 +121,7 @@ from chia.util.config import (
     save_config,
 )
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.harvester_config import add_plot_directory
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times

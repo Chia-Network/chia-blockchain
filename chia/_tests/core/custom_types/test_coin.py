@@ -8,7 +8,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.util.hash import std_hash
 
 
-def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes):
+def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes) -> None:
     c = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), amount)
     expected_hash = (b"a" * 32) + (b"b" * 32) + clvm_serialize
 
@@ -23,7 +23,7 @@ def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes)
     assert c2 == c
 
 
-def test_serialization():
+def test_serialization() -> None:
     coin_serialize(uint64(0xFFFF), bytes([0, 0xFF, 0xFF]), bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF]))
     coin_serialize(uint64(1337000000), bytes([0x4F, 0xB1, 0x00, 0x40]), bytes([0, 0, 0, 0, 0x4F, 0xB1, 0x00, 0x40]))
 

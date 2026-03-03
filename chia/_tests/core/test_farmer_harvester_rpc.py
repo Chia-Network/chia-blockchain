@@ -32,7 +32,6 @@ from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
-from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.rpc_client import ResponseFailureError
@@ -40,6 +39,7 @@ from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.solver.solver_service import SolverService
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.harvester_config import add_plot_directory
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
