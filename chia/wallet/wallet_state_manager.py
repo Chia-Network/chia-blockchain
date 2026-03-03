@@ -1760,7 +1760,9 @@ class WalletStateManager:
                         # conflicting with real wallets' coin ownership rules.
                         if coin_name in self.interested_coin_cache:
                             interested_wallet_ids = [
-                                uint32(w) for w in self.interested_coin_cache[coin_name] if uint32(w) in self.wallets
+                                wallet_id
+                                for w in self.interested_coin_cache[coin_name]
+                                if (wallet_id := uint32(w)) in self.wallets
                             ]
                             remote_wallet = self.get_existing_remote_wallet()
                             # Only persist interest-only coins if the singleton RemoteWallet exists and this coin
