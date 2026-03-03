@@ -388,13 +388,16 @@ async def test_register_remote_coins_with_existing_ids_still_subscribes() -> Non
     coin_id_1 = bytes32(bytes([1] * 32))
     wallet = RemoteWallet()
     wallet.wallet_info = WalletInfo(
-        uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), '{"remote_coin_ids":[]}'
+        uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), bytes(RemoteInfo(remote_coin_ids=[])).hex()
     )
     wallet.remote_info = RemoteInfo(remote_coin_ids=[coin_id_1])
     wallet.wallet_state_manager = Mock()
     wallet.wallet_state_manager.add_interested_coin_ids = AsyncMock()
     wallet.wallet_state_manager.user_store = Mock()
     wallet.wallet_state_manager.user_store.update_wallet = AsyncMock()
+
+    # Keep this fixture aligned with RemoteWallet persistence format.
+    assert RemoteInfo.from_bytes(bytes.fromhex(wallet.wallet_info.data)) == RemoteInfo(remote_coin_ids=[])
 
     await wallet.register_remote_coins([coin_id_1, coin_id_1])
 
