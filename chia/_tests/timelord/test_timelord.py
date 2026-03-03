@@ -62,7 +62,9 @@ async def test_invalid_vdf_proof_is_ignored_in_process_communication(
     reader.feed_eof()
 
     writer = _DummyStreamWriter()
-    await timelord._do_process_communication(chain, challenge, initial_form, "127.0.0.1", reader, writer, proof_label=1)
+    await timelord._do_process_communication(
+        chain, challenge, initial_form, "127.0.0.1", reader, writer, proof_label=1  # type: ignore[arg-type]
+    )
 
     assert timelord.proofs_finished == []
     assert state_changed_calls == []
