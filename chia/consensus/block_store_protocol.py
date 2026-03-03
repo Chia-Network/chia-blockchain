@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
+
+
+class BlockStoreProtocol(Protocol):
+    """
+    Protocol defining the interface for BlockStore that consensus code uses.
+    This allows chia.consensus to avoid importing from chia.full_node.
+    """
+
+    async def get_full_block(self, header_hash: bytes32) -> FullBlock | None: ...
+
+    async def get_blocks_by_hash(self, header_hashes: list[bytes32]) -> list[FullBlock]: ...
+
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord | None: ...
+
+    async def get_block_records_by_hash(self, header_hashes: list[bytes32]) -> list[BlockRecord]: ...
+
+    async def get_block_records_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> dict[bytes32, BlockRecord]: ...
+
+    async def get_block_records_close_to_peak(
+        self, blocks_n: int
+    ) -> tuple[dict[bytes32, BlockRecord], bytes32 | None]: ...
+
+    async def get_prev_hash(self, header_hash: bytes32) -> bytes32: ...
+
+    async def get_generator(self, header_hash: bytes32) -> bytes | None: ...
+
+    async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]: ...
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        ses_block_hash: bytes32,
+    ) -> list[SubEpochChallengeSegment] | None: ...
+
+    def get_block_from_cache(self, header_hash: bytes32) -> FullBlock | None: ...
+
+    def rollback_cache_block(self, header_hash: bytes32) -> None: ...
+
+    # Write operations used by consensus within transactions
+    async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None: ...
+
+    async def rollback(self, height: int) -> None: ...
+
+    async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None: ...
+
+    async def set_peak(self, header_hash: bytes32) -> None: ...
+
+    async def persist_sub_epoch_challenge_segments(
+        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
+    ) -> None: ...
