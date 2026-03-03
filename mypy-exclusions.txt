@@ -38,7 +38,6 @@ chia.wallet.wallet_transaction_store
 chia.wallet.wallet_user_store
 installhelper
 chia._tests.blockchain.blockchain_test_utils
-chia._tests.build-init-files
 chia._tests.clvm.coin_store
 chia._tests.clvm.test_chialisp_deserialization
 chia._tests.clvm.test_program
