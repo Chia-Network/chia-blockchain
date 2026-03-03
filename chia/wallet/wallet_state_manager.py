@@ -1841,6 +1841,18 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin spent: %s", coin_state)
+
+                        # REMOTE coins only need their spent status persisted.  Skip
+                        # fetch_children / fetch_coin_spend_for_coin_state whose failure
+                        # would roll back the DB writer transaction and create a retry loop.
+                        if (
+                            wallet_identifier is not None
+                            and wallet_identifier.type == WalletType.REMOTE
+                            and local_record is not None
+                        ):
+                            await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
+                            continue
+
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
                         if record is None:
