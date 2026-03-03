@@ -18,7 +18,7 @@ NULL_SIGNATURE = "0xc" + "0" * 191
 
 
 class TestStructStream(unittest.TestCase):
-    def test_round_trip(self):
+    def test_round_trip(self) -> None:
         spend_bundle = BLANK_SPEND_BUNDLE
         json_dict = spend_bundle.to_json_dict()
 
