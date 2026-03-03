@@ -2332,6 +2332,12 @@ class CreateNewWallet(TransactionEndpointRequest):
     p2_singleton_delay_time: uint64 | None = None
 
     def __post_init__(self) -> None:
+        if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            if self.mode is not None:
+                raise ValueError('"mode" is not a valid argument for remote wallets')
+            if self.amount is not None:
+                raise ValueError('"amount" is not a valid argument for remote wallets')
+
         if self.wallet_type == CreateNewWalletType.CAT_WALLET:
             if self.mode is None:
                 raise ValueError('Must specify a "mode" when creating a new CAT wallet')
@@ -2357,18 +2363,8 @@ class CreateNewWallet(TransactionEndpointRequest):
                 raise ValueError(
                     '"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'
                 )
-            if (
-                self.wallet_type != CreateNewWalletType.REMOTE_WALLET
-                and self.mode is not None
-                and self.mode != WalletCreationMode.NEW
-            ):
+            if self.mode is not None and self.mode != WalletCreationMode.NEW:
                 raise ValueError('"mode": "existing" is only valid for CAT wallets')
-
-        if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
-            if self.mode is not None:
-                raise ValueError('"mode" is not a valid argument for remote wallets')
-            if self.amount is not None:
-                raise ValueError('"amount" is not a valid argument for remote wallets')
 
         if self.wallet_type == CreateNewWalletType.DID_WALLET:
             if self.did_type is None:
