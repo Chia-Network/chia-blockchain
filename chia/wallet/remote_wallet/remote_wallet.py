@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.remote_wallet.remote_info import RemoteCoinData, RemoteInfo
+from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -23,7 +23,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 # Furthermore the wallet will act mainly as a sentinel for CoinRecords that are related to the remote wallet.
 class RemoteWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol[RemoteCoinData]] = cast("RemoteWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[object]] = cast("RemoteWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -132,7 +132,7 @@ class RemoteWallet:
     async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: RemoteCoinData | None) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: object | None) -> None:
         # RemoteWallet doesn't claim ownership of coins via puzzle hashes; it's a sentinel.
         return None
 
