@@ -291,7 +291,17 @@ async def test_confirming_txs_not_ours_with_remote_interest_coin(wallet_environm
             env_2.wallet_state_manager.main_wallet,
             name="Remote Wallet #1",
         )
-    await remote_wallet.register_remote_coins([removed_coin.name()])
+    removed_coin_id = removed_coin.name()
+    await remote_wallet.register_remote_coins([removed_coin_id])
+
+    async def remote_record_spent_flag() -> int:
+        record = await env_2.wallet_state_manager.coin_store.get_coin_record(removed_coin_id)
+        if record is None:
+            return 0
+        return int(record.spent)
+
+    # The REMOTE interest record should exist and initially be unspent as coin is not yet spent.
+    await time_out_assert(20, remote_record_spent_flag, 0)
 
     await env_2.rpc_client.push_transactions(
         PushTransactions(
@@ -311,6 +321,8 @@ async def test_confirming_txs_not_ours_with_remote_interest_coin(wallet_environm
     await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_2.node, timeout=20)
 
     await time_out_assert(20, pending_removal_count, 0)
+    # Regression check: spent updates for existing REMOTE records must not be skipped.
+    await time_out_assert(20, remote_record_spent_flag, 1)
 
 
 @dataclass

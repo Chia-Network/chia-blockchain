@@ -1725,13 +1725,10 @@ class WalletStateManager:
                         await self.trade_manager.coins_of_interest_farmed(coin_state, fork_height, peer)
                     if wallet_identifier is not None:
                         self.log.debug(f"Found existing wallet_identifier: {wallet_identifier}, coin: {coin_name}")
-                    elif (
-                        local_record is not None
-                        and uint32(local_record.wallet_id) in self.wallets
-                        and local_record.wallet_type != WalletType.REMOTE
-                    ):
-                        # If we have an existing coin record tied to a real wallet, we can use it as a fallback.
-                        # We intentionally exclude REMOTE since those are "interest-only" records.
+                    elif local_record is not None and uint32(local_record.wallet_id) in self.wallets:
+                        # If we already have a local coin record, use it as a fallback wallet identifier.
+                        # This includes REMOTE records so a later spent update can flow through set_spent()
+                        # rather than relying on add_coin_record() replacement semantics.
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
