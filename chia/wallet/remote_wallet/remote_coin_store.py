@@ -48,18 +48,3 @@ class RemoteCoinStore:
             )
             rows = await cursor.fetchall()
         return [bytes32(bytes.fromhex(row[0])) for row in rows]
-
-    async def get_all_coin_ids(self) -> list[bytes32]:
-        """Return every tracked coin ID across all wallets."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT coin_id FROM remote_coins")
-            rows = await cursor.fetchall()
-        return [bytes32(bytes.fromhex(row[0])) for row in rows]
-
-    async def exists(self, coin_id: bytes32) -> bool:
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT 1 FROM remote_coins WHERE coin_id = ?",
-                (coin_id.hex(),),
-            )
-            return (await cursor.fetchone()) is not None
