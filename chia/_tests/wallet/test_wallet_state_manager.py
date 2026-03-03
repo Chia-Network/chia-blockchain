@@ -270,10 +270,26 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_confirming_txs_not_ours_with_remote_interest_coin(wallet_environments: WalletTestFramework) -> None:
+    """When a REMOTE-only coin record receives a spent update,
+    the spent status must be persisted without relying on network calls that
+    could fail and roll back the DB transaction.
+
+    Two environments are required because the REMOTE interest-only code path
+    in ``_add_coin_states`` is only reachable when ``get_wallet_identifier_for_puzzle_hash``
+    returns ``None`` — i.e. the coin's puzzle hash doesn't belong to any wallet
+    in this WSM's puzzle store.  If we used a single environment, the standard
+    wallet would already claim the puzzle hash, ``wallet_identifier`` would be
+    non-None, and the local-record REMOTE fallback (+ subsequent spent short-circuit)
+    would never execute.
+
+    env_1 owns the coins and builds the transaction; env_2 only has REMOTE
+    interest in the removal coin, guaranteeing the REMOTE path is taken when the
+    spent update arrives.
+    """
     env_1 = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
-    # Some transaction, doesn't matter what.
+    # env_1 builds but does NOT push the tx; env_2 will push it later.
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         await env_1.xch_wallet.generate_signed_transaction(
             [uint64(1)],
