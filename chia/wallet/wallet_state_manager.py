@@ -1859,7 +1859,25 @@ class WalletStateManager:
                             and wallet_identifier.type == WalletType.REMOTE
                             and local_record is not None
                         ):
-                            await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
+                            # Use add_coin_record (INSERT OR REPLACE) rather than set_spent (UPDATE)
+                            # because local_record may originate from the in-memory cache
+                            # (local_records.coin_id_to_record) whose backing DB transaction was
+                            # rolled back in a prior iteration of this batch.  An UPDATE on a
+                            # non-existent row would silently do nothing.
+                            coinbase = self.is_farmer_reward(
+                                uint32(coin_state.created_height), coin_state.coin
+                            ) or self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin)
+                            await self.coin_store.add_coin_record(
+                                WalletCoinRecord(
+                                    coin_state.coin,
+                                    uint32(coin_state.created_height),
+                                    uint32(coin_state.spent_height),
+                                    True,
+                                    coinbase,
+                                    wallet_identifier.type,
+                                    wallet_identifier.id,
+                                )
+                            )
                             self.state_changed("coin_removed", wallet_identifier.id)
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             for out_tx_record in all_unconfirmed:

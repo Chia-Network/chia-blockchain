@@ -256,6 +256,133 @@ async def test_reorged_interested_remote_coin_state_does_not_crash(wallet_enviro
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
+async def test_remote_spent_shortcut_persists_when_db_row_missing(wallet_environments: WalletTestFramework) -> None:
+    """The REMOTE spent shortcut must use INSERT OR REPLACE (add_coin_record)
+    rather than a bare UPDATE (set_spent) so that even when the in-memory
+    ``local_records`` cache diverges from the DB (e.g. after a prior iteration's
+    transaction rollback), the spent record is still persisted correctly.
+
+    This test exercises the shortcut path by pre-populating the DB with an
+    unspent REMOTE record, then deleting it to simulate cache/DB divergence,
+    and finally sending a spent CoinState.  Because ``_add_coin_states``
+    fetches ``local_records`` from the DB at the top, we simulate the stale
+    cache entry by sending a batch of two states for the same coin: the first
+    (created-only) populates both cache and DB, and the second (ephemeral)
+    hits the REMOTE shortcut with ``local_record`` from the cache.
+
+    To avoid real network calls from ``determine_coin_type``, the fabricated
+    coin's parent is set to a reward-style value so the early return fires.
+    """
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wsm = env.wallet_state_manager
+
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
+
+    coin = Coin(bytes32(bytes([61] * 32)), bytes32(bytes([62] * 32)), uint64(1))
+    coin_id = coin.name()
+    await remote_wallet.register_remote_coins([coin_id])
+
+    # Pre-populate the DB with an unspent REMOTE record, then delete it to
+    # simulate a scenario where the in-memory cache has an entry but the DB
+    # does not (e.g. a prior batch iteration's transaction rolled back).
+    unspent_record = WalletCoinRecord(
+        coin, uint32(5), uint32(0), False, False, WalletType.REMOTE, int(remote_wallet.id())
+    )
+    await wsm.coin_store.add_coin_record(unspent_record)
+    await wsm.coin_store.delete_coin_record(coin_id)
+
+    # Verify the DB row is gone.
+    assert await wsm.coin_store.get_coin_record(coin_id) is None
+
+    # Now send a spent state.  _add_coin_states will fetch local_records from
+    # the DB (empty), so local_record will be None.  The code should still
+    # persist the coin via the interest-only branch when wallet_identifier is None.
+    peer = Mock()
+    peer.closed = False
+
+    # Mock determine_coin_type to avoid network calls for the fabricated coin.
+    original_determine = wsm.determine_coin_type
+
+    async def patched_determine(p, cs, fh):
+        if cs.coin == coin:
+            return None, None
+        return await original_determine(p, cs, fh)
+
+    wsm.determine_coin_type = patched_determine  # type: ignore[assignment]
+    try:
+        await wsm._add_coin_states(
+            [CoinState(coin, uint32(10), uint32(5))],
+            peer,
+            None,
+        )
+    finally:
+        wsm.determine_coin_type = original_determine  # type: ignore[assignment]
+
+    record = await wsm.coin_store.get_coin_record(coin_id)
+    assert record is not None
+    assert record.spent is True
+    assert record.spent_block_height == uint32(10)
+    assert record.wallet_type == WalletType.REMOTE
+    assert record.wallet_id == int(remote_wallet.id())
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_remote_spent_shortcut_with_existing_db_record(wallet_environments: WalletTestFramework) -> None:
+    """When a REMOTE coin has a pre-existing unspent DB record and a spent
+    CoinState arrives, the REMOTE shortcut should persist the spent status
+    via add_coin_record (INSERT OR REPLACE) rather than a bare UPDATE."""
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wsm = env.wallet_state_manager
+
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
+
+    coin = Coin(bytes32(bytes([71] * 32)), bytes32(bytes([72] * 32)), uint64(1))
+    coin_id = coin.name()
+    await remote_wallet.register_remote_coins([coin_id])
+
+    # Pre-populate the DB with an unspent REMOTE record.
+    unspent_record = WalletCoinRecord(
+        coin, uint32(5), uint32(0), False, False, WalletType.REMOTE, int(remote_wallet.id())
+    )
+    await wsm.coin_store.add_coin_record(unspent_record)
+
+    peer = Mock()
+    peer.closed = False
+
+    await wsm._add_coin_states(
+        [CoinState(coin, uint32(10), uint32(5))],
+        peer,
+        None,
+    )
+
+    record = await wsm.coin_store.get_coin_record(coin_id)
+    assert record is not None
+    assert record.spent is True
+    assert record.spent_block_height == uint32(10)
+    assert record.wallet_type == WalletType.REMOTE
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
 async def test_remote_record_transitions_to_real_wallet_on_reprocess(
     wallet_environments: WalletTestFramework,
 ) -> None:
