@@ -1858,6 +1858,7 @@ class WalletStateManager:
                         ):
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             self.state_changed("coin_removed", wallet_identifier.id)
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             for out_tx_record in all_unconfirmed:
                                 if coin_state.coin in out_tx_record.removals:
                                     await self.tx_store.set_confirmed(
