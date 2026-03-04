@@ -120,17 +120,14 @@ class DIDWallet:
             metadata=json.dumps(metadata),
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
-        wallet_created = False
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
+        )
+        self.wallet_id = self.wallet_info.id
         try:
-            self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-                name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
-            )
-            self.wallet_id = self.wallet_info.id
-            wallet_created = True
             await self.generate_new_decentralised_id(amount, action_scope, fee, extra_conditions)
         except Exception:
-            if wallet_created:
-                await wallet_state_manager.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.wallet_id)
             raise
 
         await self.wallet_state_manager.add_new_wallet(self)
