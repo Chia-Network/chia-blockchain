@@ -1795,6 +1795,8 @@ class WalletStateManager:
                                     )
                                     await self.coin_store.add_coin_record(interested_record)
                                     self.state_changed("coin_added", target_wallet_id)
+                                    if interested_record.spent:
+                                        self.state_changed("coin_removed", target_wallet_id)
                                 # Don't early-continue: still run the tx confirmation fallback below.
 
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
