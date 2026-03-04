@@ -160,6 +160,7 @@ class WalletStateManager:
     # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
     # When this is a dataclass, these errors should go away
     interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
     interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     constants: ConsensusConstants
     config: dict[str, Any]
@@ -357,6 +358,10 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
+
+    def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
+        # Return a snapshot of the cache at this moment in time
+        return self.interested_coin_cache.deepcopy()
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
@@ -1763,7 +1768,7 @@ class WalletStateManager:
                         # If we subscribed to this coin id (interested coin ids) but it doesn't map to a known wallet,
                         # persist it in the coin_store under the remote wallet id so it can be queried later without
                         # conflicting with real wallets' coin ownership rules.
-                        if coin_name in self.interested_coin_cache:
+                        if coin_name in self.get_interested_coin_cache():
                             interested_wallet_ids = [
                                 wallet_id
                                 for w in self.interested_coin_cache[coin_name]
