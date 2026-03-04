@@ -260,7 +260,7 @@ async def test_remote_wallet_create_and_save_info_paths(wallet_environments: Wal
     wsm = env.wallet_state_manager
 
     async with wsm.lock:
-        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet)
 
     assert remote_wallet.id() > 0
     assert remote_wallet.get_name() == "Remote Wallet #1"
@@ -365,6 +365,10 @@ async def test_register_remote_coins_with_existing_ids_still_subscribes() -> Non
     wallet.wallet_state_manager.add_interested_coin_ids = AsyncMock()
     wallet.wallet_state_manager.remote_coin_store = Mock()
     wallet.wallet_state_manager.remote_coin_store.add_coin_ids = AsyncMock(return_value=0)
+
+    await wallet.register_remote_coins([])
+    wallet.wallet_state_manager.remote_coin_store.add_coin_ids.assert_not_awaited()
+    wallet.wallet_state_manager.add_interested_coin_ids.assert_not_awaited()
 
     await wallet.register_remote_coins([coin_id_1, coin_id_1])
 

@@ -103,6 +103,8 @@ class RemoteWallet:
         await self.wallet_state_manager.remote_coin_store.add_coin_ids(unique_coin_ids, self.wallet_info.id)
         await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
 
+    # This is unused as we are using an SQL database for the coin info.
+    # pragma: no cover
     async def save_info(self, remote_info: RemoteInfo) -> None:
         self.remote_info = remote_info
         data_str = bytes(remote_info).hex()
