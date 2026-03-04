@@ -58,7 +58,7 @@ class DummySpends:
 
 class TestWalletPoolStore:
     @pytest.mark.anyio
-    async def test_store(self, seeded_random: random.Random):
+    async def test_store(self, seeded_random: random.Random) -> None:
         async with DBConnection(1) as db_wrapper:
             store = await WalletPoolStore.create(db_wrapper)
 
