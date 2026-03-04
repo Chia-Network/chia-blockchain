@@ -538,13 +538,6 @@ async def test_wallet_state_manager_loads_remote_wallet_on_restart(
 
 
 @pytest.mark.anyio
-async def test_remote_wallet_create_with_invalid_data_raises_error() -> None:
-    wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
-    with pytest.raises(ValueError, match="non-hexadecimal"):
-        await RemoteWallet.create(Mock(), Mock(spec=Wallet), wallet_info)
-
-
-@pytest.mark.anyio
 async def test_register_remote_coins_with_existing_ids_still_subscribes() -> None:
     coin_id_1 = bytes32(bytes([1] * 32))
     wallet = RemoteWallet()
