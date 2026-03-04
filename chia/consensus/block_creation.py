@@ -22,6 +22,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
+    tree_hash,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -226,7 +227,10 @@ def create_foliage(
 
         generator_hash = bytes32.zeros
         if new_block_gen is not None:
-            generator_hash = std_hash(new_block_gen.program)
+            if height >= constants.HARD_FORK2_HEIGHT:
+                generator_hash = bytes32(tree_hash(bytes(new_block_gen.program)))
+            else:
+                generator_hash = std_hash(new_block_gen.program)
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):

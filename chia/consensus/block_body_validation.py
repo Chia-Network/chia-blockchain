@@ -15,6 +15,7 @@ from chia_rs import (
     check_time_locks,
     compute_merkle_set_root,
     is_canonical_serialization,
+    tree_hash,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -331,7 +332,11 @@ async def validate_block_body(
     # 7a. The generator root must be the hash of the serialized bytes of
     #     the generator for this block (or zeroes if no generator)
     if block.transactions_generator is not None:
-        if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+        if height >= constants.HARD_FORK2_HEIGHT:
+            expected_generator_hash = bytes32(tree_hash(bytes(block.transactions_generator)))
+        else:
+            expected_generator_hash = std_hash(bytes(block.transactions_generator))
+        if expected_generator_hash != block.transactions_info.generator_root:
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
     elif block.transactions_info.generator_root != bytes([0] * 32):
         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
