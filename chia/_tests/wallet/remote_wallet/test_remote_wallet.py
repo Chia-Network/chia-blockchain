@@ -329,6 +329,8 @@ async def test_remote_wallet_create_and_save_info_paths(wallet_environments: Wal
     assert remote_wallet.type() == WalletType.REMOTE
     assert remote_wallet.require_derivation_paths() is False
 
+    assert await wsm.remote_coin_store.add_coin_ids([], remote_wallet.id()) == 0
+
     await remote_wallet.register_remote_coins([bytes32.zeros])
     stored_coin_ids = await wsm.remote_coin_store.get_coin_ids(remote_wallet.id())
     assert bytes32.zeros in stored_coin_ids
