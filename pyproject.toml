@@ -55,6 +55,7 @@ chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
 chia_rs = ">=0.42.0, <0.43"
 chiavdf = ">=1.1.10"  # timelord and vdf verification
+chia-vdf-verify = { git = "https://github.com/richardkiss/chia-vdf-verify.git", rev = "26f0180" }  # pure-Rust VDF verifier (optional backend)
 click = ">=8.1.7"  # For the CLI
 clvm = ">=0.9.14"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences

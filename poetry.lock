@@ -910,6 +910,22 @@ files = [
 typing-extensions = "*"
 
 [[package]]
+name = "chia-vdf-verify"
+version = "0.1.0"
+description = "Pure-Rust VDF verifier for Chia (drop-in replacement for chiavdf verification)"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/richardkiss/chia-vdf-verify.git"
+reference = "26f0180"
+resolved_reference = "26f01809286e1768553504f62e0344be701c9e86"
+
+[[package]]
 name = "chiabip158"
 version = "1.5.4"
 description = "Chia BIP158 (wraps C++)"
@@ -4124,4 +4140,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "494723fc688325b4604dc40787ab5b820c61799cecb30ab7e67e97d3dadc0edb"
+content-hash = "2569f9e2342f56b80ff49065265d6a197e72ee427f638258b6a28f681fe10351"
