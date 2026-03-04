@@ -308,9 +308,9 @@ async def test_remote_spent_shortcut_persists_when_db_row_missing(wallet_environ
     async def patched_determine(p: object, cs: CoinState, fh: uint32 | None) -> tuple[None, None]:
         if cs.coin == coin:
             return None, None
-        return await original_determine(p, cs, fh)  # type: ignore[arg-type]
+        return await original_determine(p, cs, fh)  # type: ignore[arg-type,return-value]
 
-    wsm.determine_coin_type = patched_determine  # type: ignore[method-assign]
+    wsm.determine_coin_type = patched_determine  # type: ignore[assignment,method-assign]
     try:
         await wsm._add_coin_states(
             [CoinState(coin, uint32(10), uint32(5))],
