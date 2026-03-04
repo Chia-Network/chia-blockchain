@@ -1066,6 +1066,7 @@ class Timelord:
 
                 if not validate_vdf(vdf_proof, self.constants, initial_form, vdf_info):
                     log.error("Invalid proof of time!")
+                    continue
                 if not self.bluebox_mode:
                     async with self.lock:
                         assert proof_label is not None
