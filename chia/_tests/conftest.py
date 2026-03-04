@@ -1322,7 +1322,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             )
         )
 
-        config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
+        config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0, "full_node.block_creation_timeout": 10}
 
         bts = [
             await async_exit_stack.enter_async_context(

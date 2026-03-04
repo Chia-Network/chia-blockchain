@@ -266,6 +266,7 @@ async def instantiate_mempool_manager(
         zero_calls_get_unspent_lineage_info_for_puzzle_hash,
         constants,
         max_tx_clvm_cost=max_tx_clvm_cost,
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -2420,6 +2421,7 @@ async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
         await mempool_manager.new_peak(test_block_record, None)
@@ -2673,6 +2675,7 @@ def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        validation_timeout=10,
     ) as mempool_manager:
         create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
 
