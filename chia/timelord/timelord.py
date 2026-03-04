@@ -32,7 +32,7 @@ from chia_vdf_verify import create_discriminant
 try:
     from chiavdf import prove
 except ImportError:
-    prove = None  # type: ignore[assignment]
+    prove = None
 
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol

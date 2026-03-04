@@ -50,6 +50,9 @@ ignore_missing_imports = True
 [mypy-chiavdf.*]
 ignore_missing_imports = True
 
+[mypy-chia_vdf_verify.*]
+ignore_missing_imports = True
+
 [mypy-chialisp.*]
 ignore_missing_imports = True
 
