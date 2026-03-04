@@ -545,6 +545,27 @@ async def test_remote_wallet_create_with_invalid_data_raises_error() -> None:
 
 
 @pytest.mark.anyio
+async def test_remote_wallet_save_info_then_reload_round_trips() -> None:
+    """Verify that data written by save_info can be loaded back by create."""
+    coin_id = bytes32(bytes([0xAB] * 32))
+    wallet_info = WalletInfo(uint32(4), "Remote Wallet #4", uint8(WalletType.REMOTE.value), '{"remote_coin_ids":[]}')
+    wsm = Mock()
+    wsm.user_store = Mock()
+    wsm.user_store.update_wallet = AsyncMock()
+
+    wallet = await RemoteWallet.create(wsm, Mock(spec=Wallet), wallet_info)
+    await wallet.save_info(RemoteInfo(remote_coin_ids=[coin_id]))
+
+    saved_wallet_info = wallet.wallet_info
+    assert not all(c in "0123456789abcdef" for c in saved_wallet_info.data)
+
+    wsm2 = Mock()
+    wsm2.add_interested_coin_ids = AsyncMock()
+    reloaded = await RemoteWallet.create(wsm2, Mock(spec=Wallet), saved_wallet_info)
+    assert reloaded.remote_info.remote_coin_ids == [coin_id]
+
+
+@pytest.mark.anyio
 async def test_register_remote_coins_with_existing_ids_still_subscribes() -> None:
     coin_id_1 = bytes32(bytes([1] * 32))
     wallet = RemoteWallet()
