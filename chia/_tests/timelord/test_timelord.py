@@ -8,9 +8,9 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.timelord import timelord as timelord_module
+from chia.timelord.timelord_service import TimelordService
 from chia.timelord.types import Chain
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.timelord.timelord_service import TimelordService
 
 
 @pytest.mark.anyio
