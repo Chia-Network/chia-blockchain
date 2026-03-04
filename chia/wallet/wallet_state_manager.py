@@ -1796,6 +1796,7 @@ class WalletStateManager:
                                         target_wallet_id,
                                     )
                                     await self.coin_store.add_coin_record(interested_record)
+                                    local_records.coin_id_to_record[coin_name] = interested_record
                                     self.state_changed("coin_added", target_wallet_id)
                                     if interested_record.spent:
                                         self.state_changed("coin_removed", target_wallet_id)
