@@ -27,12 +27,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from chia_vdf_verify import create_discriminant
-
-try:
-    from chiavdf import prove
-except ImportError:
-    prove = None
+from chiavdf import create_discriminant, prove
 
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
@@ -61,8 +56,6 @@ class BlueboxProcessData(Streamable):
 
 
 def prove_bluebox_slow(payload: bytes, executor_shutdown_tempfile_name: str) -> bytes:
-    if prove is None:
-        raise ImportError("chiavdf is required for timelord proving but is not installed")
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
     return cast(
