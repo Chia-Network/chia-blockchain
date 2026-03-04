@@ -922,8 +922,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/richardkiss/chia-vdf-verify.git"
-reference = "9e34bfe"
-resolved_reference = "9e34bfef815e5e4a8ba1089c5a34b93e040d0c9a"
+reference = "52867a2"
+resolved_reference = "52867a216b34c2a2e59e45624c240e37f63e4904"
 
 [[package]]
 name = "chiabip158"
@@ -4117,4 +4117,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "8fd2c3a848651f4ddb26ee974560f117ae05422cb9a2c4df2db09022ac22c4e5"
+content-hash = "51432e1a91cbd6bcb05ef09dac64d1ab89f70c969755df8ba0075d7383f6a4ca"
