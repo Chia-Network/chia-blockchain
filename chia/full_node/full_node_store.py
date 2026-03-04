@@ -25,6 +25,8 @@ from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
+MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)
@@ -79,6 +81,19 @@ def find_best_block(
         return None, None
 
     return all_blocks[0][0], all_blocks[0][1].unfinished_block
+
+
+def _maybe_evict_worst_unfinished_block(inner: dict[bytes32 | None, UnfinishedBlockEntry]) -> None:
+    if len(inner) <= MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH:
+        return
+    # None foliage hash is considered worst since the block quality is unknown
+    if None in inner:
+        del inner[None]
+        return
+    # we've already checked for None keys. At this point we know there won't be
+    # any, but max() doesn't like that the type is still Optional[Bytes32]
+    worst_key = max(inner.keys())  # type: ignore[type-var]
+    del inner[worst_key]
 
 
 class FullNodeStore:
@@ -182,6 +197,7 @@ class FullNodeStore:
     def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         ents = self._unfinished_blocks.setdefault(reward_block_hash, {})
         ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
+        _maybe_evict_worst_unfinished_block(ents)
 
     def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         reward_ents = self._unfinished_blocks.get(reward_block_hash)
@@ -248,6 +264,7 @@ class FullNodeStore:
         entry[unfinished_block.foliage.foliage_transaction_block_hash] = UnfinishedBlockEntry(
             unfinished_block, result, height
         )
+        _maybe_evict_worst_unfinished_block(entry)
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> UnfinishedBlock | None:
         result = self._unfinished_blocks.get(unfinished_reward_hash, None)

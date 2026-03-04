@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
 import logging
-import re
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import G1Element
@@ -11,7 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.remote_wallet.remote_info import RemoteCoinData, RemoteInfo
+from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -25,7 +22,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 # Furthermore the wallet will act mainly as a sentinel for CoinRecords that are related to the remote wallet.
 class RemoteWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol[RemoteCoinData]] = cast("RemoteWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[object]] = cast("RemoteWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -35,13 +32,6 @@ class RemoteWallet:
     wallet_info_type: ClassVar[type[RemoteInfo]] = RemoteInfo
 
     @staticmethod
-    def get_existing_remote_wallet(wallet_state_manager: Any) -> RemoteWallet | None:
-        for wallet in wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.REMOTE:
-                return cast(RemoteWallet, wallet)
-        return None
-
-    @staticmethod
     async def create_new_remote_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
@@ -49,20 +39,22 @@ class RemoteWallet:
     ) -> RemoteWallet:
         """
         Create a brand new Remote wallet.
-        This must be called under the wallet state manager lock.
+        This wallet can only be created once.
         """
-        if RemoteWallet.get_existing_remote_wallet(wallet_state_manager) is not None:
+        if wallet_state_manager.get_existing_remote_wallet() is not None:
+            # Maybe this should be idempotent with a warning instead?
             raise ValueError("Only one RemoteWallet instance is supported")
 
         self = RemoteWallet()
         self.wallet_state_manager = wallet_state_manager
         if name is None:
-            name = self.generate_wallet_name()
+            # We can make this more complex if we choose to support multiple remote wallets later
+            name = "Remote Wallet #1"
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        self.remote_info = RemoteInfo(remote_coin_ids=[])
-        info_as_string = json.dumps(self.remote_info.to_json_dict())
+        self.remote_info = RemoteInfo()
+        info_as_string = bytes(self.remote_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name=name, wallet_type=WalletType.REMOTE.value, data=info_as_string
         )
@@ -80,20 +72,13 @@ class RemoteWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.log = logging.getLogger(__name__)
+        self.remote_info = RemoteInfo.from_bytes(bytes.fromhex(wallet_info.data))
 
-        try:
-            data = json.loads(wallet_info.data) if wallet_info.data else {}
-            self.remote_info = RemoteInfo.from_json_dict(data)
-        except Exception:
-            # Be resilient to older/invalid data while developing.
-            self.remote_info = RemoteInfo(remote_coin_ids=[])
-
-        if len(self.remote_info.remote_coin_ids) > 0:
-            # Restore interested coin wallet-id mapping on startup so remote coin updates
-            # continue to be associated with this remote wallet after restart.
-            await self.wallet_state_manager.add_interested_coin_ids(
-                self.remote_info.remote_coin_ids, [self.wallet_info.id]
-            )
+        # Restore interested-coin subscriptions from the SQL store so that
+        # remote coin updates continue to be associated with this wallet after restart.
+        coin_ids = await self.wallet_state_manager.remote_coin_store.get_coin_ids(self.wallet_info.id)
+        if len(coin_ids) > 0:
+            await self.wallet_state_manager.add_interested_coin_ids(coin_ids, [self.wallet_info.id])
 
         return self
 
@@ -110,61 +95,56 @@ class RemoteWallet:
     def require_derivation_paths(self) -> bool:
         return False
 
-    def generate_wallet_name(self) -> str:
-        max_num = 0
-        for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.REMOTE:
-                matched = re.search(r"^Remote Wallet #(\d+)$", wallet.get_name())
-                if matched and int(matched.group(1)) > max_num:
-                    max_num = int(matched.group(1))
-        return f"Remote Wallet #{max_num + 1}"
-
     async def register_remote_coins(self, coin_ids: list[bytes32]) -> None:
         if len(coin_ids) == 0:
             return
 
-        # Preserve insertion order while de-duping.
         unique_coin_ids = list(dict.fromkeys(coin_ids))
-        new_unique = [coin_id for coin_id in unique_coin_ids if coin_id not in self.remote_info.remote_coin_ids]
-        if len(new_unique) > 0:
-            remote_info = replace(self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, *new_unique])
-            await self.save_info(remote_info)
-
+        await self.wallet_state_manager.remote_coin_store.add_coin_ids(unique_coin_ids, self.wallet_info.id)
         await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
 
+    # This is unused as we are using an SQL database for the coin info.
+    # pragma: no cover
     async def save_info(self, remote_info: RemoteInfo) -> None:
         self.remote_info = remote_info
-        data_str = json.dumps(remote_info.to_json_dict())
+        data_str = bytes(remote_info).hex()
         self.wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     # The following functions are expected to exist by WSM, but are just stubs for our uses
-    async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_confirmed_balance(
+        self, record_list: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(
+        self, unspent_records: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_spendable_balance(
+        self, unspent_records: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_pending_change_balance(self) -> uint64:
+    async def get_pending_change_balance(self) -> uint64:  # pragma: no cover
         return uint64(0)
 
-    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: RemoteCoinData | None) -> None:
-        # RemoteWallet doesn't claim ownership of coins via puzzle hashes; it's a sentinel.
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: Any, coin_data: object | None
+    ) -> None:  # pragma: no cover
         return None
 
-    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:  # pragma: no cover
         raise ValueError("RemoteWallet cannot select coins")
 
-    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         return False
 
-    async def generate_signed_transaction(
+    async def generate_signed_transaction(  # pragma: no cover
         self,
         amounts: list[uint64],
         puzzle_hashes: list[bytes32],
@@ -177,5 +157,5 @@ class RemoteWallet:
     ) -> None:
         raise ValueError("RemoteWallet cannot generate transactions")
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise RuntimeError("RemoteWallet does not derive puzzle hashes")

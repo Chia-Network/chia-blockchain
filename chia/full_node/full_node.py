@@ -3192,7 +3192,7 @@ class FullNode:
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
-            self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
+            self.log.info(f"{peer.peer_node_id} requested compact vdf we don't have, height: {request.height}.")
             return None
         compact_vdf = full_node_protocol.RespondCompactVDF(
             request.height,

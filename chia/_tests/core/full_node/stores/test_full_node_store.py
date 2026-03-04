@@ -20,7 +20,12 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
+from chia.full_node.full_node_store import (
+    MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH,
+    FullNodeStore,
+    UnfinishedBlockEntry,
+    find_best_block,
+)
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
@@ -1224,3 +1229,118 @@ async def test_mark_requesting(
     assert store.is_requesting_unfinished_block(b, b) == (False, 0)
 
     assert len(store._unfinished_blocks) == 0
+
+
+@pytest.mark.anyio
+async def test_unfinished_block_eviction(
+    bt: BlockTools,
+    seeded_random: random.Random,
+) -> None:
+    blocks = bt.get_consecutive_blocks(1, guarantee_transaction_block=True)
+    assert blocks[-1].is_transaction_block()
+    store = FullNodeStore(bt.constants)
+    unf: UnfinishedBlock = make_unfinished_block(blocks[-1], bt.constants)
+
+    num_blocks = MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH + 5
+    foliage_hashes = sorted([bytes32.random(seeded_random) for _ in range(num_blocks)])
+
+    # stamp out unfinished blocks with different (artificial) foliage hashes
+    unfinished = [recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh) for fh in foliage_hashes]
+    seeded_random.shuffle(unfinished)
+
+    for new_unf in unfinished:
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
+
+    # the best (lowest) foliage hashes should be kept
+    for idx, fh in enumerate(foliage_hashes):
+        block, count, have_better = store.get_unfinished_block2(unf.partial_hash, fh)
+        assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
+        assert have_better == (idx != 0)
+
+        if idx < MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH:
+            assert block is not None
+        else:
+            # this block should have been evicted
+            assert block is None
+
+
+@pytest.mark.anyio
+async def test_unfinished_block_eviction_none_added_last(
+    bt: BlockTools,
+    seeded_random: random.Random,
+) -> None:
+    """Fill a store to capacity with known hashes, then add a None entry.
+    None should be evicted immediately since it's worse than any known hash."""
+    blocks = bt.get_consecutive_blocks(1, guarantee_transaction_block=True)
+    assert blocks[-1].is_transaction_block()
+    store = FullNodeStore(bt.constants)
+    unf: UnfinishedBlock = make_unfinished_block(blocks[-1], bt.constants)
+
+    foliage_hashes = sorted([bytes32.random(seeded_random) for _ in range(MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH)])
+
+    for i, fh in enumerate(foliage_hashes):
+        block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+
+    _, count, _ = store.get_unfinished_block2(unf.partial_hash, foliage_hashes[0])
+    assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
+
+    # add a None foliage hash entry via mark_requesting
+    store.mark_requesting_unfinished_block(unf.partial_hash, None)
+
+    # the None entry was evicted; all known hashes still present
+    for fh in foliage_hashes:
+        block, count, _ = store.get_unfinished_block2(unf.partial_hash, fh)
+        assert block is not None
+        assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
+
+
+@pytest.mark.anyio
+async def test_unfinished_block_eviction_none_added_first(
+    bt: BlockTools,
+    seeded_random: random.Random,
+) -> None:
+    """Start with a None entry, then fill past capacity.
+    None should be the one evicted, not any known hash."""
+    blocks = bt.get_consecutive_blocks(1, guarantee_transaction_block=True)
+    assert blocks[-1].is_transaction_block()
+    store = FullNodeStore(bt.constants)
+    unf: UnfinishedBlock = make_unfinished_block(blocks[-1], bt.constants)
+
+    foliage_hashes = sorted([bytes32.random(seeded_random) for _ in range(MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH)])
+
+    # add a None foliage hash entry first via mark_requesting
+    store.mark_requesting_unfinished_block(unf.partial_hash, None)
+
+    for i, fh in enumerate(foliage_hashes):
+        block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+
+    # the None entry was evicted; all known hashes still present
+    for fh in foliage_hashes:
+        block, count, _ = store.get_unfinished_block2(unf.partial_hash, fh)
+        assert block is not None
+        assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
+
+
+@pytest.mark.anyio
+async def test_unfinished_block_eviction_mark_requesting(
+    seeded_random: random.Random,
+) -> None:
+    """mark_requesting_unfinished_block also triggers eviction."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    reward_hash = bytes32.random(seeded_random)
+    num_blocks = MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH + 5
+    request_hashes = sorted([bytes32.random(seeded_random) for _ in range(num_blocks)])
+
+    for fh in request_hashes:
+        store.mark_requesting_unfinished_block(reward_hash, fh)
+
+    # best (lowest) hashes should be kept
+    for idx, fh in enumerate(request_hashes):
+        is_requesting, count = store.is_requesting_unfinished_block(reward_hash, fh)
+        assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
+        if idx < MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH:
+            assert is_requesting
+        else:
+            assert not is_requesting
