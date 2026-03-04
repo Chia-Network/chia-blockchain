@@ -8,11 +8,13 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import RegisterRemoteCoins
@@ -243,6 +245,66 @@ async def test_reorged_interested_remote_coin_state_does_not_crash(wallet_enviro
     await wsm._add_coin_states([CoinState(coin, None, None)], peer, None)
 
     assert await wsm.coin_store.get_coin_record(coin_id) is None
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_remote_record_transitions_to_real_wallet_on_reprocess(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    """When a coin was initially stored as a REMOTE interest-only record but the
+    wallet later recognizes the puzzle hash (e.g. after derivation-index extension),
+    ``_add_coin_states`` must replace the REMOTE record with the real wallet
+    identifier so wallet-specific logic (balance tracking, tx matching) applies.
+
+    This exercises the ``local_record = None`` override at
+    ``wallet_state_manager.py:1751-1760``.
+    """
+    env = wallet_environments.environments[0]
+    wsm = env.wallet_state_manager
+    wallet: Wallet = env.xch_wallet
+
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
+
+    # Pick a puzzle hash that the standard wallet already owns so that
+    # get_wallet_identifier_for_puzzle_hash will return STANDARD_WALLET.
+    derivation_record = await wsm.get_unused_derivation_record(wallet.id())
+    owned_ph = derivation_record.puzzle_hash
+
+    # Fabricate a coin at height 1 with that puzzle hash.
+    coin = Coin(bytes32(bytes([51] * 32)), owned_ph, uint64(1))
+    coin_id = coin.name()
+
+    # Simulate the state where this coin was first processed when the puzzle
+    # hash was NOT yet known, and the interest-only REMOTE path stored it.
+    await remote_wallet.register_remote_coins([coin_id])
+    remote_record = WalletCoinRecord(
+        coin, uint32(1), uint32(0), False, False, WalletType.REMOTE, int(remote_wallet.id())
+    )
+    await wsm.coin_store.add_coin_record(remote_record)
+
+    record = await wsm.coin_store.get_coin_record(coin_id)
+    assert record is not None
+    assert record.wallet_type == WalletType.REMOTE
+
+    # Re-process the same coin state.  Now the puzzle hash IS recognized, so
+    # lines 1751-1760 should clear local_record and let coin_added() store a
+    # STANDARD_WALLET record instead.
+    peer = env.node.server.get_connections(NodeType.FULL_NODE)[0]
+    await wsm._add_coin_states([CoinState(coin, None, uint32(1))], peer, None)
+
+    record = await wsm.coin_store.get_coin_record(coin_id)
+    assert record is not None
+    assert record.wallet_type == WalletType.STANDARD_WALLET
+    assert record.wallet_id == int(wallet.id())
 
 
 @pytest.mark.parametrize(
