@@ -922,8 +922,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/richardkiss/chia-vdf-verify.git"
-reference = "malachite"
-resolved_reference = "b55d3e524b79c46f132368689844bcc850917a20"
+reference = "9e34bfe"
+resolved_reference = "9e34bfef815e5e4a8ba1089c5a34b93e040d0c9a"
 
 [[package]]
 name = "chiabip158"
@@ -4117,4 +4117,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "342e3ced51e51887d48c8f04c420a2dd49bea7c36d58a3eed0b9c142948e5704"
+content-hash = "8fd2c3a848651f4ddb26ee974560f117ae05422cb9a2c4df2db09022ac22c4e5"
