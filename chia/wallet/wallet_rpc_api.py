@@ -2922,9 +2922,7 @@ class WalletRpcApi:
 
     @marshal
     async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
-        remote_wallet = self.service.wallet_state_manager.get_wallet(
-            id=request.wallet_id, required_type=RemoteWallet
-        )
+        remote_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=RemoteWallet)
         await remote_wallet.register_remote_coins(request.coin_ids)
         return Empty()
 

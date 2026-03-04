@@ -1729,8 +1729,7 @@ class WalletStateManager:
                     if wallet_identifier is not None:
                         self.log.debug(f"Found existing wallet_identifier: {wallet_identifier}, coin: {coin_name}")
                     elif local_record is not None and (
-                        local_record.wallet_type != WalletType.REMOTE
-                        or uint32(local_record.wallet_id) in self.wallets
+                        local_record.wallet_type != WalletType.REMOTE or uint32(local_record.wallet_id) in self.wallets
                     ):
                         # If we already have a local coin record, use it as a fallback wallet identifier.
                         # This includes REMOTE records so a later spent update can flow through set_spent()
