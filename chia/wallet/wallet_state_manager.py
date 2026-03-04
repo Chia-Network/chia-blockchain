@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import json
 import logging
@@ -361,7 +362,7 @@ class WalletStateManager:
 
     def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
         # Return a snapshot of the cache at this moment in time
-        return self.interested_coin_cache.deepcopy()
+        return copy.deepcopy(self.interested_coin_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)

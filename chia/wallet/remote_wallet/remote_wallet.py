@@ -72,7 +72,8 @@ class RemoteWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.log = logging.getLogger(__name__)
-        self.remote_info = RemoteInfo.from_bytes(bytes.fromhex(wallet_info.data))
+        # self.remote_info currently contains no info. RemoteWallet is using the SQL store
+        self.remote_info = RemoteInfo()
 
         # Restore interested-coin subscriptions from the SQL store so that
         # remote coin updates continue to be associated with this wallet after restart.
