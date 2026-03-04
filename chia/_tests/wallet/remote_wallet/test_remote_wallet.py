@@ -305,12 +305,12 @@ async def test_remote_spent_shortcut_persists_when_db_row_missing(wallet_environ
     # Mock determine_coin_type to avoid network calls for the fabricated coin.
     original_determine = wsm.determine_coin_type
 
-    async def patched_determine(p, cs, fh):
+    async def patched_determine(p: object, cs: CoinState, fh: uint32 | None) -> tuple[None, None]:
         if cs.coin == coin:
             return None, None
-        return await original_determine(p, cs, fh)
+        return await original_determine(p, cs, fh)  # type: ignore[arg-type]
 
-    wsm.determine_coin_type = patched_determine  # type: ignore[assignment]
+    wsm.determine_coin_type = patched_determine  # type: ignore[method-assign]
     try:
         await wsm._add_coin_states(
             [CoinState(coin, uint32(10), uint32(5))],
@@ -318,7 +318,7 @@ async def test_remote_spent_shortcut_persists_when_db_row_missing(wallet_environ
             None,
         )
     finally:
-        wsm.determine_coin_type = original_determine  # type: ignore[assignment]
+        wsm.determine_coin_type = original_determine  # type: ignore[method-assign]
 
     record = await wsm.coin_store.get_coin_record(coin_id)
     assert record is not None
