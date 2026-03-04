@@ -12,7 +12,7 @@ from chia_rs.sized_ints import uint8, uint64
 try:
     from chia_vdf_verify import create_discriminant, verify_n_wesolowski
 except ImportError:
-    from chiavdf import create_discriminant, verify_n_wesolowski  # type: ignore[no-redef]
+    from chiavdf import create_discriminant, verify_n_wesolowski
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 
