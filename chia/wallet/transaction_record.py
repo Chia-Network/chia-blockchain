@@ -67,7 +67,7 @@ class TransactionRecordOld(Streamable):
     def height_farmed(self, genesis_challenge: bytes32) -> uint32 | None:
         if not self.confirmed:
             return None
-        if self.type in {TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD}:
+        if TransactionType(self.type) in {TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD}:
             for block_index in range(self.confirmed_at_height, self.confirmed_at_height - 100, -1):
                 if block_index < 0:
                     return None
@@ -83,7 +83,7 @@ class TransactionRecordOld(Streamable):
         if len(self.sent_to) < minimum_send_attempts:
             # we haven't tried enough peers yet
             return True
-        if any(x[1] == MempoolInclusionStatus.SUCCESS for x in self.sent_to):
+        if any(MempoolInclusionStatus(x[1]) == MempoolInclusionStatus.SUCCESS for x in self.sent_to):
             # we managed to push it to mempool at least once
             return True
         if any(x[2] in {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name} for x in self.sent_to):
