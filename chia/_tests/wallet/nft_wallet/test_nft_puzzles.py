@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 
@@ -110,7 +111,7 @@ def make_a_new_solution() -> tuple[Program, Program]:
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list = [[200, OFFER_MOD_HASH]]
-    condition_list = [[51, puzhash, 1, [puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
+    condition_list: list[Any] = [[51, puzhash, 1, [puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
     solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 
