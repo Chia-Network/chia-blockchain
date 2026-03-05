@@ -1833,6 +1833,13 @@ class NFTMintBulk(TransactionEndpointRequest):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class RegisterRemoteCoins(Streamable):
+    wallet_id: uint32
+    coin_ids: list[bytes32]
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     nft_id_list: list[str]
@@ -2278,6 +2285,7 @@ class CreateNewWalletType(Enum):
     DID_WALLET = "did_wallet"
     NFT_WALLET = "nft_wallet"
     POOL_WALLET = "pool_wallet"
+    REMOTE_WALLET = "remote_wallet"
 
 
 @streamable_enum(str)
@@ -2324,6 +2332,12 @@ class CreateNewWallet(TransactionEndpointRequest):
     p2_singleton_delay_time: uint64 | None = None
 
     def __post_init__(self) -> None:
+        if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            if self.mode is not None:
+                raise ValueError('"mode" is not a valid argument for remote wallets')
+            if self.amount is not None:
+                raise ValueError('"amount" is not a valid argument for remote wallets')
+
         if self.wallet_type == CreateNewWalletType.CAT_WALLET:
             if self.mode is None:
                 raise ValueError('Must specify a "mode" when creating a new CAT wallet')
