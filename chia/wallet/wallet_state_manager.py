@@ -361,7 +361,8 @@ class WalletStateManager:
         return self
 
     def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
-        # Return a snapshot of the cache at this moment in time
+        # Warning: this is a shallow copy of the cache
+        # Do not modify the cache directly, use the add_interested_coin_ids method instead
         return copy.copy(self.interested_coin_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
