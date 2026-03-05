@@ -42,7 +42,6 @@ chia._tests.clvm.test_puzzles
 chia._tests.clvm.test_singletons
 chia._tests.clvm.test_spend_sim
 chia._tests.conftest
-chia._tests.connection_utils
 chia._tests.core.cmds.test_keys
 chia._tests.core.consensus.test_pot_iterations
 chia._tests.core.daemon.test_daemon

@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.apis import StubMetadataRegistry
-from chia.protocols.outbound_message import NodeType
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -45,7 +45,7 @@ async def add_dummy_connection(
     type: NodeType = NodeType.FULL_NODE,
     *,
     additional_capabilities: list[tuple[uint16, str]] | None = None,
-) -> tuple[asyncio.Queue, bytes32]:
+) -> tuple[asyncio.Queue[Message], bytes32]:
     if additional_capabilities is None:
         additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
     wsc, peer_id = await add_dummy_connection_wsc(
@@ -115,7 +115,7 @@ async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_
     """
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()))
 
-    async def connected():
+    async def connected() -> bool:
         for node_id_c, _ in server_1.all_connections.items():
             if node_id_c == server_2.node_id:
                 return True
