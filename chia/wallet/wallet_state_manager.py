@@ -1793,39 +1793,6 @@ class WalletStateManager:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
-                    # REMOTE coins only need their record persisted; skip the expensive
-                    # network calls (fetch_children, fetch_coin_spend_for_coin_state) in
-                    # the normal spent path whose failure would roll back the DB transaction.
-                    if wallet_identifier.type == WalletType.REMOTE:
-                        if coin_state.created_height is not None:
-                            confirmed_height = uint32(coin_state.created_height)
-                            spent_height = (
-                                uint32(coin_state.spent_height) if coin_state.spent_height is not None else uint32(0)
-                            )
-                            coinbase = self.is_farmer_reward(confirmed_height, coin_state.coin) or self.is_pool_reward(
-                                confirmed_height, coin_state.coin
-                            )
-                            remote_record = WalletCoinRecord(
-                                coin_state.coin,
-                                confirmed_height,
-                                spent_height,
-                                spent_height != 0,
-                                coinbase,
-                                wallet_identifier.type,
-                                wallet_identifier.id,
-                            )
-                            await self.coin_store.add_coin_record(remote_record)
-                            local_records.coin_id_to_record[coin_name] = remote_record
-                            if local_record is None:
-                                self.state_changed("coin_added", wallet_identifier.id)
-                            if remote_record.spent:
-                                self.state_changed("coin_removed", wallet_identifier.id)
-                                unconfirmed_for_remote = await self.tx_store.get_all_unconfirmed()
-                                for out_tx_record in unconfirmed_for_remote:
-                                    if coin_state.coin in out_tx_record.removals:
-                                        await self.tx_store.set_confirmed(out_tx_record.name, uint32(spent_height))
-                        continue
-
                     # Update the DB to signal that we used puzzle hashes up to this one
                     derivation_index = ph_to_index_cache.get(coin_state.coin.puzzle_hash)
                     if derivation_index is None:
