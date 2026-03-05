@@ -1767,47 +1767,16 @@ class WalletStateManager:
                         local_record = None
 
                     if wallet_identifier is None:
-                        # If we subscribed to this coin id (interested coin ids) but it doesn't map to a known wallet,
-                        # persist it in the coin_store under the remote wallet id so it can be queried later without
-                        # conflicting with real wallets' coin ownership rules.
                         cache = self.get_interested_coin_cache()
                         if coin_name in cache:
                             interested_wallet_ids = [
                                 wallet_id for w in cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
                             ]
                             remote_wallet = self.get_existing_remote_wallet()
-                            # Only persist interest-only coins if the singleton RemoteWallet exists and this coin
-                            # is subscribed for that wallet id.
                             if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
-                                target_wallet_id: int = int(remote_wallet.id())
-                                target_wallet_type = WalletType.REMOTE
+                                wallet_identifier = WalletIdentifier(remote_wallet.id(), WalletType.REMOTE)
 
-                                if coin_state.created_height is not None:
-                                    confirmed_height = uint32(coin_state.created_height)
-                                    spent_height = (
-                                        uint32(coin_state.spent_height)
-                                        if coin_state.spent_height is not None
-                                        else uint32(0)
-                                    )
-                                    coinbase = self.is_farmer_reward(
-                                        confirmed_height, coin_state.coin
-                                    ) or self.is_pool_reward(confirmed_height, coin_state.coin)
-                                    interested_record = WalletCoinRecord(
-                                        coin_state.coin,
-                                        confirmed_height,
-                                        spent_height,
-                                        spent_height != 0,
-                                        coinbase,
-                                        target_wallet_type,
-                                        target_wallet_id,
-                                    )
-                                    await self.coin_store.add_coin_record(interested_record)
-                                    local_records.coin_id_to_record[coin_name] = interested_record
-                                    self.state_changed("coin_added", target_wallet_id)
-                                    if interested_record.spent:
-                                        self.state_changed("coin_removed", target_wallet_id)
-                                # Don't early-continue: still run the tx confirmation fallback below.
-
+                    if wallet_identifier is None:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         if coin_state.created_height is not None and coin_state.spent_height is not None:
                             unconfirmed_for_fallback = await self.tx_store.get_all_unconfirmed()
@@ -1822,6 +1791,41 @@ class WalletStateManager:
                                         light_tx_record.name, uint32(coin_state.spent_height)
                                     )
                         self.log.debug(f"No wallet for coin state: {coin_state}")
+                        continue
+
+                    # REMOTE coins only need their record persisted; skip the expensive
+                    # network calls (fetch_children, fetch_coin_spend_for_coin_state) in
+                    # the normal spent path whose failure would roll back the DB transaction.
+                    if wallet_identifier.type == WalletType.REMOTE:
+                        if coin_state.created_height is not None:
+                            confirmed_height = uint32(coin_state.created_height)
+                            spent_height = (
+                                uint32(coin_state.spent_height) if coin_state.spent_height is not None else uint32(0)
+                            )
+                            coinbase = self.is_farmer_reward(confirmed_height, coin_state.coin) or self.is_pool_reward(
+                                confirmed_height, coin_state.coin
+                            )
+                            remote_record = WalletCoinRecord(
+                                coin_state.coin,
+                                confirmed_height,
+                                spent_height,
+                                spent_height != 0,
+                                coinbase,
+                                wallet_identifier.type,
+                                wallet_identifier.id,
+                            )
+                            await self.coin_store.add_coin_record(remote_record)
+                            local_records.coin_id_to_record[coin_name] = remote_record
+                            if local_record is None:
+                                self.state_changed("coin_added", wallet_identifier.id)
+                            if remote_record.spent:
+                                self.state_changed("coin_removed", wallet_identifier.id)
+                                unconfirmed_for_remote = await self.tx_store.get_all_unconfirmed()
+                                for out_tx_record in unconfirmed_for_remote:
+                                    if coin_state.coin in out_tx_record.removals:
+                                        await self.tx_store.set_confirmed(
+                                            out_tx_record.name, uint32(coin_state.spent_height)
+                                        )
                         continue
 
                     # Update the DB to signal that we used puzzle hashes up to this one
@@ -1856,43 +1860,6 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin spent: %s", coin_state)
-
-                        # REMOTE coins only need their spent status persisted.  Skip
-                        # fetch_children / fetch_coin_spend_for_coin_state whose failure
-                        # would roll back the DB writer transaction and create a retry loop.
-                        if (
-                            wallet_identifier is not None
-                            and wallet_identifier.type == WalletType.REMOTE
-                            and local_record is not None
-                        ):
-                            # Use add_coin_record (INSERT OR REPLACE) rather than set_spent (UPDATE)
-                            # because local_record may originate from the in-memory cache
-                            # (local_records.coin_id_to_record) whose backing DB transaction was
-                            # rolled back in a prior iteration of this batch.  An UPDATE on a
-                            # non-existent row would silently do nothing.
-                            coinbase = self.is_farmer_reward(
-                                uint32(coin_state.created_height), coin_state.coin
-                            ) or self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin)
-                            await self.coin_store.add_coin_record(
-                                WalletCoinRecord(
-                                    coin_state.coin,
-                                    uint32(coin_state.created_height),
-                                    uint32(coin_state.spent_height),
-                                    True,
-                                    coinbase,
-                                    wallet_identifier.type,
-                                    wallet_identifier.id,
-                                )
-                            )
-                            self.state_changed("coin_removed", wallet_identifier.id)
-                            unconfirmed_for_remote = await self.tx_store.get_all_unconfirmed()
-                            for out_tx_record in unconfirmed_for_remote:
-                                if coin_state.coin in out_tx_record.removals:
-                                    await self.tx_store.set_confirmed(
-                                        out_tx_record.name, uint32(coin_state.spent_height)
-                                    )
-                            continue
-
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
                         if record is None:
