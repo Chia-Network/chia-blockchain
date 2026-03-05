@@ -1,7 +1,6 @@
 # File created by: python manage-mypy.py build-exclusions
 chia.daemon.server
 chia.introducer.introducer
-chia.introducer.introducer_api
 chia.plotters.bladebit
 chia.plotters.madmax
 chia.plotters.plotters
