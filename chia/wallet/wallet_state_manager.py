@@ -1823,9 +1823,7 @@ class WalletStateManager:
                                 unconfirmed_for_remote = await self.tx_store.get_all_unconfirmed()
                                 for out_tx_record in unconfirmed_for_remote:
                                     if coin_state.coin in out_tx_record.removals:
-                                        await self.tx_store.set_confirmed(
-                                            out_tx_record.name, uint32(coin_state.spent_height)
-                                        )
+                                        await self.tx_store.set_confirmed(out_tx_record.name, uint32(spent_height))
                         continue
 
                     # Update the DB to signal that we used puzzle hashes up to this one
