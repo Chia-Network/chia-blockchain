@@ -1779,9 +1779,9 @@ class WalletStateManager:
                     if wallet_identifier is None:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         if coin_state.created_height is not None and coin_state.spent_height is not None:
-                            unconfirmed_for_fallback = await self.tx_store.get_all_unconfirmed()
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             tx_records_to_confirm: list[LightTransactionRecord] = []
-                            for out_tx_record in unconfirmed_for_fallback:
+                            for out_tx_record in all_unconfirmed:
                                 if coin_state.coin in out_tx_record.removals:
                                     tx_records_to_confirm.append(out_tx_record)
 
