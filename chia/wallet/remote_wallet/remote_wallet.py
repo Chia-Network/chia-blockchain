@@ -105,12 +105,12 @@ class RemoteWallet:
         await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
 
     # This is unused as we are using an SQL database for the coin info.
-    # pragma: no cover
-    async def save_info(self, remote_info: RemoteInfo) -> None:
-        self.remote_info = remote_info
-        data_str = bytes(remote_info).hex()
-        self.wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
-        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
+    # This is disabled currently, but could be enabled. See that we do not load in create()
+    # async def save_info(self, remote_info: RemoteInfo) -> None:
+    #     self.remote_info = remote_info
+    #     data_str = bytes(remote_info).hex()
+    #     self.wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
+    #     await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     # The following functions are expected to exist by WSM, but are just stubs for our uses
     async def get_confirmed_balance(
