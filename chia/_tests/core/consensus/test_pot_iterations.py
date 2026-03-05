@@ -27,12 +27,12 @@ class TestPotIterations:
         assert is_overflow_block(test_constants, uint8(29))
         assert is_overflow_block(test_constants, uint8(30))
         assert is_overflow_block(test_constants, uint8(31))
-        with raises(ValueError):
+        with raises(ValueError, match="SP index too high"):
             assert is_overflow_block(test_constants, uint8(32))
 
     def test_calculate_sp_iters(self) -> None:
         ssi: uint64 = uint64(100001 * 64 * 4)
-        with raises(ValueError):
+        with raises(ValueError, match="SP index too high"):
             calculate_sp_iters(test_constants, ssi, uint8(32))
         calculate_sp_iters(test_constants, ssi, uint8(31))
 
@@ -40,23 +40,19 @@ class TestPotIterations:
         ssi: uint64 = uint64(100001 * 64 * 4)
         sp_interval_iters = ssi // test_constants.NUM_SPS_SUB_SLOT
 
-        with raises(ValueError):
-            # Invalid signage point index
+        with raises(ValueError, match="SP index too high"):
             calculate_ip_iters(test_constants, ssi, uint8(123), uint64(100000))
 
         sp_iters = sp_interval_iters * 13
 
-        with raises(ValueError):
-            # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(sp_interval_iters))  # type: ignore[arg-type]
+        with raises(ValueError, match="Required iters"):
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters))
 
-        with raises(ValueError):
-            # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(sp_interval_iters * 12))  # type: ignore[arg-type]
+        with raises(ValueError, match="Required iters"):
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters * 12))
 
-        with raises(ValueError):
-            # required_iters too low (0)
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(0))  # type: ignore[arg-type]
+        with raises(ValueError, match="not >0"):
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(0))
 
         required_iters = uint64(sp_interval_iters - 1)
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
