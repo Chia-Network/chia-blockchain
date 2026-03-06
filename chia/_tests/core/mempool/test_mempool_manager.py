@@ -713,6 +713,33 @@ async def test_reserve_fee_condition(zero_mempool_manager: MempoolManager) -> No
 
 
 @pytest.mark.anyio
+async def test_validation_timeout() -> None:
+    async with MempoolManager.managed(
+        zero_calls_get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        validation_timeout=0,
+    ) as mempool_manager:
+        await mempool_manager.new_peak(create_test_block_record(), None)
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="timeout"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_too_many_atoms() -> None:
+    # a very large MAX_BLOCK_COST_CLVM makes the per-cost atom/pair threshold
+    # effectively 0, triggering the density check on any spend
+    constants = DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(10**18))
+    async with instantiate_mempool_manager(zero_calls_get_coin_records, constants=constants) as mempool_manager:
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="too many atoms"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
 async def test_unknown_unspent() -> None:
     async def get_coin_records(_: Collection[bytes32]) -> list[CoinRecord]:
         return []
