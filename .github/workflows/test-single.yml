@@ -144,6 +144,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
+        if: ${{ !contains(inputs.runs-on, 'blacksmith-4vcpu-windows') }}
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
