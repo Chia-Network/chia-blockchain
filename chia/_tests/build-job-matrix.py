@@ -138,7 +138,7 @@ for path, index in test_paths_with_index:
         "ubuntu": {False: 0, True: 6}.get(conf["parallel"], conf["parallel"]),
         "windows": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
     }
-    pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
+    pytest_parallel_args = {os: f" -n {count} --dist loadscope" if count else "" for os, count in process_count.items()}
 
     enable_pytest_monitor = conf["check_resource_usage"]
 
