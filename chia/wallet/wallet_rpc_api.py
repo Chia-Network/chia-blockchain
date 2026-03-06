@@ -1030,8 +1030,12 @@ class WalletRpcApi:
         if len(fee_estimate_group.estimates) == 0:
             raise ValueError("No fee estimates returned from full node")
 
+        estimate = fee_estimate_group.estimates[0]
+        if estimate.error is not None:
+            raise ValueError(estimate.error)
+
         # Fee rates are in mojos per 1 clvm_cost.
-        fee_per_cost: int = int(fee_estimate_group.estimates[0].estimated_fee_rate.mojos_per_clvm_cost)
+        fee_per_cost: int = int(estimate.estimated_fee_rate.mojos_per_clvm_cost)
 
         return GetFeeEstimateResponse(fee_per_cost=uint64(fee_per_cost))
 
