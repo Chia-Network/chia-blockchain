@@ -29,6 +29,11 @@ from chia.data_layer.data_store import DataStore
 #       shared among the data layer test files.
 
 
+@pytest.fixture(scope="function", autouse=True)
+async def _use_wallet_block_tools(ignore_block_validation: None) -> None:
+    """Use simplified block creation (WalletBlockTools) for faster tests."""
+
+
 @pytest.fixture(name="chia_daemon", scope="function")
 def chia_daemon_fixture(chia_root: ChiaRoot) -> Iterator[None]:
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]):
