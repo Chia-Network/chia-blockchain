@@ -54,10 +54,10 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RespondFeeEstimates
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.types.fee_rate import FeeRate
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.types.fee_rate import FeeRate
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -576,7 +576,9 @@ async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> Non
     estimate_err_response = RespondFeeEstimates(
         FeeEstimateGroup(
             error=None,
-            estimates=[FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))],
+            estimates=[
+                FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))
+            ],
         )
     )
     estimate_err_msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, estimate_err_response)
@@ -589,9 +591,7 @@ async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> Non
             await client.get_fee_estimate()
 
     # Failure path: group-level error from full node.
-    group_err_response = RespondFeeEstimates(
-        FeeEstimateGroup(error="fee estimator unavailable", estimates=[])
-    )
+    group_err_response = RespondFeeEstimates(FeeEstimateGroup(error="fee estimator unavailable", estimates=[]))
     group_err_msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, group_err_response)
 
     async def _return_group_error(self, request):  # type: ignore[no-untyped-def]
