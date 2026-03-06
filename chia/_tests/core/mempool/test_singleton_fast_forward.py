@@ -273,7 +273,7 @@ async def prepare_singleton_eve(
         Program.to([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, starting_coin.amount - singleton_amount - 1])
     )
     # Create a solution for standard transaction
-    delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    delegated_puzzle = p2_conditions.puzzle_for_conditions(Program.to(conditions))
     full_solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
     starting_coin_spend = make_spend(starting_coin, starting_puzzle, full_solution)
     await make_and_send_spend_bundle(
