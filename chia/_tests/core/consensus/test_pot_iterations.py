@@ -41,17 +41,21 @@ class TestPotIterations:
         sp_interval_iters = ssi // test_constants.NUM_SPS_SUB_SLOT
 
         with raises(ValueError, match="SP index too high"):
+            # Invalid signage point index
             calculate_ip_iters(test_constants, ssi, uint8(123), uint64(100000))
 
         sp_iters = sp_interval_iters * 13
 
         with raises(ValueError, match="Required iters"):
+            # required_iters too high
             calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters))
 
         with raises(ValueError, match="Required iters"):
+            # required_iters too high
             calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters * 12))
 
         with raises(ValueError, match="not >0"):
+            # required_iters too low (0)
             calculate_ip_iters(test_constants, ssi, uint8(0), uint64(0))
 
         required_iters = uint64(sp_interval_iters - 1)
