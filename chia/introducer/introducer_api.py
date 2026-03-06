@@ -27,7 +27,7 @@ class IntroducerAPI:
     introducer: Introducer
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
-    def __init__(self, introducer) -> None:
+    def __init__(self, introducer: Introducer) -> None:
         self.log = logging.getLogger(__name__)
         self.introducer = introducer
 
