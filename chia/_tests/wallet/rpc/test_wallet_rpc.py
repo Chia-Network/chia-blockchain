@@ -13,7 +13,7 @@ import aiosqlite
 import pytest
 from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -49,9 +49,6 @@ from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
-from chia.protocols.outbound_message import Message, make_msg
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import RespondFeeEstimates
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -94,6 +91,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -561,54 +559,34 @@ async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> Non
         with pytest.raises(ResponseFailureError, match="Wallet is not currently connected to any full node peers"):
             await client.get_fee_estimate()
 
-    # Failure path: full node returns empty response (no data).
-    # The protocol layer treats empty data as "no response", so call_api returns None,
-    # triggering PeerRequestException at wallet_node.py:1111.
-    async def _return_empty_response(self, request):  # type: ignore[no-untyped-def]
-        return Message(uint8(ProtocolMessageTypes.respond_fee_estimates.value), None, b"")
-
-    with patch.object(FullNodeSimulator, "request_fee_estimates", _return_empty_response):
+    # Failure path: full node peer request fails (e.g. empty/invalid protocol response).
+    # PeerRequestException is raised in WalletNode.request_fee_estimates when call_api returns None.
+    with patch.object(
+        env.node,
+        "request_fee_estimates",
+        side_effect=PeerRequestException("Failed to get fee estimates from full node"),
+    ):
         with pytest.raises(ResponseFailureError, match="Failed to get fee estimates from full node"):
             await client.get_fee_estimate()
 
     # Failure path: per-estimate error from full node (e.g. insufficient data).
-    # Patched at the full node API boundary so the wallet-side protocol stack is fully exercised.
-    estimate_err_response = RespondFeeEstimates(
-        FeeEstimateGroup(
-            error=None,
-            estimates=[
-                FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))
-            ],
-        )
+    estimate_err = FeeEstimateGroup(
+        error=None,
+        estimates=[FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))],
     )
-    estimate_err_msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, estimate_err_response)
-
-    async def _return_estimate_error(self, request):  # type: ignore[no-untyped-def]
-        return estimate_err_msg
-
-    with patch.object(FullNodeSimulator, "request_fee_estimates", _return_estimate_error):
+    with patch.object(env.node, "request_fee_estimates", return_value=estimate_err):
         with pytest.raises(ResponseFailureError, match="not enough data"):
             await client.get_fee_estimate()
 
     # Failure path: group-level error from full node.
-    group_err_response = RespondFeeEstimates(FeeEstimateGroup(error="fee estimator unavailable", estimates=[]))
-    group_err_msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, group_err_response)
-
-    async def _return_group_error(self, request):  # type: ignore[no-untyped-def]
-        return group_err_msg
-
-    with patch.object(FullNodeSimulator, "request_fee_estimates", _return_group_error):
+    group_err = FeeEstimateGroup(error="fee estimator unavailable", estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=group_err):
         with pytest.raises(ResponseFailureError, match="fee estimator unavailable"):
             await client.get_fee_estimate()
 
     # Failure path: empty estimates list from full node.
-    empty_response = RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=[]))
-    empty_msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, empty_response)
-
-    async def _return_empty_estimates(self, request):  # type: ignore[no-untyped-def]
-        return empty_msg
-
-    with patch.object(FullNodeSimulator, "request_fee_estimates", _return_empty_estimates):
+    empty_estimates = FeeEstimateGroup(error=None, estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=empty_estimates):
         with pytest.raises(ResponseFailureError, match="No fee estimates returned from full node"):
             await client.get_fee_estimate()
 
