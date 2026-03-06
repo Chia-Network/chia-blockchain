@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 class CompressionReporter:
     record_property: Callable[[str, object], None]
 
-    def __call__(self, name: str, original: SupportsBytes, compressed: SupportsBytes) -> None:
+    def __call__(self, name: str, original: bytes | SupportsBytes, compressed: bytes | SupportsBytes) -> None:
         ratio = len(bytes(compressed)) / len(bytes(original))
         self.record_property("compression_ratio", ratio)
         log.warning(f"{name} compression ratio: {ratio}")
