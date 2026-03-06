@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
+from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -18,10 +19,17 @@ from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import ExtendDerivationIndex, PushTransactions
+from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
+    ExtendDerivationIndex,
+    GetWalletBalance,
+    PushTransactions,
+)
 from chia.wallet.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -258,6 +266,87 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
             ),
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_confirming_txs_not_ours_with_remote_interest_coin(wallet_environments: WalletTestFramework) -> None:
+    """When a REMOTE-only coin record receives a spent update,
+    the spent status must be persisted without relying on network calls that
+    could fail and roll back the DB transaction.
+
+    Two environments are required because the REMOTE interest-only code path
+    in ``_add_coin_states`` is only reachable when ``get_wallet_identifier_for_puzzle_hash``
+    returns ``None`` — i.e. the coin's puzzle hash doesn't belong to any wallet
+    in this WSM's puzzle store.  If we used a single environment, the standard
+    wallet would already claim the puzzle hash, ``wallet_identifier`` would be
+    non-None, and the local-record REMOTE fallback (+ subsequent spent short-circuit)
+    would never execute.
+
+    env_1 owns the coins and builds the transaction; env_2 only has REMOTE
+    interest in the removal coin, guaranteeing the REMOTE path is taken when the
+    spent update arrives.
+    """
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+
+    # env_1 builds but does NOT push the tx; env_2 will push it later.
+    async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        await env_1.xch_wallet.generate_signed_transaction(
+            [uint64(1)],
+            [await action_scope.get_puzzle_hash(env_1.wallet_state_manager)],
+            action_scope,
+        )
+
+    [tx] = action_scope.side_effects.transactions
+    [removed_coin] = tx.removals
+
+    # Register interest in the removal coin to force the REMOTE interest-only branch.
+    # Creating via RPC also covers the create_new_wallet endpoint for REMOTE_WALLET.
+    response = await env_2.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert response.type == WalletType.REMOTE.name
+    remote_wallet = env_2.wallet_state_manager.wallets[response.wallet_id]
+    assert isinstance(remote_wallet, RemoteWallet)
+    removed_coin_id = removed_coin.name()
+    await remote_wallet.register_remote_coins([removed_coin_id])
+
+    async def remote_record_spent_flag() -> int:
+        record = await env_2.wallet_state_manager.coin_store.get_coin_record(removed_coin_id)
+        if record is None:
+            return 0
+        return int(record.spent)
+
+    # The REMOTE interest record should exist and initially be unspent as coin is not yet spent.
+    await time_out_assert(20, remote_record_spent_flag, 0)
+
+    await env_2.rpc_client.push_transactions(
+        PushTransactions(
+            transactions=action_scope.side_effects.transactions,
+            sign=False,
+        ),
+        wallet_environments.tx_config,
+    )
+
+    async def pending_removal_count() -> int:
+        balance = (await env_2.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id=uint32(1)))).wallet_balance
+        return int(balance.pending_coin_removal_count)
+
+    await time_out_assert(20, pending_removal_count, 1)
+
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_2.node, timeout=20)
+
+    await time_out_assert(20, pending_removal_count, 0)
+    # Regression check: spent updates for existing REMOTE records must not be skipped.
+    await time_out_assert(20, remote_record_spent_flag, 1)
 
 
 @dataclass
