@@ -529,7 +529,9 @@ async def test_get_balance(
     # Generate some funds, get the balance and make sure it's as expected
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
-    generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
+    generated_funds = await full_node_api.farm_blocks_to_wallet(
+        5, wallet_node.wallet_state_manager.main_wallet, timeout=60
+    )
     expected_generated_balance = Balance(
         confirmed_wallet_balance=uint128(generated_funds),
         unconfirmed_wallet_balance=uint128(generated_funds),
