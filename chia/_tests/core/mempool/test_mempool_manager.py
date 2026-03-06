@@ -2210,6 +2210,7 @@ TEST_BLOCK_OVERHEAD = QUOTE_BYTES * TEST_COST_PER_BYTE + QUOTE_EXECUTION_COST
         (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST + TEST_BLOCK_OVERHEAD),
     ],
 )
+@pytest.mark.standard_block_tools
 async def test_fill_rate_block_validation(
     blockchain_constants: ConsensusConstants,
     max_block_clvm_cost: uint64,

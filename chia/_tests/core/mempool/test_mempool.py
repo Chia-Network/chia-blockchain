@@ -472,6 +472,7 @@ class TestMempoolManager:
             (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED),
         ],
     )
+    @pytest.mark.standard_block_tools
     async def test_ephemeral_timelock(
         self,
         one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
