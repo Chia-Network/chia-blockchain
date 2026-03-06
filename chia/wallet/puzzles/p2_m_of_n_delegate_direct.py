@@ -14,9 +14,9 @@ from chia.types.blockchain_format.program import Program
 MOD = Program.from_bytes(P2_M_OF_N_DELEGATE_DIRECT)
 
 
-def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:
+def puzzle_for_m_of_public_key_list(m: int, public_key_list: list[bytes]) -> Program:
     return MOD.curry(m, public_key_list)
 
 
-def solution_for_delegated_puzzle(m, selectors, puzzle, solution) -> Program:
+def solution_for_delegated_puzzle(m: int, selectors: list[int], puzzle: Program, solution: Program) -> Program:
     return Program.to([selectors, puzzle, solution])
