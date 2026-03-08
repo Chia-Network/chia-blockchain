@@ -32,7 +32,6 @@ chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
 chia.wallet.wallet_user_store
 chia._tests.clvm.test_chialisp_deserialization
-chia._tests.clvm.test_program
 chia._tests.clvm.test_puzzle_compression
 chia._tests.clvm.test_puzzles
 chia._tests.clvm.test_singletons
