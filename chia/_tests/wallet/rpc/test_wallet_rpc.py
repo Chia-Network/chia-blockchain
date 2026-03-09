@@ -541,7 +541,7 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
