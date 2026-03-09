@@ -510,6 +510,16 @@ async def test_request_fee_estimates(simulator_and_wallet: OldSimulatorsAndWalle
     assert estimates.estimates[0].error is None
     assert int(estimates.estimates[0].estimated_fee_rate.mojos_per_clvm_cost) >= 0
 
+    # test failure in wallet_node.py request_fee_estimates
+    async def request_fee_estimates(self: Self, request: wallet_protocol.RequestFeeEstimates) -> Message:
+        return Message(uint8(ProtocolMessageTypes.respond_fee_estimates.value), None, b"")
+
+    assert full_node_api.full_node._server is not None
+    fn_connection = full_node_api.full_node._server.get_connections()[0]
+    with patch_request_handler(api=fn_connection.api, handler=request_fee_estimates):
+        with pytest.raises(PeerRequestException, match="Failed to get fee estimates from full node"):
+            await wallet_node.request_fee_estimates(full_node_peer, time_targets)
+
 
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
