@@ -63,7 +63,10 @@ async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         async with MempoolManager.managed(
-            coin_store.get_coin_records, coin_store.get_unspent_lineage_info_for_puzzle_hash, test_constants
+            coin_store.get_coin_records,
+            coin_store.get_unspent_lineage_info_for_puzzle_hash,
+            test_constants,
+            validation_timeout=10,
         ) as mempool_manager:
             assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
             btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore

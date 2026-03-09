@@ -721,6 +721,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node_0)
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
