@@ -53,6 +53,7 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_creation import generator_root
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
@@ -1561,7 +1562,7 @@ async def test_unfinished_block_with_replaced_generator(
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            std_hash(bytes(replaced_generator)),
+            generator_root(bytes(replaced_generator), block.height, bt.constants),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
