@@ -26,6 +26,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
+from chia.consensus.block_creation import generator_root
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
@@ -45,7 +46,6 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.priority_mutex import PriorityMutex
 
@@ -722,9 +722,12 @@ class Blockchain:
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
+        height = uint32(prev_b.height + 1) if prev_b is not None else uint32(0)
+
         if block.transactions_info is not None:
             if block.transactions_generator is not None:
-                if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                expected = generator_root(bytes(block.transactions_generator), height, self.constants)
+                if expected != block.transactions_info.generator_root:
                     return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
             elif block.transactions_info.generator_root != bytes([0] * 32):
                 return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH

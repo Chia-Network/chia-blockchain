@@ -27,6 +27,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     is_canonical_serialization,
+    tree_hash,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -2582,6 +2583,67 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0])
+    async def test_generator_root_is_std_hash_pre_hf2(
+        self, empty_blockchain: Blockchain, bt: BlockTools
+    ) -> None:
+        """Pre-HF2 transaction blocks must use std_hash for generator_root."""
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(b, blocks[0])
+        await _validate_and_add_block(b, blocks[1])
+        block = blocks[1]
+        assert block.transactions_generator is not None
+        assert block.transactions_info is not None
+        assert block.transactions_info.generator_root == std_hash(bytes(block.transactions_generator))
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT]
+    )
+    async def test_generator_root_is_tree_hash_post_hf2(
+        self, empty_blockchain: Blockchain, bt: BlockTools
+    ) -> None:
+        """Post-HF2 transaction blocks must use tree_hash for generator_root."""
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(b, blocks[0])
+        await _validate_and_add_block(b, blocks[1])
+        block = blocks[1]
+        assert block.transactions_generator is not None
+        assert block.transactions_info is not None
+        assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT]
+    )
+    async def test_generator_root_std_hash_rejected_post_hf2(
+        self, empty_blockchain: Blockchain, bt: BlockTools
+    ) -> None:
+        """Post-HF2, a block whose generator_root is std_hash (old format) must be rejected."""
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(b, blocks[0])
+        block = blocks[1]
+        assert block.transactions_generator is not None
+        wrong_root = std_hash(bytes(block.transactions_generator))
+        block_2 = recursive_replace(block, "transactions_info.generator_root", wrong_root)
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        assert new_m is not None
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        await _validate_and_add_block(
+            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH, skip_prevalidation=True
+        )
 
     @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(
