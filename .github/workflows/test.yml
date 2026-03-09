@@ -305,6 +305,8 @@ jobs:
         if: always() && steps.alls-green.outputs.success == 'true' && github.event.repository.visibility == 'public'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          fail-on-error: false
 
       - name: Coverage report (chia/)
         if: always() && steps.alls-green.outputs.success == 'true'
