@@ -40,6 +40,7 @@ class ValueAndArgs:
     "paginate",
     [ValueAndArgs(None, []), ValueAndArgs(True, ["--paginate"]), ValueAndArgs(False, ["--no-paginate"])],
 )
+@pytest.mark.limit_consensus_modes(reason="tests CLI argument parsing, not consensus rules")
 def test_list_parsing(id: ValueAndArgs, show_unconfirmed: ValueAndArgs, paginate: ValueAndArgs) -> None:
     check_click_parsing(
         ListCMD(
@@ -291,6 +292,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     "largest_first",
     [ValueAndArgs(False, []), ValueAndArgs(True, ["--largest-first"])],
 )
+@pytest.mark.limit_consensus_modes(reason="tests CLI argument parsing, not consensus rules")
 def test_combine_parsing(
     id: ValueAndArgs,
     target_amount: ValueAndArgs,
@@ -333,6 +335,7 @@ def test_combine_parsing(
         ValueAndArgs(bytes32([0] * 32), ["--target-coin-id", bytes32([0] * 32).hex()]),
     ],
 )
+@pytest.mark.limit_consensus_modes(reason="tests CLI argument parsing, not consensus rules")
 def test_split_parsing(
     id: ValueAndArgs,
     number_of_coins: ValueAndArgs,
