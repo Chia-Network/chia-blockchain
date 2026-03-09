@@ -217,21 +217,22 @@ class Timelord:
         self._server = server
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        should_close = False
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.debug(f"New timelord connection from client: {client_ip}.")
             if client_ip not in self.ip_whitelist:
                 log.warning(f"Rejected VDF client from non-whitelisted IP: {client_ip}")
-                writer.close()
-                await writer.wait_closed()
-                return
-            if len(self.free_clients) >= self.max_free_clients:
+                should_close = True
+            elif len(self.free_clients) >= self.max_free_clients:
                 log.warning(f"Too many free VDF clients ({len(self.free_clients)}), rejecting {client_ip}")
-                writer.close()
-                await writer.wait_closed()
-                return
-            self.free_clients.append((client_ip, reader, writer))
-            log.debug(f"Added new VDF client {client_ip}.")
+                should_close = True
+            else:
+                self.free_clients.append((client_ip, reader, writer))
+                log.debug(f"Added new VDF client {client_ip}.")
+        if should_close:
+            writer.close()
+            await writer.wait_closed()
 
     async def _stop_chain(self, chain: Chain) -> None:
         try:
