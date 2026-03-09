@@ -9,6 +9,7 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -142,6 +143,7 @@ async def mint_cr_cat(
     ],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -701,6 +703,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     ],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -821,6 +824,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_cat_wallet_conversion(
     self_hostname: str,
