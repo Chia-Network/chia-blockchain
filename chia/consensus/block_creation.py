@@ -41,6 +41,13 @@ from chia.util.hash import std_hash
 log = logging.getLogger(__name__)
 
 
+def generator_root(program: bytes, height: int, constants: ConsensusConstants) -> bytes32:
+    """Return the generator_root hash for a block at the given height."""
+    if height >= constants.HARD_FORK2_HEIGHT:
+        return bytes32(tree_hash(program))
+    return std_hash(program)
+
+
 def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:
     removal_amount = 0
     addition_amount = 0
@@ -227,10 +234,7 @@ def create_foliage(
 
         generator_hash = bytes32.zeros
         if new_block_gen is not None:
-            if height >= constants.HARD_FORK2_HEIGHT:
-                generator_hash = bytes32(tree_hash(bytes(new_block_gen.program)))
-            else:
-                generator_hash = std_hash(new_block_gen.program)
+            generator_hash = generator_root(bytes(new_block_gen.program), height, constants)
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
