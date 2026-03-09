@@ -15,12 +15,12 @@ from chia_rs import (
     check_time_locks,
     compute_merkle_set_root,
     is_canonical_serialization,
-    tree_hash,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
+from chia.consensus.block_creation import generator_root
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -332,11 +332,8 @@ async def validate_block_body(
     # 7a. The generator root must be the hash of the serialized bytes of
     #     the generator for this block (or zeroes if no generator)
     if block.transactions_generator is not None:
-        if height >= constants.HARD_FORK2_HEIGHT:
-            expected_generator_hash = bytes32(tree_hash(bytes(block.transactions_generator)))
-        else:
-            expected_generator_hash = std_hash(bytes(block.transactions_generator))
-        if expected_generator_hash != block.transactions_info.generator_root:
+        if generator_root(bytes(block.transactions_generator), height, constants) != \
+                block.transactions_info.generator_root:
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
     elif block.transactions_info.generator_root != bytes([0] * 32):
         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
