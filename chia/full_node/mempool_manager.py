@@ -312,6 +312,7 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
+    validation_timeout: float
 
     def __init__(
         self,
@@ -319,6 +320,7 @@ class MempoolManager:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
         *,
+        validation_timeout: float,
         single_threaded: bool = False,
         max_tx_clvm_cost: uint64 | None = None,
     ):
@@ -350,6 +352,7 @@ class MempoolManager:
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
         self._worker_queue_size = 0
+        self.validation_timeout = validation_timeout
         if single_threaded:
             self.pool = InlineExecutor()
         else:
@@ -372,6 +375,8 @@ class MempoolManager:
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
+        *,
+        validation_timeout: float,
         single_threaded: bool = False,
         max_tx_clvm_cost: uint64 | None = None,
     ) -> AsyncIterator[Self]:
@@ -381,6 +386,7 @@ class MempoolManager:
             consensus_constants,
             single_threaded=single_threaded,
             max_tx_clvm_cost=max_tx_clvm_cost,
+            validation_timeout=validation_timeout,
         )
         try:
             yield self
@@ -504,10 +510,17 @@ class MempoolManager:
             self._worker_queue_size -= 1
 
         if sbc.num_atoms > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
-            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many atoms")
+            raise ValueError("too many atoms")
 
         if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
-            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many pairs")
+            raise ValueError("too many pairs")
+
+        if duration > self.validation_timeout:
+            raise ValueError(f"timeout {duration:0.4} s")
+
+        cost = sbc.execution_cost + sbc.condition_cost
+        if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
+            raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
@@ -516,8 +529,8 @@ class MempoolManager:
             spend_bundle_id = spend_bundle.name()
 
         log.log(
-            logging.DEBUG if duration < 2 else logging.WARNING,
-            f"pre_validate_spendbundle took {duration:0.4f} seconds "
+            logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
+            f"pre_validate_spendbundle took {duration:0.4f} seconds {duration * 1e9 / cost:0.4} ns/cost "
             f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
         return sbc
@@ -808,12 +821,12 @@ class MempoolManager:
         duration = time.monotonic() - start_time
 
         log.log(
-            logging.DEBUG if duration < 2 else logging.WARNING,
+            logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        if duration > 2:
+        if duration > self.validation_timeout:
             log.warning("validating spend took too long, rejecting")
             return Err.INVALID_SPEND_BUNDLE, None, []
 
