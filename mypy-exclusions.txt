@@ -43,7 +43,6 @@ chia._tests.core.full_node.test_node_load
 chia._tests.core.full_node.test_transactions
 chia._tests.core.ssl.test_ssl
 chia._tests.core.test_crawler_rpc
-chia._tests.core.test_db_conversion
 chia._tests.core.util.test_config
 chia._tests.core.util.test_file_keyring_synchronization
 chia._tests.core.util.test_files
