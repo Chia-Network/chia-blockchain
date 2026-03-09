@@ -2664,9 +2664,7 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0])
-    async def test_generator_root_is_std_hash_pre_hf2(
-        self, empty_blockchain: Blockchain, bt: BlockTools
-    ) -> None:
+    async def test_generator_root_is_std_hash_pre_hf2(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         """Pre-HF2 transaction blocks must use std_hash for generator_root."""
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
@@ -2681,9 +2679,7 @@ class TestBodyValidation:
     @pytest.mark.limit_consensus_modes(
         allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT]
     )
-    async def test_generator_root_is_tree_hash_post_hf2(
-        self, empty_blockchain: Blockchain, bt: BlockTools
-    ) -> None:
+    async def test_generator_root_is_tree_hash_post_hf2(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         """Post-HF2 transaction blocks must use tree_hash for generator_root."""
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
