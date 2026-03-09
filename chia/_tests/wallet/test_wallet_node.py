@@ -492,6 +492,7 @@ async def test_get_timestamp_for_height_from_peer(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests wallet puzzle hash subscription logic, not consensus rules")
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], _ = simulator_and_wallet
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
@@ -577,6 +578,7 @@ async def test_get_balance(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests error handling for connection failures, not consensus rules")
 async def test_add_states_from_peer_reorg_failure(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -595,6 +597,7 @@ async def test_add_states_from_peer_reorg_failure(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests shutdown handling during state processing, not consensus rules")
 async def test_add_states_from_peer_untrusted_shutdown(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:

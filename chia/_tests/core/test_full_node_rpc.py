@@ -702,6 +702,7 @@ async def test_get_blockchain_state(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests RPC error handling, not consensus rules")
 async def test_coin_name_not_in_request(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, _ = one_node
     assert full_node_service.rpc_server is not None
@@ -716,6 +717,7 @@ async def test_coin_name_not_in_request(one_node: SimulatorsAndWalletsServices, 
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests RPC mempool query, not consensus rules")
 async def test_coin_name_not_found_in_mempool(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, _ = one_node
     assert full_node_service.rpc_server is not None
@@ -733,6 +735,7 @@ async def test_coin_name_not_found_in_mempool(one_node: SimulatorsAndWalletsServ
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="tests RPC mempool query, not consensus rules")
 async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api
