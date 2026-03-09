@@ -15,6 +15,7 @@ from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
@@ -4303,6 +4304,7 @@ def test_send_transaction_multi_post_init() -> None:
     [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     wallet_environments: WalletTestFramework,
@@ -4334,6 +4336,7 @@ async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_register_remote_coins_validates_wallet_id(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]

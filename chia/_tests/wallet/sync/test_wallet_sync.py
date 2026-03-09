@@ -213,6 +213,7 @@ async def test_request_block_headers_transactions_filter(
 #     [(80, 99, False, ProtocolMessageTypes.respond_block_headers)],
 #     [(10, 8, False, None)],
 # )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_block_headers_rejected(
     simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: list[FullBlock]
@@ -357,6 +358,7 @@ async def test_almost_recent(
         await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_backtrack_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -387,6 +389,7 @@ async def test_backtrack_sync_wallet(
 
 
 # Tests a reorg with the wallet
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -619,6 +622,7 @@ async def test_wallet_reorg_get_coinbase(
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
@@ -703,6 +707,7 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert response.proofs[0][2] is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
@@ -794,6 +799,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     assert len(response.coins) == 0
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_removals_too_many_coin_names(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
@@ -823,6 +829,7 @@ async def test_request_removals_too_many_coin_names(
     assert reject.header_hash == last_block.header_hash
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_get_wp_fork_point(
     default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
@@ -904,6 +911,7 @@ It runs in seven phases:
 """
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "spam_filter_after_n_txs, xch_spam_amount, dust_value",
@@ -1474,6 +1482,7 @@ async def test_dusted_wallet(
     await time_out_assert(15, get_nft_count, 1, dust_nft_wallet)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_retry_store(
     two_wallet_nodes: OldSimulatorsAndWallets, self_hostname: str, monkeypatch: pytest.MonkeyPatch
