@@ -21,7 +21,6 @@ chia.wallet.puzzles.load_clvm
 chia.wallet.puzzles.p2_conditions
 chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
-chia.wallet.puzzles.tails
 chia.wallet.trading.trade_store
 chia.wallet.transaction_record
 chia.wallet.util.debug_spend_bundle
@@ -32,15 +31,12 @@ chia.wallet.wallet_node_api
 chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
 chia.wallet.wallet_user_store
-chia._tests.clvm.coin_store
 chia._tests.clvm.test_chialisp_deserialization
-chia._tests.clvm.test_program
 chia._tests.clvm.test_puzzles
 chia._tests.clvm.test_singletons
 chia._tests.clvm.test_spend_sim
 chia._tests.conftest
 chia._tests.core.cmds.test_keys
-chia._tests.core.consensus.test_pot_iterations
 chia._tests.core.daemon.test_daemon
 chia._tests.core.full_node.test_address_manager
 chia._tests.core.full_node.test_node_load
