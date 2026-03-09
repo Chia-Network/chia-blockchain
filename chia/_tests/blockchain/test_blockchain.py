@@ -375,6 +375,83 @@ class TestBlockHeaderValidation:
         assert validate_res.error is None
 
     @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT]
+    )
+    async def test_unfinished_block_generator_root_tree_hash_post_hf2(
+        self, empty_blockchain: Blockchain, bt: BlockTools
+    ) -> None:
+        """Post-HF2 unfinished transaction blocks with tree_hash generator_root must be accepted."""
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(blockchain, blocks[0])
+        block = blocks[1]
+        assert block.transactions_generator is not None
+        assert block.transactions_info is not None
+        assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
+        unf = UnfinishedBlock(
+            block.finished_sub_slots,
+            block.reward_chain_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage,
+            block.foliage_transaction_block,
+            block.transactions_info,
+            block.transactions_generator,
+            [],
+        )
+        block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
+        assert block_generator is not None
+        npc_result = get_name_puzzle_conditions(
+            block_generator,
+            block.transactions_info.cost,
+            mempool_mode=False,
+            height=block.height,
+            constants=bt.constants,
+        )
+        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        assert validate_res.error is None
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT]
+    )
+    async def test_unfinished_block_std_hash_root_rejected_post_hf2(
+        self, empty_blockchain: Blockchain, bt: BlockTools
+    ) -> None:
+        """Post-HF2 unfinished blocks with std_hash (old) generator_root must be rejected."""
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(blockchain, blocks[0])
+        block = blocks[1]
+        assert block.transactions_generator is not None
+        wrong_root = std_hash(bytes(block.transactions_generator))
+        block_2 = recursive_replace(block, "transactions_info.generator_root", wrong_root)
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        assert new_m is not None
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        unf = UnfinishedBlock(
+            block_2.finished_sub_slots,
+            block_2.reward_chain_block.get_unfinished(),
+            block_2.challenge_chain_sp_proof,
+            block_2.reward_chain_sp_proof,
+            block_2.foliage,
+            block_2.foliage_transaction_block,
+            block_2.transactions_info,
+            block_2.transactions_generator,
+            [],
+        )
+        validate_res = await blockchain.validate_unfinished_block(unf, None, False)
+        assert validate_res.error == Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value
+
+    @pytest.mark.anyio
     async def test_empty_genesis(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         for block in bt.get_consecutive_blocks(2, skip_slots=3):
             await _validate_and_add_block(empty_blockchain, block)
