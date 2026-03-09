@@ -40,7 +40,6 @@ chia._tests.core.cmds.test_keys
 chia._tests.core.daemon.test_daemon
 chia._tests.core.full_node.test_address_manager
 chia._tests.core.full_node.test_node_load
-chia._tests.core.full_node.test_performance
 chia._tests.core.full_node.test_transactions
 chia._tests.core.ssl.test_ssl
 chia._tests.core.test_crawler_rpc
