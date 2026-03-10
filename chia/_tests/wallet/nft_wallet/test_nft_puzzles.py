@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from chia_rs.sized_bytes import bytes32
+from clvm.SExp import CastableType
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
@@ -111,8 +112,11 @@ def make_a_new_solution() -> tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list = [[200, OFFER_MOD_HASH]]
-    condition_list: list[Any] = [[51, puzhash, 1, [puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
+    trade_prices_list: list[list[CastableType]] = [[200, OFFER_MOD_HASH]]
+    condition_list: list[list[CastableType]] = [
+        [51, puzhash, 1, [puzhash]],
+        [-10, new_did, trade_prices_list, new_did_inner_hash],
+    ]
     solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 
