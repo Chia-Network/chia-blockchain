@@ -8,6 +8,7 @@ it includes N public keys, any M of which needs to sign the delegated puzzle.
 from __future__ import annotations
 
 from chia_puzzles_py.programs import P2_M_OF_N_DELEGATE_DIRECT
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 
@@ -18,5 +19,5 @@ def puzzle_for_m_of_public_key_list(m: int, public_key_list: list[bytes]) -> Pro
     return MOD.curry(m, public_key_list)
 
 
-def solution_for_delegated_puzzle(m: int, selectors: list[int], puzzle: Program, solution: Program) -> Program:
+def solution_for_delegated_puzzle(m: int, selectors: CastableType, puzzle: Program, solution: CastableType) -> Program:
     return Program.to([selectors, puzzle, solution])
