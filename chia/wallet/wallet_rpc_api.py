@@ -1035,9 +1035,8 @@ class WalletRpcApi:
             raise ValueError(estimate.error)
 
         # Fee rates are in mojos per 1 clvm_cost.
-        fee_per_cost: int = int(estimate.estimated_fee_rate.mojos_per_clvm_cost)
-
-        return GetFeeEstimateResponse(fee_per_cost=uint64(fee_per_cost))
+        fee_per_cost = estimate.estimated_fee_rate.mojos_per_clvm_cost
+        return GetFeeEstimateResponse(fee_per_cost=fee_per_cost)
 
     @marshal
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
