@@ -302,9 +302,11 @@ jobs:
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - uses: coverallsapp/github-action@v2
-        if: always() && steps.alls-green.outputs.success == 'true'
+        if: always() && steps.alls-green.outputs.success == 'true' && github.event.repository.visibility == 'public'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          fail-on-error: false
 
       - name: Coverage report (chia/)
         if: always() && steps.alls-green.outputs.success == 'true'
