@@ -7,6 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from colorlog import getLogger
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -39,6 +40,7 @@ async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> list[Messa
     return all_messages
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 4
@@ -215,6 +217,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     assert notified_state.spent_height is not None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 4
@@ -316,6 +319,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     assert notified_state.spent_height is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
@@ -393,6 +397,7 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
     assert second_state_coin_2.created_height is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 4
@@ -461,6 +466,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
     assert second_coin.created_height is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 4
@@ -526,6 +532,7 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
     assert response.coin_states == []
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
@@ -561,6 +568,7 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
     assert len(set(response.coin_states)) == len(response.coin_states)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_subscribe_for_hint_long_sync(
@@ -642,6 +650,7 @@ async def test_subscribe_for_hint_long_sync(
     check_messages_for_hint(all_messages_1)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
@@ -683,6 +692,7 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     assert not s.has_puzzle_subscription(phs[5])
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet

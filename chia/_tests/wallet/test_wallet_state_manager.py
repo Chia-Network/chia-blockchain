@@ -9,6 +9,7 @@ from chia_rs import CoinState, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -53,6 +54,7 @@ async def assert_sync_mode(wallet_state_manager: WalletStateManager, target_heig
     assert wallet_state_manager.sync_target is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_set_sync_mode(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
@@ -64,6 +66,7 @@ async def test_set_sync_mode(simulator_and_wallet: OldSimulatorsAndWallets) -> N
         pass
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_set_sync_mode_exception(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
@@ -72,6 +75,7 @@ async def test_set_sync_mode_exception(simulator_and_wallet: OldSimulatorsAndWal
 
 
 @pytest.mark.parametrize("hardened", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_get_private_key(simulator_and_wallet: OldSimulatorsAndWallets, hardened: bool) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
@@ -91,6 +95,7 @@ async def test_get_private_key(simulator_and_wallet: OldSimulatorsAndWallets, ha
     assert await wallet_state_manager.get_private_key(record.puzzle_hash) == expected_private_key
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_get_private_key_failure(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(wallet_node, _)], _ = simulator_and_wallet
@@ -100,6 +105,7 @@ async def test_get_private_key_failure(simulator_and_wallet: OldSimulatorsAndWal
         await wallet_state_manager.get_private_key(bytes32(b"1" * 32))
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
