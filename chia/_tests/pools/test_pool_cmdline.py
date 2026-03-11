@@ -76,11 +76,13 @@ class StateUrlCase:
 )
 @boolean_datacases(name="self_pool", true="local", false="pool")
 @boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
+@pytest.mark.parametrize("version", [1, 2])
 @pytest.mark.anyio
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
     self_pool: bool,
     prompt: bool,
+    version: int,
     mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -104,6 +106,7 @@ async def test_plotnft_cli_create(
             "description": "Pool Description",
             "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
             "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+            "pool_memoization": "8568656c6c6f",
             "fee": "0.01",
             "protocol_version": 1,
             "relative_lock_height": 5,
@@ -124,6 +127,7 @@ async def test_plotnft_cli_create(
         state=state,
         dont_prompt=not prompt,
         pool_url=pool_url,
+        version=str(version),
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -154,7 +158,9 @@ async def test_plotnft_cli_create(
         ]
     )
 
-    summaries_response = await wallet_rpc.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))
+    summaries_response = await wallet_rpc.get_wallets(
+        GetWallets(type=uint16(WalletType.POOLING_WALLET) if version == 1 else uint16(WalletType.PLOTNFT_2))
+    )
     assert len(summaries_response.wallets) == 1
     wallet_id: int = summaries_response.wallets[0].id
 
@@ -176,9 +182,11 @@ async def test_plotnft_cli_create(
     ),
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_create_errors(
     case: StateUrlCase,
     consensus_mode: ConsensusMode,
+    version: int,
 ) -> None:
     with pytest.raises(CliRpcConnectionError, match=case.expected_error):
         await CreatePlotNFTCMD(
@@ -190,6 +198,7 @@ async def test_plotnft_cli_create_errors(
             state=case.state,
             dont_prompt=True,
             pool_url=case.pool_url,
+            version=str(version),
         ).run()
 
 
@@ -204,9 +213,11 @@ async def test_plotnft_cli_create_errors(
     indirect=True,
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_show(
     wallet_environments: WalletTestFramework,
     capsys: pytest.CaptureFixture[str],
+    version: int,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -240,7 +251,7 @@ async def test_plotnft_cli_show(
             id=15,
         ).run()
 
-    wallet_id = await create_new_plotnft(wallet_environments)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version)
 
     # need to capture the output and verify
     await ShowPlotNFTCMD(
@@ -254,7 +265,7 @@ async def test_plotnft_cli_show(
     assert "Current state: FARMING_TO_POOL" in out
     assert f"Wallet ID: {wallet_id}" in out
 
-    wallet_id_2 = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
+    wallet_id_2 = await create_new_plotnft(wallet_environments, version=version, self_pool=False, second_nft=True)
 
     # Passing in None when there are multiple pool wallets
     # Should show the state of all pool wallets
@@ -282,10 +293,12 @@ async def test_plotnft_cli_show(
     indirect=True,
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_show_with_farmer(
     wallet_environments: WalletTestFramework,
     capsys: pytest.CaptureFixture[str],
     self_hostname: str,
+    version: int,
     # with_wallet_id: bool,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -325,7 +338,7 @@ async def test_plotnft_cli_show_with_farmer(
         assert "Sync status: Synced" in out
         assert "Current state" not in out
 
-        wallet_id = await create_new_plotnft(wallet_environments)
+        wallet_id = await create_new_plotnft(wallet_environments, version=version)
         pw_info = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
 
         await ShowPlotNFTCMD(
@@ -353,10 +366,12 @@ async def test_plotnft_cli_show_with_farmer(
 )
 @boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_leave(
     wallet_environments: WalletTestFramework,
     prompt: bool,
     mocker: MockerFixture,
+    version: int,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -390,7 +405,7 @@ async def test_plotnft_cli_leave(
             dont_prompt=not prompt,
         ).run()
 
-    wallet_id = await create_new_plotnft(wallet_environments)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version)
 
     await LeavePlotNFTCMD(
         rpc_info=NeedsWalletRPC(
@@ -442,10 +457,12 @@ async def test_plotnft_cli_leave(
 )
 @boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_join(
     wallet_environments: WalletTestFramework,
     prompt: bool,
     mocker: MockerFixture,
+    version: int,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -482,7 +499,7 @@ async def test_plotnft_cli_join(
         ).run()
 
     # Create a farming plotnft to url http://pool.example.com
-    wallet_id = await create_new_plotnft(wallet_environments)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version)
 
     # Test joining the same pool again
     with pytest.raises(click.ClickException, match=re.escape("already farming to pool http://pool.example.com")):
@@ -540,6 +557,7 @@ async def test_plotnft_cli_join(
         "relative_lock_height": 50000,
         "minimum_difficulty": 1,
         "authentication_token_timeout": 5,
+        "pool_memoization": "8568656c6c6f",
     }
 
     mock_get = mocker.patch("aiohttp.ClientSession.get")
@@ -587,18 +605,44 @@ async def test_plotnft_cli_join(
         dont_prompt=not prompt,
     ).run()
 
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": -1}},
+            )
+        ]
+    )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
         count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
     )
-    await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
     await wallet_environments.full_node.wait_for_wallet_synced(
         wallet_node=wallet_environments.environments[0].node, timeout=20
     )
+    if version == 1:  # these behave slightly differently
+        await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": 1}},
+                    post_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": -1}},
+                )
+            ]
+        )
+    elif version == 2:
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": 2}},
+                    post_block_balance_updates={1: {}, 2: {"pending_coin_removal_count": -2}},
+                )
+            ]
+        )
+    await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
 
     # Create a second farming plotnft to url http://pool.example.com
-    wallet_id = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version, self_pool=False, second_nft=True)
 
     # Join the new pool - this will leave the prior pool and join the new one
     # Will fail because we don't specify a wallet ID and there are multiple pool wallets
@@ -644,9 +688,8 @@ async def test_plotnft_cli_join(
     indirect=True,
 )
 @pytest.mark.anyio
-async def test_plotnft_cli_claim(
-    wallet_environments: WalletTestFramework,
-) -> None:
+@pytest.mark.parametrize("version", [1, 2])
+async def test_plotnft_cli_claim(wallet_environments: WalletTestFramework, version: int) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
     client_info: WalletClientInfo = WalletClientInfo(
@@ -678,7 +721,7 @@ async def test_plotnft_cli_claim(
         ).run()
 
     # Create a self-pooling plotnft
-    wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
+    wallet_id = await create_new_plotnft(wallet_environments, self_pool=True, version=version)
 
     status = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
     async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -723,8 +766,9 @@ async def test_plotnft_cli_claim(
                     },
                     2: {
                         "confirmed_wallet_balance": 2 * 1_750_000_000_000,
-                        "unconfirmed_wallet_balance": 2 * 1_750_000_000_000,
-                        "spendable_balance": 2 * 1_750_000_000_000,
+                        # v2 tx will decrease unconfirmed balance
+                        "unconfirmed_wallet_balance": 2 * 1_750_000_000_000 if version == 1 else 0,
+                        "spendable_balance": 2 * 1_750_000_000_000 if version == 1 else 0,
                         "max_send_amount": 0,
                         "pending_change": 0,
                         "unspent_coin_count": 2,
@@ -738,14 +782,15 @@ async def test_plotnft_cli_claim(
                         "spendable_balance": +3_750_000_000_000,
                         "max_send_amount": +3_750_000_000_000,
                         "pending_change": 0,
-                        "unspent_coin_count": +3,
+                        # v2 combines rewards when they are claimed
+                        "unspent_coin_count": +3 if version == 1 else +2,
                         "pending_coin_removal_count": 0,
                     },
                     2: {
                         "confirmed_wallet_balance": -1_750_000_000_000,
-                        "unconfirmed_wallet_balance": -1_750_000_000_000,
-                        "spendable_balance": -1_750_000_000_000,
-                        "max_send_amount": 0,
+                        "unconfirmed_wallet_balance": -1_750_000_000_000 if version == 1 else 1_750_000_000_000,
+                        "spendable_balance": -1_750_000_000_000 if version == 1 else 1_750_000_000_000,
+                        "max_send_amount": 0 if version == 1 else 1_750_000_000_000,
                         "pending_change": 0,
                         "unspent_coin_count": -1,
                         "pending_coin_removal_count": -3,
@@ -762,14 +807,15 @@ async def test_plotnft_cli_claim(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reuse_puzhash": False,
         }
     ],
     indirect=True,
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_inspect(
-    wallet_environments: WalletTestFramework,
-    capsys: pytest.CaptureFixture[str],
+    wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str], version: int
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -798,7 +844,7 @@ async def test_plotnft_cli_inspect(
             id=15,
         ).run()
 
-    wallet_id = await create_new_plotnft(wallet_environments)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version)
 
     # need to capture the output and verify
     await InspectPlotNFTCMD(
@@ -810,13 +856,14 @@ async def test_plotnft_cli_inspect(
     out, _err = capsys.readouterr()
     json_output = json.loads(out)
 
-    assert (
-        json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+    assert json_output["pool_wallet_info"]["current"]["owner_pubkey"] == (
+        "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+        if version == 1
+        else "0x80399dec21ec7ab66ed0b43811652c2c27c16e2f304b8e2900d7f510448675ef9d8be70ba19e6b6675c4d9bb5f75ced4"
     )
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.FARMING_TO_POOL.value
 
-    wallet_id = await create_new_plotnft(wallet_environments, self_pool=True, second_nft=True)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version, self_pool=True, second_nft=True)
 
     with pytest.raises(CliRpcConnectionError, match="More than one pool wallet"):
         await InspectPlotNFTCMD(
@@ -835,9 +882,10 @@ async def test_plotnft_cli_inspect(
     out, _err = capsys.readouterr()
     json_output = json.loads(out)
 
-    assert (
-        json_output["pool_wallet_info"]["current"]["owner_pubkey"]
-        == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+    assert json_output["pool_wallet_info"]["current"]["owner_pubkey"] == (
+        "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        if version == 1
+        else "0xa2f05885f8b91c6efdc78a17a9271bc88e2e26eded036b43f07656c6618c67501db0f2b1067d8d527e64d465d4275a83"
     )
 
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value
@@ -854,10 +902,12 @@ async def test_plotnft_cli_inspect(
     indirect=True,
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize("version", [1, 2])
 async def test_plotnft_cli_change_payout(
     wallet_environments: WalletTestFramework,
     mocker: MockerFixture,
     capsys: pytest.CaptureFixture[str],
+    version: int,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -877,7 +927,7 @@ async def test_plotnft_cli_change_payout(
     burn_address = encode_puzzle_hash(burn_ph, "xch")
     root_path = wallet_environments.environments[0].node.root_path
 
-    wallet_id = await create_new_plotnft(wallet_environments)
+    wallet_id = await create_new_plotnft(wallet_environments, version=version)
     pw_info = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
 
     # This tests what happens when using None for root_path
@@ -964,7 +1014,8 @@ async def test_plotnft_cli_get_login_link(
 
 
 @pytest.mark.anyio
-async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
+@pytest.mark.parametrize("version", [1, 2])
+async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode, version: int) -> None:
     from chia.cmds.plotnft_funcs import create
 
     test_rpc_client = TestWalletRpcClient()
@@ -980,6 +1031,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="FARMING_TO_POOL",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
     with pytest.raises(ValueError, match="Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state"):
@@ -989,6 +1041,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="Invalid State",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
     # Test fall-through raise in create
@@ -1000,6 +1053,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="SELF_POOLING",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
 
@@ -1023,5 +1077,5 @@ async def test_plotnft_unsynced_joining(mocker: MockerFixture, consensus_mode: C
             pool_url="http://pool.example.com",
             fee=uint64(0),
             prompt=False,
-            wallet_id=None,
+            wallet_id=1,
         )
