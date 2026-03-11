@@ -31,6 +31,7 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_offset,
+    calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
@@ -113,6 +114,9 @@ class Wallet:
 
     def convert_secret_key_to_synthetic(self, secret_key: PrivateKey) -> PrivateKey:
         return calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+
+    def convert_public_key_to_synthetic(self, public_key: G1Element) -> G1Element:
+        return calculate_synthetic_public_key(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
