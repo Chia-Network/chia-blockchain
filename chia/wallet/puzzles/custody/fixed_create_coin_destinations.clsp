@@ -1,3 +1,6 @@
+; A puzzle that enforces that all create coins have a specific curried in puzzle hash
+;
+; Intended for use in validating the output of a delegated puzzle
 (mod
   (
     ALLOWED_PH

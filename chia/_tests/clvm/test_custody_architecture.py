@@ -18,15 +18,15 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
+    MemberHint,
     MemberOrDPuz,
+    MIPSComponent,
     MofN,
     ProvenSpend,
-    Puzzle,
-    PuzzleHint,
     PuzzleWithRestrictions,
     Restriction,
     RestrictionHint,
-    UnknownPuzzle,
+    UnknownMember,
     UnknownRestriction,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -58,13 +58,13 @@ ANY_PROGRAM = Program.to(None)
     "puzzle",
     [
         # Custody puzzle
-        UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+        UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
         # 1 of 2 (w/ & w/o restrictions)
         MofN(
             m=1,
             members=[
                 PuzzleWithRestrictions(
-                    nonce=1, restrictions=[], puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+                    nonce=1, restrictions=[], puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
                 ),
                 PuzzleWithRestrictions(
                     nonce=2,
@@ -76,7 +76,7 @@ ANY_PROGRAM = Program.to(None)
                             RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
                         ),
                     ],
-                    puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                    puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
                 ),
             ],
         ),
@@ -93,7 +93,7 @@ ANY_PROGRAM = Program.to(None)
                             PuzzleWithRestrictions(
                                 nonce=3,
                                 restrictions=[],
-                                puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+                                puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
                             )
                         ],
                     ),
@@ -107,7 +107,7 @@ ANY_PROGRAM = Program.to(None)
                             PuzzleWithRestrictions(
                                 nonce=5,
                                 restrictions=[],
-                                puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                                puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
                             )
                         ],
                     ),
@@ -116,7 +116,7 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: list[Restriction[MemberOrDPuz]], puzzle: Puzzle) -> None:
+def test_back_and_forth_hint_parsing(restrictions: list[Restriction[MemberOrDPuz]], puzzle: MIPSComponent) -> None:
     """
     This tests that a PuzzleWithRestrictions can be exported to a clvm program to be reimported from.
 
@@ -155,7 +155,7 @@ def test_unknown_puzzle_behavior() -> None:
             return bytes32([nonce] * 32)
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
-    unknown_puzzle_0 = UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+    unknown_puzzle_0 = UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
     pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=unknown_puzzle_0)
     assert pwr.unknown_puzzles == {BUNCH_OF_ZEROS: unknown_puzzle_0}
     known_puzzles = {BUNCH_OF_ZEROS: PlaceholderPuzzle()}
@@ -186,7 +186,7 @@ def test_unknown_puzzle_behavior() -> None:
     )
 
     # Now we do test an MofN recursion
-    unknown_puzzle_3 = UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_THREES, memo=ANY_PROGRAM))
+    unknown_puzzle_3 = UnknownMember(MemberHint(puzhash=BUNCH_OF_THREES, memo=ANY_PROGRAM))
     pwr = replace(
         pwr,
         puzzle=MofN(

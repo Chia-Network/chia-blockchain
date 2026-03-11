@@ -70,6 +70,7 @@ async def make_did_wallet(
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -373,7 +374,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     await env_0.rpc_client.find_lost_did(DIDFindLostDID(coin_id=did_wallet_0.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -546,7 +547,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework):
     # Get the new DID wallet
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -565,6 +566,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework):
     )
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -634,7 +636,7 @@ async def test_did_auto_transfer_limit(
     # Get the new DID wallets
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -673,7 +675,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -683,7 +685,7 @@ async def test_did_auto_transfer_limit(
     await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -707,7 +709,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -1161,6 +1163,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -1248,6 +1251,7 @@ async def test_did_resync(
     assert did_info == did_wallet_2.did_info
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "wallet_environments",
     [

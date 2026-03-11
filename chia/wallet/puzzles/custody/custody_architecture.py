@@ -25,7 +25,7 @@ INDEX_WRAPPER_HASH = INDEX_WRAPPER.get_tree_hash()
 
 
 # General (inner) puzzle driver spec
-class Puzzle(Protocol):
+class MIPSComponent(Protocol):
     def memo(self, nonce: int) -> Program: ...
 
     def puzzle(self, nonce: int) -> Program: ...
@@ -34,7 +34,7 @@ class Puzzle(Protocol):
 
 
 @dataclass(kw_only=True, frozen=True)
-class PuzzleHint:
+class MemberHint:
     puzhash: bytes32
     memo: Program
 
@@ -42,17 +42,17 @@ class PuzzleHint:
         return Program.to([self.puzhash, self.memo])
 
     @classmethod
-    def from_program(cls, prog: Program) -> PuzzleHint:
+    def from_program(cls, prog: Program) -> MemberHint:
         puzhash, memo = prog.as_iter()
-        return PuzzleHint(
+        return MemberHint(
             puzhash=bytes32(puzhash.as_atom()),
             memo=memo,
         )
 
 
 @dataclass(frozen=True)
-class UnknownPuzzle:
-    puzzle_hint: PuzzleHint
+class UnknownMember:
+    puzzle_hint: MemberHint
 
     def memo(self, nonce: int) -> Program:
         return self.puzzle_hint.memo
@@ -71,7 +71,7 @@ _T_MemberNotDPuz_co = TypeVar("_T_MemberNotDPuz_co", bound=MemberOrDPuz, covaria
 
 
 @runtime_checkable
-class Restriction(Puzzle, Protocol[_T_MemberNotDPuz_co]):
+class Restriction(MIPSComponent, Protocol[_T_MemberNotDPuz_co]):
     @property
     def member_not_dpuz(self) -> _T_MemberNotDPuz_co: ...
 
@@ -196,7 +196,13 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             only_key = next(iter(spends_to_prove.keys()))
             proven_spend = spends_to_prove[only_key]
             proof = self._merkle_tree.generate_proof(only_key)
-            return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution])
+            return Program.to(
+                [
+                    (proof[0], proof[1][0]),
+                    proven_spend.puzzle_reveal,
+                    proven_spend.solution,
+                ]
+            )
 
     def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
@@ -229,7 +235,7 @@ class DelegatedPuzzleAndSolution:
 class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
     restrictions: list[Restriction[MemberOrDPuz]]
-    puzzle: Puzzle
+    puzzle: MIPSComponent
     additional_memos: Program | None = None
     spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
 
@@ -243,14 +249,14 @@ class PuzzleWithRestrictions:
             for restriction in self.restrictions
         ]
 
-        puzzle_hint: MofNHint | PuzzleHint
+        puzzle_hint: MofNHint | MemberHint
         if isinstance(self.puzzle, MofN):
             puzzle_hint = MofNHint(
                 m=self.puzzle.m,
                 member_memos=[member.memo() for member in self.puzzle.members],
             )
         else:
-            puzzle_hint = PuzzleHint(
+            puzzle_hint = MemberHint(
                 puzhash=self.puzzle.puzzle_hash(self.nonce),
                 memo=self.puzzle.memo(self.nonce),
             )
@@ -262,7 +268,10 @@ class PuzzleWithRestrictions:
                     self.nonce,
                     (
                         [hint.to_program() for hint in restriction_hints],
-                        (1 if isinstance(self.puzzle, MofN) else 0, (puzzle_hint.to_program(), self.additional_memos)),
+                        (
+                            1 if isinstance(self.puzzle, MofN) else 0,
+                            (puzzle_hint.to_program(), self.additional_memos),
+                        ),
                     ),
                 ),
             )
@@ -281,12 +290,13 @@ class PuzzleWithRestrictions:
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
-            puzzle: Puzzle = MofN(
-                m=m_of_n_hint.m, members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
+            puzzle: MIPSComponent = MofN(
+                m=m_of_n_hint.m,
+                members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos],
             )
         else:
-            puzzle_hint = PuzzleHint.from_program(puzzle_hint_prog)
-            puzzle = UnknownPuzzle(puzzle_hint)
+            puzzle_hint = MemberHint.from_program(puzzle_hint_prog)
+            puzzle = UnknownMember(puzzle_hint)
 
         return PuzzleWithRestrictions(
             nonce=nonce.as_int(),
@@ -296,13 +306,13 @@ class PuzzleWithRestrictions:
         )
 
     @property
-    def unknown_puzzles(self) -> Mapping[bytes32, UnknownPuzzle | UnknownRestriction]:
+    def unknown_puzzles(self) -> Mapping[bytes32, UnknownMember | UnknownRestriction]:
         unknown_restrictions = {
             ur.restriction_hint.puzhash: ur for ur in self.restrictions if isinstance(ur, UnknownRestriction)
         }
 
-        unknown_puzzles: Mapping[bytes32, UnknownPuzzle | UnknownRestriction]
-        if isinstance(self.puzzle, UnknownPuzzle):
+        unknown_puzzles: Mapping[bytes32, UnknownMember | UnknownRestriction]
+        if isinstance(self.puzzle, UnknownMember):
             unknown_puzzles = {self.puzzle.puzzle_hint.puzhash: self.puzzle}
         elif isinstance(self.puzzle, MofN):
             unknown_puzzles = {
@@ -317,7 +327,7 @@ class PuzzleWithRestrictions:
             **unknown_restrictions,
         }
 
-    def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, Puzzle]) -> PuzzleWithRestrictions:
+    def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, MIPSComponent]) -> PuzzleWithRestrictions:
         new_restrictions: list[Restriction[MemberOrDPuz]] = []
         for restriction in self.restrictions:
             if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
@@ -328,9 +338,9 @@ class PuzzleWithRestrictions:
             else:
                 new_restrictions.append(restriction)
 
-        new_puzzle: Puzzle
+        new_puzzle: MIPSComponent
         if (
-            isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict  # pylint: disable=no-member
+            isinstance(self.puzzle, UnknownMember) and self.puzzle.puzzle_hint.puzhash in puzzle_dict  # pylint: disable=no-member
         ):
             new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]  # pylint: disable=no-member
         elif isinstance(self.puzzle, MofN):
@@ -394,7 +404,10 @@ class PuzzleWithRestrictions:
                     inner_puzzle_hash,
                 )
                 .get_tree_hash_precalc(
-                    *member_validator_hashes, *dpuz_validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash
+                    *member_validator_hashes,
+                    *dpuz_validator_hashes,
+                    RESTRICTION_MOD_HASH,
+                    inner_puzzle_hash,
                 )
             )
         else:
@@ -425,7 +438,11 @@ class PuzzleWithRestrictions:
 
         if delegated_puzzle_and_solution is not None:
             solution = Program.to(
-                [delegated_puzzle_and_solution.puzzle, delegated_puzzle_and_solution.solution, *solution.as_iter()]
+                [
+                    delegated_puzzle_and_solution.puzzle,
+                    delegated_puzzle_and_solution.solution,
+                    *solution.as_iter(),
+                ]
             )
 
         return solution

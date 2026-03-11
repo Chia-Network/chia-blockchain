@@ -30,6 +30,7 @@ class WalletType(IntEnum):
     CRCAT = 57
     RCAT = 132
     PLOTNFT_2 = 209
+    REMOTE = 205
 
     def to_json_dict(self) -> str:
         # yes, this isn't a `dict`, but it is json and

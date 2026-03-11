@@ -262,7 +262,12 @@ async def generate_plots(config: dict[str, Any], root_path: Path, fingerprint: i
     ) as bt:
         await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
         existing_plots = await bt.setup_plots(
-            num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, bitfield=bitfield
+            num_og_plots=PLOTS,
+            num_pool_plots=0,
+            num_non_keychain_plots=0,
+            plot_size=PLOT_SIZE,
+            num_v2_plots=PLOTS,
+            bitfield=bitfield,
         )
         print(f"{'New plots generated.' if existing_plots else 'Using Existing Plots'}\n")
 

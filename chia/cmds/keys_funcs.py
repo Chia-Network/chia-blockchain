@@ -222,8 +222,8 @@ def show_keys(
     if json_output:
         print(json.dumps({"keys": list(keys)}))
     else:
-        for _key in keys:
-            key = {k: "N/A" if v is None else v for k, v in _key.items()}
+        for iter_key in keys:
+            key = {k: "N/A" if v is None else v for k, v in iter_key.items()}
             print("")
             if "label" in key:
                 print("Label:", key["label"])

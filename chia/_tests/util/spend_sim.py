@@ -169,7 +169,10 @@ class SpendSim:
             self.defaults = defaults
 
             async with MempoolManager.managed(
-                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+                self.coin_store.get_coin_records,
+                self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                defaults,
+                validation_timeout=10,
             ) as self.mempool_manager:
                 # Load the next data if there is any
                 async with self.db_wrapper.writer_maybe_transaction() as conn:

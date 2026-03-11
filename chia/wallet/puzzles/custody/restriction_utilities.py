@@ -6,7 +6,7 @@ from chia_puzzles_py import programs as puzzle_mods
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, Puzzle
+from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, MIPSComponent
 
 UNUSED_NONCE = 0
 
@@ -18,7 +18,7 @@ QUOTED_ADD_DPUZ_WRAPPER_HASH = Program.to((1, ADD_DPUZ_WRAPPER)).get_tree_hash()
 
 @dataclass(kw_only=True, frozen=True)
 class ValidatorStackRestriction:
-    required_wrappers: list[Puzzle]
+    required_wrappers: list[MIPSComponent]
 
     @property
     def member_not_dpuz(self) -> bool:
