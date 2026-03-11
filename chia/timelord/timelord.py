@@ -98,6 +98,7 @@ class Timelord:
         self.constants = constants
         self._shut_down = False
         self.free_clients: list[tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
+        self.max_free_clients: int = 10
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self._server: ChiaServer | None = None
         self.chain_type_to_stream: dict[Chain, tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
@@ -189,6 +190,10 @@ class Timelord:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
+            for _, _, writer in self.free_clients:
+                with contextlib.suppress(Exception):
+                    writer.close()
+            self.free_clients.clear()
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -212,12 +217,22 @@ class Timelord:
         self._server = server
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        should_close = False
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.debug(f"New timelord connection from client: {client_ip}.")
-            if client_ip in self.ip_whitelist:
+            if client_ip not in self.ip_whitelist:
+                log.warning(f"Rejected VDF client from non-whitelisted IP: {client_ip}")
+                should_close = True
+            elif len(self.free_clients) >= self.max_free_clients:
+                log.warning(f"Too many free VDF clients ({len(self.free_clients)}), rejecting {client_ip}")
+                should_close = True
+            else:
                 self.free_clients.append((client_ip, reader, writer))
                 log.debug(f"Added new VDF client {client_ip}.")
+        if should_close:
+            writer.close()
+            await writer.wait_closed()
 
     async def _stop_chain(self, chain: Chain) -> None:
         try:
