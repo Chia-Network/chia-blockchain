@@ -67,6 +67,7 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      CHIA_SEMVER_VERSION: ${{ needs.version.outputs.chia-semver-version }}
       POETRY_DYNAMIC_VERSIONING_OVERRIDE: "chia-blockchain=${{ needs.version.outputs.chia-installer-version }}"
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
@@ -162,7 +163,7 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-gui
         with:
           path: ./chia-blockchain-gui
@@ -182,7 +183,7 @@ jobs:
           sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: chia-installers-linux-deb-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
@@ -300,7 +301,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         id: download
         with:
           name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}

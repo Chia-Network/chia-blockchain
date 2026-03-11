@@ -7,15 +7,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, ProofOfSpace
+from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint8, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.harvester.harvester_api import HarvesterAPI
-from chia.plotting.prover import V1Prover, V2Prover
+from chia.plotting.prover import V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo
 from chia.protocols import harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
@@ -92,9 +92,8 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             mock_get_proof.return_value = mock_proof, None
             yield
     elif isinstance(plot_info.prover, V2Prover):
-        with patch.object(plot_info.prover, "get_partial_proof") as mock_get_proof:
-            mock_proof = MagicMock(spec=ProofOfSpace)
-            mock_get_proof.return_value = [uint64(1)] * 64, None
+        with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
+            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint8(2))]
             yield
 
 

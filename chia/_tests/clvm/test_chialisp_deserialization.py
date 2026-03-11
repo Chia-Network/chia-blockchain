@@ -9,7 +9,7 @@ from chia.util.byte_types import hexstr_to_bytes
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
 
-def serialized_atom_overflow(size):
+def serialized_atom_overflow(size: int) -> str:
     if size == 0:
         size_blob = b"\x80"
     elif size < 0x40:
@@ -52,7 +52,7 @@ def serialized_atom_overflow(size):
     return size_blob.hex() + extra_str
 
 
-def test_deserialization_simple_list():
+def test_deserialization_simple_list() -> None:
     # ("hello" "friend")
     b = hexstr_to_bytes("ff8568656c6c6fff86667269656e6480")
     cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
@@ -61,7 +61,7 @@ def test_deserialization_simple_list():
     assert prog == Program.from_bytes(b)
 
 
-def test_deserialization_password_coin():
+def test_deserialization_password_coin() -> None:
     # (i (= (sha256 2) (q 0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824)) (c (q 51) (c 5 (c (q 100) (q ())))) (q "wrong password"))  # noqa
     b = hexstr_to_bytes(
         "ff04ffff0affff0bff0280ffff01ffa02cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b98248080ffff05ffff01ff3380ffff05ff05ffff05ffff01ff6480ffff01ff8080808080ffff01ff8e77726f6e672070617373776f72648080"
@@ -72,7 +72,7 @@ def test_deserialization_password_coin():
     assert prog == Program.from_bytes(b)
 
 
-def test_deserialization_large_numbers():
+def test_deserialization_large_numbers() -> None:
     # '(99999999999999999999999999999999999999999999999999999999999999999 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -99999999999999999999999999999999999999999999999999999999999999999999999999999)'  # noqa
     b = hexstr_to_bytes(
         "ff9c00f316271c7fc3908a8bef464e3945ef7a253609ffffffffffffffffffb00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1ff22ea0179500526edb610f148ec0c614155678491902d6000000000000000000180"
@@ -83,7 +83,7 @@ def test_deserialization_large_numbers():
     assert prog == Program.from_bytes(b)
 
 
-def test_overflow_atoms():
+def test_overflow_atoms() -> None:
     b = hexstr_to_bytes(serialized_atom_overflow(0xFFFFFFFF))
     with pytest.raises(Exception):
         _cost, _output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])

@@ -30,6 +30,7 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols.outbound_message import NodeType
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
@@ -301,7 +302,12 @@ class FullNodeRpcApi:
             # This is the case of getting an end of slot
             eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
             if not eos_tuple:
-                raise ValueError(f"Did not find eos {challenge_hash.hex()} in cache")
+                raise RpcError(
+                    RpcErrorCodes.EOS_NOT_IN_CACHE,
+                    f"Did not find eos {challenge_hash.hex()} in cache",
+                    data={"challenge_hash": challenge_hash.hex()},
+                    structured_message="Did not find eos in cache",
+                )
             eos, time_received = eos_tuple
 
             # If it's still in the full node store, it's not reverted
@@ -311,7 +317,7 @@ class FullNodeRpcApi:
             # Otherwise we can backtrack from peak to find it in the blockchain
             curr: BlockRecord | None = self.service.blockchain.get_peak()
             if curr is None:
-                raise ValueError("No blocks in the chain")
+                raise RpcError.simple(RpcErrorCodes.NO_BLOCKS_IN_CHAIN, "No blocks in the chain")
 
             number_of_slots_searched = 0
             while number_of_slots_searched < 10:
@@ -333,7 +339,12 @@ class FullNodeRpcApi:
         sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
         sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
         if sp_tuple is None:
-            raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
+            raise RpcError(
+                RpcErrorCodes.SP_NOT_IN_CACHE,
+                f"Did not find sp {sp_hash.hex()} in cache",
+                data={"sp_hash": sp_hash.hex()},
+                structured_message="Did not find sp in cache",
+            )
 
         sp, time_received = sp_tuple
         assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
@@ -388,20 +399,25 @@ class FullNodeRpcApi:
 
     async def get_block(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
-            raise ValueError("No header_hash in request")
+            raise RpcError.simple(RpcErrorCodes.NO_HEADER_HASH_IN_REQUEST, "No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
 
         block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
         if block is None:
-            raise ValueError(f"Block {header_hash.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_NOT_FOUND,
+                f"Block {header_hash.hex()} not found",
+                data={"header_hash": header_hash.hex()},
+                structured_message="Block not found",
+            )
 
         return {"block": block}
 
     async def get_blocks(self, request: dict[str, Any]) -> EndpointResult:
         if "start" not in request:
-            raise ValueError("No start in request")
+            raise RpcError.simple(RpcErrorCodes.NO_START_IN_REQUEST, "No start in request")
         if "end" not in request:
-            raise ValueError("No end in request")
+            raise RpcError.simple(RpcErrorCodes.NO_END_IN_REQUEST, "No end in request")
         exclude_hh = False
         if "exclude_header_hash" in request:
             exclude_hh = request["exclude_header_hash"]
@@ -449,16 +465,16 @@ class FullNodeRpcApi:
 
     async def get_block_records(self, request: dict[str, Any]) -> EndpointResult:
         if "start" not in request:
-            raise ValueError("No start in request")
+            raise RpcError.simple(RpcErrorCodes.NO_START_IN_REQUEST, "No start in request")
         if "end" not in request:
-            raise ValueError("No end in request")
+            raise RpcError.simple(RpcErrorCodes.NO_END_IN_REQUEST, "No end in request")
 
         start = int(request["start"])
         end = int(request["end"])
         records = []
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None:
-            raise ValueError("Peak is None")
+            raise RpcError.simple(RpcErrorCodes.PEAK_IS_NONE, "Peak is None")
 
         for a in range(start, end):
             if peak_height < uint32(a):
@@ -466,24 +482,39 @@ class FullNodeRpcApi:
                 break
             header_hash: bytes32 | None = self.service.blockchain.height_to_hash(uint32(a))
             if header_hash is None:
-                raise ValueError(f"Height not in blockchain: {a}")
+                raise RpcError(
+                    RpcErrorCodes.HEIGHT_NOT_IN_BLOCKCHAIN,
+                    f"Height not in blockchain: {a}",
+                    data={"height": a},
+                    structured_message="Height not in blockchain",
+                )
             record: BlockRecord | None = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
                 record = await self.service.blockchain.block_store.get_block_record(header_hash)
             if record is None:
-                raise ValueError(f"Block {header_hash.hex()} does not exist")
+                raise RpcError(
+                    RpcErrorCodes.BLOCK_DOES_NOT_EXIST,
+                    f"Block {header_hash.hex()} does not exist",
+                    data={"header_hash": header_hash.hex()},
+                    structured_message="Block does not exist",
+                )
 
             records.append(record)
         return {"block_records": records}
 
     async def get_block_spends(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
-            raise ValueError("No header_hash in request")
+            raise RpcError.simple(RpcErrorCodes.NO_HEADER_HASH_IN_REQUEST, "No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
         full_block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
         if full_block is None:
-            raise ValueError(f"Block {header_hash.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_NOT_FOUND,
+                f"Block {header_hash.hex()} not found",
+                data={"header_hash": header_hash.hex()},
+                structured_message="Block not found",
+            )
 
         block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
@@ -504,11 +535,16 @@ class FullNodeRpcApi:
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
-            raise ValueError("No header_hash in request")
+            raise RpcError.simple(RpcErrorCodes.NO_HEADER_HASH_IN_REQUEST, "No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
         full_block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
         if full_block is None:
-            raise ValueError(f"Block {header_hash.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_NOT_FOUND,
+                f"Block {header_hash.hex()} not found",
+                data={"header_hash": header_hash.hex()},
+                structured_message="Block not found",
+            )
 
         block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
@@ -527,26 +563,41 @@ class FullNodeRpcApi:
 
     async def get_block_record_by_height(self, request: dict[str, Any]) -> EndpointResult:
         if "height" not in request:
-            raise ValueError("No height in request")
+            raise RpcError.simple(RpcErrorCodes.NO_HEIGHT_IN_REQUEST, "No height in request")
         height = request["height"]
         header_height = uint32(height)
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None or header_height > peak_height:
-            raise ValueError(f"Block height {height} not found in chain")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_HEIGHT_NOT_FOUND,
+                f"Block height {height} not found in chain",
+                data={"height": height},
+                structured_message="Block height not found in chain",
+            )
         header_hash: bytes32 | None = self.service.blockchain.height_to_hash(header_height)
         if header_hash is None:
-            raise ValueError(f"Block hash {height} not found in chain")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_HASH_NOT_FOUND,
+                f"Block hash {height} not found in chain",
+                data={"height": height},
+                structured_message="Block hash not found in chain",
+            )
         record: BlockRecord | None = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Block {header_hash} does not exist")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_DOES_NOT_EXIST,
+                f"Block {header_hash} does not exist",
+                data={"header_hash": str(header_hash)},
+                structured_message="Block does not exist",
+            )
         return {"block_record": record}
 
     async def get_block_record(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
-            raise ValueError("header_hash not in request")
+            raise RpcError.simple(RpcErrorCodes.HEADER_HASH_NOT_IN_REQUEST, "header_hash not in request")
         header_hash_str = request["header_hash"]
         header_hash = bytes32.from_hexstr(header_hash_str)
         record: BlockRecord | None = self.service.blockchain.try_block_record(header_hash)
@@ -554,7 +605,12 @@ class FullNodeRpcApi:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Block {header_hash.hex()} does not exist")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_DOES_NOT_EXIST,
+                f"Block {header_hash.hex()} does not exist",
+                data={"header_hash": header_hash.hex()},
+                structured_message="Block does not exist",
+            )
 
         return {"block_record": record}
 
@@ -583,12 +639,15 @@ class FullNodeRpcApi:
         between two block header hashes.
         """
         if "newer_block_header_hash" not in request or "older_block_header_hash" not in request:
-            raise ValueError("Invalid request. newer_block_header_hash and older_block_header_hash required")
+            raise RpcError.simple(
+                RpcErrorCodes.INVALID_NETWORK_SPACE_REQUEST,
+                "Invalid request. newer_block_header_hash and older_block_header_hash required",
+            )
         newer_block_hex = request["newer_block_header_hash"]
         older_block_hex = request["older_block_header_hash"]
 
         if newer_block_hex == older_block_hex:
-            raise ValueError("New and old must not be the same")
+            raise RpcError.simple(RpcErrorCodes.NEW_AND_OLD_MUST_DIFFER, "New and old must not be the same")
 
         newer_block_bytes = bytes32.from_hexstr(newer_block_hex)
         older_block_bytes = bytes32.from_hexstr(older_block_hex)
@@ -599,10 +658,20 @@ class FullNodeRpcApi:
             try:
                 newer_block = self.service.blockchain.block_record(newer_block_bytes)
             except KeyError:
-                raise ValueError(f"Newer block {newer_block_hex} not found")
+                raise RpcError(
+                    RpcErrorCodes.NEWER_BLOCK_NOT_FOUND,
+                    f"Newer block {newer_block_hex} not found",
+                    data={"header_hash": newer_block_hex},
+                    structured_message="Newer block not found",
+                )
         older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
-            raise ValueError(f"Older block {older_block_hex} not found")
+            raise RpcError(
+                RpcErrorCodes.OLDER_BLOCK_NOT_FOUND,
+                f"Older block {older_block_hex} not found",
+                data={"header_hash": older_block_hex},
+                structured_message="Older block not found",
+            )
         delta_weight = newer_block.weight - older_block.weight
 
         # TODO: todo_v2_plots Update this calculation to take v2 plots into
@@ -625,7 +694,7 @@ class FullNodeRpcApi:
         Retrieves the coins for a given puzzlehash, by default returns unspent coins.
         """
         if "puzzle_hash" not in request:
-            raise ValueError("Puzzle hash not in request")
+            raise RpcError.simple(RpcErrorCodes.PUZZLE_HASH_NOT_IN_REQUEST, "Puzzle hash not in request")
         kwargs: dict[str, Any] = {"include_spent_coins": False, "puzzle_hash": hexstr_to_bytes(request["puzzle_hash"])}
         if "start_height" in request:
             kwargs["start_height"] = uint32(request["start_height"])
@@ -644,7 +713,7 @@ class FullNodeRpcApi:
         Retrieves the coins for a given puzzlehash, by default returns unspent coins.
         """
         if "puzzle_hashes" not in request:
-            raise ValueError("Puzzle hashes not in request")
+            raise RpcError.simple(RpcErrorCodes.PUZZLE_HASHES_NOT_IN_REQUEST, "Puzzle hashes not in request")
         kwargs: dict[str, Any] = {
             "include_spent_coins": False,
             "puzzle_hashes": [hexstr_to_bytes(ph) for ph in request["puzzle_hashes"]],
@@ -666,12 +735,17 @@ class FullNodeRpcApi:
         Retrieves a coin record by its name.
         """
         if "name" not in request:
-            raise ValueError("Name not in request")
+            raise RpcError.simple(RpcErrorCodes.NAME_NOT_IN_REQUEST, "Name not in request")
         name = bytes32.from_hexstr(request["name"])
 
         coin_record: CoinRecord | None = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
-            raise ValueError(f"Coin record 0x{name.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.COIN_RECORD_NOT_FOUND,
+                f"Coin record 0x{name.hex()} not found",
+                data={"name": name.hex()},
+                structured_message="Coin record not found",
+            )
 
         return {"coin_record": coin_record_dict_backwards_compat(coin_record.to_json_dict())}
 
@@ -680,7 +754,7 @@ class FullNodeRpcApi:
         Retrieves the coins for given coin IDs, by default returns unspent coins.
         """
         if "names" not in request:
-            raise ValueError("Names not in request")
+            raise RpcError.simple(RpcErrorCodes.NAMES_NOT_IN_REQUEST, "Names not in request")
         kwargs: dict[str, Any] = {
             "include_spent_coins": False,
             "names": [hexstr_to_bytes(name) for name in request["names"]],
@@ -702,7 +776,7 @@ class FullNodeRpcApi:
         Retrieves the coins for given parent coin IDs, by default returns unspent coins.
         """
         if "parent_ids" not in request:
-            raise ValueError("Parent IDs not in request")
+            raise RpcError.simple(RpcErrorCodes.PARENT_IDS_NOT_IN_REQUEST, "Parent IDs not in request")
         kwargs: dict[str, Any] = {
             "include_spent_coins": False,
             "parent_ids": [hexstr_to_bytes(ph) for ph in request["parent_ids"]],
@@ -724,7 +798,7 @@ class FullNodeRpcApi:
         Retrieves coins by hint, by default returns unspent coins.
         """
         if "hint" not in request:
-            raise ValueError("Hint not in request")
+            raise RpcError.simple(RpcErrorCodes.HINT_NOT_IN_REQUEST, "Hint not in request")
 
         if self.service.hint_store is None:
             return {"coin_records": []}
@@ -750,7 +824,7 @@ class FullNodeRpcApi:
 
     async def push_tx(self, request: dict[str, Any]) -> EndpointResult:
         if "spend_bundle" not in request:
-            raise ValueError("Spend bundle not in request")
+            raise RpcError.simple(RpcErrorCodes.SPEND_BUNDLE_NOT_IN_REQUEST, "Spend bundle not in request")
 
         spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
@@ -768,7 +842,12 @@ class FullNodeRpcApi:
 
         if status == MempoolInclusionStatus.FAILED:
             assert error is not None
-            raise ValueError(f"Failed to include transaction {spend_name}, error {error.name}")
+            raise RpcError(
+                RpcErrorCodes.TRANSACTION_FAILED,
+                f"Failed to include transaction {spend_name}, error {error.name}",
+                data={"spend_name": str(spend_name), "error": error.name},
+                structured_message="Failed to include transaction",
+            )
         return {
             "status": status.name,
         }
@@ -778,14 +857,19 @@ class FullNodeRpcApi:
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
-            raise ValueError(f"Invalid height {height}. coin record {coin_record}")
+            raise RpcError(
+                RpcErrorCodes.INVALID_HEIGHT_FOR_COIN,
+                f"Invalid height {height}. coin record {coin_record}",
+                data={"height": height},
+                structured_message="Invalid height for coin record",
+            )
 
         header_hash = self.service.blockchain.height_to_hash(height)
         assert header_hash is not None
         block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
-            raise ValueError("Invalid block or block generator")
+            raise RpcError.simple(RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR, "Invalid block or block generator")
 
         block_generator: BlockGenerator | None = await get_block_generator(
             self.service.blockchain.lookup_block_generators, block
@@ -803,20 +887,35 @@ class FullNodeRpcApi:
             )
             return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
         except Exception as e:
-            raise ValueError(f"Failed to get puzzle and solution for coin {coin_record.coin}, error: {e}") from e
+            raise RpcError(
+                RpcErrorCodes.PUZZLE_SOLUTION_FAILED,
+                f"Failed to get puzzle and solution for coin {coin_record.coin}, error: {e}",
+                data={"coin": str(coin_record.coin), "error": str(e)},
+                structured_message="Failed to get puzzle and solution for coin",
+            ) from e
 
     async def get_additions_and_removals(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
-            raise ValueError("No header_hash in request")
+            raise RpcError.simple(RpcErrorCodes.NO_HEADER_HASH_IN_REQUEST, "No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
 
         block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
         if block is None:
-            raise ValueError(f"Block {header_hash.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.BLOCK_NOT_FOUND,
+                f"Block {header_hash.hex()} not found",
+                data={"header_hash": header_hash.hex()},
+                structured_message="Block not found",
+            )
 
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
             if self.service.blockchain.height_to_hash(block.height) != header_hash:
-                raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
+                raise RpcError(
+                    RpcErrorCodes.BLOCK_IN_FORK,
+                    f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)",
+                    data={"header_hash": header_hash.hex()},
+                    structured_message="Block is no longer in the blockchain (in a fork)",
+                )
             additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
             removals: list[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
 
@@ -840,19 +939,24 @@ class FullNodeRpcApi:
 
     async def get_mempool_item_by_tx_id(self, request: dict[str, Any]) -> EndpointResult:
         if "tx_id" not in request:
-            raise ValueError("No tx_id in request")
+            raise RpcError.simple(RpcErrorCodes.NO_TX_ID_IN_REQUEST, "No tx_id in request")
         include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
         item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
         if item is None:
-            raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
+            raise RpcError(
+                RpcErrorCodes.TX_NOT_IN_MEMPOOL,
+                f"Tx id 0x{tx_id.hex()} not in the mempool",
+                data={"tx_id": tx_id.hex()},
+                structured_message="Tx id not in the mempool",
+            )
 
         return {"mempool_item": item.to_json_dict()}
 
     async def get_mempool_items_by_coin_name(self, request: dict[str, Any]) -> EndpointResult:
         if "coin_name" not in request:
-            raise ValueError("No coin_name in request")
+            raise RpcError.simple(RpcErrorCodes.NO_COIN_NAME_IN_REQUEST, "No coin_name in request")
 
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_name"])
         items = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
@@ -954,7 +1058,12 @@ class FullNodeRpcApi:
             if n in request:
                 c += 1
         if c != 1:
-            raise ValueError(f"Request must contain exactly one of {ns}")
+            raise RpcError(
+                RpcErrorCodes.REQUEST_MUST_CONTAIN_EXACTLY_ONE,
+                f"Request must contain exactly one of {ns}",
+                data={"options": ns},
+                structured_message="Request must contain exactly one of the required options",
+            )
 
         if "spend_bundle" in request:
             spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
@@ -965,13 +1074,23 @@ class FullNodeRpcApi:
         else:
             cost = self._get_spendbundle_type_cost(request["spend_type"])
             cost *= request.get("spend_count", 1)
-        return uint64(cost)
+        try:
+            return uint64(cost)
+        except (ValueError, TypeError) as e:
+            raise RpcError(
+                RpcErrorCodes.INVALID_COST,
+                f"Invalid cost value: {cost!r}",
+                data={"cost": str(cost)},
+                structured_message="Invalid cost value",
+            ) from e
 
     def _validate_target_times(self, request: dict[str, Any]) -> None:
         if "target_times" not in request:
-            raise ValueError("Request must contain 'target_times' array")
+            raise RpcError.simple(RpcErrorCodes.TARGET_TIMES_REQUIRED, "Request must contain 'target_times' array")
         if any(t < 0 for t in request["target_times"]):
-            raise ValueError("'target_times' array members must be non-negative")
+            raise RpcError.simple(
+                RpcErrorCodes.TARGET_TIMES_NON_NEGATIVE, "'target_times' array members must be non-negative"
+            )
 
     async def get_fee_estimate(self, request: dict[str, Any]) -> dict[str, Any]:
         self._validate_target_times(request)

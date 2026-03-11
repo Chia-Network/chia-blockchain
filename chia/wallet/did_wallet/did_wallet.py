@@ -539,6 +539,7 @@ class DIDWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
             # TODO: this seem dumb. Why bother with this case? Is it ever used?
+            # Matt Howard: I think this is for typing completeness, as origin_coin is optional
             # inner puzzle: (8 . 0)
             innerpuz_hash = shatree_pair(shatree_int(8), NIL_TREEHASH)
             return create_singleton_puzzle_hash(innerpuz_hash, bytes32.zeros)

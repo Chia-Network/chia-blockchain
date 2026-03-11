@@ -14,7 +14,7 @@ class WalletPoolStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, wrapper: DBWrapper2):
+    async def create(cls, wrapper: DBWrapper2) -> WalletPoolStore:
         self = cls()
         self.db_wrapper = wrapper
 

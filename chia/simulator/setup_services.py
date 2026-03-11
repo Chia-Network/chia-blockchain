@@ -147,8 +147,11 @@ async def setup_full_node(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     local_bt.change_config(config)
     override_capabilities = (
-        None if disable_capabilities is None else get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
+        get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
+        if disable_capabilities is not None
+        else list(default_capabilities[NodeType.FULL_NODE])
     )
+    override_capabilities.append((uint16(Capability.HARD_FORK_2.value), "1"))
     service: FullNodeService | SimulatorFullNodeService
     if simulator:
         service = await create_full_node_simulator_service(
@@ -286,12 +289,15 @@ async def setup_wallet_node(
             service_config.pop("full_node_peer", None)
             service_config.pop("full_node_peers", None)
 
+        override_capabilities = list(default_capabilities[NodeType.WALLET])
+        override_capabilities.append((uint16(Capability.HARD_FORK_2.value), "1"))
         service = create_wallet_service(
             local_bt.root_path,
             config,
             consensus_constants,
             keychain,
             connect_to_daemon=False,
+            override_capabilities=override_capabilities,
         )
 
         try:

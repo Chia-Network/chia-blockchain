@@ -266,6 +266,7 @@ async def instantiate_mempool_manager(
         zero_calls_get_unspent_lineage_info_for_puzzle_hash,
         constants,
         max_tx_clvm_cost=max_tx_clvm_cost,
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -709,6 +710,33 @@ async def test_reserve_fee_condition(zero_mempool_manager: MempoolManager) -> No
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
         await zero_mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_validation_timeout() -> None:
+    async with MempoolManager.managed(
+        zero_calls_get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        validation_timeout=0,
+    ) as mempool_manager:
+        await mempool_manager.new_peak(create_test_block_record(), None)
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="timeout"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_too_many_atoms() -> None:
+    # a very large MAX_BLOCK_COST_CLVM makes the per-cost atom/pair threshold
+    # effectively 0, triggering the density check on any spend
+    constants = DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(10**18))
+    async with instantiate_mempool_manager(zero_calls_get_coin_records, constants=constants) as mempool_manager:
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="too many atoms"):
+            await mempool_manager.pre_validate_spendbundle(sb)
 
 
 @pytest.mark.anyio
@@ -2420,6 +2448,7 @@ async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
         await mempool_manager.new_peak(test_block_record, None)
@@ -2673,6 +2702,7 @@ def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        validation_timeout=10,
     ) as mempool_manager:
         create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
 
@@ -2764,7 +2794,7 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 730])
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 630])
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("old", [True, False])
 async def test_create_block_generator(
@@ -2772,7 +2802,7 @@ async def test_create_block_generator(
 ) -> None:
     # the old way of creating bloks doesn't fit this many transactions, so we
     # expect it to fail
-    expect_failure = mempool_size == 730 and old
+    expect_failure = mempool_size == 630 and old
 
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]

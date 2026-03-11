@@ -1,2 +1,3 @@
 .git_archival.txt  export-subst
 **/*.lock  linguist-generated=false
+* -text

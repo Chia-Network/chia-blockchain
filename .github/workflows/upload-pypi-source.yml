@@ -44,8 +44,8 @@ jobs:
             matrix: macos
             emoji: 🍎
             runs-on:
-              intel: macos-13-intel
-              arm: macos-13-arm64
+              intel: macos-15-intel
+              arm: macos-15
           - name: Windows
             matrix: windows
             emoji: 🪟
@@ -213,7 +213,7 @@ jobs:
           python -m build --outdir dist .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: ./dist
