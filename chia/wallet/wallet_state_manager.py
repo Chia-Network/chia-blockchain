@@ -1026,16 +1026,16 @@ class WalletStateManager:
             )
             matched_plotnft_wallet_id = self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id)
             if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
-                matched_plotnft_wallet_id = uint32(len(self.wallets) + 1)
+                wallet_info = await self.user_store.create_wallet(
+                    name="",
+                    wallet_type=WalletType.PLOTNFT_2,
+                    data=next_plot_nft.launcher_id.hex(),
+                )
+                matched_plotnft_wallet_id = wallet_info.id
                 self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                     wallet_state_manager=self,
                     xch_wallet=self.main_wallet,
-                    wallet_info=WalletInfo(
-                        id=matched_plotnft_wallet_id,
-                        name="",
-                        type=uint8(WalletType.PLOTNFT_2),
-                        data=next_plot_nft.launcher_id.hex(),
-                    ),
+                    wallet_info=wallet_info,
                 )
             if matched_plotnft_wallet_id is None:
                 raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
