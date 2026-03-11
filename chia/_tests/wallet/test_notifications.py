@@ -9,6 +9,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -51,6 +52,7 @@ async def test_notification_store_backwards_compat() -> None:
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_notifications(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random

@@ -12,7 +12,7 @@ from packaging.version import Version
 
 from chia import __version__
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import connect_and_get_peer
+from chia._tests.connection_utils import add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
@@ -64,11 +64,11 @@ async def test_connection_string_conversion(
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes_one_block
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-    # 1000 is based on the current implementation (example below), should be reconsidered/adjusted if this test fails
-    # WSChiaConnection(local_type=<NodeType.FULL_NODE: 1>, local_port=50632, local_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>], peer_host='127.0.0.1', peer_port=50640, peer_node_id=<bytes32: 566a318f0f656125b4fef0e85fbddcf9bc77f8003d35293c392479fc5d067f4d>, outbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13f50>, inbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13e90>, is_outbound=False, creation_time=1675271096.275591, bytes_read=68, bytes_written=162, last_message_time=1675271096.276271, peer_server_port=50636, active=False, closed=False, connection_type=<NodeType.FULL_NODE: 1>, request_nonce=32768, peer_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>], version='', protocol_version='') # noqa
+    # 1100 is based on the current implementation (example below), should be reconsidered/adjusted if this test fails
+    # WSChiaConnection(local_type=<NodeType.FULL_NODE: 1>, local_port=50632, local_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>, <Capability.MEMPOOL_UPDATES: 5>, <Capability.HARD_FORK_2: 6>], peer_info=PeerInfo(_ip=IPv4Address('127.0.0.1'), _port=50640), peer_node_id=<bytes32: 566a318f0f656125b4fef0e85fbddcf9bc77f8003d35293c392479fc5d067f4d>, outbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13f50>, inbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13e90>, is_outbound=False, creation_time=1675271096.275591, bytes_read=68, bytes_written=162, last_message_time=1675271096.276271, peer_server_port=50636, closed=False, connection_type=<NodeType.FULL_NODE: 1>, request_nonce=32768, peer_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>, <Capability.MEMPOOL_UPDATES: 5>, <Capability.HARD_FORK_2: 6>], version='', protocol_version=<Version('0.0.36')>) # noqa
     converted = method(peer)
     print(converted)
-    assert len(converted) < 1000
+    assert len(converted) < 1100
 
 
 @pytest.mark.anyio
@@ -132,16 +132,19 @@ async def test_error_response(
     await wallet_node.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
-    wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
-    full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
     test_version = Version(version)
-    wallet_connection.protocol_version = test_version
     request = RequestTransaction(bytes32(32 * b"1"))
     error_message = f"Some error message: {request.transaction_id}"
+    dummy_wsc, dummy_peer_id = await add_dummy_connection_wsc(full_node.server, self_hostname, 1337)
+    dummy_full_node_connection = full_node.server.all_connections[dummy_peer_id]
+    dummy_full_node_connection.protocol_version = test_version
     with caplog.at_level(logging.DEBUG):
-        response = await full_node_connection.call_api(TestAPI.request_transaction, request, timeout=5)
+        response = await dummy_wsc.call_api(TestAPI.request_transaction, request, timeout=5)
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
-        assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
+        assert (
+            f"ApiError: {error} from {dummy_full_node_connection.peer_node_id}, {dummy_full_node_connection.peer_info}"
+            in caplog.text
+        )
         if test_version >= error_response_version:
             assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, b"ab")
             assert "Request timeout:" not in caplog.text

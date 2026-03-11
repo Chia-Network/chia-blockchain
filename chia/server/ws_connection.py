@@ -20,6 +20,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import Message, NodeType, make_msg
+from chia.protocols.protocol_message_type_to_node_type import ProtocolMessageTypeToNodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -35,14 +36,20 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.log_exceptions import log_exceptions
+from chia.util.lru_cache import LRUSet
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import is_in_network, is_localhost
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 
+MAX_PENDING_COMPACT_VDFS = 100
+
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
+
+# Max length of peer version string in bytes (UTF-8)
+MAX_VERSION_STRING_BYTES: int = 128
 
 WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
@@ -125,6 +132,10 @@ class WSChiaConnection:
         default_factory=create_default_last_message_time_dict,
         repr=False,
     )
+
+    # Tracks compact VDF requests we've sent to this peer (hashed RequestCompactVDF).
+    # Used to reject unsolicited RespondCompactVDF messages.
+    pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
 
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
@@ -217,64 +228,47 @@ class WSChiaConnection:
                 ),
             )
             await self._send_message(outbound_handshake)
-            inbound_handshake_msg = await self._read_one_message()
-            if inbound_handshake_msg is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+        try:
+            message = await self._read_one_message()
+        except Exception:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+        if message is None:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-
-            if (
-                local_type in {NodeType.FARMER, NodeType.HARVESTER}
-                and inbound_handshake.protocol_version != protocol_version[local_type]
-            ):
-                self.log.warning(
-                    f"protocol version mismatch: "
-                    f"local_type={local_type} "
-                    f"incoming={inbound_handshake.protocol_version} "
-                    f"our={protocol_version[local_type]}"
-                )
-
-            self.version = inbound_handshake.software_version
-            self.protocol_version = Version(inbound_handshake.protocol_version)
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
-        else:
-            try:
-                message = await self._read_one_message()
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            if message is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type = ProtocolMessageTypes(message.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
+        # Handle case of invalid ProtocolMessageType
+        try:
             inbound_handshake = Handshake.from_bytes(message.data)
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+            message_type = ProtocolMessageTypes(message.type)
+        except Exception:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            remote_node_type = NodeType(inbound_handshake.node_type)
+        if message_type != ProtocolMessageTypes.handshake:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
+        if inbound_handshake.network_id != network_id:
+            raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+        if (
+            self.is_outbound
+            and local_type in {NodeType.FARMER, NodeType.HARVESTER}
+            and inbound_handshake.protocol_version != protocol_version[local_type]
+        ):
+            self.log.warning(
+                f"protocol version mismatch: "
+                f"local_type={local_type} "
+                f"incoming={inbound_handshake.protocol_version} "
+                f"our={protocol_version[local_type]}"
+            )
+
+        remote_node_type = NodeType(inbound_handshake.node_type)
+
+        if len(inbound_handshake.software_version.encode("utf-8")) > MAX_VERSION_STRING_BYTES:
+            self.log.debug("version string too long")
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+        if not self.is_outbound:
             if (
                 remote_node_type in {NodeType.FARMER, NodeType.HARVESTER}
                 and inbound_handshake.protocol_version != protocol_version[remote_node_type]
@@ -298,12 +292,13 @@ class WSChiaConnection:
                 ),
             )
             await self._send_message(outbound_handshake)
-            self.version = inbound_handshake.software_version
-            self.protocol_version = Version(inbound_handshake.protocol_version)
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = remote_node_type
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+
+        self.version = inbound_handshake.software_version
+        self.protocol_version = Version(inbound_handshake.protocol_version)
+        self.peer_server_port = inbound_handshake.server_port
+        self.connection_type = remote_node_type
+        # "1" means capability is enabled
+        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
         self.outbound_task = create_referenced_task(self.outbound_handler())
         self.inbound_task = create_referenced_task(self.inbound_handler())
@@ -428,6 +423,16 @@ class WSChiaConnection:
 
             if metadata is None:
                 self.log.error(f"Peer trying to call non api function {message_type}")
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+
+            assert self.connection_type is not None
+            allowed_senders = ProtocolMessageTypeToNodeType.get(bare_message_type)
+            if allowed_senders is None or self.connection_type not in allowed_senders:
+                self.log.error(
+                    f"API call type mismatch: {self.get_peer_logging()} of "
+                    f"type {self.connection_type.name} and version {self.version} "
+                    f"is calling {message_type}"
+                )
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request

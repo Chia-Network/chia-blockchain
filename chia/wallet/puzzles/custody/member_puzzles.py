@@ -7,7 +7,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.custody.custody_architecture import Puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
@@ -22,7 +21,7 @@ FIXED_PUZZLE_MEMBER_MOD = Program.from_bytes(puzzle_mods.FIXED_PUZZLE_MEMBER)
 
 
 @dataclass(kw_only=True, frozen=True)
-class BLSWithTaprootMember(Puzzle):
+class BLSWithTaprootMember:
     synthetic_key: G1Element | None = None
     public_key: G1Element | None = None
     hidden_puzzle: Program | None = None  # must be specified manually due to frozen class
@@ -60,7 +59,7 @@ class BLSWithTaprootMember(Puzzle):
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonMember(Puzzle):
+class SingletonMember:
     singleton_id: bytes32
     singleton_mod_hash: bytes32 = SINGLETON_TOP_LAYER_MOD_HASH
     singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_PUZZLE_HASH
@@ -80,7 +79,7 @@ class SingletonMember(Puzzle):
 
 
 @dataclass(kw_only=True, frozen=True)
-class FixedPuzzleMember(Puzzle):
+class FixedPuzzleMember:
     fixed_puzzle_hash: bytes32
 
     def memo(self, nonce: int) -> Program:

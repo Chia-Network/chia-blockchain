@@ -12,7 +12,7 @@ from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 
 
-async def check_block_store_invariant(bc: Blockchain):
+async def check_block_store_invariant(bc: Blockchain) -> None:
     db_wrapper = bc.block_store.db_wrapper
 
     if db_wrapper.db_version == 1:

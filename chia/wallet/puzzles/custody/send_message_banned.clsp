@@ -1,3 +1,6 @@
+; A puzzle that enforces the lack of SEND_MESSAGE conditions in the condition set
+;
+; Intended for use in validating the output of a delegated puzzle
 (mod (Conditions)
 
   (include condition_codes.clib)

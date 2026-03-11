@@ -1,3 +1,6 @@
+; A puzzle that enforces that an ASSERT_HEIGHT_RELATIVE condition with a specific height parameter is present in the condition set
+;
+; Intended for use in validating the output of a delegated puzzle
 (mod
   (
     HEIGHTLOCK

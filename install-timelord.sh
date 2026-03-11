@@ -95,6 +95,9 @@ if [ -e "$THE_PATH" ]; then
 else
   if [ -e venv/bin/python ] && test "$UBUNTU_DEBIAN"; then
     echo "Installing chiavdf dependencies on Ubuntu/Debian"
+    # Update package lists before install
+    echo "apt-get update"
+    sudo apt-get update
     # Install remaining needed development tools - assumes venv and prior run of install.sh
     echo "apt-get install libgmp-dev libboost-python-dev $PYTHON_DEV_DEPENDENCY libboost-system-dev build-essential -y"
     sudo apt-get install libgmp-dev libboost-python-dev "$PYTHON_DEV_DEPENDENCY" libboost-system-dev build-essential -y
