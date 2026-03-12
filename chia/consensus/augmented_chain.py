@@ -32,11 +32,28 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    _read_only: bool
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._read_only = False
+
+    def _ensure_mutable(self) -> None:
+        if self._read_only:
+            raise AugmentedBlockchainValidationError("Cannot mutate read-only augmented blockchain snapshot")
+
+    def read_only_snapshot(self) -> AugmentedBlockchain:
+        # _underlying is shared by reference; safe because the snapshot is only
+        # used for read-only BlockRecordsProtocol calls in a single executor task
+        # while the asyncio event loop serializes mutations on the writer side.
+        snapshot = AugmentedBlockchain.__new__(AugmentedBlockchain)
+        snapshot._underlying = self._underlying
+        snapshot._extra_blocks = self._extra_blocks.copy()
+        snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._read_only = True
+        return snapshot
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         eb = self._extra_blocks.get(header_hash)
@@ -45,6 +62,7 @@ class AugmentedBlockchain:
         return eb[1]
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         if block.header_hash != block_record.header_hash:
             raise AugmentedBlockchainValidationError(
                 f"Block header hash mismatch: block={block.header_hash.hex()[:16]}, "
@@ -70,6 +88,7 @@ class AugmentedBlockchain:
         self._height_to_hash[block_record.height] = block_record.header_hash
 
     def remove_extra_block(self, hh: bytes32) -> None:
+        self._ensure_mutable()
         if hh not in self._extra_blocks:
             return
 
@@ -112,6 +131,7 @@ class AugmentedBlockchain:
         return await self._underlying.get_block_record_from_db(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
         # now that we're adding the block to the underlying blockchain, we don't
