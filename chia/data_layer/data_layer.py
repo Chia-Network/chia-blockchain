@@ -98,19 +98,22 @@ def server_files_path_from_config(config: dict[str, Any], root_path: Path) -> Pa
     return server_files_replaced
 
 
-async def get_plugin_info(plugin_remote: PluginRemote) -> tuple[PluginRemote, dict[str, Any]]:
+async def get_plugin_info(
+    plugin_remote: PluginRemote, timeout: aiohttp.ClientTimeout
+) -> tuple[PluginRemote, dict[str, Any]]:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 plugin_remote.url + "/plugin_info",
                 json={},
                 headers=plugin_remote.headers,
+                timeout=timeout,
             ) as response:
                 ret = {"status": response.status}
                 if response.status == 200:
                     ret["response"] = json.loads(await response.text())
                 return plugin_remote, ret
-    except aiohttp.ClientError as e:
+    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         return plugin_remote, {"error": f"ClientError: {e}"}
 
 
@@ -708,6 +711,7 @@ class DataLayer:
                         d.url + "/handle_download",
                         json=request_json,
                         headers=d.headers,
+                        timeout=self.client_timeout,
                     ) as response:
                         res_json = await response.json()
                         if res_json["handle_download"]:
@@ -782,6 +786,7 @@ class DataLayer:
                                 uploader.url + "/upload",
                                 json=request_json,
                                 headers=uploader.headers,
+                                timeout=self.client_timeout,
                             ) as response:
                                 res_json = await response.json()
                                 if res_json["uploaded"]:
@@ -843,6 +848,7 @@ class DataLayer:
                         uploader.url + "/add_missing_files",
                         json=request_json,
                         headers=uploader.headers,
+                        timeout=self.client_timeout,
                     ) as response:
                         res_json = await response.json()
                         if not res_json["uploaded"]:
@@ -1342,6 +1348,7 @@ class DataLayer:
                         uploader.url + "/handle_upload",
                         json={"store_id": store_id.hex()},
                         headers=uploader.headers,
+                        timeout=self.client_timeout,
                     ) as response:
                         res_json = await response.json()
                         if res_json["handle_upload"]:
@@ -1351,7 +1358,10 @@ class DataLayer:
         return uploaders
 
     async def check_plugins(self) -> PluginStatus:
-        coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
+        coros = [
+            get_plugin_info(plugin_remote=plugin, timeout=self.client_timeout)
+            for plugin in {*self.uploaders, *self.downloaders}
+        ]
         results = dict(await asyncio.gather(*coros))
 
         unknown = {
