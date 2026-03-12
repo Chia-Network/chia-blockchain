@@ -598,13 +598,6 @@ class TradeManager:
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
-            # Verify all specified coins were claimed by an offering wallet
-            if specified_coins_by_wallet:
-                unused_wallet_ids = list(specified_coins_by_wallet.keys())
-                raise ValueError(
-                    f"Specified coins belong to wallet(s) {unused_wallet_ids} which are not offering in this trade"
-                )
-
                 offer_dict_no_ints[asset_id] = amount
 
                 if asset_id is not None and wallet is not None:  # if this asset is not XCH
@@ -623,6 +616,13 @@ class TradeManager:
                             driver_dict[asset_id] = puzzle_driver
                     else:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
+
+            # Verify all specified coins were claimed by an offering wallet
+            if specified_coins_by_wallet:
+                unused_wallet_ids = list(specified_coins_by_wallet.keys())
+                raise ValueError(
+                    f"Specified coins belong to wallet(s) {unused_wallet_ids} which are not offering in this trade"
+                )
 
             requested_payments = await self.check_for_requested_payment_modifications(
                 requested_payments, driver_dict, taking
