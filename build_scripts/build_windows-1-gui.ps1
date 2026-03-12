@@ -34,6 +34,9 @@ If ($LastExitCode -gt 0){
 # it can't find workspace packages that are removed below for cache optimization.
 Write-Output "Clearing dependencies from packages/gui/package.json for electron-builder"
 node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('./packages/gui/package.json', 'utf8')); p.dependencies = {}; fs.writeFileSync('./packages/gui/package.json', JSON.stringify(p, null, 2) + '\n');"
+If ($LastExitCode -gt 0){
+    Throw "Failed to clear dependencies from packages/gui/package.json"
+}
 
 # Remove unused packages
 Remove-Item node_modules -Recurse -Force
