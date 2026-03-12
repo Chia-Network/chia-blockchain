@@ -76,6 +76,7 @@
     "icon": "src/assets/img/chia.icns"
   },
   "deb": {
+    "compression": "xz",
     "afterInstall": "../../../build_scripts/assets/deb/postinst.sh",
     "afterRemove": "../../../build_scripts/assets/deb/prerm.sh",
     "depends": [
