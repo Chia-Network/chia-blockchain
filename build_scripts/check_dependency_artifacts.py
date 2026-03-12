@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,7 @@ excepted_packages = {
     "chialisp_puzzles",
     "chia_base",
     "keyrings.cryptfile",
+    "chia_rs",  # pinned to git commit for LIMIT_HEAP test branch
 }
 
 
@@ -25,7 +27,13 @@ def excepted(path: pathlib.Path) -> bool:
     # TODO: This should be implemented with a real file name parser though i'm
     #       uncertain at the moment what package that would be.
 
-    name, _dash, _rest = path.name.partition("-")
+    # Split at the version boundary: first '-' followed by a digit.
+    # This handles hyphenated package names like chia-rs (chia-rs-0.39.0.zip).
+    m = re.match(r"^([a-zA-Z][a-zA-Z0-9._-]*?)-(\d)", path.name)
+    if m:
+        name = m.group(1).replace("-", "_")
+    else:
+        name, _dash, _rest = path.name.partition("-")
     return name in excepted_packages
 
 

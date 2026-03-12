@@ -4,6 +4,7 @@ import logging
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    LIMIT_HEAP,
     MEMPOOL_MODE,
     ConsensusConstants,
     G2Element,
@@ -37,6 +38,9 @@ def get_name_puzzle_conditions(
 
     if height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
+        # LIMIT_HEAP is a mempool policy (caps allocator to 500MB), not a consensus rule.
+        # run_block_generator2 rejects it to prevent accidental consensus footguns.
+        flags &= ~LIMIT_HEAP
     else:
         run_block = run_block_generator
 
