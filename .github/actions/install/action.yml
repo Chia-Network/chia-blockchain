@@ -39,6 +39,14 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Install curl (required by rustup on some runners)
+      if: runner.os == 'linux'
+      shell: bash
+      run: |
+        if ! command -v curl &>/dev/null; then
+          sudo apt-get update -qq && sudo apt-get install -y curl
+        fi
+
     - name: Set up Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
