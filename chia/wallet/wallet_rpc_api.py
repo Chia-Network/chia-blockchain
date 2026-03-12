@@ -2006,6 +2006,7 @@ class WalletRpcApi:
                 fee=request.fee,
                 validate_only=request.validate_only,
                 extra_conditions=extra_conditions,
+                coin_ids=request.coin_ids,
             )
 
         return CreateOfferForIDsResponse(

@@ -2136,6 +2136,7 @@ class CreateOfferForIDs(TransactionEndpointRequest):
     driver_dict: dict[bytes32, PuzzleInfo] | None = None
     solver: Solver | None = None
     validate_only: bool = False
+    coin_ids: list[bytes32] | None = None
 
     @property
     def offer_spec(self) -> dict[int | bytes32, int]:

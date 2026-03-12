@@ -16,6 +16,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
+from chia.util.streamable import UInt32Range
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -428,6 +429,7 @@ class TradeManager:
         validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
+        coin_ids: list[bytes32] | None = None,
     ) -> tuple[Literal[True], TradeRecord, None]:
         if driver_dict is None:
             driver_dict = {}
@@ -441,6 +443,7 @@ class TradeManager:
             fee=fee,
             extra_conditions=extra_conditions,
             taking=taking,
+            coin_ids=coin_ids,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -477,6 +480,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
+        coin_ids: list[bytes32] | None = None,
     ) -> tuple[Literal[True], Offer, None] | tuple[Literal[False], None, str]:
         """
         Offer is dictionary of wallet ids and amount
@@ -489,6 +493,22 @@ class TradeManager:
             coins_to_offer: dict[int | bytes32, set[Coin]] = {}
             requested_payments: dict[bytes32 | None, list[CreateCoin]] = {}
             offer_dict_no_ints: dict[bytes32 | None, int] = {}
+
+            # Pre-resolve specified coins so we can validate and group them by wallet
+            specified_coins_by_wallet: dict[int, set[Coin]] = {}
+            if coin_ids is not None and len(coin_ids) > 0:
+                records_result = await self.wallet_state_manager.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(coin_ids),
+                    spent_range=UInt32Range(stop=uint32(0)),
+                )
+                found_ids: set[bytes32] = set()
+                for record in records_result.records:
+                    found_ids.add(record.coin.name())
+                    specified_coins_by_wallet.setdefault(record.wallet_id, set()).add(record.coin)
+                for cid in coin_ids:
+                    if cid not in found_ids:
+                        raise ValueError(f"Coin {cid} not found or already spent")
+
             for id, amount in offer_dict.items():
                 asset_id: bytes32 | None = None
                 # asset_id can either be none if asset is XCH or
@@ -539,7 +559,30 @@ class TradeManager:
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         amount_to_select += fee
                     assert isinstance(wallet, (CATWallet, DataLayerWallet, NFTWallet, Wallet))
-                    if isinstance(wallet, DataLayerWallet):
+
+                    wallet_specified = specified_coins_by_wallet.pop(wallet.id(), set())
+                    if wallet_specified:
+                        if isinstance(wallet, (DataLayerWallet, NFTWallet)):
+                            raise ValueError(
+                                f"Cannot specify coins for wallet {wallet.id()} "
+                                f"(non-fungible wallets select coins by asset ID)"
+                            )
+                        specified_total = sum(c.amount for c in wallet_specified)
+                        if specified_total >= amount_to_select:
+                            coins_to_offer[id] = wallet_specified
+                        else:
+                            remaining = amount_to_select - specified_total
+                            adjusted_tx_config = dataclasses.replace(
+                                action_scope.config.tx_config,
+                                excluded_coin_ids=[
+                                    *action_scope.config.tx_config.excluded_coin_ids,
+                                    *(c.name() for c in wallet_specified),
+                                ],
+                            )
+                            async with self.wallet_state_manager.new_action_scope(adjusted_tx_config) as sandbox:
+                                additional = await wallet.select_coins(uint64(remaining), sandbox)
+                            coins_to_offer[id] = wallet_specified | additional
+                    elif isinstance(wallet, DataLayerWallet):
                         assert asset_id is not None
                         coins_to_offer[id] = await wallet.get_coins_to_offer(launcher_id=asset_id)
                     elif isinstance(wallet, NFTWallet):
@@ -554,6 +597,14 @@ class TradeManager:
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
+
+            # Verify all specified coins were claimed by an offering wallet
+            if specified_coins_by_wallet:
+                unused_wallet_ids = list(specified_coins_by_wallet.keys())
+                raise ValueError(
+                    f"Specified coins belong to wallet(s) {unused_wallet_ids} "
+                    f"which are not offering in this trade"
+                )
 
                 offer_dict_no_ints[asset_id] = amount
 

@@ -537,6 +537,93 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
 
 @pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_offer_with_coin_ids(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+
+    # Get spendable XCH coins
+    coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(coins_response.coins) >= 1
+    xch_coin = coins_response.coins[0]
+
+    # Success: create offer specifying a coin to use
+    # Offer 1 mojo of XCH, request some fake CAT (validate_only so we don't need a real CAT wallet)
+    create_res = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-xch_coin.amount)},
+            validate_only=True,
+            coin_ids=[xch_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert create_res.offer is not None
+    involved = create_res.offer.get_involved_coins()
+    assert xch_coin in involved
+
+    # Failure: non-existent coin ID
+    fake_coin_id = bytes32.zeros
+    with pytest.raises(ResponseFailureError, match="not found or already spent"):
+        await client.create_offer_for_ids(
+            CreateOfferForIDs(
+                offer={str(1): "-1"},
+                validate_only=True,
+                coin_ids=[fake_coin_id],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # Failure: coin belongs to a wallet not offering in this trade
+    # Wallet 1 (XCH) is requesting (positive), not offering, so a wallet-1 coin is invalid
+    with pytest.raises(ResponseFailureError, match="not offering in this trade"):
+        await client.create_offer_for_ids(
+            CreateOfferForIDs(
+                offer={str(1): "1"},
+                validate_only=True,
+                coin_ids=[xch_coin.name()],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # Success: partial coverage -- specify a small coin, let auto-selection fill the rest
+    # First, get two separate coins (we have 2 blocks worth of rewards)
+    all_coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(3_500_000_000_000),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(all_coins_response.coins) >= 2
+    small_coin = min(all_coins_response.coins, key=lambda c: c.amount)
+    total_needed = sum(c.amount for c in all_coins_response.coins)
+
+    create_res2 = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-total_needed)},
+            validate_only=True,
+            coin_ids=[small_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert create_res2.offer is not None
+    involved2 = create_res2.offer.get_involved_coins()
+    assert small_coin in involved2
+    assert len(involved2) >= 2
+
+
+@pytest.mark.parametrize(
     "output_args, fee, select_coin, is_cat",
     [
         ([(348026, None)], 0, False, False),
