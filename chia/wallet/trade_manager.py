@@ -602,8 +602,7 @@ class TradeManager:
             if specified_coins_by_wallet:
                 unused_wallet_ids = list(specified_coins_by_wallet.keys())
                 raise ValueError(
-                    f"Specified coins belong to wallet(s) {unused_wallet_ids} "
-                    f"which are not offering in this trade"
+                    f"Specified coins belong to wallet(s) {unused_wallet_ids} which are not offering in this trade"
                 )
 
                 offer_dict_no_ints[asset_id] = amount
