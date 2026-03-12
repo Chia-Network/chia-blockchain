@@ -314,6 +314,45 @@ class TestPendingTxCache:
             items[9].spend_bundle_name: items[9],
         }
 
+    def test_eviction_with_empty_height_bucket(self) -> None:
+        # When an empty bucket exists in _by_height, eviction must remove the
+        # bucket rather than attempting to pop from _txs with a height key.
+        c = PendingTxCache(160)
+        item1 = make_item(1, assert_height=uint32(100))
+        item2 = make_item(2, assert_height=uint32(200))
+        c.add(item1)
+        c.add(item2)
+
+        # Inject an empty bucket at the highest height to simulate the edge case.
+        c._by_height[uint32(300)] = {}
+
+        # Adding a third item (total cost 240 > limit 160) forces eviction.
+        # The eviction loop sees the empty bucket at height 300 first.
+        item3 = make_item(3, assert_height=uint32(150))
+        c.add(item3)
+
+        # The empty bucket should be removed, and a real item evicted.
+        # item2 (height 200) is the highest real bucket, so it gets evicted next.
+        assert c.get(item2.name) is None
+        assert c.get(item3.name) is not None
+        assert uint32(300) not in c._by_height
+
+    def test_eviction_removes_highest_height_first(self) -> None:
+        # Verify normal eviction order: highest assert_height evicted first
+        c = PendingTxCache(160)
+        item_low = make_item(1, assert_height=uint32(50))
+        item_mid = make_item(2, assert_height=uint32(100))
+        item_high = make_item(3, assert_height=uint32(200))
+        c.add(item_low)
+        c.add(item_mid)
+        # Adding item_high exceeds cost limit (240 > 160), evicts item_high itself
+        # since it has the highest assert_height
+        c.add(item_high)
+
+        assert c.get(item_low.name) is not None
+        assert c.get(item_mid.name) is not None
+        assert c.get(item_high.name) is None
+
 
 class TestMempool:
     @pytest.mark.anyio
