@@ -14,6 +14,7 @@ excepted_packages = {
     "chialisp_puzzles",
     "chia_base",
     "keyrings.cryptfile",
+    "chia_rs",  # pinned to git commit for LIMIT_HEAP test branch
 }
 
 
