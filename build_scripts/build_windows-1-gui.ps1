@@ -29,6 +29,12 @@ If ($LastExitCode -gt 0){
     Throw "npm run build failed!"
 }
 
+# Webpack already bundled all JS into build/. Clear production dependencies from
+# package.json so electron-builder v26's node module collector doesn't fail when
+# it can't find workspace packages that are removed below for cache optimization.
+Write-Output "Clearing dependencies from packages/gui/package.json for electron-builder"
+node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync('./packages/gui/package.json', 'utf8')); p.dependencies = {}; fs.writeFileSync('./packages/gui/package.json', JSON.stringify(p, null, 2) + '\n');"
+
 # Remove unused packages
 Remove-Item node_modules -Recurse -Force
 
@@ -48,5 +54,5 @@ Remove-Item packages\wallets -Recurse -Force
 #Remove-Item "@mui" -Recurse -Force # ~71MB
 #Remove-Item typescript -Recurse -Force # ~63MB
 
-# Remove `packages/gui/node_modules/@chia-network` because it causes an error on later `electron-packager` command
+# Remove `packages/gui/node_modules/@chia-network` to save cache space
 #Remove-Item "@chia-network" -Recurse -Force
