@@ -114,7 +114,7 @@ async def get_plugin_info(
                     ret["response"] = json.loads(await response.text())
                 return plugin_remote, ret
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        return plugin_remote, {"error": f"ClientError: {e}"}
+        return plugin_remote, {"error": f"{type(e).__name__}: {e}"}
 
 
 @final

@@ -147,16 +147,20 @@ async def download_file(
         "filename": filename,
         "group_files_by_store": group_downloaded_files_by_store,
     }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            downloader.url + "/download",
-            json=request_json,
-            headers=downloader.headers,
-            timeout=timeout,
-        ) as response:
-            res_json = await response.json()
-            assert isinstance(res_json["downloaded"], bool)
-            return res_json["downloaded"]
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                downloader.url + "/download",
+                json=request_json,
+                headers=downloader.headers,
+                timeout=timeout,
+            ) as response:
+                res_json = await response.json()
+                assert isinstance(res_json["downloaded"], bool)
+                return res_json["downloaded"]
+    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+        log.error(f"download_file could not get response from plugin {downloader}: {type(e).__name__}: {e}")
+        return False
 
 
 async def insert_from_delta_file(
