@@ -622,6 +622,24 @@ async def test_create_offer_with_coin_ids(wallet_environments: WalletTestFramewo
     assert small_coin in involved2
     assert len(involved2) >= 2
 
+    # Verify first specified coin_id becomes the origin (the coin that creates outputs).
+    # When two coins are specified, coin_ids[0] should carry the CREATE_COIN conditions.
+    sorted_coins = sorted(all_coins_response.coins, key=lambda c: c.amount)
+    first_coin, second_coin = sorted_coins[0], sorted_coins[1]
+    create_res3 = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-total_needed)},
+            validate_only=True,
+            coin_ids=[first_coin.name(), second_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    offer3 = create_res3.offer
+    assert offer3 is not None
+    additions_by_coin = {cs.coin: offer3._additions.get(cs.coin, []) for cs in offer3.coin_spends()}
+    assert len(additions_by_coin[first_coin]) > 0, "first specified coin should be the origin with outputs"
+    assert len(additions_by_coin[second_coin]) == 0, "second coin should not create outputs"
+
 
 @pytest.mark.parametrize(
     "output_args, fee, select_coin, is_cat",

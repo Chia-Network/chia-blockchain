@@ -648,6 +648,19 @@ class TradeManager:
 
             all_transactions: list[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
+
+            # Resolve the preferred origin coin from coin_ids[0] so it carries extra_conditions
+            preferred_origin: Coin | None = None
+            if coin_ids:
+                target_id = coin_ids[0]
+                for coin_set in coins_to_offer.values():
+                    for c in coin_set:
+                        if c.name() == target_id:
+                            preferred_origin = c
+                            break
+                    if preferred_origin is not None:
+                        break
+
             # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
             # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
             for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
@@ -678,6 +691,9 @@ class TradeManager:
                     else:
                         # ATTENTION: new_wallets
                         assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet))
+                        origin_id: bytes32 | None = None
+                        if preferred_origin is not None and preferred_origin in selected_coins:
+                            origin_id = preferred_origin.name()
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
@@ -686,6 +702,7 @@ class TradeManager:
                             coins=selected_coins,
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                             add_authorizations_to_cr_cats=False,
+                            origin_id=origin_id,
                         )
 
                 all_transactions.extend(inner_action_scope.side_effects.transactions)
