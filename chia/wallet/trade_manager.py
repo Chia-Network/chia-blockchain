@@ -421,7 +421,7 @@ class TradeManager:
 
     async def create_offer_for_ids(
         self,
-        offer: dict[int | bytes32, int],
+        offer: dict[int | bytes32, int],  # wallet id and relative amount of the asset to offer/request
         action_scope: WalletActionScope,
         driver_dict: dict[bytes32, PuzzleInfo] | None = None,
         solver: Solver | None = None,
@@ -429,7 +429,7 @@ class TradeManager:
         validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
-        coin_ids: list[bytes32] | None = None,
+        coin_ids: list[bytes32] | None = None,  # the first entry in this list makes the extra_conditions
     ) -> tuple[Literal[True], TradeRecord, None]:
         if driver_dict is None:
             driver_dict = {}
