@@ -49,11 +49,13 @@ from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
+from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.types.fee_rate import FeeRate
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -90,6 +92,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -133,6 +136,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -534,6 +538,58 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
     # This tests that the client returns successfully, rather than raising or returning something unexpected
     await client.get_timestamp_for_height(GetTimestampForHeight(height=uint32(1)))
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+
+    # Success path
+    result: GetFeeEstimateResponse = await client.get_fee_estimate()
+    assert int(result.fee_per_cost) >= 0
+
+    # Failure path: no connected full node peer
+    with patch.object(env.node, "get_full_node_peer", side_effect=ValueError("No peer connected")):
+        with pytest.raises(ResponseFailureError, match="Wallet is not currently connected to any full node peers"):
+            await client.get_fee_estimate()
+
+    # Failure path: full node peer request fails (e.g. empty/invalid protocol response).
+    # PeerRequestException is raised in WalletNode.request_fee_estimates when call_api returns None.
+    with patch.object(
+        env.node,
+        "request_fee_estimates",
+        side_effect=PeerRequestException("Failed to get fee estimates from full node"),
+    ):
+        with pytest.raises(ResponseFailureError, match="Failed to get fee estimates from full node"):
+            await client.get_fee_estimate()
+
+    # Failure path: per-estimate error from full node (e.g. insufficient data).
+    estimate_err = FeeEstimateGroup(
+        error=None,
+        estimates=[FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))],
+    )
+    with patch.object(env.node, "request_fee_estimates", return_value=estimate_err):
+        with pytest.raises(ResponseFailureError, match="not enough data"):
+            await client.get_fee_estimate()
+
+    # Failure path: group-level error from full node.
+    group_err = FeeEstimateGroup(error="fee estimator unavailable", estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=group_err):
+        with pytest.raises(ResponseFailureError, match="fee estimator unavailable"):
+            await client.get_fee_estimate()
+
+    # Failure path: empty estimates list from full node.
+    empty_estimates = FeeEstimateGroup(error=None, estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=empty_estimates):
+        with pytest.raises(ResponseFailureError, match="No fee estimates returned from full node"):
+            await client.get_fee_estimate()
 
 
 @pytest.mark.parametrize(
