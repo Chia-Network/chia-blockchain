@@ -38,6 +38,10 @@ from chia.server.capabilities import known_active_capabilities
         [[(uint16(max(Capability) + 1), "1")], []],
         # a few invalid
         [[(uint16(max(Capability) + n), "1") for n in range(1, 10)], []],
+        # Only "0" value disables the capabilities
+        [[(uint16(Capability.BASE), "42")], [Capability.BASE]],
+        [[(uint16(Capability.BASE), "")], [Capability.BASE]],
+        [[(uint16(Capability.BASE), "0")], []],
     ],
 )
 @pytest.mark.parametrize(
@@ -60,6 +64,7 @@ def test_known_active_capabilities_filter(
         values *= 2
 
     if disabled:
+        # Only "0" value disables the capabilities
         values = [(value, "0") for value, state in values]
         expected = []
 

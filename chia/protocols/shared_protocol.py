@@ -48,9 +48,14 @@ class Capability(IntEnum):
     # Signals support for Hard Fork 2
     HARD_FORK_2 = 6
 
+    # When both peers advertise this, rate limits v3 replace v2 for supported
+    # protocol message types.
+    RATE_LIMITS_V3 = 7
+
 
 # These are the default capabilities used in all outgoing handshakes.
-# "1" means the capability is supported and enabled.
+# "0" means the capability is not supported/disabled.
+# Any other value means the capability is supported and enabled.
 _capabilities: list[tuple[uint16, str]] = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
