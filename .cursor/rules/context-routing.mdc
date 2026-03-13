@@ -1,0 +1,37 @@
+---
+description: Route agents to pre-built context before code exploration
+alwaysApply: true
+---
+
+# Deep Context — Read Before You Grep
+
+Pre-built deep context exists in `.cursor/context/`. **Before running broad
+code searches** (semantic search, grep, glob) to understand how a subsystem
+works, read the matching context file first. It will answer most structural
+questions instantly.
+
+## Routing table
+
+Match the files or intent to the right context doc:
+
+| If you're touching… | Read first |
+|----------------------|------------|
+| `chia/consensus/**` or block validation / reorg / difficulty | `.cursor/context/consensus.md` |
+| `chia/full_node/mempool*.py`, `eligible_coin_spends.py`, fee logic | `.cursor/context/mempool.md` |
+| `chia/full_node/full_node.py`, `full_node_api.py`, `full_node_store.py`, sync | `.cursor/context/full-node.md` |
+| `chia/server/**`, `chia/protocols/**`, connections, rate limits | `.cursor/context/networking.md` |
+| `chia/wallet/**` | `.cursor/context/wallet.md` |
+| CLVM, puzzles, conditions, generators, `chia/types/blockchain_format/**` | `.cursor/context/clvm-execution.md` |
+| Cross-cutting / security review / unsure | `.cursor/context/global-invariants.md` |
+| First time / orientation / unfamiliar area | `.cursor/context/architecture-overview.md` |
+
+## Protocol
+
+1. Identify which subsystem(s) the task touches.
+2. Read the matching context file(s) via the Read tool.
+3. State: `Context loaded: <filename> (area: <area>)`.
+4. Only then do targeted code reads for the specific lines you need to change.
+
+The context files contain: file maps, function-level analysis, invariants,
+constants, assumptions, and cross-module dependencies. They replace the need
+for broad exploratory searches.

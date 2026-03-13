@@ -1,0 +1,17 @@
+---
+description: Auto-attach mempool context when working in mempool code
+globs:
+  - chia/full_node/mempool*.py
+  - chia/full_node/eligible_coin_spends.py
+  - chia/full_node/pending_tx_cache.py
+  - chia/full_node/fee_*.py
+  - chia/full_node/bitcoin_fee_estimator.py
+---
+
+# Mempool Context Available
+
+Deep context for this subsystem exists at `.cursor/context/mempool.md`.
+Read it before exploring code — it documents the full admission pipeline,
+`validate_spend_bundle()`, `check_removals()`, `add_spend_bundle()`,
+`new_peak()` reorg handling, FF/DEDUP logic, conflict resolution, and all
+key constants with their rationale.
