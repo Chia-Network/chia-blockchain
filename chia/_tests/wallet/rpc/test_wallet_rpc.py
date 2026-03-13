@@ -651,54 +651,72 @@ async def test_create_offer_with_coin_ids(wallet_environments: WalletTestFramewo
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_create_offer_with_coin_ids_cat_origin(wallet_environments: WalletTestFramework) -> None:
+    # we test that the CAT coin makes the extra_conditions
     env = wallet_environments.environments[0]
     client: WalletRpcClient = env.rpc_client
-    env.wallet_aliases = {"xch": 1, "cat": 2}
+    env.wallet_aliases = {"xch": 1, "cat_a": 2, "cat_b": 3}
 
-    cat_wallet = await mint_cat(wallet_environments, env, "xch", "cat", uint64(100), CATWallet, "cat_origin_test")
-    cat_wallet_id = uint32(cat_wallet.id())
-    # cat_asset_id = cat_wallet.cat_info.limitations_program_hash
+    cat_a = await mint_cat(wallet_environments, env, "xch", "cat_a", uint64(100), CATWallet, "cat_a_origin")
+    cat_b = await mint_cat(wallet_environments, env, "xch", "cat_b", uint64(50), CATWallet, "cat_b_origin")
+    cat_a_id = uint32(cat_a.id())
+    cat_b_asset_id = cat_b.cat_info.limitations_program_hash
+
+    xch_coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(xch_coins_response.coins) >= 1
+    xch_coin = xch_coins_response.coins[0]
 
     cat_coins_response = await client.select_coins(
         SelectCoins.from_coin_selection_config(
             amount=uint64(1),
-            wallet_id=cat_wallet_id,
+            wallet_id=cat_a_id,
             coin_selection_config=wallet_environments.tx_config.coin_selection_config,
         )
     )
     assert len(cat_coins_response.coins) >= 1
-    cat_coin = cat_coins_response.coins[0]
+    cat_a_coin = cat_coins_response.coins[0]
 
-    # add extra condition to the cat spend
-    # offer a cat for some mojo
+    # Offer both XCH and CAT_A, request CAT_B.
+    # coin_ids[0] is the CAT coin, so extra_conditions must land on its spend.
     remark_condition = Remark(Program.to("cat_origin_test"))
     create_res = await client.create_offer_for_ids(
         CreateOfferForIDs(
-            offer={str(cat_wallet_id): str(-cat_coin.amount), "1": "1000"},
+            offer={
+                str(1): str(-xch_coin.amount),
+                str(cat_a_id): str(-cat_a_coin.amount),
+                cat_b_asset_id.hex(): "1",
+            },
             validate_only=True,
-            coin_ids=[cat_coin.name()],
+            coin_ids=[cat_a_coin.name()],
         ),
         tx_config=wallet_environments.tx_config,
         extra_conditions=(remark_condition,),
     )
     assert create_res.offer is not None
     involved = create_res.offer.get_involved_coins()
-    assert cat_coin in involved
+    assert cat_a_coin in involved
+    assert xch_coin in involved
 
-    # Verify the Remark condition is present in one of the coin spends
-    remark_found = False
+    # Verify the Remark condition is on the CAT coin spend, NOT the XCH spend
+    remark_on_cat = False
+    remark_on_xch = False
     for cs in create_res.offer.coin_spends():
         puzzle = ChiaProgram.from_bytes(bytes(cs.puzzle_reveal))
         solution = ChiaProgram.from_bytes(bytes(cs.solution))
-        # generate conds
         conditions = puzzle.run(solution).as_python()
-        for cond in conditions:
-            if cond[0] == ConditionOpcode.REMARK:
-                remark_found = True
-                break
-        if remark_found:
-            break
-    assert remark_found
+        has_remark = any(cond[0] == ConditionOpcode.REMARK for cond in conditions)
+        if has_remark:
+            if cs.coin == cat_a_coin:
+                remark_on_cat = True
+            elif cs.coin == xch_coin:
+                remark_on_xch = True
+    assert remark_on_cat
+    assert not remark_on_xch
 
 
 @pytest.mark.parametrize(

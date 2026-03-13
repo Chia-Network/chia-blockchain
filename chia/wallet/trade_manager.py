@@ -667,6 +667,15 @@ class TradeManager:
             # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
             for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
                 selected_coins = coins_to_offer[id]
+                origin_in_this_wallet = False
+                if preferred_origin is not None and preferred_origin in selected_coins:
+                    origin_in_this_wallet = True
+
+                if preferred_origin is not None:
+                    conditions_for_this_wallet = extra_conditions if origin_in_this_wallet else tuple()
+                else:
+                    conditions_for_this_wallet = extra_conditions
+
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets.get(uint32(id))
                 else:
@@ -688,13 +697,15 @@ class TradeManager:
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            extra_conditions=(*conditions_for_this_wallet, *announcements_to_assert),
                         )
                     else:
                         # ATTENTION: new_wallets
                         assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet))
                         origin_id: bytes32 | None = None
-                        if preferred_origin is not None and preferred_origin in selected_coins:
+                        if origin_in_this_wallet:
+                            # if we have origin in this wallet, we can assume we have a preferred origin
+                            assert preferred_origin is not None
                             origin_id = preferred_origin.name()
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
@@ -702,7 +713,7 @@ class TradeManager:
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            extra_conditions=(*conditions_for_this_wallet, *announcements_to_assert),
                             add_authorizations_to_cr_cats=False,
                             origin_id=origin_id,
                         )
@@ -710,7 +721,8 @@ class TradeManager:
                 all_transactions.extend(inner_action_scope.side_effects.transactions)
 
                 fee_left_to_pay = uint64(0)
-                extra_conditions = tuple()
+                if preferred_origin is None or origin_in_this_wallet:
+                    extra_conditions = tuple()
 
             async with action_scope.use() as interface:
                 interface.side_effects.transactions.extend(all_transactions)
