@@ -257,10 +257,14 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
 
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(
-    launcher_id: bytes32, inner_puz: Program, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
+    launcher_id: bytes32,
+    inner_puz: Program,
+    launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
+    singleton_mod: Program = SINGLETON_MOD,
+    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
 ) -> Program:
-    return SINGLETON_MOD.curry(
-        (SINGLETON_MOD_HASH, (launcher_id, launcher_hash)),
+    return singleton_mod.curry(
+        (singleton_mod_hash, (launcher_id, launcher_hash)),
         inner_puz,
     )
 
