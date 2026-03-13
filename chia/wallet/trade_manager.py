@@ -504,7 +504,9 @@ class TradeManager:
                 found_ids: set[bytes32] = set()
                 for record in records_result.records:
                     found_ids.add(record.coin.name())
-                    specified_coins_by_wallet.setdefault(record.wallet_id, set()).add(record.coin)
+                    if record.wallet_id not in specified_coins_by_wallet:
+                        specified_coins_by_wallet[record.wallet_id] = set()
+                    specified_coins_by_wallet[record.wallet_id].add(record.coin)
                 for cid in coin_ids:
                     if cid not in found_ids:
                         raise ValueError(f"Coin {cid} not found or already spent")
