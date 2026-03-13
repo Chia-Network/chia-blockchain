@@ -38,6 +38,7 @@
     "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
     "category": "public.app-category.finance",
     "target": "dmg",
+    "minimumSystemVersion": "15",
     "icon": "src/assets/img/chia.icns",
     "entitlements": "entitlements.mac.plist",
     "provisioningProfile": "chiablockchain.provisionprofile",
@@ -76,6 +77,7 @@
     "icon": "src/assets/img/chia.icns"
   },
   "deb": {
+    "packageName": "chia-blockchain",
     "afterInstall": "../../../build_scripts/assets/deb/postinst.sh",
     "afterRemove": "../../../build_scripts/assets/deb/prerm.sh",
     "depends": [
@@ -92,6 +94,7 @@
     ]
   },
   "rpm": {
+    "packageName": "chia-blockchain",
     "afterInstall": "../../../build_scripts/assets/rpm/postinst.sh",
     "afterRemove": "../../../build_scripts/assets/rpm/prerm.sh",
     "fpm": [
