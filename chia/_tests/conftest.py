@@ -21,7 +21,15 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
-from chia_rs import ConsensusConstants
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    ConsensusConstants,
+    FullBlock,
+    SpendBundleConditions,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import MonkeyPatch
 
@@ -592,6 +600,90 @@ def pytest_configure(config):
             return request.param
 
         globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
+
+
+@pytest.fixture(scope="function")
+async def ignore_block_validation(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    anyio_backend: str,
+) -> None:
+    """
+    Patches BlockTools with WalletBlockTools and bypasses consensus validation for faster tests.
+    Tests that need real validation should use @pytest.mark.standard_block_tools to opt out.
+
+    This fixture is NOT autouse. Individual test directories opt in via a thin autouse wrapper
+    in their conftest.py that depends on this fixture.
+    """
+    if "standard_block_tools" in request.keywords:
+        return None
+
+    from chia._tests.wallet.wallet_block_tools import WalletBlockTools
+    from chia.full_node.full_node import FullNode
+
+    async def validate_block_body(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    def create_wrapper(original_create: Any) -> Any:
+        async def new_create(*args: Any, **kwargs: Any) -> Any:
+            if "config" in kwargs:
+                kwargs["config"]["single_threaded"] = True
+            else:  # pragma: no cover
+                args[0]["single_threaded"] = True
+            full_node = await original_create(*args, **kwargs)
+            return full_node
+
+        return new_create
+
+    def block_runner(
+        block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
+    ) -> tuple[int | None, SpendBundleConditions | None]:
+        assert block.transactions_generator is not None
+        assert block.transactions_info is not None
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+        if block.height >= constants.HARD_FORK_HEIGHT:
+            run_block = run_block_generator2
+        else:
+            run_block = run_block_generator
+        err, conds = run_block(
+            bytes(block.transactions_generator),
+            prev_generators,
+            block.transactions_info.cost,
+            flags,
+            block.transactions_info.aggregated_signature,
+            None,
+            constants,
+        )
+        if conds is not None:
+            conds = conds.replace(validated_signature=True)
+        return err, conds
+
+    monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
+    monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
+    monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
+    monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", block_runner)
+    monkeypatch.setattr(
+        "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)
+    )
+    monkeypatch.setattr(
+        "chia.wallet.wallet_blockchain.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
+    )
+    monkeypatch.setattr(
+        "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
+    )
+    monkeypatch.setattr(
+        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters", lambda *_, **__: uint64(0)
+    )
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
+    monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_sp_iters", lambda *_: uint64(0))
+    monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_ip_iters", lambda *_: uint64(0))
+    monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_sub_slot_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_difficulty", lambda *_: uint64(1))
+    monkeypatch.setattr("chia.full_node.full_node_store.calculate_sp_interval_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia.consensus.pot_iterations.calculate_sp_interval_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia.consensus.pot_iterations.calculate_ip_iters", lambda *_: uint64(1))
+    monkeypatch.setattr("chia_rs.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: list[pytest.Function]):
