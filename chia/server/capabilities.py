@@ -13,7 +13,8 @@ def known_active_capabilities(values: Iterable[tuple[uint16, str]]) -> list[Capa
     #       presently it considers it supported
     filtered: set[Capability] = set()
     for value, state in values:
-        if state != "1":
+        # Treat only "0" as disabled
+        if state == "0":
             continue
 
         try:
