@@ -1,8 +1,19 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol, TypeVar
+
+from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2
+
+
+class _Serializable(Protocol):
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> Self: ...
+    def stream_to_bytes(self) -> bytes: ...
+
+
+_T = TypeVar("_T", bound=_Serializable)
 
 
 class KeyValStore:
@@ -13,7 +24,7 @@ class KeyValStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -23,7 +34,7 @@ class KeyValStore:
             await conn.execute("DROP INDEX IF EXISTS key_val_name")
         return self
 
-    async def get_object(self, key: str, object_type: Any) -> Any:
+    async def get_object(self, key: str, object_type: type[_T]) -> _T | None:
         """
         Return bytes representation of stored object
         """
@@ -38,9 +49,9 @@ class KeyValStore:
 
         return object_type.from_bytes(row[0])
 
-    async def set_object(self, key: str, obj: Any):
+    async def set_object(self, key: str, obj: _Serializable) -> None:
         """
-        Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
+        Adds object to key val store. Obj MUST support stream_to_bytes() method.
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
@@ -49,7 +60,7 @@ class KeyValStore:
             )
             await cursor.close()
 
-    async def remove_object(self, key: str):
+    async def remove_object(self, key: str) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute("DELETE FROM key_val_store where key=?", (key,))
             await cursor.close()
