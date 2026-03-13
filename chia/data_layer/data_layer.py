@@ -843,18 +843,21 @@ class DataLayer:
                 "group_files_by_store": self.group_files_by_store,
             }
             for uploader in uploaders:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        uploader.url + "/add_missing_files",
-                        json=request_json,
-                        headers=uploader.headers,
-                        timeout=self.client_timeout,
-                    ) as response:
-                        res_json = await response.json()
-                        if not res_json["uploaded"]:
-                            self.log.error(f"failed to upload to uploader {uploader}")
-                        else:
-                            self.log.debug(f"uploaded to uploader {uploader}")
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            uploader.url + "/add_missing_files",
+                            json=request_json,
+                            headers=uploader.headers,
+                            timeout=self.client_timeout,
+                        ) as response:
+                            res_json = await response.json()
+                            if not res_json["uploaded"]:
+                                self.log.error(f"failed to upload to uploader {uploader}")
+                            else:
+                                self.log.debug(f"uploaded to uploader {uploader}")
+                except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+                    self.log.error(f"add_missing_files could not reach uploader {uploader}: {type(e).__name__}: {e}")
 
     async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
