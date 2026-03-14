@@ -218,6 +218,8 @@ class AugmentedBlockchain:
             return augmented_hash
 
         assert self._height_to_hash
+        if height > max(self._height_to_hash):
+            return None
         curr_hash = self._height_to_hash[min(self._height_to_hash)]
         br: BlockRecord | None = self.block_record(curr_hash)
         while br is not None and br.height > height:
