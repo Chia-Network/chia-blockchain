@@ -71,17 +71,17 @@ class AugmentedBlockchain:
         if self._fork_height is not None:
             return
 
-        if block_record.height == 0:
-            self._fork_height = uint32(0)
-            return
-
         # Walk backward from the block's parent to find the fork point: the
         # highest height where the augmented chain's ancestry agrees with the
         # underlying canonical chain.  Blocks between the fork point and the
         # first augmented block may be orphans in the underlying (present in
         # its block record cache but not in its height-to-hash map).
-        h = int(block_record.height) - 1
-        curr_hash = block_record.prev_hash
+        if block_record.height == 0:
+            h = 0
+            curr_hash = block_record.header_hash
+        else:
+            h = int(block_record.height) - 1
+            curr_hash = block_record.prev_hash
         while h >= 0:
             canonical = self._underlying.height_to_hash(uint32(h))
             if canonical == curr_hash:
@@ -92,7 +92,6 @@ class AugmentedBlockchain:
                 break
             curr_hash = br.prev_hash
             h -= 1
-        self._fork_height = uint32(max(0, h))
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self._ensure_mutable()
@@ -203,7 +202,7 @@ class AugmentedBlockchain:
 
     def height_to_hash(self, height: uint32) -> bytes32 | None:
         # At or below the fork point both chains agree — delegate.
-        if self._fork_height is None or height <= self._fork_height:
+        if not self._height_to_hash or (self._fork_height is not None and height <= self._fork_height):
             return self._underlying.height_to_hash(height)
 
         # Above the fork point — check the augmented map, then traverse
