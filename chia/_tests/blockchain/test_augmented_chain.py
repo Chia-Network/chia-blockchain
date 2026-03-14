@@ -109,6 +109,53 @@ class InMemoryBlockchain:
 
 
 @dataclass
+class BlockchainMock(NullBlockchain):
+    records: dict[bytes32, BlockRecord] = field(default_factory=dict)
+
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
+        return self.records.get(header_hash)
+
+    def add_block_record(self, block_record: BlockRecord) -> None:
+        self.added_blocks.add(block_record.header_hash)
+        self.records[block_record.header_hash] = block_record
+        self.heights[block_record.height] = block_record.header_hash
+
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
+        return self.records.get(header_hash)
+
+    def block_record(self, header_hash: bytes32) -> BlockRecord:
+        return self.records[header_hash]
+
+    def height_to_block_record(self, height: uint32) -> BlockRecord:
+        hh = self.heights.get(height)
+        if hh is None:
+            raise ValueError("Height is not in blockchain")
+        return self.records[hh]
+
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        return self.heights.get(height) == header_hash
+
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
+        ret: list[bytes32] = []
+        for hh in header_hashes:
+            br = self.records.get(hh)
+            if br is None:
+                raise KeyError("no block records in BlockchainMock")
+            ret.append(br.prev_hash)
+        return ret
+
+
+@dataclass
+class SparseCacheBlockchainMock(BlockchainMock):
+    cached_hashes: set[bytes32] = field(default_factory=set)
+
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
+        if header_hash not in self.cached_hashes:
+            return None
+        return super().try_block_record(header_hash)
+
+
+@dataclass
 class FakeBlockRecord:
     height: uint32
     header_hash: bytes32
@@ -186,7 +233,7 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
 
     assert abc.height_to_hash(uint32(5)) is None
     null.heights = {uint32(5): blocks[5].header_hash}
-    assert abc.height_to_hash(uint32(5)) == blocks[5].header_hash
+    assert abc.height_to_hash(uint32(5)) is None
 
     # if we add blocks to cache that are already augmented into the chain, the
     # augmented blocks should be removed
@@ -333,6 +380,7 @@ async def test_remove_promoted_extra_block_cascades(default_10000_blocks: list[F
 
     assert uint32(2) not in abc._height_to_hash
     assert uint32(5) in abc._height_to_hash
+    assert abc._fork_height == uint32(2)
 
 
 @pytest.mark.anyio
@@ -360,6 +408,162 @@ async def test_remove_non_promoted_extra_block(default_10000_blocks: list[FullBl
 
     assert uint32(5) not in abc._height_to_hash
     assert uint32(7) in abc._height_to_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_gap_below_fork_point_uses_underlying(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = BlockchainMock()
+    for block in blocks[:4]:
+        underlying.add_block_record(BR(block))
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    abc.add_extra_block(blocks[3], BR(blocks[3]))
+
+    # Underlying height lookup disagrees with records to verify gap resolution.
+    underlying.heights[uint32(1)] = bytes32(b"\xff" * 32)
+
+    abc.remove_extra_block(blocks[2].header_hash)
+
+    assert abc.height_to_hash(uint32(1)) == bytes32(b"\xff" * 32)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_hash_lookup_underlying_cache_miss(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = SparseCacheBlockchainMock()
+    for block in blocks[:4]:
+        underlying.add_block_record(BR(block))
+
+    underlying.cached_hashes = {blocks[3].header_hash}
+    abc = AugmentedBlockchain(underlying)
+    abc.add_block_record(BR(blocks[3]))
+    abc.add_extra_block(blocks[4], BR(blocks[4]))
+
+    assert underlying.try_block_record(blocks[2].header_hash) is None
+    assert abc.height_to_hash(uint32(1)) == blocks[1].header_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_promoted_orphan_below_fork_uses_underlying(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = BlockchainMock()
+    for block in blocks[:4]:
+        underlying.add_block_record(BR(block))
+
+    abc = AugmentedBlockchain(underlying)
+    # simulate an augmented orphan record promoted into underlying DB/cache
+    abc.add_block_record(BR(blocks[3]))
+    assert len(abc._extra_blocks) == 0
+
+    # Under the fork point, underlying height lookup is trusted directly.
+    underlying.heights[uint32(1)] = bytes32(b"\xff" * 32)
+    assert abc.height_to_hash(uint32(1)) == bytes32(b"\xff" * 32)
+
+
+@pytest.mark.anyio
+async def test_fork_height_stays_fixed_for_augmented_branch() -> None:
+    h0 = bytes32(b"\x00" * 32)
+    h1 = bytes32(b"\x01" * 32)
+    h2 = bytes32(b"\x02" * 32)
+    h3 = bytes32(b"\x03" * 32)
+
+    underlying = BlockchainMock()
+    underlying.add_block_record(FakeBlockRecord(height=uint32(0), header_hash=h0, prev_hash=h0))  # type: ignore[arg-type]
+    underlying.add_block_record(FakeBlockRecord(height=uint32(1), header_hash=h1, prev_hash=h0))  # type: ignore[arg-type]
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_block_record(FakeBlockRecord(height=uint32(2), header_hash=h2, prev_hash=h1))  # type: ignore[arg-type]
+
+    assert abc._fork_height == uint32(1)
+
+    # Promote another block on the same augmented branch; fork point stays fixed.
+    abc.add_block_record(FakeBlockRecord(height=uint32(3), header_hash=h3, prev_hash=h2))  # type: ignore[arg-type]
+    assert abc._fork_height == uint32(1)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_orphan_gap_resolved_by_traversal(default_10000_blocks: list[FullBlock]) -> None:
+    """Blocks between the fork point and the lowest augmented height exist as
+    orphans in the underlying (in its block-record cache but NOT in its
+    height-to-hash map).  height_to_hash must resolve them by backward
+    traversal from the lowest augmented block, not by delegating to the
+    underlying which would return the wrong (canonical) hash."""
+    blocks = default_10000_blocks
+
+    underlying = BlockchainMock()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+    # canonical heights: {0: h0, 1: h1, 2: h2, 3: h3, 4: h4}
+
+    # Orphan fork blocks at heights 3-4 that branch from canonical height 2.
+    fork_h3 = blocks[10].header_hash
+    fork_h4 = blocks[11].header_hash
+    fork_h5 = blocks[12].header_hash
+    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[arg-type]
+    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[arg-type]
+    # These are NOT in underlying.heights — they are orphans.
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(
+        blocks[12],
+        FakeBlockRecord(uint32(5), fork_h5, fork_h4),  # type: ignore[arg-type]
+    )
+
+    # Fork point should be height 2 (where the fork ancestry meets canonical).
+    assert abc._fork_height == uint32(2)
+
+    # Case 1: in augmented height-to-hash.
+    assert abc.height_to_hash(uint32(5)) == fork_h5
+
+    # Case 2: at or below the fork point — underlying (canonical).
+    assert abc.height_to_hash(uint32(0)) == blocks[0].header_hash
+    assert abc.height_to_hash(uint32(1)) == blocks[1].header_hash
+    assert abc.height_to_hash(uint32(2)) == blocks[2].header_hash
+
+    # Case 3: orphan gap — resolved by traversal, NOT the underlying.
+    assert abc.height_to_hash(uint32(3)) == fork_h3
+    assert abc.height_to_hash(uint32(4)) == fork_h4
+
+    # Above the augmented chain's tip: no data.
+    assert abc.height_to_hash(uint32(6)) is None
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_fork_height_advances_on_cascade(default_10000_blocks: list[FullBlock]) -> None:
+    """When remove_extra_block triggers a cascade (fork promoted to canonical),
+    _fork_height advances to the removed block's height."""
+    blocks = default_10000_blocks
+
+    underlying = BlockchainMock()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    fork_h3 = blocks[10].header_hash
+    fork_h4 = blocks[11].header_hash
+    fork_h5 = blocks[12].header_hash
+    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[arg-type]
+    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[arg-type]
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(
+        blocks[12],
+        FakeBlockRecord(uint32(5), fork_h5, fork_h4),  # type: ignore[arg-type]
+    )
+    assert abc._fork_height == uint32(2)
+
+    # Promote the fork block at height 5 to canonical in the underlying.
+    underlying.heights[uint32(5)] = fork_h5
+    abc.remove_extra_block(fork_h5)
+
+    # Fork height should advance to the promoted block's height.
+    assert abc._fork_height == uint32(5)
 
 
 @pytest.mark.anyio

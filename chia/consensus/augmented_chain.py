@@ -32,12 +32,17 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    # The highest height where the augmented chain's block matches the
+    # underlying canonical chain.  Heights at or below this delegate to the
+    # underlying; heights above it must be resolved from the augmented state.
+    _fork_height: uint32 | None
     _read_only: bool
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._fork_height = None
         self._read_only = False
 
     def _ensure_mutable(self) -> None:
@@ -52,6 +57,7 @@ class AugmentedBlockchain:
         snapshot._underlying = self._underlying
         snapshot._extra_blocks = self._extra_blocks.copy()
         snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._fork_height = self._fork_height
         snapshot._read_only = True
         return snapshot
 
@@ -60,6 +66,33 @@ class AugmentedBlockchain:
         if eb is None:
             return None
         return eb[1]
+
+    def _initialize_fork_height(self, block_record: BlockRecord) -> None:
+        if self._fork_height is not None:
+            return
+
+        if block_record.height == 0:
+            self._fork_height = uint32(0)
+            return
+
+        # Walk backward from the block's parent to find the fork point: the
+        # highest height where the augmented chain's ancestry agrees with the
+        # underlying canonical chain.  Blocks between the fork point and the
+        # first augmented block may be orphans in the underlying (present in
+        # its block record cache but not in its height-to-hash map).
+        h = int(block_record.height) - 1
+        curr_hash = block_record.prev_hash
+        while h >= 0:
+            canonical = self._underlying.height_to_hash(uint32(h))
+            if canonical == curr_hash:
+                self._fork_height = uint32(h)
+                return
+            br = self._underlying.try_block_record(curr_hash)
+            if br is None:
+                break
+            curr_hash = br.prev_hash
+            h -= 1
+        self._fork_height = uint32(max(0, h))
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self._ensure_mutable()
@@ -86,6 +119,7 @@ class AugmentedBlockchain:
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._initialize_fork_height(block_record)
 
     def remove_extra_block(self, hh: bytes32) -> None:
         self._ensure_mutable()
@@ -99,6 +133,10 @@ class AugmentedBlockchain:
                 if h not in self._height_to_hash:
                     break
                 del self._height_to_hash[uint32(h)]
+            # The cascade only fires once the fork has been promoted to
+            # canonical in the underlying, so the fork point advances to
+            # the removed block's height.
+            self._fork_height = block_record.height
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -134,6 +172,7 @@ class AugmentedBlockchain:
         self._ensure_mutable()
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._initialize_fork_height(block_record)
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
         hh = block_record.header_hash
@@ -154,19 +193,33 @@ class AugmentedBlockchain:
         return self._underlying.block_record(header_hash)
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash = self._height_to_hash.get(height)
-        if header_hash is not None:
-            ret = self._get_block_record(header_hash)
-            if ret is not None:
-                return ret
-            return self._underlying.block_record(header_hash)
-        return self._underlying.height_to_block_record(height)
-
-    def height_to_hash(self, height: uint32) -> bytes32 | None:
-        ret = self._height_to_hash.get(height)
+        header_hash = self.height_to_hash(height)
+        if header_hash is None:
+            raise ValueError(f"Height is not in blockchain: {height}")
+        ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
-        return self._underlying.height_to_hash(height)
+        return self._underlying.block_record(header_hash)
+
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
+        # At or below the fork point both chains agree — delegate.
+        if self._fork_height is None or height <= self._fork_height:
+            return self._underlying.height_to_hash(height)
+
+        # Above the fork point — check the augmented map, then traverse
+        # backward through orphan blocks in the gap below it.
+        augmented_hash = self._height_to_hash.get(height)
+        if augmented_hash is not None:
+            return augmented_hash
+
+        assert self._height_to_hash
+        curr_hash = self._height_to_hash[min(self._height_to_hash)]
+        br: BlockRecord | None = self.block_record(curr_hash)
+        while br is not None and br.height > height:
+            curr_hash = br.prev_hash
+            br = self.block_record(curr_hash)
+        assert br is not None and br.height == height
+        return curr_hash
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         block_hash_from_hh = self.height_to_hash(height)
@@ -175,7 +228,7 @@ class AugmentedBlockchain:
         return True
 
     def contains_height(self, height: uint32) -> bool:
-        return (height in self._height_to_hash) or self._underlying.contains_height(height)
+        return self.height_to_hash(height) is not None
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret: list[bytes32] = []
