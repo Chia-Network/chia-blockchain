@@ -32,13 +32,37 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    # The highest height where the augmented chain's block matches the
+    # underlying canonical chain.  Heights at or below this delegate to the
+    # underlying; heights above it must be resolved from the augmented state.
+    _fork_height: uint32 | None
+    _read_only: bool
     mmr_manager: MMRManagerProtocol
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._fork_height = None
+        self._read_only = False
         self.mmr_manager = underlying.mmr_manager.copy()
+
+    def _ensure_mutable(self) -> None:
+        if self._read_only:
+            raise AugmentedBlockchainValidationError("Cannot mutate read-only augmented blockchain snapshot")
+
+    def read_only_snapshot(self) -> AugmentedBlockchain:
+        # _underlying is shared by reference; safe because the snapshot is only
+        # used for read-only BlockRecordsProtocol calls in a single executor task
+        # while the asyncio event loop serializes mutations on the writer side.
+        snapshot = AugmentedBlockchain.__new__(AugmentedBlockchain)
+        snapshot._underlying = self._underlying
+        snapshot._extra_blocks = self._extra_blocks.copy()
+        snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._fork_height = self._fork_height
+        snapshot._read_only = True
+        snapshot.mmr_manager = self.mmr_manager.copy()
+        return snapshot
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         eb = self._extra_blocks.get(header_hash)
@@ -46,18 +70,36 @@ class AugmentedBlockchain:
             return None
         return eb[1]
 
-    def _get_fork_height(self) -> uint32 | None:
-        """
-        Compute the fork point (last common block height) from augmented height_to_hash.
-        """
-        if not self._height_to_hash:
-            return None
-        min_height = min(self._height_to_hash.keys())
-        if min_height == 0:
-            return None  # no common blocks
-        return uint32(min_height - 1)
+    def _initialize_fork_height(self, block_record: BlockRecord) -> None:
+        if self._fork_height is not None:
+            return
+
+        # Walk backward from the block's parent to find the fork point: the
+        # highest height where the augmented chain's ancestry agrees with the
+        # underlying canonical chain.  Blocks between the fork point and the
+        # first augmented block may be orphans in the underlying (present in
+        # its block record cache but not in its height-to-hash map).
+        if block_record.height == 0:
+            h = 0
+            curr_hash = block_record.header_hash
+        else:
+            h = int(block_record.height) - 1
+            curr_hash = block_record.prev_hash
+        while h >= 0:
+            canonical = self._underlying.height_to_hash(uint32(h))
+            if canonical == curr_hash:
+                self._fork_height = uint32(h)
+                return
+            br = self._underlying.try_block_record(curr_hash)
+            if br is None:
+                break
+            curr_hash = br.prev_hash
+            h -= 1
+        # No common block found — leave _fork_height as None so
+        # height_to_hash resolves entirely from augmented state.
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         if block.header_hash != block_record.header_hash:
             raise AugmentedBlockchainValidationError(
                 f"Block header hash mismatch: block={block.header_hash.hex()[:16]}, "
@@ -81,8 +123,10 @@ class AugmentedBlockchain:
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._initialize_fork_height(block_record)
 
     def remove_extra_block(self, hh: bytes32) -> None:
+        self._ensure_mutable()
         if hh not in self._extra_blocks:
             return
 
@@ -93,6 +137,10 @@ class AugmentedBlockchain:
                 if h not in self._height_to_hash:
                     break
                 del self._height_to_hash[uint32(h)]
+            # The cascade only fires once the fork has been promoted to
+            # canonical in the underlying, so the fork point advances to
+            # the removed block's height.
+            self._fork_height = block_record.height
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -125,8 +173,10 @@ class AugmentedBlockchain:
         return await self._underlying.get_block_record_from_db(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._initialize_fork_height(block_record)
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
         hh = block_record.header_hash
@@ -147,19 +197,38 @@ class AugmentedBlockchain:
         return self._underlying.block_record(header_hash)
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash = self._height_to_hash.get(height)
-        if header_hash is not None:
-            ret = self._get_block_record(header_hash)
-            if ret is not None:
-                return ret
-            return self._underlying.block_record(header_hash)
-        return self._underlying.height_to_block_record(height)
-
-    def height_to_hash(self, height: uint32) -> bytes32 | None:
-        ret = self._height_to_hash.get(height)
+        header_hash = self.height_to_hash(height)
+        if header_hash is None:
+            raise ValueError(f"Height is not in blockchain: {height}")
+        ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
-        return self._underlying.height_to_hash(height)
+        return self._underlying.block_record(header_hash)
+
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
+        # At or below the fork point both chains agree — delegate.
+        # Also delegate when no augmented blocks exist.
+        if not self._height_to_hash or (self._fork_height is not None and height <= self._fork_height):
+            return self._underlying.height_to_hash(height)
+
+        # Above the augmented chain's tip — doesn't exist on this fork yet.
+        if height > max(self._height_to_hash):
+            return None
+
+        # At or above the floor — direct lookup in augmented height map.
+        augmented_hash = self._height_to_hash.get(height)
+        if augmented_hash is not None:
+            return augmented_hash
+
+        # In the gap (fork_height < height < floor): traverse backward from
+        # the lowest augmented entry through orphan block records.
+        curr_hash = self._height_to_hash[min(self._height_to_hash)]
+        br: BlockRecord | None = self.block_record(curr_hash)
+        while br is not None and br.height > height:
+            curr_hash = br.prev_hash
+            br = self.block_record(curr_hash)
+        assert br is not None and br.height == height
+        return curr_hash
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         block_hash_from_hh = self.height_to_hash(height)
@@ -168,7 +237,7 @@ class AugmentedBlockchain:
         return True
 
     def contains_height(self, height: uint32) -> bool:
-        return (height in self._height_to_hash) or self._underlying.contains_height(height)
+        return self.height_to_hash(height) is not None
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret: list[bytes32] = []
@@ -187,7 +256,7 @@ class AugmentedBlockchain:
         starts_new_slot: bool,
     ) -> bytes32 | None:
         return self.mmr_manager.get_mmr_root_for_block(
-            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._get_fork_height()
+            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._fork_height
         )
 
     def get_current_mmr_root(self) -> bytes32 | None:

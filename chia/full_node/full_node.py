@@ -856,7 +856,7 @@ class FullNode:
                 self.blockchain,
                 prev_b_hash=peak.prev_hash,
                 sp_index=peak.signage_point_index,
-                first_in_sub_slot=peak.first_in_sub_slot,
+                finished_sub_slots=int(peak.first_in_sub_slot),
             )
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
@@ -1323,6 +1323,16 @@ class FullNode:
                         return None
                     peer, blocks = res
 
+                    # Keep the augmented chain's MMR snapshot aligned with the
+                    # underlying blockchain before validating each fetched
+                    # batch.
+                    # TODO: Consider per-batch AugmentedBlockchain instances.
+                    # The current sync pipeline shares one augmented overlay
+                    # across fetch/validate/ingest, so we refresh only the MMR
+                    # snapshot to avoid stale roots after ingest advances the
+                    # canonical chain.
+                    blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
+
                     # skip_blocks is only relevant at the start of the sync,
                     # to skip blocks we already have in the database (and have
                     # been validated). Once we start validating blocks, we
@@ -1511,6 +1521,10 @@ class FullNode:
     ) -> tuple[bool, StateChangeSummary | None]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
+
+        # Keep the augmented chain's MMR snapshot aligned with the underlying
+        # blockchain between batches.
+        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
 
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
@@ -2461,7 +2475,7 @@ class FullNode:
             self.blockchain,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,

@@ -68,14 +68,16 @@ class BlockchainMMRManager:
         """
         target_height = target_block.height
 
-        # Case 1: Build from scratch
-        # (no fork / fork before aggregate_from / underlying MMR doesn't exist/reach fork point)
+        # Case 1: Fast path - current MMR already at target
         if (
-            fork_height is None
-            or self._last_height is None
-            or self._last_height < fork_height
-            or fork_height < self.aggregate_from
+            self._last_height is not None
+            and self._last_height == target_height
+            and self._last_header_hash == target_block.header_hash
         ):
+            return self._mmr.compute_root()
+
+        # Case 2: Build from scratch when we don't have usable fork context
+        if self._last_height is None or fork_height is None:
             mmr = MerkleMountainRange()
             log.debug(f"Building MMR from height {self.aggregate_from} to {target_height}")
 
@@ -86,31 +88,31 @@ class BlockchainMMRManager:
 
             return mmr.compute_root()
 
-        # Case 2: Fast path - current MMR already at target (main chain, no fork before target)
-        if (
-            self._last_height == target_height
-            and self._last_header_hash == target_block.header_hash
-            and fork_height == target_height
-        ):
-            log.debug(f"Using current MMR state at height {target_height} (no fork before target)")
-            return self._mmr.compute_root()
+        # Case 3: rollback to common point and extend via prev-hash walk
+        common_height = min(self._last_height, target_height, fork_height)
+        log.debug(f"Reusing underlying MMR, rollback to {common_height}, then rebuild to {target_height}")
 
-        # Case 3: rollback to fork point and extend
-        log.debug(f"Reusing underlying MMR, will rollback to fork {fork_height}, then rebuild to {target_height}")
-        mmr = copy.deepcopy(self._mmr)
+        if common_height < self.aggregate_from:
+            mmr = MerkleMountainRange()
+            common_height = uint32(self.aggregate_from - 1)
+        else:
+            mmr = copy.deepcopy(self._mmr)
+            if self._last_height > common_height:
+                for _ in range(self._last_height - common_height):
+                    mmr.pop()
 
-        # Rollback to fork point if underlying MMR is beyond it
-        if self._last_height > fork_height:
-            blocks_to_pop = self._last_height - fork_height
-            for _ in range(blocks_to_pop):
-                mmr.pop()
+        # Add fork chain blocks by walking backward from target.
+        new_hashes: list[bytes32] = []
+        current = target_block
+        while current.height > common_height:
+            new_hashes.append(current.header_hash)
+            if current.height == 0:
+                break
+            current = blocks.block_record(current.prev_hash)
+        new_hashes.reverse()
 
-        # Add blocks from fork point to target
-        start_height = max(fork_height + 1, self.aggregate_from)
-        for height in range(start_height, target_height + 1):
-            header_hash = blocks.height_to_hash(uint32(height))
-            assert header_hash is not None
-            mmr.append(header_hash)
+        for hh in new_hashes:
+            mmr.append(hh)
 
         return mmr.compute_root()
 
