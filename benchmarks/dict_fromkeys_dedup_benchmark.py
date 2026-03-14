@@ -51,7 +51,10 @@ def generate_low_duplicates() -> list[int]:
 def generate_medium_duplicates() -> list[int]:
     """~50% of the values are duplicates."""
     unique_count = LIST_SIZE // 2
-    items = random.choices(range(unique_count), k=LIST_SIZE)
+    items = list(range(unique_count))
+    extras = random.choices(range(unique_count), k=LIST_SIZE - unique_count)
+    items.extend(extras)
+    random.shuffle(items)
     return items
 
 
@@ -128,7 +131,7 @@ def run_scenario(name: str, data: list[int]) -> None:
     print(f"Scenario: {name}")
     print(f"  List size:       {total:>12,}")
     print(f"  Unique values:   {unique_actual:>12,}")
-    print(f"  Duplicate %%:     {dup_pct:>11.2f}%")
+    print(f"  Duplicate %:     {dup_pct:>11.2f}%")
     print(f"{'=' * 72}")
 
     strategies = [
