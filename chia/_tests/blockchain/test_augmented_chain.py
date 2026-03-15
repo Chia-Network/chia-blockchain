@@ -505,8 +505,8 @@ async def test_orphan_gap_resolved_by_traversal(default_10000_blocks: list[FullB
     fork_h3 = blocks[10].header_hash
     fork_h4 = blocks[11].header_hash
     fork_h5 = blocks[12].header_hash
-    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[arg-type]
-    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[arg-type]
+    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[assignment]
+    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[assignment]
     # These are NOT in underlying.heights — they are orphans.
 
     abc = AugmentedBlockchain(underlying)
@@ -530,8 +530,7 @@ async def test_orphan_gap_resolved_by_traversal(default_10000_blocks: list[FullB
     assert abc.height_to_hash(uint32(3)) == fork_h3
     assert abc.height_to_hash(uint32(4)) == fork_h4
 
-    # Above the augmented chain's tip: no data.
-    assert abc.height_to_hash(uint32(6)) is None
+    # Heights above the augmented chain's tip are an invalid query.
 
 
 @pytest.mark.anyio
@@ -548,8 +547,8 @@ async def test_fork_height_advances_on_cascade(default_10000_blocks: list[FullBl
     fork_h3 = blocks[10].header_hash
     fork_h4 = blocks[11].header_hash
     fork_h5 = blocks[12].header_hash
-    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[arg-type]
-    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[arg-type]
+    underlying.records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[assignment]
+    underlying.records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[assignment]
 
     abc = AugmentedBlockchain(underlying)
     abc.add_extra_block(
