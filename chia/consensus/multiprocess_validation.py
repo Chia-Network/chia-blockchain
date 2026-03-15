@@ -273,11 +273,13 @@ async def pre_validate_block(
     except ValueError:
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
 
+    readonly_blockchain = blockchain.read_only_snapshot()
+
     future = asyncio.get_running_loop().run_in_executor(
         pool,
         _pre_validate_block,
         constants,
-        blockchain,
+        readonly_blockchain,
         block,
         previous_generators,
         conds,
