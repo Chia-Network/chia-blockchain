@@ -65,7 +65,7 @@ async def select_coins(
         exact_match_coin: Coin | None = check_for_exact_match(valid_spendable_coins, uint64(amount))
         if exact_match_coin:
             log.debug(f"selected coin with an exact match: {exact_match_coin}")
-            return {exact_match_coin}
+            return included_coins | {exact_match_coin}
 
     # Check for an exact match with all of the coins smaller than the amount.
     # If we have more, smaller coins than the amount we run the next algorithm.
@@ -77,12 +77,12 @@ async def select_coins(
             smaller_coins.append(coin)
     if smaller_coin_sum == remaining_amount and len(smaller_coins) < max_num_coins and remaining_amount != 0:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
-        return set(smaller_coins)
+        return included_coins | set(smaller_coins)
     elif smaller_coin_sum < remaining_amount:
         smallest_coin: Coin | None = select_smallest_coin_over_target(remaining_amount, valid_spendable_coins)
         assert smallest_coin is not None  # Since we know we have enough, there must be a larger coin
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
-        return {smallest_coin}
+        return included_coins | {smallest_coin}
     elif smaller_coin_sum > remaining_amount:
         coin_set: set[Coin] | None = knapsack_coin_algorithm(
             smaller_coins, remaining_amount, coin_selection_config.max_coin_amount, max_num_coins
@@ -98,14 +98,14 @@ async def select_coins(
                         f"{max_num_coins} coins. Try sending a smaller amount"
                     )
                 coin_set = {greater_coin}
-        return coin_set
+        return included_coins | coin_set
     else:
         # if smaller_coin_sum == amount and (len(smaller_coins) >= max_num_coins or amount == 0)
         potential_large_coin: Coin | None = select_smallest_coin_over_target(remaining_amount, valid_spendable_coins)
         if potential_large_coin is None:
             raise ValueError("Too many coins are required to make this transaction")
         log.debug(f"Resorted to selecting smallest coin over target due to dust.: {potential_large_coin}")
-        return {potential_large_coin}
+        return included_coins | {potential_large_coin}
 
 
 # These algorithms were based off of the algorithms in:
