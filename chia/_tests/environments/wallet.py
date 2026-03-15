@@ -323,6 +323,7 @@ class WalletTestFramework:
                 min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
                 max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
                 coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                coins_to_include=tuple(self.tx_config.included_coin_ids),
                 amounts_to_exclude=tuple(
                     CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
                 ),
