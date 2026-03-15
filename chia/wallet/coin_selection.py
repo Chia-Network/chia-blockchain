@@ -53,7 +53,7 @@ async def select_coins(
     # Try to use the coins that must be included
     included_coins = {coin for coin in valid_spendable_coins if coin.name() in coin_selection_config.included_coin_ids}
     included_coin_sum = sum(coin.amount for coin in included_coins)
-    if included_coin_sum >= amount:
+    if included_coin_sum >= amount and len(included_coins) > 0:
         return included_coins
     remaining_amount = uint128(amount - included_coin_sum)
     if included_coins != set():
