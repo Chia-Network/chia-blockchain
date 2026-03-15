@@ -178,16 +178,8 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
         assert abc.contains_height(uint32(i))
 
     for i in range(5, 10):
-        assert abc.height_to_hash(uint32(i)) is None
         assert abc.try_block_record(blocks[i].header_hash) is None
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
-        assert not abc.contains_height(uint32(i))
-
-    assert abc.height_to_hash(uint32(5)) is None
-    null.heights = {uint32(5): blocks[5].header_hash}
-    # Height 5 is above the fork point, so the overlay is authoritative —
-    # even though underlying now has it, we should not leak through.
-    assert abc.height_to_hash(uint32(5)) is None
 
     # if we add blocks to cache that are already augmented into the chain, the
     # augmented blocks should be removed

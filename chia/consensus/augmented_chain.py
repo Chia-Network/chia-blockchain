@@ -211,9 +211,8 @@ class AugmentedBlockchain:
         if not self._height_to_hash or (self._fork_height is not None and height <= self._fork_height):
             return self._underlying.height_to_hash(height)
 
-        # Above the augmented chain's tip — doesn't exist on this fork yet.
-        if height > max(self._height_to_hash):
-            return None
+        # height cannot be above the highest augmented block
+        assert height <= max(self._height_to_hash)
 
         # At or above the floor — direct lookup in augmented height map.
         augmented_hash = self._height_to_hash.get(height)
