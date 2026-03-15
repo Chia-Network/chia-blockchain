@@ -205,13 +205,17 @@ class AugmentedBlockchain:
         if not self._height_to_hash or (self._fork_height is not None and height <= self._fork_height):
             return self._underlying.height_to_hash(height)
 
-        # Above the fork point — check the augmented map, then traverse
-        # backward through orphan blocks in the gap below it.
+        # Above the augmented chain's tip — doesn't exist on this fork yet.
+        if height > max(self._height_to_hash):
+            return None
+
+        # At or above the floor — direct lookup in augmented height map.
         augmented_hash = self._height_to_hash.get(height)
         if augmented_hash is not None:
             return augmented_hash
 
-        assert self._height_to_hash
+        # In the gap (fork_height < height < floor): traverse backward from
+        # the lowest augmented entry through orphan block records.
         curr_hash = self._height_to_hash[min(self._height_to_hash)]
         br: BlockRecord | None = self.block_record(curr_hash)
         while br is not None and br.height > height:
