@@ -495,6 +495,8 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "-l10",
         "--exclude-coin",
         bytes32_hexstr,
+        "--include-coin",
+        f"0x{bytes32([99] * 32).hex()}",
         "--valid-at",
         "100",
         "--expires-at",
