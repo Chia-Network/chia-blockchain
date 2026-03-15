@@ -32,7 +32,10 @@ async def select_coins(
     log.debug(f"About to select coins for amount {amount}")
 
     max_num_coins = 500
-    valid_spendable_coins: list[Coin] = list(coin_selection_config.filter_coins({cr.coin for cr in spendable_coins}))
+    confirmed_spendable_coins = {cr for cr in spendable_coins if cr.coin.name() not in unconfirmed_removals}
+    valid_spendable_coins: list[Coin] = list(
+        coin_selection_config.filter_coins({cr.coin for cr in confirmed_spendable_coins})
+    )
     sum_spendable_coins = sum(coin.amount for coin in valid_spendable_coins)
 
     # This happens when we couldn't use one of the coins because it's already used
@@ -60,9 +63,9 @@ async def select_coins(
     # Sort the coins by amount
     valid_spendable_coins.sort(reverse=True, key=lambda r: r.amount)
 
-    if coin_selection_config.included_coin_ids != []:
+    if coin_selection_config.included_coin_ids == []:
         # check for exact 1 to 1 coin match.
-        exact_match_coin: Coin | None = check_for_exact_match(valid_spendable_coins, uint64(amount))
+        exact_match_coin: Coin | None = check_for_exact_match(valid_spendable_coins, uint64(remaining_amount))
         if exact_match_coin:
             log.debug(f"selected coin with an exact match: {exact_match_coin}")
             return included_coins | {exact_match_coin}

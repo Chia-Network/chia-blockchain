@@ -443,6 +443,7 @@ def test_tx_config_helper() -> None:
             max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
+            coins_to_include=(bytes32([1] * 32),),
         )
     )
 
@@ -456,6 +457,8 @@ def test_tx_config_helper() -> None:
         "0.01",
         "--exclude-coin",
         bytes32([0] * 32).hex(),
+        "--include-coin",
+        bytes32([1] * 32).hex(),
     )
 
     # again, convenience for testing sake
@@ -481,6 +484,7 @@ def test_tx_config_helper() -> None:
             max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
+            coins_to_include=(bytes32([1] * 32),),
             reuse=False,
         )
     )
@@ -495,6 +499,8 @@ def test_tx_config_helper() -> None:
         "0.01",
         "--exclude-coin",
         bytes32([0] * 32).hex(),
+        "--include-coin",
+        bytes32([1] * 32).hex(),
         "--new-address",
     )
 
