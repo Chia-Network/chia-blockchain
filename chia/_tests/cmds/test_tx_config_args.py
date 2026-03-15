@@ -19,6 +19,7 @@ def test_coin_selection_args() -> None:
         min_coin_amount: CliAmount,
         max_coin_amount: CliAmount,
         coins_to_exclude: Sequence[bytes32],
+        coins_to_include: Sequence[bytes32],
         amounts_to_exclude: Sequence[CliAmount],
     ) -> None:
         print(
@@ -27,6 +28,7 @@ def test_coin_selection_args() -> None:
                 max_coin_amount,
                 list(amounts_to_exclude),
                 list(coins_to_exclude),
+                list(coins_to_include),
             )
             .to_coin_selection_config(1)
             .to_json_dict()
@@ -43,6 +45,8 @@ def test_coin_selection_args() -> None:
             "0.0",
             "--exclude-coin",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "--include-coin",
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
             "--exclude-amount",
             "0.0",
         ],
@@ -51,7 +55,8 @@ def test_coin_selection_args() -> None:
 
     assert (
         r"{'min_coin_amount': 0, 'max_coin_amount': 0, 'excluded_coin_amounts': [0], 'excluded_coin_ids': "
-        r"['0x0000000000000000000000000000000000000000000000000000000000000000']}" in result.output
+        r"['0x0000000000000000000000000000000000000000000000000000000000000000'], 'included_coin_ids': "
+        r"['0x1111111111111111111111111111111111111111111111111111111111111111']}" in result.output
     )
 
     result = runner.invoke(
@@ -61,6 +66,10 @@ def test_coin_selection_args() -> None:
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "--exclude-coin",
             "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "--include-coin",
+            "0x2222222222222222222222222222222222222222222222222222222222222222",
+            "--include-coin",
+            "0x3333333333333333333333333333333333333333333333333333333333333333",
             "--exclude-amount",
             "0.0",
             "--exclude-amount",
@@ -72,7 +81,9 @@ def test_coin_selection_args() -> None:
     assert (
         r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [0, 1], "
         r"'excluded_coin_ids': ['0x0000000000000000000000000000000000000000000000000000000000000000', "
-        r"'0x1111111111111111111111111111111111111111111111111111111111111111']}" in result.output
+        r"'0x1111111111111111111111111111111111111111111111111111111111111111'], "
+        r"'included_coin_ids': ['0x2222222222222222222222222222222222222222222222222222222222222222', "
+        r"'0x3333333333333333333333333333333333333333333333333333333333333333']}" in result.output
     )
 
     result = runner.invoke(
@@ -83,7 +94,7 @@ def test_coin_selection_args() -> None:
 
     assert (
         r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
-        r"'excluded_coin_ids': []}" in result.output
+        r"'excluded_coin_ids': [], 'included_coin_ids': []}" in result.output
     )
 
 
@@ -100,6 +111,7 @@ def test_tx_config_args() -> None:
             min_coin_amount: CliAmount,
             max_coin_amount: CliAmount,
             coins_to_exclude: Sequence[bytes32],
+            coins_to_include: Sequence[bytes32],
             amounts_to_exclude: Sequence[CliAmount],
             reuse: bool | None,
         ) -> None:
@@ -109,6 +121,7 @@ def test_tx_config_args() -> None:
                     max_coin_amount,
                     list(amounts_to_exclude),
                     list(coins_to_exclude),
+                    list(coins_to_include),
                     reuse,
                 )
                 .to_tx_config(1, config, 1234567890)
@@ -125,7 +138,7 @@ def test_tx_config_args() -> None:
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
-            r"'excluded_coin_ids': [], 'reuse_puzhash': True}" in result.output
+            r"'excluded_coin_ids': [], 'included_coin_ids': [], 'reuse_puzhash': True}" in result.output
         )
 
         result = runner.invoke(
@@ -138,7 +151,7 @@ def test_tx_config_args() -> None:
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
-            r"'excluded_coin_ids': [], 'reuse_puzhash': False}" in result.output
+            r"'excluded_coin_ids': [], 'included_coin_ids': [], 'reuse_puzhash': False}" in result.output
         )
 
         result = runner.invoke(
@@ -149,5 +162,5 @@ def test_tx_config_args() -> None:
 
         assert (
             r"{'min_coin_amount': 0, 'max_coin_amount': 18446744073709551615, 'excluded_coin_amounts': [], "
-            r"'excluded_coin_ids': [], 'reuse_puzhash': True}" in result.output
+            r"'excluded_coin_ids': [], 'included_coin_ids': [], 'reuse_puzhash': True}" in result.output
         )
