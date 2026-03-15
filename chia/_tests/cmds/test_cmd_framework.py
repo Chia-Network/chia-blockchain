@@ -464,6 +464,7 @@ def test_tx_config_helper() -> None:
         max_coin_amount=uint64(1),
         excluded_coin_amounts=[uint64(1)],
         excluded_coin_ids=[bytes32([0] * 32)],
+        included_coin_ids=[bytes32([1] * 32)],
     )
 
     @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
@@ -503,6 +504,7 @@ def test_tx_config_helper() -> None:
         max_coin_amount=uint64(1),
         excluded_coin_amounts=[uint64(1)],
         excluded_coin_ids=[bytes32([0] * 32)],
+        included_coin_ids=[bytes32([1] * 32)],
         reuse_puzhash=False,
     )
 

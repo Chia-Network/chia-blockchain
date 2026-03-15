@@ -181,6 +181,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                     max_coin_amount=uint64(18446744073709551615),
                     excluded_coin_amounts=[],
                     excluded_coin_ids=[],
+                    included_coin_ids=[],
                     reuse_puzhash=True,
                 ),
                 test_condition_valid_times,

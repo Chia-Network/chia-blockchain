@@ -36,6 +36,7 @@ STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
         min_coin_amount=cli_amount_none,
         max_coin_amount=cli_amount_none,
         coins_to_exclude=(),
+        coins_to_include=(),
         amounts_to_exclude=(),
         reuse=None,
     ),
