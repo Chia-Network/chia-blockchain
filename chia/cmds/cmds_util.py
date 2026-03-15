@@ -300,12 +300,20 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
                 help="Exclude this coin from being spent.",
             )(
                 click.option(
-                    "--exclude-amount",
-                    "amounts_to_exclude",
+                    "--include-coin",
+                    "coins_to_include",
                     multiple=True,
-                    type=AmountParamType(),
-                    help="Exclude any coins with this XCH or CAT amount from being included.",
-                )(func)
+                    type=Bytes32ParamType(),
+                    help="Include this coin in the spend.",
+                )(
+                    click.option(
+                        "--exclude-amount",
+                        "amounts_to_exclude",
+                        multiple=True,
+                        type=AmountParamType(),
+                        help="Exclude any coins with this XCH or CAT amount from being included.",
+                    )(func)
+                )
             )
         )
     )
@@ -393,6 +401,7 @@ class CMDCoinSelectionConfigLoader:
     max_coin_amount: CliAmount = cli_amount_none
     excluded_coin_amounts: list[CliAmount] | None = None
     excluded_coin_ids: list[bytes32] | None = None
+    included_coin_ids: list[bytes32] | None = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
@@ -404,6 +413,7 @@ class CMDCoinSelectionConfigLoader:
                 else None
             ),
             self.excluded_coin_ids,
+            self.included_coin_ids,
         ).autofill(constants=DEFAULT_CONSTANTS)
 
 
@@ -418,6 +428,7 @@ class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
             cs_config.max_coin_amount,
             cs_config.excluded_coin_amounts,
             cs_config.excluded_coin_ids,
+            cs_config.included_coin_ids,
             self.reuse_puzhash,
         ).autofill(constants=DEFAULT_CONSTANTS, config=config, logged_in_fingerprint=fingerprint)
 

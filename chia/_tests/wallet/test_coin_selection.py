@@ -68,7 +68,8 @@ class TestCoinSelection:
             assert 265 <= selected_sum <= 281  # Selects a set of coins which does exceed by too much
 
     @pytest.mark.anyio
-    async def test_coin_selection_randomly(self, a_hash: bytes32) -> None:
+    @pytest.mark.parametrize("specify_coins_to_include", [True, False])
+    async def test_coin_selection_randomly(self, a_hash: bytes32, specify_coins_to_include: bool) -> None:
         coin_base_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_amounts = []
         spendable_amount = 0
@@ -87,7 +88,9 @@ class TestCoinSelection:
         for target_amount in coin_amounts[:100]:  # select the first 100 values
             result: set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_COIN_SELECTION_CONFIG,
+                DEFAULT_COIN_SELECTION_CONFIG.override(
+                    included_coin_ids=[coin_list[0].coin.name()] if specify_coins_to_include else []
+                ),
                 coin_list,
                 {},
                 logging.getLogger("test"),

@@ -82,6 +82,15 @@ def test_cs_config() -> None:
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
         "max_coin_amount": 100,
     }
+    with pytest.raises(ValueError, match="`included_coin_ids` and `excluded_coin_ids` must be disjoint"):
+        CoinSelectionConfigLoader(excluded_coin_ids=[bytes32.zeros], included_coin_ids=[bytes32.zeros]).autofill(
+            constants=DEFAULT_CONSTANTS
+        )
+    with pytest.raises(ValueError, match="Some coin selection restrictions eliminated coins specified for inclusion"):
+        a_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
+        CoinSelectionConfigLoader(included_coin_ids=[bytes32.zeros], excluded_coin_amounts=[uint64(0)]).autofill(
+            constants=DEFAULT_CONSTANTS
+        ).filter_coins({a_coin})
 
 
 def test_tx_config() -> None:
