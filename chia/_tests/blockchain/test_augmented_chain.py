@@ -399,18 +399,18 @@ async def test_height_to_hash_resolves_orphan_ancestors() -> None:
 
     abc = AugmentedBlockchain(underlying)
     br3 = FakeBlockRecord(height=uint32(3), header_hash=h3_fork, prev_hash=h2_fork)
-    abc._extra_blocks[h3_fork] = (None, br3)  # type: ignore[assignment]
-    abc._height_to_hash[uint32(3)] = h3_fork
-    abc._initialize_fork_height(br3)  # type: ignore[arg-type]
+    abc.add_extra_block(br3, br3)  # type: ignore[arg-type]
 
     # Fork point is 1 (height 2 diverges: canonical has h2, fork has h2_fork)
     assert abc._fork_height == uint32(1)
 
+    # _populate_fork_ancestry filled height 2 with the fork hash.
+    assert abc._height_to_hash[uint32(2)] == h2_fork
+
     # Height 1 is at the fork point — underlying is authoritative.
     assert abc.height_to_hash(uint32(1)) == h1
 
-    # Height 2 is above the fork point — must resolve to the fork's h2_fork,
-    # NOT the canonical h2.
+    # Height 2 resolves to the fork's h2_fork via _height_to_hash.
     assert abc.height_to_hash(uint32(2)) == h2_fork
 
 
