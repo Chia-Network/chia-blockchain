@@ -3578,6 +3578,7 @@ class TestReorgs:
         fork_block = default_10000_blocks[num_blocks_chain_2_start - 101]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         await b.warmup(fork_block.height)
+        aug_chain = AugmentedBlockchain(b)
         for block in blocks:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
@@ -3594,7 +3595,13 @@ class TestReorgs:
                     block.weight == peak.weight and block.total_iters < peak.total_iters
                 )
                 expect = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
-            await _validate_and_add_block(b, block, fork_info=fork_info, expected_result=expect)
+            await _validate_and_add_block(
+                b,
+                block,
+                fork_info=fork_info,
+                expected_result=expect,
+                augmented_blockchain=aug_chain,
+            )
 
         # if these asserts fires, there was no reorg back to the original chain
         peak = b.get_peak()

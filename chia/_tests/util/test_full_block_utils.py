@@ -34,6 +34,7 @@ from chia.full_node.full_block_utils import (
     generator_from_block,
     get_height_and_tx_status_from_block,
     header_block_from_block,
+    skip_reward_chain_block,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -111,6 +112,16 @@ def get_reward_chain_block(height: uint32) -> Iterator[RewardChainBlock]:
                                 mmr_root,
                                 has_transactions,
                             )
+
+
+@pytest.mark.parametrize(("has_icc", "has_mmr_root"), [(False, False), (False, True), (True, False), (True, True)])
+def test_skip_reward_chain_block_handles_combined_optional_tag(has_icc: bool, has_mmr_root: bool) -> None:
+    reward_chain_block = next(get_reward_chain_block(uint32(100))).replace(
+        infused_challenge_chain_ip_vdf=vdf() if has_icc else None,
+        header_mmr_root=hsh() if has_mmr_root else None,
+    )
+    # The helper should consume exactly one serialized RewardChainBlock.
+    assert len(skip_reward_chain_block(memoryview(bytes(reward_chain_block)))) == 0
 
 
 def get_foliage_block_data() -> Iterator[FoliageBlockData]:

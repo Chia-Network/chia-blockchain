@@ -32,13 +32,31 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    _fork_height: uint32 | None
+    _read_only: bool
     mmr_manager: MMRManagerProtocol
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._fork_height = None
+        self._read_only = False
         self.mmr_manager = underlying.mmr_manager.copy()
+
+    def _ensure_mutable(self) -> None:
+        if self._read_only:
+            raise AugmentedBlockchainValidationError("Cannot mutate read-only augmented blockchain snapshot")
+
+    def read_only_snapshot(self) -> AugmentedBlockchain:
+        snapshot = AugmentedBlockchain.__new__(AugmentedBlockchain)
+        snapshot._underlying = self._underlying
+        snapshot._extra_blocks = self._extra_blocks.copy()
+        snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._fork_height = self._fork_height
+        snapshot._read_only = True
+        snapshot.mmr_manager = self.mmr_manager.copy()
+        return snapshot
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         eb = self._extra_blocks.get(header_hash)
@@ -46,18 +64,22 @@ class AugmentedBlockchain:
             return None
         return eb[1]
 
-    def _get_fork_height(self) -> uint32 | None:
-        """
-        Compute the fork point (last common block height) from augmented height_to_hash.
-        """
-        if not self._height_to_hash:
-            return None
-        min_height = min(self._height_to_hash.keys())
-        if min_height == 0:
-            return None  # no common blocks
-        return uint32(min_height - 1)
+    def _populate_fork_ancestry(self, prev_hash: bytes32) -> None:
+        """Walk backward from prev_hash through orphan block records in the
+        underlying chain, filling _height_to_hash until we reach fork point."""
+        curr_hash = prev_hash
+        while True:
+            br = self._underlying.block_record(curr_hash)
+            if self._underlying.height_to_hash(br.height) == curr_hash:
+                self._fork_height = br.height
+                break
+            self._height_to_hash[br.height] = curr_hash
+            if br.height == 0:
+                break
+            curr_hash = br.prev_hash
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         if block.header_hash != block_record.header_hash:
             raise AugmentedBlockchainValidationError(
                 f"Block header hash mismatch: block={block.header_hash.hex()[:16]}, "
@@ -78,11 +100,13 @@ class AugmentedBlockchain:
                     f"First added block's prev_hash must exist in underlying blockchain. "
                     f"Block height {block_record.height}, prev_hash {block_record.prev_hash.hex()[:16]} not found"
                 )
+            self._populate_fork_ancestry(block_record.prev_hash)
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
 
     def remove_extra_block(self, hh: bytes32) -> None:
+        self._ensure_mutable()
         if hh not in self._extra_blocks:
             return
 
@@ -125,6 +149,7 @@ class AugmentedBlockchain:
         return await self._underlying.get_block_record_from_db(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
+        self._ensure_mutable()
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
         # now that we're adding the block to the underlying blockchain, we don't
@@ -187,7 +212,7 @@ class AugmentedBlockchain:
         starts_new_slot: bool,
     ) -> bytes32 | None:
         return self.mmr_manager.get_mmr_root_for_block(
-            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._get_fork_height()
+            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._fork_height
         )
 
     def get_current_mmr_root(self) -> bytes32 | None:

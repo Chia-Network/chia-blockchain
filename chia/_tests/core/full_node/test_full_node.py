@@ -3605,7 +3605,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
     db_path = path_from_root(bt.root_path, db_path_replaced)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    await make_db(db_path, default_400_blocks)
+    await make_db(db_path, default_400_blocks, bt.constants)
     with contextlib.closing(sqlite3.connect(db_path)) as conn:
         conn.execute("DELETE FROM current_peak;")
         conn.commit()
