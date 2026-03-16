@@ -211,11 +211,13 @@ class ConsensusMode(ComparableEnum):
     HARD_FORK_2_0 = 1
     # the soft fork introduced in Chia 2.6
     SOFT_FORK_2_6 = 2
+    # the soft fork introduced in Chia 2.7
+    SOFT_FORK_2_7 = 3
     # the hard fork introduced in Chia 3.0
-    HARD_FORK_3_0 = 3
+    HARD_FORK_3_0 = 4
     # the hard fork introduced in Chia 3.0 but after v1 plots have been
     # phased-out, and no longer valid
-    HARD_FORK_3_0_AFTER_PHASE_OUT = 4
+    HARD_FORK_3_0_AFTER_PHASE_OUT = 5
 
 
 @pytest.fixture(
@@ -224,6 +226,7 @@ class ConsensusMode(ComparableEnum):
         ConsensusMode.PLAIN,
         ConsensusMode.HARD_FORK_2_0,
         ConsensusMode.SOFT_FORK_2_6,
+        ConsensusMode.SOFT_FORK_2_7,
         ConsensusMode.HARD_FORK_3_0,
         ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
     ],
@@ -236,14 +239,25 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
 
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+        ret = ret.replace(
+            HARD_FORK_HEIGHT=uint32(2),
+        )
+
     if consensus_mode >= ConsensusMode.SOFT_FORK_2_6:
         ret = ret.replace(
             SOFT_FORK8_HEIGHT=uint32(2),
         )
 
-    if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+    if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(0),
+            SOFT_FORK8_HEIGHT=uint32(0),
+            SOFT_FORK9_HEIGHT=uint32(0),
+        )
+
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+        ret = ret.replace(
             HARD_FORK2_HEIGHT=uint32(0),
             PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(0),
             # we don't have very much v2 space, and no phase-out means the
@@ -257,7 +271,6 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             # activate the hard fork at some height > 0 (e.g. 5)
             # and have a shorter phase-out period (e.g. 2 bits). We would have
             # to regenerate the test chains and tweak some tests for this
-            HARD_FORK_HEIGHT=uint32(0),
             HARD_FORK2_HEIGHT=uint32(0),
             # we don't have very much v2 space. We need a lower difficulty
             # level to start with
@@ -265,7 +278,6 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
-            HARD_FORK_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
@@ -335,6 +347,8 @@ def test_chain_suffix(consensus_mode: ConsensusMode) -> str:
         return "3.0"
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         return "3.0_mixed"
+    elif consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+        return "2.7"
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         return "2.0_hardfork"
     else:

@@ -719,7 +719,7 @@ class Blockchain:
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.
-        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:
+        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT and block.transactions_generator_ref_list != []:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if block.transactions_info is not None:

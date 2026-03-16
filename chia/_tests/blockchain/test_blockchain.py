@@ -2617,7 +2617,7 @@ class TestBodyValidation:
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
-        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode < ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
         else:
             # after the hard fork activation, we no longer allow block references
@@ -2640,9 +2640,9 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
 
-        # after the 3.0 hard fork, we no longer allowe block references, so the
+        # after the 3.0 hard fork, we no longer allow block references, so the
         # block_refs parameter is no longer valid, nor this test
-        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode < ConsensusMode.SOFT_FORK_2_7:
             blocks = bt.get_consecutive_blocks(
                 1,
                 block_list_input=blocks,
@@ -3359,7 +3359,11 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode not in [ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_6]:  # noqa: PLR6201
+        if consensus_mode not in {
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_6,
+            ConsensusMode.SOFT_FORK_2_7,
+        }:
             reorg_point = 13
         else:
             reorg_point = 12
@@ -3815,8 +3819,8 @@ class TestReorgs:
             block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
         )
 
-        # overlong encoding became invalid in the 3.0 hard fork
-        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # overlong encoding became invalid in the 2.7 soft fork
+        if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
