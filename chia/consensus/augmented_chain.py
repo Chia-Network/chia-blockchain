@@ -117,6 +117,7 @@ class AugmentedBlockchain:
                 if h not in self._height_to_hash:
                     break
                 del self._height_to_hash[uint32(h)]
+            self._fork_height = block_record.height
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
