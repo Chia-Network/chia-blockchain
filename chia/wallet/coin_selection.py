@@ -93,7 +93,7 @@ async def select_coins(
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
             coin_set = sum_largest_coins(remaining_amount, smaller_coins)
-            if coin_set is None or len(coin_set) > max_num_coins:
+            if coin_set is None or len(coin_set) + len(list(included_coins)) > max_num_coins:
                 greater_coin = select_smallest_coin_over_target(remaining_amount, valid_spendable_coins)
                 if greater_coin is None:
                     raise ValueError(
