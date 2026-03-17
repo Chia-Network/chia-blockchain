@@ -1467,6 +1467,15 @@ class ConditionValidTimes(ConditionValidTimesAbsolute):
 
         return final_condition_list
 
+    @property
+    def has_relative_timelocks(self) -> bool:
+        return (
+            self.max_secs_after_created is not None
+            or self.min_secs_since_created is not None
+            or self.max_blocks_after_created is not None
+            or self.min_blocks_since_created is not None
+        )
+
     def only_absolutes(self) -> ConditionValidTimesAbsolute:
         return ConditionValidTimesAbsolute(
             min_time=self.min_time,

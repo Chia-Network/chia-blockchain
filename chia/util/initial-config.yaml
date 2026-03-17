@@ -633,6 +633,11 @@ wallet:
 
   auto_sign_txs: True
 
+  # Whether to allow taking offers that contain relative timelocks.
+  # Relative timelocks can make offers expire or become valid only after a certain
+  # time/block height relative to when the offer coins were created, which can be risky.
+  accept_offers_with_relative_timelocks: False
+
 solver:
   # The solver server will run on this port
   port: 8666

@@ -843,6 +843,15 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer, peer)
         if not valid:
             raise ValueError("This offer is no longer valid")
+
+        if not self.wallet_state_manager.config.get("accept_offers_with_relative_timelocks", False):
+            for coin_valid_times in offer.valid_times().values():
+                if coin_valid_times.has_relative_timelocks:
+                    raise ValueError(
+                        "This offer contains relative timelocks which could be risky. "
+                        "Set accept_offers_with_relative_timelocks to True in your wallet config to allow this."
+                    )
+
         # We need to sandbox the transactions here because we're going to make our own
         async with self.wallet_state_manager.new_action_scope(
             action_scope.config.tx_config, push=False

@@ -199,21 +199,8 @@ class Offer:
     def valid_times(self) -> dict[Coin, ConditionValidTimes]:
         return {coin: parse_timelock_info(conditions) for coin, conditions in self.conditions().items()}
 
-    def absolute_valid_times_ban_relatives(self) -> ConditionValidTimes:
-        valid_times: ConditionValidTimes = parse_timelock_info(
-            [c for conditions in self.conditions().values() for c in conditions]
-        )
-        # This restriction was only for user safety.
-        # We now do these checks for the offer taker.
-
-        # if (
-        #     valid_times.max_secs_after_created is not None
-        #     or valid_times.min_secs_since_created is not None
-        #     or valid_times.max_blocks_after_created is not None
-        #     or valid_times.min_blocks_since_created is not None
-        # ):
-        #     raise ValueError("Offers with relative timelocks are not currently supported")
-        return valid_times
+    def absolute_valid_times(self) -> ConditionValidTimes:
+        return parse_timelock_info([c for conditions in self.conditions().values() for c in conditions])
 
     def hints(self) -> dict[bytes32, bytes32]:
         return self._hints
@@ -360,7 +347,7 @@ class Offer:
             keys_and_amounts_to_strings(offered_amounts),
             keys_and_amounts_to_strings(requested_amounts),
             driver_dict,
-            self.absolute_valid_times_ban_relatives(),
+            self.absolute_valid_times(),
         )
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer

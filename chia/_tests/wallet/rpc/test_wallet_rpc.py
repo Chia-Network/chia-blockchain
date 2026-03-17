@@ -64,6 +64,7 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
+    AssertSecondsRelative,
     ConditionValidTimes,
     ConditionValidTimesAbsolute,
     CreateCoinAnnouncement,
@@ -534,6 +535,53 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
     # This tests that the client returns successfully, rather than raising or returning something unexpected
     await client.get_timestamp_for_height(GetTimestampForHeight(height=uint32(1)))
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_take_offer_rejects_relative_timelocks(wallet_environments: WalletTestFramework) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+
+    # env_1 creates a one-sided offer (gift of 1 mojo XCH) with a relative timelock
+    create_res = await env_1.rpc_client.create_offer_for_ids(
+        CreateOfferForIDs(offer={str(1): "-1"}),
+        tx_config=wallet_environments.tx_config,
+        extra_conditions=(AssertSecondsRelative(uint64(100)),),
+    )
+    offer = create_res.offer
+    assert offer is not None
+
+    # Verify the offer actually contains relative timelocks
+    for cvt in offer.valid_times().values():
+        if cvt.has_relative_timelocks:
+            break
+    else:
+        raise AssertionError("Expected offer to contain relative timelocks")
+
+    # env_2 tries to take the offer — should be rejected by default
+    with pytest.raises(ResponseFailureError, match="relative timelocks"):
+        await env_2.rpc_client.take_offer(
+            TakeOffer(offer=offer.to_bech32(), fee=uint64(0), push=True),
+            wallet_environments.tx_config,
+        )
+
+    # Enable the config setting on the taker's node
+    env_2.node.wallet_state_manager.config["accept_offers_with_relative_timelocks"] = True
+
+    # The relative timelock guard should now be bypassed (may still fail downstream for other reasons)
+    try:
+        await env_2.rpc_client.take_offer(
+            TakeOffer(offer=offer.to_bech32(), fee=uint64(0), push=True),
+            wallet_environments.tx_config,
+        )
+    except ResponseFailureError as e:
+        assert "relative timelocks" not in str(e), "Should not be rejected for relative timelocks after config change"
 
 
 @pytest.mark.parametrize(
