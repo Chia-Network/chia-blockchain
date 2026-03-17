@@ -203,13 +203,16 @@ class Offer:
         valid_times: ConditionValidTimes = parse_timelock_info(
             [c for conditions in self.conditions().values() for c in conditions]
         )
-        if (
-            valid_times.max_secs_after_created is not None
-            or valid_times.min_secs_since_created is not None
-            or valid_times.max_blocks_after_created is not None
-            or valid_times.min_blocks_since_created is not None
-        ):
-            raise ValueError("Offers with relative timelocks are not currently supported")
+        # This restriction was only for user safety. 
+        # We now do these checks for the offer taker.
+
+        # if (
+        #     valid_times.max_secs_after_created is not None
+        #     or valid_times.min_secs_since_created is not None
+        #     or valid_times.max_blocks_after_created is not None
+        #     or valid_times.min_blocks_since_created is not None
+        # ):
+        #     raise ValueError("Offers with relative timelocks are not currently supported")
         return valid_times
 
     def hints(self) -> dict[bytes32, bytes32]:
