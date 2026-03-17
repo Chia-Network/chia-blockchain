@@ -19,8 +19,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
-- Simplify TransactionQueue's put
-- Use an adapted version of deficit round robin algorithm in TransactionQueue's pop
+- Simplify and optimize `TransactionQueue`
+- Use an adapted version of deficit round robin algorithm in `TransactionQueue`
 - Forward `send_transaction` and `cat_spend` to `create_signed_transaction`
 - Prioritize trusted peers in FullNodeAPI's `send_transaction`
 - Add `kw_only` to all wallet RPC types
