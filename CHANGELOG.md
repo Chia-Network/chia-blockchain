@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.6.1 Chia blockchain 2026-3-18
+
+## What's Changed
+
+### Added
+
+- Add BYC and CRT to default CAT list
+- New inner puzzle meta-standard that has instructions for how a wallet can handle arbitrary authorization trees
+- Work in Progress - PoS2 integration
+- Use structured RPC errors in `full_node_rpc_api`
+
+### Changed
+
+- Simplify TransactionQueue's put
+- Use an adapted version of deficit round robin algorithm in TransactionQueue's pop
+- Forward `send_transaction` and `cat_spend` to `create_signed_transaction`
+- Prioritize trusted peers in FullNodeAPI's `send_transaction`
+- Add `kw_only` to all wallet RPC types
+- Miscellaneous wallet RPC cleanups
+- Tolerate quote related cost mismatch for older nodes
+- Skip fetching additions and removals for non transaction blocks in FullNodeAPI's `request_header_blocks`
+- Refactor connection handshake
+- Reject unsolicited `RespondCompactVDF` messages
+- Made log less chatty for compact proofs
+- Harden full node store
+- Validate QR bit in DNS seeder to only process queries
+- Add missing request decorator to `reject_removals_request`
+- Correct accounting of cost limits in offer summary computation
+- Harden nodes message typechecking
+- Harden the full node’s incoming connection logic
+- Default to block creation 1
+- Only update the fast forward state on successful validation in `process_fast_forward_spends`
+- Bump `chia_rs` to `0.38.2`
+
+### Fixed
+
+- Revert accidental RPC parameter name change
+- Augmented usage fix
+- Blocktools double sub epoch summary hash bug
+- Fix reorg edge case handling in the wallet protocol
+- Prevent dangling SAVEPOINTs by shielding against cancellation
+- Return RejectAdditionsRequest to wallets instead of raising an exception
+- Close VDF client TCP connections properly
+- Fix PendingTxCache eviction when encountering empty height buckets
+
+### Removed
+
+- Drop support for macOS 13 (Ventura) and macOS 14 (Sonoma)
+
 ## 2.6.0 Chia blockchain 2026-2-11
 
 As this is a soft fork release, upgrading is strongly recommended before height 8,655,000.
