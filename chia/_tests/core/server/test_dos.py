@@ -163,6 +163,7 @@ class TestDos:
         await ws.close()
 
     @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
     async def test_invalid_protocol_handshake(
         self,
         setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -177,7 +178,7 @@ class TestDos:
         )
         assert response.type == WSMsgType.CLOSE
         assert response.data == WSCloseCode.PROTOCOL_ERROR
-        assert response.extra == str(int(Err.INVALID_PROTOCOL_MESSAGE.value))
+        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))
 
     @pytest.mark.anyio
     async def test_handshake_version_too_long_disconnect(
