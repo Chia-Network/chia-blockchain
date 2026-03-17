@@ -9,7 +9,7 @@ from chia_rs import ConsensusConstants, VDFInfo, VDFProof
 from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint64
 
-from chia_vdf_verify import create_discriminant, verify_n_wesolowski
+from chia_vdf_verify import create_discriminant_bytes, verify_n_wesolowski_bytes
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 
@@ -19,25 +19,22 @@ __all__ = ["VDFInfo", "VDFProof"]
 
 
 @lru_cache(maxsize=200)
-def get_discriminant(challenge: bytes32, size_bites: int) -> int:
-    return int(
-        create_discriminant(challenge, size_bites),
-        16,
-    )
+def get_discriminant_bytes(challenge: bytes32, size_bites: int) -> bytes:
+    """Return discriminant as bytes (sign+magnitude). Cached per (challenge, size_bits)."""
+    return create_discriminant_bytes(challenge, size_bites)
 
 
-@lru_cache(maxsize=1000)
 def verify_vdf(
-    disc: int,
+    disc_bytes: bytes,
     input_el: bytes100,
     output: bytes,
     number_of_iterations: uint64,
     discriminant_size: int,
     witness_type: uint8,
 ) -> bool:
-    # TODO: chiavdf needs hinted
-    return verify_n_wesolowski(  # type:ignore[no-any-return]
-        str(disc),
+    """Verify VDF proof. disc_bytes from get_discriminant_bytes (avoids repeated parse)."""
+    return verify_n_wesolowski_bytes(  # type:ignore[no-any-return]
+        disc_bytes,
         input_el,
         output,
         number_of_iterations,
@@ -63,10 +60,10 @@ def validate_vdf(
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
         return False
     try:
-        disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
+        disc_bytes: bytes = get_discriminant_bytes(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         return verify_vdf(
-            disc,
+            disc_bytes,
             input_el.data,
             info.output.data + bytes(proof.witness),
             info.number_of_iterations,
