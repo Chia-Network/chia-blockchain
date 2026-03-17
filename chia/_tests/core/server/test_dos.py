@@ -10,11 +10,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint64
 
 import chia.server.server
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake, protocol_version
+from chia.protocols.shared_protocol import Capability, Handshake, default_capabilities, protocol_version
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import (
@@ -397,3 +398,72 @@ class TestDos:
             return "1.2.3.4" in server_2.banned_peers
 
         await time_out_assert(15, is_banned)
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+    async def test_invalid_message_format_disconnect(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
+        """Invalid binary after handshake disconnects with PROTOCOL_ERROR and peer is banned."""
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        capabilities = default_capabilities[NodeType.FULL_NODE] + [
+            (uint16(Capability.HARD_FORK_2.value), "1"),
+        ]
+        handshake = Handshake(
+            server_1._network_id,
+            protocol_version[NodeType.FULL_NODE],
+            "test",
+            uint16(0),
+            uint8(NodeType.FULL_NODE.value),
+            capabilities,
+        )
+        # Binary that should fail Message.from_bytes(): Message is (uint8 type, optional uint16 id, bytes data).
+        # - bytes: 4-byte big-endian length then payload. Optional: 1 byte 0/1, if 1 then uint16.
+        invalid_payloads = [
+            b"",  # EOF reading type (uint8)
+            b"\x01\x02",  # type=1, optional prefix 0x02 invalid (must be 0 or 1)
+            b"\x01\x01",  # type=1, id present, EOF reading uint16
+            b"\x01\x00\x00\x00\x00\x00\x00\x05\x11\x22",  # type=1, id=None, data len=5 but only 2 bytes
+            b"\xff\xff\xff",  # type=255, optional prefix 0xff invalid
+        ]
+        timeout = ClientTimeout(total=10)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+        async with ClientSession(timeout=timeout) as session:
+            for invalid_payload in invalid_payloads:
+                async with session.ws_connect(
+                    url,
+                    autoclose=True,
+                    autoping=True,
+                    ssl=server_2.ssl_client_context,
+                    max_msg_size=50 * 1024 * 1024,
+                ) as ws:
+                    await ws.send_bytes(
+                        bytes(Message(uint8(ProtocolMessageTypes.handshake.value), None, bytes(handshake)))
+                    )
+                    first = await ws.receive()
+                    assert first.type == WSMsgType.BINARY, "Expected handshake response"
+
+                    assert len(server_1.all_connections) == 1
+                    ws_con = next(iter(server_1.all_connections.values()))
+                    ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
+
+                    await ws.send_bytes(invalid_payload)
+
+                    response = await ws.receive()
+                    while response.type != WSMsgType.CLOSE:
+                        response = await ws.receive()
+                    assert response.type == WSMsgType.CLOSE
+                    assert response.data == WSCloseCode.PROTOCOL_ERROR
+
+                def is_banned() -> bool:
+                    return "1.2.3.4" in server_1.banned_peers
+
+                await time_out_assert(10, is_banned)
+
+        # Final check that peer remained banned after all iterations
+        assert "1.2.3.4" in server_1.banned_peers

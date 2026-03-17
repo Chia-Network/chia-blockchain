@@ -534,10 +534,15 @@ class WSChiaConnection:
                     continue
         except asyncio.CancelledError:
             self.log.debug("Inbound_handler task cancelled")
+        except ProtocolError as e:
+            self.log.error(f"Disconnecting peer: {e}")
+            await self.close(INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, e.code)
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
+            # Close (no ban) so the connection is not left as a zombie
+            await self.close(0, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
 
     async def send_message(self, message: Message) -> bool:
         """Send message sends a message with no tracking / callback."""
@@ -713,24 +718,18 @@ class WSChiaConnection:
                 return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
-            full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            full_message_loaded = None
             try:
+                full_message_loaded = Message.from_bytes(data)
                 message_type = ProtocolMessageTypes(full_message_loaded.type)
             except Exception:
-                self.log.error(
-                    f"Disconnecting peer for unknown message type {full_message_loaded.type}: {self.peer_info.host}"
-                )
-                create_referenced_task(
-                    self.close(
-                        INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
-                    ),
-                    known_unreferenced=True,
-                )
-                # Yield so we let the close task cancel us
-                await asyncio.sleep(3)
-                return None
+                if full_message_loaded is not None:
+                    error_message = f"unknown message type {full_message_loaded.type}: {self.peer_info.host}"
+                else:
+                    error_message = f"invalid message format: {self.peer_info.host}"
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
             limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
