@@ -45,9 +45,6 @@ class AugmentedBlockchain:
             raise AugmentedBlockchainValidationError("Cannot mutate read-only augmented blockchain snapshot")
 
     def read_only_snapshot(self) -> AugmentedBlockchain:
-        # _underlying is shared by reference; safe because the snapshot is only
-        # used for read-only BlockRecordsProtocol calls in a single executor task
-        # while the asyncio event loop serializes mutations on the writer side.
         snapshot = AugmentedBlockchain.__new__(AugmentedBlockchain)
         snapshot._underlying = self._underlying
         snapshot._extra_blocks = self._extra_blocks.copy()
@@ -60,6 +57,20 @@ class AugmentedBlockchain:
         if eb is None:
             return None
         return eb[1]
+
+    def _populate_fork_ancestry(self, prev_hash: bytes32) -> None:
+        """Walk backward from prev_hash through orphan block records in the
+        underlying chain, filling _height_to_hash until we reach fork point."""
+        curr_hash = prev_hash
+        while True:
+            br = self._underlying.block_record(curr_hash)
+            # if common block, break,
+            if self._underlying.height_to_hash(br.height) == curr_hash:
+                break
+            self._height_to_hash[br.height] = curr_hash
+            if br.height == 0:
+                break
+            curr_hash = br.prev_hash
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self._ensure_mutable()
@@ -83,6 +94,7 @@ class AugmentedBlockchain:
                     f"First added block's prev_hash must exist in underlying blockchain. "
                     f"Block height {block_record.height}, prev_hash {block_record.prev_hash.hex()[:16]} not found"
                 )
+            self._populate_fork_ancestry(block_record.prev_hash)
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
