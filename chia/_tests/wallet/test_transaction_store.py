@@ -146,6 +146,38 @@ async def test_increment_sent_error() -> None:
         assert tr.sent_to == [("peer1", uint8(3), "MEMPOOL_NOT_INITIALIZED")]
 
 
+@pytest.mark.anyio
+async def test_increment_sent_duplicate_peer_status_ignored() -> None:
+    """Duplicate (peer, status) is ignored: return True, sent and sent_to unchanged."""
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
+
+        await store.add_transaction_record(tr1)
+
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.PENDING, None) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 1
+        assert tr.sent_to == [("peer1", uint8(2), None)]
+
+        # Same (peer, status) again: idempotent, no new entry, sent unchanged
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.PENDING, None) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 1
+        assert tr.sent_to == [("peer1", uint8(2), None)]
+
+        # Same peer, different status: new entry, sent still 1
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 1
+        assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
+
+        # Duplicate (peer1, SUCCESS): ignored
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 1
+        assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
+
+
 def test_filter_ok_mempool_status() -> None:
     assert filter_ok_mempool_status([("peer1", uint8(1), None)]) == []
     assert filter_ok_mempool_status([("peer1", uint8(2), None)]) == []
@@ -812,13 +844,15 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_transaction_record_is_valid() -> None:
     invalid_attempts: list[tuple[str, uint8, str | None]] = []
+    sent_count = 0
     # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
     while len(invalid_attempts) < minimum_send_attempts:
-        assert dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
+        assert dataclasses.replace(tr1, sent=uint32(sent_count), sent_to=invalid_attempts).is_valid()
         invalid_attempts.append(("peer", uint8(MempoolInclusionStatus.FAILED), None))
+        sent_count += 1
     # The tx should be invalid now with more than minimum failed attempts
     assert len(invalid_attempts) == minimum_send_attempts
-    assert not dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
+    assert not dataclasses.replace(tr1, sent=uint32(sent_count), sent_to=invalid_attempts).is_valid()
     mempool_success = ("success", uint8(MempoolInclusionStatus.SUCCESS), None)
     low_fee = ("low_fee", uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name)
     close_to_zero = (

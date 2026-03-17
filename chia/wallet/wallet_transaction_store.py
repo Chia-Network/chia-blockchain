@@ -179,6 +179,8 @@ class WalletTransactionStore:
     ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
+        Each peer may contribute at most one entry per MempoolInclusionStatus; duplicate
+        (peer, status) responses are ignored so sent_to stays bounded.
         """
 
         current: TransactionRecord | None = await self.get_transaction_record(tx_id)
@@ -187,17 +189,15 @@ class WalletTransactionStore:
 
         sent_to = current.sent_to.copy()
 
-        current_peers = set()
         err_str = err.name if err is not None else None
         append_data = (name, uint8(send_status.value), err_str)
 
-        for peer_id, status, error in sent_to:
-            current_peers.add(peer_id)
+        # Ignore if this peer already reported this status (one entry per status per peer)
+        if any(peer_id == name and status == send_status.value for peer_id, status, _ in sent_to):
+            return True
 
-        if name in current_peers:
-            sent_count = uint32(current.sent)
-        else:
-            sent_count = uint32(current.sent + 1)
+        peer_is_new = not any(peer_id == name for peer_id, _, _ in sent_to)
+        sent_count = uint32(current.sent + 1) if peer_is_new else uint32(current.sent)
 
         sent_to.append(append_data)
 

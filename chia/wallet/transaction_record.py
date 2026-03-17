@@ -80,15 +80,16 @@ class TransactionRecordOld(Streamable):
         return None
 
     def is_valid(self) -> bool:
-        if len(self.sent_to) < minimum_send_attempts:
-            # we haven't tried enough peers yet
-            return True
         if any(x[1] == MempoolInclusionStatus.SUCCESS.value for x in self.sent_to):
             # we managed to push it to mempool at least once
             return True
         if any(x[2] in {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name} for x in self.sent_to):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
+        if self.sent < minimum_send_attempts:
+            # we haven't tried enough peers yet
+            return True
+
         return False
 
     def hint_dict(self) -> dict[bytes32, bytes32]:
