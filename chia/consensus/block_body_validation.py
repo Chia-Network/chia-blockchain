@@ -345,7 +345,7 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
     else:
         # With hard fork 2 we ban transactions_generator_ref_list.
-        if prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT:
+        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
             return Err.TOO_MANY_GENERATOR_REFS
 
         # If we have a generator reference list, we must have a generator
@@ -378,7 +378,7 @@ async def validate_block_body(
         assert conds is not None
         assert conds.validated_signature
 
-        if prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT:
+        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
             if not is_canonical_serialization(bytes(block.transactions_generator)):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 
