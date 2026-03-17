@@ -203,7 +203,7 @@ class Offer:
         valid_times: ConditionValidTimes = parse_timelock_info(
             [c for conditions in self.conditions().values() for c in conditions]
         )
-        # This restriction was only for user safety. 
+        # This restriction was only for user safety.
         # We now do these checks for the offer taker.
 
         # if (
