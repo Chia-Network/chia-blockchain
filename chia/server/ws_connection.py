@@ -694,6 +694,7 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -702,10 +703,12 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
                 create_referenced_task(self.close(), known_unreferenced=True)
+                # Yield so we let the close task cancel us
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
@@ -741,6 +744,7 @@ class WSChiaConnection:
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
+                    # Yield so we let the close task cancel us
                     await asyncio.sleep(3)
                     return None
                 else:
@@ -756,11 +760,13 @@ class WSChiaConnection:
                 create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
             else:
                 create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             create_referenced_task(self.close())
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         return None
 
