@@ -73,6 +73,26 @@ class TestKeyringWrapper:
         )
         assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is True
 
+    # When: the cached master passphrase has been cleared
+    def test_has_cached_master_passphrase_cleared(self, empty_temp_file_keyring: TempKeyring):
+        """
+        has_cached_master_passphrase should return False when the cache is cleared
+        """
+        # Precondition: default passphrase is cached
+        assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is True
+
+        # When: clearing the cached passphrase
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
+
+        # Expect: has_cached_master_passphrase reports no passphrase
+        assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is False
+
+        # When: setting an empty string passphrase
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase("")
+
+        # Expect: empty string is also treated as "no passphrase"
+        assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is False
+
     # When: using a file keyring
     def test_set_cached_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
