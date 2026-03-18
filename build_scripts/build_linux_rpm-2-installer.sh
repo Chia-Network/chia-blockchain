@@ -88,7 +88,7 @@ fpm -s dir -t rpm \
   --before-install=assets/rpm/before-install.sh \
   --rpm-tag 'Requires(pre): findutils' \
   --rpm-compression xz \
-  --rpm-compression-level 6 \
+  --rpm-compression-level 9 \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui

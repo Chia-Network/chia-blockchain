@@ -69,7 +69,7 @@ cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
-dpkg-deb -Zxz -z6 --build --root-owner-group "dist/$CLI_DEB_BASE"
+dpkg-deb -Zxz -z9 --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
