@@ -157,7 +157,7 @@ jobs:
       concurrency-name: ubuntu-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-latest
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
@@ -173,7 +173,7 @@ jobs:
       concurrency-name: ubuntu-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-24.04-arm
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404-arm' || 'ubuntu-24.04-arm' }}
       arch: arm
       arch-emoji: 💪
       collect-junit: false
@@ -189,7 +189,7 @@ jobs:
       concurrency-name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: windows-latest
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-windows-2025' || 'windows-latest' }}
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
