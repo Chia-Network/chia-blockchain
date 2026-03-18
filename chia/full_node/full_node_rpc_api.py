@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import (
-    LIMIT_HEAP,
     MEMPOOL_MODE,
     BlockRecord,
     CoinRecord,
@@ -1007,7 +1006,7 @@ class FullNodeRpcApi:
                     bytes(gen.program),
                     gen.generator_refs,
                     self.service.constants.MAX_BLOCK_COST_CLVM,
-                    MEMPOOL_MODE & ~LIMIT_HEAP,
+                    MEMPOOL_MODE,
                     gen.signature,
                     None,
                     self.service.constants,
