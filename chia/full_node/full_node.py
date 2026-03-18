@@ -2061,6 +2061,9 @@ class FullNode:
         ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
+            pos = block.reward_chain_block.proof_of_space
+            if pos.version == 1 and pos.quality_string() is None:
+                raise ConsensusError(Err.INVALID_POSPACE)
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             foliage_hash: bytes32 | None = block.foliage.foliage_transaction_block_hash
             assert foliage_hash is not None
@@ -2325,6 +2328,10 @@ class FullNode:
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")
             return None
+
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            raise ConsensusError(Err.INVALID_POSPACE)
 
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different

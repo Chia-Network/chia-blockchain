@@ -1231,6 +1231,11 @@ def validate_recent_blocks(
     adjusted = False
     validated_block_count = 0
     for idx, block in enumerate(recent_chain.recent_chain_data):
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            log.info(f"invalid proof of space in weight proof recent chain block {block.height}")
+            return False, []
+
         required_iters = uint64(0)
         overflow = False
         ses = False
