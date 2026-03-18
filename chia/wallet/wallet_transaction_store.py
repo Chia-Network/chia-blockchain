@@ -180,7 +180,8 @@ class WalletTransactionStore:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
         Each peer may contribute at most one entry per MempoolInclusionStatus; duplicate
-        (peer, status) responses are ignored so sent_to stays bounded.
+        (peer, status) pairs only update the error field (to capture fee errors on retries).
+        The sent counter is always incremented to track total attempts for expiration.
         """
 
         current: TransactionRecord | None = await self.get_transaction_record(tx_id)
@@ -192,14 +193,22 @@ class WalletTransactionStore:
         err_str = err.name if err is not None else None
         append_data = (name, uint8(send_status.value), err_str)
 
-        # Ignore if this peer already reported this status (one entry per status per peer)
-        if any(peer_id == name and status == send_status.value for peer_id, status, _ in sent_to):
-            return True
+        # Check if this peer already reported this status
+        duplicate_idx: int | None = None
+        for i, (peer_id, status, _) in enumerate(sent_to):
+            if peer_id == name and status == send_status.value:
+                duplicate_idx = i
+                break
 
-        peer_is_new = not any(peer_id == name for peer_id, _, _ in sent_to)
-        sent_count = uint32(current.sent + 1) if peer_is_new else uint32(current.sent)
+        # Always increment sent to track total attempts for expiration threshold
+        sent_count = uint32(current.sent + 1)
 
-        sent_to.append(append_data)
+        if duplicate_idx is not None:
+            # Update error if different to capture fee errors on retries
+            if sent_to[duplicate_idx][2] != err_str:
+                sent_to[duplicate_idx] = append_data
+        else:
+            sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
         if not tx.is_valid():

@@ -121,12 +121,12 @@ async def test_increment_sent() -> None:
 
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 2  # sent increments on every call to track total attempts
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
         assert await store.increment_sent(tr1.name, "peer2", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 2
+        assert tr.sent == 3  # sent increments on every call to track total attempts
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
 
@@ -147,8 +147,8 @@ async def test_increment_sent_error() -> None:
 
 
 @pytest.mark.anyio
-async def test_increment_sent_duplicate_peer_status_ignored() -> None:
-    """Duplicate (peer, status) is ignored: return True, sent and sent_to unchanged."""
+async def test_increment_sent_duplicate_peer_status_updates_error() -> None:
+    """Duplicate (peer, status) updates error if different but doesn't add to sent_to. Sent always increments."""
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
@@ -159,23 +159,36 @@ async def test_increment_sent_duplicate_peer_status_ignored() -> None:
         assert tr.sent == 1
         assert tr.sent_to == [("peer1", uint8(2), None)]
 
-        # Same (peer, status) again: idempotent, no new entry, sent unchanged
+        # Same (peer, status) again: sent increments (to track attempts), no new entry in sent_to
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.PENDING, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 2  # sent increments to track total attempts for expiration
         assert tr.sent_to == [("peer1", uint8(2), None)]
 
-        # Same peer, different status: new entry, sent still 1
+        # Same peer, different status: new entry in sent_to, sent increments
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 3
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
-        # Duplicate (peer1, SUCCESS): ignored
+        # Duplicate (peer1, SUCCESS): sent increments, no new entry
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 4
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
+
+        # Test error update: same (peer, status) with different error updates the error in sent_to
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 5
+        assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer1", uint8(3), "MEMPOOL_NOT_INITIALIZED")]
+
+        # Same (peer, FAILED) with fee error: error should be updated to capture fee errors on retries
+        assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.FAILED, Err.INVALID_FEE_LOW_FEE) is True
+        tr = await store.get_transaction_record(tr1.name)
+        assert tr.sent == 6
+        # Error updated from MEMPOOL_NOT_INITIALIZED to INVALID_FEE_LOW_FEE
+        assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer1", uint8(3), "INVALID_FEE_LOW_FEE")]
 
 
 def test_filter_ok_mempool_status() -> None:
