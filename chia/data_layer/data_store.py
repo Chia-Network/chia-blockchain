@@ -242,7 +242,12 @@ class DataStore:
                     merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
                 # Don't store these blob objects into cache, since their data structures are not calculated yet.
-                await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+                new_root = await self.insert_root_from_merkle_blob(
+                    merkle_blob, store_id, Status.COMMITTED, update_cache=False
+                )
+                # Double-check that the MerkleBlob is correct by loading it into memory.
+                if new_root.node_hash is not None:
+                    await self.get_merkle_blob(store_id=store_id, root_hash=new_root.node_hash, read_only=True)
                 return delta_reader
 
     async def build_merkle_blob_queries_for_missing_hashes(
