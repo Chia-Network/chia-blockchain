@@ -703,6 +703,9 @@ class Blockchain:
     async def validate_unfinished_block_header(
         self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
     ) -> tuple[uint64 | None, Err | None]:
+        if len(block.reward_chain_block.proof_of_space.proof) >= 2000:
+            return None, Err.INVALID_POSPACE
+
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
