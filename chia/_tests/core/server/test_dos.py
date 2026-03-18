@@ -17,14 +17,17 @@ from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, Handshake, default_capabilities, protocol_version
 from chia.server.rate_limits import RateLimiter
-from chia.server.server import ChiaServer
+from chia.server.server import ChiaServer, ssl_context_for_client
+from chia.server.ssl_context import chia_ssl_ca_paths
 from chia.server.ws_connection import (
     MAX_VERSION_STRING_BYTES,
     WSChiaConnection,
 )
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.timing import adjusted_timeout
 from chia.wallet.wallet_node import WalletNode
@@ -163,7 +166,6 @@ class TestDos:
         await ws.close()
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
     async def test_invalid_protocol_handshake(
         self,
         setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -178,7 +180,7 @@ class TestDos:
         )
         assert response.type == WSMsgType.CLOSE
         assert response.data == WSCloseCode.PROTOCOL_ERROR
-        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))
+        assert response.extra == str(int(Err.INVALID_PROTOCOL_MESSAGE.value))
 
     @pytest.mark.anyio
     async def test_handshake_version_too_long_disconnect(
@@ -403,20 +405,13 @@ class TestDos:
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
     async def test_invalid_message_format_disconnect(
-        self,
-        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
-        self_hostname: str,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
     ) -> None:
         """Invalid binary after handshake disconnects with PROTOCOL_ERROR and peer is banned."""
-        nodes, _, _ = setup_two_nodes_fixture
-        server_1 = nodes[0].full_node.server
-        server_2 = nodes[1].full_node.server
-
-        capabilities = default_capabilities[NodeType.FULL_NODE] + [
-            (uint16(Capability.HARD_FORK_2.value), "1"),
-        ]
+        _, server, _ = one_node_one_block
+        capabilities = default_capabilities[NodeType.FULL_NODE] + [(uint16(Capability.HARD_FORK_2.value), "1")]
         handshake = Handshake(
-            server_1._network_id,
+            server._network_id,
             protocol_version[NodeType.FULL_NODE],
             "test",
             uint16(0),
@@ -433,24 +428,23 @@ class TestDos:
             b"\xff\xff\xff",  # type=255, optional prefix 0xff invalid
         ]
         timeout = ClientTimeout(total=10)
-        url = f"wss://{self_hostname}:{server_1._port}/ws"
+        url = f"wss://{self_hostname}:{server._port}/ws"
+        ca_crt_path, ca_key_path = chia_ssl_ca_paths(server.root_path, load_config(server.root_path, "config.yaml"))
+        dummy_crt_path = server.root_path / "dummy.crt"
+        dummy_key_path = server.root_path / "dummy.key"
+        generate_ca_signed_cert(ca_crt_path.read_bytes(), ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path)
+        ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, dummy_crt_path, dummy_key_path)
         async with ClientSession(timeout=timeout) as session:
             for invalid_payload in invalid_payloads:
-                async with session.ws_connect(
-                    url,
-                    autoclose=True,
-                    autoping=True,
-                    ssl=server_2.ssl_client_context,
-                    max_msg_size=50 * 1024 * 1024,
-                ) as ws:
+                async with session.ws_connect(url, ssl=ssl_context) as ws:
                     await ws.send_bytes(
                         bytes(Message(uint8(ProtocolMessageTypes.handshake.value), None, bytes(handshake)))
                     )
                     first = await ws.receive()
                     assert first.type == WSMsgType.BINARY, "Expected handshake response"
 
-                    assert len(server_1.all_connections) == 1
-                    ws_con = next(iter(server_1.all_connections.values()))
+                    assert len(server.all_connections) == 1
+                    ws_con = next(iter(server.all_connections.values()))
                     ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
 
                     await ws.send_bytes(invalid_payload)
@@ -461,10 +455,7 @@ class TestDos:
                     assert response.type == WSMsgType.CLOSE
                     assert response.data == WSCloseCode.PROTOCOL_ERROR
 
-                def is_banned() -> bool:
-                    return "1.2.3.4" in server_1.banned_peers
-
-                await time_out_assert(10, is_banned)
+                await time_out_assert(5, lambda: "1.2.3.4" in server.banned_peers)
 
         # Final check that peer remained banned after all iterations
-        assert "1.2.3.4" in server_1.banned_peers
+        assert "1.2.3.4" in server.banned_peers
