@@ -62,6 +62,15 @@ MIN_COST_THRESHOLD = 6_000_000
 # integers, which we rely on for computing fee per cost as well as the fee sum
 MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
+# After soft_fork9_height, blocks are limited to 6000 spends in addition to the
+# CLVM cost limit. To prevent low-cost, many-spend transactions from exhausting
+# the spend limit and crowding out higher-value transactions, the mempool
+# prioritizes by fee per "virtual cost" rather than fee per CLVM cost.
+# Virtual cost is defined as: cost + num_spends * 500_000
+# This penalizes transactions that consume a disproportionate number of spend
+# slots relative to their CLVM cost.
+MAX_SPENDS_PER_BLOCK = 6000
+
 
 @dataclass
 class MempoolRemoveInfo:
@@ -572,6 +581,7 @@ class Mempool:
     ) -> tuple[SpendBundle, list[Coin]] | None:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        spend_count = 0  # Checks that total spends do not exceed MAX_SPENDS_PER_BLOCK
         processed_spend_bundles = 0
         additions: list[Coin] = []
         # This contains a map of coin ID to a coin spend solution and its
@@ -637,29 +647,34 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
                 new_cost_sum = cost_sum + item_cost
-                if new_cost_sum > self.mempool_info.max_block_clvm_cost:
-                    # Let's skip this item
+                new_spend_count = spend_count + len(unique_coin_spends)
+                if new_cost_sum > self.mempool_info.max_block_clvm_cost or new_spend_count > MAX_SPENDS_PER_BLOCK:
                     log.info(
-                        "Skipping mempool item. Cumulative cost %d exceeds maximum block cost %d",
+                        "Skipping mempool item. Cumulative cost %d (max %d) spends %d (max %d)",
                         new_cost_sum,
                         self.mempool_info.max_block_clvm_cost,
+                        new_spend_count,
+                        MAX_SPENDS_PER_BLOCK,
                     )
                     skipped_items += 1
                     if skipped_items < MAX_SKIPPED_ITEMS:
                         continue
-                    # Let's stop taking more items if we skipped `MAX_SKIPPED_ITEMS`
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.aggregated_signature)
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
+                spend_count = new_spend_count
                 processed_spend_bundles += 1
                 # Let's stop taking more items if we don't have enough cost left
                 # for at least `MIN_COST_THRESHOLD` because that would mean we're
                 # getting very close to the limit anyway and *probably* won't
                 # find transactions small enough to fit at this point
-                if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
+                if (
+                    self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD
+                    or spend_count >= MAX_SPENDS_PER_BLOCK
+                ):
                     break
             except SkipDedup as e:
                 log.info(f"{e}")
@@ -732,6 +747,16 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
 
+                new_spend_count = added_spends + batch_spends + len(unique_coin_spends)
+                if new_spend_count > MAX_SPENDS_PER_BLOCK:
+                    log.info(
+                        "Skipping mempool item. Cumulative spends %d exceeds limit %d",
+                        new_spend_count,
+                        MAX_SPENDS_PER_BLOCK,
+                    )
+                    skipped_items += 1
+                    continue
+
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
@@ -764,6 +789,8 @@ class Mempool:
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum
                 block_cost += item.conds.cost - cost_saving
+                if added_spends + batch_spends >= MAX_SPENDS_PER_BLOCK:
+                    break
             except SkipDedup as e:
                 log.info(f"{e}")
                 continue
