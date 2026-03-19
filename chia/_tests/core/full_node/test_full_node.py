@@ -1169,6 +1169,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1224,6 +1225,7 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 

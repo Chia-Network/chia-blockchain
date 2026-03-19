@@ -942,6 +942,14 @@ class FullNode:
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
                 await connection.send_message(msg)
+                # Old peers (< 2.6.0) respond to RequestMempoolTransactions with
+                # RespondTransaction directly. New peers send NewTransaction instead.
+                try:
+                    old_peer = Version(connection.version) < Version("2.6.0")
+                except Exception:
+                    old_peer = True
+                if old_peer:
+                    connection.expected_mempool_responses += 100
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 

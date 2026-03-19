@@ -314,6 +314,11 @@ class FullNodeAPI:
         spend_name = std_hash(tx_bytes)
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        elif peer.expected_mempool_responses > 0:
+            peer.expected_mempool_responses -= 1
+        else:
+            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             peers_with_tx = self.full_node.full_node_store.peers_with_tx.pop(spend_name)
