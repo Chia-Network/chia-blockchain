@@ -694,6 +694,7 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -702,10 +703,12 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
                 create_referenced_task(self.close(), known_unreferenced=True)
+                # Yield so we let the close task cancel us
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
@@ -714,9 +717,20 @@ class WSChiaConnection:
             self.bytes_read += len(data)
             self.last_message_time = time.time()
             try:
-                message_type = ProtocolMessageTypes(full_message_loaded.type).name
+                message_type = ProtocolMessageTypes(full_message_loaded.type)
             except Exception:
-                message_type = "Unknown"
+                self.log.error(
+                    f"Disconnecting peer for unknown message type {full_message_loaded.type}: {self.peer_info.host}"
+                )
+                create_referenced_task(
+                    self.close(
+                        INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
+                    ),
+                    known_unreferenced=True,
+                )
+                # Yield so we let the close task cancel us
+                await asyncio.sleep(3)
+                return None
             limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
@@ -726,15 +740,16 @@ class WSChiaConnection:
                     and not is_localhost(self.peer_info.host)
                     and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
                 ):
-                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
+                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type.name}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
+                    # Yield so we let the close task cancel us
                     await asyncio.sleep(3)
                     return None
                 else:
                     self.log.debug(
-                        f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type}, "
+                        f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type.name}, "
                         f"port {self.peer_info.port} but not disconnecting"
                     )
                     return full_message_loaded
@@ -745,11 +760,13 @@ class WSChiaConnection:
                 create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
             else:
                 create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             create_referenced_task(self.close())
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         return None
 

@@ -3605,7 +3605,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
     db_path = path_from_root(bt.root_path, db_path_replaced)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    await make_db(db_path, default_400_blocks)
+    await make_db(db_path, default_400_blocks, bt.constants)
     with contextlib.closing(sqlite3.connect(db_path)) as conn:
         conn.execute("DELETE FROM current_peak;")
         conn.commit()
@@ -3741,3 +3741,40 @@ def test_hard_fork2_capability_on_release_branch() -> None:
     if branch is not None and branch.startswith("release/3."):
         for capabilities in default_capabilities.values():
             assert (uint16(Capability.HARD_FORK_2.value), "1") in capabilities
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_register_for_coin_updates(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the scenario where a peer registers for coin updates to make sure we
+    don't return coin states for coins that are not in the processed list.
+    """
+    full_node_api, server, bt = one_node_one_block
+    blocks = await full_node_api.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+    for block in blocks:
+        await full_node_api.full_node.add_block(block)
+    real_coin_ids = [c.name() for c in blocks[-1].get_included_reward_coins()]
+    assert len(real_coin_ids) >= 2
+    max_subscribe_items = 42
+    full_node_api.full_node.config["max_subscribe_items"] = max_subscribe_items
+    # Place one coin within the subscription limit and the rest after it so we
+    # can verify the response only includes states for coins that fit.
+    first_coin = real_coin_ids[:1]
+    remaining_coins = real_coin_ids[1:]
+    fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
+    request_ids = first_coin + fake_coin_ids + remaining_coins
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    response = await full_node_api.register_for_coin_updates(
+        wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0)), dummy_peer
+    )
+    assert response is not None
+    assert response.type == ProtocolMessageTypes.respond_to_coin_updates.value
+    response_data = wallet_protocol.RespondToCoinUpdates.from_bytes(response.data)
+    assert len(response_data.coin_ids) == max_subscribe_items
+    assert {cs.coin.name() for cs in response_data.coin_states} == set(first_coin)
+    for coin_id in remaining_coins:
+        assert coin_id not in response_data.coin_ids

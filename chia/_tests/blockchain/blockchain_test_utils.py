@@ -105,11 +105,21 @@ async def _validate_and_add_block(
     if fork_info is None:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
 
+    # Match full-node add_prevalidated_blocks() by passing the prevalidated
+    # overlay record into add_block().
+    block_record = aug_blockchain.try_block_record(block.header_hash)
     (
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, ssi, fork_info=fork_info)
+    ) = await blockchain.add_block(
+        block,
+        results,
+        ssi,
+        fork_info=fork_info,
+        prev_ses_block=prev_ses_block,
+        block_record=block_record,
+    )
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
