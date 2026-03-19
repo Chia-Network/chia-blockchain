@@ -3361,7 +3361,6 @@ class TestReorgs:
 
         if consensus_mode not in {
             ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_6,
             ConsensusMode.SOFT_FORK_2_7,
         }:
             reorg_point = 13

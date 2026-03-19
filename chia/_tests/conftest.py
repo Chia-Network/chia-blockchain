@@ -209,15 +209,13 @@ class ConsensusMode(ComparableEnum):
     PLAIN = 0
     # the hard fork introduced in Chia 2.0 (but really in 2.1)
     HARD_FORK_2_0 = 1
-    # the soft fork introduced in Chia 2.6
-    SOFT_FORK_2_6 = 2
     # the soft fork introduced in Chia 2.7
-    SOFT_FORK_2_7 = 3
+    SOFT_FORK_2_7 = 2
     # the hard fork introduced in Chia 3.0
-    HARD_FORK_3_0 = 4
+    HARD_FORK_3_0 = 3
     # the hard fork introduced in Chia 3.0 but after v1 plots have been
     # phased-out, and no longer valid
-    HARD_FORK_3_0_AFTER_PHASE_OUT = 5
+    HARD_FORK_3_0_AFTER_PHASE_OUT = 4
 
 
 @pytest.fixture(
@@ -225,7 +223,6 @@ class ConsensusMode(ComparableEnum):
     params=[
         ConsensusMode.PLAIN,
         ConsensusMode.HARD_FORK_2_0,
-        ConsensusMode.SOFT_FORK_2_6,
         ConsensusMode.SOFT_FORK_2_7,
         ConsensusMode.HARD_FORK_3_0,
         ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
@@ -242,11 +239,6 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
-        )
-
-    if consensus_mode >= ConsensusMode.SOFT_FORK_2_6:
-        ret = ret.replace(
-            SOFT_FORK8_HEIGHT=uint32(2),
         )
 
     if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
