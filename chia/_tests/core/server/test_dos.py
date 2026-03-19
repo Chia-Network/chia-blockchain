@@ -174,7 +174,9 @@ class TestDos:
         response = await send_handshake_and_assert_protocol_error(
             server_1, server_2, self_hostname, handshake, message_type=2
         )
-        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
+        assert response.type == WSMsgType.CLOSE
+        assert response.data == WSCloseCode.PROTOCOL_ERROR
+        assert response.extra == str(int(Err.INVALID_PROTOCOL_MESSAGE.value))
 
     @pytest.mark.anyio
     async def test_handshake_version_too_long_disconnect(

@@ -412,7 +412,7 @@ class BlockTools:
         block_generator: NewBlockGenerator | None,
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
-        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
+        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT:
             assert block_refs == [], "block references are not allowed after hard fork 2"
             dummy_block_references = False
 

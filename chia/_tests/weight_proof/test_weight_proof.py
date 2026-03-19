@@ -317,7 +317,7 @@ class TestWeightProof:
         allowed=[
             ConsensusMode.PLAIN,
             ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_6,
+            ConsensusMode.SOFT_FORK_2_7,
             ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
         ],
         reason="investigate test failure",
