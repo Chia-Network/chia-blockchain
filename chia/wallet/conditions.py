@@ -247,23 +247,19 @@ class CreateCoin(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> Self:
+        puzzle_hash = bytes32(program.at("rf").as_atom())
+        amount = uint64(program.at("rrf").as_int())
         potential_memos: Program = program.at("rrr")
+        if potential_memos == Program.NIL:
+            return cls(puzzle_hash, amount, None)
+
+        memo_or_blob = potential_memos.at("f")
         try:
-            return cls(
-                bytes32(program.at("rf").as_atom()),
-                uint64(program.at("rrf").as_int()),
-                (
-                    None
-                    if potential_memos == Program.NIL
-                    else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
-                ),
-            )
+            memos = [memo.as_atom() for memo in memo_or_blob.as_iter()]
         except ValueError:  # a bit of a hack to avoid doing the heavy lifting of switching the memo usage everywhere
-            return cls(
-                bytes32(program.at("rf").as_atom()),
-                uint64(program.at("rrf").as_int()),
-                memo_blob=potential_memos.at("f"),
-            )
+            return cls(puzzle_hash, amount, memo_blob=memo_or_blob)
+
+        return cls(puzzle_hash, amount, memos)
 
     def as_condition_args(self) -> list[bytes32 | uint64 | list[bytes] | Program | None]:
         return [self.puzzle_hash, self.amount, self.memos if self.memos is not None else self.memo_blob]
