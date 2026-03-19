@@ -3193,6 +3193,8 @@ class WalletRpcApi:
         if isinstance(wallet, PoolWallet):
             total_fee = await wallet.self_pool(request.fee, action_scope)
         elif isinstance(wallet, PlotNFT2Wallet):
+            if (await wallet.get_current_plotnft()).pool_config is None:
+                raise ValueError("Attempted to self pool when already self pooling")
             finish_leaving_fee = request.finish_leaving_fee if request.finish_leaving_fee is not None else request.fee
             await wallet.leave_pool(
                 action_scope=action_scope,
