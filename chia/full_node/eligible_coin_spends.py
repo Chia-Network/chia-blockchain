@@ -195,6 +195,7 @@ class SingletonFastForward:
         new_coin_spends = []
         new_bundle_coin_spends = {}
         fast_forwarded_spends = 0
+        ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
         for coin_id, spend_data in mempool_item.bundle_coin_spends.items():
             if not spend_data.supports_fast_forward:
                 # Nothing to do for this spend, moving on
@@ -219,7 +220,7 @@ class SingletonFastForward:
                     set_next_singleton_version(
                         current_singleton=spend_data.coin_spend.coin,
                         singleton_additions=spend_data.additions,
-                        fast_forward_spends=self.fast_forward_spends,
+                        fast_forward_spends=ff_state_update,
                     )
                     # Nothing more to do for this spend, moving on
                     new_coin_spends.append(spend_data.coin_spend)
@@ -229,14 +230,14 @@ class SingletonFastForward:
                 new_coin_spend, patched_additions = perform_the_fast_forward(
                     unspent_lineage_info=unspent_lineage_info,
                     spend_data=spend_data,
-                    fast_forward_spends=self.fast_forward_spends,
+                    fast_forward_spends=ff_state_update,
                 )
                 new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                     coin_spend=new_coin_spend,
                     eligible_for_dedup=spend_data.eligible_for_dedup,
                     additions=patched_additions,
                     cost=spend_data.cost,
-                    latest_singleton_lineage=self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash),
+                    latest_singleton_lineage=ff_state_update.get(spend_data.coin_spend.coin.puzzle_hash),
                 )
                 # Update the list of coins spends that will make the new fast
                 # forward spend bundle
@@ -252,20 +253,21 @@ class SingletonFastForward:
             new_coin_spend, patched_additions = perform_the_fast_forward(
                 unspent_lineage_info=unspent_lineage_info,
                 spend_data=spend_data,
-                fast_forward_spends=self.fast_forward_spends,
+                fast_forward_spends=ff_state_update,
             )
             new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                 coin_spend=new_coin_spend,
                 eligible_for_dedup=spend_data.eligible_for_dedup,
                 additions=patched_additions,
                 cost=spend_data.cost,
-                latest_singleton_lineage=self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash),
+                latest_singleton_lineage=ff_state_update.get(spend_data.coin_spend.coin.puzzle_hash),
             )
             # Update the list of coins spends that make the new fast forward bundle
             new_coin_spends.append(new_coin_spend)
             fast_forwarded_spends += 1
         if fast_forwarded_spends == 0:
-            # This item doesn't have any fast forward coins, nothing to do here
+            # Update the fast forward state with current chain
+            self.fast_forward_spends.update(ff_state_update)
             return new_bundle_coin_spends
         # Update the mempool item after validating the new spend bundle
         new_sb = SpendBundle(coin_spends=new_coin_spends, aggregated_signature=mempool_item.aggregated_signature)
@@ -284,4 +286,5 @@ class SingletonFastForward:
                 raise ValueError(
                     "Mempool item became invalid after singleton fast forward with an unspecified error."
                 )  # pragma: no cover
+        self.fast_forward_spends.update(ff_state_update)
         return new_bundle_coin_spends

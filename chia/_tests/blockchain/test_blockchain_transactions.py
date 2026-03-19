@@ -879,14 +879,12 @@ class TestBlockchainTransactions:
 
         # we compare the timestamp against the previous transaction block, so in
         # order to progress the timestamp, we need to farm one more block
-        blocks.extend(
-            bt.get_consecutive_blocks(
-                1,
-                blocks,
-                farmer_reward_puzzle_hash=coinbase_puzzlehash,
-                guarantee_transaction_block=True,
-                time_per_block=301,
-            )
+        blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
+            time_per_block=301,
         )
         await _validate_and_add_block(full_node_1.blockchain, blocks[-1])
 
@@ -952,14 +950,12 @@ class TestBlockchainTransactions:
 
         # we compare the timestamp against the previous transaction block, so in
         # order to progress the timestamp, we need to farm one more block
-        blocks.extend(
-            bt.get_consecutive_blocks(
-                1,
-                blocks,
-                farmer_reward_puzzle_hash=coinbase_puzzlehash,
-                guarantee_transaction_block=True,
-                time_per_block=30,
-            )
+        blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
+            time_per_block=30,
         )
         await _validate_and_add_block(full_node_1.blockchain, blocks[-1])
 
