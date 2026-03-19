@@ -314,6 +314,7 @@ class S3Plugin:
 
                         if not (bytes32.fromhex(file_name[:64]) == store_id):
                             log.error(f"failed uploading file {file_name}, store id mismatch")
+                            continue
 
                     file_path = self.get_path_for_filename(store_id, file_name, group_files_by_store)
                     target_file_name = self.get_s3_target_from_path(store_id, file_path, group_files_by_store)

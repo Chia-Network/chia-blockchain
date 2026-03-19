@@ -781,7 +781,7 @@ class DataLayer:
 
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {store_id.hex()}")
-                        async with aiohttp.ClientSession() as session:
+                        async with aiohttp.ClientSession(timeout=self.client_timeout) as session:
                             async with session.post(
                                 uploader.url + "/upload",
                                 json=request_json,
@@ -844,7 +844,7 @@ class DataLayer:
             }
             for uploader in uploaders:
                 try:
-                    async with aiohttp.ClientSession() as session:
+                    async with aiohttp.ClientSession(timeout=self.client_timeout) as session:
                         async with session.post(
                             uploader.url + "/add_missing_files",
                             json=request_json,
@@ -1345,7 +1345,7 @@ class DataLayer:
     async def get_uploaders(self, store_id: bytes32) -> list[PluginRemote]:
         uploaders = []
         for uploader in self.uploaders:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=self.client_timeout) as session:
                 try:
                     async with session.post(
                         uploader.url + "/handle_upload",

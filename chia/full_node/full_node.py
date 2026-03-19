@@ -1629,8 +1629,17 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
-            assert pre_validation_results[i].error is None
-            assert pre_validation_results[i].required_iters is not None
+            if pre_validation_results[i].error is not None:
+                self.log.error(
+                    f"prevalidation failed for block {header_hash.hex()} height {block.height} "
+                    f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                )
+                return agg_state_change_summary, Err(pre_validation_results[i].error)
+            if pre_validation_results[i].required_iters is None:
+                self.log.error(
+                    f"required_iters is None for block {header_hash.hex()} height {block.height} from peer {peer_info}"
+                )
+                return agg_state_change_summary, Err.UNKNOWN
             state_change_summary: StateChangeSummary | None
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
