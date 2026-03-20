@@ -1169,6 +1169,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1224,11 +1225,53 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 
     await asyncio.sleep(1)
     assert incoming_queue.qsize() == 0
+
+
+@pytest.mark.anyio
+async def test_unsolicited_transaction_ignored(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    spend_bundle = make_spend_bundle(1)
+    assert peer.expected_mempool_responses == 0
+    res = await full_node_1.respond_transaction(fnp.RespondTransaction(spend_bundle), peer)
+    assert res is None
+    assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
+
+
+@pytest.mark.anyio
+async def test_malformed_peer_version_on_connect(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    # Make synced() return True so on_connect reaches the version check
+    original_network = full_node_1.full_node.config.get("selected_network")
+    full_node_1.full_node.config["selected_network"] = "simulator0"
+    try:
+        peer.version = "2.7.0-custom"
+        peer.expected_mempool_responses = 0
+        await full_node_1.full_node.on_connect(peer)
+
+        # Unparseable version should be treated as old, so the counter is incremented
+        assert peer.expected_mempool_responses == 100
+    finally:
+        full_node_1.full_node.config["selected_network"] = original_network
 
 
 @pytest.mark.anyio

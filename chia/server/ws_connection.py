@@ -137,6 +137,11 @@ class WSChiaConnection:
     # Used to reject unsolicited RespondCompactVDF messages.
     pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
 
+    # Tracks expected RespondTransaction messages from old peers (< 2.6.0) that
+    # respond to RequestMempoolTransactions with RespondTransaction directly.
+    # Decremented on each such response; if 0, the message is unsolicited.
+    expected_mempool_responses: int = 0
+
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
         repr=False,
