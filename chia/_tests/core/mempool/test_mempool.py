@@ -47,7 +47,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import MAX_SPENDS_PER_BLOCK, Mempool
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -3399,6 +3399,95 @@ def test_create_block_generator(old: bool) -> None:
 
     assert num_additions == len(generator.additions)
     invariant_check_mempool(mempool)
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_max_spends_per_block(old: bool) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Fill up to MAX_SPENDS_PER_BLOCK - 1 with single-coin items.
+    coin_idx = 0
+    for i in range(MAX_SPENDS_PER_BLOCK - 1):
+        item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+        coin_idx += 1
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    # Add 2-coin items. These are processed next (same fee_per_cost, higher
+    # seq) and each would push new_spend_count to
+    # MAX_SPENDS_PER_BLOCK - 1 + 2 = MAX_SPENDS_PER_BLOCK + 1, which must
+    # trigger the > MAX_SPENDS_PER_BLOCK skip path.
+    num_two_coin_items = 5
+    for i in range(num_two_coin_items):
+        item = mk_item([make_coin(coin_idx), make_coin(coin_idx + 1)], cost=1_000_000, fee=100)
+        coin_idx += 2
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    # Add a final single-coin item that fits in the remaining slot.
+    item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+    coin_idx += 1
+    info = mempool.add_to_pool(item)
+    assert info.error is None
+
+    total_items = MAX_SPENDS_PER_BLOCK - 1 + num_two_coin_items + 1
+    assert mempool.size() == total_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # The 2-coin items were skipped but the final 1-coin item fits.
+    assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_max_spends_per_block_with_dedup(old: bool) -> None:
+    from chia_rs import ELIGIBLE_FOR_DEDUP
+
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    shared_coin = make_coin(0)
+
+    num_items = MAX_SPENDS_PER_BLOCK + 500
+    for i in range(num_items):
+        unique_coin = make_coin(i + 1)
+        item = mk_item(
+            [shared_coin, unique_coin],
+            cost=1_000_000,
+            fee=100,
+            flags=[ELIGIBLE_FOR_DEDUP, 0],
+        )
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+
+    # With dedup, the shared coin is only counted once. Each item contributes
+    # 1 unique spend (after the first which contributes 2), so more items fit
+    # than without dedup, but we must still respect the limit.
+    assert len(generator.removals) <= MAX_SPENDS_PER_BLOCK
+
+    # Verify dedup actually helped: without dedup each item would need 2 spend
+    # slots, limiting us to 3000 items. With dedup we should fit more.
+    assert len(generator.removals) > MAX_SPENDS_PER_BLOCK // 2
 
 
 def test_keccak() -> None:
