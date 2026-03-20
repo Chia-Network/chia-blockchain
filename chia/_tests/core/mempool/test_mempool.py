@@ -3412,18 +3412,39 @@ def test_max_spends_per_block(old: bool) -> None:
     )
     mempool = Mempool(mempool_info, fee_estimator)
 
-    num_items = MAX_SPENDS_PER_BLOCK + 500
-    for i in range(num_items):
-        item = mk_item([make_coin(i)], cost=1_000_000, fee=100)
+    # Fill up to MAX_SPENDS_PER_BLOCK - 1 with single-coin items.
+    coin_idx = 0
+    for i in range(MAX_SPENDS_PER_BLOCK - 1):
+        item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+        coin_idx += 1
         info = mempool.add_to_pool(item)
         assert info.error is None
 
-    assert mempool.size() == num_items
+    # Add 2-coin items. These are processed next (same fee_per_cost, higher
+    # seq) and each would push new_spend_count to
+    # MAX_SPENDS_PER_BLOCK - 1 + 2 = MAX_SPENDS_PER_BLOCK + 1, which must
+    # trigger the > MAX_SPENDS_PER_BLOCK skip path.
+    num_two_coin_items = 5
+    for i in range(num_two_coin_items):
+        item = mk_item([make_coin(coin_idx), make_coin(coin_idx + 1)], cost=1_000_000, fee=100)
+        coin_idx += 2
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    # Add a final single-coin item that fits in the remaining slot.
+    item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+    coin_idx += 1
+    info = mempool.add_to_pool(item)
+    assert info.error is None
+
+    total_items = MAX_SPENDS_PER_BLOCK - 1 + num_two_coin_items + 1
+    assert mempool.size() == total_items
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
     generator = create_block(test_constants, uint32(0), 30.0)
     assert generator is not None
-    assert len(generator.removals) <= MAX_SPENDS_PER_BLOCK
+    # The 2-coin items were skipped but the final 1-coin item fits.
+    assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
 
 
 @pytest.mark.parametrize("old", [True, False])
