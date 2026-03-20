@@ -129,11 +129,13 @@ class Mempool:
                 assert_before_height INT,
                 assert_before_seconds INT,
                 fee_per_cost REAL,
+                priority REAL,
                 seq INTEGER PRIMARY KEY AUTOINCREMENT)
                 """
             )
             self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
+            self._db_conn.execute("CREATE INDEX priority_idx ON tx(priority)")
             self._db_conn.execute(
                 "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
                 "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL"
@@ -307,7 +309,7 @@ class Mempool:
         # TODO: make MempoolItem.cost be CLVMCost
         current_cost = self._total_cost
 
-        # Iterates through all spends in increasing fee per cost
+        # Iterates through all spends in increasing fee per virtual cost
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
 
@@ -414,8 +416,8 @@ class Mempool:
             cursor = self._db_conn.execute(
                 """
                 SELECT name,
-                    fee_per_cost,
-                    SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS cumulative_cost
+                    priority,
+                    SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS cumulative_cost
                 FROM tx
                 WHERE assert_before_seconds IS NOT NULL AND assert_before_seconds < ?
                     OR assert_before_height IS NOT NULL AND assert_before_height < ?
@@ -425,7 +427,7 @@ class Mempool:
             )
             to_remove: list[bytes32] = []
             for row in cursor:
-                name, fee_per_cost, cumulative_cost = row
+                name, priority, cumulative_cost = row
 
                 # there's space for us, stop pruning
                 if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
@@ -433,7 +435,7 @@ class Mempool:
 
                 # we can't evict any more transactions, abort (and don't
                 # evict what we put aside in "to_remove" list)
-                if fee_per_cost > item.fee_per_cost:
+                if priority > item.fee_per_virtual_cost:
                     return MempoolAddInfo([], Err.INVALID_FEE_LOW_FEE)
                 to_remove.append(name)
 
@@ -442,13 +444,13 @@ class Mempool:
             # if we don't find any entries, it's OK to add this entry
 
         if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
-            # pick the items with the lowest fee per cost to remove
+            # pick the items with the lowest priority to remove
             cursor = self._db_conn.execute(
                 """SELECT name FROM tx
                 WHERE name NOT IN (
                     SELECT name FROM (
                         SELECT name,
-                        SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                        SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS total_cost
                         FROM tx) AS tx_with_cost
                     WHERE total_cost <= ?)
                 """,
@@ -462,8 +464,9 @@ class Mempool:
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
             conn.execute(
                 "INSERT INTO "
-                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,"
+                "fee_per_cost,priority) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item.name,
                     item.cost,
@@ -471,7 +474,8 @@ class Mempool:
                     item.assert_height,
                     item.assert_before_height,
                     item.assert_before_seconds,
-                    item.fee / item.cost,
+                    item.fee_per_cost,
+                    item.fee_per_virtual_cost,
                 ),
             )
             all_coin_spends = []
@@ -598,7 +602,7 @@ class Mempool:
         sigs: list[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         bundle_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
         skipped_items = 0
         for row in cursor:
             name = bytes32(row[0])
@@ -710,7 +714,7 @@ class Mempool:
         singleton_ff = SingletonFastForward()
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
         builder = BlockBuilder()
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
