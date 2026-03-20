@@ -416,8 +416,8 @@ class Mempool:
             cursor = self._db_conn.execute(
                 """
                 SELECT name,
-                    fee_per_cost,
-                    SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS cumulative_cost
+                    priority,
+                    SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS cumulative_cost
                 FROM tx
                 WHERE assert_before_seconds IS NOT NULL AND assert_before_seconds < ?
                     OR assert_before_height IS NOT NULL AND assert_before_height < ?
@@ -427,7 +427,7 @@ class Mempool:
             )
             to_remove: list[bytes32] = []
             for row in cursor:
-                name, fee_per_cost, cumulative_cost = row
+                name, priority, cumulative_cost = row
 
                 # there's space for us, stop pruning
                 if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
@@ -435,7 +435,7 @@ class Mempool:
 
                 # we can't evict any more transactions, abort (and don't
                 # evict what we put aside in "to_remove" list)
-                if fee_per_cost > item.fee_per_cost:
+                if priority > item.fee_per_virtual_cost:
                     return MempoolAddInfo([], Err.INVALID_FEE_LOW_FEE)
                 to_remove.append(name)
 
@@ -444,13 +444,13 @@ class Mempool:
             # if we don't find any entries, it's OK to add this entry
 
         if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
-            # pick the items with the lowest fee per virtual cost to remove
+            # pick the items with the lowest priority to remove
             cursor = self._db_conn.execute(
                 """SELECT name FROM tx
                 WHERE name NOT IN (
                     SELECT name FROM (
                         SELECT name,
-                        SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                        SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS total_cost
                         FROM tx) AS tx_with_cost
                     WHERE total_cost <= ?)
                 """,
