@@ -735,10 +735,8 @@ class WSChiaConnection:
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
             if limiter_msg is not None:
-                if (
-                    self.local_type == NodeType.FULL_NODE
-                    and not is_localhost(self.peer_info.host)
-                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                if not is_localhost(self.peer_info.host) and not is_in_network(
+                    self.peer_info.host, self.exempt_peer_networks
                 ):
                     details = ", ".join([f"{self.peer_info.host}", f"message: {message_type.name}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
