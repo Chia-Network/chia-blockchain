@@ -3041,32 +3041,47 @@ def test_full_mempool(items: list[int], add: int, expected: list[int]) -> None:
         assert mi.cost == expected_cost
 
 
+SCALE = 1_000_000
+
+
 @pytest.mark.parametrize("height", [True, False])
 @pytest.mark.parametrize(
     "items,expected,increase_fee",
     [
-        # the max size is 100
-        # the max block size is 50
+        # the max size is 100 * SCALE
+        # the max block size is 50 * SCALE
         # which is also the max size for expiring transactions
         # the increasing fee will order the transactions in the reverse
         # insertion order
-        ([10, 11, 12, 13, 14], [14, 13, 12, 11], True),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 14 * SCALE],
+            [14 * SCALE, 13 * SCALE, 12 * SCALE, 11 * SCALE],
+            True,
+        ),
         # decreasing fee rate will make the last one fail to be inserted
-        ([10, 11, 12, 13, 14], [10, 11, 12, 13], False),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 14 * SCALE],
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE],
+            False,
+        ),
         # the last is big enough to evict all previous ones
-        ([10, 11, 12, 13, 50], [50], True),
+        ([10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 50 * SCALE], [50 * SCALE], True),
         # the last one will not evict any earlier ones, because the fee rate is
         # lower
-        ([10, 11, 12, 13, 50], [10, 11, 12, 13], False),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 50 * SCALE],
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE],
+            False,
+        ),
     ],
 )
 def test_limit_expiring_transactions(height: bool, items: list[int], expected: list[int], increase_fee: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(100)),
+        CLVMCost(uint64(100 * SCALE)),
         FeeRate(uint64(1000000)),
-        CLVMCost(uint64(50)),
+        CLVMCost(uint64(50 * SCALE)),
     )
     mempool = Mempool(mempool_info, fee_estimator)
     mempool.new_tx_block(uint32(10), uint64(100000))
@@ -3075,7 +3090,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
     # fill the mempool with regular transactions (without expiration)
     fee_rate: float = 3.0
     for i in range(1, 20):
-        mempool.add_to_pool(item_cost(i, fee_rate))
+        mempool.add_to_pool(item_cost(i * SCALE, fee_rate))
         fee_rate -= 0.1
         invariant_check_mempool(mempool)
 
@@ -3112,7 +3127,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
             ttl = "No"
         print(f"- cost: {item.cost} TTL: {ttl}")
 
-    assert mempool.total_mempool_cost() > 90
+    assert mempool.total_mempool_cost() > 90 * SCALE
     invariant_check_mempool(mempool)
 
 
