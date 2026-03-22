@@ -51,6 +51,7 @@ from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.start_wallet import create_wallet_service
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_service import WalletService
 
 log = logging.getLogger(__name__)
@@ -403,15 +404,20 @@ async def setup_farmer(
     else:
         service_config.pop("solver_peers", None)
 
-    service = create_farmer_service(
-        root_path,
-        root_config,
-        config_pool,
-        consensus_constants,
-        b_tools.local_keychain,
-        connect_to_daemon=False,
-        solver_peer=solver_peer,
-    )
+    async with WalletRpcClient.create_as_context(
+        self_hostname=root_config["self_hostname"],
+        port=root_config["wallet"]["port"],
+        root_path=root_path,
+    ) as wallet_rpc_client:
+        service = create_farmer_service(
+            root_path,
+            root_config,
+            config_pool,
+            consensus_constants,
+            wallet_rpc_client=wallet_rpc_client,
+            connect_to_daemon=False,
+            solver_peer=solver_peer,
+        )
 
     async with service.manage(start=start_service):
         yield service

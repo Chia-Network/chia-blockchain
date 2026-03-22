@@ -522,6 +522,9 @@ class PlotNFT2Wallet:
             singleton_block_height=await self.wallet_state_manager.plotnft2_store.get_plotnft_created_height(
                 coin_id=plotnft.coin.name()
             ),
+            payout_instructions=encode_puzzle_hash(
+                self.rewards_claim_puzhash, AddressType.XCH.hrp(self.wallet_state_manager.config)
+            ),
         )
 
     # Wallet Protocol Stubs

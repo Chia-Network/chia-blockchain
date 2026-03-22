@@ -21,7 +21,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
+from chia.pools.pool_config import PoolWalletConfig, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -57,6 +57,9 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import GetWallets, PWStatus
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
@@ -127,6 +130,7 @@ class Farmer:
         farmer_config: dict[str, Any],
         pool_config: dict[str, Any],
         consensus_constants: ConsensusConstants,
+        wallet_rpc_client: WalletRpcClient,
         local_keychain: Keychain | None = None,
     ):
         self.keychain_proxy: KeychainProxy | None = None
@@ -134,6 +138,7 @@ class Farmer:
         self._root_path = root_path
         self.config = farmer_config
         self.pool_config = pool_config
+        self.wallet_rpc_client = wallet_rpc_client
         # Keep track of all sps, keyed on challenge chain signage point hash
         self.sps: dict[bytes32, list[farmer_protocol.NewSignagePoint]] = {}
 
@@ -427,7 +432,9 @@ class Farmer:
     async def _pool_post_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
     ) -> dict[str, Any] | None:
-        auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+        auth_sk: PrivateKey | None = self.get_authentication_sk(
+            pool_config.p2_singleton_puzzle_hash, pool_config.owner_public_key
+        )
         assert auth_sk is not None
         post_farmer_payload: PostFarmerPayload = PostFarmerPayload(
             pool_config.launcher_id,
@@ -475,7 +482,9 @@ class Farmer:
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
     ) -> None:
-        auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+        auth_sk: PrivateKey | None = self.get_authentication_sk(
+            pool_config.p2_singleton_puzzle_hash, pool_config.owner_public_key
+        )
         assert auth_sk is not None
         put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
             pool_config.launcher_id,
@@ -518,23 +527,38 @@ class Farmer:
                 pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
             )
 
-    def get_authentication_sk(self, pool_config: PoolWalletConfig) -> PrivateKey | None:
-        if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
-            return self.authentication_keys[pool_config.p2_singleton_puzzle_hash]
-        auth_sk: PrivateKey | None = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
+    def get_authentication_sk(
+        self, p2_singleton_puzzle_hash: bytes32, owner_public_key: G1Element
+    ) -> PrivateKey | None:
+        if p2_singleton_puzzle_hash in self.authentication_keys:
+            return self.authentication_keys[p2_singleton_puzzle_hash]
+        auth_sk: PrivateKey | None = find_authentication_sk(self.all_root_sks, owner_public_key)
         if auth_sk is not None:
-            self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk
+            self.authentication_keys[p2_singleton_puzzle_hash] = auth_sk
         return auth_sk
 
     async def update_pool_state(self) -> None:
-        config = load_config(self._root_path, "config.yaml")
-
-        pool_config_list: list[PoolWalletConfig] = load_pool_config(self._root_path)
-        for pool_config in pool_config_list:
-            p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
+        pool_wallets = await self.wallet_rpc_client.get_wallets(
+            GetWallets(type=uint16(WalletType.POOLING_WALLET.value))
+        )
+        for pool_wallet_info in pool_wallets.wallets:
+            pw_status = await self.wallet_rpc_client.pw_status(PWStatus(wallet_id=pool_wallet_info.id))
+            if pw_status.state.current.pool_url is None:
+                continue
+            p2_singleton_puzzle_hash = pw_status.state.p2_singleton_puzzle_hash
+            pool_config = PoolWalletConfig(
+                launcher_id=pw_status.state.launcher_id,
+                pool_url=pw_status.state.current.pool_url,
+                payout_instructions=pw_status.state.payout_instructions,
+                target_puzzle_hash=pw_status.state.current.target_puzzle_hash,
+                p2_singleton_puzzle_hash=pw_status.state.p2_singleton_puzzle_hash,
+                owner_public_key=pw_status.state.current.owner_pubkey,
+            )
 
             try:
-                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+                authentication_sk: PrivateKey | None = self.get_authentication_sk(
+                    pw_status.state.p2_singleton_puzzle_hash, pw_status.state.current.owner_pubkey
+                )
 
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
@@ -576,6 +600,7 @@ class Farmer:
                 if pool_config.pool_url == "":
                     continue
 
+                config = load_config(self._root_path, "config.yaml")
                 enforce_https = config["full_node"]["selected_network"] == "mainnet"
                 if enforce_https and not pool_config.pool_url.startswith("https://"):
                     self.log.error(f"Pool URLs must be HTTPS on mainnet {pool_config.pool_url}")
@@ -739,7 +764,9 @@ class Farmer:
             if pool_config.launcher_id != launcher_id:
                 continue
 
-            authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+            authentication_sk: PrivateKey | None = self.get_authentication_sk(
+                pool_config.p2_singleton_puzzle_hash, pool_config.owner_public_key
+            )
             if authentication_sk is None:
                 self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
                 continue

@@ -24,6 +24,7 @@ from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -36,6 +37,7 @@ def create_farmer_service(
     config: dict[str, Any],
     config_pool: dict[str, Any],
     consensus_constants: ConsensusConstants,
+    wallet_rpc_client: WalletRpcClient,
     keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
     solver_peer: UnresolvedPeerInfo | None = None,
@@ -48,7 +50,12 @@ def create_farmer_service(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     node = Farmer(
-        root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
+        root_path,
+        service_config,
+        config_pool,
+        consensus_constants=updated_constants,
+        local_keychain=keychain,
+        wallet_rpc_client=wallet_rpc_client,
     )
     peer_api = FarmerAPI(node)
 
@@ -86,7 +93,14 @@ async def async_main(root_path: pathlib.Path) -> int:
     config["pool"] = config_pool
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = create_farmer_service(root_path, config, config_pool, DEFAULT_CONSTANTS)
+    async with WalletRpcClient.create_as_context(
+        self_hostname=config["self_hostname"],
+        port=config["wallet"]["port"],
+        root_path=root_path,
+    ) as wallet_rpc_client:
+        service = create_farmer_service(
+            root_path, config, config_pool, DEFAULT_CONSTANTS, wallet_rpc_client=wallet_rpc_client
+        )
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()

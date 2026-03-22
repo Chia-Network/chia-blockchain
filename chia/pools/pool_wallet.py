@@ -211,6 +211,11 @@ class PoolWallet:
             last_singleton_spend_height = uint32(history[curr_spend_i][0])
             curr_spend_i -= 1
 
+        pool_config_list: list[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
+        pool_config_dict: dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
+        existing_config: PoolWalletConfig | None = pool_config_dict.get(launcher_id, None)
+        payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
+
         assert pool_state is not None
         return PoolWalletInfo(
             pool_state,
@@ -220,6 +225,7 @@ class PoolWallet:
             p2_singleton_puzzle_hash,
             tip_singleton_coin.name(),
             last_singleton_spend_height,
+            payout_instructions,
         )
 
     async def get_unconfirmed_transactions(self) -> list[TransactionRecord]:
@@ -232,17 +238,15 @@ class PoolWallet:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: list[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
-        existing_config: PoolWalletConfig | None = pool_config_dict.get(current_state.launcher_id, None)
-        payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
-        if len(payout_instructions) == 0:
+        if len(current_state.payout_instructions) == 0:
             payout_instructions = (await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
             current_state.launcher_id,
             current_state.current.pool_url if current_state.current.pool_url else "",
-            payout_instructions,
+            current_state.payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,

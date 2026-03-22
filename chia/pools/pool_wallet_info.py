@@ -147,3 +147,4 @@ class PoolWalletInfo(Streamable):
     p2_singleton_puzzle_hash: bytes32
     tip_singleton_coin_id: bytes32
     singleton_block_height: uint32  # Block height that current PoolState is from
+    payout_instructions: str = ""
