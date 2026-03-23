@@ -242,11 +242,13 @@ class PoolWallet:
         if len(current_state.payout_instructions) == 0:
             payout_instructions = (await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
+        else:
+            payout_instructions = current_state.payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
             current_state.launcher_id,
             current_state.current.pool_url if current_state.current.pool_url else "",
-            current_state.payout_instructions,
+            payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,

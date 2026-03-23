@@ -95,15 +95,16 @@ async def async_main(root_path: pathlib.Path) -> int:
 
     async with WalletRpcClient.create_as_context(
         self_hostname=config["self_hostname"],
-        port=config["wallet"]["port"],
+        port=config["wallet"]["rpc_port"],
         root_path=root_path,
+        net_config=config,
     ) as wallet_rpc_client:
         service = create_farmer_service(
             root_path, config, config_pool, DEFAULT_CONSTANTS, wallet_rpc_client=wallet_rpc_client
         )
-    async with SignalHandlers.manage() as signal_handlers:
-        await service.setup_process_global_state(signal_handlers=signal_handlers)
-        await service.run()
+        async with SignalHandlers.manage() as signal_handlers:
+            await service.setup_process_global_state(signal_handlers=signal_handlers)
+            await service.run()
 
     return 0
 

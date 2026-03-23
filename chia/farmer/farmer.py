@@ -538,6 +538,7 @@ class Farmer:
         return auth_sk
 
     async def update_pool_state(self) -> None:
+        config = load_config(self._root_path, "config.yaml")
         pool_wallets = await self.wallet_rpc_client.get_wallets(
             GetWallets(type=uint16(WalletType.POOLING_WALLET.value))
         )
@@ -600,7 +601,6 @@ class Farmer:
                 if pool_config.pool_url == "":
                     continue
 
-                config = load_config(self._root_path, "config.yaml")
                 enforce_https = config["full_node"]["selected_network"] == "mainnet"
                 if enforce_https and not pool_config.pool_url.startswith("https://"):
                     self.log.error(f"Pool URLs must be HTTPS on mainnet {pool_config.pool_url}")

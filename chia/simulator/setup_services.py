@@ -248,7 +248,6 @@ async def setup_wallet_node(
         service_config = config["wallet"]
         service_config["testing"] = True
         service_config["port"] = 0
-        service_config["rpc_port"] = 0
         service_config["initial_num_public_keys"] = initial_num_public_keys
         service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
         service_config["xch_spam_amount"] = xch_spam_amount
@@ -406,21 +405,23 @@ async def setup_farmer(
 
     async with WalletRpcClient.create_as_context(
         self_hostname=root_config["self_hostname"],
-        port=root_config["wallet"]["port"],
+        port=root_config["wallet"]["rpc_port"],
         root_path=root_path,
+        net_config=root_config,
     ) as wallet_rpc_client:
         service = create_farmer_service(
             root_path,
             root_config,
             config_pool,
             consensus_constants,
+            keychain=b_tools.local_keychain,
             wallet_rpc_client=wallet_rpc_client,
             connect_to_daemon=False,
             solver_peer=solver_peer,
         )
 
-    async with service.manage(start=start_service):
-        yield service
+        async with service.manage(start=start_service):
+            yield service
 
 
 @asynccontextmanager
