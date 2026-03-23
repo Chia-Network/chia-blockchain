@@ -540,25 +540,29 @@ class Farmer:
     async def update_pool_state(self) -> None:
         if self.wallet_rpc_client is None:
             return
-        config = load_config(self._root_path, "config.yaml")
-        pool_wallets = await self.wallet_rpc_client.get_wallets(
-            GetWallets(type=uint16(WalletType.POOLING_WALLET.value))
-        )
-        for pool_wallet_info in pool_wallets.wallets:
-            pw_status = await self.wallet_rpc_client.pw_status(PWStatus(wallet_id=pool_wallet_info.id))
-            if pw_status.state.current.pool_url is None:
-                continue
-            p2_singleton_puzzle_hash = pw_status.state.p2_singleton_puzzle_hash
-            pool_config = PoolWalletConfig(
-                launcher_id=pw_status.state.launcher_id,
-                pool_url=pw_status.state.current.pool_url,
-                payout_instructions=pw_status.state.payout_instructions,
-                target_puzzle_hash=pw_status.state.current.target_puzzle_hash,
-                p2_singleton_puzzle_hash=pw_status.state.p2_singleton_puzzle_hash,
-                owner_public_key=pw_status.state.current.owner_pubkey,
+        try:
+            config = load_config(self._root_path, "config.yaml")
+            pool_wallets = await self.wallet_rpc_client.get_wallets(
+                GetWallets(type=uint16(WalletType.POOLING_WALLET.value))
             )
-
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Wallet error while updating pool states: {e} {tb}")
+            return
+        for pool_wallet_info in pool_wallets.wallets:
             try:
+                pw_status = await self.wallet_rpc_client.pw_status(PWStatus(wallet_id=pool_wallet_info.id))
+                if pw_status.state.current.pool_url is None:
+                    continue
+                p2_singleton_puzzle_hash = pw_status.state.p2_singleton_puzzle_hash
+                pool_config = PoolWalletConfig(
+                    launcher_id=pw_status.state.launcher_id,
+                    pool_url=pw_status.state.current.pool_url,
+                    payout_instructions=pw_status.state.payout_instructions,
+                    target_puzzle_hash=pw_status.state.current.target_puzzle_hash,
+                    p2_singleton_puzzle_hash=pw_status.state.p2_singleton_puzzle_hash,
+                    owner_public_key=pw_status.state.current.owner_pubkey,
+                )
                 authentication_sk: PrivateKey | None = self.get_authentication_sk(
                     pw_status.state.p2_singleton_puzzle_hash, pw_status.state.current.owner_pubkey
                 )
