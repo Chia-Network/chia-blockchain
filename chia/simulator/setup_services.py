@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import gc
 import logging
 import signal
@@ -248,6 +249,7 @@ async def setup_wallet_node(
         service_config = config["wallet"]
         service_config["testing"] = True
         service_config["port"] = 0
+        service_config["rpc_port"] = 0
         service_config["initial_num_public_keys"] = initial_num_public_keys
         service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
         service_config["xch_spam_amount"] = xch_spam_amount
@@ -365,6 +367,7 @@ async def setup_farmer(
     full_node_port: uint16 | None = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
+    wallet_rpc_port: uint16 | None = None,
     solver_peer: UnresolvedPeerInfo | None = None,
 ) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
@@ -403,23 +406,28 @@ async def setup_farmer(
     else:
         service_config.pop("solver_peers", None)
 
-    async with WalletRpcClient.create_as_context(
-        self_hostname=root_config["self_hostname"],
-        port=root_config["wallet"]["rpc_port"],
-        root_path=root_path,
-        net_config=root_config,
-    ) as wallet_rpc_client:
-        service = create_farmer_service(
-            root_path,
-            root_config,
-            config_pool,
-            consensus_constants,
-            keychain=b_tools.local_keychain,
-            wallet_rpc_client=wallet_rpc_client,
-            connect_to_daemon=False,
-            solver_peer=solver_peer,
-        )
-
+    create_service = functools.partial(
+        create_farmer_service,
+        root_path,
+        root_config,
+        config_pool,
+        consensus_constants,
+        keychain=b_tools.local_keychain,
+        connect_to_daemon=False,
+        solver_peer=solver_peer,
+    )
+    if wallet_rpc_port is not None:
+        async with WalletRpcClient.create_as_context(
+            self_hostname=root_config["self_hostname"],
+            port=wallet_rpc_port,
+            root_path=root_path,
+            net_config=root_config,
+        ) as wallet_rpc_client:
+            service = create_service(wallet_rpc_client=wallet_rpc_client)
+            async with service.manage(start=start_service):
+                yield service
+    else:
+        service = create_service(wallet_rpc_client=None)
         async with service.manage(start=start_service):
             yield service
 

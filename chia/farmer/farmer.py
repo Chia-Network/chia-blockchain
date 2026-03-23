@@ -130,7 +130,7 @@ class Farmer:
         farmer_config: dict[str, Any],
         pool_config: dict[str, Any],
         consensus_constants: ConsensusConstants,
-        wallet_rpc_client: WalletRpcClient,
+        wallet_rpc_client: WalletRpcClient | None = None,
         local_keychain: Keychain | None = None,
     ):
         self.keychain_proxy: KeychainProxy | None = None
@@ -538,6 +538,8 @@ class Farmer:
         return auth_sk
 
     async def update_pool_state(self) -> None:
+        if self.wallet_rpc_client is None:
+            return
         config = load_config(self._root_path, "config.yaml")
         pool_wallets = await self.wallet_rpc_client.get_wallets(
             GetWallets(type=uint16(WalletType.POOLING_WALLET.value))

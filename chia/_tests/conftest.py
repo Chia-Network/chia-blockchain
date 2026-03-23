@@ -905,7 +905,10 @@ async def farmer_one_harvester_simulator_wallet(
     ]
 ]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
-        async with setup_farmer_solver_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
+        assert wallets[0].rpc_server is not None
+        async with setup_farmer_solver_multi_harvester(
+            bt, 1, tmp_path, bt.constants, wallet_rpc_port=wallets[0].rpc_server.listen_port, start_services=True
+        ) as (
             harvester_services,
             farmer_service,
             _,

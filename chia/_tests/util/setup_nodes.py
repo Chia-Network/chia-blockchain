@@ -327,6 +327,7 @@ async def setup_farmer_solver_multi_harvester(
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
+    wallet_rpc_port: uint16 | None = None,
     *,
     start_services: bool,
     solver_peer: UnresolvedPeerInfo | None = None,
@@ -339,6 +340,7 @@ async def setup_farmer_solver_multi_harvester(
                 block_tools.config["self_hostname"],
                 consensus_constants,
                 port=uint16(0),
+                wallet_rpc_port=wallet_rpc_port,
                 start_service=start_services,
                 solver_peer=solver_peer,
             )

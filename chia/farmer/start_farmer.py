@@ -37,7 +37,7 @@ def create_farmer_service(
     config: dict[str, Any],
     config_pool: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    wallet_rpc_client: WalletRpcClient,
+    wallet_rpc_client: WalletRpcClient | None = None,
     keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
     solver_peer: UnresolvedPeerInfo | None = None,
