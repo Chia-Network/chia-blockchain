@@ -36,7 +36,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
-from chia.types.mempool_item import MempoolItem
+from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
@@ -633,9 +633,10 @@ class Mempool:
                     for spend_data in item.bundle_coin_spends.values():
                         unique_coin_spends.append(spend_data.coin_spend)
                         unique_additions.extend(spend_data.additions)
+                    ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
                     cost_saving = 0
                 else:
-                    bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+                    bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
                         mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                     )
                     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
@@ -664,6 +665,7 @@ class Mempool:
                     if skipped_items < MAX_SKIPPED_ITEMS:
                         continue
                     break
+                singleton_ff.update_fast_forward_spends(ff_state_update)
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.aggregated_signature)
@@ -712,6 +714,9 @@ class Mempool:
 
         dedup_coin_spends = IdenticalSpendDedup()
         singleton_ff = SingletonFastForward()
+        # Fast forward state committed so far from accepted batches, used to
+        # rollback on batch rejection.
+        committed_ff = singleton_ff.copy()
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
@@ -739,7 +744,9 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                bundle_coin_spends = singleton_ff.process_fast_forward_spends(
+                # This `ff_state_update` is only committed later on via
+                # `update_fast_forward_spends` if the item gets batched.
+                bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
                     mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                 )
                 unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
@@ -769,6 +776,9 @@ class Mempool:
 
                     block_cost = builder.cost()
                     if added:
+                        # Update the checkpoint to include the fast forward
+                        # state from all the items in this accepted batch.
+                        committed_ff = singleton_ff.copy()
                         added_spends += batch_spends
                         additions.extend(batch_additions)
                         removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
@@ -776,17 +786,36 @@ class Mempool:
                             f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
                             f"cost: {batch_cost} total cost: {block_cost}"
                         )
+                        batch_cost = 0
+                        batch_transactions = []
+                        batch_additions = []
+                        batch_spends = 0
                     else:
                         log.info(f"Skipping transaction batch cumulative cost: {block_cost} batch cost: {batch_cost}")
                         skipped_items += 1
+                        # Restore FF state
+                        singleton_ff = committed_ff.copy()
+                        # Reset the batch
+                        batch_cost = 0
+                        batch_transactions = []
+                        batch_additions = []
+                        batch_spends = 0
+                        # Reprocess the current item against the correct fast
+                        # forward state.
+                        bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
+                            mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
+                        )
+                        unique_coin_spends = []
+                        unique_additions = []
+                        for spend_data in bundle_coin_spends.values():
+                            unique_coin_spends.append(spend_data.coin_spend)
+                            unique_additions.extend(spend_data.additions)
+                        cost_saving = uint64(0)
 
-                    batch_cost = 0
-                    batch_transactions = []
-                    batch_additions = []
-                    batch_spends = 0
                     if done:
                         break
 
+                singleton_ff.update_fast_forward_spends(ff_state_update)
                 batch_cost += cost - cost_saving
                 batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
                 batch_spends += len(unique_coin_spends)
