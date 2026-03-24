@@ -25,7 +25,12 @@ from chiabip158 import PyBIP158
 from colorlog import getLogger
 
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import connect_and_get_peer, disconnect_all, disconnect_all_and_reconnect
+from chia._tests.connection_utils import (
+    add_dummy_connection,
+    connect_and_get_peer,
+    disconnect_all,
+    disconnect_all_and_reconnect,
+)
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -35,14 +40,17 @@ from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_api import MAX_COIN_HASHES_PER_REQUEST, FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
+    RejectAdditionsRequest,
+    RejectRemovalsRequest,
     RequestAdditions,
+    RequestRemovals,
     RespondAdditions,
     RespondBlockHeader,
     RespondBlockHeaders,
@@ -205,6 +213,7 @@ async def test_request_block_headers_transactions_filter(
 #     [(80, 99, False, ProtocolMessageTypes.respond_block_headers)],
 #     [(10, 8, False, None)],
 # )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_block_headers_rejected(
     simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: list[FullBlock]
@@ -349,6 +358,7 @@ async def test_almost_recent(
         await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_backtrack_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -379,6 +389,7 @@ async def test_backtrack_sync_wallet(
 
 
 # Tests a reorg with the wallet
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
@@ -611,6 +622,7 @@ async def test_wallet_reorg_get_coinbase(
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
@@ -630,16 +642,44 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     last_block: BlockRecord | None = full_node_api.full_node.blockchain.get_peak()
     assert last_block is not None
 
-    # Invalid height
-    with pytest.raises(ValueError):
-        await full_node_api.request_additions(RequestAdditions(uint32(100), last_block.header_hash, [ph]))
+    # Invalid height (with header_hash specified)
+    res = await full_node_api.request_additions(RequestAdditions(uint32(100), last_block.header_hash, [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == 100
+    assert reject.header_hash == last_block.header_hash
+
+    # Invalid height (no header_hash, returns zeros)
+    res = await full_node_api.request_additions(RequestAdditions(uint32(100), None, [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == 100
+    assert reject.header_hash == bytes32.zeros
 
     # Invalid header hash
-    with pytest.raises(ValueError):
-        await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == std_hash(b"")
+
+    # Too many puzzle hashes
+    too_many = [bytes32.random() for _ in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, too_many))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == last_block.header_hash
+
+    # Exactly at the limit is allowed
+    at_limit = [bytes32.random() for _i in range(MAX_COIN_HASHES_PER_REQUEST)]
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, at_limit))
+    assert res is not None
+    response = RespondAdditions.from_bytes(res.data)
+    assert response.height == last_block.height
 
     # No results
-    fake_coin = std_hash(b"")
+    fake_coin = bytes32.random()
     assert ph != fake_coin
     res1 = await full_node_api.request_additions(
         RequestAdditions(last_block.height, last_block.header_hash, [fake_coin])
@@ -662,11 +702,12 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     # all coin names are concatenated and hashed into one entry in the merkle set for proof_2
     # the response contains the list of coins so you can check the proof_2
 
-    assert response.proofs[0][0] == std_hash(b"")
+    assert response.proofs[0][0] == fake_coin
     assert response.proofs[0][1] is not None
     assert response.proofs[0][2] is None
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
@@ -676,7 +717,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     full_node_api = full_nodes[0]
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
+    wallet_peer = await connect_and_get_peer(full_node_api.full_node.server, wallet_server, self_hostname)
 
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -698,7 +739,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), wallet_peer)
     await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -758,6 +799,37 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     assert len(response.coins) == 0
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_request_removals_too_many_coin_names(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+) -> None:
+    full_nodes, wallets, _ = simulator_and_wallet
+    wallet_node, wallet_server = wallets[0]
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+
+    full_node_api = full_nodes[0]
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
+
+    for _ in range(2):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    last_block = full_node_api.full_node.blockchain.get_peak()
+    assert last_block is not None
+
+    too_many = [bytes32.random() for _ in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    res = await full_node_api.request_removals(RequestRemovals(last_block.height, last_block.header_hash, too_many))
+    assert res is not None
+    reject = RejectRemovalsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == last_block.header_hash
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_get_wp_fork_point(
     default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
@@ -839,6 +911,7 @@ It runs in seven phases:
 """
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "spam_filter_after_n_txs, xch_spam_amount, dust_value",
@@ -918,7 +991,9 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)
+    dummy_peer = full_node_api.server.all_connections[dummy_node_id]
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
     await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -985,7 +1060,7 @@ async def test_dusted_wallet(
                 )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
-            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
             # advance the chain and sync both wallets
             await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1008,7 +1083,7 @@ async def test_dusted_wallet(
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
         # advance the chain and sync both wallets
         await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1061,7 +1136,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1105,7 +1180,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1169,7 +1244,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1210,7 +1285,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1259,7 +1334,7 @@ async def test_dusted_wallet(
                 )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
-            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
             await full_node_api.wait_transaction_records_entered_mempool([tx])
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1278,7 +1353,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1313,7 +1388,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1407,6 +1482,7 @@ async def test_dusted_wallet(
     await time_out_assert(15, get_nft_count, 1, dust_nft_wallet)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_retry_store(
     two_wallet_nodes: OldSimulatorsAndWallets, self_hostname: str, monkeypatch: pytest.MonkeyPatch
@@ -1639,7 +1715,7 @@ async def test_bad_peak_mismatch(
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
     default_1000_blocks: list[FullBlock],
-    default_400_blocks: list[FullBlock],
+    default_1500_blocks: list[FullBlock],
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
     use_delta_sync: bool,
@@ -1650,26 +1726,15 @@ async def test_long_sync_untrusted_break(
     wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
     wallet_node.config["use_delta_sync"] = use_delta_sync
 
-    sync_canceled = False
-
     async def register_for_ph_updates(
         self: object,
         request: wallet_protocol.RegisterForPhUpdates,
         peer: WSChiaConnection,
     ) -> None:
-        nonlocal sync_canceled
-        # Just sleep a long time here to simulate a long-running untrusted sync
-        try:
-            await asyncio.sleep(120)
-        except Exception:
-            sync_canceled = True
-            raise
+        await peer.wait_until_closed()
 
     def wallet_syncing() -> bool:
         return wallet_node.wallet_state_manager.sync_mode
-
-    def check_sync_canceled() -> bool:
-        return sync_canceled
 
     def synced_to_trusted() -> bool:
         return trusted_full_node_server.node_id in wallet_node.synced_peers
@@ -1679,26 +1744,32 @@ async def test_long_sync_untrusted_break(
         untrusted_peers = sum(not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
         return trusted_peers == 1 and untrusted_peers == 0
 
-    await add_blocks_in_batches(default_400_blocks, trusted_full_node_api.full_node)
+    await add_blocks_in_batches(default_1500_blocks[:600], trusted_full_node_api.full_node)
+    await add_blocks_in_batches(default_1000_blocks[:600], untrusted_full_node_api.full_node)
 
-    await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
-
-    with patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates):
+    with (
+        patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates),
+        caplog.at_level(logging.INFO),
+    ):
         # Connect to the untrusted peer and wait until the long sync started
-        await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
+        assert await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
+        untrusted_conn = wallet_server.all_connections.get(untrusted_full_node_server.node_id)
+        assert untrusted_conn is not None
         await time_out_assert(30, wallet_syncing)
-        with caplog.at_level(logging.INFO):
-            # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
-            await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
-            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
-            assert time_out_assert(10, synced_to_trusted)
-            assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
-            assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
 
-        # Make sure the sync was interrupted
-        assert time_out_assert(30, check_sync_canceled)
+        # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
+        assert await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, 599)
+        await time_out_assert(10, synced_to_trusted)
+        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+
+        assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+        assert (
+            f"Connection closed: {untrusted_conn.peer_info.host}, node id: {untrusted_full_node_server.node_id}"
+            in caplog.text
+        )
         # And that we only have a trusted peer left
-        assert time_out_assert(30, only_trusted_peer)
+        await time_out_assert(30, only_trusted_peer)
 
 
 @pytest.mark.anyio

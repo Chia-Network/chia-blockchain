@@ -6,7 +6,7 @@ from typing import cast
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotParam, PrivateKey, ProofOfSpace, validate_proof_v2
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint16, uint32
 from chiapos import Verifier
 
 from chia.util.hash import std_hash
@@ -19,40 +19,36 @@ def make_pos(
     pool_public_key: G1Element | None,
     pool_contract_puzzle_hash: bytes32 | None,
     plot_public_key: G1Element,
-    version_and_size: PlotParam,
+    params: PlotParam,
     proof: bytes,
 ) -> ProofOfSpace:
     k: int
-    if version_and_size.size_v1 is not None:
-        k = version_and_size.size_v1
+    if params.size_v1 is not None:
+        version = 0
+        plot_index = 0
+        meta_group = 0
+        strength = 0
+        k = params.size_v1
     else:
-        assert version_and_size.strength_v2 is not None
-        k = version_and_size.strength_v2
-        assert k is not None
-        assert k <= 0x3F
-        k |= 0x80
+        version = 1
+        assert params.strength_v2 is not None
+        plot_index = params.plot_index
+        meta_group = params.meta_group
+        strength = params.strength_v2
+        k = 0
 
     return ProofOfSpace(
         challenge,
         pool_public_key,
         pool_contract_puzzle_hash,
         plot_public_key,
+        uint8(version),
+        uint16(plot_index),
+        uint8(meta_group),
+        uint8(strength),
         uint8(k),
         proof,
     )
-
-
-def get_plot_id(pos: ProofOfSpace) -> bytes32:
-    plot_param = pos.param()
-    if plot_param.strength_v2 is not None:
-        assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, uint8(plot_param.strength_v2))
-
-    assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
-    if pos.pool_public_key is None:
-        assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_ph(pos.pool_contract_puzzle_hash, pos.plot_public_key)
-    return calculate_plot_id_pk(pos.pool_public_key, pos.plot_public_key)
 
 
 def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
@@ -145,10 +141,6 @@ def verify_and_get_quality_string(
             return None
 
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
-    # Except v2 plots, they only support pool contract puzzle hash
-    if plot_param.strength_v2 is not None and pos.pool_contract_puzzle_hash is None:
-        log.error("v2 plots require pool_contract_puzzle_hash, pool public key is not supported")
-        return None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
         return None
@@ -159,7 +151,7 @@ def verify_and_get_quality_string(
     if not check_plot_param(constants, plot_param):
         return None
 
-    plot_id: bytes32 = get_plot_id(pos)
+    plot_id: bytes32 = pos.compute_plot_id()
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
@@ -176,6 +168,11 @@ def verify_and_get_quality_string(
         # === V1 plots ===
         assert plot_param.strength_v2 is None
 
+        if not height_agnostic and prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
+            if len(pos.proof) >= 2000:
+                log.error(f"Proof of space too large: {len(pos.proof)} bytes")
+                return None
+
         quality_str = Verifier().validate_proof(plot_id, plot_param.size_v1, pos.challenge, bytes(pos.proof))
         if not quality_str:
             return None
@@ -189,7 +186,6 @@ def verify_and_get_quality_string(
             constants.PLOT_SIZE_V2,
             pos.challenge,
             plot_param.strength_v2,
-            constants.QUALITY_PROOF_SCAN_FILTER,
             pos.proof,
         )
 
@@ -241,14 +237,6 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 
 def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
     return std_hash(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
-
-
-def calculate_plot_id_v2(
-    pool_contract_puzzle_hash: bytes32,
-    plot_public_key: G1Element,
-    strength: uint8,
-) -> bytes32:
-    return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key) + bytes(strength))
 
 
 def calculate_plot_id_pk(

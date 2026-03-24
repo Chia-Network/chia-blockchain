@@ -20,10 +20,12 @@ from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
-from chia.util.lru_cache import LRUCache
+from chia.util.lru_cache import LRUCache, LRUSet
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
 
 
 @streamable
@@ -81,6 +83,19 @@ def find_best_block(
     return all_blocks[0][0], all_blocks[0][1].unfinished_block
 
 
+def _maybe_evict_worst_unfinished_block(inner: dict[bytes32 | None, UnfinishedBlockEntry]) -> None:
+    if len(inner) <= MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH:
+        return
+    # None foliage hash is considered worst since the block quality is unknown
+    if None in inner:
+        del inner[None]
+        return
+    # we've already checked for None keys. At this point we know there won't be
+    # any, but max() doesn't like that the type is still Optional[Bytes32]
+    worst_key = max(inner.keys())  # type: ignore[type-var]
+    del inner[worst_key]
+
+
 class FullNodeStore:
     constants: ConsensusConstants
 
@@ -92,7 +107,7 @@ class FullNodeStore:
     # effectively a set[bytes32] but in order to evict the oldest items first,
     # we use a Dict that preserves insertion order, and remove from the
     # beginning
-    seen_unfinished_blocks: dict[bytes32, None]
+    seen_unfinished_blocks: LRUSet[bytes32]
 
     # Unfinished blocks, keyed from reward hash
     # There may be multiple different unfinished blocks with the same partial
@@ -139,12 +154,10 @@ class FullNodeStore:
     serialized_wp_message: Message | None
     serialized_wp_message_tip: bytes32 | None
 
-    max_seen_unfinished_blocks: int
-
     def __init__(self, constants: ConsensusConstants):
         self.candidate_blocks = {}
         self.candidate_backup_blocks = {}
-        self.seen_unfinished_blocks = {}
+        self.seen_unfinished_blocks = LRUSet(1000)
         self._unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
@@ -161,7 +174,6 @@ class FullNodeStore:
         self.tx_fetch_tasks = {}
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
-        self.max_seen_unfinished_blocks = 1000
 
     def is_requesting_unfinished_block(
         self, reward_block_hash: bytes32, foliage_hash: bytes32 | None
@@ -185,6 +197,7 @@ class FullNodeStore:
     def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         ents = self._unfinished_blocks.setdefault(reward_block_hash, {})
         ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
+        _maybe_evict_worst_unfinished_block(ents)
 
     def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         reward_ents = self._unfinished_blocks.get(reward_block_hash)
@@ -240,11 +253,7 @@ class FullNodeStore:
     def seen_unfinished_block(self, object_hash: bytes32) -> bool:
         if object_hash in self.seen_unfinished_blocks:
             return True
-        self.seen_unfinished_blocks[object_hash] = None
-        if len(self.seen_unfinished_blocks) > self.max_seen_unfinished_blocks:
-            # remove the least recently added hash
-            to_remove = next(iter(self.seen_unfinished_blocks))
-            del self.seen_unfinished_blocks[to_remove]
+        self.seen_unfinished_blocks.put(object_hash)
         return False
 
     def add_unfinished_block(
@@ -255,6 +264,7 @@ class FullNodeStore:
         entry[unfinished_block.foliage.foliage_transaction_block_hash] = UnfinishedBlockEntry(
             unfinished_block, result, height
         )
+        _maybe_evict_worst_unfinished_block(entry)
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> UnfinishedBlock | None:
         result = self._unfinished_blocks.get(unfinished_reward_hash, None)
@@ -346,6 +356,7 @@ class FullNodeStore:
         if ch not in self.future_ip_cache:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
+        self.future_cache_key_times[ch] = int(time.time())
 
     def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
         if signage_point.rc_vdf is None:

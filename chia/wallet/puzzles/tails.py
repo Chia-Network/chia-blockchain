@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 from chia_puzzles_py.programs import (
     DELEGATED_TAIL,
@@ -48,12 +51,17 @@ class LimitationsProgram:
         raise NotImplementedError("Need to implement 'construct' on limitations programs")
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: dict[str, Any]) -> Program:
         raise NotImplementedError("Need to implement 'solve' on limitations programs")
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: dict, amount: uint64, action_scope: WalletActionScope
+        cls,
+        wallet: CATWallet,
+        cat_tail_info: dict[str, Any],
+        amount: uint64,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
     ) -> WalletSpendBundle:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -77,19 +85,19 @@ class GenesisById(LimitationsProgram):
         return GENESIS_BY_ID_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: dict[str, Any]) -> Program:
         return Program.to([])
 
     @classmethod
     async def generate_issuance_bundle(
         cls,
-        wallet,
-        _: dict,
+        wallet: CATWallet,
+        _: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> WalletSpendBundle:
-        coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
+        coins = await wallet.standard_wallet.select_coins(uint64(amount + fee), action_scope)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -162,7 +170,7 @@ class GenesisByPuzhash(LimitationsProgram):
         return GENESIS_BY_PUZHASH_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: dict[str, Any]) -> Program:
         pid = hexstr_to_bytes(solution_dict["parent_coin_info"])
         return Program.to([pid, solution_dict["amount"]])
 
@@ -185,7 +193,7 @@ class EverythingWithSig(LimitationsProgram):
         return EVERYTHING_WITH_SIG_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: dict[str, Any]) -> Program:
         return Program.to([])
 
 
@@ -207,7 +215,7 @@ class DelegatedLimitations(LimitationsProgram):
         return DELEGATED_LIMITATIONS_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: dict[str, Any]) -> Program:
         signed_program = ALL_LIMITATIONS_PROGRAMS[solution_dict["signed_program"]["identifier"]]
         inner_program_args = [Program.fromhex(item) for item in solution_dict["signed_program"]["args"]]
         inner_solution_dict = solution_dict["program_arguments"]
@@ -221,7 +229,7 @@ class DelegatedLimitations(LimitationsProgram):
 
 # This should probably be much more elegant than just a dictionary with strings as identifiers
 # Right now this is small and experimental so it can stay like this
-ALL_LIMITATIONS_PROGRAMS: dict[str, Any] = {
+ALL_LIMITATIONS_PROGRAMS: dict[str, type[LimitationsProgram]] = {
     "genesis_by_id": GenesisById,
     "genesis_by_puzhash": GenesisByPuzhash,
     "everything_with_signature": EverythingWithSig,
@@ -229,7 +237,7 @@ ALL_LIMITATIONS_PROGRAMS: dict[str, Any] = {
 }
 
 
-def match_limitations_program(limitations_program: Program) -> tuple[LimitationsProgram | None, list[Program]]:
+def match_limitations_program(limitations_program: Program) -> tuple[type[LimitationsProgram] | None, list[Program]]:
     uncurried_mod, curried_args = limitations_program.uncurry()
     for key, lp in ALL_LIMITATIONS_PROGRAMS.items():
         matched, args = lp.match(uncurried_mod, curried_args)

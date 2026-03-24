@@ -236,17 +236,12 @@ class FullNodeSimulator(FullNodeAPI):
 
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
-            pool_target: bytes32 | None = target
-            if current_blocks[-1].height >= self.full_node.constants.HARD_FORK2_HEIGHT - 1:
-                # v2 plots (which we start farming at the hard fork activation)
-                # don't support specifying the pool target
-                pool_target = None
             more = self.bt.get_consecutive_blocks(
                 1,
                 time_per_block=time_per_block,
                 transaction_data=spend_bundle,
                 farmer_reward_puzzle_hash=target,
-                pool_reward_puzzle_hash=pool_target,
+                pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=current_time,
@@ -293,16 +288,11 @@ class FullNodeSimulator(FullNodeAPI):
                 spend_bundle = mempool_bundle[0]
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
-            pool_target: bytes32 | None = target
-            if current_blocks[-1].height >= self.full_node.constants.HARD_FORK2_HEIGHT - 1:
-                # v2 plots (which we start farming at the hard fork activation)
-                # don't support specifying the pool target
-                pool_target = None
             more = self.bt.get_consecutive_blocks(
                 1,
                 transaction_data=spend_bundle,
                 farmer_reward_puzzle_hash=target,
-                pool_reward_puzzle_hash=pool_target,
+                pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
                 current_time=current_time,
                 time_per_block=time_per_block,
@@ -320,15 +310,10 @@ class FullNodeSimulator(FullNodeAPI):
         current_blocks = await self.get_all_full_blocks()
         block_count = new_index - old_index
 
-        pool_target: bytes32 | None = coinbase_ph
-        if current_blocks[-1].height >= self.full_node.constants.HARD_FORK2_HEIGHT - 1:
-            # v2 plots (which we start farming at the hard fork activation)
-            # don't support specifying the pool target
-            pool_target = None
         more_blocks = self.bt.get_consecutive_blocks(
             block_count,
             farmer_reward_puzzle_hash=coinbase_ph,
-            pool_reward_puzzle_hash=pool_target,
+            pool_reward_puzzle_hash=coinbase_ph,
             block_list_input=current_blocks[: old_index + 1],
             force_overflow=True,
             guarantee_transaction_block=True,
@@ -417,13 +402,7 @@ class FullNodeSimulator(FullNodeAPI):
             expected_peak_height = 0 if original_peak_height is None else original_peak_height
             extra_blocks = [[False, False]] if original_peak_height is None else []  # Farm genesis block first
 
-            if expected_peak_height >= self.full_node.constants.HARD_FORK2_HEIGHT - 1:
-                # v2 plots (which we start farming at the hard fork activation)
-                # don't support specifying the pool target, so we only get the
-                # farmer reward, not the pool reward
-                expected_reward_coin_count = count
-            else:
-                expected_reward_coin_count = 2 * count
+            expected_reward_coin_count = 2 * count
 
             for to_wallet, tx_block in [*extra_blocks, *([[True, False]] * (count - 1)), [True, True], [False, True]]:
                 # This complicated application of the last two blocks being transaction

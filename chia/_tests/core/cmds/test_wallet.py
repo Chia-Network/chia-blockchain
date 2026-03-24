@@ -21,7 +21,8 @@ TEST_ASSET_ID_NAME_MAPPING: dict[bytes32, tuple[uint32, str]] = {
 
 
 async def cat_name_resolver(request: CATAssetIDToName) -> CATAssetIDToNameResponse:
-    return CATAssetIDToNameResponse(*TEST_ASSET_ID_NAME_MAPPING.get(request.asset_id, (None, None)))
+    wallet_id, name = TEST_ASSET_ID_NAME_MAPPING.get(request.asset_id, (None, None))
+    return CATAssetIDToNameResponse(wallet_id=wallet_id, name=name)
 
 
 @pytest.mark.anyio

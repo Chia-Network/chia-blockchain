@@ -62,6 +62,15 @@ MIN_COST_THRESHOLD = 6_000_000
 # integers, which we rely on for computing fee per cost as well as the fee sum
 MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
+# After soft_fork9_height, blocks are limited to 6000 spends in addition to the
+# CLVM cost limit. To prevent low-cost, many-spend transactions from exhausting
+# the spend limit and crowding out higher-value transactions, the mempool
+# prioritizes by fee per "virtual cost" rather than fee per CLVM cost.
+# Virtual cost is defined as: cost + num_spends * 500_000
+# This penalizes transactions that consume a disproportionate number of spend
+# slots relative to their CLVM cost.
+MAX_SPENDS_PER_BLOCK = 6000
+
 
 @dataclass
 class MempoolRemoveInfo:
@@ -120,11 +129,13 @@ class Mempool:
                 assert_before_height INT,
                 assert_before_seconds INT,
                 fee_per_cost REAL,
+                priority REAL,
                 seq INTEGER PRIMARY KEY AUTOINCREMENT)
                 """
             )
             self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
+            self._db_conn.execute("CREATE INDEX priority_idx ON tx(priority)")
             self._db_conn.execute(
                 "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
                 "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL"
@@ -144,7 +155,7 @@ class Mempool:
         self.mempool_info: MempoolInfo = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
 
-    def __del__(self) -> None:
+    def close(self) -> None:
         self._db_conn.close()
 
     def _row_to_item(self, row: sqlite3.Row) -> MempoolItem:
@@ -298,7 +309,7 @@ class Mempool:
         # TODO: make MempoolItem.cost be CLVMCost
         current_cost = self._total_cost
 
-        # Iterates through all spends in increasing fee per cost
+        # Iterates through all spends in increasing fee per virtual cost
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
 
@@ -405,8 +416,8 @@ class Mempool:
             cursor = self._db_conn.execute(
                 """
                 SELECT name,
-                    fee_per_cost,
-                    SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS cumulative_cost
+                    priority,
+                    SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS cumulative_cost
                 FROM tx
                 WHERE assert_before_seconds IS NOT NULL AND assert_before_seconds < ?
                     OR assert_before_height IS NOT NULL AND assert_before_height < ?
@@ -416,7 +427,7 @@ class Mempool:
             )
             to_remove: list[bytes32] = []
             for row in cursor:
-                name, fee_per_cost, cumulative_cost = row
+                name, priority, cumulative_cost = row
 
                 # there's space for us, stop pruning
                 if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
@@ -424,7 +435,7 @@ class Mempool:
 
                 # we can't evict any more transactions, abort (and don't
                 # evict what we put aside in "to_remove" list)
-                if fee_per_cost > item.fee_per_cost:
+                if priority > item.fee_per_virtual_cost:
                     return MempoolAddInfo([], Err.INVALID_FEE_LOW_FEE)
                 to_remove.append(name)
 
@@ -433,13 +444,13 @@ class Mempool:
             # if we don't find any entries, it's OK to add this entry
 
         if self._total_cost + item.cost > self.mempool_info.max_size_in_cost:
-            # pick the items with the lowest fee per cost to remove
+            # pick the items with the lowest priority to remove
             cursor = self._db_conn.execute(
                 """SELECT name FROM tx
                 WHERE name NOT IN (
                     SELECT name FROM (
                         SELECT name,
-                        SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                        SUM(cost) OVER (ORDER BY priority DESC, seq ASC) AS total_cost
                         FROM tx) AS tx_with_cost
                     WHERE total_cost <= ?)
                 """,
@@ -453,8 +464,9 @@ class Mempool:
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
             conn.execute(
                 "INSERT INTO "
-                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,"
+                "fee_per_cost,priority) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item.name,
                     item.cost,
@@ -462,7 +474,8 @@ class Mempool:
                     item.assert_height,
                     item.assert_before_height,
                     item.assert_before_seconds,
-                    item.fee / item.cost,
+                    item.fee_per_cost,
+                    item.fee_per_virtual_cost,
                 ),
             )
             all_coin_spends = []
@@ -572,6 +585,7 @@ class Mempool:
     ) -> tuple[SpendBundle, list[Coin]] | None:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        spend_count = 0  # Checks that total spends do not exceed MAX_SPENDS_PER_BLOCK
         processed_spend_bundles = 0
         additions: list[Coin] = []
         # This contains a map of coin ID to a coin spend solution and its
@@ -588,7 +602,7 @@ class Mempool:
         sigs: list[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         bundle_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
         skipped_items = 0
         for row in cursor:
             name = bytes32(row[0])
@@ -637,29 +651,34 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
                 new_cost_sum = cost_sum + item_cost
-                if new_cost_sum > self.mempool_info.max_block_clvm_cost:
-                    # Let's skip this item
+                new_spend_count = spend_count + len(unique_coin_spends)
+                if new_cost_sum > self.mempool_info.max_block_clvm_cost or new_spend_count > MAX_SPENDS_PER_BLOCK:
                     log.info(
-                        "Skipping mempool item. Cumulative cost %d exceeds maximum block cost %d",
+                        "Skipping mempool item. Cumulative cost %d (max %d) spends %d (max %d)",
                         new_cost_sum,
                         self.mempool_info.max_block_clvm_cost,
+                        new_spend_count,
+                        MAX_SPENDS_PER_BLOCK,
                     )
                     skipped_items += 1
                     if skipped_items < MAX_SKIPPED_ITEMS:
                         continue
-                    # Let's stop taking more items if we skipped `MAX_SKIPPED_ITEMS`
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
                 sigs.append(item.aggregated_signature)
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
+                spend_count = new_spend_count
                 processed_spend_bundles += 1
                 # Let's stop taking more items if we don't have enough cost left
                 # for at least `MIN_COST_THRESHOLD` because that would mean we're
                 # getting very close to the limit anyway and *probably* won't
                 # find transactions small enough to fit at this point
-                if self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD:
+                if (
+                    self.mempool_info.max_block_clvm_cost - cost_sum < MIN_COST_THRESHOLD
+                    or spend_count >= MAX_SPENDS_PER_BLOCK
+                ):
                     break
             except SkipDedup as e:
                 log.info(f"{e}")
@@ -695,7 +714,7 @@ class Mempool:
         singleton_ff = SingletonFastForward()
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
-        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
         builder = BlockBuilder()
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
@@ -732,6 +751,16 @@ class Mempool:
                     # accounting for it
                     break  # pragma: no cover
 
+                new_spend_count = added_spends + batch_spends + len(unique_coin_spends)
+                if new_spend_count > MAX_SPENDS_PER_BLOCK:
+                    log.info(
+                        "Skipping mempool item. Cumulative spends %d exceeds limit %d",
+                        new_spend_count,
+                        MAX_SPENDS_PER_BLOCK,
+                    )
+                    skipped_items += 1
+                    continue
+
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
@@ -764,6 +793,8 @@ class Mempool:
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum
                 block_cost += item.conds.cost - cost_saving
+                if added_spends + batch_spends >= MAX_SPENDS_PER_BLOCK:
+                    break
             except SkipDedup as e:
                 log.info(f"{e}")
                 continue

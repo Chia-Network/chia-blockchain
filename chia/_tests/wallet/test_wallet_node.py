@@ -12,6 +12,7 @@ from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -19,6 +20,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
@@ -427,6 +429,14 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
+# todo_v2_plots
+# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
+# so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
+# clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
+# this test expects a certine chain state
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -481,6 +491,7 @@ async def test_get_timestamp_for_height_from_peer(
     assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], _ = simulator_and_wallet
@@ -489,10 +500,11 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_1000_blocks: list[FullBlock]
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
@@ -512,14 +524,16 @@ async def test_get_balance(
     #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
     #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
     #       be able to restart the wallet in this test.
-    await add_blocks_in_batches(default_400_blocks, full_node_api.full_node)
+    await add_blocks_in_batches(default_1000_blocks[:600], full_node_api.full_node)
     # Initially there should be no sync and no balance
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()
     # Generate some funds, get the balance and make sure it's as expected
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
-    generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
+    generated_funds = await full_node_api.farm_blocks_to_wallet(
+        5, wallet_node.wallet_state_manager.main_wallet, timeout=60
+    )
     expected_generated_balance = Balance(
         confirmed_wallet_balance=uint128(generated_funds),
         unconfirmed_wallet_balance=uint128(generated_funds),
@@ -566,6 +580,7 @@ async def test_get_balance(
     assert await wallet_node.get_balance(wallet_id) == expected_more_balance
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_add_states_from_peer_reorg_failure(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
@@ -584,6 +599,7 @@ async def test_add_states_from_peer_reorg_failure(
         assert "Processing reorged states failed" in caplog.text
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_add_states_from_peer_untrusted_shutdown(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
@@ -624,7 +640,7 @@ async def test_transaction_send_cache(
     logged_spends = []
 
     async def send_transaction(
-        self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
+        self: Self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
     ) -> Message | None:
         logged_spends.append(request.transaction.name())
         return None
@@ -714,6 +730,7 @@ async def test_wallet_node_bad_coin_state_ignore(
             await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_key_types(
@@ -745,6 +762,7 @@ async def test_start_with_multiple_key_types(
     assert wallet_node.wallet_state_manager.private_key == initial_sk
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(

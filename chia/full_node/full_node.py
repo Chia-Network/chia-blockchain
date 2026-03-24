@@ -78,6 +78,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
@@ -279,127 +280,126 @@ class FullNode:
                 log_coins=log_coins,
             )
 
-            self._mempool_manager = MempoolManager(
+            async with MempoolManager.managed(
                 get_coin_records=self.coin_store.get_coin_records,
                 get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
-            )
-
-            # Transactions go into this queue from the server, and get sent to respond_transaction
-            self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
-
-            self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
-
-            if self.config.get("enable_profiler", False):
-                create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
-
-            self.profile_block_validation = self.config.get("profile_block_validation", False)
-            if self.profile_block_validation:  # pragma: no cover
-                # this is not covered by any unit tests as it's essentially test code
-                # itself. It's exercised manually when investigating performance issues
-                profile_dir = path_from_root(self.root_path, "block-validation-profile")
-                profile_dir.mkdir(parents=True, exist_ok=True)
-
-            if self.config.get("enable_memory_profiler", False):
-                create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
-
-            time_taken = time.monotonic() - start_time
-            peak: BlockRecord | None = self.blockchain.get_peak()
-            if peak is None:
-                self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                if not await self.coin_store.is_empty():
-                    self.log.error(
-                        "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
-                        "This is a fatal error. The blockchain database may be corrupt"
-                    )
-                    raise RuntimeError("corrupt blockchain DB")
-            else:
-                self.log.info(
-                    f"Blockchain initialized to peak {peak.header_hash} height"
-                    f" {peak.height}, "
-                    f"time taken: {int(time_taken)}s"
+                validation_timeout=self.config.get("block_creation_timeout", 2.0),
+            ) as self._mempool_manager:
+                # Transactions go into this queue from the server, and get sent to respond_transaction
+                self._transaction_queue = TransactionQueue(
+                    1000, self.log, max_tx_clvm_cost=uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
                 )
-                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                    pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                    # No pending transactions when starting up
-                    assert len(pending_tx.spend_bundle_ids) == 0
+                self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
-                    full_peak: FullBlock | None = await self.blockchain.get_full_peak()
-                    assert full_peak is not None
-                    state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
-                    # Must be called under priority_mutex
-                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                        full_peak, state_change_summary, None
+                self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
+
+                if self.config.get("enable_profiler", False):
+                    create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
+
+                self.profile_block_validation = self.config.get("profile_block_validation", False)
+                if self.profile_block_validation:  # pragma: no cover
+                    # this is not covered by any unit tests as it's essentially test code
+                    # itself. It's exercised manually when investigating performance issues
+                    profile_dir = path_from_root(self.root_path, "block-validation-profile")
+                    profile_dir.mkdir(parents=True, exist_ok=True)
+
+                if self.config.get("enable_memory_profiler", False):
+                    create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
+
+                time_taken = time.monotonic() - start_time
+                peak: BlockRecord | None = self.blockchain.get_peak()
+                if peak is None:
+                    self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+                    if not await self.coin_store.is_empty():
+                        self.log.error(
+                            "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
+                            "This is a fatal error. The blockchain database may be corrupt"
+                        )
+                        raise RuntimeError("corrupt blockchain DB")
+                else:
+                    self.log.info(
+                        f"Blockchain initialized to peak {peak.header_hash} height"
+                        f" {peak.height}, "
+                        f"time taken: {int(time_taken)}s"
                     )
-                # Can be called outside of priority_mutex
-                await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-            if self.config["send_uncompact_interval"] != 0:
-                sanitize_weight_proof_only = False
-                if "sanitize_weight_proof_only" in self.config:
-                    sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
-                assert self.config["target_uncompact_proofs"] != 0
-                self.uncompact_task = create_referenced_task(
-                    self.broadcast_uncompact_blocks(
-                        self.config["send_uncompact_interval"],
-                        self.config["target_uncompact_proofs"],
-                        sanitize_weight_proof_only,
+                    async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                        pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
+                        # No pending transactions when starting up
+                        assert len(pending_tx.spend_bundle_ids) == 0
+
+                        full_peak: FullBlock | None = await self.blockchain.get_full_peak()
+                        assert full_peak is not None
+                        state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                        # Must be called under priority_mutex
+                        ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                            full_peak, state_change_summary, None
+                        )
+                    # Can be called outside of priority_mutex
+                    await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+                if self.config["send_uncompact_interval"] != 0:
+                    sanitize_weight_proof_only = False
+                    if "sanitize_weight_proof_only" in self.config:
+                        sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
+                    assert self.config["target_uncompact_proofs"] != 0
+                    self.uncompact_task = create_referenced_task(
+                        self.broadcast_uncompact_blocks(
+                            self.config["send_uncompact_interval"],
+                            self.config["target_uncompact_proofs"],
+                            sanitize_weight_proof_only,
+                        )
                     )
-                )
-            if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
+                if self.wallet_sync_task is None or self.wallet_sync_task.done():
+                    self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
-            self.initialized = True
+                self.initialized = True
 
-            try:
-                async with contextlib.AsyncExitStack() as aexit_stack:
-                    if self.full_node_peers is not None:
-                        await aexit_stack.enter_async_context(self.full_node_peers.manage())
-                    yield
-            finally:
-                self._shut_down = True
-                if self._init_weight_proof is not None:
-                    self._init_weight_proof.cancel()
+                try:
+                    async with contextlib.AsyncExitStack() as aexit_stack:
+                        if self.full_node_peers is not None:
+                            await aexit_stack.enter_async_context(self.full_node_peers.manage())
+                        yield
+                finally:
+                    self._shut_down = True
+                    if self._init_weight_proof is not None:
+                        self._init_weight_proof.cancel()
 
-                # blockchain is created in _start and in certain cases it may not exist here during _close
-                if self._blockchain is not None:
-                    self.blockchain.shut_down()
-                # same for mempool_manager
-                if self._mempool_manager is not None:
-                    self.mempool_manager.shut_down()
-                if self.uncompact_task is not None:
-                    self.uncompact_task.cancel()
-                if self._transaction_queue_task is not None:
-                    self._transaction_queue_task.cancel()
-                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-                for one_tx_task in self._tx_task_list:
-                    if not one_tx_task.done():
-                        cancel_task_safe(task=one_tx_task, log=self.log)
-                for one_sync_task in self._sync_task_list:
-                    if not one_sync_task.done():
-                        cancel_task_safe(task=one_sync_task, log=self.log)
-                for segment_task in self._segment_task_list:
-                    cancel_task_safe(segment_task, self.log)
-                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-                    cancel_task_safe(task, self.log)
-                if self._init_weight_proof is not None:
-                    await asyncio.wait([self._init_weight_proof])
-                for one_tx_task in self._tx_task_list:
-                    if one_tx_task.done():
-                        self.log.info(f"TX task {one_tx_task.get_name()} done")
-                    else:
-                        with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
-                            await one_tx_task
-                for one_sync_task in self._sync_task_list:
-                    if one_sync_task.done():
-                        self.log.info(f"Long sync task {one_sync_task.get_name()} done")
-                    else:
-                        with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
-                            await one_sync_task
-                await asyncio.gather(*self._segment_task_list, return_exceptions=True)
+                    # blockchain is created in _start and in certain cases it may not exist here during _close
+                    if self._blockchain is not None:
+                        self.blockchain.shut_down()
+                    if self.uncompact_task is not None:
+                        self.uncompact_task.cancel()
+                    if self._transaction_queue_task is not None:
+                        self._transaction_queue_task.cancel()
+                    cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+                    for one_tx_task in self._tx_task_list:
+                        if not one_tx_task.done():
+                            cancel_task_safe(task=one_tx_task, log=self.log)
+                    for one_sync_task in self._sync_task_list:
+                        if not one_sync_task.done():
+                            cancel_task_safe(task=one_sync_task, log=self.log)
+                    for segment_task in self._segment_task_list:
+                        cancel_task_safe(segment_task, self.log)
+                    for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                        cancel_task_safe(task, self.log)
+                    if self._init_weight_proof is not None:
+                        await asyncio.wait([self._init_weight_proof])
+                    for one_tx_task in self._tx_task_list:
+                        if one_tx_task.done():
+                            self.log.info(f"TX task {one_tx_task.get_name()} done")
+                        else:
+                            with contextlib.suppress(asyncio.CancelledError):
+                                self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
+                                await one_tx_task
+                    for one_sync_task in self._sync_task_list:
+                        if one_sync_task.done():
+                            self.log.info(f"Long sync task {one_sync_task.get_name()} done")
+                        else:
+                            with contextlib.suppress(asyncio.CancelledError):
+                                self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
+                                await one_sync_task
+                    await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
     def block_store(self) -> BlockStore:
@@ -942,6 +942,14 @@ class FullNode:
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
                 await connection.send_message(msg)
+                # Old peers (< 2.6.0) respond to RequestMempoolTransactions with
+                # RespondTransaction directly. New peers send NewTransaction instead.
+                try:
+                    old_peer = Version(connection.version) < Version("2.6.0")
+                except Exception:
+                    old_peer = True
+                if old_peer:
+                    connection.expected_mempool_responses += 100
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 
@@ -1629,8 +1637,17 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
-            assert pre_validation_results[i].error is None
-            assert pre_validation_results[i].required_iters is not None
+            if pre_validation_results[i].error is not None:
+                self.log.error(
+                    f"prevalidation failed for block {header_hash.hex()} height {block.height} "
+                    f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                )
+                return agg_state_change_summary, Err(pre_validation_results[i].error)
+            if pre_validation_results[i].required_iters is None:
+                self.log.error(
+                    f"required_iters is None for block {header_hash.hex()} height {block.height} from peer {peer_info}"
+                )
+                return agg_state_change_summary, Err.UNKNOWN
             state_change_summary: StateChangeSummary | None
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
@@ -2062,6 +2079,9 @@ class FullNode:
         ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
+            pos = block.reward_chain_block.proof_of_space
+            if pos.version == 1 and pos.quality_string() is None:
+                raise ConsensusError(Err.INVALID_POSPACE)
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             foliage_hash: bytes32 | None = block.foliage.foliage_transaction_block_hash
             assert foliage_hash is not None
@@ -2326,6 +2346,10 @@ class FullNode:
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")
             return None
+
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            raise ConsensusError(Err.INVALID_POSPACE)
 
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
@@ -2784,7 +2808,13 @@ class FullNode:
         if self.sync_store.get_sync_mode() or self.mempool_manager.peak is None:
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
-        cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
+        try:
+            cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
+        except ValueError as e:
+            # ValueError is used to indicate a soft failure. We don't want to
+            # ban the peer
+            self.log.info(f"Rejecting transaction {spend_name}: {e}")
+            return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 
@@ -2820,7 +2850,14 @@ class FullNode:
             # Now that we validated this transaction, check what fees and
             # costs the peers have advertised for it.
             for peer_id, entry in peers_with_tx.items():
-                if entry.advertised_fee == mempool_item.fee and entry.advertised_cost == mempool_item.cost:
+                # Older nodes (2.4.3 and earlier) compute the cost slightly
+                # differently. They include the byte cost and execution cost of
+                # the quote for the puzzle.
+                tolerated_diff = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+                if entry.advertised_fee == mempool_item.fee and (
+                    entry.advertised_cost == mempool_item.cost
+                    or entry.advertised_cost == mempool_item.cost + tolerated_diff
+                ):
                     continue
                 self.log.warning(
                     f"Banning peer {peer_id}. Sent us a new tx {spend_name} with mismatch "
@@ -3144,8 +3181,14 @@ class FullNode:
             peer_request = full_node_protocol.RequestCompactVDF(
                 request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
+            vdf_req_key = peer_request.get_hash()
+            peer.pending_compact_vdfs.put(vdf_req_key)
             response = await peer.call_api(FullNodeAPI.request_compact_vdf, peer_request, timeout=10)
             if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                # if we fail to receive a response within 10 seconds, we give up
+                # here, but it's stil possible it will arrive later. We leave it
+                # in pending_compact_vdfs
+                peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
@@ -3180,7 +3223,7 @@ class FullNode:
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
-            self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
+            self.log.info(f"{peer.peer_node_id} requested compact vdf we don't have, height: {request.height}.")
             return None
         compact_vdf = full_node_protocol.RespondCompactVDF(
             request.height,

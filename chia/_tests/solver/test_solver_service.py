@@ -18,13 +18,15 @@ from chia.simulator.setup_services import setup_solver
 @pytest.mark.anyio
 async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_path: Path) -> None:
     with TempKeyring(populate=True) as keychain:
-        bt = await create_block_tools_async(constants=blockchain_constants, keychain=keychain)
-        async with setup_solver(tmp_path, bt, blockchain_constants) as solver_service:
+        async with (
+            create_block_tools_async(constants=blockchain_constants, keychain=keychain) as bt,
+            setup_solver(tmp_path, bt, blockchain_constants) as solver_service,
+        ):
             solver = solver_service._node
             solver_api = solver_service._api
             assert solver_api.ready() is True
             test_info = SolverInfo(
-                PartialProof([uint64(256)] * 64),
+                PartialProof([uint64(256)] * 16),
                 plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
                 strength=uint8(5),
                 size=uint8(28),

@@ -267,8 +267,10 @@ def test_convert_primitive_failures(input_dict: dict[str, Any], error: Any) -> N
             StreamableFromDict1,
             {"a": "asdf", "b": "2", "c": G1Element()},
             ConversionError,
-            "Failed to convert 'asdf' from type str to uint8: ValueError: invalid literal "
-            "for int() with base 10: 'asdf'",
+            (
+                "Failed to convert 'asdf' from type str to uint8: ValueError: invalid literal "
+                "for int() with base 10: 'asdf'"
+            ),
         ],
         [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError, "1 field missing for StreamableFromDict1: c"],
         [StreamableFromDict1, {"a": 1}, ParameterMissingError, "2 fields missing for StreamableFromDict1: b, c"],
@@ -778,8 +780,23 @@ def test_ambiguous_deserialization_program() -> None:
 
     TestClassProgram.from_bytes(bytes(program))
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassProgram.from_bytes(bytes(program) + b"9")
+
+
+def test_from_bytes_rejects_trailing_bytes_rust_types() -> None:
+    from chia_rs import G2Element, SpendBundle
+
+    coin = Coin(bytes32(bytes(32)), bytes32(bytes(32)), uint64(0))
+    valid_coin = bytes(coin)
+    Coin.from_bytes(valid_coin)
+    with pytest.raises(ValueError):
+        Coin.from_bytes(valid_coin + b"\x00")
+
+    valid_sb = bytes(4) + bytes(G2Element())
+    SpendBundle.from_bytes(valid_sb)
+    with pytest.raises(ValueError):
+        SpendBundle.from_bytes(valid_sb + b"\x00")
 
 
 def test_streamable_empty() -> None:

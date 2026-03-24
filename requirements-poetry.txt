@@ -1,4 +1,4 @@
 # keep this matching with what dependabot uses
-poetry==2.2.0
+poetry==2.2.1
 poetry-dynamic-versioning[plugin]
 poetry-plugin-export

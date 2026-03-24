@@ -53,7 +53,7 @@ def find_retirement(tocheck: list[ConditionWithArgs]) -> bool:
     return False
 
 
-def test_block_no_generator():
+def test_block_no_generator() -> None:
     dirname = Path(__file__).parent
     with open(dirname / "300000.json") as f:
         full_block = json.load(f)
@@ -63,7 +63,7 @@ def test_block_no_generator():
     assert not cat_list
 
 
-def test_block_retired_cat_with_memo():
+def test_block_retired_cat_with_memo() -> None:
     dirname = Path(__file__).parent
     with open(dirname / "1315630.json") as f:
         full_block = json.load(f)
@@ -83,7 +83,7 @@ def test_block_retired_cat_with_memo():
     assert found
 
 
-def test_block_retired_cat_no_memo():
+def test_block_retired_cat_no_memo() -> None:
     dirname = Path(__file__).parent
     with open(dirname / "1315544.json") as f:
         full_block = json.load(f)
@@ -104,7 +104,7 @@ def test_block_retired_cat_no_memo():
     assert found
 
 
-def test_block_cat():
+def test_block_cat() -> None:
     dirname = Path(__file__).parent
     with open(dirname / "1315537.json") as f:
         full_block = json.load(f)
@@ -118,7 +118,7 @@ def test_block_cat():
     assert cat_list[0].npc.puzzle_hash.hex() == "20a2284ec41cdcc3c54e6b44f8801db2dc28f3aa01c115674b598757d62f09a6"
 
 
-def test_generator_ref():
+def test_generator_ref() -> None:
     """Run a block containing a back reference without error"""
     dirname = Path(__file__).parent
     with open(dirname / "466212.json") as f:

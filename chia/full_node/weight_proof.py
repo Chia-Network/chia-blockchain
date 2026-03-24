@@ -84,7 +84,7 @@ class WeightProofHandler:
             return None
 
         if tip_rec.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-            log.debug("chain to short for weight proof")
+            log.info(f"chain to short for weight proof. tip: {tip_rec.height}")
             return None
 
         async with self.lock:
@@ -124,6 +124,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
+        if len(summary_heights) <= 1:
+            log.error("not enough sub epochs. perhaps WEIGHT_PROOF_RECENT_BLOCKS is too small")
+            return None
+
         zero_hash = self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
@@ -1227,6 +1231,11 @@ def validate_recent_blocks(
     adjusted = False
     validated_block_count = 0
     for idx, block in enumerate(recent_chain.recent_chain_data):
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            log.info(f"invalid proof of space in weight proof recent chain block {block.height}")
+            return False, []
+
         required_iters = uint64(0)
         overflow = False
         ses = False
@@ -1335,7 +1344,7 @@ def _validate_pospace_recent_chain(
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         ),
     )
     if required_iters is None:

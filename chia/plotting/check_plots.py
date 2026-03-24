@@ -8,7 +8,7 @@ from pathlib import Path
 from threading import Lock
 from time import monotonic, sleep
 
-from chia_rs import G1Element, solve_proof
+from chia_rs import G1Element, solve_proof, validate_proof_v2
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
@@ -177,7 +177,7 @@ def check_plots(
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
                     quality_start_time = round(monotonic() * 1000)
-                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.QUALITY_PROOF_SCAN_FILTER)
+                    qualities = pr.get_qualities_for_challenge(challenge)
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
@@ -213,24 +213,38 @@ def check_plots(
 
                         if isinstance(pr, V1Prover):
                             full_proof = pr.get_full_proof(challenge, index, parallel_read)
-                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         elif isinstance(pr, V2Prover):
                             assert isinstance(quality, V2Quality)
-                            partial_proof = pr.get_partial_proof(quality)
-                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                             full_proof = solve_proof(
-                                partial_proof, pr.get_id(), pr.get_strength(), DEFAULT_CONSTANTS.PLOT_SIZE_V2
+                                quality.get_partial_proof(),
+                                pr.get_id(),
+                                pr.get_strength(),
+                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
                             )
 
+                        proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         if proof_spent_time > 15000:
+                            action = "Finding" if isinstance(pr, V1Prover) else "Solving"
                             log.warning(
-                                f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
+                                f"\t{action} proof took: {proof_spent_time} ms. This should be below 15 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:
                             log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_param().size_v1, challenge, full_proof)
+                        if isinstance(pr, V1Prover):
+                            ver_quality_str = v.validate_proof(
+                                pr.get_id(), pr.get_param().size_v1, challenge, full_proof
+                            )
+                        elif isinstance(pr, V2Prover):
+                            ver_quality_str = validate_proof_v2(
+                                pr.get_id(),
+                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                challenge,
+                                pr.get_strength(),
+                                full_proof,
+                            )
+
                         if quality_str == ver_quality_str:
                             total_proofs += 1
                         else:
