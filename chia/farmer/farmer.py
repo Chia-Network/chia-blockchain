@@ -346,8 +346,9 @@ class Farmer:
 
     def pool_url_for_p2_singleton_puzhash(self, p2_singleton_puzzle_hash: bytes32) -> str:
         pool_state = self.pool_state[p2_singleton_puzzle_hash]
-        if pool_state.get("pool_url_override", "") != "":
-            return pool_state["pool_url_override"]
+        pool_url_override = pool_state.get("pool_url_override")
+        if pool_url_override not in (None, ""):
+            return pool_url_override
         else:
             return pool_state["pool_config"].pool_url
 
@@ -573,6 +574,7 @@ class Farmer:
             self.log.error(f"Wallet error while updating pool states: {e} {tb}")
             return
         for pool_wallet_info in pool_wallets.wallets:
+            pool_config: PoolWalletConfig | None = None
             try:
                 pw_status = await self.wallet_rpc_client.pw_status(PWStatus(wallet_id=pool_wallet_info.id))
                 if pw_status.state.current.pool_url is None:
@@ -619,7 +621,7 @@ class Farmer:
                         "authentication_token_timeout": None,
                         "plot_count": 0,
                         "pool_config": pool_config,
-                        "pool_url_override": None,
+                        "pool_url_override": "",
                     }
                     self.log.info(f"Added pool: {pool_config}")
                 else:
@@ -725,9 +727,10 @@ class Farmer:
 
             except Exception as e:
                 tb = traceback.format_exc()
+                pool_identifier = pool_config.pool_url if pool_config is not None else f"wallet_id={pool_wallet_info.id}"
                 self.log.error(
                     f"Exception in update_pool_state for "
-                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e} {tb}"
+                    f"{pool_identifier}, {e} {tb}"
                 )
 
     def get_public_keys(self) -> list[G1Element]:
