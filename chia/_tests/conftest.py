@@ -1257,11 +1257,16 @@ HarvesterFarmerEnvironment = tuple[FarmerService, FarmerRpcClient, HarvesterServ
 
 @pytest.fixture(scope="function")
 async def harvester_farmer_environment(
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester_simulator_wallet: tuple[
+        HarvesterService,
+        FarmerService,
+        SimulatorFullNodeService,
+        WalletService,
+        BlockTools,
+    ],
     self_hostname: str,
 ) -> AsyncIterator[HarvesterFarmerEnvironment]:
-    harvesters, farmer_service, bt = farmer_one_harvester
-    harvester_service = harvesters[0]
+    harvester_service, farmer_service, _, _, bt = farmer_one_harvester_simulator_wallet
 
     assert farmer_service.rpc_server is not None
     farmer_rpc_cl = await FarmerRpcClient.create(

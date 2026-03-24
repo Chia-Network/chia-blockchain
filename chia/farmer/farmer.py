@@ -344,6 +344,13 @@ class Farmer:
             del self.plot_sync_receivers[connection.peer_node_id]
             self.state_changed("harvester_removed", {"node_id": connection.peer_node_id})
 
+    def pool_url_for_p2_singleton_puzhash(self, p2_singleton_puzzle_hash: bytes32) -> str:
+        pool_state = self.pool_state[p2_singleton_puzzle_hash]
+        if pool_state.get("pool_url_override", "") != "":
+            return pool_state["pool_url_override"]
+        else:
+            return pool_state["pool_config"].pool_url
+
     async def plot_sync_callback(self, peer_id: bytes32, delta: Delta | None) -> None:
         log.debug(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
         receiver: Receiver = self.plot_sync_receivers[peer_id]
@@ -354,7 +361,7 @@ class Farmer:
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> GetPoolInfoResult | None:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                url = f"{pool_config.pool_url}/pool_info"
+                url = f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}/pool_info"
                 async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
                         response: dict[str, Any] = json.loads(await resp.text())
@@ -372,12 +379,16 @@ class Farmer:
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
-                            f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}",
+                            "Error in GET /pool_info "
+                            f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, "
+                            f"{resp.status}",
                         )
 
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /pool_info {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in GET /pool_info "
+                f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e}",
             )
 
         return None
@@ -400,7 +411,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}/farmer",
                     params=get_farmer_params,
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -421,11 +432,15 @@ class Farmer:
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
-                            f"Error in GET /farmer {pool_config.pool_url}, {resp.status}",
+                            "Error in GET /farmer "
+                            f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, "
+                            f"{resp.status}",
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                "Exception in GET /farmer "
+                f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e}",
             )
         return None
 
@@ -450,7 +465,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}/farmer",
                     json=post_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -471,11 +486,15 @@ class Farmer:
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
-                            f"Error in POST /farmer {pool_config.pool_url}, {resp.status}",
+                            "Error in POST /farmer "
+                            f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, "
+                            f"{resp.status}",
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in POST /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                "Exception in POST /farmer "
+                f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e}",
             )
         return None
 
@@ -500,7 +519,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}/farmer",
                     json=put_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -520,11 +539,15 @@ class Farmer:
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
-                            f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}",
+                            f"Error in PUT /farmer "
+                            f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, "
+                            f"{resp.status}",
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in PUT /farmer "
+                f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e}",
             )
 
     def get_authentication_sk(
@@ -596,6 +619,7 @@ class Farmer:
                         "authentication_token_timeout": None,
                         "plot_count": 0,
                         "pool_config": pool_config,
+                        "pool_url_override": None,
                     }
                     self.log.info(f"Added pool: {pool_config}")
                 else:
@@ -604,12 +628,17 @@ class Farmer:
                 pool_state = self.pool_state[p2_singleton_puzzle_hash]
 
                 # Skip state update when self pooling
-                if pool_config.pool_url == "":
+                if self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash) == "":
                     continue
 
                 enforce_https = config["full_node"]["selected_network"] == "mainnet"
-                if enforce_https and not pool_config.pool_url.startswith("https://"):
-                    self.log.error(f"Pool URLs must be HTTPS on mainnet {pool_config.pool_url}")
+                if enforce_https and not self.pool_url_for_p2_singleton_puzhash(
+                    pool_config.p2_singleton_puzzle_hash
+                ).startswith("https://"):
+                    self.log.error(
+                        "Pool URLs must be HTTPS on mainnet "
+                        f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}"
+                    )
                     continue
 
                 # TODO: Improve error handling below, inform about unexpected failures
@@ -627,7 +656,7 @@ class Farmer:
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
                     if pool_info_result is not None and pool_info_result.new_pool_url is not None:
-                        update_pool_url(self._root_path, pool_config, pool_info_result.new_pool_url)
+                        self.pool_state[p2_singleton_puzzle_hash]["pool_url_override"] = pool_info_result.new_pool_url
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
@@ -667,7 +696,9 @@ class Farmer:
                             )
                             if post_response is not None and "error_code" not in post_response:
                                 self.log.info(
-                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}"
+                                    f"Welcome message from "
+                                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}: "
+                                    f"{post_response['welcome_message']}"
                                 )
                                 # Now we should be able to update the local farmer info
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()
@@ -694,7 +725,10 @@ class Farmer:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Exception in update_pool_state for {pool_config.pool_url}, {e} {tb}")
+                self.log.error(
+                    f"Exception in update_pool_state for "
+                    f"{self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)}, {e} {tb}"
+                )
 
     def get_public_keys(self) -> list[G1Element]:
         return [child_sk.get_g1() for child_sk in self._private_keys]
@@ -792,7 +826,7 @@ class Farmer:
             )
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
-                pool_config.pool_url
+                self.pool_url_for_p2_singleton_puzhash(pool_config.p2_singleton_puzzle_hash)
                 + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
                 f"&signature={bytes(signature).hex()}"
             )

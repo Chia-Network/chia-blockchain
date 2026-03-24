@@ -9,7 +9,7 @@ from typing import Any, cast
 from unittest.mock import ANY
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotParam, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, Coin, G1Element, G2Element, PlotParam, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
@@ -24,11 +24,13 @@ from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increme
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolWalletConfig
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     make_pos,
@@ -36,6 +38,9 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import GetWallets, GetWalletsResponse, PWStatusResponse, WalletInfoResponse
+from chia.wallet.wallet_service import WalletService
 
 log = logging.getLogger(__name__)
 
@@ -1183,13 +1188,20 @@ class PoolInfoCase(DataCase):
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
 )
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_farmer_pool_info_config_update(
     mocker: MockerFixture,
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester_simulator_wallet: tuple[
+        HarvesterService,
+        FarmerService,
+        SimulatorFullNodeService,
+        WalletService,
+        BlockTools,
+    ],
     case: PoolInfoCase,
 ) -> None:
-    _, farmer_service, _ = farmer_one_harvester
+    _, farmer_service, _, _, _ = farmer_one_harvester_simulator_wallet
     p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
     farmer_service._node.authentication_keys = {
         p2_singleton_puzzle_hash: PrivateKey.from_bytes(
@@ -1202,25 +1214,48 @@ async def test_farmer_pool_info_config_update(
             "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
         },
     )
-    config = load_config(farmer_service.root_path, "config.yaml")
-    config["pool"]["pool_list"] = [
-        make_pool_list_entry(
-            overrides={
-                "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
-                "pool_url": case.initial_pool_url_in_config,
-            }
-        )
-    ]
-    save_config(farmer_service.root_path, "config.yaml", config)
+    mocker.patch(
+        "chia.wallet.wallet_rpc_client.WalletRpcClient.get_wallets",
+        return_value=GetWalletsResponse(
+            wallets=[WalletInfoResponse(id=uint32(2), name="", type=uint8(WalletType.POOLING_WALLET.value), data="")]
+        ),
+    )
+    mocker.patch(
+        "chia.wallet.wallet_rpc_client.WalletRpcClient.pw_status",
+        return_value=PWStatusResponse(
+            state=PoolWalletInfo(
+                current=PoolState(
+                    version=uint8(1),
+                    state=uint8(PoolSingletonState.FARMING_TO_POOL.value),
+                    target_puzzle_hash=bytes32.zeros,
+                    owner_pubkey=G1Element.from_bytes(
+                        bytes.fromhex(
+                            "832cd71376d04f2e28ad72380bdea901fa6efe8dce339ad6c379a207af16a8315836e9e04ff9a7d5faffee4cfcd23b82"
+                        )
+                    ),
+                    pool_url=str(case.initial_pool_url_in_config),
+                    relative_lock_height=uint32(10),
+                ),
+                target=None,
+                launcher_coin=Coin(bytes32.zeros, bytes32.zeros, 0),
+                launcher_id=bytes32.zeros,
+                p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+                tip_singleton_coin_id=bytes32.zeros,
+                singleton_block_height=uint32(0),
+                payout_instructions="",
+            ),
+            unconfirmed_transactions=[],
+        ),
+    )
     mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
 
     await farmer_service._node.update_pool_state()
 
     mock_http_get.assert_called_once()
-    config = load_config(farmer_service.root_path, "config.yaml")
-    assert len(config["pool"]["pool_list"]) == 1
-    assert config["pool"]["pool_list"][0]["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
-    assert config["pool"]["pool_list"][0]["pool_url"] == case.expected_pool_url_in_config
+    assert (
+        farmer_service._node.pool_url_for_p2_singleton_puzhash(p2_singleton_puzzle_hash)
+        == case.expected_pool_url_in_config
+    )
 
 
 @dataclass
