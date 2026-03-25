@@ -53,6 +53,7 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
+    pre_sp_tx_height_out: list[uint32] | None = None,
 ) -> tuple[uint64 | None, ValidationError | None]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -123,6 +124,8 @@ def validate_unfinished_header_block(
         sp_index=header_block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(header_block.finished_sub_slots),
     )
+    if pre_sp_tx_height_out is not None:
+        pre_sp_tx_height_out.append(pre_sp_tx_height)
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
@@ -514,13 +517,7 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        pre_sp_tx_block_height(
-            constants=constants,
-            blocks=blocks,
-            prev_b_hash=header_block.prev_header_hash,
-            sp_index=header_block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(header_block.finished_sub_slots),
-        ),
+        pre_sp_tx_height,
     )
     if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)
@@ -868,6 +865,7 @@ def validate_finished_header_block(
         header_block.transactions_filter,
     )
 
+    pre_sp_tx_height: list[uint32] = []
     required_iters, validate_unfinished_err = validate_unfinished_header_block(
         constants,
         blocks,
@@ -876,6 +874,7 @@ def validate_finished_header_block(
         expected_vs,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
+        pre_sp_tx_height_out=pre_sp_tx_height,
     )
 
     genesis_block = False
@@ -1074,14 +1073,8 @@ def validate_finished_header_block(
 
     # 34. Validate header MMR commitment (skip for weight proof validation)
 
-    pre_sp_tx_height = pre_sp_tx_block_height(
-        constants=constants,
-        blocks=blocks,
-        prev_b_hash=header_block.prev_header_hash,
-        sp_index=header_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(header_block.finished_sub_slots),
-    )
-    if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+    assert len(pre_sp_tx_height) == 1
+    if not skip_commitment_validation and pre_sp_tx_height[0] >= constants.HARD_FORK2_HEIGHT:
         sp_index = header_block.reward_chain_block.signage_point_index
         starts_new_slot = len(header_block.finished_sub_slots) > 0
 

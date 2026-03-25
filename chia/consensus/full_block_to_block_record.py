@@ -52,7 +52,7 @@ def block_to_block_record(
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=True,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         ses = make_sub_epoch_summary(
             constants,

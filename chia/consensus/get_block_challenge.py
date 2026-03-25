@@ -139,7 +139,7 @@ def post_hard_fork2(
     *,
     prev_b_hash: bytes32,
     sp_index: uint8,
-    first_in_sub_slot: bool,
+    finished_sub_slots: int,
 ) -> bool:
     return (
         pre_sp_tx_block_height(
@@ -147,7 +147,7 @@ def post_hard_fork2(
             blocks=blocks,
             prev_b_hash=prev_b_hash,
             sp_index=sp_index,
-            finished_sub_slots=int(first_in_sub_slot),
+            finished_sub_slots=finished_sub_slots,
         )
         >= constants.HARD_FORK2_HEIGHT
     )
