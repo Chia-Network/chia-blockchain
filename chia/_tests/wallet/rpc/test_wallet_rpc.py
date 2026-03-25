@@ -651,12 +651,11 @@ async def test_create_signed_transaction(
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
-
-    main_tx = next(tx for tx in txs if tx.amount > 0)
-    assert_tx_amounts(main_tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
+    spend_bundle = txs[0].spend_bundle
+    assert spend_bundle is not None
     xch_delta = amount_total if not is_cat else amount_fee
     cat_delta = amount_total if is_cat else 0
     await wallet_environments.process_pending_states(
@@ -4181,6 +4180,84 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
                         "max_send_amount": 250_000_000_000,
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -1,  # combine 2 into 1
+                    }
+                },
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_combine_coins_respects_max_coin_amount(wallet_environments: WalletTestFramework) -> None:
+    """
+    Regression test: combine_coins must respect max_coin_amount from tx_config
+    and must never include spent coins in the selection.
+
+    Setup gives 4 coins: 2x 1.75 XCH + 2x 0.25 XCH.
+    With largest_first=True and NO filter, the two 1.75 XCH coins would be
+    selected.  With max_coin_amount=0.25 XCH the 1.75 XCH coins must be
+    excluded and only the 0.25 XCH coins selected -- proving the filter works.
+    """
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1}
+
+    SMALL = uint64(250_000_000_000)  # 0.25 XCH
+
+    base_args = wallet_environments.cmd_tx_endpoint_args(env)
+    base_args["tx_config_loader"] = dataclasses.replace(
+        base_args["tx_config_loader"],
+        max_coin_amount=CliAmount(amount=SMALL, mojos=True),
+    )
+
+    combine_request = CombineCMD(
+        **{
+            **base_args,
+            **dict(
+                id=env.wallet_aliases["xch"],
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(),
+                largest_first=True,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await combine_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -2 * SMALL,
+                        "pending_change": 2 * SMALL,
+                        "max_send_amount": -2 * SMALL,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": 2 * SMALL,
+                        "pending_change": -2 * SMALL,
+                        "max_send_amount": 2 * SMALL,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
                     }
                 },
             )
