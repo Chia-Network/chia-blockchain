@@ -10,10 +10,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ## What's Changed
 
+### Added
+
+- Remote Wallet and new RPC calls
+
 ### Changed
 - Numerous hardening measures and soft fork: Please read our blog post for more information
   <url>
-- Add Remote Wallet and new RPC calls
 - Make the mempool a bit more defensive on slow machines
 - Harden connection handling and message validation in `WSChiaConnection`
 - Improve `register_for_coin_updates`
