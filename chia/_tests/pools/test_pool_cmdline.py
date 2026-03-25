@@ -38,7 +38,7 @@ from chia.cmds.plotnft import (
     LeavePlotNFTCMD,
     ShowPlotNFTCMD,
 )
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState
 from chia.simulator.setup_services import setup_farmer
 from chia.util.bech32m import encode_puzzle_hash
@@ -890,20 +890,14 @@ async def test_plotnft_cli_change_payout(
     out, _err = capsys.readouterr()
     assert f"{bytes32(32 * b'0').hex()} Not found." in out
 
-    new_config: PoolWalletConfig = PoolWalletConfig(
-        launcher_id=pw_info.launcher_id,
-        pool_url="http://pool.example.com",
-        payout_instructions=zero_address,
-        target_puzzle_hash=bytes32(32 * b"0"),
-        p2_singleton_puzzle_hash=pw_info.p2_singleton_puzzle_hash,
-        owner_public_key=G1Element(),
-    )
-
-    await update_pool_config(root_path=root_path, pool_config_list=[new_config])
-    config: list[PoolWalletConfig] = load_pool_config(root_path)
-    wanted_config = next((x for x in config if x.launcher_id == pw_info.launcher_id), None)
-    assert wanted_config is not None
-    assert wanted_config.payout_instructions == zero_address
+    with PoolingShareState.acquire(
+        root_path=root_path, p2_singleton_puzzle_hash=pw_info.p2_singleton_puzzle_hash
+    ) as pool_config:
+        pool_config.launcher_id = pw_info.launcher_id
+        pool_config.pool_url = "http://pool.example.com"
+        pool_config.payout_instructions = zero_address
+        pool_config.target_puzzle_hash = bytes32(32 * b"0")
+        pool_config.owner_public_key = G1Element()
 
     await ChangePayoutInstructionsPlotNFTCMD(
         context=ChiaCliContext(root_path=root_path),
@@ -913,10 +907,10 @@ async def test_plotnft_cli_change_payout(
     out, _err = capsys.readouterr()
     assert f"Payout Instructions for launcher id: {pw_info.launcher_id.hex()} successfully updated" in out
 
-    config = load_pool_config(root_path)
-    wanted_config = next((x for x in config if x.launcher_id == pw_info.launcher_id), None)
-    assert wanted_config is not None
-    assert wanted_config.payout_instructions == burn_ph.hex()
+    with PoolingShareState.acquire(
+        root_path=root_path, p2_singleton_puzzle_hash=pw_info.p2_singleton_puzzle_hash
+    ) as pool_config:
+        assert pool_config.payout_instructions == burn_ph.hex()
 
 
 @pytest.mark.parametrize(

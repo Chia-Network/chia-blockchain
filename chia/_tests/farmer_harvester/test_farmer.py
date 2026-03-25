@@ -23,7 +23,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
-from chia.pools.pool_config import PoolWalletConfig
+from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
@@ -141,7 +141,7 @@ class NewProofOfSpaceCase:
     pool_contract_puzzle_hash: bytes32
     height: uint32
     proof: bytes
-    pool_config: PoolWalletConfig
+    pool_config: PoolingShareState
     pool_difficulty: uint64 | None
     authentication_token_timeout: uint8 | None
     farmer_private_keys: list[PrivateKey]
@@ -164,7 +164,7 @@ class NewProofOfSpaceCase:
         expected_pool_stats: dict[str, Any],
     ) -> NewProofOfSpaceCase:
         p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
-        pool_config = PoolWalletConfig(
+        pool_config = PoolingShareState(
             launcher_id=bytes32.fromhex("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
             pool_url=pool_url,
             payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
