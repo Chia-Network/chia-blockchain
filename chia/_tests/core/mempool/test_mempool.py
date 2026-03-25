@@ -2912,9 +2912,9 @@ class TestMaliciousGenerators:
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
-        with pytest.raises(ValidationError) as e:
-            await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert e.value.code == Err.WRONG_PUZZLE_HASH
+        status, error = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.WRONG_PUZZLE_HASH
 
 
 coins = make_test_coins()
