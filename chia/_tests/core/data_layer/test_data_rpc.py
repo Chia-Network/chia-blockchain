@@ -206,9 +206,9 @@ async def check_mempool_spend_count_or_fail(
         tx_record = TransactionRecord.from_json_dict(val["transaction"])
         for _, status, error in tx_record.sent_to:
             if status == MempoolInclusionStatus.FAILED.value:
-                raise RuntimeError(f"Transaction {tx_id} rejected by mempool: {error}")
-    except ValueError:
-        pass
+                raise RuntimeError(f"Transaction {tx_id} rejected by mempool: {error}")  # pragma: no cover
+    except ValueError:  # pragma: no cover
+        pass  # pragma: no cover
     return full_node_api.full_node.mempool_manager.mempool.size() >= num_of_spends
 
 
