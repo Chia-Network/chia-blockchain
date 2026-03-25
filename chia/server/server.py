@@ -361,7 +361,7 @@ class ChiaServer:
             if (
                 not self.accept_inbound_connections(connection.connection_type)
                 and not is_in_network(connection.peer_info.host, self.exempt_peer_networks)
-                and not is_localhost(connection.peer_info.host)
+                and not (connection.connection_type == NodeType.TIMELORD and is_localhost(connection.peer_info.host))
             ):
                 self.log.info(
                     f"Not accepting inbound connection: {connection.get_peer_logging()} "
