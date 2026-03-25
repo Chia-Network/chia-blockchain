@@ -45,9 +45,9 @@ class PoolingShareState:
     @contextmanager
     def _get_raw_content(cls, *, root_path: Path) -> Iterator[list[_PoolConfig]]:
         if not cls.state_path(root_path).parent.exists():
-            cls.state_path(root_path).parent.mkdir()
+            cls.state_path(root_path).parent.mkdir(exist_ok=True)
         if not cls.state_path(root_path).exists():
-            cls.state_path(root_path).touch()
+            cls.state_path(root_path).touch(exist_ok=True)
         with (
             cls.lock(root_path),
             open(cls.state_path(root_path), "r+") as f,
