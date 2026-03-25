@@ -132,5 +132,5 @@ def perform_migration_from_old_config(root_path: Path) -> None:
                     owner_public_key=G1Element.from_bytes(bytes.fromhex(pool["owner_public_key"])),
                     p2_singleton_puzzle_hash=bytes32.from_hexstr(pool["p2_singleton_puzzle_hash"]),
                 ).add(root_path=root_path)
-                chia_config["pool"]["pool_list"] = []
-                save_config(root_path, "config.yaml", chia_config)
+            chia_config["pool"]["pool_list"] = []
+            save_config(root_path, "config.yaml", chia_config)
