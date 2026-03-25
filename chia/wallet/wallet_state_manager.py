@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import json
 import logging
@@ -89,6 +90,8 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
+from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import (
     KeyHints,
     PathHint,
@@ -158,6 +161,7 @@ class WalletStateManager:
     # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
     # When this is a dataclass, these errors should go away
     interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
     interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     constants: ConsensusConstants
     config: dict[str, Any]
@@ -191,6 +195,7 @@ class WalletStateManager:
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     interested_store: WalletInterestedStore
+    remote_coin_store: RemoteCoinStore
     retry_store: WalletRetryStore
     multiprocessing_context: multiprocessing.context.BaseContext
     server: ChiaServer
@@ -252,6 +257,7 @@ class WalletStateManager:
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
+        self.remote_coin_store = await RemoteCoinStore.create(self.db_wrapper)
         self.retry_store = await WalletRetryStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
@@ -343,10 +349,21 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
+            elif wallet_type == WalletType.REMOTE:
+                wallet = await RemoteWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
         return self
+
+    def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
+        # Warning: this is a shallow copy of the cache
+        # Do not modify the cache directly, use the add_interested_coin_ids method instead
+        return copy.copy(self.interested_coin_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
@@ -387,6 +404,12 @@ class WalletStateManager:
             )
 
         return wallet
+
+    def get_existing_remote_wallet(self) -> RemoteWallet | None:
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.REMOTE:
+                return cast(RemoteWallet, wallet)
+        return None
 
     @asynccontextmanager
     async def puzzle_hash_db_writer(self) -> AsyncIterator[None]:
@@ -1690,7 +1713,9 @@ class WalletStateManager:
 
                     wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
                     coin_data: Streamable | None = None
-                    # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
+                    # If we already have this coin, & it was spent & confirmed at the same heights, then return (done).
+                    # Exception: if this record is REMOTE and we now can map the puzzle hash to a real wallet,
+                    # we must continue processing so ownership can transition away from interest-only storage.
                     if local_record is not None:
                         local_spent = None
                         if local_record.spent_block_height != 0:
@@ -1698,6 +1723,11 @@ class WalletStateManager:
                         if (
                             local_spent == coin_state.spent_height
                             and local_record.confirmed_block_height == coin_state.created_height
+                            and not (
+                                local_record.wallet_type == WalletType.REMOTE
+                                and wallet_identifier is not None
+                                and wallet_identifier.type != WalletType.REMOTE
+                            )
                         ):
                             continue
 
@@ -1705,7 +1735,12 @@ class WalletStateManager:
                         await self.trade_manager.coins_of_interest_farmed(coin_state, fork_height, peer)
                     if wallet_identifier is not None:
                         self.log.debug(f"Found existing wallet_identifier: {wallet_identifier}, coin: {coin_name}")
-                    elif local_record is not None:
+                    elif local_record is not None and (
+                        local_record.wallet_type != WalletType.REMOTE or uint32(local_record.wallet_id) in self.wallets
+                    ):
+                        # If we already have a local coin record, use it as a fallback wallet identifier.
+                        # This includes REMOTE records so a later spent update can flow through set_spent()
+                        # rather than relying on add_coin_record() replacement semantics.
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
@@ -1719,6 +1754,27 @@ class WalletStateManager:
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
+
+                    # If this coin was previously only stored as an "interest-only" record (REMOTE),
+                    # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
+                    # logic runs and the record can be replaced with the real wallet identifier.
+                    if (
+                        wallet_identifier is not None
+                        and local_record is not None
+                        and local_record.wallet_type == WalletType.REMOTE
+                        and wallet_identifier.type != WalletType.REMOTE
+                    ):
+                        local_record = None
+
+                    if wallet_identifier is None:
+                        cache = self.get_interested_coin_cache()
+                        if coin_name in cache:
+                            interested_wallet_ids = [
+                                wallet_id for w in cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
+                            ]
+                            remote_wallet = self.get_existing_remote_wallet()
+                            if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
+                                wallet_identifier = WalletIdentifier(remote_wallet.id(), WalletType.REMOTE)
 
                     if wallet_identifier is None:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet

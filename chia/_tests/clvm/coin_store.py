@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from chia_rs import CoinRecord, ConsensusConstants, SpendBundle, check_time_locks
+from chia_rs import CoinRecord, CoinSpend, ConsensusConstants, SpendBundle, check_time_locks
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -30,7 +30,7 @@ class CoinTimestamp:
 class CoinStore:
     def __init__(self, constants: ConsensusConstants, reward_mask: int = 0):
         self._db: dict[bytes32, CoinRecord] = dict()
-        self._ph_index: dict = defaultdict(list)
+        self._ph_index: dict[bytes32, list[bytes32]] = defaultdict(list)
         self._reward_mask = reward_mask
         self._constants = constants
 
@@ -39,7 +39,7 @@ class CoinStore:
         puzzle_hash: bytes32,
         birthday: CoinTimestamp,
         amount: int = 1024,
-        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),
+        prefix: bytes32 = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),
     ) -> Coin:
         parent = bytes32(
             [
@@ -101,7 +101,7 @@ class CoinStore:
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
         max_cost: int,
-    ):
+    ) -> tuple[list[Coin], list[CoinSpend]]:
         err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")

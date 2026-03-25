@@ -34,6 +34,7 @@ from chia.util.task_referencer import create_referenced_task
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
 MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
+MAX_IP_ADDRESS_STRING_LENGTH = 45  # IPv4 max 15, IPv6 max 45
 NETWORK_ID_DEFAULT_PORTS = {
     "mainnet": 8444,
     "testnet7": 58444,
@@ -459,6 +460,16 @@ class FullNodeDiscovery:
         if is_misbehaving:
             return None
         for peer in peer_list:
+            # Fast-fail oversized junk before IP parsing. IPAddress.create() rejects
+            # invalid input too, but parsing pathological long strings is much slower.
+            if len(peer.host) > MAX_IP_ADDRESS_STRING_LENGTH:
+                self.log.debug(f"Skipping peer with oversized host string ({len(peer.host)} chars)")
+                continue
+            try:
+                IPAddress.create(peer.host)
+            except ValueError:
+                self.log.debug(f"Skipping peer with invalid host: {peer.host!r:.50}")
+                continue
             if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
                 current_peer = TimestampedPeerInfo(
@@ -552,6 +563,12 @@ class FullNodePeers(FullNodeDiscovery):
     async def add_peers_neighbour(self, peers: list[TimestampedPeerInfo], neighbour_info: PeerInfo) -> None:
         async with self.lock:
             for peer in peers:
+                if len(peer.host) > MAX_IP_ADDRESS_STRING_LENGTH:
+                    continue
+                try:
+                    IPAddress.create(peer.host)
+                except ValueError:
+                    continue
                 if neighbour_info not in self.neighbour_known_peers:
                     self.neighbour_known_peers[neighbour_info] = set()
                 if peer.host not in self.neighbour_known_peers[neighbour_info]:

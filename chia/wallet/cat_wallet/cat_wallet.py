@@ -292,7 +292,7 @@ class CATWallet:
         try:
             self.cat_info = cls.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        except AssertionError:
+        except (AssertionError, ValueError):
             # Do a migration of the lineage proofs
             cat_info = LegacyCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.cat_info = cls.wallet_info_type(cat_info.limitations_program_hash, cat_info.my_tail)

@@ -28,11 +28,11 @@ from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
+from chia.util.harvester_config import add_plot_directory, remove_plot_directory
 from chia.util.streamable import _T_Streamable
 
 

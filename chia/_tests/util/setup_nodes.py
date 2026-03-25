@@ -91,7 +91,11 @@ async def setup_two_nodes(
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
 
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with (
             create_block_tools_async(
@@ -132,7 +136,11 @@ async def setup_n_nodes(
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
     with ExitStack() as stack:
         keychains = [stack.enter_context(TempKeyring(populate=True)) for _ in range(n)]
         async with AsyncExitStack() as async_exit_stack:
@@ -260,6 +268,7 @@ async def setup_simulators_and_wallets_inner(
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
         config_overrides["full_node.log_coins"] = True
+        config_overrides["full_node.block_creation_timeout"] = 10
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
             await async_exit_stack.enter_async_context(
@@ -380,7 +389,11 @@ async def setup_full_system_inner(
     keychain2: Keychain,
     shared_b_tools: BlockTools,
 ) -> AsyncIterator[FullSystem]:
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
 
     self_hostname = shared_b_tools.config["self_hostname"]
 

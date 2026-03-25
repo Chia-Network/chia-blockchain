@@ -12,7 +12,7 @@ from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 
 
-async def check_block_store_invariant(bc: Blockchain):
+async def check_block_store_invariant(bc: Blockchain) -> None:
     db_wrapper = bc.block_store.db_wrapper
 
     if db_wrapper.db_version == 1:
@@ -105,6 +105,8 @@ async def _validate_and_add_block(
     if fork_info is None:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
 
+    # Match full-node add_prevalidated_blocks() by passing the prevalidated
+    # overlay record into add_block().
     block_record = aug_blockchain.try_block_record(block.header_hash)
     (
         result,

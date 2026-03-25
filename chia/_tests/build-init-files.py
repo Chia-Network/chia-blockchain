@@ -56,7 +56,7 @@ def traverse_directory(path: pathlib.Path) -> list[pathlib.Path]:
     "-r", "--root", "root_str", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True), default="."
 )
 @click.option("-v", "--verbose", count=True, help=f"Increase verbosity up to {len(log_levels) - 1} times")
-def command(verbose, root_str):
+def command(verbose: int, root_str: str) -> None:
     logger = logging.getLogger()
     log_level = log_levels.get(verbose, min(log_levels.values()))
     logger.setLevel(log_level)

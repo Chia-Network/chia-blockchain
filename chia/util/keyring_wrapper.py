@@ -219,7 +219,7 @@ class KeyringWrapper:
         self.cached_passphrase_is_validated = validated
 
     def has_cached_master_passphrase(self) -> bool:
-        passphrase = self.get_cached_master_passphrase()
+        passphrase, _ = self.get_cached_master_passphrase()
         return passphrase is not None and len(passphrase) > 0
 
     def has_master_passphrase(self) -> bool:

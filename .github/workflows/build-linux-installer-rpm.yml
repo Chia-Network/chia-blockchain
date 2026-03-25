@@ -173,7 +173,7 @@ jobs:
           bash build_linux_rpm-2-installer.sh amd64
 
       - name: Upload fpm-generated rpm spec files
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           if-no-files-found: error
           name: spec
@@ -182,7 +182,7 @@ jobs:
             build_scripts/dist/gui.spec
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: chia-installers-linux-rpm-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
@@ -313,7 +313,7 @@ jobs:
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Download packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         id: download
         with:
           name: chia-installers-linux-rpm-intel

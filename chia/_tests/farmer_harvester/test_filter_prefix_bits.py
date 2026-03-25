@@ -19,7 +19,7 @@ from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
 from chia.protocols import farmer_protocol
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
+from chia.types.blockchain_format.proof_of_space import passes_plot_filter
 from chia.util.keychain import Keychain
 
 
@@ -39,7 +39,7 @@ def test_filter_prefix_bits_on_blocks(
 ) -> None:
     passed = 0
     for block in default_10000_blocks:
-        plot_id = get_plot_id(blockchain_constants, block.reward_chain_block.proof_of_space)
+        plot_id = block.reward_chain_block.proof_of_space.compute_plot_id()
         original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0

@@ -26,7 +26,7 @@ def puzzle_for_pk(public_key: bytes) -> Program:
     return MOD.curry(public_key)
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: Program) -> Program:
     delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
 

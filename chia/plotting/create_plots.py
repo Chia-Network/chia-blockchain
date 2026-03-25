@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey, create_v2_plot
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey, compute_plot_id_v2, create_v2_plot
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16
 from chiapos import DiskPlotter
@@ -14,7 +14,6 @@ from chia.plotting.util import Params, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
-    calculate_plot_id_v2,
     generate_plot_public_key,
 )
 from chia.util.bech32m import decode_puzzle_hash
@@ -334,8 +333,13 @@ async def create_v2_plots(
         else:  # pragma: no cover
             assert False, "one of pool_contract_puzzle_hash and pool_public_key must be set"
 
-        plot_id = calculate_plot_id_v2(
-            uint8(size), plot_index, meta_group, pool_ph_or_pk, plot_public_key, uint8(strength)
+        plot_id = compute_plot_id_v2(
+            uint8(strength),
+            plot_public_key,
+            keys.pool_public_key,
+            keys.pool_contract_puzzle_hash,
+            plot_index,
+            meta_group,
         )
 
         filename = f"plot-k{size}-{plot_id}.plot2"
