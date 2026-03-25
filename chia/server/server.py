@@ -358,9 +358,11 @@ class ChiaServer:
                     raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Limit inbound connections to config's specifications.
-            if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
-                connection.peer_info.host, self.exempt_peer_networks
-            ) and not is_localhost(connection.peer_info.host):
+            if (
+                not self.accept_inbound_connections(connection.connection_type)
+                and not is_in_network(connection.peer_info.host, self.exempt_peer_networks)
+                and not is_localhost(connection.peer_info.host)
+            ):
                 self.log.info(
                     f"Not accepting inbound connection: {connection.get_peer_logging()} "
                     f"of type {connection.connection_type.name}. Inbound limit reached."
