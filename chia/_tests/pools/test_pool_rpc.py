@@ -22,6 +22,7 @@ from pytest_mock import MockerFixture
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
@@ -31,8 +32,6 @@ from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
 from chia.wallet.transaction_record import TransactionRecord
@@ -340,22 +339,26 @@ class TestPoolWalletRpc:
         assert status.current.relative_lock_height == 0
         assert status.current.version == 1
         # Check that config has been written properly
-        full_config: dict[str, Any] = load_config(wallet.wallet_state_manager.root_path, "config.yaml")
-        pool_list: list[dict[str, Any]] = full_config["pool"]["pool_list"]
-        assert len(pool_list) == 1
-        pool_config = pool_list[0]
-        assert (
-            pool_config["owner_public_key"]
-            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+        p2_singleton_puzzle_hashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+            root_path=wallet.wallet_state_manager.root_path
         )
-        # It can be one of multiple launcher IDs, due to selecting a different coin
-        launcher_id = None
-        for addition in create_response.transactions[0].additions:
-            if addition.puzzle_hash == SINGLETON_LAUNCHER_HASH:
-                launcher_id = addition.name()
-                break
-        assert hexstr_to_bytes(pool_config["launcher_id"]) == launcher_id
-        assert pool_config["pool_url"] == ""
+        assert len(p2_singleton_puzzle_hashes) == 1
+        with PoolingShareState.acquire(
+            root_path=wallet.wallet_state_manager.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hashes[0]
+        ) as pool_config:
+            assert pool_config.owner_public_key == G1Element.from_bytes(
+                bytes.fromhex(
+                    "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+                )
+            )
+            # It can be one of multiple launcher IDs, due to selecting a different coin
+            launcher_id = None
+            for addition in create_response.transactions[0].additions:
+                if addition.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    launcher_id = addition.name()
+                    break
+            assert pool_config.launcher_id == launcher_id
+            assert pool_config.pool_url == ""
 
     @pytest.mark.anyio
     async def test_create_new_pool_wallet_farm_to_pool(
@@ -407,22 +410,26 @@ class TestPoolWalletRpc:
         assert status.current.relative_lock_height == 10
         assert status.current.version == 1
         # Check that config has been written properly
-        full_config: dict[str, Any] = load_config(wallet.wallet_state_manager.root_path, "config.yaml")
-        pool_list: list[dict[str, Any]] = full_config["pool"]["pool_list"]
-        assert len(pool_list) == 1
-        pool_config = pool_list[0]
-        assert (
-            pool_config["owner_public_key"]
-            == "0x880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+        p2_singleton_puzzle_hashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+            root_path=wallet.wallet_state_manager.root_path
         )
-        # It can be one of multiple launcher IDs, due to selecting a different coin
-        launcher_id = None
-        for addition in create_response.transactions[0].additions:
-            if addition.puzzle_hash == SINGLETON_LAUNCHER_HASH:
-                launcher_id = addition.name()
-                break
-        assert hexstr_to_bytes(pool_config["launcher_id"]) == launcher_id
-        assert pool_config["pool_url"] == "http://pool.example.com"
+        assert len(p2_singleton_puzzle_hashes) == 1
+        with PoolingShareState.acquire(
+            root_path=wallet.wallet_state_manager.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hashes[0]
+        ) as pool_config:
+            assert pool_config.owner_public_key == G1Element.from_bytes(
+                bytes.fromhex(
+                    "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
+                )
+            )
+            # It can be one of multiple launcher IDs, due to selecting a different coin
+            launcher_id = None
+            for addition in create_response.transactions[0].additions:
+                if addition.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    launcher_id = addition.name()
+                    break
+            assert pool_config.launcher_id == launcher_id
+            assert pool_config.pool_url == "http://pool.example.com"
 
     @pytest.mark.anyio
     async def test_create_multiple_pool_wallets(
@@ -495,9 +502,10 @@ class TestPoolWalletRpc:
             assert status_2.current.state == PoolSingletonState.FARMING_TO_POOL.value
             assert status_3.current.state == PoolSingletonState.SELF_POOLING.value
 
-        full_config = load_config(wallet.wallet_state_manager.root_path, "config.yaml")
-        pool_list: list[dict[str, Any]] = full_config["pool"]["pool_list"]
-        assert len(pool_list) == 2
+        p2_singleton_puzzle_hashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+            root_path=wallet.wallet_state_manager.root_path
+        )
+        assert len(p2_singleton_puzzle_hashes) == 2
 
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(3)) == 0
@@ -564,9 +572,10 @@ class TestPoolWalletRpc:
                 await full_node_api.process_transaction_records(records=create_response.transactions)
                 await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-                full_config = load_config(wallet.wallet_state_manager.root_path, "config.yaml")
-                pool_list = full_config["pool"]["pool_list"]
-                assert len(pool_list) == i + 3
+                p2_singleton_puzzle_hashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+                    root_path=wallet.wallet_state_manager.root_path
+                )
+                assert len(p2_singleton_puzzle_hashes) == i + 3
                 if i == 0:
                     for some_wallet in wallet_node.wallet_state_manager.wallets.values():
                         if some_wallet.type() == WalletType.POOLING_WALLET:

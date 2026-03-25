@@ -41,7 +41,6 @@ from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
@@ -718,17 +717,10 @@ class Farmer:
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> None:
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                with lock_and_load_config(self._root_path, "config.yaml") as config:
-                    new_list = []
-                    pool_list = config["pool"].get("pool_list", [])
-                    if pool_list is not None:
-                        for list_element in pool_list:
-                            if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
-                                list_element["payout_instructions"] = payout_instructions
-                            new_list.append(list_element)
-
-                    config["pool"]["pool_list"] = new_list
-                    save_config(self._root_path, "config.yaml", config)
+                with PoolingShareState.acquire(
+                    root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+                ) as pool_config:
+                    pool_config.payout_instructions = payout_instructions
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
                 pool_state_dict["next_farmer_update"] = 0
                 return

@@ -19,6 +19,7 @@ class _PoolConfig(TypedDict):
     pool_url: str
     payout_instructions: str
     target_puzzle_hash: str
+    p2_singleton_puzzle_hash: str
     owner_public_key: str
 
 
@@ -41,7 +42,7 @@ class PoolingShareState:
 
     @classmethod
     @contextmanager
-    def _get_raw_content(cls, *, root_path: Path) -> Iterator[dict[str, _PoolConfig]]:
+    def _get_raw_content(cls, *, root_path: Path) -> Iterator[list[_PoolConfig]]:
         if not cls.state_path(root_path).parent.exists():
             cls.state_path(root_path).parent.mkdir()
         if not cls.state_path(root_path).exists():
@@ -50,36 +51,43 @@ class PoolingShareState:
             cls.lock(root_path),
             open(cls.state_path(root_path), "r+") as f,
         ):
-            loaded_dict = yaml.safe_load(f)
-            if loaded_dict is None:
-                loaded_dict = {}
-            yield loaded_dict
-            yaml.dump(loaded_dict, f)
+            loaded_content = yaml.safe_load(f)
+            if loaded_content is None:
+                loaded_list = []
+            else:
+                loaded_list = loaded_content["pooling_information"]
+            yield loaded_list
+            if loaded_list != []:
+                yaml.dump({"pooling_information": loaded_list}, f)
+
+    @staticmethod
+    def _p2_singleton_puzzle_hashes_from_list(loaded_list: list[_PoolConfig]) -> list[bytes32]:
+        return [bytes32.from_hexstr(p["p2_singleton_puzzle_hash"]) for p in loaded_list]
 
     @classmethod
     def get_all_p2_singleton_puzzle_hashes(cls, *, root_path: Path) -> list[bytes32]:
-        with cls._get_raw_content(root_path=root_path) as loaded_dict:
-            return [bytes32.from_hexstr(p) for p in loaded_dict.keys()]
+        with cls._get_raw_content(root_path=root_path) as loaded_list:
+            return cls._p2_singleton_puzzle_hashes_from_list(loaded_list)
 
     def add(self, *, root_path: Path) -> None:
-        with self._get_raw_content(root_path=root_path) as loaded_dict:
-            if self.p2_singleton_puzzle_hash.hex() in loaded_dict:
+        with self._get_raw_content(root_path=root_path) as loaded_list:
+            if self.p2_singleton_puzzle_hash in self._p2_singleton_puzzle_hashes_from_list(loaded_list):
                 raise ValueError("Can only call .add() for new singleton entries")
-            loaded_dict[self.p2_singleton_puzzle_hash.hex()] = {
-                "launcher_id": self.launcher_id.hex(),
-                "pool_url": self.pool_url,
-                "payout_instructions": self.payout_instructions,
-                "target_puzzle_hash": self.target_puzzle_hash.hex(),
-                "owner_public_key": bytes(self.owner_public_key).hex(),
-            }
+            loaded_list.append(self.to_json_dict())
 
     @classmethod
     @contextmanager
     def acquire(cls, *, root_path: Path, p2_singleton_puzzle_hash: bytes32) -> Iterator[Self]:
-        with cls._get_raw_content(root_path=root_path) as loaded_dict:
-            if p2_singleton_puzzle_hash.hex() not in loaded_dict:
+        with cls._get_raw_content(root_path=root_path) as loaded_list:
+            if p2_singleton_puzzle_hash not in cls._p2_singleton_puzzle_hashes_from_list(loaded_list):
                 raise ValueError(f"Attempting to load non-existent pooling state for {p2_singleton_puzzle_hash.hex()}")
-            config = loaded_dict[p2_singleton_puzzle_hash.hex()]
+            config = loaded_list[
+                next(
+                    i
+                    for i, c in enumerate(loaded_list)
+                    if c["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
+                )
+            ]
             self = cls(
                 launcher_id=bytes32.from_hexstr(config["launcher_id"]),
                 pool_url=config["pool_url"],
@@ -89,10 +97,17 @@ class PoolingShareState:
                 owner_public_key=G1Element.from_bytes(bytes.fromhex(config["owner_public_key"])),
             )
             yield self
-            loaded_dict[p2_singleton_puzzle_hash.hex()] = {
-                "launcher_id": self.launcher_id.hex(),
-                "pool_url": self.pool_url,
-                "payout_instructions": self.payout_instructions,
-                "target_puzzle_hash": self.target_puzzle_hash.hex(),
-                "owner_public_key": bytes(self.owner_public_key).hex(),
-            }
+            for i, conf in enumerate(loaded_list):
+                if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
+                    loaded_list[i] = self.to_json_dict()
+                    break
+
+    def to_json_dict(self) -> _PoolConfig:
+        return {
+            "launcher_id": self.launcher_id.hex(),
+            "pool_url": self.pool_url,
+            "payout_instructions": self.payout_instructions,
+            "target_puzzle_hash": self.target_puzzle_hash.hex(),
+            "owner_public_key": bytes(self.owner_public_key).hex(),
+            "p2_singleton_puzzle_hash": self.p2_singleton_puzzle_hash.hex(),
+        }
