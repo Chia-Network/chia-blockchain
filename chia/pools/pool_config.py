@@ -11,6 +11,7 @@ from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import Self
 
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.lock import Lockfile
 
 
@@ -113,3 +114,23 @@ class PoolingShareState:
             "owner_public_key": bytes(self.owner_public_key).hex(),
             "p2_singleton_puzzle_hash": self.p2_singleton_puzzle_hash.hex(),
         }
+
+
+def perform_migration_from_old_config(root_path: Path) -> None:
+    with lock_and_load_config(root_path, "config.yaml") as chia_config:
+        if (
+            not PoolingShareState.state_path(root_path=root_path).exists()
+            and chia_config["pool"].get("pool_list", []) != []
+        ):
+            pool_list = chia_config["pool"]["pool_list"]
+            for pool in pool_list:
+                PoolingShareState(
+                    launcher_id=bytes32.from_hexstr(pool["launcher_id"]),
+                    pool_url=pool["pool_url"],
+                    payout_instructions=pool["payout_instructions"],
+                    target_puzzle_hash=bytes32.from_hexstr(pool["target_puzzle_hash"]),
+                    owner_public_key=G1Element.from_bytes(bytes.fromhex(pool["owner_public_key"])),
+                    p2_singleton_puzzle_hash=bytes32.from_hexstr(pool["p2_singleton_puzzle_hash"]),
+                ).add(root_path=root_path)
+                chia_config["pool"]["pool_list"] = []
+                save_config(root_path, "config.yaml", chia_config)

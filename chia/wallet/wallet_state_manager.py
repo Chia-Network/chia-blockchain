@@ -25,6 +25,7 @@ from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pai
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.pools import pool_config
 from chia.pools.pool_puzzles import (
     get_most_recent_singleton_coin_from_coin_spend,
     solution_to_pool_state,
@@ -294,6 +295,8 @@ class WalletStateManager:
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
+
+        pool_config.perform_migration_from_old_config(root_path=self.root_path)
 
         wallet: WalletProtocol[Any] | None = None
         for wallet_info in await self.get_all_wallet_info_entries():
