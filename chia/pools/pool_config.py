@@ -58,6 +58,8 @@ class PoolingShareState:
                 loaded_list = loaded_content["pooling_information"]
             yield loaded_list
             if loaded_list != []:
+                f.seek(0)
+                f.truncate()
                 yaml.dump({"pooling_information": loaded_list}, f)
 
     @staticmethod
