@@ -141,7 +141,7 @@ jobs:
       concurrency-name: macos-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-14
+      runs-on: macos-15
       arch: arm
       arch-emoji: 💪
       collect-junit: false
@@ -157,7 +157,7 @@ jobs:
       concurrency-name: ubuntu-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-latest
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
@@ -173,7 +173,7 @@ jobs:
       concurrency-name: ubuntu-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-24.04-arm
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404-arm' || 'ubuntu-24.04-arm' }}
       arch: arm
       arch-emoji: 💪
       collect-junit: false
@@ -189,7 +189,7 @@ jobs:
       concurrency-name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: windows-latest
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-windows-2025' || 'windows-latest' }}
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
@@ -237,7 +237,7 @@ jobs:
 
       # - name: Download Results
       #   if: false
-      #   uses: actions/download-artifact@v7
+      #   uses: actions/download-artifact@v8
       #   with:
       #     merge-multiple: true
       #     pattern: junit-data-*
@@ -256,14 +256,14 @@ jobs:
 
       # - name: Publish formatted JUnit data
       #   if: false
-      #   uses: actions/upload-artifact@v6
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: junit-data
       #     path: junit-data/*
       #     if-no-files-found: error
 
       - name: Download Coverage
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
           pattern: coverage-data-*
@@ -289,7 +289,7 @@ jobs:
 
       - name: Publish JUnit results
         if: always() && steps.alls-green.outputs.success == 'true' && false
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: junit-results
           path: junit-results/*
@@ -302,9 +302,11 @@ jobs:
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - uses: coverallsapp/github-action@v2
-        if: always() && steps.alls-green.outputs.success == 'true'
+        if: always() && steps.alls-green.outputs.success == 'true' && github.event.repository.visibility == 'public'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          fail-on-error: false
 
       - name: Coverage report (chia/)
         if: always() && steps.alls-green.outputs.success == 'true'
@@ -414,7 +416,7 @@ jobs:
 
       - name: Publish coverage reports
         if: always() && steps.alls-green.outputs.success == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
           path: coverage-reports/*

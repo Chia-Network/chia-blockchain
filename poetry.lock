@@ -535,18 +535,18 @@ bitarray = ">=3.0.0,<4.0"
 
 [[package]]
 name = "boto3"
-version = "1.42.45"
+version = "1.42.59"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "boto3-1.42.45-py3-none-any.whl", hash = "sha256:5074e074a718a6f3c2b519cbb9ceab258f17b331a143d23351d487984f2a412f"},
-    {file = "boto3-1.42.45.tar.gz", hash = "sha256:4db50b8b39321fab87ff7f40ab407887d436d004c1f2b0dfdf56e42b4884709b"},
+    {file = "boto3-1.42.59-py3-none-any.whl", hash = "sha256:7a66e3e8e2087ea4403e135e9de592e6d63fc9a91080d8dac415bb74df873a72"},
+    {file = "boto3-1.42.59.tar.gz", hash = "sha256:6c4a14a4eb37b58a9048901bdeefbe1c529638b73e8f55413319a25f010ca211"},
 ]
 
 [package.dependencies]
-botocore = ">=1.42.45,<1.43.0"
+botocore = ">=1.42.59,<1.43.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.16.0,<0.17.0"
 
@@ -555,14 +555,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.42.47"
+version = "1.42.65"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "botocore-1.42.47-py3-none-any.whl", hash = "sha256:c60f5feaf189423e17755aca3f1d672b7466620dd2032440b32aaac64ae8cac8"},
-    {file = "botocore-1.42.47.tar.gz", hash = "sha256:c26e190c1b4d863ba7b44dc68cc574d8eb862ddae5f0fe3472801daee12a0378"},
+    {file = "botocore-1.42.65-py3-none-any.whl", hash = "sha256:0283c332ce00cbd1b894e86b7bed89dd624a5ca3a4ee62ec4db3898d16652e98"},
+    {file = "botocore-1.42.65.tar.gz", hash = "sha256:7d52c148df07f70c375eeda58f99b439c7c7836c25df74cccfba3bb6e12444d2"},
 ]
 
 [package.dependencies]
@@ -571,7 +571,7 @@ python-dateutil = ">=2.1,<3.0.0"
 urllib3 = {version = ">=1.25.4,<2.2.0 || >2.2.0,<3", markers = "python_version >= \"3.10\""}
 
 [package.extras]
-crt = ["awscrt (==0.29.2)"]
+crt = ["awscrt (==0.31.2)"]
 
 [[package]]
 name = "build"
@@ -872,38 +872,38 @@ pytest = ">=8.3.3,<9.0.0"
 
 [[package]]
 name = "chia-rs"
-version = "0.37.0"
+version = "0.41.0"
 description = ""
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "chia_rs-0.37.0-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:2d41db7846a54f4e9acc5e20096eab8a8cd387326fbf9253eef303150dcc124b"},
-    {file = "chia_rs-0.37.0-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:938ebde34af09b96acb5bf6f3be0200e28e8cdf6cfe54cda7f8dbe66a5b5bfc8"},
-    {file = "chia_rs-0.37.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:44d3661dd4056761ba0b7d186a1bf5688f988c50201e77ad3ce92340f02aaa6d"},
-    {file = "chia_rs-0.37.0-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:10b490c14b8f607deba13fcc0a0095bb31affa4d0b0f94423538c21296a1c388"},
-    {file = "chia_rs-0.37.0-cp310-cp310-win_amd64.whl", hash = "sha256:83e64cd834791d0e61dd5cd13650834897c4708d6130cd28be83b756d3c12681"},
-    {file = "chia_rs-0.37.0-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:d58ad1556baaba4c3e36d3bfa6c79611f3349c938635c173a9bea7c5aa755b87"},
-    {file = "chia_rs-0.37.0-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:6d925a188e9a38c2020a8d40d080d8c507cad6c82c27a648def2e6a7f005afa0"},
-    {file = "chia_rs-0.37.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:27753b9b45004688293368f289d69ac43085ca7bb203229ed9d8c9d58fd62c1c"},
-    {file = "chia_rs-0.37.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:e53f0cdbb1ea5e04d3fc484633a615f65c8dfc062e7b21127b7fc8a02085d827"},
-    {file = "chia_rs-0.37.0-cp311-cp311-win_amd64.whl", hash = "sha256:74daad0d2266aa293406d92513d57ce3beda6c7da73ba365143c78ac871df7f6"},
-    {file = "chia_rs-0.37.0-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:614e8154be519006e828553c951f3604efde54225731936c27d82fe07dc1770d"},
-    {file = "chia_rs-0.37.0-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:3e813637df5dbfbf76797cd576ae4088f760e9dafd3930d9848285d80e2ac8ea"},
-    {file = "chia_rs-0.37.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:2472009ca39831409397912bb6f3b4d76f6ef8059cc8fe840685b5e847c94fc9"},
-    {file = "chia_rs-0.37.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:4bac95fa0813954171f37d30264d7a58680d96b5bef63aa38cd0bf655e5c8f41"},
-    {file = "chia_rs-0.37.0-cp312-cp312-win_amd64.whl", hash = "sha256:5cf3cc0b1db442e4c2d85b3c2034b88f1d87dd097aac2b8591af9309a989c23a"},
-    {file = "chia_rs-0.37.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:cd5293bf22044c76632d870a512ecc4ff6ba69021d1880a7d4458f4342b3cd59"},
-    {file = "chia_rs-0.37.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:ccfb622abc491780f2405e0de544a6ca7b924d5004b7dfe4b79c4aa54037dd46"},
-    {file = "chia_rs-0.37.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:ef2c1cc971860ee4d084e371752612fbc2a61c6e2cf280e5ff2e05efa9577c95"},
-    {file = "chia_rs-0.37.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:dc24a6d171a03bb05a9f237c94b9458b7f970299bc32472931d19b3fa9fd800d"},
-    {file = "chia_rs-0.37.0-cp313-cp313-win_amd64.whl", hash = "sha256:b872923fff3f3d4ce539d5c660ada180d0805f7413b75fee74b8f147d796800b"},
-    {file = "chia_rs-0.37.0-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:43325270ce134767bc0eb687df42c7374ea4bc89c6d04423f3957e395945ae8f"},
-    {file = "chia_rs-0.37.0-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:56311e8ed362142d9c27e7832301b7696c50cea51db795cde0f67ba401e89a9f"},
-    {file = "chia_rs-0.37.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:f81e10b0a9ee2dfbd80be07a605672b4169876158945ddc48b81d6b5eaeabfad"},
-    {file = "chia_rs-0.37.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:57d0c588f2f5599d3ef1280cf48c2d881c65a6e4adddf6c0079d264c948c7182"},
-    {file = "chia_rs-0.37.0-cp314-cp314-win_amd64.whl", hash = "sha256:c40491af95960b4289db31e35a66305c2fcc8aae4889851ab576333613092015"},
-    {file = "chia_rs-0.37.0.tar.gz", hash = "sha256:4068dd6eddef0a1cd674bb47a483d9c435087220707c4819a6032fc1d16945dc"},
+    {file = "chia_rs-0.41.0-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:778dce0cc5ed1d5f5f118cd862268733c4dfb80fb4f83d84e641c48529c23030"},
+    {file = "chia_rs-0.41.0-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:419df38ff3fa19422cef2a5f20dc786f997c98fa76ff698e9ffab9be500ee19a"},
+    {file = "chia_rs-0.41.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:dbff87a2142367db4bc6c45369d1f0127bf328fc86016d4d171097db78da3bc0"},
+    {file = "chia_rs-0.41.0-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:8ea4ce4d60d6e9049ddff8fa0ccd66f8485ce35de53b21fed0d888ee51670d85"},
+    {file = "chia_rs-0.41.0-cp310-cp310-win_amd64.whl", hash = "sha256:edeb1f23b938e65a92b0e3e43657c6e198a4d4d87e0406e126b0c4c8a6f14d88"},
+    {file = "chia_rs-0.41.0-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:575dbf026da39a67a228183faaa797b10941cc0c72f1ce27ee55e85cf6585d68"},
+    {file = "chia_rs-0.41.0-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:2ca5d58810b358d5ab9eb8a70391cf35b7feecbba6515a32afa91ddf146d4da9"},
+    {file = "chia_rs-0.41.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:6267c7baba0caba5b3a4d91e7b3abc2c993c3364087cffe7db67d9b0774d1486"},
+    {file = "chia_rs-0.41.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:be947da8f104bac0a1cdb7ec99b04dac1bf0edfe7bcea388d3968faaeafdb711"},
+    {file = "chia_rs-0.41.0-cp311-cp311-win_amd64.whl", hash = "sha256:cc1f3403378119d6be3973c467e8853beee53088ed2854ac78bc0a764b2ef5cb"},
+    {file = "chia_rs-0.41.0-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:5a65a5193fb261dfe78e96bdc7b8596587e9db5991fc7b56c0a8b32e853f491f"},
+    {file = "chia_rs-0.41.0-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:194f53e79b27333d956de5836444af54599ee9d86d233e7f9b4684f013e7c972"},
+    {file = "chia_rs-0.41.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:9e4fc81142e10c3f55e4f843802ec649b3880e4e106eceab150bbd0b02c45438"},
+    {file = "chia_rs-0.41.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:f773e3908879e782352045a6bab4636cae566deee971d9de220c133ea9f7dcc6"},
+    {file = "chia_rs-0.41.0-cp312-cp312-win_amd64.whl", hash = "sha256:3305248a7b64386ce6eecad6e4875d1b526addffe7392ad0bc90cc429ac269e9"},
+    {file = "chia_rs-0.41.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:73393d6c0bdece9ed742f0057e9ae347a8b5a9e080ce322832f64ee3b000053e"},
+    {file = "chia_rs-0.41.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:2bca42c29364f00a7d20602403686a68eb69b0f4ec8ea0bd9b315e728572b57b"},
+    {file = "chia_rs-0.41.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:8c7fce718ed95b456ad174e5f2a02ce56260c08e85a72570a98504907741f87e"},
+    {file = "chia_rs-0.41.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:0f18aa3cdbcd07af38cc008f1f22a908bdf231d8f74fb1de9f5769d839d87cf1"},
+    {file = "chia_rs-0.41.0-cp313-cp313-win_amd64.whl", hash = "sha256:f153a90135f3cf397adf022212193d07db62af7e33ce9313c0a7f71d5d5fe7b1"},
+    {file = "chia_rs-0.41.0-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:53add2b466fd0518844a0556426fc04e2e130205cb792e84bad308abbd8c5dbc"},
+    {file = "chia_rs-0.41.0-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:331fb7e7cf4b0c2ffa8008826c16921773256decea5b8335d3a58fe23811bc8f"},
+    {file = "chia_rs-0.41.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:19e13f94ebe1a1b83129c0431404bc465eb72febdb9e696d2e40d6a3272f5c6f"},
+    {file = "chia_rs-0.41.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:4948ad58cababaac1d7098b2ecdfb3e5fc475e13294440847e8664dce1aa82d9"},
+    {file = "chia_rs-0.41.0-cp314-cp314-win_amd64.whl", hash = "sha256:8ca59ae438671a33bb466cf4b1b10aadf85abafb6688660d5e3b2b712925621b"},
+    {file = "chia_rs-0.41.0.tar.gz", hash = "sha256:6210df932d1b7da84cc7dc2787a134b9a51c22d470d85e8305bba8b24d7b76e1"},
 ]
 
 [package.dependencies]
@@ -1184,21 +1184,21 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
 name = "concurrent-log-handler"
-version = "0.9.28"
+version = "0.9.29"
 description = "RotatingFileHandler replacement with concurrency, gzip and Windows support. Size and time based rotation."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "concurrent_log_handler-0.9.28-py3-none-any.whl", hash = "sha256:65db25d05506651a61573937880789fc51c7555e7452303042b5a402fd78939c"},
-    {file = "concurrent_log_handler-0.9.28.tar.gz", hash = "sha256:4cc27969b3420239bd153779266f40d9713ece814e312b7aa753ce62c6eacdb8"},
+    {file = "concurrent_log_handler-0.9.29-py3-none-any.whl", hash = "sha256:0d6c077fbaef2dae49a25975dcf72a602fe0a6a4ce80a3b7c37696d37e10459a"},
+    {file = "concurrent_log_handler-0.9.29.tar.gz", hash = "sha256:bc37a76d3f384cbf4a98f693ebd770543edc0f4cd5c6ab6bc70e9e1d7d582265"},
 ]
 
 [package.dependencies]
-portalocker = ">=1.6.0"
+portalocker = ">=2.6.0"
 
 [package.extras]
-dev = ["black", "coverage", "hatch", "pytest", "pytest-cov", "pytest-mock", "pytest-sugar", "ruff"]
+dev = ["black (>=26.1.0)", "coverage", "hatch", "pytest", "pytest-cov", "pytest-mock", "pytest-repeat", "pytest-sugar", "ruff (>=0.15.2)"]
 
 [[package]]
 name = "coverage"
@@ -1498,14 +1498,14 @@ testing = ["hatch", "pre-commit", "pytest", "tox"]
 
 [[package]]
 name = "filelock"
-version = "3.20.3"
+version = "3.25.0"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "filelock-3.20.3-py3-none-any.whl", hash = "sha256:4b0dda527ee31078689fc205ec4f1c1bf7d56cf88b6dc9426c4f230e46c2dce1"},
-    {file = "filelock-3.20.3.tar.gz", hash = "sha256:18c57ee915c7ec61cff0ecf7f0f869936c7c30191bb0cf406f1341778d0834e1"},
+    {file = "filelock-3.25.0-py3-none-any.whl", hash = "sha256:5ccf8069f7948f494968fc0713c10e5c182a9c9d9eef3a636307a20c2490f047"},
+    {file = "filelock-3.25.0.tar.gz", hash = "sha256:8f00faf3abf9dc730a1ffe9c354ae5c04e079ab7d3a683b7c32da5dd05f26af3"},
 ]
 
 [[package]]
@@ -3563,31 +3563,31 @@ files = [
 
 [[package]]
 name = "tach"
-version = "0.33.2"
+version = "0.33.4"
 description = "A Python tool to maintain a modular package architecture."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "tach-0.33.2-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:0f46a12af6f2f80056ff24a1572d42b897a6cc593b74b895cd3f701548211021"},
-    {file = "tach-0.33.2-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:f053c9b84ec30e5a8899df6d8f492dda55062c2719b4166bdde1416d3dcc6cb0"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:94696ed0860de30f2402eb1fa3efd661da21d55aacaebd7e06ad69a4223ff5a2"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:4510c0c3511379566a8141920020d7e9e7a73e1d3117ff443d4dcbbb56a4c9c2"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b743e0bf7ab8a4017927043c591ca2fb9248bcecbd5e92928bd8c48cb4954efa"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:5ee3cd01948d1c46f377f992e884db9eca4db5aa6511d66aaf1633a3ae65773e"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:d5738d559bca28c6beea48225e291c592e484225fd131292b34c866469d6c642"},
-    {file = "tach-0.33.2-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:956324a36db3fbd5cc30ffd0a51615420163a91a2bd8660d18b2b60f0ddc6d25"},
-    {file = "tach-0.33.2-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:0f3c75224d5449b1519445166095a3904aa45df8a12b7bc1cefad6184c358157"},
-    {file = "tach-0.33.2-cp37-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:5e7d167ef2c17e31c87d2f3749c6f1e8cf9323b119792859ce6197b06a3866b1"},
-    {file = "tach-0.33.2-cp37-abi3-musllinux_1_2_i686.whl", hash = "sha256:45c2aa07381c139b066a3824e12499bd4ffdbd4c859cd3bf51d23baad76e8ee3"},
-    {file = "tach-0.33.2-cp37-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:111b94337cdff9442281b5670e8908ddb5737fd6c82edb242f05c3870b2e7288"},
-    {file = "tach-0.33.2-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:f07cf07ef64dd1aa11f9f4ba52cc26b60bdd9f684202b5db83ba37abd1e07756"},
-    {file = "tach-0.33.2-cp37-abi3-win32.whl", hash = "sha256:fef9377bf44fc342cf9d6834d69b0b6cfbb1c92c72c5fc1b8bdfbab37cdefa74"},
-    {file = "tach-0.33.2-cp37-abi3-win_amd64.whl", hash = "sha256:0d58dbc362023e84112b08e29a6ecbc9e9b0fa519ec7f00e3a6393048f68a18f"},
-    {file = "tach-0.33.2-pp311-pypy311_pp73-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:8e2f8ef4d9c9a06ede1fdd8d741b9cf28006f5ee0c191a81fb352b748844cfb9"},
-    {file = "tach-0.33.2-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0a68255e20e1e12e30fa2dcef6165cb425e47b7fb971fb5ca2fb252f880fc43c"},
-    {file = "tach-0.33.2.tar.gz", hash = "sha256:26621f7d30e364e2b255815706dc24d7185dbfad34a50ed2af9604e7d9c6e60f"},
+    {file = "tach-0.33.4-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e95cc9b1ea0f33a45d9b637c94b1e128b345618b01e1f850bf2a59b2081b4b19"},
+    {file = "tach-0.33.4-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:20e166a8c5dcc89205a1bfaa4b73079db024a5e98023d838671d052394a7ce40"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e9987d38afa30d64a0378e27fbd59b605ef07cde94242ae90538e39afe178e87"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:967b258068d0fcddfed78b3bbca352f36062122660fdba28bf5dd645723992f9"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:5d246e6650cf414f1521372584c63c1a5ffbd5d30b0acea4121123bf4cfaab32"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d1770235b5523e1c9e8bd1adb1d211c3b27d770f87823a68c55f459d167c3cb8"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:9bf717dd896e47e6a81658fc8e89ceb0b21fc5c8c2f6223d80ddcd2ebad8cfbd"},
+    {file = "tach-0.33.4-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d5a803ffccda2bbb99fcba5fdce5eca6578fc606ff1ae9935baf44c765e2373"},
+    {file = "tach-0.33.4-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:c5d4a3df6a8608e68fd20f0b49721b906d8cb95be3adccd9a3c869fa4caa4a70"},
+    {file = "tach-0.33.4-cp37-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:b6760b2b4ec34cb58634b2faa66d9d6c212dcf5bf31fcd87986c348cb56b2570"},
+    {file = "tach-0.33.4-cp37-abi3-musllinux_1_2_i686.whl", hash = "sha256:206e099ff746833b6edc68ef59e25ef7997718247f94bdf46e0400e28c944f50"},
+    {file = "tach-0.33.4-cp37-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:5be463e6fd1bfd3e41b0746b52aa4d96e4bdf3c725b33e2716ad425081114a9b"},
+    {file = "tach-0.33.4-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:c2d93d86412575e9b2b6a1ad3db055bb89847b034dd529e0ad941cc235e030ec"},
+    {file = "tach-0.33.4-cp37-abi3-win32.whl", hash = "sha256:0b9096e513e861c61eee6a8174405bc99a7f7e2fab8793102ecbc5dd95419012"},
+    {file = "tach-0.33.4-cp37-abi3-win_amd64.whl", hash = "sha256:e7a588314b337d8636de4b1c4c2e745adde8c103955ba4d2456833d30f9ae5b9"},
+    {file = "tach-0.33.4-pp311-pypy311_pp73-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:171fb4800af5b99f017622062be98a9e7a0d6c7217266858b28346b3545c352d"},
+    {file = "tach-0.33.4-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d8451dab4fdbadca98e8ce67b0de6e1d39b79b4ecdfca75636adbda5852829c"},
+    {file = "tach-0.33.4.tar.gz", hash = "sha256:633f2f3c2516cfa5ee5169a230bb4383644167c35acba831f2a787b0be5d05ea"},
 ]
 
 [package.dependencies]
@@ -3788,19 +3788,22 @@ files = [
 
 [[package]]
 name = "wheel"
-version = "0.41.2"
-description = "A built-package format for Python"
+version = "0.46.2"
+description = "Command line tool for manipulating wheel files"
 optional = true
-python-versions = ">=3.7"
+python-versions = ">=3.9"
 groups = ["main"]
 markers = "extra == \"dev\" and sys_platform == \"linux\""
 files = [
-    {file = "wheel-0.41.2-py3-none-any.whl", hash = "sha256:75909db2664838d015e3d9139004ee16711748a52c8f336b52882266540215d8"},
-    {file = "wheel-0.41.2.tar.gz", hash = "sha256:0c5ac5ff2afb79ac23ab82bab027a0be7b5dbcf2e54dc50efe4bf507de1f7985"},
+    {file = "wheel-0.46.2-py3-none-any.whl", hash = "sha256:33ae60725d69eaa249bc1982e739943c23b34b58d51f1cb6253453773aca6e65"},
+    {file = "wheel-0.46.2.tar.gz", hash = "sha256:3d79e48fde9847618a5a181f3cc35764c349c752e2fe911e65fa17faab9809b0"},
 ]
 
+[package.dependencies]
+packaging = ">=24.0"
+
 [package.extras]
-test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
+test = ["pytest (>=6.0.0)", "setuptools (>=77)"]
 
 [[package]]
 name = "yarl"
@@ -4101,4 +4104,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "64aae75f34fc0f7494038548f5004ddae3c61cd7ded8397b362269a1cddaa945"
+content-hash = "e2c95ab55327becafdddd19bc77907c61cd00906af4ed7592e46a8f5a0e79fba"

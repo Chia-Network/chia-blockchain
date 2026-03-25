@@ -277,7 +277,7 @@ async def pre_validate_block(
         pool,
         _pre_validate_block,
         constants,
-        blockchain,
+        blockchain.read_only_snapshot(),
         block,
         previous_generators,
         conds,

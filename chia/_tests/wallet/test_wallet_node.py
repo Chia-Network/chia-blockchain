@@ -491,6 +491,7 @@ async def test_get_timestamp_for_height_from_peer(
     assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], _ = simulator_and_wallet
@@ -499,6 +500,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
@@ -529,7 +531,9 @@ async def test_get_balance(
     # Generate some funds, get the balance and make sure it's as expected
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
-    generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
+    generated_funds = await full_node_api.farm_blocks_to_wallet(
+        5, wallet_node.wallet_state_manager.main_wallet, timeout=60
+    )
     expected_generated_balance = Balance(
         confirmed_wallet_balance=uint128(generated_funds),
         unconfirmed_wallet_balance=uint128(generated_funds),
@@ -576,6 +580,7 @@ async def test_get_balance(
     assert await wallet_node.get_balance(wallet_id) == expected_more_balance
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_add_states_from_peer_reorg_failure(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
@@ -594,6 +599,7 @@ async def test_add_states_from_peer_reorg_failure(
         assert "Processing reorged states failed" in caplog.text
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_add_states_from_peer_untrusted_shutdown(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
@@ -724,6 +730,7 @@ async def test_wallet_node_bad_coin_state_ignore(
             await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_key_types(
@@ -755,6 +762,7 @@ async def test_start_with_multiple_key_types(
     assert wallet_node.wallet_state_manager.private_key == initial_sk
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(

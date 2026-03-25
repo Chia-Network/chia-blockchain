@@ -15,6 +15,7 @@ from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
@@ -154,6 +155,7 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     PushTransactions,
     PushTX,
+    RegisterRemoteCoins,
     RoyaltyAsset,
     SelectCoins,
     SendNotification,
@@ -649,11 +651,12 @@ async def test_create_signed_transaction(
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
-    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+
+    main_tx = next(tx for tx in txs if tx.amount > 0)
+    assert_tx_amounts(main_tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = txs[0].spend_bundle
-    assert spend_bundle is not None
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     xch_delta = amount_total if not is_cat else amount_fee
     cat_delta = amount_total if is_cat else 0
     await wallet_environments.process_pending_states(
@@ -4297,6 +4300,63 @@ def test_send_transaction_multi_post_init() -> None:
         ).convert_to_proxy(VCSpend)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    with pytest.raises(ValueError, match="Only one RemoteWallet instance is supported"):
+        await env.rpc_client.create_new_wallet(
+            CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #2", push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    assert response.type == WalletType.REMOTE.name
+
+    remote_wallets = [
+        wallet for wallet in env.node.wallet_state_manager.wallets.values() if wallet.type() == WalletType.REMOTE
+    ]
+    assert len(remote_wallets) == 1
+    assert remote_wallets[0].id() == response.wallet_id
+    assert remote_wallets[0].get_name() == "Remote Wallet #1"
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_register_remote_coins_validates_wallet_id(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    # Main wallet id exists but is not a RemoteWallet.
+    with pytest.raises(ValueError, match="type RemoteWallet is required"):
+        await env.rpc_client.register_remote_coins(RegisterRemoteCoins(wallet_id=uint32(1), coin_ids=[bytes32.zeros]))
+
+    # Unknown wallet ids should fail rather than silently using the existing remote wallet.
+    with pytest.raises(ValueError, match="does not exist"):
+        await env.rpc_client.register_remote_coins(
+            RegisterRemoteCoins(wallet_id=uint32(response.wallet_id + 1000), coin_ids=[bytes32.zeros])
+        )
+
+
 def test_create_new_wallet_post_init() -> None:
     with pytest.raises(
         ValueError,
@@ -4519,3 +4579,93 @@ def test_create_new_wallet_post_init() -> None:
         match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delay_time=uint64(0))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"amount" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, amount=uint64(100))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.EXISTING)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"test" mode is not supported except for new CAT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, test=True)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, asset_id=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_type" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_type=DIDType.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_dids" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_dids=["foo"])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"metadata" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, metadata={"foo": "bar"})
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"wallet_name" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, wallet_name="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_data" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_data="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_id" is only a valid argument for NFT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_id="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"initial_target_state" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.REMOTE_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delayed_ph" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delayed_ph=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delay_time=uint64(0))
+
+    # Creating a Remote wallet via create_new_wallet() should require no extra fields.
+    CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)

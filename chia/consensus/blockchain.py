@@ -724,6 +724,9 @@ class Blockchain:
     async def validate_unfinished_block_header(
         self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
     ) -> tuple[uint64 | None, Err | None]:
+        if len(block.reward_chain_block.proof_of_space.proof) >= 2000:
+            return None, Err.INVALID_POSPACE
+
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
@@ -740,7 +743,7 @@ class Blockchain:
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.
-        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:
+        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT and block.transactions_generator_ref_list != []:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if block.transactions_info is not None:

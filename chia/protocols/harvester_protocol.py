@@ -5,7 +5,7 @@ from enum import IntEnum
 
 from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import int16, uint8, uint32, uint64
+from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64
 
 from chia.util.streamable import Streamable, streamable
 
@@ -85,6 +85,8 @@ class PartialProofsData(Streamable):
     partial_proofs: list[PartialProof]
     signage_point_index: uint8
     plot_size: uint8
+    plot_index: uint16
+    meta_group: uint8
     strength: uint8
     plot_id: bytes32
     pool_public_key: G1Element | None
@@ -156,8 +158,11 @@ class Plot(Streamable):
     compression_level: uint8 | None
 
     def param(self) -> PlotParam:
+        # TODO: todo_v2_plots we need plot_index and meta_group here. Maybe we
+        # just need a version 2 of this message. We still need the existing
+        # version for backwards compatibility with existing harvesters
         if (self.size & 0x80) != 0:
-            return PlotParam.make_v2(self.size & 0x7F)
+            return PlotParam.make_v2(0, 0, self.size & 0x7F)
         else:
             return PlotParam.make_v1(self.size)
 

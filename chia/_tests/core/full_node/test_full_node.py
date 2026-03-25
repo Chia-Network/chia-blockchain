@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import os
 import platform
 import random
 import sqlite3
@@ -1168,6 +1169,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1223,11 +1225,53 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 
     await asyncio.sleep(1)
     assert incoming_queue.qsize() == 0
+
+
+@pytest.mark.anyio
+async def test_unsolicited_transaction_ignored(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    spend_bundle = make_spend_bundle(1)
+    assert peer.expected_mempool_responses == 0
+    res = await full_node_1.respond_transaction(fnp.RespondTransaction(spend_bundle), peer)
+    assert res is None
+    assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
+
+
+@pytest.mark.anyio
+async def test_malformed_peer_version_on_connect(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    # Make synced() return True so on_connect reaches the version check
+    original_network = full_node_1.full_node.config.get("selected_network")
+    full_node_1.full_node.config["selected_network"] = "simulator0"
+    try:
+        peer.version = "2.7.0-custom"
+        peer.expected_mempool_responses = 0
+        await full_node_1.full_node.on_connect(peer)
+
+        # Unparseable version should be treated as old, so the counter is incremented
+        assert peer.expected_mempool_responses == 100
+    finally:
+        full_node_1.full_node.config["selected_network"] = original_network
 
 
 @pytest.mark.anyio
@@ -1641,7 +1685,11 @@ async def test_unfinished_block_with_replaced_generator(
                 pos.pool_public_key,
                 pos.pool_contract_puzzle_hash,
                 public_key,
-                pos.version_and_size,
+                pos.version,
+                pos.plot_index,
+                pos.meta_group,
+                pos.strength,
+                pos.size,
                 pos.proof,
             )
 
@@ -2153,13 +2201,14 @@ async def test_compact_protocol_invalid_messages(
         wrong_challenge = block.reward_chain_block.challenge_chain_sp_vdf.challenge
         wrong_iters = block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
 
-    wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
+    wrong_vdf_info, _ = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
         wrong_challenge,
         wrong_iters,
         True,
     )
+    wrong_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
     timelord_protocol_invalid_messages: list[timelord_protocol.RespondCompactProofOfTime] = []
     full_node_protocol_invalid_messages: list[fnp.RespondCompactVDF] = []
     for block in blocks_2[:2]:
@@ -2171,7 +2220,6 @@ async def test_compact_protocol_invalid_messages(
                 sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
                 True,
             )
-            assert wrong_vdf_proof != correct_vdf_proof
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
                     vdf_info,
@@ -2198,7 +2246,6 @@ async def test_compact_protocol_invalid_messages(
                     sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
                     True,
                 )
-                assert wrong_vdf_proof != correct_vdf_proof
                 timelord_protocol_invalid_messages.append(
                     timelord_protocol.RespondCompactProofOfTime(
                         vdf_info,
@@ -2226,14 +2273,10 @@ async def test_compact_protocol_invalid_messages(
                 block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
                 True,
             )
-            sp_vdf_proof = wrong_vdf_proof
-            if wrong_vdf_proof == correct_vdf_proof:
-                # This can actually happen...
-                sp_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
                     vdf_info,
-                    sp_vdf_proof,
+                    wrong_vdf_proof,
                     block.header_hash,
                     block.height,
                     uint8(CompressibleVDFField.CC_SP_VDF),
@@ -2245,7 +2288,7 @@ async def test_compact_protocol_invalid_messages(
                     block.header_hash,
                     uint8(CompressibleVDFField.CC_SP_VDF),
                     vdf_info,
-                    sp_vdf_proof,
+                    wrong_vdf_proof,
                 )
             )
 
@@ -3605,7 +3648,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
     db_path = path_from_root(bt.root_path, db_path_replaced)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    await make_db(db_path, default_400_blocks)
+    await make_db(db_path, default_400_blocks, bt.constants)
     with contextlib.closing(sqlite3.connect(db_path)) as conn:
         conn.execute("DELETE FROM current_peak;")
         conn.commit()
@@ -3659,14 +3702,122 @@ async def test_request_header_blocks_non_tx_block(
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
-@pytest.mark.parametrize("node_type", NodeType)
+@pytest.mark.parametrize(
+    "node_type",
+    [NodeType.FULL_NODE, NodeType.WALLET, NodeType.FARMER, NodeType.TIMELORD],
+)
 async def test_node_type_message_typechecking(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str, node_type: NodeType
 ) -> None:
     _, server, _ = one_node_one_block
     wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
     await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
     type_mismatch = node_type not in {NodeType.WALLET, NodeType.FULL_NODE}
     await time_out_assert(5, lambda: wsc.closed, type_mismatch)
     await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers, type_mismatch)
+
+
+@pytest.mark.parametrize(
+    "node_type, config_key",
+    [
+        (NodeType.HARVESTER, None),
+        (NodeType.FARMER, "max_inbound_farmer"),
+        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.INTRODUCER, None),
+        (NodeType.WALLET, "max_inbound_wallet"),
+        (NodeType.DATA_LAYER, None),
+        (NodeType.SOLVER, None),
+    ],
+)
+@pytest.mark.anyio
+async def test_node_types_inbound_connections_limit(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    node_type: NodeType,
+    config_key: str | None,
+) -> None:
+    _, server, _ = one_node_one_block
+    if config_key is None:
+        assert server.accept_inbound_connections(node_type) is False
+        return
+    # Establish a reference base
+    assert server.accept_inbound_connections(node_type) is True
+    # Set a low limit for this test and reach it with a dummy connection
+    server.config[config_key] = 1
+    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    # New inbound connections should be refused
+    assert server.accept_inbound_connections(node_type) is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("has_hard_fork2_capability", [True, False])
+async def test_hard_fork_version_enforcement(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
+    has_hard_fork2_capability: bool,
+) -> None:
+    """
+    Covers the case where peers connecting to a full node after the hard fork
+    without advertising the HARD_FORK_2 capability get disconnected.
+    """
+    _, server, _ = one_node_one_block
+    additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_hard_fork2_capability else []
+    wsc, peer_id = await add_dummy_connection_wsc(
+        server, self_hostname, 42, NodeType.FULL_NODE, additional_capabilities=additional_capabilities
+    )
+    staying_connected = consensus_mode < ConsensusMode.HARD_FORK_3_0 or has_hard_fork2_capability
+    if staying_connected:
+        await asyncio.sleep(2)
+        assert peer_id in server.all_connections
+    else:
+        await time_out_assert(5, lambda: wsc.closed)
+        await time_out_assert(5, lambda: peer_id not in server.all_connections)
+
+
+# TODO: Remove the test once we enable this capability
+def test_hard_fork2_capability_on_release_branch() -> None:
+    branch = os.environ.get("GITHUB_REF_NAME")
+    if branch is not None and branch.startswith("release/3."):
+        for capabilities in default_capabilities.values():
+            assert (uint16(Capability.HARD_FORK_2.value), "1") in capabilities
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_register_for_coin_updates(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the scenario where a peer registers for coin updates to make sure we
+    don't return coin states for coins that are not in the processed list.
+    """
+    full_node_api, server, bt = one_node_one_block
+    blocks = await full_node_api.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+    for block in blocks:
+        await full_node_api.full_node.add_block(block)
+    real_coin_ids = [c.name() for c in blocks[-1].get_included_reward_coins()]
+    assert len(real_coin_ids) >= 2
+    max_subscribe_items = 42
+    full_node_api.full_node.config["max_subscribe_items"] = max_subscribe_items
+    # Place one coin within the subscription limit and the rest after it so we
+    # can verify the response only includes states for coins that fit.
+    first_coin = real_coin_ids[:1]
+    remaining_coins = real_coin_ids[1:]
+    fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
+    request_ids = first_coin + fake_coin_ids + remaining_coins
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    response = await full_node_api.register_for_coin_updates(
+        wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0)), dummy_peer
+    )
+    assert response is not None
+    assert response.type == ProtocolMessageTypes.respond_to_coin_updates.value
+    response_data = wallet_protocol.RespondToCoinUpdates.from_bytes(response.data)
+    assert len(response_data.coin_ids) == max_subscribe_items
+    assert {cs.coin.name() for cs in response_data.coin_states} == set(first_coin)
+    for coin_id in remaining_coins:
+        assert coin_id not in response_data.coin_ids

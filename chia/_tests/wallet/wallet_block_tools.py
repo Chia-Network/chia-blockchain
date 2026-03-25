@@ -22,7 +22,7 @@ from chia_rs import (
     compute_merkle_set_root,
 )
 from chia_rs.sized_bytes import bytes32, bytes100
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -42,7 +42,11 @@ DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     G1Element(),
     None,
     G1Element(),
-    uint8(20),
+    uint8(0),  # version 1
+    uint16(0),  # plot_index
+    uint8(0),  # group_id
+    uint8(0),  # strength
+    uint8(20),  # size
     bytes(32 * 5),
 )
 DEFAULT_VDF_INFO = VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros))

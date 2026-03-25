@@ -44,7 +44,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
-    get_plot_id,
     verify_and_get_quality_string,
 )
 
@@ -109,7 +108,7 @@ class FarmerAPI:
                 prev_transaction_block_height=sp.last_tx_height,
             )
             if computed_quality_string is None:
-                plotid: bytes32 = get_plot_id(self.farmer.constants, new_proof_of_space.proof)
+                plotid: bytes32 = new_proof_of_space.proof.compute_plot_id()
                 self.farmer.log.error(f"Invalid proof of space: {plotid.hex()} proof: {new_proof_of_space.proof}")
                 return None
 
@@ -571,7 +570,11 @@ class FarmerAPI:
                 proof_data.pool_public_key,
                 proof_data.pool_contract_puzzle_hash,
                 proof_data.plot_public_key,
-                proof_data.plot_size,
+                uint8(1),  # we only use this for v2 plots
+                proof_data.plot_index,
+                proof_data.meta_group,
+                proof_data.strength,
+                uint8(0),  # size is unused for v2 proofs
                 proof_bytes,
             ),
             proof_data.signage_point_index,

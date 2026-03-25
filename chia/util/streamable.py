@@ -683,7 +683,9 @@ class Streamable:
     def from_bytes(cls, blob: bytes) -> Self:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
-        assert f.read() == b""
+        remainder = f.read()
+        if remainder != b"":
+            raise ValueError(f"{cls.__name__}: {len(remainder)} bytes not consumed")
         return parsed
 
     def stream_to_bytes(self) -> bytes:

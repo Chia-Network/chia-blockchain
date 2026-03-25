@@ -20,7 +20,7 @@ from chia_rs import (
     RewardChainSubSlot,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
@@ -376,7 +376,11 @@ def prepare_sp_and_pos_for_fee_test(
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=pubkey,
-            version_and_size=uint8(32),
+            version=uint8(0),
+            plot_index=uint16(0),
+            meta_group=uint8(0),
+            strength=uint8(0),
+            size=uint8(32),
             proof=proof,
         ),
         signage_point_index=uint8(0),

@@ -357,6 +357,7 @@ class FullNodeStore:
         if ch not in self.future_ip_cache:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
+        self.future_cache_key_times[ch] = int(time.time())
 
     def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
         if signage_point.rc_vdf is None:
