@@ -15,6 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 - Remote Wallet and new RPC calls
 
 ### Changed
+
 - Numerous hardening measures and soft fork: Please read our blog post for more information
   <url>
 - Make the mempool a bit more defensive on slow machines
@@ -31,7 +32,7 @@ for setuptools_scm/PEP 440 reasons.
 - Fix timelord to skip processing after failed VDF proof validation
 - Apply `client_timeout` to all DataLayer plugin HTTP calls
 - DataLayer hardening related to DAT file downloading
-  
+
 ## 2.6.1 Chia blockchain 2026-3-18
 
 ## What's Changed
