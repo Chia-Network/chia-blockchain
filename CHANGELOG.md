@@ -15,9 +15,7 @@ for setuptools_scm/PEP 440 reasons.
   <url>
 - Add Remote Wallet and new RPC calls
 - Make the mempool a bit more defensive on slow machines
-- Improve waiting for the connection to close in `_read_one_message`
-- Improve unknown protocol message type handling in `_read_one_message`
-- Simplify a peer check in `WSChiaConnection`'s `_read_one_message`
+- Harden connection handling and message validation in `WSChiaConnection`
 - Improve `register_for_coin_updates`
 - Early check of proof of space in a few places
 - Ignore unsolicited `RespondTransaction`
