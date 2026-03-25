@@ -168,6 +168,11 @@ def verify_and_get_quality_string(
         # === V1 plots ===
         assert plot_param.strength_v2 is None
 
+        if not height_agnostic and prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
+            if len(pos.proof) >= 2000:
+                log.error(f"Proof of space too large: {len(pos.proof)} bytes")
+                return None
+
         quality_str = Verifier().validate_proof(plot_id, plot_param.size_v1, pos.challenge, bytes(pos.proof))
         if not quality_str:
             return None

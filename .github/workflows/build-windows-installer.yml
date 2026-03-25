@@ -235,7 +235,7 @@ jobs:
           .\build_windows-2-installer.ps1
 
       - name: Upload Installer to artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: chia-installers-windows-exe-intel
           path: chia-blockchain-gui\release-builds\windows-installer\

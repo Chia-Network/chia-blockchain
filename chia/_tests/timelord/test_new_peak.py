@@ -157,7 +157,7 @@ class TestNewPeak:
         allowed=[
             ConsensusMode.PLAIN,
             ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_6,
+            ConsensusMode.SOFT_FORK_2_7,
         ],
         reason="test builds a synthetic unfinished block for HF3.0",
     )

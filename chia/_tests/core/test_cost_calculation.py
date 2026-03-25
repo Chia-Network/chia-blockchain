@@ -97,22 +97,20 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert puzzle == coin_spend.puzzle_reveal
     assert solution == coin_spend.solution
 
-    if softfork_height >= bt.constants.HARD_FORK_HEIGHT:
+    condition_cost = ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value
+    if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
+        clvm_cost = 27360
+    elif softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
         clvm_cost = 404560
     byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
-    assert (
-        npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + clvm_cost + byte_cost
-    )
+    assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
 
     # Create condition + agg_sig_condition + length + cpu_cost
     assert (
-        npc_result.conds.cost
-        == ConditionCost.CREATE_COIN.value
-        + ConditionCost.AGG_SIG.value
-        + len(bytes(program.program)) * bt.constants.COST_PER_BYTE
-        + clvm_cost
+        npc_result.conds.cost == condition_cost + len(bytes(program.program)) * bt.constants.COST_PER_BYTE + clvm_cost
     )
 
 

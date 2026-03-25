@@ -412,7 +412,7 @@ class BlockTools:
         block_generator: NewBlockGenerator | None,
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
-        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
+        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT:
             assert block_refs == [], "block references are not allowed after hard fork 2"
             dummy_block_references = False
 
@@ -2184,17 +2184,11 @@ CONDITION_COSTS = compute_cost_table()
 
 
 def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
-    free_conditions = 100
-
     condition_cost = 0
     for cond in conds.as_iter():
         condition = cond.first().as_atom()
 
         # this is new in hard fork 2
-        if free_conditions > 0:
-            free_conditions -= 1
-        elif charge_for_conditions:
-            condition_cost += ConditionCost.GENERIC_CONDITION_COST.value
 
         if condition == ConditionOpcode.CREATE_COIN:
             condition_cost += ConditionCost.CREATE_COIN.value
@@ -2202,9 +2196,13 @@ def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
         # have costs. Account for that.
         elif len(condition) == 2 and condition[0] != 0:
             condition_cost += CONDITION_COSTS[condition[1]]
+            if charge_for_conditions:
+                condition_cost += ConditionCost.GENERIC_CONDITION_COST.value
         elif condition == ConditionOpcode.SOFTFORK.value:
             arg = cond.rest().first().as_int()
             condition_cost += arg * 10000
+            if charge_for_conditions:
+                condition_cost += ConditionCost.GENERIC_CONDITION_COST.value
         elif condition in {
             ConditionOpcode.AGG_SIG_UNSAFE,
             ConditionOpcode.AGG_SIG_ME,
@@ -2216,6 +2214,23 @@ def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
         }:
             condition_cost += ConditionCost.AGG_SIG.value
+        elif (
+            condition
+            in {
+                ConditionOpcode.SEND_MESSAGE,
+                ConditionOpcode.RECEIVE_MESSAGE,
+                ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
+                ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
+                ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+                ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
+                ConditionOpcode.ASSERT_CONCURRENT_SPEND,
+                ConditionOpcode.ASSERT_CONCURRENT_PUZZLE,
+            }
+            and charge_for_conditions
+        ):
+            condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
+        elif charge_for_conditions:
+            condition_cost += ConditionCost.GENERIC_CONDITION_COST.value
     return uint64(condition_cost)
 
 

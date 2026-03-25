@@ -4,6 +4,7 @@ import pytest
 from chia_rs import FullBlock, HeaderBlock
 from chia_rs.sized_ints import uint8, uint32
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.blockchain import AddBlockResult
@@ -15,6 +16,7 @@ from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_wallet_blockchain(

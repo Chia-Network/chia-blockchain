@@ -15,6 +15,7 @@ from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
@@ -650,11 +651,12 @@ async def test_create_signed_transaction(
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
-    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+
+    main_tx = next(tx for tx in txs if tx.amount > 0)
+    assert_tx_amounts(main_tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = txs[0].spend_bundle
-    assert spend_bundle is not None
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     xch_delta = amount_total if not is_cat else amount_fee
     cat_delta = amount_total if is_cat else 0
     await wallet_environments.process_pending_states(
@@ -4303,6 +4305,7 @@ def test_send_transaction_multi_post_init() -> None:
     [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     wallet_environments: WalletTestFramework,
@@ -4334,6 +4337,7 @@ async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_register_remote_coins_validates_wallet_id(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
