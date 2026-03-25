@@ -360,7 +360,7 @@ class ChiaServer:
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_info.host, self.exempt_peer_networks
-            ):
+            ) and not is_localhost(connection.peer_info.host):
                 self.log.info(
                     f"Not accepting inbound connection: {connection.get_peer_logging()} "
                     f"of type {connection.connection_type.name}. Inbound limit reached."
@@ -746,8 +746,6 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
         if node_type == NodeType.FARMER:
             return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
-        if node_type == NodeType.TIMELORD:
-            return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
         return False
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:

@@ -3724,7 +3724,7 @@ async def test_node_type_message_typechecking(
     [
         (NodeType.HARVESTER, None),
         (NodeType.FARMER, "max_inbound_farmer"),
-        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.TIMELORD, None),
         (NodeType.INTRODUCER, None),
         (NodeType.WALLET, "max_inbound_wallet"),
         (NodeType.DATA_LAYER, None),
