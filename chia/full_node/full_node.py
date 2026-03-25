@@ -949,7 +949,7 @@ class FullNode:
                 except Exception:
                     old_peer = True
                 if old_peer:
-                    connection.expected_mempool_responses += 100
+                    connection.expected_mempool_responses = 100
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 

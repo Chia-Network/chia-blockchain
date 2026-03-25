@@ -110,12 +110,32 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             if peer_id not in full_node.server.all_connections:
                 continue
             random_peer = full_node.server.all_connections[peer_id]
-            request_tx = full_node_protocol.RequestTransaction(transaction_id)
-            msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-            await random_peer.send_message(msg)
-            await asyncio.sleep(5)
-            if full_node.mempool_manager.seen(transaction_id):
-                break
+            try:
+                response = await random_peer.call_api(
+                    FullNodeAPI.request_transaction, full_node_protocol.RequestTransaction(transaction_id), timeout=5
+                )
+            except Exception:
+                continue
+            if not isinstance(response, full_node_protocol.RespondTransaction):
+                continue
+            entry = TransactionQueueEntry(
+                transaction=response.transaction,
+                transaction_bytes=bytes(response.transaction),
+                spend_name=response.transaction.name(),
+                peer=random_peer,
+                test=False,
+                peers_with_tx=peers_with_tx,
+            )
+            # Try to put the transaction in this peer's queue, but if it's full
+            # then try another peer's queue. `TransactionQueue` has an internal
+            # queue for each peer.
+            for pid in [random_peer.peer_node_id, *peers_with_tx]:
+                try:
+                    full_node.transaction_queue.put(entry, pid)
+                    break
+                except TransactionQueueFull:
+                    continue
+            break
     except asyncio.CancelledError:
         pass
     finally:

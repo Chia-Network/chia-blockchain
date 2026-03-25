@@ -9,7 +9,7 @@ import platform
 import random
 import sqlite3
 import time
-from collections.abc import Awaitable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 
 import pytest
@@ -60,8 +60,9 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node import FullNode, WalletUpdate
-from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.sync_store import Peak
+from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols.farmer_protocol import DeclareProofOfSpace
@@ -111,6 +112,7 @@ from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.recursive_replace import recursive_replace
+from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
@@ -1169,7 +1171,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    peer.expected_mempool_responses += 1
+    peer.expected_mempool_responses = 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1225,7 +1227,7 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    peer.expected_mempool_responses += 1
+    peer.expected_mempool_responses = 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 
@@ -3821,3 +3823,67 @@ async def test_register_for_coin_updates(
     assert {cs.coin.name() for cs in response_data.coin_states} == set(first_coin)
     for coin_id in remaining_coins:
         assert coin_id not in response_data.coin_ids
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_tx_request_and_timeout_call_api_exception(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Covers the case where `call_api` raises an exception in
+    `tx_request_and_timeout` to make sure that's handled properly.
+    """
+    full_node_api, server, _ = one_node_one_block
+    full_node = full_node_api.full_node
+    _, peer_id = await add_dummy_connection(server, self_hostname, 42)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    server_connection = server.all_connections[peer_id]
+    transaction_id = bytes32.random()
+    full_node.full_node_store.peers_with_tx[transaction_id] = {
+        peer_id: PeerWithTx(peer_host=self_hostname, advertised_fee=uint64(0), advertised_cost=uint64(1))
+    }
+
+    async def test_call_api(
+        request_method: Callable[..., Awaitable[Message | None]], message: Streamable, timeout: int = 60
+    ) -> Any:
+        raise ValueError
+
+    monkeypatch.setattr(server_connection, "call_api", test_call_api)
+    await tx_request_and_timeout(full_node=full_node, transaction_id=transaction_id, task_id=bytes32.random())
+    assert transaction_id not in full_node.full_node_store.peers_with_tx
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_tx_request_and_timeout_queue_full(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Covers the case where a peer's transaction queue is full when attempting to
+    put a transaction into it via `tx_request_and_timeout`.
+    """
+    full_node_api, server, _ = one_node_one_block
+    full_node = full_node_api.full_node
+    _, peer_id = await add_dummy_connection(server, self_hostname, 42)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    server_connection = server.all_connections[peer_id]
+    sb = SpendBundle([], G2Element())
+    transaction_id = sb.name()
+    full_node.full_node_store.peers_with_tx[transaction_id] = {
+        peer_id: PeerWithTx(peer_host=self_hostname, advertised_fee=uint64(0), advertised_cost=uint64(1))
+    }
+    full_node.transaction_queue.peer_size_limit = 0
+
+    async def test_call_api(
+        request_method: Callable[..., Awaitable[Message | None]], message: Streamable, timeout: int = 60
+    ) -> Any:
+        return full_node_protocol.RespondTransaction(sb)
+
+    monkeypatch.setattr(server_connection, "call_api", test_call_api)
+    await tx_request_and_timeout(full_node=full_node, transaction_id=transaction_id, task_id=bytes32.random())
+    assert transaction_id not in full_node.full_node_store.peers_with_tx

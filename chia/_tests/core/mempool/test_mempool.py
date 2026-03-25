@@ -465,7 +465,7 @@ class TestMempoolManager:
         spend_bundle = generate_test_spend_bundle(wallet_a, coin)
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        peer.expected_mempool_responses += 1
+        peer.expected_mempool_responses = 1
         await full_node_1.respond_transaction(tx, peer, test=True)
 
         await time_out_assert(
