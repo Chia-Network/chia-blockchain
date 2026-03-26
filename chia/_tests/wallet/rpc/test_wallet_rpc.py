@@ -4265,6 +4265,137 @@ async def test_combine_coins_respects_max_coin_amount(wallet_environments: Walle
     )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_combine_coins_rejects_spent_coins(wallet_environments: WalletTestFramework) -> None:
+    """Regression test: combine_coins must reject explicitly-specified spent coin IDs."""
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1}
+
+    SMALL = uint64(250_000_000_000)  # 0.25 XCH
+
+    # Grab a 0.25 XCH coin and remember its ID before spending it
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = next(iter(await env.xch_wallet.select_coins(SMALL, action_scope)))
+        assert target_coin.amount == SMALL
+    spent_coin_id = target_coin.name()
+
+    # Combine two small coins (one of which is target_coin), spending them
+    combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=1,
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(spent_coin_id,),
+                largest_first=False,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await combine_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -2 * SMALL,
+                        "pending_change": 2 * SMALL,
+                        "max_send_amount": -2 * SMALL,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": 2 * SMALL,
+                        "pending_change": -2 * SMALL,
+                        "max_send_amount": 2 * SMALL,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            )
+        ]
+    )
+
+    # target_coin is now confirmed-spent; trying to combine with it should fail
+    with pytest.raises(ResponseFailureError, match="Cannot combine already-spent coins"):
+        rpc_request = CombineCoins(
+            wallet_id=uint32(1),
+            number_of_coins=uint16(2),
+            target_coin_ids=[spent_coin_id],
+            fee=uint64(0),
+            push=False,
+        )
+        await env.rpc_client.combine_coins(rpc_request, wallet_environments.tx_config)
+
+    # Wallet now has 3 unspent coins (2x 1.75 XCH + 1x 0.5 XCH) and 2 spent
+    # 0.25 XCH records still in the DB.  A fill-up combine (no explicit IDs,
+    # smallest-first) must skip the spent records and select only unspent coins.
+    # Without the spent_range fix this would silently pick the spent 0.25 XCH
+    # records because they sort before the 0.5 XCH coin.
+    COMBINED = uint64(2 * SMALL)  # 0.5 XCH from first combine
+    BIG = uint64(1_750_000_000_000)  # 1.75 XCH
+    fillup_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=1,
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(),
+                largest_first=False,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await fillup_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -(COMBINED + BIG),
+                        "pending_change": COMBINED + BIG,
+                        "max_send_amount": -(COMBINED + BIG),
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": COMBINED + BIG,
+                        "pending_change": -(COMBINED + BIG),
+                        "max_send_amount": COMBINED + BIG,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            )
+        ]
+    )
+
+
 def test_send_transaction_multi_post_init() -> None:
     with pytest.raises(
         ValueError,
