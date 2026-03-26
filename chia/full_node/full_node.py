@@ -27,6 +27,7 @@ from chia_rs import (
     HeaderBlock,
     PoolTarget,
     SpendBundle,
+    SpendBundleConditions,
     SubEpochSummary,
     UnfinishedBlock,
     get_flags_for_height_and_constants,
@@ -45,7 +46,6 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -2394,7 +2394,7 @@ class FullNode:
 
         # The clvm generator and aggregate signature are validated outside of the lock, to allow other blocks and
         # transactions to get validated
-        npc_result: NPCResult | None = None
+        conds: SpendBundleConditions | None = None
         pre_validation_time = None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
@@ -2450,13 +2450,13 @@ class FullNode:
                 raise ConsensusError(Err(err))
             assert conditions is not None
             assert conditions.validated_signature
-            npc_result = NPCResult(None, conditions)
+            conds = conditions
             pre_validation_time = time.monotonic() - pre_validation_start
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.monotonic()
-            validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
+            validate_result = await self.blockchain.validate_unfinished_block(block, conds)
             if validate_result.error is not None:
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.monotonic() - validation_start
