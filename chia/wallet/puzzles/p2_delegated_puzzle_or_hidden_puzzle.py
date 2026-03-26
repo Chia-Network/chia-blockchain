@@ -143,7 +143,7 @@ def puzzle_hash_for_pk(public_key: G1Element) -> bytes32:
     return puzzle_hash_for_public_key_and_hidden_puzzle_hash(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
 
-def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: Program) -> Program:
+def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: CastableType) -> Program:
     return Program.to([[], delegated_puzzle, solution])
 
 
