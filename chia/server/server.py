@@ -358,11 +358,7 @@ class ChiaServer:
                     raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Limit inbound connections to config's specifications.
-            if (
-                not self.accept_inbound_connections(connection.connection_type)
-                and not is_in_network(connection.peer_info.host, self.exempt_peer_networks)
-                and not (connection.connection_type == NodeType.TIMELORD and is_localhost(connection.peer_info.host))
-            ):
+            if not self.should_accept_inbound(connection.connection_type, connection.peer_info.host):
                 self.log.info(
                     f"Not accepting inbound connection: {connection.get_peer_logging()} "
                     f"of type {connection.connection_type.name}. Inbound limit reached."
@@ -737,6 +733,7 @@ class ChiaServer:
         return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
+        """Check if there are available inbound slots for this node type per config.yaml limits."""
         if not self._local_type == NodeType.FULL_NODE:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
@@ -748,6 +745,17 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
         if node_type == NodeType.FARMER:
             return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
+        return False
+
+    def should_accept_inbound(self, connection_type: NodeType, peer_host: str) -> bool:
+        """Check if an inbound connection should be accepted, considering config limits,
+        exempt peer networks, and localhost exceptions for timelords."""
+        if self.accept_inbound_connections(connection_type):
+            return True
+        if is_in_network(peer_host, self.exempt_peer_networks):
+            return True
+        if connection_type == NodeType.TIMELORD and is_localhost(peer_host):
+            return True
         return False
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:
