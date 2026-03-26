@@ -5,6 +5,7 @@ import logging
 import math
 import time
 import traceback
+import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
@@ -55,6 +56,11 @@ WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")
+
+
+def sanitize_version_string(version: str) -> str:
+    """Strip Unicode control characters (Cc) and format characters (Cf) to prevent log injection."""
+    return "".join(c for c in version if unicodedata.category(c) not in {"Cc", "Cf"})
 
 
 def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
@@ -298,7 +304,7 @@ class WSChiaConnection:
             )
             await self._send_message(outbound_handshake)
 
-        self.version = inbound_handshake.software_version
+        self.version = sanitize_version_string(inbound_handshake.software_version)
         self.protocol_version = Version(inbound_handshake.protocol_version)
         self.peer_server_port = inbound_handshake.server_port
         self.connection_type = remote_node_type
