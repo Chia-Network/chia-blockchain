@@ -536,7 +536,11 @@ class Farmer:
                     root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, read_only=True
                 ) as pool_config:
                     pass  # Just releases the config without any edits
+            except Exception as e:
+                self.log.error(f"Error loading config for {p2_singleton_puzzle_hash}, {e}")
+                continue
 
+            try:
                 authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")

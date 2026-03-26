@@ -70,7 +70,7 @@ class PoolingShareState:
 
     @classmethod
     def get_all_p2_singleton_puzzle_hashes(cls, *, root_path: Path) -> list[bytes32]:
-        with cls._get_raw_content(root_path=root_path) as loaded_list:
+        with cls._get_raw_content(root_path=root_path, read_only=True) as loaded_list:
             return cls._p2_singleton_puzzle_hashes_from_list(loaded_list)
 
     def add(self, *, root_path: Path) -> None:
