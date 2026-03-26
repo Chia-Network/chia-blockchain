@@ -21,7 +21,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
-from chia.pools.pool_config import PoolingShareState
+from chia.pools.pool_config import PoolingShareState, perform_migration_from_old_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -180,6 +180,7 @@ class Farmer:
 
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: tuple[uint64, farmer_protocol.NewSignagePoint] | None = None
+        perform_migration_from_old_config(self._root_path)
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
@@ -531,7 +532,7 @@ class Farmer:
         p2_singleton_puzhashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(root_path=self._root_path)
         for p2_singleton_puzzle_hash in p2_singleton_puzhashes:
             with PoolingShareState.acquire(
-                root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+                root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, read_only=True
             ) as pool_config:
                 pass  # Just releases the config without any edits
             try:
