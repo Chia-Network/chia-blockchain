@@ -17,7 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - Numerous hardening measures and soft fork: Please read our blog post for more information
-  https://www.chia.net/blog/
+  https://www.chia.net/2026/03/26/chia-2-7-0-combatting-the-ai-siege/
 - Make the mempool a bit more defensive on slow machines
 - Harden connection handling and message validation in `WSChiaConnection`
 - Improve `register_for_coin_updates`
