@@ -531,13 +531,13 @@ class Farmer:
 
         p2_singleton_puzhashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(root_path=self._root_path)
         for p2_singleton_puzzle_hash in p2_singleton_puzhashes:
-            with PoolingShareState.acquire(
-                root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, read_only=True
-            ) as pool_config:
-                pass  # Just releases the config without any edits
             try:
-                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+                with PoolingShareState.acquire(
+                    root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, read_only=True
+                ) as pool_config:
+                    pass  # Just releases the config without any edits
 
+                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
