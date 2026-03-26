@@ -367,16 +367,21 @@ class PlotNFT2Wallet:
                     root_path=self.wallet_state_manager.root_path,
                     p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
                 ) as pool_config:
-                    pool_config.pool_url = str(coin_data.remarks[0].rest.as_atom(), "utf8")
                     pool_config.owner_public_key = coin_data.user_config.synthetic_pubkey
                     if coin_data.pool_config is not None:
-                        pool_config.target_puzzle_hash = coin_data.pool_config.pool_puzzle_hash
+                        if coin_data.pool_config.pool_puzzle_hash != pool_config.target_puzzle_hash:
+                            pool_config.pool_url = await self.wallet_state_manager.plotnft2_store.get_latest_remark(
+                                coin_data.launcher_id
+                            )
+                            pool_config.target_puzzle_hash = coin_data.pool_config.pool_puzzle_hash
                     else:
                         pool_config.target_puzzle_hash = bytes32.from_hexstr(pool_config.payout_instructions)
             else:
                 PoolingShareState(
                     launcher_id=coin_data.launcher_id,
-                    pool_url=str(coin_data.remarks[0].rest.as_atom(), "utf8"),
+                    pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(coin_data.launcher_id)
+                    if coin_data.pool_config is not None
+                    else "",
                     owner_public_key=coin_data.user_config.synthetic_pubkey,
                     target_puzzle_hash=coin_data.pool_config.pool_puzzle_hash
                     if coin_data.pool_config is not None
