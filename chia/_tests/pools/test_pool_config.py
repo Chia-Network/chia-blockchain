@@ -41,7 +41,8 @@ def test_pool_config(tmp_path: Path) -> None:
     ) as pool_config:
         assert pool_config.payout_instructions == "foo"
     with pytest.raises(ValueError, match=f"Attempting to load non-existent pooling state for {bytes32.zeros.hex()}"):
-        PoolingShareState.acquire(root_path=test_root, p2_singleton_puzzle_hash=bytes32.zeros)
+        with PoolingShareState.acquire(root_path=test_root, p2_singleton_puzzle_hash=bytes32.zeros):
+            pass  # pragma: no cover
 
 
 def test_migration(tmp_path: Path) -> None:
