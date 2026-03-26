@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
+from chia.pools.pool_config import PoolingShareState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -359,6 +360,31 @@ class PlotNFT2Wallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):
             await self.wallet_state_manager.plotnft2_store.add_plotnft(plotnft=coin_data, created_height=height)
+            if self.p2_singleton_puzzle_hash in PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+                root_path=self.wallet_state_manager.root_path
+            ):
+                with PoolingShareState.acquire(
+                    root_path=self.wallet_state_manager.root_path,
+                    p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
+                ) as pool_config:
+                    pool_config.pool_url = str(coin_data.remarks[0].rest.as_atom(), "utf8")
+                    pool_config.owner_public_key = coin_data.user_config.synthetic_pubkey
+                    if coin_data.pool_config is not None:
+                        pool_config.target_puzzle_hash = coin_data.pool_config.pool_puzzle_hash
+                    else:
+                        pool_config.target_puzzle_hash = bytes32.from_hexstr(pool_config.payout_instructions)
+            else:
+                PoolingShareState(
+                    launcher_id=coin_data.launcher_id,
+                    pool_url=str(coin_data.remarks[0].rest.as_atom(), "utf8"),
+                    owner_public_key=coin_data.user_config.synthetic_pubkey,
+                    target_puzzle_hash=coin_data.pool_config.pool_puzzle_hash
+                    if coin_data.pool_config is not None
+                    else self.rewards_claim_puzhash,
+                    p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
+                    payout_instructions=self.rewards_claim_puzhash.hex(),
+                ).add(root_path=self.wallet_state_manager.root_path)
+
             if coin_data.exiting:
                 await self.wallet_state_manager.plotnft2_store.add_exiting_height(
                     wallet_id=self.id(), height=uint32(height + coin_data.guaranteed_pool_config.heightlock)
