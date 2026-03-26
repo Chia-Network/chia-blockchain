@@ -64,6 +64,7 @@ from functools import lru_cache
 from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 from chia.util.casts import int_from_bytes
@@ -154,6 +155,6 @@ def solution_for_hidden_puzzle(
     return Program.to([hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle])
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: CastableType) -> Program:
     delegated_puzzle = puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
