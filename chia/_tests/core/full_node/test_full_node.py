@@ -553,6 +553,25 @@ async def test_inbound_connection_limit(setup_four_nodes: OldSimulatorsAndWallet
 
 
 @pytest.mark.anyio
+async def test_timelord_inbound_connection(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    _, server, _ = one_node_one_block
+    from ipaddress import ip_network
+
+    # Timelord from localhost should be accepted
+    assert server.should_accept_inbound(NodeType.TIMELORD, "127.0.0.1") is True
+    assert server.should_accept_inbound(NodeType.TIMELORD, "::1") is True
+
+    # Timelord from non-localhost, non-exempt should be rejected
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is False
+
+    # Timelord from non-localhost, exempt network should be accepted
+    server.exempt_peer_networks = [ip_network("8.8.8.0/24")]
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is True
+
+
+@pytest.mark.anyio
 async def test_request_peers(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -3724,7 +3743,7 @@ async def test_node_type_message_typechecking(
     [
         (NodeType.HARVESTER, None),
         (NodeType.FARMER, "max_inbound_farmer"),
-        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.TIMELORD, None),
         (NodeType.INTRODUCER, None),
         (NodeType.WALLET, "max_inbound_wallet"),
         (NodeType.DATA_LAYER, None),
