@@ -5,7 +5,6 @@ import functools
 import json
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import replace
 from pathlib import Path
 from pprint import pprint
 from typing import Any
@@ -25,11 +24,7 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
-from chia.pools.pool_config import (
-    PoolWalletConfig,
-    load_pool_config,
-    update_pool_config,
-)
+from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
@@ -461,24 +456,22 @@ async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: in
 
 
 async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, root_path: Path | None) -> None:
-    new_pool_configs: list[PoolWalletConfig] = []
-    id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
+
     if root_path is None:
         root_path = DEFAULT_ROOT_PATH
 
-    old_configs: list[PoolWalletConfig] = load_pool_config(root_path)
-    for pool_config in old_configs:
-        if pool_config.launcher_id == launcher_id:
-            id_found = True
-            new_pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
-        else:
-            new_pool_config = pool_config
-        new_pool_configs.append(new_pool_config)
-    if id_found:
-        print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
-        await update_pool_config(root_path, new_pool_configs)
-        print(f"Payout Instructions for launcher id: {launcher_id.hex()} successfully updated to: {address}.")
-        print(f"You will need to change the payout instructions on every device you use to: {address}.")
+    p2_singleton_puzzle_hashes = PoolingShareState.get_all_p2_singleton_puzzle_hashes(root_path=root_path)
+
+    for p2_singleton_puzzle_hash in p2_singleton_puzzle_hashes:
+        with PoolingShareState.acquire(
+            root_path=root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+        ) as pool_config:
+            if pool_config.launcher_id == launcher_id:
+                print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
+                pool_config.payout_instructions = puzzle_hash.hex()
+                print(f"Payout Instructions for launcher id: {launcher_id.hex()} successfully updated to: {address}.")
+                print(f"You will need to change the payout instructions on every device you use to: {address}.")
+                break
     else:
         print(f"Launcher Id: {launcher_id.hex()} Not found.")

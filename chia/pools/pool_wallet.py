@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack, final
 
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_puzzles import (
     create_absorb_spend,
     create_full_puzzle,
@@ -230,25 +230,32 @@ class PoolWallet:
 
     async def update_pool_config(self, action_scope: WalletActionScope) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
-        pool_config_list: list[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
-        pool_config_dict: dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
-        existing_config: PoolWalletConfig | None = pool_config_dict.get(current_state.launcher_id, None)
-        payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
+        if current_state.p2_singleton_puzzle_hash not in PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+            root_path=self.wallet_state_manager.root_path
+        ):
+            PoolingShareState(
+                launcher_id=current_state.launcher_id,
+                pool_url=current_state.current.pool_url if current_state.current.pool_url else "",
+                payout_instructions=(await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex(),
+                p2_singleton_puzzle_hash=current_state.p2_singleton_puzzle_hash,
+                owner_public_key=current_state.current.owner_pubkey,
+                target_puzzle_hash=current_state.current.target_puzzle_hash,
+            ).add(root_path=self.wallet_state_manager.root_path)
+        with PoolingShareState.acquire(
+            root_path=self.wallet_state_manager.root_path,
+            p2_singleton_puzzle_hash=current_state.p2_singleton_puzzle_hash,
+        ) as pool_config:
+            payout_instructions = pool_config.payout_instructions
+            if payout_instructions == "":
+                payout_instructions = (await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex()
+                self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
-        if len(payout_instructions) == 0:
-            payout_instructions = (await action_scope.get_puzzle_hash(self.wallet_state_manager)).hex()
-            self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
-
-        new_config: PoolWalletConfig = PoolWalletConfig(
-            current_state.launcher_id,
-            current_state.current.pool_url if current_state.current.pool_url else "",
-            payout_instructions,
-            current_state.current.target_puzzle_hash,
-            current_state.p2_singleton_puzzle_hash,
-            current_state.current.owner_pubkey,
-        )
-        pool_config_dict[new_config.launcher_id] = new_config
-        await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
+            pool_config.launcher_id = current_state.launcher_id
+            pool_config.pool_url = current_state.current.pool_url if current_state.current.pool_url else ""
+            pool_config.payout_instructions = payout_instructions
+            pool_config.target_puzzle_hash = current_state.current.target_puzzle_hash
+            pool_config.p2_singleton_puzzle_hash = current_state.p2_singleton_puzzle_hash
+            pool_config.owner_public_key = current_state.current.owner_pubkey
 
     async def apply_state_transition(
         self, new_state: CoinSpend, block_height: uint32, action_scope: WalletActionScope

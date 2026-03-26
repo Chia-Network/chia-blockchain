@@ -23,7 +23,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
-from chia.pools.pool_config import PoolWalletConfig
+from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
@@ -34,7 +34,6 @@ from chia.types.blockchain_format.proof_of_space import (
     make_pos,
     verify_and_get_quality_string,
 )
-from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
@@ -141,7 +140,7 @@ class NewProofOfSpaceCase:
     pool_contract_puzzle_hash: bytes32
     height: uint32
     proof: bytes
-    pool_config: PoolWalletConfig
+    pool_config: PoolingShareState
     pool_difficulty: uint64 | None
     authentication_token_timeout: uint8 | None
     farmer_private_keys: list[PrivateKey]
@@ -164,7 +163,7 @@ class NewProofOfSpaceCase:
         expected_pool_stats: dict[str, Any],
     ) -> NewProofOfSpaceCase:
         p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
-        pool_config = PoolWalletConfig(
+        pool_config = PoolingShareState(
             launcher_id=bytes32.fromhex("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
             pool_url=pool_url,
             payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
@@ -942,20 +941,6 @@ async def test_farmer_pool_response(
     assert_stats_24h("missing_partials_24h")
 
 
-def make_pool_list_entry(overrides: dict[str, Any]) -> dict[str, Any]:
-    pool_list_entry = {
-        "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",  # noqa: E501
-        "p2_singleton_puzzle_hash": "302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df",
-        "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-        "pool_url": "localhost",
-        "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
-        "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-    }
-    for key, value in overrides.items():
-        pool_list_entry[key] = value
-    return pool_list_entry
-
-
 def make_pool_info() -> dict[str, Any]:
     return {
         "name": "Pool Name",
@@ -1202,25 +1187,27 @@ async def test_farmer_pool_info_config_update(
             "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
         },
     )
-    config = load_config(farmer_service.root_path, "config.yaml")
-    config["pool"]["pool_list"] = [
-        make_pool_list_entry(
-            overrides={
-                "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
-                "pool_url": case.initial_pool_url_in_config,
-            }
-        )
-    ]
-    save_config(farmer_service.root_path, "config.yaml", config)
+    PoolingShareState(
+        owner_public_key=G1Element.from_bytes(
+            bytes.fromhex(
+                "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
+            )
+        ),
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        pool_url=case.initial_pool_url_in_config,
+        launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
+        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+    ).add(root_path=farmer_service.root_path)
     mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
 
     await farmer_service._node.update_pool_state()
 
     mock_http_get.assert_called_once()
-    config = load_config(farmer_service.root_path, "config.yaml")
-    assert len(config["pool"]["pool_list"]) == 1
-    assert config["pool"]["pool_list"][0]["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
-    assert config["pool"]["pool_list"][0]["pool_url"] == case.expected_pool_url_in_config
+    with PoolingShareState.acquire(
+        root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+    ) as pool_config:
+        assert pool_config.pool_url == case.expected_pool_url_in_config
 
 
 @dataclass
