@@ -4,12 +4,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NotRequired, TypedDict
+from typing import TypedDict
 
 import yaml
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import Self
+from typing_extensions import NotRequired, Self
 
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.lock import Lockfile
