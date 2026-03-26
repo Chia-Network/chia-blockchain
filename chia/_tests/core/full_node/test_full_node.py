@@ -553,6 +553,25 @@ async def test_inbound_connection_limit(setup_four_nodes: OldSimulatorsAndWallet
 
 
 @pytest.mark.anyio
+async def test_timelord_inbound_connection(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    _, server, _ = one_node_one_block
+    from ipaddress import ip_network
+
+    # Timelord from localhost should be accepted
+    assert server.should_accept_inbound(NodeType.TIMELORD, "127.0.0.1") is True
+    assert server.should_accept_inbound(NodeType.TIMELORD, "::1") is True
+
+    # Timelord from non-localhost, non-exempt should be rejected
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is False
+
+    # Timelord from non-localhost, exempt network should be accepted
+    server.exempt_peer_networks = [ip_network("8.8.8.0/24")]
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is True
+
+
+@pytest.mark.anyio
 async def test_request_peers(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -1169,6 +1188,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1224,11 +1244,53 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
+    peer.expected_mempool_responses += 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 
     await asyncio.sleep(1)
     assert incoming_queue.qsize() == 0
+
+
+@pytest.mark.anyio
+async def test_unsolicited_transaction_ignored(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    spend_bundle = make_spend_bundle(1)
+    assert peer.expected_mempool_responses == 0
+    res = await full_node_1.respond_transaction(fnp.RespondTransaction(spend_bundle), peer)
+    assert res is None
+    assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
+
+
+@pytest.mark.anyio
+async def test_malformed_peer_version_on_connect(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    full_node_1, server_1, _bt = one_node_one_block
+
+    _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+    peer = server_1.all_connections[dummy_node_id]
+
+    # Make synced() return True so on_connect reaches the version check
+    original_network = full_node_1.full_node.config.get("selected_network")
+    full_node_1.full_node.config["selected_network"] = "simulator0"
+    try:
+        peer.version = "2.7.0-custom"
+        peer.expected_mempool_responses = 0
+        await full_node_1.full_node.on_connect(peer)
+
+        # Unparseable version should be treated as old, so the counter is incremented
+        assert peer.expected_mempool_responses == 100
+    finally:
+        full_node_1.full_node.config["selected_network"] = original_network
 
 
 @pytest.mark.anyio
@@ -3605,7 +3667,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
     db_path = path_from_root(bt.root_path, db_path_replaced)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    await make_db(db_path, default_400_blocks)
+    await make_db(db_path, default_400_blocks, bt.constants)
     with contextlib.closing(sqlite3.connect(db_path)) as conn:
         conn.execute("DELETE FROM current_peak;")
         conn.commit()
@@ -3681,7 +3743,7 @@ async def test_node_type_message_typechecking(
     [
         (NodeType.HARVESTER, None),
         (NodeType.FARMER, "max_inbound_farmer"),
-        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.TIMELORD, None),
         (NodeType.INTRODUCER, None),
         (NodeType.WALLET, "max_inbound_wallet"),
         (NodeType.DATA_LAYER, None),
@@ -3741,3 +3803,40 @@ def test_hard_fork2_capability_on_release_branch() -> None:
     if branch is not None and branch.startswith("release/3."):
         for capabilities in default_capabilities.values():
             assert (uint16(Capability.HARD_FORK_2.value), "1") in capabilities
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_register_for_coin_updates(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the scenario where a peer registers for coin updates to make sure we
+    don't return coin states for coins that are not in the processed list.
+    """
+    full_node_api, server, bt = one_node_one_block
+    blocks = await full_node_api.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+    for block in blocks:
+        await full_node_api.full_node.add_block(block)
+    real_coin_ids = [c.name() for c in blocks[-1].get_included_reward_coins()]
+    assert len(real_coin_ids) >= 2
+    max_subscribe_items = 42
+    full_node_api.full_node.config["max_subscribe_items"] = max_subscribe_items
+    # Place one coin within the subscription limit and the rest after it so we
+    # can verify the response only includes states for coins that fit.
+    first_coin = real_coin_ids[:1]
+    remaining_coins = real_coin_ids[1:]
+    fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
+    request_ids = first_coin + fake_coin_ids + remaining_coins
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    response = await full_node_api.register_for_coin_updates(
+        wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0)), dummy_peer
+    )
+    assert response is not None
+    assert response.type == ProtocolMessageTypes.respond_to_coin_updates.value
+    response_data = wallet_protocol.RespondToCoinUpdates.from_bytes(response.data)
+    assert len(response_data.coin_ids) == max_subscribe_items
+    assert {cs.coin.name() for cs in response_data.coin_states} == set(first_coin)
+    for coin_id in remaining_coins:
+        assert coin_id not in response_data.coin_ids

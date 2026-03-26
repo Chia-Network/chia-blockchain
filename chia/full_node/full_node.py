@@ -942,6 +942,14 @@ class FullNode:
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
                 await connection.send_message(msg)
+                # Old peers (< 2.6.0) respond to RequestMempoolTransactions with
+                # RespondTransaction directly. New peers send NewTransaction instead.
+                try:
+                    old_peer = Version(connection.version) < Version("2.6.0")
+                except Exception:
+                    old_peer = True
+                if old_peer:
+                    connection.expected_mempool_responses += 100
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 
@@ -1629,8 +1637,17 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
-            assert pre_validation_results[i].error is None
-            assert pre_validation_results[i].required_iters is not None
+            if pre_validation_results[i].error is not None:
+                self.log.error(
+                    f"prevalidation failed for block {header_hash.hex()} height {block.height} "
+                    f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                )
+                return agg_state_change_summary, Err(pre_validation_results[i].error)
+            if pre_validation_results[i].required_iters is None:
+                self.log.error(
+                    f"required_iters is None for block {header_hash.hex()} height {block.height} from peer {peer_info}"
+                )
+                return agg_state_change_summary, Err.UNKNOWN
             state_change_summary: StateChangeSummary | None
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
@@ -2062,6 +2079,9 @@ class FullNode:
         ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
+            pos = block.reward_chain_block.proof_of_space
+            if pos.version == 1 and pos.quality_string() is None:
+                raise ConsensusError(Err.INVALID_POSPACE)
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             foliage_hash: bytes32 | None = block.foliage.foliage_transaction_block_hash
             assert foliage_hash is not None
@@ -2326,6 +2346,10 @@ class FullNode:
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")
             return None
+
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            raise ConsensusError(Err.INVALID_POSPACE)
 
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
@@ -2791,6 +2815,10 @@ class FullNode:
             # ban the peer
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
+        except ValidationError as e:
+            self.log.info(f"Rejecting transaction {spend_name}: {e.code}")
+            self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+            return MempoolInclusionStatus.FAILED, e.code
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 

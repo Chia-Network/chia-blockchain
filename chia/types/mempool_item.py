@@ -10,6 +10,10 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.util.streamable import recurse_jsonify
 
+# Per-spend penalty added to CLVM cost when computing virtual cost.
+# Virtual cost = CLVM cost + num_spends * SPEND_PENALTY_COST
+SPEND_PENALTY_COST = 500_000
+
 
 @dataclass(frozen=True)
 class UnspentLineageInfo:
@@ -69,12 +73,24 @@ class MempoolItem:
         return int(self.fee) / int(self.cost)
 
     @property
+    def fee_per_virtual_cost(self) -> float:
+        return int(self.fee) / int(self.virtual_cost)
+
+    @property
     def name(self) -> bytes32:
         return self.spend_bundle_name
 
     @property
     def cost(self) -> uint64:
         return uint64(0 if self.conds is None else self.conds.cost)
+
+    @property
+    def num_spends(self) -> int:
+        return 0 if self.conds is None else len(self.conds.spends)
+
+    @property
+    def virtual_cost(self) -> uint64:
+        return uint64(self.cost + self.num_spends * SPEND_PENALTY_COST)
 
     @property
     def additions(self) -> list[Coin]:

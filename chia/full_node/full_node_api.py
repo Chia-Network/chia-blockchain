@@ -314,6 +314,11 @@ class FullNodeAPI:
         spend_name = std_hash(tx_bytes)
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        elif peer.expected_mempool_responses > 0:
+            peer.expected_mempool_responses -= 1
+        else:
+            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             peers_with_tx = self.full_node.full_node_store.peers_with_tx.pop(spend_name)
@@ -1767,13 +1772,14 @@ class FullNodeAPI:
         # TODO: apparently we have tests that expect to receive a
         # RespondToCoinUpdates even when subscribing to the same coin multiple
         # times, so we can't optimize away such DB lookups (yet)
-        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
+        coin_ids = request.coin_ids[:max_subscriptions]
+        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
         states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=set(request.coin_ids), min_height=request.min_height, max_items=max_items
+            include_spent_coins=True, coin_ids=set(coin_ids), min_height=request.min_height, max_items=max_items
         )
 
-        response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
+        response = wallet_protocol.RespondToCoinUpdates(coin_ids, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_updates, response)
         return msg
 

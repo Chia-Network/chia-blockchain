@@ -155,6 +155,6 @@ def solution_for_hidden_puzzle(
     return Program.to([hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle])
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: CastableType) -> Program:
     delegated_puzzle = puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
