@@ -25,7 +25,7 @@ from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import WSChiaConnection, error_response_version
+from chia.server.ws_connection import WSChiaConnection, error_response_version, sanitize_version_string
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
@@ -87,6 +87,24 @@ async def test_connection_versions(
         assert connection.protocol_version == Version(protocol_version[NodeType.WALLET])
         assert connection.version == __version__
         assert connection.get_version() == connection.version
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("2.5.0", "2.5.0"),
+        ("", ""),
+        ("2.5.0\nERROR fake log line", "2.5.0ERROR fake log line"),
+        ("2.5.0\r\nINJECTED", "2.5.0INJECTED"),
+        ("2.5.0\x00hidden", "2.5.0hidden"),
+        ("\x1b[31mred\x1b[0m", "[31mred[0m"),
+        ("valid-version_1.2.3+build.42", "valid-version_1.2.3+build.42"),
+        ("a" * 128, "a" * 128),
+        ("\u200b\u200czero-width", "zero-width"),
+    ],
+)
+def test_sanitize_version_string(raw: str, expected: str) -> None:
+    assert sanitize_version_string(raw) == expected
 
 
 @pytest.mark.anyio

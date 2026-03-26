@@ -53,3 +53,7 @@ class ProofIntegrityError(Exception):
 
 class LauncherCoinNotFoundError(Exception):
     pass
+
+
+class MaxDeltaFileSizeExceededError(Exception):
+    pass
