@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 import yaml
 from chia_rs import G1Element
@@ -22,6 +22,7 @@ class _PoolConfig(TypedDict):
     target_puzzle_hash: str
     p2_singleton_puzzle_hash: str
     owner_public_key: str
+    version: NotRequired[int]
 
 
 @dataclass(kw_only=True)
@@ -32,6 +33,7 @@ class PoolingShareState:
     target_puzzle_hash: bytes32
     p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
+    version: int = 1
 
     @staticmethod
     def state_path(root_path: Path) -> Path:
@@ -98,6 +100,7 @@ class PoolingShareState:
                 target_puzzle_hash=bytes32.from_hexstr(config["target_puzzle_hash"]),
                 p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
                 owner_public_key=G1Element.from_bytes(bytes.fromhex(config["owner_public_key"])),
+                version=config.get("version", 1),
             )
             yield self
             for i, conf in enumerate(loaded_list):
@@ -113,6 +116,7 @@ class PoolingShareState:
             "target_puzzle_hash": self.target_puzzle_hash.hex(),
             "owner_public_key": bytes(self.owner_public_key).hex(),
             "p2_singleton_puzzle_hash": self.p2_singleton_puzzle_hash.hex(),
+            "version": self.version,
         }
 
 

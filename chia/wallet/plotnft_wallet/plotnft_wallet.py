@@ -388,6 +388,7 @@ class PlotNFT2Wallet:
                     else self.rewards_claim_puzhash,
                     p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
                     payout_instructions=self.rewards_claim_puzhash.hex(),
+                    version=2,
                 ).add(root_path=self.wallet_state_manager.root_path)
 
             if coin_data.exiting:
