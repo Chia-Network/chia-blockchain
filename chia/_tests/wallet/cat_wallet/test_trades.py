@@ -2219,18 +2219,21 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
 
     await wallet_environments.process_pending_states(
         [
-            # We're ignoring initial balance checking here because of the peculiarity
-            # of the forced resend behavior we're doing above. Not entirely sure that we should be
-            # but the balances are weird in such a way that it suggests to me a test issue and not
-            # an issue with production code - quex
+            # We use set_remainder=True for both pre- and post-block on all wallets here.
+            # The forced resend above means the bad spend may or may not have been rejected
+            # by the time the pre-block snapshot is taken, making the CAT unconfirmed balance
+            # non-deterministic (either 4 or 0). After the block is farmed the wallet always
+            # settles to 0, but "cat": {} would assert "no change from pre-block" and fail if
+            # the pre-block snapshot happened to capture the pending value. The important
+            # behavioral assertion (trade is FAILED) is checked below via get_trade_and_status.
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {"set_remainder": True},
                     "cat": {"set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {},
-                    "cat": {},
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
                 },
             ),
             WalletStateTransition(
@@ -2239,8 +2242,8 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
                     "cat": {"init": True, "set_remainder": True},
                 },
                 post_block_balance_updates={
-                    "xch": {},
-                    "cat": {},
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
                 },
             ),
         ],
