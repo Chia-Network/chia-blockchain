@@ -11,6 +11,7 @@ import aiohttp
 from chia_rs.datalayer import DeltaReader
 from chia_rs.sized_bytes import bytes32
 
+from chia.data_layer.data_layer_errors import MaxDeltaFileSizeExceededError
 from chia.data_layer.data_layer_util import (
     PluginRemote,
     Root,
@@ -121,6 +122,7 @@ async def download_file(
     log: logging.Logger,
     grouped_by_store: bool,
     group_downloaded_files_by_store: bool,
+    max_delta_file_size: int,
 ) -> bool:
     if target_filename_path.exists():
         return True
@@ -129,8 +131,10 @@ async def download_file(
     if downloader is None:
         # use http downloader - this raises on any error
         try:
-            await http_download(target_filename_path, filename, proxy_url, server_info, timeout, log)
-        except (asyncio.TimeoutError, aiohttp.ClientError):
+            await http_download(
+                target_filename_path, filename, proxy_url, server_info, timeout, log, max_delta_file_size
+            )
+        except (asyncio.TimeoutError, aiohttp.ClientError, MaxDeltaFileSizeExceededError):
             new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
             log.info(
                 f"Failed to download {filename} from {new_server_info.url}."
@@ -146,6 +150,7 @@ async def download_file(
         "client_folder": str(client_foldername),
         "filename": filename,
         "group_files_by_store": group_downloaded_files_by_store,
+        "max_delta_file_size": max_delta_file_size,
     }
     try:
         async with aiohttp.ClientSession() as session:
@@ -177,6 +182,7 @@ async def insert_from_delta_file(
     downloader: PluginRemote | None,
     group_files_by_store: bool = False,
     maximum_full_file_count: int = 1,
+    max_delta_file_size: int = 250,
 ) -> bool:
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
@@ -206,6 +212,7 @@ async def insert_from_delta_file(
                 log=log,
                 grouped_by_store=grouped_by_store,
                 group_downloaded_files_by_store=group_files_by_store,
+                max_delta_file_size=max_delta_file_size,
             )
             if success:
                 break
@@ -227,6 +234,7 @@ async def insert_from_delta_file(
                     None if root_hash == bytes32.zeros else root_hash,
                     target_filename_path,
                     delta_reader=delta_reader,
+                    max_delta_file_size=max_delta_file_size,
                 )
                 log.info(
                     f"Successfully inserted hash {root_hash} from delta file. "
@@ -294,6 +302,7 @@ async def http_download(
     server_info: ServerInfo,
     timeout: aiohttp.ClientTimeout,
     log: logging.Logger,
+    max_delta_file_size: int,
 ) -> None:
     """
     Download a file from a server using aiohttp.
@@ -309,14 +318,28 @@ async def http_download(
         ) as resp:
             resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))
+            max_delta_file_size_bytes = max_delta_file_size * 1024 * 1024
+            if size > max_delta_file_size_bytes:
+                raise MaxDeltaFileSizeExceededError(f"Maximum delta file size exceeded: {max_delta_file_size} MiB.")
             log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
             progress_byte = 0
             progress_percentage = f"{0:.0%}"
-            with target_filename_path.open(mode="wb") as f:
-                async for chunk, _ in resp.content.iter_chunks():
-                    f.write(chunk)
-                    progress_byte += len(chunk)
-                    new_percentage = f"{progress_byte / size:.0%}"
-                    if new_percentage != progress_percentage:
-                        progress_percentage = new_percentage
-                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+            success = False
+            try:
+                with target_filename_path.open(mode="wb") as f:
+                    async for chunk, _ in resp.content.iter_chunks():
+                        f.write(chunk)
+                        progress_byte += len(chunk)
+                        if progress_byte > max_delta_file_size_bytes:
+                            raise MaxDeltaFileSizeExceededError(
+                                f"Maximum delta file size exceeded: {max_delta_file_size} MiB."
+                            )
+                        if size > 0:
+                            new_percentage = f"{progress_byte / size:.0%}"
+                            if new_percentage != progress_percentage:
+                                progress_percentage = new_percentage
+                                log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+                success = True
+            finally:
+                if not success:
+                    target_filename_path.unlink(missing_ok=True)

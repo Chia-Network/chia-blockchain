@@ -38,7 +38,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
-from chia._tests.conftest import ConsensusMode
+from chia._tests.conftest import ConsensusMode, make_old_setup_simulators_and_wallets
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
@@ -3906,3 +3906,68 @@ async def test_tx_request_and_timeout_queue_full(
     monkeypatch.setattr(server_connection, "call_api", test_call_api)
     await tx_request_and_timeout(full_node=full_node, transaction_id=transaction_id, task_id=bytes32.random())
     assert transaction_id not in full_node.full_node_store.peers_with_tx
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_request_puzzle_state_rejects_before_peak(
+    blockchain_constants: ConsensusConstants, self_hostname: str
+) -> None:
+    """
+    request_puzzle_state must return RejectPuzzleState instead of crashing
+    when the node has no peak (before any blocks are synced).
+    """
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
+        (nodes, _, _bt) = make_old_setup_simulators_and_wallets(new=new)
+        full_node_api = nodes[0]
+        server = full_node_api.full_node.server
+
+        assert full_node_api.full_node.blockchain.get_peak_height() is None
+
+        dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1338, NodeType.WALLET)
+
+        request = wallet_protocol.RequestPuzzleState(
+            puzzle_hashes=[bytes32.random()],
+            previous_height=None,
+            header_hash=blockchain_constants.GENESIS_CHALLENGE,
+            filters=wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            subscribe_when_finished=False,
+        )
+        response = await full_node_api.request_puzzle_state(request, dummy_peer)
+
+        assert response is not None
+        assert response.type == ProtocolMessageTypes.reject_puzzle_state.value
+        reject = wallet_protocol.RejectPuzzleState.from_bytes(response.data)
+        assert reject.reason == uint8(wallet_protocol.RejectStateReason.REORG)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_request_puzzle_state_responds_normally(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Happy-path: request_puzzle_state returns RespondPuzzleState on a synced node.
+    """
+    full_node_api, server, _bt = one_node_one_block
+
+    assert full_node_api.full_node.blockchain.get_peak_height() is not None
+
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1339, NodeType.WALLET)
+
+    peak_height = full_node_api.full_node.blockchain.get_peak_height()
+    assert peak_height is not None
+    header_hash = full_node_api.full_node.blockchain.height_to_hash(peak_height)
+    assert header_hash is not None
+
+    request = wallet_protocol.RequestPuzzleState(
+        puzzle_hashes=[bytes32.random()],
+        previous_height=peak_height,
+        header_hash=header_hash,
+        filters=wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+        subscribe_when_finished=False,
+    )
+    response = await full_node_api.request_puzzle_state(request, dummy_peer)
+
+    assert response is not None
+    assert response.type == ProtocolMessageTypes.respond_puzzle_state.value

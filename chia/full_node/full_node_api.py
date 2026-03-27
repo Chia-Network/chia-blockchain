@@ -1664,6 +1664,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug(f"Ignoring CompactProofOfTime: {request}, _waiters")
 
         return None
@@ -1690,6 +1691,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
@@ -1965,11 +1967,15 @@ class FullNodeAPI:
         is_done = next_min_height is None
 
         peak_height = self.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
+        if peak_height is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         height = uint32(next_min_height - 1) if next_min_height is not None else peak_height
         header_hash = self.full_node.blockchain.height_to_hash(height)
-        assert header_hash is not None
+        if header_hash is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         # Check if the request would exceed the subscription limit.
         # We do this again since we've crossed an `await` point, to prevent a race condition.

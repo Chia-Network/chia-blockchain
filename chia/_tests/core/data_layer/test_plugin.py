@@ -214,6 +214,7 @@ async def test_download_file_plugin_success(tmp_path: Path) -> None:
             log=log,
             grouped_by_store=False,
             group_downloaded_files_by_store=False,
+            max_delta_file_size=10 * 1024 * 1024,  # 10 MB
         )
 
     assert result is True
@@ -246,6 +247,7 @@ async def test_download_file_plugin_timeout(tmp_path: Path) -> None:
             log=log,
             grouped_by_store=False,
             group_downloaded_files_by_store=False,
+            max_delta_file_size=10 * 1024 * 1024,  # 10 MB
         )
 
     assert result is False
@@ -278,6 +280,7 @@ async def test_download_file_plugin_client_error(tmp_path: Path) -> None:
             log=log,
             grouped_by_store=False,
             group_downloaded_files_by_store=False,
+            max_delta_file_size=10 * 1024 * 1024,  # 10 MB
         )
 
     assert result is False
