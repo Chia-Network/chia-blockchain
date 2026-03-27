@@ -3195,7 +3195,9 @@ class FullNode:
                 peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer_id: bytes32
+    ) -> VDFProof | None:
         header_block = await self.blockchain.get_header_block_by_height(
             request.height, request.header_hash, tx_filter=False
         )
@@ -3227,17 +3229,9 @@ class FullNode:
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
-            self.log.info(f"{peer.peer_node_id} requested compact vdf we don't have, height: {request.height}.")
+            self.log.info(f"{peer_id} requested compact vdf we don't have, height: {request.height}.")
             return None
-        compact_vdf = full_node_protocol.RespondCompactVDF(
-            request.height,
-            request.header_hash,
-            request.field_vdf,
-            request.vdf_info,
-            vdf_proof,
-        )
-        msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
-        await peer.send_message(msg)
+        return vdf_proof
 
     async def add_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))
