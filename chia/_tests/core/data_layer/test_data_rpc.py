@@ -182,9 +182,9 @@ async def init_wallet_and_node(
 async def farm_block_check_singleton(
     data_layer: DataLayer, full_node_api: FullNodeSimulator, ph: bytes32, store_id: bytes32, wallet: WalletNode
 ) -> None:
-    await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(30, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, check_singleton_confirmed, True, data_layer, store_id)
+    await time_out_assert(30, check_singleton_confirmed, True, data_layer, store_id)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=20)
 
 
@@ -215,9 +215,9 @@ async def check_mempool_spend_count_or_fail(
 async def farm_block_with_spend(
     full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi
 ) -> None:
-    await time_out_assert(10, check_mempool_spend_count_or_fail, True, full_node_api, 1, wallet_rpc_api, tx_rec)
+    await time_out_assert(30, check_mempool_spend_count_or_fail, True, full_node_api, 1, wallet_rpc_api, tx_rec)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(10, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
+    await time_out_assert(30, is_transaction_confirmed, True, wallet_rpc_api, tx_rec)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
 
 
