@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
 import sys
 import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from math import floor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import aiohttp
+import jwt
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
@@ -22,19 +23,8 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolingShareState, perform_migration_from_old_config
-from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols import farmer_protocol, harvester_protocol, pool_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
-from chia.protocols.pool_protocol import (
-    AuthenticationPayload,
-    ErrorResponse,
-    GetFarmerResponse,
-    PoolErrorCode,
-    PostFarmerPayload,
-    PostFarmerRequest,
-    PutFarmerPayload,
-    PutFarmerRequest,
-    get_current_authentication_token,
-)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer, ssl_context_for_root
@@ -53,6 +43,7 @@ from chia.wallet.derive_keys import (
     find_owner_sk,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
+    master_sk_to_pooling2_authentication_sk,
     match_address_to_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
@@ -68,7 +59,7 @@ UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 @dataclass(frozen=True)
 class GetPoolInfoResult:
-    pool_info: dict[str, Any]
+    pool_info: pool_protocol.GetPoolInfoResponse
     new_pool_url: str | None
 
 
@@ -172,6 +163,7 @@ class Farmer:
 
         # From p2_singleton to auth PrivateKey
         self.authentication_keys: dict[bytes32, PrivateKey] = {}
+        self.authentication_token: str | None = None
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: float = 0
@@ -322,6 +314,9 @@ class Farmer:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 
+    def get_current_time(self) -> uint64:
+        return uint64(time.time())
+
     def handle_failed_pool_response(self, p2_singleton_puzzle_hash: bytes32, error_message: str) -> None:
         self.log.error(error_message)
         increment_pool_stats(
@@ -329,7 +324,9 @@ class Farmer:
             p2_singleton_puzzle_hash,
             "pool_errors",
             time.time(),
-            value=ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict(),
+            value=pool_protocol.ErrorResponse(
+                uint16(pool_protocol.PoolErrorCode.REQUEST_FAILED.value), error_message
+            ).to_json_dict(),
         )
 
     async def on_disconnect(self, connection: WSChiaConnection) -> None:
@@ -346,13 +343,78 @@ class Farmer:
         if receiver.initial_sync() or harvester_updated:
             self.state_changed("harvester_update", receiver.to_dict(True))
 
+    async def _get_current_authentication_token(
+        self, pool_config: PoolingShareState, authentication_token_timeout: uint8
+    ) -> str | None:
+        if pool_config.version == 1:
+            return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
+        elif pool_config.version == 2:
+            if self.authentication_token is None or datetime.fromtimestamp(
+                jwt.get_unverified_header(self.authentication_token)["exp"], tz=timezone.utc
+            ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
+                auth_response = await self._pool_get_auth(pool_config)
+                if isinstance(auth_response, pool_protocol.GetAuthResponse):
+                    return auth_response.authentication_token
+                else:
+                    return None
+            else:
+                # seems sketchy because in theory we should check for non-None here but
+                # the auth token cannot be None AND expired so semantics guarantee a non-None, non-expired token here
+                return self.authentication_token
+        else:
+            raise ValueError("Unknown pool protocol version specified in pooling config")
+
+    async def _pool_get_auth(
+        self, pool_config: PoolingShareState
+    ) -> pool_protocol.GetAuthResponse | pool_protocol.ErrorResponse | None:
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                url = f"{pool_config.pool_url}/v{pool_config.version}/auth"
+                async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
+                    if resp.ok:
+                        json_response = await resp.json()
+                        log_level = logging.INFO
+                        if "error_code" in json_response:
+                            log_level = logging.WARNING
+                            increment_pool_stats(
+                                self.pool_state,
+                                pool_config.p2_singleton_puzzle_hash,
+                                "pool_errors",
+                                time.time(),
+                                value=json_response,
+                            )
+                        self.log.log(log_level, f"GET /auth response: {json_response}")
+                        if "error_code" in json_response:
+                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        else:
+                            return pool_protocol.GetAuthResponse.from_json_dict(json_response)
+                    else:
+                        self.handle_failed_pool_response(
+                            pool_config.p2_singleton_puzzle_hash,
+                            f"Error in GET /auth {pool_config.pool_url}, {resp.status}",
+                        )
+        except Exception as e:
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /auth {pool_config.pool_url}, {e}"
+            )
+        return None
+
     async def _pool_get_pool_info(self, pool_config: PoolingShareState) -> GetPoolInfoResult | None:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                url = f"{pool_config.pool_url}/pool_info"
+                url = f"{pool_config.pool_url}/v{pool_config.version}/pool_info"
                 async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
-                        response: dict[str, Any] = json.loads(await resp.text())
+                        json_response = await resp.json()
+                        if "error_code" in json_response:
+                            error_response = pool_protocol.ErrorResponse.from_json_dict(json_response)
+                            self.handle_failed_pool_response(
+                                pool_config.p2_singleton_puzzle_hash,
+                                f"Error in GET /pool_info {pool_config.pool_url}, "
+                                f"code: {error_response.error_code}, message: {error_response.error_message}",
+                            )
+                            return None
+                        response = pool_protocol.GetPoolInfoResponse.from_json_dict(json_response)
                         self.log.info(f"GET /pool_info response: {response}")
                         new_pool_url: str | None = None
                         response_url_str = f"{resp.url}"
@@ -379,40 +441,52 @@ class Farmer:
 
     async def _pool_get_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, authentication_sk: PrivateKey
-    ) -> dict[str, Any] | None:
-        authentication_token = get_current_authentication_token(authentication_token_timeout)
-        message: bytes32 = std_hash(
-            AuthenticationPayload(
-                "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+    ) -> pool_protocol.GetFarmerResponse | pool_protocol.ErrorResponse | None:
+        authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
+        if authentication_token is None:
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash,
+                f"Failed to authenticate to pool before aquiring farmer details: {pool_config.pool_url}",
             )
-        )
-        signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-        get_farmer_params: dict[str, str | int] = {
-            "launcher_id": pool_config.launcher_id.hex(),
-            "authentication_token": authentication_token,
-            "signature": bytes(signature).hex(),
-        }
+            return None
+        if pool_config.version == 1:
+            message: bytes32 = std_hash(
+                pool_protocol.AuthenticationPayloadV1(
+                    "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, uint64(authentication_token)
+                )
+            )
+            signature = AugSchemeMPL.sign(authentication_sk, message)
+        else:
+            signature = None
+
+        get_farmer_params = pool_protocol.GetFarmerRequest(
+            authentication_token=authentication_token, launcher_id=pool_config.launcher_id, signature=signature
+        ).to_json_dict()
+
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
                     params=get_farmer_params,
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: dict[str, Any] = json.loads(await resp.text())
+                        json_response = await resp.json()
                         log_level = logging.INFO
-                        if "error_code" in response:
+                        if "error_code" in json_response:
                             log_level = logging.WARNING
                             increment_pool_stats(
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
                                 time.time(),
-                                value=response,
+                                value=json_response,
                             )
-                        self.log.log(log_level, f"GET /farmer response: {response}")
-                        return response
+                        self.log.log(log_level, f"GET /farmer response: {json_response}")
+                        if "error_code" in json_response:
+                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        else:
+                            return pool_protocol.GetFarmerResponse.from_json_dict(json_response)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -426,41 +500,48 @@ class Farmer:
 
     async def _pool_post_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> dict[str, Any] | None:
+    ) -> pool_protocol.PostFarmerResponse | pool_protocol.ErrorResponse | None:
         auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
-        post_farmer_payload: PostFarmerPayload = PostFarmerPayload(
+        authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
+        if authentication_token is None:
+            self.log.error(f"Attempting to POST farmer details without being logged into {pool_config.pool_url}")
+            return None
+        post_farmer_payload = pool_protocol.PostFarmerPayload(
             pool_config.launcher_id,
-            get_current_authentication_token(authentication_token_timeout),
+            authentication_token,
             auth_sk.get_g1(),
             pool_config.payout_instructions,
             None,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
-        post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
-        self.log.debug(f"POST /farmer request {post_farmer_request}")
+        post_farmer_request = pool_protocol.PostFarmerRequest(post_farmer_payload, signature)
+        self.log.debug("POST /farmer request %s", post_farmer_request)
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
                     json=post_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: dict[str, Any] = json.loads(await resp.text())
+                        json_response = await resp.json()
                         log_level = logging.INFO
-                        if "error_code" in response:
+                        if "error_code" in json_response:
                             log_level = logging.WARNING
                             increment_pool_stats(
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
                                 time.time(),
-                                value=response,
+                                value=json_response,
                             )
-                        self.log.log(log_level, f"POST /farmer response: {response}")
-                        return response
+                        self.log.log(log_level, f"POST /farmer response: {json_response}")
+                        if "error_code" in json_response:
+                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        else:
+                            return pool_protocol.PostFarmerResponse.from_json_dict(json_response)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -474,40 +555,48 @@ class Farmer:
 
     async def _pool_put_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> None:
+    ) -> pool_protocol.PutFarmerResponse | pool_protocol.ErrorResponse | None:
         auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
-        put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
+        authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
+        if authentication_token is None:
+            self.log.error(f"Attempting to PUT farmer details without being logged into {pool_config.pool_url}")
+            return None
+        put_farmer_payload = pool_protocol.PutFarmerPayload(
             pool_config.launcher_id,
-            get_current_authentication_token(authentication_token_timeout),
+            authentication_token,
             auth_sk.get_g1(),
             pool_config.payout_instructions,
             None,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
-        put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
+        put_farmer_request = pool_protocol.PutFarmerRequest(put_farmer_payload, signature)
         self.log.debug(f"PUT /farmer request {put_farmer_request}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
-                    f"{pool_config.pool_url}/farmer",
+                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
                     json=put_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: dict[str, Any] = json.loads(await resp.text())
+                        json_response = await resp.json()
                         log_level = logging.INFO
-                        if "error_code" in response:
+                        if "error_code" in json_response:
                             log_level = logging.WARNING
                             increment_pool_stats(
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
                                 time.time(),
-                                value=response,
+                                value=json_response,
                             )
-                        self.log.log(log_level, f"PUT /farmer response: {response}")
+                        self.log.log(log_level, f"POST /farmer response: {json_response}")
+                        if "error_code" in json_response:
+                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        else:
+                            return pool_protocol.PutFarmerResponse.from_json_dict(json_response)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -517,14 +606,22 @@ class Farmer:
             self.handle_failed_pool_response(
                 pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
             )
+        return None
 
     def get_authentication_sk(self, pool_config: PoolingShareState) -> PrivateKey | None:
-        if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
-            return self.authentication_keys[pool_config.p2_singleton_puzzle_hash]
-        auth_sk: PrivateKey | None = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
-        if auth_sk is not None:
-            self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk
-        return auth_sk
+        if pool_config.version == 1:
+            if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
+                return self.authentication_keys[pool_config.p2_singleton_puzzle_hash]
+            auth_sk: PrivateKey | None = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
+            if auth_sk is not None:
+                self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk
+            return auth_sk
+        else:
+            for sk in self.all_root_sks:
+                auth_sk = master_sk_to_pooling2_authentication_sk(sk, pool_config.p2_singleton_puzzle_hash)
+                if auth_sk.get_g1() == pool_config.owner_public_key:
+                    return auth_sk
+            return None
 
     async def update_pool_state(self) -> None:
         config = load_config(self._root_path, "config.yaml")
@@ -588,12 +685,12 @@ class Farmer:
                     pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
                     pool_info_result = await self._pool_get_pool_info(pool_config)
-                    if pool_info_result is not None and "error_code" not in pool_info_result.pool_info:
+                    if pool_info_result is not None:
                         pool_info = pool_info_result.pool_info
-                        pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
+                        pool_state["authentication_token_timeout"] = pool_info.authentication_token_timeout
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
-                            pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+                            pool_state["current_difficulty"] = pool_info.minimum_difficulty
                     else:
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
@@ -607,41 +704,39 @@ class Farmer:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
-                    async def update_pool_farmer_info() -> tuple[GetFarmerResponse | None, PoolErrorCode | None]:
+                    async def update_pool_farmer_info() -> tuple[
+                        pool_protocol.GetFarmerResponse | None, pool_protocol.PoolErrorCode | None
+                    ]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(
                             pool_config, authentication_token_timeout, authentication_sk
                         )
-                        farmer_response: GetFarmerResponse | None = None
-                        error_code_response: PoolErrorCode | None = None
                         if response is not None:
-                            if "error_code" not in response:
-                                farmer_response = GetFarmerResponse.from_json_dict(response)
-                                if farmer_response is not None:
-                                    pool_state["current_difficulty"] = farmer_response.current_difficulty
-                                    pool_state["current_points"] = farmer_response.current_points
+                            if not isinstance(response, pool_protocol.ErrorResponse):
+                                pool_state["current_difficulty"] = response.current_difficulty
+                                pool_state["current_points"] = response.current_points
+                                return response, None
                             else:
                                 try:
-                                    error_code_response = PoolErrorCode(response["error_code"])
+                                    error_code = pool_protocol.PoolErrorCode(response.error_code)
+                                    return None, error_code
                                 except ValueError:
-                                    self.log.error(
-                                        f"Invalid error code received from the pool: {response['error_code']}"
-                                    )
-
-                        return farmer_response, error_code_response
+                                    self.log.error(f"Invalid error code received from the pool: {response.error_code}")
+                                    return None, None
+                        return None, None
 
                     if authentication_token_timeout is not None:
                         farmer_info, error_code = await update_pool_farmer_info()
-                        if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
+                        if error_code == pool_protocol.PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
                             owner_sk_and_index = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             assert owner_sk_and_index is not None
                             post_response = await self._pool_post_farmer(
                                 pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
-                            if post_response is not None and "error_code" not in post_response:
+                            if post_response is not None and not isinstance(post_response, pool_protocol.ErrorResponse):
                                 self.log.info(
-                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}"
+                                    f"Welcome message from {pool_config.pool_url}: {post_response.welcome_message}"
                                 )
                                 # Now we should be able to update the local farmer info
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()
@@ -654,7 +749,10 @@ class Farmer:
                             farmer_info is not None
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         )
-                        if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
+                        if (
+                            payout_instructions_update_required
+                            or error_code == pool_protocol.PoolErrorCode.INVALID_SIGNATURE
+                        ):
                             owner_sk_and_index = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             assert owner_sk_and_index is not None
                             await self._pool_put_farmer(
@@ -749,17 +847,25 @@ class Farmer:
                 )
                 return None
 
-            authentication_token = get_current_authentication_token(authentication_token_timeout)
-            message: bytes32 = std_hash(
-                AuthenticationPayload(
-                    "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+            timestamp = self.get_current_time()
+            if pool_config.version == 1:
+                auth_token = str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
+                message: bytes = std_hash(
+                    pool_protocol.AuthenticationPayloadV1(
+                        "get_login",
+                        pool_config.launcher_id,
+                        pool_config.target_puzzle_hash,
+                        pool_protocol.get_current_authentication_token(authentication_token_timeout),
+                    )
                 )
-            )
+            else:
+                auth_token = ""
+                message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
-                pool_config.pool_url
-                + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
-                f"&signature={bytes(signature).hex()}"
+                pool_config.pool_url + f"/login?launcher_id={pool_config.launcher_id.hex()}"
+                f"&authentication_token={auth_token}"
+                f"&signature={bytes(signature).hex()}&timestamp={timestamp}"
             )
 
         return None

@@ -15,6 +15,7 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     PartialProof,
     PoolTarget,
+    Program,
     ProofOfSpace,
     RespondToPhUpdates,
     RewardChainBlock,
@@ -970,7 +971,7 @@ respond_peers_introducer = introducer_protocol.RespondPeersIntroducer(
 
 
 # POOL PROTOCOL
-authentication_payload = pool_protocol.AuthenticationPayload(
+authentication_payload = pool_protocol.AuthenticationPayloadV1(
     "method",
     bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
     bytes32(bytes.fromhex("9de241b508b5e9e2073b7645291cfaa9458d33935340399a861acf2ee1770440")),
@@ -987,6 +988,7 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
     "pool description.",
     bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
     uint8(76),
+    Program.to(None),
 )
 
 post_partial_request = pool_protocol.PostPartialRequest(
@@ -1011,7 +1013,7 @@ get_farmer_response = pool_protocol.GetFarmerResponse(
 
 post_farmer_payload = pool_protocol.PostFarmerPayload(
     bytes32(bytes.fromhex("d3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3")),
-    uint64(5820795488800541986),
+    str(uint64(5820795488800541986)),
     G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
@@ -1032,7 +1034,7 @@ post_farmer_response = pool_protocol.PostFarmerResponse(
 
 put_farmer_payload = pool_protocol.PutFarmerPayload(
     bytes32(bytes.fromhex("78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8")),
-    uint64(15049374353843709257),
+    str(uint64(15049374353843709257)),
     G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"

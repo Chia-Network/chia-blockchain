@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from chia_rs import G1Element, G2Element, ProofOfSpace
+from chia_rs import G1Element, G2Element, Program, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -35,11 +35,28 @@ class PoolErrorCode(Enum):
 # Used to verify GET /farmer and GET /login
 @streamable
 @dataclass(frozen=True)
-class AuthenticationPayload(Streamable):
+class AuthenticationPayloadV1(Streamable):
     method_name: str
     launcher_id: bytes32
     target_puzzle_hash: bytes32
     authentication_token: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class AuthenticationPayloadV2(Streamable):
+    launcher_id: bytes32
+    timestamp: uint64
+
+
+# GET /auth (only v2)
+# Request is AuthenticationPayloadV2
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAuthResponse(Streamable):
+    authentication_token: str
 
 
 # GET /pool_info
@@ -55,6 +72,7 @@ class GetPoolInfoResponse(Streamable):
     description: str
     target_puzzle_hash: bytes32
     authentication_token_timeout: uint8
+    pool_memoization: Program  # addition from v1
 
 
 # POST /partial
@@ -86,6 +104,12 @@ class PostPartialResponse(Streamable):
 
 
 # GET /farmer
+@streamable
+@dataclass(frozen=True, kw_only=True)
+class GetFarmerRequest(Streamable):
+    authentication_token: str
+    launcher_id: bytes32
+    signature: G2Element | None = None
 
 
 # Response in success case
@@ -105,7 +129,7 @@ class GetFarmerResponse(Streamable):
 @dataclass(frozen=True)
 class PostFarmerPayload(Streamable):
     launcher_id: bytes32
-    authentication_token: uint64
+    authentication_token: str
     authentication_public_key: G1Element
     payout_instructions: str
     suggested_difficulty: uint64 | None
@@ -132,7 +156,7 @@ class PostFarmerResponse(Streamable):
 @dataclass(frozen=True)
 class PutFarmerPayload(Streamable):
     launcher_id: bytes32
-    authentication_token: uint64
+    authentication_token: str
     authentication_public_key: G1Element | None
     payout_instructions: str | None
     suggested_difficulty: uint64 | None

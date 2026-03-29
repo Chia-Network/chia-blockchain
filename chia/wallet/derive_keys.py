@@ -114,6 +114,21 @@ def find_authentication_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Pr
     return None
 
 
+def master_sk_to_pooling2_authentication_sk(master: PrivateKey, plotnft_id: bytes32) -> PrivateKey:
+    return _derive_path(
+        master,
+        [
+            12381,
+            8444,
+            7,
+            int.from_bytes(plotnft_id[0:4], "big"),
+            int.from_bytes(plotnft_id[4:8], "big"),
+            int.from_bytes(plotnft_id[8:12], "big"),
+            int.from_bytes(plotnft_id[12:16], "big"),
+        ],
+    )
+
+
 def match_address_to_sk(
     sk: PrivateKey, addresses_to_search: list[bytes32], max_ph_to_search: int = 500
 ) -> set[bytes32]:
