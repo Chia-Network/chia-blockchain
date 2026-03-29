@@ -72,7 +72,7 @@ class GetPoolInfoResponse(Streamable):
     description: str
     target_puzzle_hash: bytes32
     authentication_token_timeout: uint8
-    pool_memoization: Program  # addition from v1
+    pool_memoization: Program = Program.to(None)  # addition from v1
 
 
 # POST /partial

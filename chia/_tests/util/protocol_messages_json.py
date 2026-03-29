@@ -2410,6 +2410,7 @@ get_pool_info_response_json: dict[str, Any] = {
     "description": "pool description.",
     "target_puzzle_hash": "0xf6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36",
     "authentication_token_timeout": 76,
+    "pool_memoization": "0x80",
 }
 
 post_partial_payload_json: dict[str, Any] = {
@@ -2466,7 +2467,7 @@ get_farmer_response_json: dict[str, Any] = {
 
 post_farmer_payload_json: dict[str, Any] = {
     "launcher_id": "0xd3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3",
-    "authentication_token": 5820795488800541986,
+    "authentication_token": "5820795488800541986",
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payout_instructions",
     "suggested_difficulty": 1996244065095983466,
@@ -2475,7 +2476,7 @@ post_farmer_payload_json: dict[str, Any] = {
 post_farmer_request_json: dict[str, Any] = {
     "payload": {
         "launcher_id": "0xd3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3",
-        "authentication_token": 5820795488800541986,
+        "authentication_token": "5820795488800541986",
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payout_instructions",
         "suggested_difficulty": 1996244065095983466,
@@ -2487,7 +2488,7 @@ post_farmer_response_json: dict[str, Any] = {"welcome_message": "welcome"}
 
 put_farmer_payload_json: dict[str, Any] = {
     "launcher_id": "0x78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8",
-    "authentication_token": 15049374353843709257,
+    "authentication_token": "15049374353843709257",
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payload",
     "suggested_difficulty": 201241879360854600,
@@ -2496,7 +2497,7 @@ put_farmer_payload_json: dict[str, Any] = {
 put_farmer_request_json: dict[str, Any] = {
     "payload": {
         "launcher_id": "0x78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8",
-        "authentication_token": 15049374353843709257,
+        "authentication_token": "15049374353843709257",
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payload",
         "suggested_difficulty": 201241879360854600,

@@ -998,11 +998,11 @@ class DummyPoolInfoResponse:
     pool_info: dict[str, Any] | None = None
     history: tuple[DummyClientResponse, ...] = ()
 
-    async def text(self) -> str:
+    async def json(self) -> dict[str, Any]:
         if self.pool_info is None:
-            return ""
+            return {}
 
-        return json.dumps(self.pool_info)
+        return self.pool_info
 
     async def __aenter__(self) -> Self:
         return self
