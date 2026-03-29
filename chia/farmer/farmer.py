@@ -349,12 +349,24 @@ class Farmer:
         if pool_config.version == 1:
             return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
         elif pool_config.version == 2:
-            if self.authentication_token is None or datetime.fromtimestamp(
-                jwt.get_unverified_header(self.authentication_token)["exp"], tz=timezone.utc
-            ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
+            token_expired = True
+            if self.authentication_token is not None:
+                try:
+                    token_expiration = datetime.fromtimestamp(
+                        jwt.decode(
+                            self.authentication_token, options={"verify_signature": False, "verify_exp": False}
+                        )["exp"],
+                        tz=timezone.utc,
+                    )
+                    token_expired = token_expiration < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc)
+                except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+                    token_expired = True
+
+            if self.authentication_token is None or token_expired:
                 auth_response = await self._pool_get_auth(pool_config)
                 if isinstance(auth_response, pool_protocol.GetAuthResponse):
-                    return auth_response.authentication_token
+                    self.authentication_token = auth_response.authentication_token
+                    return self.authentication_token
                 else:
                     return None
             else:
@@ -423,7 +435,7 @@ class Farmer:
                             and len(resp.history) > 0
                             and all(r.status in {301, 308} for r in resp.history)
                         ):
-                            new_pool_url = response_url_str.replace("/pool_info", "")
+                            new_pool_url = response_url_str.replace(f"/v{pool_config.version}/pool_info", "")
 
                         return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
                     else:
@@ -592,7 +604,7 @@ class Farmer:
                                 time.time(),
                                 value=json_response,
                             )
-                        self.log.log(log_level, f"POST /farmer response: {json_response}")
+                        self.log.log(log_level, f"PUT /farmer response: {json_response}")
                         if "error_code" in json_response:
                             return pool_protocol.ErrorResponse.from_json_dict(json_response)
                         else:
@@ -860,7 +872,7 @@ class Farmer:
                 )
             else:
                 auth_token = ""
-                message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
+                message = timestamp.stream_to_bytes() + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
                 pool_config.pool_url + f"/login?launcher_id={pool_config.launcher_id.hex()}"
