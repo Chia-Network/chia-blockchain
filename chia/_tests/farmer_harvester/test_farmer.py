@@ -35,6 +35,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.util.hash import std_hash
+from chia.wallet.derive_keys import master_sk_to_pooling2_authentication_sk
 
 log = logging.getLogger(__name__)
 
@@ -1168,19 +1169,25 @@ class PoolInfoCase(DataCase):
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
 )
+@pytest.mark.parametrize("pool_protocol_version", [1, 2])
 @pytest.mark.anyio
 async def test_farmer_pool_info_config_update(
     mocker: MockerFixture,
     farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     case: PoolInfoCase,
+    pool_protocol_version: int,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
     p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
-    farmer_service._node.authentication_keys = {
-        p2_singleton_puzzle_hash: PrivateKey.from_bytes(
+    if pool_protocol_version == 1:
+        auth_sk = PrivateKey.from_bytes(
             bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-        ),
-    }
+        )
+    else:
+        auth_sk = master_sk_to_pooling2_authentication_sk(
+            farmer_service._node.all_root_sks[0], p2_singleton_puzzle_hash
+        )
+    farmer_service._node.authentication_keys = {p2_singleton_puzzle_hash: auth_sk}
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
         p2_singleton_puzzle_hash,
         overrides={
@@ -1188,16 +1195,13 @@ async def test_farmer_pool_info_config_update(
         },
     )
     PoolingShareState(
-        owner_public_key=G1Element.from_bytes(
-            bytes.fromhex(
-                "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
-            )
-        ),
+        owner_public_key=auth_sk.get_g1(),
         p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
         payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
         pool_url=case.initial_pool_url_in_config,
         launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
         target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+        version=pool_protocol_version,
     ).add(root_path=farmer_service.root_path)
     mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
 
