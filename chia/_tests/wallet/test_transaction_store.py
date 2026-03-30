@@ -121,12 +121,12 @@ async def test_increment_sent() -> None:
 
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
         assert await store.increment_sent(tr1.name, "peer2", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 2
+        assert tr.sent == 3
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
 
@@ -148,7 +148,7 @@ async def test_increment_sent_error() -> None:
 
 @pytest.mark.anyio
 async def test_increment_sent_duplicate_peer_status_ignored() -> None:
-    """Duplicate (peer, status) is ignored: return True, sent and sent_to unchanged."""
+    """Duplicate (peer, status) is ignored for sent_to; sent still tracks total send results."""
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
@@ -159,22 +159,22 @@ async def test_increment_sent_duplicate_peer_status_ignored() -> None:
         assert tr.sent == 1
         assert tr.sent_to == [("peer1", uint8(2), None)]
 
-        # Same (peer, status) again: idempotent, no new entry, sent unchanged
+        # Same (peer, status) again: no new sent_to entry, but sent increments
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.PENDING, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(2), None)]
 
-        # Same peer, different status: new entry, sent still 1
+        # Same peer, different status: new sent_to entry and sent increments
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 3
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
-        # Duplicate (peer1, SUCCESS): ignored
+        # Duplicate (peer1, SUCCESS): no new sent_to entry, sent increments
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
-        assert tr.sent == 1
+        assert tr.sent == 4
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
 
@@ -893,7 +893,7 @@ async def test_valid_times_migration() -> None:
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
-            sent=uint32(10),
+            sent=uint32(0),
             spend_bundle=None,
             additions=[],
             removals=[],
@@ -944,7 +944,7 @@ async def test_large_tx_record_query() -> None:
                 amount=uint64(0),
                 fee_amount=uint64(0),
                 confirmed=False,
-                sent=uint32(10),
+                sent=uint32(0),
                 spend_bundle=None,
                 additions=[],
                 removals=[],

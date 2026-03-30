@@ -364,7 +364,10 @@ class TradeManager:
                     amount=uint64(coin.amount),
                     fee_amount=fee,
                     confirmed=False,
-                    sent=uint32(10),
+                    # `sent` tracks send-result attempts and is used by tx validity checks.
+                    # These synthetic trade records start unsent; using a non-zero sentinel can
+                    # prematurely mark the tx invalid before any real send attempts occur.
+                    sent=uint32(0),
                     spend_bundle=None,
                     additions=[],
                     removals=[coin],
@@ -732,7 +735,8 @@ class TradeManager:
                             amount=uint64(addition.amount),
                             fee_amount=uint64(0),
                             confirmed=False,
-                            sent=uint32(10),
+                            # Trade-effect records are bookkeeping entries and should begin unsent.
+                            sent=uint32(0),
                             spend_bundle=None,
                             additions=[addition],
                             removals=[],
@@ -793,7 +797,8 @@ class TradeManager:
                     amount=uint64(sent_amount),
                     fee_amount=all_fees,
                     confirmed=False,
-                    sent=uint32(10),
+                    # Trade-effect records are bookkeeping entries and should begin unsent.
+                    sent=uint32(0),
                     spend_bundle=None,
                     additions=change_coins,
                     removals=grouped_removals,

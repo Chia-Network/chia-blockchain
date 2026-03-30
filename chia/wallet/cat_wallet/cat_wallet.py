@@ -179,7 +179,7 @@ class CATWallet:
             amount=uint64(cat_coin.amount),
             fee_amount=fee,
             confirmed=False,
-            sent=uint32(10),
+            sent=uint32(0),
             spend_bundle=spend_bundle,
             additions=[cat_coin],
             removals=list(filter(lambda rem: rem.name() == cat_pid, spend_bundle.removals())),
