@@ -532,9 +532,19 @@ class WalletNode:
                 ):
                     continue
                 self.log.debug(f"sending: {msg}")
-                await peer.send_message(msg)
-                self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-                self._tx_messages_in_progress[peer.peer_node_id].append(msg_name)
+                in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+                in_progress.append(msg_name)
+                try:
+                    await peer.send_message(msg)
+                except Exception:
+                    # Roll back in-flight marker if send fails.
+                    if peer.peer_node_id in self._tx_messages_in_progress:
+                        in_progress = self._tx_messages_in_progress[peer.peer_node_id]
+                        if msg_name in in_progress:
+                            in_progress.remove(msg_name)
+                        if in_progress == []:
+                            del self._tx_messages_in_progress[peer.peer_node_id]
+                    raise
 
     async def _messages_to_resend(self) -> list[tuple[Message, set[bytes32]]]:
         if self._wallet_state_manager is None or self._shut_down:
@@ -751,7 +761,25 @@ class WalletNode:
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
-            await peer.send_message(msg)
+            msg_name: bytes32 = std_hash(msg.data)
+            if (
+                peer.peer_node_id in self._tx_messages_in_progress
+                and msg_name in self._tx_messages_in_progress[peer.peer_node_id]
+            ):
+                continue
+            in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+            in_progress.append(msg_name)
+            try:
+                await peer.send_message(msg)
+            except Exception:
+                # Roll back in-flight marker if send fails.
+                if peer.peer_node_id in self._tx_messages_in_progress:
+                    in_progress = self._tx_messages_in_progress[peer.peer_node_id]
+                    if msg_name in in_progress:
+                        in_progress.remove(msg_name)
+                    if in_progress == []:
+                        del self._tx_messages_in_progress[peer.peer_node_id]
+                raise
 
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
@@ -1712,9 +1740,22 @@ class WalletNode:
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
     async def push_tx(self, spend_bundle: WalletSpendBundle) -> None:
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
+        msg_name: bytes32 = std_hash(msg.data)
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
-            await peer.send_message(msg)
+            in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+            in_progress.append(msg_name)
+            try:
+                await peer.send_message(msg)
+            except Exception:
+                # Roll back in-flight marker if send fails.
+                if peer.peer_node_id in self._tx_messages_in_progress:
+                    in_progress = self._tx_messages_in_progress[peer.peer_node_id]
+                    if msg_name in in_progress:
+                        in_progress.remove(msg_name)
+                    if in_progress == []:
+                        del self._tx_messages_in_progress[peer.peer_node_id]
+                raise
 
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"
