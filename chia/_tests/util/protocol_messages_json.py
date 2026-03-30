@@ -2453,6 +2453,7 @@ post_partial_request_json: dict[str, Any] = {
         "end_of_sub_slot": False,
         "harvester_id": "0xf98dff6bdcc3926b33cb8ab22e11bd15c13d6a9b6832ac948b3273f5ccd8e7ec",
     },
+    "authentication_token_v2": "",
     "aggregate_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }
 
@@ -2467,19 +2468,21 @@ get_farmer_response_json: dict[str, Any] = {
 
 post_farmer_payload_json: dict[str, Any] = {
     "launcher_id": "0xd3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3",
-    "authentication_token": "5820795488800541986",
+    "authentication_token": 5820795488800541986,
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payout_instructions",
     "suggested_difficulty": 1996244065095983466,
+    "authentication_token_v2": "",
 }
 
 post_farmer_request_json: dict[str, Any] = {
     "payload": {
         "launcher_id": "0xd3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3",
-        "authentication_token": "5820795488800541986",
+        "authentication_token": 5820795488800541986,
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payout_instructions",
         "suggested_difficulty": 1996244065095983466,
+        "authentication_token_v2": "",
     },
     "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }
@@ -2488,19 +2491,21 @@ post_farmer_response_json: dict[str, Any] = {"welcome_message": "welcome"}
 
 put_farmer_payload_json: dict[str, Any] = {
     "launcher_id": "0x78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8",
-    "authentication_token": "15049374353843709257",
+    "authentication_token": 15049374353843709257,
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payload",
     "suggested_difficulty": 201241879360854600,
+    "authentication_token_v2": "",
 }
 
 put_farmer_request_json: dict[str, Any] = {
     "payload": {
         "launcher_id": "0x78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8",
-        "authentication_token": "15049374353843709257",
+        "authentication_token": 15049374353843709257,
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payload",
         "suggested_difficulty": 201241879360854600,
+        "authentication_token_v2": "",
     },
     "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }

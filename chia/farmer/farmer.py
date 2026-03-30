@@ -460,7 +460,10 @@ class Farmer:
             signature = None
 
         get_farmer_params = pool_protocol.GetFarmerRequest(
-            authentication_token=authentication_token, launcher_id=pool_config.launcher_id, signature=signature
+            authentication_token=uint64(authentication_token) if pool_config.version == 1 else uint64(0),
+            launcher_id=pool_config.launcher_id,
+            signature=signature,
+            authentication_token_v2=authentication_token,
         ).to_json_dict()
 
         try:
@@ -509,10 +512,11 @@ class Farmer:
             return None
         post_farmer_payload = pool_protocol.PostFarmerPayload(
             pool_config.launcher_id,
-            authentication_token,
+            uint64(authentication_token) if pool_config.version == 1 else uint64(0),
             auth_sk.get_g1(),
             pool_config.payout_instructions,
             None,
+            authentication_token_v2=authentication_token,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
@@ -564,10 +568,11 @@ class Farmer:
             return None
         put_farmer_payload = pool_protocol.PutFarmerPayload(
             pool_config.launcher_id,
-            authentication_token,
+            uint64(authentication_token) if pool_config.version == 1 else uint64(0),
             auth_sk.get_g1(),
             pool_config.payout_instructions,
             None,
+            authentication_token_v2=authentication_token,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())

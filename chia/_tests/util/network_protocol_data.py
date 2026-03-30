@@ -993,6 +993,7 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
 
 post_partial_request = pool_protocol.PostPartialRequest(
     post_partial_payload,
+    "",
     g2_element,
 )
 
@@ -1013,7 +1014,7 @@ get_farmer_response = pool_protocol.GetFarmerResponse(
 
 post_farmer_payload = pool_protocol.PostFarmerPayload(
     bytes32(bytes.fromhex("d3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3")),
-    str(uint64(5820795488800541986)),
+    uint64(5820795488800541986),
     G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
@@ -1021,6 +1022,7 @@ post_farmer_payload = pool_protocol.PostFarmerPayload(
     ),
     "payout_instructions",
     uint64(1996244065095983466),
+    authentication_token_v2="",
 )
 
 post_farmer_request = pool_protocol.PostFarmerRequest(
@@ -1034,7 +1036,7 @@ post_farmer_response = pool_protocol.PostFarmerResponse(
 
 put_farmer_payload = pool_protocol.PutFarmerPayload(
     bytes32(bytes.fromhex("78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8")),
-    str(uint64(15049374353843709257)),
+    uint64(15049374353843709257),
     G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
@@ -1042,6 +1044,7 @@ put_farmer_payload = pool_protocol.PutFarmerPayload(
     ),
     "payload",
     uint64(201241879360854600),
+    authentication_token_v2="",
 )
 
 put_farmer_request = pool_protocol.PutFarmerRequest(

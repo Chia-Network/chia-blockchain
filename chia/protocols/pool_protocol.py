@@ -93,6 +93,7 @@ class PostPartialPayload(Streamable):
 @dataclass(frozen=True)
 class PostPartialRequest(Streamable):
     payload: PostPartialPayload
+    authentication_token_v2: str
     aggregate_signature: G2Element
 
 
@@ -107,9 +108,10 @@ class PostPartialResponse(Streamable):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class GetFarmerRequest(Streamable):
-    authentication_token: str
+    authentication_token: uint64
     launcher_id: bytes32
     signature: G2Element | None = None
+    authentication_token_v2: str
 
 
 # Response in success case
@@ -129,10 +131,11 @@ class GetFarmerResponse(Streamable):
 @dataclass(frozen=True)
 class PostFarmerPayload(Streamable):
     launcher_id: bytes32
-    authentication_token: str
+    authentication_token: uint64
     authentication_public_key: G1Element
     payout_instructions: str
     suggested_difficulty: uint64 | None
+    authentication_token_v2: str
 
 
 @streamable
@@ -156,10 +159,11 @@ class PostFarmerResponse(Streamable):
 @dataclass(frozen=True)
 class PutFarmerPayload(Streamable):
     launcher_id: bytes32
-    authentication_token: str
+    authentication_token: uint64
     authentication_public_key: G1Element | None
     payout_instructions: str | None
     suggested_difficulty: uint64 | None
+    authentication_token_v2: str
 
 
 @streamable
