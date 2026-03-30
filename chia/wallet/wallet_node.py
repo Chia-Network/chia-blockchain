@@ -514,6 +514,24 @@ class WalletNode:
             return None
         create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
+    def _tx_message_in_flight(self, peer_id: bytes32, msg_name: bytes32) -> bool:
+        return peer_id in self._tx_messages_in_progress and msg_name in self._tx_messages_in_progress[peer_id]
+
+    async def _send_transaction_message(self, peer: WSChiaConnection, msg: Message, msg_name: bytes32) -> None:
+        in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+        in_progress.append(msg_name)
+        try:
+            await peer.send_message(msg)
+        except Exception:
+            # Roll back in-flight marker if send fails.
+            if peer.peer_node_id in self._tx_messages_in_progress:
+                in_progress = self._tx_messages_in_progress[peer.peer_node_id]
+                if msg_name in in_progress:
+                    in_progress.remove(msg_name)
+                if in_progress == []:
+                    del self._tx_messages_in_progress[peer.peer_node_id]
+            raise
+
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return None
@@ -526,25 +544,10 @@ class WalletNode:
                 if peer.peer_node_id in sent_peers:
                     continue
                 msg_name: bytes32 = std_hash(msg.data)
-                if (
-                    peer.peer_node_id in self._tx_messages_in_progress
-                    and msg_name in self._tx_messages_in_progress[peer.peer_node_id]
-                ):
+                if self._tx_message_in_flight(peer.peer_node_id, msg_name):
                     continue
                 self.log.debug(f"sending: {msg}")
-                in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-                in_progress.append(msg_name)
-                try:
-                    await peer.send_message(msg)
-                except Exception:
-                    # Roll back in-flight marker if send fails.
-                    if peer.peer_node_id in self._tx_messages_in_progress:
-                        in_progress = self._tx_messages_in_progress[peer.peer_node_id]
-                        if msg_name in in_progress:
-                            in_progress.remove(msg_name)
-                        if in_progress == []:
-                            del self._tx_messages_in_progress[peer.peer_node_id]
-                    raise
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _messages_to_resend(self) -> list[tuple[Message, set[bytes32]]]:
         if self._wallet_state_manager is None or self._shut_down:
@@ -762,24 +765,9 @@ class WalletNode:
             if peer.peer_node_id in peer_ids:
                 continue
             msg_name: bytes32 = std_hash(msg.data)
-            if (
-                peer.peer_node_id in self._tx_messages_in_progress
-                and msg_name in self._tx_messages_in_progress[peer.peer_node_id]
-            ):
+            if self._tx_message_in_flight(peer.peer_node_id, msg_name):
                 continue
-            in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-            in_progress.append(msg_name)
-            try:
-                await peer.send_message(msg)
-            except Exception:
-                # Roll back in-flight marker if send fails.
-                if peer.peer_node_id in self._tx_messages_in_progress:
-                    in_progress = self._tx_messages_in_progress[peer.peer_node_id]
-                    if msg_name in in_progress:
-                        in_progress.remove(msg_name)
-                    if in_progress == []:
-                        del self._tx_messages_in_progress[peer.peer_node_id]
-                raise
+            await self._send_transaction_message(peer, msg, msg_name)
 
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
@@ -1743,19 +1731,7 @@ class WalletNode:
         msg_name: bytes32 = std_hash(msg.data)
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
-            in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-            in_progress.append(msg_name)
-            try:
-                await peer.send_message(msg)
-            except Exception:
-                # Roll back in-flight marker if send fails.
-                if peer.peer_node_id in self._tx_messages_in_progress:
-                    in_progress = self._tx_messages_in_progress[peer.peer_node_id]
-                    if msg_name in in_progress:
-                        in_progress.remove(msg_name)
-                    if in_progress == []:
-                        del self._tx_messages_in_progress[peer.peer_node_id]
-                raise
+            await self._send_transaction_message(peer, msg, msg_name)
 
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"

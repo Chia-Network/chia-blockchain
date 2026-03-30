@@ -13,6 +13,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
+from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -691,16 +692,25 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     await time_out_assert(5, check_wallet_cache_empty, True)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
 @pytest.mark.anyio
 async def test_transaction_ack_duplicate_without_resend_ignored(
-    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, caplog: pytest.LogCaptureFixture
+    wallet_environments: WalletTestFramework, caplog: pytest.LogCaptureFixture
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
-
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    wallet = wallet_node.wallet_state_manager.main_wallet
-    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    env = wallet_environments.environments[0]
+    full_node_api = wallet_environments.full_node
+    wallet_node = env.node
+    wallet = env.xch_wallet
 
     logged_spends = []
 
@@ -712,7 +722,9 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
 
     assert full_node_api.full_node._server is not None
     with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
-        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet.wallet_state_manager.tx_config, push=True
+        ) as action_scope:
             await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
         [tx] = action_scope.side_effects.transactions
 
@@ -725,8 +737,7 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
                 tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name
             ),
         )
-        assert simulator_and_wallet[1][0][0]._server is not None
-        conn = simulator_and_wallet[1][0][0]._server.get_connections()[0]
+        conn = env.peer_server.get_connections()[0]
         await conn.incoming_queue.put(msg)
 
         def check_wallet_cache_empty() -> bool:
