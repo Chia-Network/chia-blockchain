@@ -2363,7 +2363,8 @@ class FullNode:
 
         # If we have already added the block with this reward block hash and
         # foliage hash, return
-        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
+        existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
+        if existing is not None or has_better:
             return None
 
         peak: BlockRecord | None = self.blockchain.get_peak()
@@ -2464,7 +2465,8 @@ class FullNode:
         assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
-        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
+        existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
+        if existing is not None or has_better:
             return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:

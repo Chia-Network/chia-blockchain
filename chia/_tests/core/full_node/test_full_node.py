@@ -1845,30 +1845,27 @@ async def test_request_unfinished_block2(
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-    # the "best" unfinished block according to the metric we use to pick one
-    # deterministically
-    best_unf: UnfinishedBlock | None = None
-
+    # Generate all unfinished blocks up front, each with a different
+    # transaction (different foliage) but the same reward block (same plot).
+    unfinished_blocks: list[UnfinishedBlock] = []
     for idx in range(6):
-        # we include a different transaction in each block. This makes the
-        # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)
-
-        # note that we use the same chain to build the new block on top of every time
         block = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )[-1]
         unf = make_unfinished_block(block, bt.constants)
         assert unf.foliage.foliage_transaction_block_hash is not None
+        unfinished_blocks.append(unf)
 
-        if best_unf is None:
-            best_unf = unf
-        elif (
-            best_unf.foliage.foliage_transaction_block_hash is not None
-            and unf.foliage.foliage_transaction_block_hash < best_unf.foliage.foliage_transaction_block_hash
-        ):
-            best_unf = unf
+    # Sort worst-to-best (descending foliage hash), so every block we send is
+    # strictly better than what the node already has and will be accepted.
+    def foliage_tx_hash(b: UnfinishedBlock) -> bytes32:
+        assert b.foliage.foliage_transaction_block_hash is not None
+        return b.foliage.foliage_transaction_block_hash
 
+    unfinished_blocks.sort(key=foliage_tx_hash, reverse=True)
+
+    for unf in unfinished_blocks:
         # Don't have
         res = await full_node_1.request_unfinished_block2(
             fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
@@ -1876,6 +1873,7 @@ async def test_request_unfinished_block2(
         assert res is None
 
         await full_node_1.full_node.add_unfinished_block(unf, peer)
+
         # Have
         res = await full_node_1.request_unfinished_block2(
             fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
@@ -1883,13 +1881,14 @@ async def test_request_unfinished_block2(
         assert res is not None
         assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
+        # The current block is always the best so far
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
+        assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
         res = await full_node_1.request_unfinished_block2(fnp.RequestUnfinishedBlock2(unf.partial_hash, None))
         assert res is not None
-        assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
+        assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
 
 @pytest.mark.anyio
