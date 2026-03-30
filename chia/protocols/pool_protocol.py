@@ -50,7 +50,13 @@ class AuthenticationPayloadV2(Streamable):
 
 
 # GET /auth (only v2)
-# Request is AuthenticationPayloadV2
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAuthRequest(Streamable):
+    payload: AuthenticationPayloadV2
+    signature: G2Element
 
 
 @streamable

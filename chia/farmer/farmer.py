@@ -370,7 +370,24 @@ class Farmer:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 url = f"{pool_config.pool_url}/v{pool_config.version}/auth"
-                async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
+                timestamp = self.get_current_time()
+                message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
+                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+                if authentication_sk is None:
+                    self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
+                    return None
+                signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+                async with session.get(
+                    url,
+                    params=pool_protocol.GetAuthRequest(
+                        payload=pool_protocol.AuthenticationPayloadV2(
+                            launcher_id=pool_config.p2_singleton_puzzle_hash,
+                            timestamp=timestamp,
+                        ),
+                        signature=signature,
+                    ).to_json_dict(),
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
+                ) as resp:
                     if resp.ok:
                         json_response = await resp.json()
                         log_level = logging.INFO
