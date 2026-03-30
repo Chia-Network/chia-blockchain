@@ -2319,10 +2319,12 @@ async def test_fill_rate_block_validation(
         # Check for the peak change after farming the block
         assert peak.prev_hash == current_peak.header_hash
         # Check our coin(s)
+        _, peer_id = await add_dummy_connection(full_node_api.server, self_hostname, 12313)
+        peer = full_node_api.server.all_connections[peer_id]
         for i in range(expected_block_items):
             coin_name, puzzle, _ = sbs_info[i]
             rps_res = await full_node_api.request_puzzle_solution(
-                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height)
+                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height), peer
             )
             assert rps_res is not None
             rps_res_parsed = wallet_protocol.RespondPuzzleSolution.from_bytes(rps_res.data)
