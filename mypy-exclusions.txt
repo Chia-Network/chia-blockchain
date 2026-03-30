@@ -18,8 +18,6 @@ chia.types.blockchain_format.program
 chia.wallet.did_wallet.did_wallet
 chia.wallet.key_val_store
 chia.wallet.puzzles.load_clvm
-chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
-chia.wallet.puzzles.p2_m_of_n_delegate_direct
 chia.wallet.trading.trade_store
 chia.wallet.util.debug_spend_bundle
 chia.wallet.util.new_peak_queue

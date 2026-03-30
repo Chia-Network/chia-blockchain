@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import random
+import time
 from collections.abc import AsyncIterator
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
+from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock, VDFInfo, VDFProof
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -30,6 +31,7 @@ from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.keyring import TempKeyring
+from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 
@@ -1344,3 +1346,59 @@ async def test_unfinished_block_eviction_mark_requesting(
             assert is_requesting
         else:
             assert not is_requesting
+
+
+@pytest.mark.anyio
+async def test_add_to_future_ip_sets_ttl(seeded_random: random.Random) -> None:
+    """add_to_future_ip must register a TTL in future_cache_key_times so that
+    clear_old_cache_entries can evict stale IP cache entries."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+
+    challenge = bytes32.random(seeded_random)
+    vdf_info = VDFInfo(challenge, uint64(1000), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    ip = NewInfusionPointVDF(
+        unfinished_reward_hash=bytes32.random(seeded_random),
+        challenge_chain_ip_vdf=vdf_info,
+        challenge_chain_ip_proof=vdf_proof,
+        reward_chain_ip_vdf=vdf_info,
+        reward_chain_ip_proof=vdf_proof,
+        infused_challenge_chain_ip_vdf=None,
+        infused_challenge_chain_ip_proof=None,
+    )
+
+    store.add_to_future_ip(ip)
+
+    assert challenge in store.future_ip_cache
+    assert challenge in store.future_cache_key_times, (
+        "add_to_future_ip must set future_cache_key_times so entries can be evicted"
+    )
+
+
+@pytest.mark.anyio
+async def test_clear_old_cache_entries_evicts_future_ip(seeded_random: random.Random) -> None:
+    """Entries added via add_to_future_ip must be evicted by clear_old_cache_entries
+    after the 1-hour TTL expires."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+
+    challenge = bytes32.random(seeded_random)
+    vdf_info = VDFInfo(challenge, uint64(1000), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    ip = NewInfusionPointVDF(
+        unfinished_reward_hash=bytes32.random(seeded_random),
+        challenge_chain_ip_vdf=vdf_info,
+        challenge_chain_ip_proof=vdf_proof,
+        reward_chain_ip_vdf=vdf_info,
+        reward_chain_ip_proof=vdf_proof,
+        infused_challenge_chain_ip_vdf=None,
+        infused_challenge_chain_ip_proof=None,
+    )
+
+    store.add_to_future_ip(ip)
+    assert challenge in store.future_ip_cache
+
+    store.future_cache_key_times[challenge] = int(time.time()) - 3601
+    store.clear_old_cache_entries()
+
+    assert challenge not in store.future_ip_cache, "stale IP cache entry was not evicted"
+    assert challenge not in store.future_cache_key_times

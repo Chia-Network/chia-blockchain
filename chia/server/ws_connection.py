@@ -5,6 +5,7 @@ import logging
 import math
 import time
 import traceback
+import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
@@ -55,6 +56,11 @@ WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")
+
+
+def sanitize_version_string(version: str) -> str:
+    """Strip Unicode control characters (Cc) and format characters (Cf) to prevent log injection."""
+    return "".join(c for c in version if unicodedata.category(c) not in {"Cc", "Cf"})
 
 
 def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
@@ -136,6 +142,11 @@ class WSChiaConnection:
     # Tracks compact VDF requests we've sent to this peer (hashed RequestCompactVDF).
     # Used to reject unsolicited RespondCompactVDF messages.
     pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
+
+    # Tracks expected RespondTransaction messages from old peers (< 2.6.0) that
+    # respond to RequestMempoolTransactions with RespondTransaction directly.
+    # Decremented on each such response; if 0, the message is unsolicited.
+    expected_mempool_responses: int = 0
 
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
@@ -293,7 +304,7 @@ class WSChiaConnection:
             )
             await self._send_message(outbound_handshake)
 
-        self.version = inbound_handshake.software_version
+        self.version = sanitize_version_string(inbound_handshake.software_version)
         self.protocol_version = Version(inbound_handshake.protocol_version)
         self.peer_server_port = inbound_handshake.server_port
         self.connection_type = remote_node_type
@@ -735,10 +746,8 @@ class WSChiaConnection:
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
             if limiter_msg is not None:
-                if (
-                    self.local_type == NodeType.FULL_NODE
-                    and not is_localhost(self.peer_info.host)
-                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                if not is_localhost(self.peer_info.host) and not is_in_network(
+                    self.peer_info.host, self.exempt_peer_networks
                 ):
                     details = ", ".join([f"{self.peer_info.host}", f"message: {message_type.name}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")

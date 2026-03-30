@@ -780,8 +780,23 @@ def test_ambiguous_deserialization_program() -> None:
 
     TestClassProgram.from_bytes(bytes(program))
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassProgram.from_bytes(bytes(program) + b"9")
+
+
+def test_from_bytes_rejects_trailing_bytes_rust_types() -> None:
+    from chia_rs import G2Element, SpendBundle
+
+    coin = Coin(bytes32(bytes(32)), bytes32(bytes(32)), uint64(0))
+    valid_coin = bytes(coin)
+    Coin.from_bytes(valid_coin)
+    with pytest.raises(ValueError):
+        Coin.from_bytes(valid_coin + b"\x00")
+
+    valid_sb = bytes(4) + bytes(G2Element())
+    SpendBundle.from_bytes(valid_sb)
+    with pytest.raises(ValueError):
+        SpendBundle.from_bytes(valid_sb + b"\x00")
 
 
 def test_streamable_empty() -> None:

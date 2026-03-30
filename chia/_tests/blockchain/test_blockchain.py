@@ -321,7 +321,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -335,8 +335,9 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
+            conds = npc_result.conds
 
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         err = validate_res.error
         assert err is None
 
@@ -354,7 +355,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -368,7 +369,8 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+            conds = npc_result.conds
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
@@ -448,7 +450,7 @@ class TestBlockHeaderValidation:
                     block.transactions_generator,
                     [],
                 )
-                npc_result = None
+                conds = None
                 # if this assert fires, remove it along with the pragma for the block
                 # below
                 assert block.transactions_generator is None
@@ -462,9 +464,8 @@ class TestBlockHeaderValidation:
                         height=block.height,
                         constants=bt.constants,
                     )
-                validate_res = await blockchain.validate_unfinished_block(
-                    unf, npc_result, skip_overflow_ss_validation=True
-                )
+                    conds = npc_result.conds
+                validate_res = await blockchain.validate_unfinished_block(unf, conds, skip_overflow_ss_validation=True)
                 assert validate_res.error is None
                 return None
 
@@ -3361,7 +3362,6 @@ class TestReorgs:
 
         if consensus_mode not in {
             ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_6,
             ConsensusMode.SOFT_FORK_2_7,
         }:
             reorg_point = 13
