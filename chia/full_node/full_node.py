@@ -86,13 +86,16 @@ from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import process_config_start_method
+from chia.util.cpu import available_logical_cores
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
+from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
+from chia.util.priority_thread_pool_executor import Executor, PriorityThreadPoolExecutor
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_referencer import create_referenced_task
@@ -164,6 +167,7 @@ class FullNode:
     _mempool_manager: MempoolManager | None = None
     _init_weight_proof: asyncio.Task[None] | None = None
     _blockchain: Blockchain | None = None
+    _pool: Executor | None = None
     _timelord_lock: asyncio.Lock | None = None
     weight_proof_handler: WeightProofHandler | None = None
     # hashes of peaks that failed long sync on chip13 Validation
@@ -263,11 +267,23 @@ class FullNode:
             self._coin_store = await CoinStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
-            reserved_cores = self.config.get("reserved_cores", 0)
             single_threaded = self.config.get("single_threaded", False)
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            if single_threaded:
+                self._pool = InlineExecutor()
+            else:
+                reserved_cores = self.config.get("reserved_cores", 0)
+                cpu_count = available_logical_cores()
+                num_workers = max(cpu_count - reserved_cores, 1)
+                dedicated = 1 if num_workers > 1 else 0
+                self._pool = PriorityThreadPoolExecutor(
+                    max_workers=num_workers,
+                    dedicated=dedicated,
+                    thread_name_prefix="validation-",
+                )
+                self.log.info(f"Started {num_workers} threads for validation ({dedicated} dedicated)")
             selected_network = self.config.get("selected_network")
             height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
@@ -275,8 +291,7 @@ class FullNode:
                 block_store=self.block_store,
                 consensus_constants=self.constants,
                 height_map=height_map,
-                reserved_cores=reserved_cores,
-                single_threaded=single_threaded,
+                pool=self.pool,
                 log_coins=log_coins,
             )
 
@@ -357,6 +372,7 @@ class FullNode:
 
                 try:
                     async with contextlib.AsyncExitStack() as aexit_stack:
+                        aexit_stack.enter_context(self.pool)
                         if self.full_node_peers is not None:
                             await aexit_stack.enter_async_context(self.full_node_peers.manage())
                         yield
@@ -420,6 +436,11 @@ class FullNode:
     def blockchain(self) -> Blockchain:
         assert self._blockchain is not None
         return self._blockchain
+
+    @property
+    def pool(self) -> Executor:
+        assert self._pool is not None
+        return self._pool
 
     @property
     def coin_store(self) -> CoinStoreProtocol:
@@ -1615,10 +1636,11 @@ class FullNode:
                     self.constants,
                     blockchain,
                     block,
-                    self.blockchain.pool,
+                    self.pool,
                     None,
                     vs,
                     wp_summaries=wp_summaries,
+                    nice=(20,),
                 )
             )
         return ret
@@ -2170,7 +2192,7 @@ class FullNode:
                 self.blockchain.constants,
                 AugmentedBlockchain(self.blockchain),
                 block,
-                self.blockchain.pool,
+                self.pool,
                 conds,
                 ValidationState(ssi, diff, prev_ses_block),
             )
@@ -2364,7 +2386,7 @@ class FullNode:
 
         # If we have already added the block with this reward block hash and
         # foliage hash, return
-        existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
+        existing, unfinished_count, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
         if existing is not None or has_better:
             return None
 
@@ -2436,8 +2458,10 @@ class FullNode:
                 run_block = run_block_generator
 
             # run_block() also validates the signature
-            err, conditions = await asyncio.get_running_loop().run_in_executor(
-                self.blockchain.pool,
+            # bump nice for each unfinished block we already have for this
+            # reward hash, so a burst of duplicates doesn't starve mempool
+            # transaction validation
+            err, conditions = await self.pool.run_in_loop(
                 run_block,
                 bytes(block.transactions_generator),
                 generator_args,
@@ -2446,6 +2470,7 @@ class FullNode:
                 block.transactions_info.aggregated_signature,
                 self._bls_cache,
                 self.constants,
+                nice=(5 + unfinished_count,),
             )
 
             if err is not None:
