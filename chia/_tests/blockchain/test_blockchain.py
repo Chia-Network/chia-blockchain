@@ -2659,7 +2659,7 @@ class TestBodyValidation:
     @pytest.mark.anyio
     @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2675,7 +2675,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        for i in range(7_000):
+        num_coins = 7_000
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # after the hard fork, CREATE_COIN is 25% cheaper, so we need more
+            # coins to exceed the block cost
+            num_coins += num_coins // 3
+        for i in range(num_coins):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
