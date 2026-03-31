@@ -506,6 +506,8 @@ def test_tx_config_helper() -> None:
         bytes32([0] * 32).hex(),
         "--include-coin",
         bytes32([1] * 32).hex(),
+        "--primary-coin",
+        bytes32([1] * 32).hex(),
         "--new-address",
     )
 

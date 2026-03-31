@@ -160,6 +160,7 @@ class TXConfigLoader(CoinSelectionConfigLoader):
             self.excluded_coin_amounts,
             self.excluded_coin_ids,
             self.included_coin_ids,
+            self.primary_coin,
         ).autofill(constants=constants)
 
         return TXConfig(
