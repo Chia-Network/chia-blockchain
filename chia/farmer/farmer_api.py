@@ -371,7 +371,7 @@ class FarmerAPI:
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
-                            f"{pool_url}/partial",
+                            self.farmer._url_for_endpoint(pool_state_dict["pool_config"], "partial"),
                             json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.farmer.log),
                             headers={

@@ -352,25 +352,29 @@ class Farmer:
     async def _get_current_authentication_token(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8
     ) -> str | None:
-        if pool_config.version == 1:
-            return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
-        elif pool_config.version == 2:
-            cached_auth_token = self.authentication_tokens.get(pool_config.launcher_id, None)
-            if cached_auth_token is None or datetime.fromtimestamp(
-                jwt.decode(cached_auth_token, options={"verify_signature": False})["exp"], tz=timezone.utc
-            ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
-                auth_response = await self._pool_get_auth(pool_config)
-                if isinstance(auth_response, pool_protocol.GetAuthResponse):
-                    self.authentication_tokens[pool_config.launcher_id] = auth_response.authentication_token
-                    return auth_response.authentication_token
+        try:
+            if pool_config.version == 1:
+                return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
+            elif pool_config.version == 2:
+                cached_auth_token = self.authentication_tokens.get(pool_config.launcher_id, None)
+                if cached_auth_token is None or datetime.fromtimestamp(
+                    jwt.decode(cached_auth_token, options={"verify_signature": False})["exp"], tz=timezone.utc
+                ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
+                    auth_response = await self._pool_get_auth(pool_config)
+                    if isinstance(auth_response, pool_protocol.GetAuthResponse):
+                        self.authentication_tokens[pool_config.launcher_id] = auth_response.authentication_token
+                        return auth_response.authentication_token
+                    else:
+                        return None
                 else:
-                    return None
+                    # seems sketchy because in theory we should check for non-None here but
+                    # the auth token can't be None AND expired so semantics guarantee a non-None, non-expired token here
+                    return cached_auth_token
             else:
-                # seems sketchy because in theory we should check for non-None here but
-                # the auth token cannot be None AND expired so semantics guarantee a non-None, non-expired token here
-                return cached_auth_token
-        else:
-            raise ValueError("Unknown pool protocol version specified in pooling config")
+                raise ValueError("Unknown pool protocol version specified in pooling config")
+        except Exception as e:
+            self.log.error(f"Error getting auth token: {e}")
+            return None
 
     async def _pool_get_auth(
         self, pool_config: PoolingShareState
