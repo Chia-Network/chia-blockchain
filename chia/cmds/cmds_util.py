@@ -319,7 +319,7 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
                             type=Bytes32ParamType(),
                             required=False,
                             default=None,
-                            help="Use this coin as the primary coin which outputs the conditions.",
+                            help="Use this coin as the primary coin that creates the conditions.",
                         )(func)
                     )
                 )
