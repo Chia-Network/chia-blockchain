@@ -51,7 +51,10 @@ async def select_coins(
         )
 
     # Try to use the coins that must be included
-    included_coins = {coin for coin in valid_spendable_coins if coin.name() in coin_selection_config.included_coin_ids}
+    coins_that_must_be_included = coin_selection_config.included_coin_ids + (
+        [coin_selection_config.primary_coin] if coin_selection_config.primary_coin is not None else []
+    )
+    included_coins = {coin for coin in valid_spendable_coins if coin.name() in coins_that_must_be_included}
     included_coin_sum = sum(coin.amount for coin in included_coins)
     if included_coin_sum >= amount and len(included_coins) > 0:
         return included_coins
@@ -63,7 +66,7 @@ async def select_coins(
     # Sort the coins by amount
     valid_spendable_coins.sort(reverse=True, key=lambda r: r.amount)
 
-    if coin_selection_config.included_coin_ids == []:
+    if coins_that_must_be_included == []:
         # check for exact 1 to 1 coin match.
         exact_match_coin: Coin | None = check_for_exact_match(valid_spendable_coins, uint64(remaining_amount))
         if exact_match_coin:
