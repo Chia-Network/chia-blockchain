@@ -548,7 +548,7 @@ class CATWallet:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope,
+                    inner_action_scope,
                 )
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
@@ -564,7 +564,7 @@ class CATWallet:
             else:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope,
+                    inner_action_scope,
                 )
                 origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
@@ -593,6 +593,7 @@ class CATWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.selected_coins.extend(inner_action_scope.side_effects.selected_coins)
 
         return announcement
 
