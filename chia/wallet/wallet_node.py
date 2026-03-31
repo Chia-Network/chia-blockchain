@@ -520,17 +520,12 @@ class WalletNode:
     async def _send_transaction_message(self, peer: WSChiaConnection, msg: Message, msg_name: bytes32) -> None:
         in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
         in_progress.append(msg_name)
-        try:
-            await peer.send_message(msg)
-        except Exception:
-            # Roll back in-flight marker if send fails.
-            if peer.peer_node_id in self._tx_messages_in_progress:
-                in_progress = self._tx_messages_in_progress[peer.peer_node_id]
-                if msg_name in in_progress:
-                    in_progress.remove(msg_name)
-                if in_progress == []:
-                    del self._tx_messages_in_progress[peer.peer_node_id]
-            raise
+        # send_message returns False when the connection is closed; it does not raise.
+        if not await peer.send_message(msg):
+            # Connection was closed; roll back the in-flight marker.
+            in_progress.remove(msg_name)
+            if not in_progress:
+                del self._tx_messages_in_progress[peer.peer_node_id]
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
