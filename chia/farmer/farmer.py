@@ -343,13 +343,19 @@ class Farmer:
         if receiver.initial_sync() or harvester_updated:
             self.state_changed("harvester_update", receiver.to_dict(True))
 
+    def _url_for_endpoint(self, pool_config: PoolingShareState, endpoint: str) -> str:
+        if pool_config.version == 1:
+            return f"{pool_config.pool_url}/{endpoint}"
+        else:
+            return f"{pool_config.pool_url}/v2/{endpoint}"
+
     async def _get_current_authentication_token(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8
     ) -> str | None:
         if pool_config.version == 1:
             return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
         elif pool_config.version == 2:
-            cached_auth_token = self.authentication_tokens[pool_config.launcher_id]
+            cached_auth_token = self.authentication_tokens.get(pool_config.launcher_id, None)
             if cached_auth_token is None or datetime.fromtimestamp(
                 jwt.decode(cached_auth_token, options={"verify_signature": False})["exp"], tz=timezone.utc
             ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
@@ -371,7 +377,7 @@ class Farmer:
     ) -> pool_protocol.GetAuthResponse | pool_protocol.ErrorResponse | None:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                url = f"{pool_config.pool_url}/v{pool_config.version}/auth"
+                url = self._url_for_endpoint(pool_config, "auth")
                 timestamp = self.get_current_time()
                 message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
                 authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
@@ -421,7 +427,7 @@ class Farmer:
     async def _pool_get_pool_info(self, pool_config: PoolingShareState) -> GetPoolInfoResult | None:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                url = f"{pool_config.pool_url}/v{pool_config.version}/pool_info"
+                url = self._url_for_endpoint(pool_config, "pool_info")
                 async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
                         json_response = await resp.json()
@@ -488,7 +494,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
-                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
+                    self._url_for_endpoint(pool_config, "farmer"),
                     params=get_farmer_params,
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -544,7 +550,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
+                    self._url_for_endpoint(pool_config, "farmer"),
                     json=post_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -600,7 +606,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
-                    f"{pool_config.pool_url}/v{pool_config.version}/farmer",
+                    self._url_for_endpoint(pool_config, "farmer"),
                     json=put_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
@@ -879,7 +885,7 @@ class Farmer:
                         "get_login",
                         pool_config.launcher_id,
                         pool_config.target_puzzle_hash,
-                        pool_protocol.get_current_authentication_token(authentication_token_timeout),
+                        uint64(auth_token),
                     )
                 )
             else:
