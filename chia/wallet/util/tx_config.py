@@ -50,7 +50,9 @@ class CoinSelectionConfig:
             and coin.amount not in self.excluded_coin_amounts
             and coin.name() not in self.excluded_coin_ids
         }
-        if not set(self.included_coin_ids).issubset({coin.name() for coin in filtered_set}):
+        if not set(*self.included_coin_ids, *([] if self.primary_coin is None else [self.primary_coin])).issubset(
+            {coin.name() for coin in filtered_set}
+        ):
             raise ValueError("Some coin selection restrictions eliminated coins specified for inclusion")
         return filtered_set
 

@@ -546,6 +546,8 @@ class SelectCoins(CoinSelectionConfigLoader):
             max_coin_amount=coin_selection_config.max_coin_amount,
             excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
             excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+            included_coin_ids=coin_selection_config.included_coin_ids,
+            primary_coin=coin_selection_config.primary_coin,
         )
 
 
