@@ -620,12 +620,20 @@ class CATWallet:
         payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if coins is None:
-            cat_coins = await self.select_coins(
+            cat_coins_set = await self.select_coins(
                 uint64(starting_amount),
                 action_scope,
             )
         else:
-            cat_coins = coins
+            cat_coins_set = coins
+
+        cat_coins = list(
+            sorted(
+                cat_coins_set,
+                key=lambda c: c.name() == action_scope.config.tx_config.coin_selection_config.primary_coin,
+                reverse=True,
+            )
+        )
 
         selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount

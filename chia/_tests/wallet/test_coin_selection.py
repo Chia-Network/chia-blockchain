@@ -8,9 +8,12 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.util.hash import std_hash
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import (
     check_for_exact_match,
     knapsack_coin_algorithm,
@@ -607,3 +610,97 @@ class TestCoinSelection:
                 logging.getLogger("test"),
                 target_amount,
             )
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
+    @pytest.mark.anyio
+    async def test_coin_selection_with_primary_coin(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        env.wallet_aliases = {
+            "xch": 1,
+            "cat": 2,
+        }
+        whole_balance = uint64(await env.xch_wallet.get_confirmed_balance())
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            selected_coins = await env.xch_wallet.select_coins(whole_balance, action_scope)
+
+        assert len(selected_coins) == 2
+
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            await env.xch_wallet.generate_signed_transaction([whole_balance], [bytes32.zeros], action_scope)
+
+        origin_coin_id = action_scope.side_effects.transactions[0].additions[0].parent_coin_info
+        assert origin_coin_id in {c.name() for c in selected_coins}
+        other_coin_id = next(iter(c.name() for c in selected_coins if c.name() != origin_coin_id))
+
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config.override(primary_coin=other_coin_id),
+            push=False,
+        ) as action_scope:
+            await env.xch_wallet.generate_signed_transaction([whole_balance], [bytes32.zeros], action_scope)
+
+        assert action_scope.side_effects.transactions[0].additions[0].parent_coin_info == other_coin_id
+
+        await mint_cat(
+            wallet_environments,
+            env,
+            "xch",
+            "cat",
+            uint64(3),
+            wallet_type=CATWallet,
+            tail_nonce="cat",
+        )
+
+        cat_wallet = env.wallet_state_manager.wallets[uint32(env.wallet_aliases["cat"])]
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config.override(primary_coin=other_coin_id),
+            push=True,
+        ) as action_scope:
+            puzhash = await action_scope.get_puzzle_hash(env.wallet_state_manager)
+            # split the coin in two
+            await cat_wallet.generate_signed_transaction([uint64(2), uint64(1)], [puzhash, puzhash], action_scope)
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={"cat": {"set_remainder": True}},
+                    post_block_balance_updates={"cat": {"set_remainder": True}},
+                )
+            ]
+        )
+
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            selected_coins = await cat_wallet.select_coins(uint64(3), action_scope)
+
+        assert len(selected_coins) == 2
+
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            await cat_wallet.generate_signed_transaction([uint64(3)], [bytes32.zeros], action_scope)
+
+        origin_coin_id = action_scope.side_effects.transactions[0].additions[0].parent_coin_info
+        assert origin_coin_id in {c.name() for c in selected_coins}
+        other_coin_id = next(iter(c.name() for c in selected_coins if c.name() != origin_coin_id))
+
+        async with env.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config.override(primary_coin=other_coin_id),
+            push=False,
+        ) as action_scope:
+            await cat_wallet.generate_signed_transaction([uint64(3)], [bytes32.zeros], action_scope)
+
+        assert action_scope.side_effects.transactions[0].additions[0].parent_coin_info == other_coin_id

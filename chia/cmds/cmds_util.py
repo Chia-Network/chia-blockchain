@@ -312,7 +312,16 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
                         multiple=True,
                         type=AmountParamType(),
                         help="Exclude any coins with this XCH or CAT amount from being included.",
-                    )(func)
+                    )(
+                        click.option(
+                            "--primary-coin",
+                            "primary_coin",
+                            type=Bytes32ParamType(),
+                            required=False,
+                            default=None,
+                            help="Use this coin as the primary coin which outputs the conditions.",
+                        )(func)
+                    )
                 )
             )
         )
@@ -402,6 +411,7 @@ class CMDCoinSelectionConfigLoader:
     excluded_coin_amounts: list[CliAmount] | None = None
     excluded_coin_ids: list[bytes32] | None = None
     included_coin_ids: list[bytes32] | None = None
+    primary_coin: bytes32 | None = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
@@ -414,6 +424,7 @@ class CMDCoinSelectionConfigLoader:
             ),
             self.excluded_coin_ids,
             self.included_coin_ids,
+            self.primary_coin,
         ).autofill(constants=DEFAULT_CONSTANTS)
 
 
@@ -429,6 +440,7 @@ class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
             cs_config.excluded_coin_amounts,
             cs_config.excluded_coin_ids,
             cs_config.included_coin_ids,
+            cs_config.primary_coin,
             self.reuse_puzhash,
         ).autofill(constants=DEFAULT_CONSTANTS, config=config, logged_in_fingerprint=fingerprint)
 
