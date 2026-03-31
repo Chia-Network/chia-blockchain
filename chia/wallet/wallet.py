@@ -447,6 +447,8 @@ class Wallet:
         reserve_fee: uint64 | None = None,
         preferred_change_puzzle_hash: bytes32 | None = None,
     ) -> None:
+        if action_scope.config.tx_config.primary_coin is not None:
+            raise ValueError("Using a primary coin is not supported for this wallet")
         if coins is None:
             coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(

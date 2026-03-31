@@ -543,7 +543,7 @@ class CATWallet:
         """
         announcement: AssertCoinAnnouncement | None = None
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config.override(primary_coin=None), push=False
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
