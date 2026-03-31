@@ -6,7 +6,6 @@ import time
 import types
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
@@ -691,45 +690,6 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     # Disconnect from the peer to make sure their entry in the cache is also deleted
     await simulator_and_wallet[1][0][0]._server.get_connections()[0].close(120)
     await time_out_assert(5, check_wallet_cache_empty, True)
-
-
-@pytest.mark.anyio
-async def test_send_transaction_message_cleans_up_on_closed_connection(
-    root_path_populated_with_config: Path,
-) -> None:
-    """
-    When peer.send_message returns False (connection closed),
-    _send_transaction_message should roll back the in-flight marker.
-    """
-    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
-    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
-
-    peer_id = bytes32(b"\x01" * 32)
-    msg_name_a = bytes32(b"\x0a" * 32)
-    msg_name_b = bytes32(b"\x0b" * 32)
-
-    peer = MagicMock(spec=WSChiaConnection)
-    peer.peer_node_id = peer_id
-    peer.send_message = AsyncMock(return_value=False)
-    mock_msg: Any = object()
-
-    async def send_and_check(
-        initial_state: dict[bytes32, list[bytes32]],
-        expected_state: dict[bytes32, list[bytes32]],
-    ) -> None:
-        wallet_node._tx_messages_in_progress = initial_state
-        await wallet_node._send_transaction_message(peer, mock_msg, msg_name_a)
-        assert wallet_node._tx_messages_in_progress == expected_state
-
-    # Only message in-flight for this peer — peer entry is fully removed
-    await send_and_check({}, {})
-
-    # Another message already in-flight — only the failed one is removed
-    await send_and_check({peer_id: [msg_name_b]}, {peer_id: [msg_name_b]})
-
-    # Successful send — marker stays in-flight
-    peer.send_message = AsyncMock(return_value=True)
-    await send_and_check({}, {peer_id: [msg_name_a]})
 
 
 @pytest.mark.parametrize(

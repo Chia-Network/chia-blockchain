@@ -520,12 +520,12 @@ class WalletNode:
     async def _send_transaction_message(self, peer: WSChiaConnection, msg: Message, msg_name: bytes32) -> None:
         in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
         in_progress.append(msg_name)
-        # send_message returns False when the connection is closed; it does not raise.
-        if not await peer.send_message(msg):
-            # Connection was closed; roll back the in-flight marker.
-            in_progress.remove(msg_name)
-            if not in_progress:
-                del self._tx_messages_in_progress[peer.peer_node_id]
+        # send_message returns False (never raises) when the connection is
+        # closed.  No rollback of the in-flight marker is needed here because
+        # on_disconnect already deletes the entire peer entry from
+        # _tx_messages_in_progress.  Attempting to roll back here would race
+        # with on_disconnect and risk a KeyError.
+        await peer.send_message(msg)
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
