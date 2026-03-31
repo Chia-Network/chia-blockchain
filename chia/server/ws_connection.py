@@ -241,7 +241,7 @@ class WSChiaConnection:
             await self._send_message(outbound_handshake)
 
         try:
-            message = await self._read_one_message()
+            message = await self._read_one_message(performing_handshake=True)
         except Exception:
             raise ProtocolError(Err.INVALID_HANDSHAKE)
 
@@ -691,7 +691,7 @@ class WSChiaConnection:
         )
         self.bytes_written += size
 
-    async def _read_one_message(self) -> Message | None:
+    async def _read_one_message(self, performing_handshake: bool = False) -> Message | None:
         message: WSMessage = await self.ws.receive()
 
         if self.connection_type is not None:
@@ -733,6 +733,17 @@ class WSChiaConnection:
                 self.log.error(
                     f"Disconnecting peer for unknown message type {full_message_loaded.type}: {self.peer_info.host}"
                 )
+                create_referenced_task(
+                    self.close(
+                        INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
+                    ),
+                    known_unreferenced=True,
+                )
+                # Yield so we let the close task cancel us
+                await asyncio.sleep(3)
+                return None
+            if message_type == ProtocolMessageTypes.handshake and not performing_handshake:
+                self.log.info(f"Received separate handshake message from {self.peer_info.host} version {self.version}")
                 create_referenced_task(
                     self.close(
                         INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
