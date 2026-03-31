@@ -163,7 +163,7 @@ class Farmer:
 
         # From p2_singleton to auth PrivateKey
         self.authentication_keys: dict[bytes32, PrivateKey] = {}
-        self.authentication_token: str | None = None
+        self.authentication_tokens: dict[bytes32, str | None] = {}
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: float = 0
@@ -349,18 +349,20 @@ class Farmer:
         if pool_config.version == 1:
             return str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
         elif pool_config.version == 2:
-            if self.authentication_token is None or datetime.fromtimestamp(
-                jwt.get_unverified_header(self.authentication_token)["exp"], tz=timezone.utc
+            cached_auth_token = self.authentication_tokens[pool_config.launcher_id]
+            if cached_auth_token is None or datetime.fromtimestamp(
+                jwt.decode(cached_auth_token, options={"verify_signature": False})["exp"], tz=timezone.utc
             ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
                 auth_response = await self._pool_get_auth(pool_config)
                 if isinstance(auth_response, pool_protocol.GetAuthResponse):
+                    self.authentication_tokens[pool_config.launcher_id] = auth_response.authentication_token
                     return auth_response.authentication_token
                 else:
                     return None
             else:
                 # seems sketchy because in theory we should check for non-None here but
                 # the auth token cannot be None AND expired so semantics guarantee a non-None, non-expired token here
-                return self.authentication_token
+                return cached_auth_token
         else:
             raise ValueError("Unknown pool protocol version specified in pooling config")
 
@@ -379,9 +381,9 @@ class Farmer:
                 signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
                 async with session.get(
                     url,
-                    params=pool_protocol.GetAuthRequest(
+                    json=pool_protocol.GetAuthRequest(
                         payload=pool_protocol.AuthenticationPayloadV2(
-                            launcher_id=pool_config.p2_singleton_puzzle_hash,
+                            launcher_id=pool_config.launcher_id,
                             timestamp=timestamp,
                         ),
                         signature=signature,
@@ -440,7 +442,7 @@ class Farmer:
                             and len(resp.history) > 0
                             and all(r.status in {301, 308} for r in resp.history)
                         ):
-                            new_pool_url = response_url_str.replace("/pool_info", "")
+                            new_pool_url = response_url_str.replace(f"/v{pool_config.version}/pool_info", "")
 
                         return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
                     else:
