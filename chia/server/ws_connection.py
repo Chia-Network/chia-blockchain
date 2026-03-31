@@ -724,15 +724,19 @@ class WSChiaConnection:
                 return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
-            full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            full_message_loaded = None
             try:
+                full_message_loaded = Message.from_bytes(data)
                 message_type = ProtocolMessageTypes(full_message_loaded.type)
             except Exception:
-                self.log.error(
-                    f"Disconnecting peer for unknown message type {full_message_loaded.type}: {self.peer_info.host}"
+                reason = (
+                    "invalid message format"
+                    if full_message_loaded is None
+                    else f"unknown message type {full_message_loaded.type}"
                 )
+                self.log.error(f"Disconnecting peer for {reason}: {self.peer_info.host}")
                 create_referenced_task(
                     self.close(
                         INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
