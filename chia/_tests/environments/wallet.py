@@ -38,6 +38,7 @@ STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
         coins_to_exclude=(),
         coins_to_include=(),
         amounts_to_exclude=(),
+        primary_coin=None,
         reuse=None,
     ),
     transaction_writer=TransactionsOut(transaction_file_out=None),

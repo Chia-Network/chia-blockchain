@@ -126,6 +126,13 @@ class NeedsCoinSelectionConfig:
         type=Bytes32ParamType(),
         help="Include this coin in the spend.",
     )
+    primary_coin: bytes32 | None = option(
+        "--primary-coin",
+        type=Bytes32ParamType(),
+        required=False,
+        default=None,
+        help="Use this coin as the primary coin that creates the conditions.",
+    )
     amounts_to_exclude: Sequence[CliAmount] = option(
         "--exclude-amount",
         multiple=True,
@@ -140,6 +147,7 @@ class NeedsCoinSelectionConfig:
             excluded_coin_amounts=list(_ for _ in self.amounts_to_exclude),
             excluded_coin_ids=list(_ for _ in self.coins_to_exclude),
             included_coin_ids=list(_ for _ in self.coins_to_include),
+            primary_coin=self.primary_coin,
         ).to_coin_selection_config(mojo_per_unit)
 
 
@@ -160,6 +168,7 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
             excluded_coin_amounts=list(_ for _ in self.amounts_to_exclude),
             excluded_coin_ids=list(_ for _ in self.coins_to_exclude),
             included_coin_ids=list(_ for _ in self.coins_to_include),
+            primary_coin=self.primary_coin,
             reuse_puzhash=self.reuse,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
