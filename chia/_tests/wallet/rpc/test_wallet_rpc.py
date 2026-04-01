@@ -661,7 +661,7 @@ async def test_create_signed_transaction(
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={  # type: ignore[arg-type]
+                pre_block_balance_updates={
                     "xch": {
                         "unconfirmed_wallet_balance": -xch_delta,
                         "<=#spendable_balance": -xch_delta,
@@ -672,7 +672,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
@@ -683,7 +683,7 @@ async def test_create_signed_transaction(
                     if is_cat
                     else {}
                 ),
-                post_block_balance_updates={  # type: ignore[arg-type]
+                post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": -xch_delta,
                         ">=#spendable_balance": 0,
@@ -695,7 +695,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "confirmed_wallet_balance": -cat_delta,
                             ">=#spendable_balance": 1 if is_cat else 0,
                             ">=#max_send_amount": 1 if is_cat else 0,
