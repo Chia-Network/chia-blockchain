@@ -1,41 +1,44 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import pytest
+from chia_rs import BlockRecord, FullBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.util.augmented_chain import AugmentedBlockchain
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.util.blockchain import create_blockchain
+from chia.consensus.augmented_chain import AugmentedBlockchain, AugmentedBlockchainValidationError
+from chia.simulator.block_tools import BlockTools
+from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
-from chia.util.ints import uint32
 
 
 @dataclass
 class NullBlockchain:
-
     if TYPE_CHECKING:
         from chia.consensus.blockchain_interface import BlocksProtocol
 
         _protocol_check: ClassVar[BlocksProtocol] = cast("NullBlockchain", None)
 
-    added_blocks: Set[bytes32] = field(default_factory=set)
-    heights: Dict[uint32, bytes32] = field(default_factory=dict)
+    added_blocks: set[bytes32] = field(default_factory=set)
+    heights: dict[uint32, bytes32] = field(default_factory=dict)
 
     # BlocksProtocol
-    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover
 
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
         return None  # pragma: no cover
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self.added_blocks.add(block_record.header_hash)
 
     # BlockRecordsProtocol
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return None  # pragma: no cover
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
@@ -44,17 +47,38 @@ class NullBlockchain:
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         raise ValueError("Height is not in blockchain")
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
         return self.heights.get(height)
 
-    def contains_block(self, header_hash: bytes32) -> bool:
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         return False  # pragma: no cover
 
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
+
+
+class InMemoryBlockchain(BlockCache):
+    """BlockCache extended with the three BlocksProtocol methods."""
+
+    if TYPE_CHECKING:
+        from chia.consensus.blockchain_interface import BlocksProtocol
+
+        _protocol_check: ClassVar[BlocksProtocol] = cast("InMemoryBlockchain", None)
+
+    def __init__(self) -> None:
+        super().__init__({})
+
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
+        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover
+
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
+        return self.try_block_record(header_hash)
+
+    def add_block_record(self, block_record: BlockRecord) -> None:
+        self.add_block(block_record)
 
 
 @dataclass
@@ -71,8 +95,7 @@ def BR(b: FullBlock) -> BlockRecord:
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="save time")
-async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
-
+async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
     blocks = default_10000_blocks
     # this test blockchain is expected to have block generators at these
     # heights:
@@ -93,7 +116,7 @@ async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
     with pytest.raises(KeyError):
         await abc.prev_block_hash([blocks[2].header_hash])
 
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[3].header_hash, {uint32(3)})
 
     block_records = []
@@ -105,11 +128,11 @@ async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
 
     assert abc.height_to_block_record(uint32(1)) == block_records[1]
 
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[10].header_hash, {uint32(3), uint32(10)})
 
     # block 1 exists in the chain, but it doesn't have a generator
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[1].header_hash, {uint32(1)})
 
     expect_gen = blocks[2].transactions_generator
@@ -124,13 +147,13 @@ async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
         assert abc.try_block_record(blocks[i].header_hash) == block_records[i]
         assert abc.height_to_hash(uint32(i)) == blocks[i].header_hash
         assert await abc.prev_block_hash([blocks[i].header_hash]) == [blocks[i].prev_header_hash]
-        assert abc.contains_block(blocks[i].header_hash) is True
+        assert abc.try_block_record(blocks[i].header_hash) is not None
         assert await abc.get_block_record_from_db(blocks[i].header_hash) == block_records[i]
         assert abc.contains_height(uint32(i))
 
     for i in range(5, 10):
         assert abc.height_to_hash(uint32(i)) is None
-        assert not abc.contains_block(blocks[i].header_hash)
+        assert abc.try_block_record(blocks[i].header_hash) is None
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
         assert not abc.contains_height(uint32(i))
 
@@ -145,3 +168,218 @@ async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
         abc.add_block_record(BR(b))
     assert len(abc._extra_blocks) == 0
     assert null.added_blocks == {br.header_hash for br in blocks[:5]}
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlock], bt: BlockTools) -> None:
+    blocks = default_10000_blocks[:50]
+    async with create_blockchain(bt.constants, 2) as (b1, _):
+        async with create_blockchain(bt.constants, 2) as (b2, _):
+            for block in blocks:
+                await _validate_and_add_block(b1, block)
+                await _validate_and_add_block(b2, block)
+
+            new_blocks = bt.get_consecutive_blocks(10, block_list_input=blocks)[50:]
+            abc = AugmentedBlockchain(b1)
+            for block in new_blocks:
+                await _validate_and_add_block(b2, block)
+                block_rec = b2.block_record(block.header_hash)
+                abc.add_extra_block(block, block_rec)
+
+            for block in blocks:
+                # check underlying contains block but augmented does not
+                assert abc.contains_block(block.header_hash, block.height) is True
+                assert block.height not in abc._height_to_hash
+
+            for block in new_blocks:
+                # check augmented contains block but augmented does not
+                assert abc.contains_block(block.header_hash, block.height) is True
+                assert not abc._underlying.contains_height(block.height)
+
+            for block in new_blocks:
+                await _validate_and_add_block(b1, block)
+
+            for block in new_blocks:
+                # check underlying contains block
+                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                # check augmented contains block
+                assert abc._height_to_hash[block.height] == block.header_hash
+
+            abc.remove_extra_block(new_blocks[-1].header_hash)
+
+            # check blocks removed from augmented
+            for block in new_blocks:
+                # check underlying contains block
+                assert abc._underlying.height_to_hash(block.height) == block.header_hash
+                # check augmented contains block
+                assert block.height not in abc._height_to_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_sequential(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks[:10]
+    abc = AugmentedBlockchain(NullBlockchain())
+
+    # wrong header_hash in block_record
+    abc.add_extra_block(blocks[0], BR(blocks[0]))
+    mismatched_record = FakeBlockRecord(
+        height=uint32(1),
+        header_hash=blocks[2].header_hash,
+        prev_hash=blocks[0].header_hash,
+    )
+    with pytest.raises(AugmentedBlockchainValidationError, match="Block header hash mismatch"):
+        abc.add_extra_block(blocks[1], mismatched_record)  # type: ignore[arg-type]
+
+    abc.add_extra_block(blocks[1], BR(blocks[1]))
+
+    # out of order
+    with pytest.raises(AugmentedBlockchainValidationError, match="New block's prev_hash must match last added block"):
+        abc.add_extra_block(blocks[3], BR(blocks[3]))
+
+    # wrong prev_hash
+    wrong_prev_block = FakeBlockRecord(
+        height=uint32(2),
+        header_hash=blocks[2].header_hash,
+        prev_hash=blocks[0].header_hash,  # Points to block 0 instead of block 1
+    )
+
+    with pytest.raises(AugmentedBlockchainValidationError, match="New block's prev_hash must match last added block"):
+        abc.add_extra_block(blocks[2], wrong_prev_block)  # type: ignore[arg-type]
+
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    assert len(abc._height_to_hash) == 3
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_validation_first_block_prev_hash(
+    default_10000_blocks: list[FullBlock], bt: BlockTools
+) -> None:
+    blocks = default_10000_blocks[:50]
+    async with create_blockchain(bt.constants, 2) as (blockchain, _):
+        for block in blocks[:10]:
+            await _validate_and_add_block(blockchain, block)
+
+        # first block prev_hash not in underlying
+        abc = AugmentedBlockchain(blockchain)
+        fake_prev_hash = bytes32(b"0" * 32)
+        orphan_block = FakeBlockRecord(
+            height=uint32(100),
+            header_hash=blocks[20].header_hash,
+            prev_hash=fake_prev_hash,  # Doesn't exist in underlying
+        )
+
+        with pytest.raises(
+            AugmentedBlockchainValidationError, match="First added block's prev_hash must exist in underlying"
+        ):
+            abc.add_extra_block(blocks[20], orphan_block)  # type: ignore[arg-type]
+
+        abc2 = AugmentedBlockchain(blockchain)
+        correct_block = FakeBlockRecord(
+            height=uint32(10),
+            header_hash=blocks[10].header_hash,
+            prev_hash=blocks[9].header_hash,  # Block 9 is in underlying peak
+        )
+        abc2.add_extra_block(blocks[10], correct_block)  # type: ignore[arg-type]
+        assert len(abc2._height_to_hash) == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_fork_ancestry_populated_on_first_add(default_10000_blocks: list[FullBlock]) -> None:
+    """When the first block added to the augmented chain is on a fork,
+    _populate_fork_ancestry fills _height_to_hash for orphan ancestors
+    so height_to_hash returns fork hashes, not canonical ones."""
+    blocks = default_10000_blocks
+
+    underlying = InMemoryBlockchain()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    # Orphan fork blocks at heights 3-4 that branch from canonical height 2.
+    # Added directly to the record cache (not the height map) to simulate orphans.
+    fork_h3 = blocks[10].header_hash
+    fork_h4 = blocks[11].header_hash
+    fork_h5 = blocks[12].header_hash
+    underlying._block_records[fork_h3] = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)  # type: ignore[assignment]
+    underlying._block_records[fork_h4] = FakeBlockRecord(uint32(4), fork_h4, fork_h3)  # type: ignore[assignment]
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(
+        blocks[12],
+        FakeBlockRecord(uint32(5), fork_h5, fork_h4),  # type: ignore[arg-type]
+    )
+
+    # Orphan heights 3-4 filled into _height_to_hash by _populate_fork_ancestry.
+    assert abc._height_to_hash[uint32(3)] == fork_h3
+    assert abc._height_to_hash[uint32(4)] == fork_h4
+    assert abc._height_to_hash[uint32(5)] == fork_h5
+
+    # height_to_hash returns correct values for all regions.
+    assert abc.height_to_hash(uint32(0)) == blocks[0].header_hash
+    assert abc.height_to_hash(uint32(2)) == blocks[2].header_hash
+    assert abc.height_to_hash(uint32(3)) == fork_h3
+    assert abc.height_to_hash(uint32(4)) == fork_h4
+    assert abc.height_to_hash(uint32(5)) == fork_h5
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_read_only_snapshot_rejects_mutation(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = InMemoryBlockchain()
+    underlying.add_block_record(BR(blocks[1]))
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+
+    snapshot = abc.read_only_snapshot()
+    expected_error = "Cannot mutate read-only augmented blockchain snapshot"
+
+    with pytest.raises(AugmentedBlockchainValidationError, match=expected_error):
+        snapshot.remove_extra_block(blocks[2].header_hash)
+
+    with pytest.raises(AugmentedBlockchainValidationError, match=expected_error):
+        snapshot.add_block_record(BR(blocks[0]))
+
+    br3 = FakeBlockRecord(height=uint32(3), header_hash=blocks[3].header_hash, prev_hash=blocks[2].header_hash)
+    with pytest.raises(AugmentedBlockchainValidationError, match=expected_error):
+        snapshot.add_extra_block(blocks[3], br3)  # type: ignore[arg-type]
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_read_only_snapshot_preserves_generator_lookup(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = InMemoryBlockchain()
+    underlying.add_block_record(BR(blocks[1]))
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+
+    generator = blocks[2].transactions_generator
+    assert generator is not None
+    expected = {uint32(2): bytes(generator)}
+
+    snapshot = abc.read_only_snapshot()
+    assert await abc.lookup_block_generators(blocks[2].header_hash, {uint32(2)}) == expected
+    assert await snapshot.lookup_block_generators(blocks[2].header_hash, {uint32(2)}) == expected
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_read_only_snapshot_isolated_from_writer(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = InMemoryBlockchain()
+    underlying.add_block_record(BR(blocks[1]))
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+
+    snapshot = abc.read_only_snapshot()
+    assert snapshot.block_record(blocks[2].header_hash) == BR(blocks[2])
+
+    br3 = FakeBlockRecord(height=uint32(3), header_hash=blocks[3].header_hash, prev_hash=blocks[2].header_hash)
+    abc.add_extra_block(blocks[3], br3)  # type: ignore[arg-type]
+    assert uint32(3) in abc._height_to_hash
+    assert uint32(3) not in snapshot._height_to_hash
+    assert snapshot.try_block_record(blocks[3].header_hash) is None

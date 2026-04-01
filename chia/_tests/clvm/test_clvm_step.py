@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from clvm_tools_rs import start_clvm_program
+from chialisp import start_clvm_program
 
 factorial = (
     "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"
@@ -17,8 +17,8 @@ factorial_sym = {factorial_function_hash: "factorial"}
 def test_simple_program_run() -> None:
     p = start_clvm_program(factorial, "ff0580", factorial_sym)
 
-    last: Optional[Any] = None
-    location: Optional[Any] = None
+    last: Any | None = None
+    location: Any | None = None
 
     while not p.is_ended():
         step_result = p.step()

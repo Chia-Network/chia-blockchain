@@ -1,25 +1,23 @@
 from __future__ import annotations
 
 import itertools
-from typing import List
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 
-from chia.clvm.spend_sim import CostLogger, sim_and_client
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
+from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertPuzzleAnnouncement
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    NFT_TRANSFER_PROGRAM_DEFAULT,
+from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
 )
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
@@ -68,13 +66,13 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         await sim.farm_block()
 
         if metadata_updater == "default":
-            metadata_updater_solutions: List[Program] = [
+            metadata_updater_solutions: list[Program] = [
                 Program.to((b"u", "update")),
                 Program.to((b"lu", "update")),
                 Program.to((b"mu", "update")),
                 Program.to((b"foo", "update")),
             ]
-            expected_metadatas: List[Program] = [
+            expected_metadatas: list[Program] = [
                 metadata_to_program(
                     {
                         b"u": ["update", "hey hey"],
@@ -140,7 +138,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
 @pytest.mark.anyio
 async def test_ownership_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
-        TARGET_OWNER = bytes32([0] * 32)
+        TARGET_OWNER = bytes32.zeros
         TARGET_TP = Program.to([8])  # (x)
         # (a (i 11 (q 4 19 (c 43 (q ()))) (q 8)) 1) or
         # (mod (_ _ solution) (if solution (list (f solution) (f (r solution)) ()) (x)))
@@ -182,7 +180,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         result = await sim_client.push_tx(skip_tp_bundle)
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
         with pytest.raises(ValueError, match="clvm raise"):
-            skip_tp_spend.puzzle_reveal.to_program().run(skip_tp_spend.solution.to_program())
+            run(skip_tp_spend.puzzle_reveal, Program.from_serialized(skip_tp_spend.solution))
 
         make_bad_announcement_spend = make_spend(
             ownership_coin,
@@ -192,7 +190,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                     [
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
-                        [62, b"\xad\x4c" + bytes32([0] * 32)],
+                        [62, b"\xad\x4c" + bytes32.zeros],
                     ]
                 ]
             ),
@@ -202,8 +200,8 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         result = await sim_client.push_tx(make_bad_announcement_bundle)
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
         with pytest.raises(ValueError, match="clvm raise"):
-            make_bad_announcement_spend.puzzle_reveal.to_program().run(
-                make_bad_announcement_spend.solution.to_program()
+            run(
+                make_bad_announcement_spend.puzzle_reveal, Program.from_serialized(make_bad_announcement_spend.solution)
             )
 
         expected_announcement = AssertPuzzleAnnouncement(
@@ -252,7 +250,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
-        FAKE_LAUNCHER_ID = bytes32([0] * 32)
+        FAKE_LAUNCHER_ID = bytes32.zeros
         FAKE_TAIL = bytes32([2] * 32)
         FAKE_SINGLETON_STRUCT = Program.to((FAKE_SINGLETON_MOD.get_tree_hash(), (FAKE_LAUNCHER_ID, FAKE_LAUNCHER_ID)))
         FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(FAKE_SINGLETON_STRUCT, ACS)

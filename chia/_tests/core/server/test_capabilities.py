@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
+from chia_rs.sized_ints import uint16
 
 from chia.protocols.shared_protocol import Capability
 from chia.server.capabilities import known_active_capabilities
-from chia.util.ints import uint16
 
 
 @pytest.mark.parametrize(
@@ -53,13 +51,13 @@ from chia.util.ints import uint16
     ids=lambda value: "disabled" if value else "enabled",
 )
 def test_known_active_capabilities_filter(
-    values: List[Tuple[uint16, str]],
-    expected: List[Capability],
+    values: list[tuple[uint16, str]],
+    expected: list[Capability],
     duplicated: bool,
     disabled: bool,
 ) -> None:
     if duplicated:
-        values = values * 2
+        values *= 2
 
     if disabled:
         values = [(value, "0") for value, state in values]

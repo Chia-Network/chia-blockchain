@@ -3,58 +3,44 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import logging.config
 import os
 import signal
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from pathlib import Path
 from types import FrameType
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import Any, Generic, TypeVar, cast
+
+from chia_rs.sized_ints import uint16
 
 from chia.daemon.server import service_launch_lock_path
+from chia.protocols.outbound_message import NodeType
+from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.chia_policy import set_chia_policy
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
-from chia.util.ints import uint16
+from chia.util.chia_version import chia_short_version
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
-
-from ..protocols.shared_protocol import default_capabilities
-from ..util.chia_version import chia_short_version
+from chia.util.task_referencer import create_referenced_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
-main_pid: Optional[int] = None
+main_pid: int | None = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound=RpcApiProtocol)
 
-RpcInfo = Tuple[Type[_T_RpcApiProtocol], int]
+RpcInfo = tuple[type[_T_RpcApiProtocol], int]
 
 log = logging.getLogger(__name__)
 
@@ -70,18 +56,19 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         node: _T_RpcServiceProtocol,
         peer_api: _T_ApiProtocol,
         node_type: NodeType,
-        advertised_port: Optional[int],
+        advertised_port: int | None,
         service_name: str,
         network_id: str,
         *,
-        config: Dict[str, Any],
-        upnp_ports: Optional[List[int]] = None,
-        connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
-        on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
-        rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
+        config: dict[str, Any],
+        stub_metadata_for_type: dict[NodeType, ApiMetadata],
+        upnp_ports: list[int] | None = None,
+        connect_peers: set[UnresolvedPeerInfo] | None = None,
+        on_connect_callback: Callable[[WSChiaConnection], Awaitable[None]] | None = None,
+        rpc_info: RpcInfo[_T_RpcApiProtocol] | None = None,
         connect_to_daemon: bool = True,
-        max_request_body_size: Optional[int] = None,
-        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        max_request_body_size: int | None = None,
+        override_capabilities: list[tuple[uint16, str]] | None = None,
     ) -> None:
         if upnp_ports is None:
             upnp_ports = []
@@ -98,7 +85,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self.rpc_server: Optional[RpcServer[_T_RpcApiProtocol]] = None
+        self.rpc_server: RpcServer[_T_RpcApiProtocol] | None = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
@@ -117,7 +104,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         if node_type == NodeType.WALLET:
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = default_capabilities[node_type]
+        capabilities_to_use: list[tuple[uint16, str]] = default_capabilities[node_type]
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 
@@ -136,6 +123,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
+            stub_metadata_for_type=stub_metadata_for_type,
             name=f"{service_name}_server",
         )
         f = getattr(node, "set_server", None)
@@ -153,12 +141,12 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
         self._connect_peers = connect_peers
-        self._connect_peers_task: Optional[asyncio.Task[None]] = None
+        self._connect_peers_task: asyncio.Task[None] | None = None
         self.upnp: UPnP = UPnP()
         self.stop_requested = asyncio.Event()
 
     async def _connect_peers_task_handler(self) -> None:
-        resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
+        resolved_peers: dict[UnresolvedPeerInfo, PeerInfo] = {}
         prefer_ipv6 = self.config.get("prefer_ipv6", False)
         while True:
             for unresolved in self._connect_peers:
@@ -231,7 +219,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     except ValueError:
                         pass
 
-                    self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
+                    self._connect_peers_task = create_referenced_task(self._connect_peers_task_handler())
 
                     self._log.info(
                         f"Started {self._service_name} service on network_id: {self._network_id} "
@@ -248,7 +236,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                             self.stop_requested.set,
                             self.root_path,
                             self.config,
-                            self._connect_to_daemon,
+                            service_config=self.service_config,
+                            connect_to_daemon=self._connect_to_daemon,
                             max_request_body_size=self.max_request_body_size,
                         )
                 yield
@@ -298,13 +287,12 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
     def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
-        global main_pid
         ignore = os.getpid() != main_pid
 
         # TODO: if we remove this conditional behavior, consider moving logging to common signal handling
@@ -321,7 +309,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self.stop_requested.set()
 
 
-def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
+def async_run(coro: Coroutine[object, object, T], connection_limit: int | None = None) -> T:
     with log_exceptions(log=log, message="fatal uncaught exception"):
         if connection_limit is not None:
             set_chia_policy(connection_limit)

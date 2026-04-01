@@ -6,13 +6,11 @@ changelog:
       - CI
       - Tests
       - Cleanup
-      - dependencies
       - checkpoint_merge
       - Exclude_Notes
       - GUI-Pin
     authors:
       - octocat
-      - dependabot
       - snyk-bot
       - github-actions
   categories:
@@ -22,6 +20,7 @@ changelog:
     - title: Changed
       labels:
         - Changed
+        - dependencies
     - title: Fixed
       labels:
         - Fixed

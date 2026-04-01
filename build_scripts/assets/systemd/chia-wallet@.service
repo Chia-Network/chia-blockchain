@@ -7,7 +7,7 @@ After=chia-daemon@%i.service
 Type=simple
 Environment=CHIA_ROOT=/home/%i/.chia/mainnet
 ExecStart=/opt/chia/start_wallet
-ExecStartPost=/bin/bash -c '(while ! nc -z -v -w1 localhost 9256 2>/dev/null; do echo "Waiting for the wallet to listen on port 9256..."; sleep 1; done); sleep 1'
+ExecStartPost=/bin/bash -c '(while ! /opt/chia/chia rpc wallet get_version 2>/dev/null; do echo "Waiting for the wallet to listen on port 9256..."; sleep 1; done); sleep 1'
 User=%i
 Group=%i
 LimitNOFILE=1048576

@@ -11,7 +11,13 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
 }
+if (-not (Test-Path env:CHIA_SEMVER_VERSION)) {
+  $env:CHIA_SEMVER_VERSION = $env:CHIA_INSTALLER_VERSION
+  Write-Output "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $env:CHIA_INSTALLER_VERSION"
+}
+
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
+Write-Output "Chia Semver Version is: $env:CHIA_SEMVER_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -62,17 +68,15 @@ Write-Output "   ---"
 Write-Output "fix version in package.json"
 choco install jq
 cp package.json package.json.orig
-jq --arg VER "$env:CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json
+jq --arg VER "$env:CHIA_SEMVER_VERSION" '.version=$VER' package.json > temp.json
 rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
-$OLD_ENV_PATH = $Env:Path
-$Env:Path = $NPM_PATH + ";" + $Env:Path
-electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
-$Env:Path = $OLD_ENV_PATH
+& "$NPM_PATH/electron-builder.ps1" --version
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
@@ -92,7 +96,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {

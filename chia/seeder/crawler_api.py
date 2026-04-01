@@ -1,19 +1,25 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.outbound_message import Message
 from chia.seeder.crawler import Crawler
-from chia.server.outbound_message import Message
+from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.api_decorators import api_request
 
 
 class CrawlerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("CrawlerAPI", None)
+
     log: logging.Logger
     crawler: Crawler
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, crawler: Crawler) -> None:
         self.log = logging.getLogger(__name__)
@@ -27,103 +33,97 @@ class CrawlerAPI:
     def ready(self) -> bool:
         return True
 
-    @api_request(peer_required=True)
-    async def request_peers(
-        self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    @metadata.request(peer_required=True)
+    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection) -> Message | None:
         pass
 
-    @api_request(peer_required=True)
-    async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    @metadata.request(peer_required=True)
+    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection) -> Message | None:
         pass
 
-    @api_request(peer_required=True)
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> Optional[Message]:
+    @metadata.request(peer_required=True)
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> Message | None:
         await self.crawler.new_peak(request, peer)
         return None
 
-    @api_request()
-    async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
+    @metadata.request()
+    async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Message | None:
         pass
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
         self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request()
-    async def new_unfinished_block(
-        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
-    ) -> Optional[Message]:
+    @metadata.request()
+    async def new_unfinished_block(self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock) -> Message | None:
         pass
 
-    @api_request()
+    @metadata.request()
     async def new_unfinished_block2(
         self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_compact_vdf(
         self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request()
-    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
+    @metadata.request()
+    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
         pass
 
-    @api_request()
-    async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
+    @metadata.request()
+    async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Message | None:
         pass
 
-    @api_request()
-    async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
+    @metadata.request()
+    async def request_block(self, request: full_node_protocol.RequestBlock) -> Message | None:
         pass
 
-    @api_request()
-    async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
+    @metadata.request()
+    async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Message | None:
         pass
 
-    @api_request()
+    @metadata.request()
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request()
+    @metadata.request()
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         pass
 
-    @api_request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Optional[Message]:
+    @metadata.request()
+    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
         pass
 
-    @api_request()
-    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
+    @metadata.request()
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Message | None:
         pass
 
-    @api_request()
-    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
+    @metadata.request()
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Message | None:
         pass
 
-    @api_request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+    @metadata.request()
+    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
         pass
 
-    @api_request()
-    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+    @metadata.request()
+    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Message | None:
         pass

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 import pytest
 from click.testing import CliRunner, Result
@@ -26,7 +26,7 @@ def configure(root_path: Path, *args: str) -> Result:
     )
 
 
-def configure_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
+def configure_interactive(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [
@@ -53,7 +53,7 @@ def enable(root_path: Path, *args: str) -> Result:
     )
 
 
-def enable_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
+def enable_interactive(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [
@@ -66,7 +66,7 @@ def enable_interactive(root_path: Path, user_input: Optional[str] = None) -> Res
     )
 
 
-def prepare_submission(root_path: Path, user_input: Optional[str] = None) -> Result:
+def prepare_submission(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [
@@ -342,7 +342,7 @@ def test_prepare_submission(
     assert output in result.output
 
     if exit_code == 0:
-        submission_file = list(beta_path.rglob("*.zip"))[0]
+        submission_file = next(iter(beta_path.rglob("*.zip")))
         assert submission_file.name.startswith(f"submission_{choice - 1}")
         with zipfile.ZipFile(submission_file) as zip_file:
             all_files = [Path(info.filename) for info in zip_file.filelist]
@@ -378,5 +378,5 @@ def test_beta_status(root_path_populated_with_config: Path, enabled: bool, path:
 
     assert result.exit_code == 0
     assert f"enabled: {enabled}" in result.output
-    assert f"path: {str(path)}" in result.output
-    assert f"metrics log interval: {str(metrics_log_interval_default)}" in result.output
+    assert f"path: {path!s}" in result.output
+    assert f"metrics log interval: {metrics_log_interval_default!s}" in result.output

@@ -14,22 +14,23 @@ This roughly corresponds to bitcoin's graftroot.
 
 from __future__ import annotations
 
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE
+from clvm.SExp import CastableType
+
 from chia.types.blockchain_format.program import Program
+from chia.wallet.puzzles import p2_conditions
 
-from . import p2_conditions
-from .load_clvm import load_clvm_maybe_recompile
-
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle.clsp")
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE)
 
 
 def puzzle_for_pk(public_key: bytes) -> Program:
     return MOD.curry(public_key)
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: Program) -> Program:
     delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
 
 
-def solution_for_delegated_puzzle(delegated_puzzle: Program, delegated_solution: Program) -> Program:
+def solution_for_delegated_puzzle(delegated_puzzle: Program, delegated_solution: CastableType) -> Program:
     return delegated_puzzle.to([delegated_puzzle, delegated_solution])

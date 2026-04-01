@@ -5,13 +5,14 @@ import concurrent
 import contextlib
 import dataclasses
 import logging
+from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
-from typing_extensions import Literal
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint32
 
-from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -27,19 +28,16 @@ from chia.plotting.util import (
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    add_plot_directory,
     get_harvester_config,
-    get_plot_directories,
     remove_plot,
-    remove_plot_directory,
     update_harvester_config,
 )
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.cpu import available_logical_cores
-from chia.util.ints import uint32
+from chia.util.harvester_config import add_plot_directory, get_plot_directories, remove_plot_directory
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +53,11 @@ class Harvester:
     root_path: Path
     _shut_down: bool
     executor: ThreadPoolExecutor
-    state_changed_callback: Optional[StateChangedProtocol] = None
+    state_changed_callback: StateChangedProtocol | None = None
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
-    _server: Optional[ChiaServer]
+    _server: ChiaServer | None
     _mode: HarvestingMode
 
     @property
@@ -71,7 +69,7 @@ class Harvester:
 
         return self._server
 
-    def __init__(self, root_path: Path, config: Dict[str, Any], constants: ConsensusConstants):
+    def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
         # TODO, remove checks below later after some versions / time
@@ -90,13 +88,18 @@ class Harvester:
         self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
 
         self.plot_manager = PlotManager(
-            root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
+            root_path,
+            refresh_parameter=refresh_parameter,
+            refresh_callback=self._plot_refresh_callback,
+            constants=constants,
         )
         self._shut_down = False
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=config["num_threads"], thread_name_prefix="harvester-"
+        )
         self._server = None
         self.constants = constants
-        self.state_changed_callback: Optional[StateChangedProtocol] = None
+        self.state_changed_callback: StateChangedProtocol | None = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
@@ -145,7 +148,7 @@ class Harvester:
 
             await self.plot_sync_sender.await_closed()
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -154,7 +157,7 @@ class Harvester:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -181,16 +184,22 @@ class Harvester:
         asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
         self.plot_manager.stop_refreshing()
 
-    def get_plots(self) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
+    def get_plots(self) -> tuple[list[dict[str, Any]], list[str], list[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
-        response_plots: List[Dict[str, Any]] = []
+        response_plots: list[dict[str, Any]] = []
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
+                param = prover.get_param()
+                if param.size_v1 is not None:
+                    k = uint8(param.size_v1)
+                else:
+                    assert param.strength_v2 is not None
+                    k = uint8(0x80 | param.strength_v2)
                 response_plots.append(
                     {
                         "filename": str(path),
-                        "size": prover.get_size(),
+                        "size": k,
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
@@ -222,7 +231,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_plot_directories(self) -> List[str]:
+    async def get_plot_directories(self) -> list[str]:
         return get_plot_directories(self.root_path)
 
     async def remove_plot_directory(self, str_path: str) -> bool:
@@ -230,22 +239,22 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvester_config(self) -> Dict[str, Any]:
+    async def get_harvester_config(self) -> dict[str, Any]:
         return get_harvester_config(self.root_path)
 
     async def update_harvester_config(
         self,
         *,
-        use_gpu_harvesting: Optional[bool] = None,
-        gpu_index: Optional[int] = None,
-        enforce_gpu_index: Optional[bool] = None,
-        disable_cpu_affinity: Optional[bool] = None,
-        parallel_decompressor_count: Optional[int] = None,
-        decompressor_thread_count: Optional[int] = None,
-        recursive_plot_scan: Optional[bool] = None,
-        refresh_parameter_interval_seconds: Optional[uint32] = None,
+        use_gpu_harvesting: bool | None = None,
+        gpu_index: int | None = None,
+        enforce_gpu_index: bool | None = None,
+        disable_cpu_affinity: bool | None = None,
+        parallel_decompressor_count: int | None = None,
+        decompressor_thread_count: int | None = None,
+        recursive_plot_scan: bool | None = None,
+        refresh_parameter_interval_seconds: uint32 | None = None,
     ) -> bool:
-        refresh_parameter: Optional[PlotsRefreshParameter] = None
+        refresh_parameter: PlotsRefreshParameter | None = None
         if refresh_parameter_interval_seconds is not None:
             refresh_parameter = PlotsRefreshParameter(
                 interval_seconds=refresh_parameter_interval_seconds,

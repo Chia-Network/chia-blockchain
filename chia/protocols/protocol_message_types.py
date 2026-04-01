@@ -13,6 +13,7 @@ class ProtocolMessageTypes(Enum):
     new_proof_of_space = 5
     request_signatures = 6
     respond_signatures = 7
+    partial_proofs = 110
 
     # Farmer protocol (farmer <-> full_node)
     new_signage_point = 8
@@ -100,10 +101,10 @@ class ProtocolMessageTypes(Enum):
 
     # More wallet protocol
     coin_state_update = 69
-    register_interest_in_puzzle_hash = 70
-    respond_to_ph_update = 71
-    register_interest_in_coin = 72
-    respond_to_coin_update = 73
+    register_for_ph_updates = 70
+    respond_to_ph_updates = 71
+    register_for_coin_updates = 72
+    respond_to_coin_updates = 73
     request_children = 74
     respond_children = 75
     request_ses_hashes = 76
@@ -135,5 +136,11 @@ class ProtocolMessageTypes(Enum):
     mempool_items_removed = 105
     request_cost_info = 106
     respond_cost_info = 107
+
+    # new farmer protocol messages
+    solution_response = 108
+
+    # solver protocol
+    solve = 109
 
     error = 255

@@ -7,13 +7,15 @@ from pathlib import Path
 
 import click
 
-from chia.plotting.util import add_plot_directory, validate_plot_size
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.plotting.util import validate_plot_size
+from chia.util.harvester_config import add_plot_directory
 
 log = logging.getLogger(__name__)
 
 
 def show_plots(root_path: Path) -> None:
-    from chia.plotting.util import get_plot_directories
+    from chia.util.harvester_config import get_plot_directories
 
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually")
@@ -33,7 +35,7 @@ def plots_cmd(ctx: click.Context) -> None:
     """Create, add, remove and check your plots"""
     from chia.util.chia_logging import initialize_logging
 
-    root_path: Path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
     initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
@@ -132,7 +134,7 @@ def create_cmd(
         nobitfield=nobitfield,
     )
 
-    root_path: Path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     try:
         validate_plot_size(root_path, size, override_k)
     except ValueError as e:
@@ -177,7 +179,14 @@ def check_cmd(
 ) -> None:
     from chia.plotting.check_plots import check_plots
 
-    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
+    check_plots(
+        ChiaCliContext.set_default(ctx).root_path,
+        num,
+        challenge_start,
+        grep_string,
+        list_duplicates,
+        debug_show_memo,
+    )
 
 
 @plots_cmd.command("add", help="Adds a directory of plots")
@@ -191,10 +200,10 @@ def check_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, final_dir: str) -> None:
-    from chia.plotting.util import add_plot_directory
+    from chia.util.harvester_config import add_plot_directory
 
     try:
-        add_plot_directory(ctx.obj["root_path"], final_dir)
+        add_plot_directory(ChiaCliContext.set_default(ctx).root_path, final_dir)
         print(f"Successfully added: {final_dir}")
     except ValueError as e:
         print(e)
@@ -211,12 +220,12 @@ def add_cmd(ctx: click.Context, final_dir: str) -> None:
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str) -> None:
-    from chia.plotting.util import remove_plot_directory
+    from chia.util.harvester_config import remove_plot_directory
 
-    remove_plot_directory(ctx.obj["root_path"], final_dir)
+    remove_plot_directory(ChiaCliContext.set_default(ctx).root_path, final_dir)
 
 
 @plots_cmd.command("show", help="Shows the directory of current plots")
 @click.pass_context
 def show_cmd(ctx: click.Context) -> None:
-    show_plots(ctx.obj["root_path"])
+    show_plots(ChiaCliContext.set_default(ctx).root_path)

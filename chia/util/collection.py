@@ -1,11 +1,11 @@
-from __future__ import annotations
+# Package: utils
 
-from typing import List, Set
+from __future__ import annotations
 
 # Utility Functions for Collections & Sequences
 
 
-def find_duplicates(array: List[int]) -> Set[int]:
+def find_duplicates(array: list[int]) -> set[int]:
     seen = set()
     duplicates = set()
 

@@ -6,7 +6,7 @@ StopWhenUnneeded=true
 Type=simple
 Environment=CHIA_ROOT=/home/%i/.chia/mainnet
 ExecStart=/opt/chia/daemon
-ExecStartPost=/bin/bash -c '(while ! nc -z -v -w1 localhost 55400 2>/dev/null; do echo "Waiting for the daemon to listen on port 55400..."; sleep 1; done); sleep 1'
+ExecStartPost=/bin/bash -c '(while ! /opt/chia/chia rpc daemon get_version 2>/dev/null; do echo "Waiting for the daemon to listen on port 55400..."; sleep 1; done); sleep 1'
 User=%i
 Group=%i
 LimitNOFILE=1048576

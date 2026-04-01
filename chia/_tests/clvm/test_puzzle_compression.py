@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, SupportsBytes
+from typing import SupportsBytes
 
 import pytest
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
+from chia.types.coin_spend import make_spend
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.wallet.trading.offer import OFFER_MOD
@@ -24,9 +24,8 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-ZERO_32 = bytes32([0] * 32)
 ONE_32 = bytes32([17] * 32)
-COIN = Coin(ZERO_32, ZERO_32, uint64(0))
+COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 SOLUTION = Program.to([])
 
 
@@ -35,20 +34,20 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class CompressionReporter:
-    record_property: Callable
+    record_property: Callable[[str, object], None]
 
-    def __call__(self, name: str, original: SupportsBytes, compressed: SupportsBytes):
+    def __call__(self, name: str, original: bytes | SupportsBytes, compressed: bytes | SupportsBytes) -> None:
         ratio = len(bytes(compressed)) / len(bytes(original))
-        self.record_property(name="compression_ratio", value=ratio)
+        self.record_property("compression_ratio", ratio)
         log.warning(f"{name} compression ratio: {ratio}")
 
 
 @pytest.fixture(name="report_compression")
-def report_compression_fixture(record_property):
+def report_compression_fixture(record_property: Callable[[str, object], None]) -> CompressionReporter:
     return CompressionReporter(record_property=record_property)
 
 
-def test_standard_puzzle(report_compression):
+def test_standard_puzzle(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
         puzzle_for_pk(G1Element()),
@@ -61,16 +60,16 @@ def test_standard_puzzle(report_compression):
     report_compression(name="standard puzzle", original=coin_spend, compressed=compressed)
 
 
-def test_decompress_limit():
+def test_decompress_limit() -> None:
     buffer = bytearray(10 * 1024 * 1024)
-    compressed = compress_object_with_puzzles(buffer, LATEST_VERSION)
+    compressed = compress_object_with_puzzles(bytes(buffer), LATEST_VERSION)
     print(len(compressed))
     decompressed = decompress_object_with_puzzles(compressed)
     print(len(decompressed))
     assert len(decompressed) <= 6 * 1024 * 1024
 
 
-def test_cat_puzzle(report_compression):
+def test_cat_puzzle(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
         construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
@@ -83,7 +82,7 @@ def test_cat_puzzle(report_compression):
     report_compression(name="CAT puzzle", original=coin_spend, compressed=compressed)
 
 
-def test_offer_puzzle(report_compression):
+def test_offer_puzzle(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
         OFFER_MOD,
@@ -96,7 +95,7 @@ def test_offer_puzzle(report_compression):
     report_compression(name="offer puzzle", original=coin_spend, compressed=compressed)
 
 
-def test_nesting_puzzles(report_compression):
+def test_nesting_puzzles(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
         construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
@@ -109,7 +108,7 @@ def test_nesting_puzzles(report_compression):
     report_compression(name="nesting puzzle", original=coin_spend, compressed=compressed)
 
 
-def test_unknown_wrapper(report_compression):
+def test_unknown_wrapper(report_compression: CompressionReporter) -> None:
     unknown = Program.to([2, 2, []])  # (a 2 ())
     coin_spend = make_spend(
         COIN,
@@ -123,13 +122,13 @@ def test_unknown_wrapper(report_compression):
     report_compression(name="unknown wrapper", original=coin_spend, compressed=compressed)
 
 
-def test_lowest_best_version():
+def test_lowest_best_version() -> None:
     assert lowest_best_version([bytes(CAT_MOD)]) == 4
     assert lowest_best_version([bytes(OFFER_MOD_OLD)]) == 2
     assert lowest_best_version([bytes(OFFER_MOD)]) == 5
 
 
-def test_version_override():
+def test_version_override() -> None:
     coin_spend = make_spend(
         COIN,
         OFFER_MOD,

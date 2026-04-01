@@ -44,7 +44,7 @@ async def test_failure_output_no_traceback(
     ) as (client, _):
         await client.fetch(path="/table", request_json={"response": expected_response})
 
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert "ResponseFailureError" not in out
     assert "Traceback:" not in out
@@ -69,7 +69,7 @@ async def test_failure_output_with_traceback(
     ) as (client, _):
         await client.fetch(path="/table", request_json={"response": expected_response})
 
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert sample_traceback_json not in out
     assert sample_traceback in out
 

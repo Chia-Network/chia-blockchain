@@ -1,9 +1,12 @@
+# Package: utils
+
 from __future__ import annotations
 
 import os
 import sys
 import time
-from typing import Callable, Iterator, Optional, overload
+from collections.abc import Callable, Iterator
+from typing import overload
 
 system_delays = {
     # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
@@ -39,7 +42,7 @@ def adjusted_timeout(timeout: float) -> float: ...
 def adjusted_timeout(timeout: None) -> None: ...
 
 
-def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
+def adjusted_timeout(timeout: float | None) -> float | None:
     if timeout is None:
         return None
 

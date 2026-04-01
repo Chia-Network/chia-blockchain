@@ -5,20 +5,20 @@ import random
 import sqlite3
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
-from typing import Iterator, List, Optional
 
 import click
 import zstd
+from chia_rs import SpendBundle
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.constants import test_constants
 from chia.simulator.block_tools import create_block_tools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
-from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
-from chia.util.ints import uint32, uint64
 
 
 @contextmanager
@@ -54,7 +54,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 @click.option(
     "--output", type=str, required=False, default=None, help="the filename to write the resulting sqlite database to"
 )
-def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: Optional[str]) -> None:
+def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: str | None) -> None:
     if fill_rate < 0 or fill_rate > 100:
         print("fill-rate must be within [0, 100]")
         sys.exit(1)
@@ -77,8 +77,10 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
     root_path = Path("./test-chain").resolve()
     root_path.mkdir(parents=True, exist_ok=True)
-    with TempKeyring() as keychain:
-        bt = create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain)
+    with (
+        TempKeyring() as keychain,
+        create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain) as bt,
+    ):
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
         )
@@ -97,7 +99,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
             wallet = bt.get_farmer_wallet_tool()
             farmer_puzzlehash = wallet.get_new_puzzlehash()
             pool_puzzlehash = wallet.get_new_puzzlehash()
-            transaction_blocks: List[uint32] = []
+            transaction_blocks: list[uint32] = []
 
             blocks = bt.get_consecutive_blocks(
                 3,
@@ -107,11 +109,11 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 genesis_timestamp=uint64(1234567890),
             )
 
-            unspent_coins: List[Coin] = []
+            unspent_coins: list[Coin] = []
 
             for b in blocks:
                 for coin in b.get_included_reward_coins():
-                    if coin.puzzle_hash in [farmer_puzzlehash, pool_puzzlehash]:
+                    if coin.puzzle_hash in {farmer_puzzlehash, pool_puzzlehash}:
                         unspent_coins.append(coin)
                 db.execute(
                     "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",
@@ -133,8 +135,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 with enable_profiler(profile, b.height):
                     start_time = time.monotonic()
 
-                    new_coins: List[Coin] = []
-                    spend_bundles: List[SpendBundle] = []
+                    new_coins: list[Coin] = []
+                    spend_bundles: list[SpendBundle] = []
                     i = 0
                     for i in range(num_tx_per_block):
                         if unspent_coins == []:
@@ -145,7 +147,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         new_coins.extend(bundle.additions())
                         spend_bundles.append(bundle)
 
-                    block_references: List[uint32]
+                    block_references: list[uint32]
                     if block_refs:
                         block_references = random.sample(transaction_blocks, min(len(transaction_blocks), 512))
                         random.shuffle(block_references)
@@ -193,15 +195,15 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
                     print(
                         f"height: {b.height} "
-                        f"spends: {i+1} "
+                        f"spends: {i + 1} "
                         f"refs: {len(block_references)} "
-                        f"fill_rate: {actual_fill_rate*100:.1f}% "
+                        f"fill_rate: {actual_fill_rate * 100:.1f}% "
                         f"new coins: {len(new_coins)} "
                         f"unspent: {len(unspent_coins)} "
                         f"difficulty: {b.weight - prev_block.weight} "
                         f"timestamp: {ts} "
                         f"time: {end_time - start_time:0.2f}s "
-                        f"tx-block-ratio: {len(transaction_blocks)*100/b.height:0.0f}% "
+                        f"tx-block-ratio: {len(transaction_blocks) * 100 / b.height:0.0f}% "
                     )
 
                     new_blocks = [
@@ -221,5 +223,4 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

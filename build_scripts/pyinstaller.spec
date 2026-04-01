@@ -123,7 +123,6 @@ datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
 for path in sorted({path.parent for path in ROOT.joinpath("chia").rglob("*.hex")}):
     datas.append((f"{path}/*.hex", path.relative_to(ROOT)))
 datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
-datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.extend(version_data)
 
 pathex = []
@@ -174,13 +173,14 @@ add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
 add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
 for server in SERVERS:
-    add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+    add_binary(f"start_{server}", f"{ROOT}/chia/{server}/start_{server}.py", COLLECT_ARGS)
 
 add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
 add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
 add_binary("start_data_layer_s3_plugin", f"{ROOT}/chia/data_layer/s3_plugin_service.py", COLLECT_ARGS)
 add_binary("timelord_launcher", f"{ROOT}/chia/timelord/timelord_launcher.py", COLLECT_ARGS)
+add_binary(f"start_simulator", f"{ROOT}/chia/simulator/start_simulator.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

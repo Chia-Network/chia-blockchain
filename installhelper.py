@@ -55,13 +55,13 @@ def get_chia_version() -> str:
     chia_executable = shutil.which("chia")
     if chia_executable is None:
         chia_executable = "chia"
-    output = subprocess.run([chia_executable, "version"], capture_output=True)
+    output = subprocess.run([chia_executable, "version"], capture_output=True, check=False)
     if output.returncode == 0:
         version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
     return make_semver(version)
 
 
-def update_version(package_json_path: str):
+def update_version(package_json_path: str) -> None:
     if not exists(package_json_path):
         return
 

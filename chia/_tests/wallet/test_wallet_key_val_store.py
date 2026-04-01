@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import FullBlock, HeaderBlock
 
 from chia._tests.util.db_connection import DBConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.wallet.key_val_store import KeyValStore
 
 

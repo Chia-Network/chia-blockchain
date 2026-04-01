@@ -7,15 +7,16 @@ import pathlib
 import signal
 import sys
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
 
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
@@ -26,7 +27,7 @@ log = logging.getLogger(__name__)
 class VDFClientProcessMgr:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     stopped: bool = False
-    active_processes: List[asyncio.subprocess.Process] = field(default_factory=list)
+    active_processes: list[asyncio.subprocess.Process] = field(default_factory=list)
 
     async def remove_process(self, proc: asyncio.subprocess.Process) -> None:
         async with self.lock:
@@ -131,7 +132,7 @@ async def spawn_process(
             await proc.communicate()
 
 
-async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFClientProcessMgr):
+async def spawn_all_processes(config: dict, net_config: dict, process_mgr: VDFClientProcessMgr):
     await asyncio.sleep(5)
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
@@ -152,12 +153,12 @@ async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFCl
     await asyncio.gather(*awaitables)
 
 
-async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
+async def async_main(config: dict[str, Any], net_config: dict[str, Any]) -> None:
     process_mgr = VDFClientProcessMgr()
 
     async def stop(
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         await process_mgr.kill_processes()
@@ -174,8 +175,9 @@ async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None
 def main():
     if os.name == "nt":
         log.info("Timelord launcher not supported on Windows.")
-        return
-    root_path = DEFAULT_ROOT_PATH
+        return 1
+    root_path = resolve_root_path(override=None)
+
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
@@ -185,4 +187,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

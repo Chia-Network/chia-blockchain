@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 DUMMY_SLEEP_VALUE = 2
 
 
-def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
+def dummy_set_passphrase(service: str, user: str, passphrase: Key, keyring_path: str, index: int) -> None:
     with TempKeyring(existing_keyring_path=keyring_path, delete_on_cleanup=False):
         if platform == "linux" or platform == "win32" or platform == "cygwin":
             # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
@@ -61,7 +61,7 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
 
 class TestFileKeyringSynchronization:
     # When: using a new empty keyring
-    def test_multiple_writers(self, empty_temp_file_keyring: TempKeyring):
+    def test_multiple_writers(self, empty_temp_file_keyring: TempKeyring) -> None:
         num_workers = 10
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         passphrase_list = [

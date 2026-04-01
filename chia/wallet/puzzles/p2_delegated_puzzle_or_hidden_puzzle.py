@@ -60,27 +60,26 @@ from __future__ import annotations
 
 import hashlib
 from functools import lru_cache
-from typing import Union
 
+from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
-from clvm.casts import int_from_bytes
+from chia_rs.sized_bytes import bytes32
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.casts import int_from_bytes
+from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom
-
-from .load_clvm import load_clvm_maybe_recompile
-from .p2_conditions import puzzle_for_conditions
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
-DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
+DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(=)` always fails
 
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
+MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE)
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 
-PublicKeyProgram = Union[bytes, Program]
+PublicKeyProgram = bytes | Program
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 
@@ -144,7 +143,7 @@ def puzzle_hash_for_pk(public_key: G1Element) -> bytes32:
     return puzzle_hash_for_public_key_and_hidden_puzzle_hash(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
 
-def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: Program) -> Program:
+def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: CastableType) -> Program:
     return Program.to([[], delegated_puzzle, solution])
 
 
@@ -156,6 +155,6 @@ def solution_for_hidden_puzzle(
     return Program.to([hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle])
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: CastableType) -> Program:
     delegated_puzzle = puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))

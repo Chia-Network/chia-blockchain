@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from chia.ssl.create_ssl import create_all_ssl
-from chia.util.ssl_check import check_ssl
+from chia.ssl.ssl_check import check_ssl
 
 
 def test_check_ssl_stream_with_bad_permissions(

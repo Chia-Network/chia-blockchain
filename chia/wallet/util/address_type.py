@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Set
+from typing import Any
 
 from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.config import selected_network_address_prefix
@@ -12,7 +12,7 @@ class AddressType(Enum):
     NFT = "nft"
     DID = "did:chia:"
 
-    def hrp(self, config: Dict[str, Any]) -> str:
+    def hrp(self, config: dict[str, Any]) -> str:
         if self == AddressType.XCH:
             # Special case to map XCH to the current network's address prefix
             return selected_network_address_prefix(config)
@@ -24,7 +24,7 @@ class AddressType(Enum):
         return 32
 
 
-def is_valid_address(address: str, allowed_types: Set[AddressType], config: Dict[str, Any]) -> bool:
+def is_valid_address(address: str, allowed_types: set[AddressType], config: dict[str, Any]) -> bool:
     try:
         ensure_valid_address(address, allowed_types=allowed_types, config=config)
         return True
@@ -32,7 +32,7 @@ def is_valid_address(address: str, allowed_types: Set[AddressType], config: Dict
         return False
 
 
-def ensure_valid_address(address: str, *, allowed_types: Set[AddressType], config: Dict[str, Any]) -> str:
+def ensure_valid_address(address: str, *, allowed_types: set[AddressType], config: dict[str, Any]) -> str:
     hrp, b32data = bech32_decode(address)
     if not b32data or not hrp:
         raise ValueError(f"Invalid address: {address}")

@@ -1,0 +1,26 @@
+; A puzzle that enforces that all create coins have a specific curried in puzzle hash
+;
+; Intended for use in validating the output of a delegated puzzle
+(mod
+  (
+    ALLOWED_PH
+    Conditions
+  )
+
+  (include condition_codes.clib)
+
+  (defun check_conditions (ALLOWED_PH conditions return)
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+            (if (= (f (r (f conditions))) ALLOWED_PH)
+                (check_conditions ALLOWED_PH (r conditions) return)
+                (x)
+            )
+            (check_conditions ALLOWED_PH (r conditions) return)
+        )
+        return
+    )
+  )
+
+  (check_conditions ALLOWED_PH Conditions Conditions)
+)

@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL
 from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CONDITIONS = {k: bytes(v)[0] for k, v in ConditionOpcode.__members__.items()}  # pylint: disable=E1101
+CONDITIONS = {opcode.name: opcode.value[0] for opcode in ConditionOpcode}
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -76,9 +74,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     pks = []
     msgs = []
 
-    created_coin_announcements: List[List[bytes]] = []
+    created_coin_announcements: list[list[bytes]] = []
     asserted_coin_announcements = []
-    created_puzzle_announcements: List[List[bytes]] = []
+    created_puzzle_announcements: list[list[bytes]] = []
     asserted_puzzle_announcements = []
 
     print("=" * 80)
@@ -110,7 +108,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             pks.append(pk)
             msgs.append(m)
         print()
-        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        _cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
         print(disassemble(r))
         create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
         print()
@@ -141,13 +139,13 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
 
                     print(f"  {disassemble(as_prog)}")
             created_coin_announcements.extend(
-                [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
+                [coin_name, *_.vars] for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
             )
             asserted_coin_announcements.extend(
                 [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
             )
             created_puzzle_announcements.extend(
-                [puzzle_reveal.get_tree_hash()] + _.vars
+                [puzzle_reveal.get_tree_hash(), *_.vars]
                 for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
             )
             asserted_puzzle_announcements.extend(

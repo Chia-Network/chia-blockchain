@@ -10,7 +10,7 @@ from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pytest
 import yaml
@@ -37,11 +37,11 @@ from chia.util.timing import adjusted_timeout
 
 def write_config(
     root_path: Path,
-    config: Dict,
+    config: dict,
     atomic_write: bool,
     do_sleep: bool,
     iterations: int,
-    error_queue: Optional[Queue] = None,
+    error_queue: Queue | None = None,
 ):
     """
     Wait for a random amount of time and write out the config data. With a large
@@ -74,7 +74,7 @@ def write_config(
 
 
 def read_and_compare_config(
-    root_path: Path, default_config: Dict, do_sleep: bool, iterations: int, error_queue: Optional[Queue] = None
+    root_path: Path, default_config: dict, do_sleep: bool, iterations: int, error_queue: Queue | None = None
 ):
     """
     Wait for a random amount of time, read the config and compare with the
@@ -99,7 +99,7 @@ def read_and_compare_config(
         raise
 
 
-async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
+async def create_reader_and_writer_tasks(root_path: Path, default_config: dict):
     """
     Spin-off reader and writer threads and wait for completion
     """
@@ -135,7 +135,7 @@ async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
         raise error_queue.get()
 
 
-def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
+def run_reader_and_writer_tasks(root_path: Path, default_config: dict):
     """
     Subprocess entry point. This function spins-off threads to perform read/write tasks
     concurrently, possibly leading to synchronization issues accessing config data.
@@ -144,12 +144,12 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
 
 
 @pytest.fixture(scope="function")
-def default_config_dict() -> Dict:
+def default_config_dict() -> dict:
     """
     Returns a dictionary containing the default config.yaml contents
     """
     content: str = initial_config_file("config.yaml")
-    config: Dict = yaml.safe_load(content)
+    config: dict = yaml.safe_load(content)
     return config
 
 
@@ -208,7 +208,7 @@ class TestConfig:
         """
         root_path: Path = root_path_populated_with_config
         # When: loading a newly created config
-        config: Dict = load_config(root_path=root_path, filename="config.yaml")
+        config: dict = load_config(root_path=root_path, filename="config.yaml")
         assert config is not None
         # Expect: config values should match the defaults (from a small sampling)
         assert config["daemon_port"] == default_config_dict["daemon_port"] == 55400
@@ -242,7 +242,7 @@ class TestConfig:
         calling load_config().
         """
         root_path: Path = root_path_populated_with_config
-        config: Dict = copy.deepcopy(default_config_dict)
+        config: dict = copy.deepcopy(default_config_dict)
         # When: modifying the config
         config["harvester"]["farmer_peers"][0]["host"] = "oldmacdonald.eie.io"
         # Sanity check that we didn't modify the default config
@@ -255,7 +255,7 @@ class TestConfig:
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
 
         # Expect: modifications should be preserved in the config read from disk
-        loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
+        loaded: dict = load_config(root_path=root_path, filename="config.yaml")
         assert loaded["harvester"]["farmer_peers"][0]["host"] == "oldmacdonald.eie.io"
 
     def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
@@ -263,7 +263,7 @@ class TestConfig:
         Test whether multiple readers/writers encounter data corruption. When using non-atomic operations
         to write to the config, partial/incomplete writes can cause readers to yield bad/corrupt data.
         """
-        # Artifically inflate the size of the default config. This is done to (hopefully) force
+        # Artificially inflate the size of the default config. This is done to (hopefully) force
         # save_config() to require multiple writes. When save_config() was using shutil.move()
         # multiple writes were observed, leading to read failures when data was partially written.
         default_config_dict["xyz"] = "x" * 32768
@@ -310,7 +310,7 @@ class TestConfig:
             await asyncio.gather(*all_tasks)
 
     @pytest.mark.parametrize("prefix", [None])
-    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: dict[str, Any]) -> None:
         """
         Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
         """
@@ -319,7 +319,7 @@ class TestConfig:
         assert prefix == "xch"
 
     @pytest.mark.parametrize("prefix", ["txch"])
-    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: dict[str, Any]) -> None:
         """
         Temp config.yaml created using a modified config. address_prefix is set to "txch"
         """
@@ -327,7 +327,7 @@ class TestConfig:
         prefix = selected_network_address_prefix(config)
         assert prefix == "txch"
 
-    def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
+    def test_selected_network_address_prefix_config_dict(self, default_config_dict: dict[str, Any]) -> None:
         """
         Modified config dictionary has address_prefix set to "customxch"
         """

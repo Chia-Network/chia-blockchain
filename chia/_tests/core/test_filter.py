@@ -1,27 +1,28 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chiabip158 import PyBIP158
 
+from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+
 
 @pytest.mark.anyio
-async def test_basic_filter_test(simulator_and_wallet):
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, server_2 = wallets[0]
+async def test_basic_filter_test(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
+    _full_nodes, wallets, bt = simulator_and_wallet
+    wallet_node, _server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     num_blocks = 2
-    ph = await wallet.get_new_puzzlehash()
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     blocks = bt.get_consecutive_blocks(
         10,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=ph,
-        pool_reward_puzzle_hash=ph,
     )
     for i in range(1, num_blocks):
-        byte_array_tx: List[bytes] = []
+        byte_array_tx: list[bytes] = []
         block = blocks[i]
         coins = block.get_included_reward_coins()
         coin_0 = bytearray(coins[0].puzzle_hash)

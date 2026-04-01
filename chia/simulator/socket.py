@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import socket
 from contextlib import closing
-from typing import Set
 
-recent_ports: Set[int] = set()
+recent_ports: set[int] = set()
 
 
 def find_available_listen_port(name: str = "free") -> int:
-    global recent_ports
-
     while True:
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
             try:

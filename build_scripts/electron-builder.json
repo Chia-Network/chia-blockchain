@@ -18,8 +18,10 @@
   "win": {
     "target": "nsis",
     "icon": "src/assets/img/chia.ico",
-    "timeStampServer": "http://timestamp.comodoca.com",
-    "executableName": "Chia"
+    "executableName": "Chia",
+    "signtoolOptions": {
+      "timeStampServer": "http://timestamp.comodoca.com"
+    }
   },
   "nsis": {
     "artifactName": "ChiaSetup-${env.CHIA_INSTALLER_VERSION}.exe",
@@ -65,6 +67,11 @@
     }
   },
   "linux": {
+    "desktop": {
+      "entry": {
+        "Name": "Chia Blockchain"
+      }
+    },
     "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
     "icon": "src/assets/img/chia.icns"
   },

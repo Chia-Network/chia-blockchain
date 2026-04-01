@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Optional, Type
+from typing import TYPE_CHECKING
 
 import aiosqlite
 import pytest
@@ -14,6 +15,7 @@ from _pytest.fixtures import SubRequest
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
+from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
     ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
@@ -22,8 +24,6 @@ if TYPE_CHECKING:
 
 class UniqueError(Exception):
     """Used to uniquely trigger the exception path out of the context managers."""
-
-    pass
 
 
 async def increment_counter(db_wrapper: DBWrapper2) -> None:
@@ -54,7 +54,7 @@ async def decrement_counter(db_wrapper: DBWrapper2) -> None:
         await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
 
 
-async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
+async def sum_counter(db_wrapper: DBWrapper2, output: list[int]) -> None:
     async with db_wrapper.reader_no_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
             row = await cursor.fetchone()
@@ -119,7 +119,7 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
             tasks = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -263,7 +263,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         async with get_reader() as reader:
             assert await query_value(connection=reader) == 0
 
-            task = asyncio.create_task(write())
+            task = create_referenced_task(write())
             await writer_committed.wait()
 
             assert await query_value(connection=reader) == 0 if transactioned else 1
@@ -340,9 +340,9 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -369,13 +369,13 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
-                task = asyncio.create_task(increment_counter(db_wrapper))
+                task = create_referenced_task(increment_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(decrement_counter(db_wrapper))
+                task = create_referenced_task(decrement_counter(db_wrapper))
                 tasks.append(task)
-                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                task = create_referenced_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
@@ -426,7 +426,7 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
 
             with pytest.raises(UniqueError):
                 async with db_wrapper.reader() as _:
-                    raise UniqueError()
+                    raise UniqueError
 
             assert await query_value(connection=writer) == 1
 
@@ -495,11 +495,11 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 @dataclass
 class RowFactoryCase:
     id: str
-    factory: Optional[Type[aiosqlite.Row]]
+    factory: type[aiosqlite.Row] | None
     marks: Marks = ()
 
 
-row_factory_cases: List[RowFactoryCase] = [
+row_factory_cases: list[RowFactoryCase] = [
     RowFactoryCase(id="default named tuple", factory=None),
     RowFactoryCase(id="aiosqlite row", factory=aiosqlite.Row),
 ]

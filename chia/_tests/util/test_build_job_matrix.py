@@ -4,14 +4,13 @@ import json
 import pathlib
 import subprocess
 import sys
-from typing import Dict, List
 
 import chia._tests
 
 build_job_matrix_path = pathlib.Path(chia._tests.__file__).with_name("build-job-matrix.py")
 
 
-def run(args: List[str]) -> str:
+def run(args: list[str]) -> str:
     completed_process = subprocess.run(
         [sys.executable, build_job_matrix_path, *args],
         check=True,
@@ -22,7 +21,7 @@ def run(args: List[str]) -> str:
 
 
 def test() -> None:
-    timeouts: Dict[int, Dict[str, int]] = {}
+    timeouts: dict[int, dict[str, int]] = {}
 
     multipliers = [1, 2, 3]
 

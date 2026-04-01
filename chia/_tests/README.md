@@ -21,7 +21,7 @@ The subdirectory jobs do not include the tests from their parents.
 
 ## testconfig.py
 
-In the top tests directory, [testconfig.py](https://github.com/Chia-Network/chia-blockchain/tree/main/tests/testconfig.py)
+In the top tests directory, [testconfig.py](https://github.com/Chia-Network/chia-blockchain/blob/main/chia/_tests/testconfig.py)
 contains the application settings and the per-directory default settings.
 
 ## config.py

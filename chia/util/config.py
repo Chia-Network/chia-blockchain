@@ -10,27 +10,25 @@ import sys
 import tempfile
 import time
 import traceback
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Union, cast
+from typing import Any, Literal, cast
 
 import importlib_resources
 import yaml
-from typing_extensions import Literal
 
-from chia.server.outbound_message import NodeType
-from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.lock import Lockfile
 
 log = logging.getLogger(__name__)
 
 
-def initial_config_file(filename: Union[str, Path]) -> str:
+def initial_config_file(filename: str | Path) -> str:
     initial_config_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath(f"initial-{filename}")
     contents: str = initial_config_path.read_text(encoding="utf-8")
     return contents
 
 
-def create_default_chia_config(root_path: Path, filenames: List[str] = ["config.yaml"]) -> None:
+def create_default_chia_config(root_path: Path, filenames: list[str] = ["config.yaml"]) -> None:
     for filename in filenames:
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
@@ -44,7 +42,7 @@ def create_default_chia_config(root_path: Path, filenames: List[str] = ["config.
             shutil.move(str(tmp_path), str(path))
 
 
-def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
+def config_path_for_filename(root_path: Path, filename: str | Path) -> Path:
     path_filename = Path(filename)
     if path_filename.is_absolute():
         return path_filename
@@ -52,7 +50,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 @contextlib.contextmanager
-def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
+def lock_config(root_path: Path, filename: str | Path) -> Iterator[None]:
     # TODO: This is presently used in some tests to lock the saving of the
     #       configuration file without having loaded it right there.  This usage
     #       should probably be removed and this function made private.
@@ -64,9 +62,9 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
 @contextlib.contextmanager
 def lock_and_load_config(
     root_path: Path,
-    filename: Union[str, Path],
+    filename: str | Path,
     fill_missing_services: bool = False,
-) -> Iterator[Dict[str, Any]]:
+) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
         config = _load_config_maybe_locked(
             root_path=root_path,
@@ -77,7 +75,7 @@ def lock_and_load_config(
         yield config
 
 
-def save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -> None:
+def save_config(root_path: Path, filename: str | Path, config_data: Any) -> None:
     # This must be called under an acquired config lock
     path: Path = config_path_for_filename(root_path, filename)
     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
@@ -92,11 +90,11 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -
 
 def load_config(
     root_path: Path,
-    filename: Union[str, Path],
-    sub_config: Optional[str] = None,
+    filename: str | Path,
+    sub_config: str | None = None,
     exit_on_error: bool = True,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return _load_config_maybe_locked(
         root_path=root_path,
         filename=filename,
@@ -109,12 +107,12 @@ def load_config(
 
 def _load_config_maybe_locked(
     root_path: Path,
-    filename: Union[str, Path],
-    sub_config: Optional[str] = None,
+    filename: str | Path,
+    sub_config: str | None = None,
     exit_on_error: bool = True,
     acquire_lock: bool = True,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # This must be called under an acquired config lock, or acquire_lock should be True
 
     path = config_path_for_filename(root_path, filename)
@@ -130,7 +128,7 @@ def _load_config_maybe_locked(
     for i in range(10):
         try:
             # at least we intend it to be this type
-            r: Dict[str, Any]
+            r: dict[str, Any]
             with contextlib.ExitStack() as exit_stack:
                 if acquire_lock:
                     exit_stack.enter_context(lock_config(root_path, filename))
@@ -143,7 +141,7 @@ def _load_config_maybe_locked(
             if fill_missing_services:
                 r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
             if sub_config is not None:
-                r = cast(Dict[str, Any], r.get(sub_config))
+                r = cast(dict[str, Any], r.get(sub_config))
             return r
         except Exception as e:
             tb = traceback.format_exc()
@@ -155,9 +153,9 @@ def _load_config_maybe_locked(
 def load_config_cli(
     root_path: Path,
     filename: str,
-    sub_config: Optional[str] = None,
+    sub_config: str | None = None,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
@@ -182,7 +180,7 @@ def load_config_cli(
     return unflatten_properties(flattened_props)
 
 
-def flatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
+def flatten_properties(config: dict[str, Any]) -> dict[str, Any]:
     properties = {}
     for key, value in config.items():
         if type(value) is dict:
@@ -193,8 +191,8 @@ def flatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     return properties
 
 
-def unflatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
-    properties: Dict[str, Any] = {}
+def unflatten_properties(config: dict[str, Any]) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
     for key, value in config.items():
         if "." in key:
             add_property(properties, key, value)
@@ -203,7 +201,7 @@ def unflatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     return properties
 
 
-def add_property(d: Dict[str, Any], partial_key: str, value: Any) -> None:
+def add_property(d: dict[str, Any], partial_key: str, value: Any) -> None:
     if "." not in partial_key:  # root of dict
         d[partial_key] = value
     else:
@@ -216,19 +214,19 @@ def add_property(d: Dict[str, Any], partial_key: str, value: Any) -> None:
             d[key_1][key_2] = value
 
 
-def str2bool(v: Union[str, bool]) -> bool:
+def str2bool(v: str | bool) -> bool:
     # Source from https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     if isinstance(v, bool):
         return v
-    if v.lower() in ("yes", "true", "True", "t", "y", "1"):
+    if v.lower() in {"yes", "true", "True", "t", "y", "1"}:
         return True
-    elif v.lower() in ("no", "false", "False", "f", "n", "0"):
+    elif v.lower() in {"no", "false", "False", "f", "n", "0"}:
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
-def traverse_dict(d: Dict[str, Any], key_path: str) -> Any:
+def traverse_dict(d: dict[str, Any], key_path: str) -> Any:
     """
     Traverse nested dictionaries to find the element pointed-to by key_path.
     Key path components are separated by a ':' e.g.
@@ -255,8 +253,8 @@ def traverse_dict(d: Dict[str, Any], key_path: str) -> Any:
 
 
 method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
-method_values = Optional[Literal["fork", "forkserver", "spawn"]]
-start_methods: Dict[method_strings, method_values] = {
+method_values = Literal["fork", "forkserver", "spawn"] | None
+start_methods: dict[method_strings, method_values] = {
     "default": None,
     "python_default": None,
     "fork": "fork",
@@ -266,7 +264,7 @@ start_methods: Dict[method_strings, method_values] = {
 
 
 def process_config_start_method(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     log: logging.Logger,
 ) -> method_values:
     from_config: object = config.get("multiprocessing_start_method")
@@ -290,7 +288,7 @@ def process_config_start_method(
     return processed_method
 
 
-def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def override_config(config: dict[str, Any], config_overrides: dict[str, Any] | None) -> dict[str, Any]:
     new_config = copy.deepcopy(config)
     if config_overrides is None:
         return new_config
@@ -299,21 +297,19 @@ def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str,
     return new_config
 
 
-def selected_network_address_prefix(config: Dict[str, Any]) -> str:
+def selected_network_address_prefix(config: dict[str, Any]) -> str:
     # we intend this to be a str at least
     address_prefix: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     return address_prefix
 
 
-def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str) -> Dict[str, Any]:
-    services = ["data_layer"]
+def load_defaults_for_missing_services(config: dict[str, Any], config_name: str) -> dict[str, Any]:
+    services = ["data_layer", "solver"]
     missing_services = [service for service in services if service not in config]
     defaulted = {}
     if len(missing_services) > 0:
         marshalled_default_config: str = initial_config_file(config_name)
-
         unmarshalled_default_config = yaml.safe_load(marshalled_default_config)
-
         for service in missing_services:
             defaulted[service] = unmarshalled_default_config[service]
 
@@ -329,38 +325,3 @@ def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str)
                     defaulted[service]["selected_network"] = "".join(to_be_referenced)
 
     return defaulted
-
-
-PEER_INFO_MAPPING: Dict[NodeType, str] = {
-    NodeType.FULL_NODE: "full_node_peer",
-    NodeType.FARMER: "farmer_peer",
-}
-
-
-def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeType) -> Set[UnresolvedPeerInfo]:
-    peer_info_key = PEER_INFO_MAPPING[peer_type]
-    peer_infos: List[Dict[str, Any]] = service_config.get(f"{peer_info_key}s", [])
-    peer_info: Optional[Dict[str, Any]] = service_config.get(peer_info_key)
-    if peer_info is not None:
-        peer_infos.append(peer_info)
-
-    return {UnresolvedPeerInfo(host=peer["host"], port=peer["port"]) for peer in peer_infos}
-
-
-def set_peer_info(
-    service_config: Dict[str, Any],
-    peer_type: NodeType,
-    peer_host: Optional[str] = None,
-    peer_port: Optional[int] = None,
-) -> None:
-    peer_info_key = PEER_INFO_MAPPING[peer_type]
-    if peer_info_key in service_config:
-        if peer_host is not None:
-            service_config[peer_info_key]["host"] = peer_host
-        if peer_port is not None:
-            service_config[peer_info_key]["port"] = peer_port
-    elif f"{peer_info_key}s" in service_config and len(service_config[f"{peer_info_key}s"]) > 0:
-        if peer_host is not None:
-            service_config[f"{peer_info_key}s"][0]["host"] = peer_host
-        if peer_port is not None:
-            service_config[f"{peer_info_key}s"][0]["port"] = peer_port

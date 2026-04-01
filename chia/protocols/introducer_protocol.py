@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.streamable import Streamable, streamable
@@ -23,4 +22,4 @@ class RequestPeersIntroducer(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPeersIntroducer(Streamable):
-    peer_list: List[TimestampedPeerInfo]
+    peer_list: list[TimestampedPeerInfo]

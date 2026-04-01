@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import List, Optional, Union
 
 import pytest
 
@@ -19,7 +18,7 @@ class TestC:
 
     # WARNING: this is just a simple stand in for rust classes and is not a good
     # reference for how such a method should be implemented in python
-    def replace(self, **kwargs: Union[int, str, Optional[TestA]]) -> TestC:
+    def replace(self, **kwargs: int | str | TestA | None) -> TestC:
         ret = TestC(copy.deepcopy(self.a), copy.deepcopy(self.b))
         for key, value in kwargs.items():
             if key == "a":
@@ -35,23 +34,23 @@ class TestC:
 class TestA:
     a: int
     b: str
-    c: List[int]
-    d: Optional[TestC]
+    c: list[int]
+    d: TestC | None
 
 
 class TestB:
     a: int
     b: str
-    c: Optional[TestA]
+    c: TestA | None
 
-    def __init__(self, a: int, b: str, c: Optional[TestA]):
+    def __init__(self, a: int, b: str, c: TestA | None):
         self.a = a
         self.b = b
         self.c = c
 
     # WARNING: this is just a simple stand in for rust classes and is not a good
     # reference for how such a method should be implemented in python
-    def replace(self, **kwargs: Union[int, str, Optional[TestA]]) -> TestB:
+    def replace(self, **kwargs: int | str | TestA | None) -> TestB:
         ret = TestB(copy.deepcopy(self.a), copy.deepcopy(self.b), copy.deepcopy(self.c))
         for key, value in kwargs.items():
             if key == "a":  # pragma: no cover

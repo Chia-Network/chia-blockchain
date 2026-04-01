@@ -1,7 +1,10 @@
+# Package: utils
+
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import Executor, Future
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 _T = TypeVar("_T")
 

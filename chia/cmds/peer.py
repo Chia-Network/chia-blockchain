@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
 
@@ -30,7 +29,7 @@ from chia.cmds.peer_funcs import peer_async
 @click.pass_context
 def peer_cmd(
     ctx: click.Context,
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     connections: bool,
     add_connection: str,
     remove_connection: str,
@@ -42,7 +41,7 @@ def peer_cmd(
         peer_async(
             node_type,
             rpc_port,
-            ctx.obj["root_path"],
+            ChiaCliContext.set_default(ctx).root_path,
             connections,
             add_connection,
             remove_connection,

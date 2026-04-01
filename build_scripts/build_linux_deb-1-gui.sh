@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -18,6 +18,17 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
   echo >&2 "npm run build failed!"
   exit $LAST_EXIT_CODE
 fi
+
+# Webpack already bundled all JS into build/. Clear production dependencies from
+# package.json so electron-builder v26's node module collector doesn't fail when
+# it can't find workspace packages that are removed below for cache optimization.
+echo "Clearing dependencies from packages/gui/package.json for electron-builder"
+node -e "
+  const fs = require('fs');
+  const p = JSON.parse(fs.readFileSync('./packages/gui/package.json', 'utf8'));
+  p.dependencies = {};
+  fs.writeFileSync('./packages/gui/package.json', JSON.stringify(p, null, 2) + '\n');
+"
 
 # Remove unused packages
 rm -rf node_modules
@@ -39,5 +50,5 @@ rm -rf electron/dist # ~186MB
 rm -rf "@mui"        # ~71MB
 rm -rf typescript    # ~63MB
 
-# Remove `packages/gui/node_modules/@chia-network` because it causes an error on later `electron-packager` command
+# Remove `packages/gui/node_modules/@chia-network` to save cache space
 rm -rf "@chia-network"

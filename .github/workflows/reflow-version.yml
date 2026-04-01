@@ -2,9 +2,19 @@ name: identify version
 
 on:
   workflow_call:
+    inputs:
+      release_type:
+        description: "Tagged release testing scenario"
+        required: false
+        type: string
+        default: ""
     outputs:
+      chia-dev-version:
+        value: ${{ jobs.version.outputs.chia-dev-version }}
       chia-installer-version:
         value: ${{ jobs.version.outputs.chia-installer-version }}
+      chia-semver-version:
+        value: ${{ jobs.version.outputs.chia-semver-version }}
       tag-type:
         value: ${{ jobs.version.outputs.tag-type }}
 
@@ -16,11 +26,12 @@ jobs:
     outputs:
       chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
+      chia-semver-version: ${{ steps.version-number.outputs.chia-semver-version }}
       tag-type: ${{ steps.tag-type.outputs.tag-type }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -37,7 +48,7 @@ jobs:
           elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
             TAG_TYPE=rc
           fi
-          echo "tag-type=${TAG_TYPE}" | tee -a "$$GITHUB_OUTPUT"
+          echo "tag-type=${TAG_TYPE}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Create installer version number
         id: version-number
@@ -52,5 +63,7 @@ jobs:
           echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
+          SEMVER_VERSION=$(echo "${VERSION}" | sed -E 's/([0-9])(rc|beta)/\1-\2/g; s/\.dev/-dev/g')
+          echo "chia-semver-version=${SEMVER_VERSION}" >> "$GITHUB_OUTPUT"
 
           deactivate

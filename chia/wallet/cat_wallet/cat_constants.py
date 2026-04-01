@@ -61,6 +61,18 @@ ETH_WARPED_USDT = {
     "symbol": "wUSDT",
 }
 
+BYTECASH = {
+    "asset_id": "ae1536f56760e471ad85ead45f00d680ff9cca73b8cc3407be778f1c0c606eac",
+    "name": "Bytecash",
+    "symbol": "BYC",
+}
+
+CIRCUIT_DAO_TOKEN = {
+    "asset_id": "ea3ace5525d6aaf6d921b66052afc67da11c820b676de91d61ae1a766c8ce615",
+    "name": "Circuit DAO Token",
+    "symbol": "CRT",
+}
+
 DEFAULT_CATS = {
     SPACEBUCKS["asset_id"]: SPACEBUCKS,
     MARMOT["asset_id"]: MARMOT,
@@ -72,4 +84,6 @@ DEFAULT_CATS = {
     ETH_WARPED_USDC["asset_id"]: ETH_WARPED_USDC,
     ETH_WARPED_MILLIETH["asset_id"]: ETH_WARPED_MILLIETH,
     ETH_WARPED_USDT["asset_id"]: ETH_WARPED_USDT,
+    BYTECASH["asset_id"]: BYTECASH,
+    CIRCUIT_DAO_TOKEN["asset_id"]: CIRCUIT_DAO_TOKEN,
 }

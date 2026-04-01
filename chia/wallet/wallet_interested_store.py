@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.protocols.wallet_protocol import CoinState
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 
 class WalletInterestedStore:
@@ -38,7 +37,7 @@ class WalletInterestedStore:
 
         return self
 
-    async def get_interested_coin_ids(self) -> List[bytes32]:
+    async def get_interested_coin_ids(self) -> list[bytes32]:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute("SELECT coin_name FROM interested_coins")
             rows_hex = await cursor.fetchall()
@@ -54,13 +53,13 @@ class WalletInterestedStore:
             cursor = await conn.execute("DELETE FROM interested_coins WHERE coin_name=?", (coin_id.hex(),))
             await cursor.close()
 
-    async def get_interested_puzzle_hashes(self) -> List[Tuple[bytes32, int]]:
+    async def get_interested_puzzle_hashes(self) -> list[tuple[bytes32, int]]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT puzzle_hash, wallet_id FROM interested_puzzle_hashes")
             rows_hex = await cursor.fetchall()
         return [(bytes32(bytes.fromhex(row[0])), row[1]) for row in rows_hex]
 
-    async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> Optional[int]:
+    async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> int | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT wallet_id FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
@@ -88,7 +87,7 @@ class WalletInterestedStore:
         self,
         asset_id: bytes32,
         name: str,
-        first_seen_height: Optional[uint32],
+        first_seen_height: uint32 | None,
         sender_puzzle_hash: bytes32,
     ) -> None:
         """
@@ -111,7 +110,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_tokens(self) -> List:
+    async def get_unacknowledged_tokens(self) -> list:
         """
         Get a list of all unacknowledged CATs
         :return: A json style list of unacknowledged CATs
@@ -130,7 +129,7 @@ class WalletInterestedStore:
         self,
         asset_id: bytes32,
         coin_state: CoinState,
-        fork_height: Optional[uint32],
+        fork_height: uint32 | None,
     ) -> None:
         """
         Add an unacknowledged coin state of a CAT to the database. It will be inserted into the retry store when the
@@ -147,7 +146,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> List[Tuple[CoinState, uint32]]:
+    async def get_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> list[tuple[CoinState, uint32]]:
         """
         Return all states for a particular asset ID that were ignored
         :param asset_id: CAT asset ID

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 import typing_extensions
 
@@ -15,9 +14,9 @@ class FeeStore:
     This object stores Fee Stats
     """
 
-    _backup: Optional[FeeTrackerBackup] = None
+    _backup: FeeTrackerBackup | None = None
 
-    def get_stored_fee_data(self) -> Optional[FeeTrackerBackup]:
+    def get_stored_fee_data(self) -> FeeTrackerBackup | None:
         return self._backup
 
     def store_fee_data(self, fee_backup: FeeTrackerBackup) -> None:

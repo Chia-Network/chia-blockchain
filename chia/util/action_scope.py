@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Awaitable, Callable, Generic, Optional, Protocol, Type, TypeVar, final
+from typing import Generic, Protocol, TypeVar
 
 import aiosqlite
+from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 
@@ -21,16 +23,15 @@ class ResourceManager(Protocol):
         # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield
 
-    async def get_resource(self, resource_type: Type[_T_SideEffects]) -> _T_SideEffects: ...
+    async def get_resource(self, resource_type: type[_T_SideEffects]) -> _T_SideEffects: ...
 
     async def save_resource(self, resource: SideEffects) -> None: ...
 
 
 @dataclass
 class SQLiteResourceManager:
-
     _db: DBWrapper2
-    _active_writer: Optional[aiosqlite.Connection] = field(init=False, default=None)
+    _active_writer: aiosqlite.Connection | None = field(init=False, default=None)
 
     def get_active_writer(self) -> aiosqlite.Connection:
         if self._active_writer is None:
@@ -62,7 +63,7 @@ class SQLiteResourceManager:
             finally:
                 self._active_writer = None
 
-    async def get_resource(self, resource_type: Type[_T_SideEffects]) -> _T_SideEffects:
+    async def get_resource(self, resource_type: type[_T_SideEffects]) -> _T_SideEffects:
         row = await execute_fetchone(self.get_active_writer(), "SELECT total FROM side_effects")
         assert row is not None
         side_effects = resource_type.from_bytes(row[0])
@@ -80,14 +81,13 @@ class SideEffects(Protocol):
     def __bytes__(self) -> bytes: ...
 
     @classmethod
-    def from_bytes(cls: Type[_T_SideEffects], blob: bytes) -> _T_SideEffects: ...
+    def from_bytes(cls, blob: bytes) -> Self: ...
 
 
 _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
 _T_Config = TypeVar("_T_Config")
 
 
-@final
 @dataclass
 class ActionScope(Generic[_T_SideEffects, _T_Config]):
     """
@@ -100,10 +100,10 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     """
 
     _resource_manager: ResourceManager
-    _side_effects_format: Type[_T_SideEffects]
+    _side_effects_format: type[_T_SideEffects]
     _config: _T_Config  # An object not intended to be mutated during the lifetime of the scope
-    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
-    _final_side_effects: Optional[_T_SideEffects] = field(init=False, default=None)
+    _callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]] | None = None
+    _final_side_effects: _T_SideEffects | None = field(init=False, default=None)
 
     @property
     def side_effects(self) -> _T_SideEffects:
@@ -123,11 +123,11 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     @contextlib.asynccontextmanager
     async def new_scope(
         cls,
-        side_effects_format: Type[_T_SideEffects],
+        side_effects_format: type[_T_SideEffects],
         # I want a default here in case a use case doesn't want to take advantage of the config but no default seems to
         # satisfy the type hint _T_Config so we'll just ignore this.
         config: _T_Config = object(),  # type: ignore[assignment]
-        resource_manager_backend: Type[ResourceManager] = SQLiteResourceManager,
+        resource_manager_backend: type[ResourceManager] = SQLiteResourceManager,
     ) -> AsyncIterator[ActionScope[_T_SideEffects, _T_Config]]:
         async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
             self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format, _config=config)
@@ -155,13 +155,13 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
 class StateInterface(Generic[_T_SideEffects]):
     side_effects: _T_SideEffects
     _callbacks_allowed: bool
-    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
+    _callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]] | None = None
 
     @property
-    def callback(self) -> Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]:
+    def callback(self) -> Callable[[StateInterface[_T_SideEffects]], Awaitable[None]] | None:
         return self._callback
 
-    def set_callback(self, new_callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]) -> None:
+    def set_callback(self, new_callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]] | None) -> None:
         if not self._callbacks_allowed:
             raise RuntimeError("Callback cannot be edited from inside itself")
 

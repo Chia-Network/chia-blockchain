@@ -1,11 +1,12 @@
+# Package: utils
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Union
 
 
-def path_from_root(root: Path, path_str: Union[str, Path]) -> Path:
+def path_from_root(root: Path, path_str: str | Path) -> Path:
     """
     If path is relative, prepend root
     If path is absolute, return it directly.
@@ -17,7 +18,7 @@ def path_from_root(root: Path, path_str: Union[str, Path]) -> Path:
     return path.resolve()
 
 
-def make_path_relative(path_str: Union[str, Path], root: Path) -> Path:
+def make_path_relative(path_str: str | Path, root: Path) -> Path:
     """
     Try to make the given path relative, given the default root.
     """

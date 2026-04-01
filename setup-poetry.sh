@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -30,7 +30,9 @@ while getopts c:h flag; do
   esac
 done
 
-"$PYTHON_COMMAND" -m venv .penv
-.penv/bin/python -m pip install --upgrade pip setuptools wheel
+if [ ! -d .penv/bin/ ]; then
+  "$PYTHON_COMMAND" -m venv .penv
+  .penv/bin/python -m pip install --upgrade pip
+fi
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
-.penv/bin/python -m pip install poetry "poetry-dynamic-versioning[plugin]"
+.penv/bin/python -m pip install --upgrade --requirement requirements-poetry.txt

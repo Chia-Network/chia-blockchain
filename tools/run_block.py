@@ -35,12 +35,15 @@ associated with the coin being spent. Condition Opcodes are verified by every cl
 and in this way they control whether a spend is valid or not.
 
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import click
+from chia_rs import ConsensusConstants
 
 from chia._tests.util.run_block import run_json_block
 from chia.consensus.constants import replace_str_to_bytes
@@ -51,12 +54,12 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 @click.command()
 @click.argument("filename", type=click.Path(exists=True), default="testnet10.396963.json")
-def cmd_run_json_block_file(filename):
+def cmd_run_json_block_file(filename: str) -> None:
     """`file` is a file containing a FullBlock in JSON format"""
     return run_json_block_file(Path(filename))
 
 
-def run_json_block_file(filename: Path):
+def run_json_block_file(filename: Path) -> None:
     full_block = json.load(filename.open("rb"))
     # pull in current constants from config.yaml
     _, constants = get_config_and_constants()
@@ -67,7 +70,7 @@ def run_json_block_file(filename: Path):
     print(cat_list_json)
 
 
-def get_config_and_constants():
+def get_config_and_constants() -> tuple[dict[str, Any], ConsensusConstants]:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     network = config["selected_network"]
     overrides = config["network_overrides"]["constants"][network]
@@ -76,4 +79,4 @@ def get_config_and_constants():
 
 
 if __name__ == "__main__":
-    cmd_run_json_block_file()  # pylint: disable=no-value-for-parameter
+    cmd_run_json_block_file()

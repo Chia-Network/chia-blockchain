@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator, Optional, Type
 
 import aiosqlite
 
@@ -13,8 +13,8 @@ from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 @asynccontextmanager
 async def DBConnection(
     db_version: int,
-    foreign_keys: Optional[bool] = None,
-    row_factory: Optional[Type[aiosqlite.Row]] = None,
+    foreign_keys: bool | None = None,
+    row_factory: type[aiosqlite.Row] | None = None,
 ) -> AsyncIterator[DBWrapper2]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(
@@ -24,13 +24,13 @@ async def DBConnection(
         db_version=db_version,
         foreign_keys=foreign_keys,
         row_factory=row_factory,
-    ) as _db_wrapper:
-        yield _db_wrapper
+    ) as db_wrapper:
+        yield db_wrapper
 
 
 @asynccontextmanager
 async def PathDBConnection(db_version: int) -> AsyncIterator[DBWrapper2]:
     with tempfile.TemporaryDirectory() as directory:
         db_path = Path(directory).joinpath("db.sqlite")
-        async with DBWrapper2.managed(database=db_path, reader_count=4, db_version=db_version) as _db_wrapper:
-            yield _db_wrapper
+        async with DBWrapper2.managed(database=db_path, reader_count=4, db_version=db_version) as db_wrapper:
+            yield db_wrapper

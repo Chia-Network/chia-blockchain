@@ -1,8 +1,10 @@
+# Package: utils
+
 from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from click import ClickException
 
@@ -192,6 +194,11 @@ class Err(Enum):
     INVALID_COIN_ID = 146
     # message not sent/received
     MESSAGE_NOT_SENT_OR_RECEIVED = 147
+    # the transactions generator uses overlong encoding of CLVM atoms in its
+    # serialization
+    INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
+    # block or spendbundle had too many spends
+    TOO_MANY_SPENDS = 149
 
 
 class ValidationError(Exception):
@@ -208,25 +215,25 @@ class TimestampError(Exception):
 
 
 class ConsensusError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
 
 class ProtocolError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
 
 class ApiError(Exception):
-    def __init__(self, code: Err, message: str, data: Optional[bytes] = None):
+    def __init__(self, code: Err, message: str, data: bytes | None = None):
         super().__init__(f"{code.name}: {message}")
         self.code: Err = code
         self.message: str = message
-        self.data: Optional[bytes] = data
+        self.data: bytes | None = data
 
 
 ##
@@ -347,5 +354,3 @@ class CliRpcConnectionError(ClickException):
     """
     This error is raised when a rpc server cant be reached by the cli async generator
     """
-
-    pass

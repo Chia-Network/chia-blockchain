@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Dict, List
 
 import pytest
 
@@ -32,7 +31,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         store_id = dic["id"]
         key = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
         value = "ffff8353594d8083616263"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
         print(json.dumps(changelist))
         update = chia_root.run(
             args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)]

@@ -6,30 +6,27 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element
-from clvm.casts import int_to_bytes
+from chia_rs import AugSchemeMPL, CoinRecord, FullBlock, G2Element, SpendBundle
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools.binutils import assemble
 
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
+from chia._tests.core.full_node.ram_db import create_ram_blockchain
+from chia._tests.core.full_node.test_full_node import find_reward_coin
+from chia.consensus.condition_costs import ConditionCost
+from chia.consensus.condition_tools import agg_sig_additional_data
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import agg_sig_additional_data
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
-
-from ...blockchain.blockchain_test_utils import _validate_and_add_block
-from .ram_db import create_ram_blockchain
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:
@@ -46,12 +43,11 @@ EASY_PUZZLE = SerializedProgram.from_bytes(b"\x01")
 EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()
 
 
-async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock]:
+async def initial_blocks(bt: BlockTools, block_count: int = 4) -> list[FullBlock]:
     blocks = bt.get_consecutive_blocks(
         block_count,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=EASY_PUZZLE_HASH,
-        pool_reward_puzzle_hash=EASY_PUZZLE_HASH,
         genesis_timestamp=uint64(10000),
         time_per_block=10,
     )
@@ -60,17 +56,17 @@ async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock
 
 async def check_spend_bundle_validity(
     bt: BlockTools,
-    blocks: List[FullBlock],
+    blocks: list[FullBlock],
     spend_bundle: SpendBundle,
-    expected_err: Optional[Err] = None,
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+    expected_err: Err | None = None,
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
 
-    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
+    async with create_ram_blockchain(bt.constants) as (_, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -99,15 +95,15 @@ async def check_spend_bundle_validity(
 async def check_conditions(
     bt: BlockTools,
     condition_solution: Program,
-    expected_err: Optional[Err] = None,
+    expected_err: Err | None = None,
     spend_reward_index: int = -2,
     *,
     aggsig: G2Element = G2Element(),
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
-    coin = blocks[spend_reward_index].get_included_reward_coins()[0]
+    coin = find_reward_coin(blocks[spend_reward_index], EASY_PUZZLE_HASH)
 
-    coin_spend = make_spend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
+    coin_spend = make_spend(coin, EASY_PUZZLE, condition_solution)
     spend_bundle = SpendBundle([coin_spend], aggsig)
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
@@ -142,16 +138,22 @@ class TestConditions:
         self, opcode: int, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
         if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            block_base_cost = 756064
+            block_base_cost = 756064 - 12000
         else:
-            block_base_cost = 761056
+            block_base_cost = 761056 - 12000
+
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+        else:
+            condition_cost = 0
+
         assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+        assert new_block.transactions_info.cost - block_base_cost - condition_cost == expected_cost
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
@@ -165,20 +167,25 @@ class TestConditions:
         self, condition: str, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(condition))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         if consensus_mode < ConsensusMode.HARD_FORK_2_0:
-            block_base_cost = 737056
+            block_base_cost = 737056 - 12000
         else:
             # once the hard fork activates, blocks no longer pay the cost of the ROM
             # generator (which includes hashing all puzzles).
-            block_base_cost = 732064
+            block_base_cost = 732064 - 12000
+
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+        else:
+            condition_cost = 0
 
         # the block_base_cost includes the cost of the bytes for the condition
         # with 2 bytes argument. This test works as long as the conditions it's
         # parameterized on has the same size
         assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+        assert new_block.transactions_info.cost - block_base_cost - condition_cost == expected_cost
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
@@ -271,7 +278,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_invalid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         wrong_name = bytearray(coin.name())
         wrong_name[-1] ^= 1
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{wrong_name.hex()}))"))
@@ -280,14 +287,14 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
         await check_conditions(bt, conditions)
 
     @pytest.mark.anyio
     async def test_invalid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test_bad")
         conditions = Program.to(
             assemble(
@@ -300,7 +307,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_valid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         announce = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
         conditions = Program.to(
             assemble(
@@ -359,6 +366,9 @@ class TestConditions:
             ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 513, Err.TOO_MANY_ANNOUNCEMENTS),
         ],
     )
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_2_0], reason="announce conditions limit was removed in hard-fork 3.0"
+    )
     async def test_announce_conditions_limit(
         self,
         consensus_mode: ConsensusMode,
@@ -366,7 +376,7 @@ class TestConditions:
         condition1: str,
         condition2: str,
         num: int,
-        expect_err: Optional[Err],
+        expect_err: Err | None,
         bt: BlockTools,
     ) -> None:
         """
@@ -375,7 +385,7 @@ class TestConditions:
         """
 
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         coin_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
         puzzle_announcement = AssertPuzzleAnnouncement(asserted_ph=EASY_PUZZLE_HASH, asserted_msg=b"test")
 
@@ -405,7 +415,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_coin_messages(self, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()})"
@@ -417,7 +427,7 @@ class TestConditions:
     @pytest.mark.anyio
     async def test_parent_messages(self, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info})"
@@ -438,7 +448,7 @@ class TestConditions:
             ('(66 0x27 "foo" {coin}) (67 0x3f "foo" {coin})', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
             ('(66 0 "foo") (67 0 "foo")', None),
             ('(66 0 "foobar") (67 0 "foo")', Err.MESSAGE_NOT_SENT_OR_RECEIVED),
-            ('(66 0x09 "foo" 1750000000000) (67 0x09 "foo" 1750000000000)', None),
+            ('(66 0x09 "foo" 250000000000) (67 0x09 "foo" 250000000000)', None),
             ('(66 -1 "foo")', Err.INVALID_MESSAGE_MODE),
             ('(67 -1 "foo")', Err.INVALID_MESSAGE_MODE),
             ('(66 0x40 "foo")', Err.INVALID_MESSAGE_MODE),
@@ -446,10 +456,10 @@ class TestConditions:
         ],
     )
     async def test_message_conditions(
-        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Optional[Err]
+        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Err | None
     ) -> None:
         blocks = await initial_blocks(bt)
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         conditions = Program.to(assemble("(" + conds.format(coin="0x" + coin.name().hex()) + ")"))
 
         await check_conditions(bt, conditions, expected_err=expected)
@@ -503,7 +513,6 @@ class TestConditions:
         bt: BlockTools,
         consensus_mode: ConsensusMode,
     ) -> None:
-
         c = bt.constants
 
         additional_data = agg_sig_additional_data(c.AGG_SIG_ME_ADDITIONAL_DATA)
@@ -523,7 +532,7 @@ class TestConditions:
 
         sk = AugSchemeMPL.key_gen(b"8" * 32)
         pubkey = sk.get_g1()
-        coin = blocks[-2].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
         for msg in [
             c.AGG_SIG_ME_ADDITIONAL_DATA,
             c.AGG_SIG_PARENT_ADDITIONAL_DATA,

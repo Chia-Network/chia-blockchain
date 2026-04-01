@@ -18,6 +18,9 @@ async def validate_get_routes(client: RpcClient, api: RpcApiProtocol) -> None:
         "/get_routes",
         "/get_version",
         "/healthz",
+        "/get_log_level",
+        "/set_log_level",
+        "/reset_log_level",
     ]
     assert len(routes_api) > 0
     assert sorted(routes_client) == sorted(routes_api + routes_server)

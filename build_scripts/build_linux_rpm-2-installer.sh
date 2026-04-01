@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -21,7 +21,13 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
   echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"
 fi
+if [ ! "$CHIA_SEMVER_VERSION" ]; then
+  echo "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $CHIA_INSTALLER_VERSION."
+  CHIA_SEMVER_VERSION="$CHIA_INSTALLER_VERSION"
+fi
+
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "Chia Semver Version is: $CHIA_SEMVER_VERSION"
 
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
@@ -91,7 +97,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
 jq '.rpm.fpm |= . + ["--edit"]' ../../../build_scripts/electron-builder.json >temp.json && mv temp.json ../../../build_scripts/electron-builder.json
@@ -102,14 +108,14 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-echo "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
+echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
-  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.productName="${PRODUCT_NAME}" \
   --config.rpm.packageName="chia-blockchain" \
   --config ../../../build_scripts/electron-builder.json
-"${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
+USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
-  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.productName="${PRODUCT_NAME}" \
   --config.rpm.packageName="chia-blockchain" \
   --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?

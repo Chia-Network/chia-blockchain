@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   start_release:
+    if: github.repository_owner == 'Chia-Network'
     name: Starts Sync Test
     runs-on: ubuntu-latest
     steps:

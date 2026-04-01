@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.db_backup_func import db_backup_func
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
@@ -34,14 +34,14 @@ def db_cmd() -> None:
 @click.pass_context
 def db_upgrade_cmd(
     ctx: click.Context,
-    in_db_path: Optional[str],
-    out_db_path: Optional[str],
+    in_db_path: str | None,
+    out_db_path: str | None,
     no_update_config: bool,
     force: bool,
 ) -> None:
     try:
         db_upgrade_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.set_default(ctx).root_path,
             None if in_db_path is None else Path(in_db_path),
             None if out_db_path is None else Path(out_db_path),
             no_update_config=no_update_config,
@@ -60,10 +60,10 @@ def db_upgrade_cmd(
     help="validate consistency of properties of the encoded blocks and block records",
 )
 @click.pass_context
-def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_blocks: bool) -> None:
+def db_validate_cmd(ctx: click.Context, in_db_path: str | None, validate_blocks: bool) -> None:
     try:
         db_validate_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.set_default(ctx).root_path,
             None if in_db_path is None else Path(in_db_path),
             validate_blocks=validate_blocks,
         )
@@ -75,10 +75,10 @@ def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_bloc
 @click.option("--backup_file", "db_backup_file", default=None, type=click.Path(), help="Specifies the backup file")
 @click.option("--no_indexes", default=False, is_flag=True, help="Create backup without indexes")
 @click.pass_context
-def db_backup_cmd(ctx: click.Context, db_backup_file: Optional[str], no_indexes: bool) -> None:
+def db_backup_cmd(ctx: click.Context, db_backup_file: str | None, no_indexes: bool) -> None:
     try:
         db_backup_func(
-            Path(ctx.obj["root_path"]),
+            ChiaCliContext.set_default(ctx).root_path,
             None if db_backup_file is None else Path(db_backup_file),
             no_indexes=no_indexes,
         )

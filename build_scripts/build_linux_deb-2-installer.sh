@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -22,8 +22,15 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
   echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"
 fi
+if [ ! "$CHIA_SEMVER_VERSION" ]; then
+  echo "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $CHIA_INSTALLER_VERSION."
+  CHIA_SEMVER_VERSION="$CHIA_INSTALLER_VERSION"
+fi
+
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "Chia Semver Version is: $CHIA_SEMVER_VERSION"
 export CHIA_INSTALLER_VERSION
+export CHIA_SEMVER_VERSION
 
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
@@ -49,22 +56,13 @@ echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
 
-# Builds CLI only .deb
-# need j2 for templating the control file
-format_deb_version_string() {
-  version_str=$1
-  # Use sed to conform to expected apt versioning conventions:
-  # - conditionally insert a hyphen before 'rc' or 'beta' if not already present
-  # - replace '.dev' with '-dev'
-  echo "$version_str" | sed -E 's/([0-9])(rc|beta)/\1-\2/g; s/\.dev/-dev/g'
-}
-pip install j2cli
+pip install jinjanator
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
-CHIA_DEB_CONTROL_VERSION=$(format_deb_version_string "$CHIA_INSTALLER_VERSION")
+CHIA_DEB_CONTROL_VERSION=$CHIA_SEMVER_VERSION
 export CHIA_DEB_CONTROL_VERSION
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
@@ -81,42 +79,34 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
 PRODUCT_NAME="chia"
 if [ "$PLATFORM" = "arm64" ]; then
-  # electron-builder does not work for arm64 as of Aug 16, 2022.
-  # This is a temporary fix.
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
-  # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
-  sudo apt -y install ruby ruby-dev
-  # ERROR:  Error installing fpm:
-  #     The last version of dotenv (>= 0) to support your Ruby & RubyGems was 2.8.1. Try installing it with `gem install dotenv -v 2.8.1` and then running the current command again
-  #     dotenv requires Ruby version >= 3.0. The current ruby version is 2.7.0.0.
-  # @TODO Once ruby 3.0 can be installed on `apt install ruby`, installing dotenv below should be removed.
-  sudo gem install dotenv -v 2.8.1
-  sudo gem install fpm
-  echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
+  # workaround for above now implemented in the image build at
+  # https://github.com/Chia-Network/build-images/blob/7c74d2f20739543c486c2522032cf09d96396d24/ubuntu-22.04/Dockerfile#L48-L61
+  echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
-  USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
+  USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?

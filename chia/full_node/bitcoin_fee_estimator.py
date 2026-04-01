@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import uint32, uint64
+
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import EmptyFeeMempoolInfo, FeeBlockInfo, FeeMempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
@@ -7,7 +9,6 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import FeeTracker
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRateV2
-from chia.util.ints import uint32, uint64
 
 
 class BitcoinFeeEstimator(FeeEstimatorInterface):

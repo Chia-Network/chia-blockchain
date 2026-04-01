@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 
 @contextlib.contextmanager

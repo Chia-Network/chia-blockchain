@@ -1,46 +1,49 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple, cast
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
-from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
-from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResponse
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint32, uint64
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.wallet_request_types import (
+    DeleteNotifications,
+    GetNotifications,
+    GetNotificationsResponse,
+    SendNotification,
+    SendNotificationResponse,
+)
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 # Notifications Commands
 
 
-def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class NotificationsSendRpcClient(TestWalletRpcClient):
         async def send_notification(
             self,
-            target: bytes32,
-            msg: bytes,
-            amount: uint64,
-            fee: uint64 = uint64(0),
-            push: bool = True,
+            request: SendNotification,
+            tx_config: TXConfig,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> TransactionRecord:
-            self.add_to_log("send_notification", (target, msg, amount, fee, push, timelock_info))
+        ) -> SendNotificationResponse:
+            self.add_to_log(
+                "send_notification",
+                (request.target, request.message, request.amount, request.fee, request.push, timelock_info),
+            )
 
-            class FakeTransactionRecord:
-                def __init__(self, name: str) -> None:
-                    self.name = name
+            return SendNotificationResponse(unsigned_transactions=[STD_UTX], transactions=[STD_TX], tx=STD_TX)
 
-            return cast(TransactionRecord, FakeTransactionRecord(get_bytes32(2).hex()))
-
-    inst_rpc_client = NotificationsSendRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsSendRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_ph = get_bytes32(1)
     target_addr = encode_puzzle_hash(target_ph, "xch")
@@ -71,7 +74,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -79,10 +82,10 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
             self.add_to_log("get_notifications", (request,))
             return GetNotificationsResponse(
-                [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
+                notifications=[Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
             )
 
-    inst_rpc_client = NotificationsGetRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsGetRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_ph = get_bytes32(1)
     command_args = [
@@ -101,24 +104,42 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         "amount: 1000000000",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_notifications": [(GetNotifications([get_bytes32(1)], uint32(10), uint32(10)),)]}
+    expected_calls: logType = {
+        "get_notifications": [(GetNotifications(ids=[get_bytes32(1)], start=uint32(10), end=uint32(10)),)]
+    }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_notifications_delete(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_delete(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class NotificationsDeleteRpcClient(TestWalletRpcClient):
-        async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
-            self.add_to_log("delete_notifications", (ids,))
-            return True
+        async def delete_notifications(self, request: DeleteNotifications) -> None:
+            self.add_to_log("delete_notifications", (request.ids,))
 
-    inst_rpc_client = NotificationsDeleteRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsDeleteRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    # Try all first
     command_args = ["wallet", "notifications", "delete", FINGERPRINT_ARG, "--all"]
     # these are various things that should be in the output
-    assert_list = ["Success: True"]
+    assert_list = ["Success!"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {"delete_notifications": [(None,)]}
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+    # Next try specifying IDs
+    command_args = [
+        "wallet",
+        "notifications",
+        "delete",
+        FINGERPRINT_ARG,
+        "--id",
+        bytes32.zeros.hex(),
+        "--id",
+        bytes32.zeros.hex(),
+    ]
+    # these are various things that should be in the output
+    assert_list = ["Success!"]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    expected_calls = {"delete_notifications": [([bytes32.zeros, bytes32.zeros],)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

@@ -6,7 +6,7 @@ import json
 import logging
 import types
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import testconfig
 
@@ -18,7 +18,7 @@ def skip(path: Path) -> bool:
     return any(part.startswith(("_", ".")) and part != "_tests" for part in path.parts)
 
 
-def subdirs(per: str) -> List[Path]:
+def subdirs(per: str) -> list[Path]:
     if per == "directory":
         glob_pattern = "**/"
     elif per == "file":
@@ -44,11 +44,11 @@ def subdirs(per: str) -> List[Path]:
     return sorted(paths)
 
 
-def module_dict(module: types.ModuleType) -> Dict[str, Any]:
+def module_dict(module: types.ModuleType) -> dict[str, Any]:
     return {k: v for k, v in module.__dict__.items() if not k.startswith("_") and k != "annotations"}
 
 
-def dir_config(dir: Path) -> Dict[str, Any]:
+def dir_config(dir: Path) -> dict[str, Any]:
     import importlib
 
     module_name = ".".join([*dir.relative_to(root_path).parts, "config"])
@@ -60,14 +60,14 @@ def dir_config(dir: Path) -> Dict[str, Any]:
 
 @dataclasses.dataclass
 class SpecifiedDefaultsError(Exception):
-    overlap: Dict[str, Any]
+    overlap: dict[str, Any]
 
     def __post_init__(self) -> None:
         super().__init__()
 
 
 # Overwrite with directory specific values
-def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, Any]:
+def update_config(parent: dict[str, Any], child: dict[str, Any]) -> dict[str, Any]:
     if child is None:
         return parent
     conf = child
@@ -107,8 +107,8 @@ test_paths_with_index = [(path, index + 1) for path in test_paths for index in r
 
 configuration = []
 
-specified_defaults: Dict[Path, Dict[str, Any]] = {}
-pytest_monitor_enabling_paths: List[Path] = []
+specified_defaults: dict[Path, dict[str, Any]] = {}
+pytest_monitor_enabling_paths: list[Path] = []
 
 for path, index in test_paths_with_index:
     if path.is_dir():
@@ -177,7 +177,7 @@ for path, index in test_paths_with_index:
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
 
-messages: List[str] = []
+messages: list[str] = []
 
 if len(specified_defaults) > 0:
     message = f"Found {len(specified_defaults)} directories with specified defaults"

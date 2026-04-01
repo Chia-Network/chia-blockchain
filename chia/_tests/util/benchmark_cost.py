@@ -4,20 +4,20 @@ import random
 import time
 
 from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint32
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
-def float_to_str(f):
+def float_to_str(f: float) -> str:
     float_string = repr(f)
     if "e" in float_string:  # detect scientific notation
         digits, exp_str = float_string.split("e")
@@ -32,7 +32,7 @@ def float_to_str(f):
     return float_string
 
 
-def run_and_return_cost_time(chialisp):
+def run_and_return_cost_time(chialisp: str) -> tuple[int, float]:
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
@@ -50,11 +50,11 @@ def run_and_return_cost_time(chialisp):
     return cost, total_time
 
 
-def get_cost_compared_to_addition(addition_cost, addition_time, other_time):
+def get_cost_compared_to_addition(addition_cost: int, addition_time: float, other_time: float) -> float:
     return (addition_cost * other_time) / addition_time
 
 
-def benchmark_all_operators():
+def benchmark_all_operators() -> None:
     addition = "(+ (q 1000000000) (q 1000000000))"
     substraction = "(- (q 1000000000) (q 1000000000))"
     multiply = "(* (q 1000000000) (q 1000000000))"
@@ -66,15 +66,15 @@ def benchmark_all_operators():
     point_add = "(point_add"
     " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb)"
     " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
-    point_add_cost, point_add_time = run_and_return_cost_time(point_add)
+    _point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
-    substraction_cost, substraction_time = run_and_return_cost_time(substraction)
-    multiply_cost, multiply_time = run_and_return_cost_time(multiply)
-    greater_cost, greater_time = run_and_return_cost_time(greater)
-    equal_cost, equal_time = run_and_return_cost_time(equal)
-    if_cost, if_time = run_and_return_cost_time(if_clvm)
-    sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
-    pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
+    _substraction_cost, substraction_time = run_and_return_cost_time(substraction)
+    _multiply_cost, multiply_time = run_and_return_cost_time(multiply)
+    _greater_cost, greater_time = run_and_return_cost_time(greater)
+    _equal_cost, equal_time = run_and_return_cost_time(equal)
+    _if_cost, if_time = run_and_return_cost_time(if_clvm)
+    _sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
+    _pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
 
     one_addition = 1
     one_substraction = get_cost_compared_to_addition(addition_cost, addition_time, substraction_time) / addition_cost
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     seeded_random = random.Random()
     seeded_random.seed(a=0, version=2)
 
-    for i in range(0, 1000):
+    for i in range(1000):
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.get_g1()
         solution = wallet_tool.make_solution(
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     # Run Puzzle 1000 times
     puzzle_start = time.time()
     clvm_cost = 0
-    for i in range(0, 1000):
+    for i in range(1000):
         cost_run, _ = puzzles[i].run_with_cost(INFINITE_COST, solutions[i])
         clvm_cost += cost_run
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # Run AggSig 1000 times
     agg_sig_start = time.time()
     agg_sig_cost = 0
-    for i in range(0, 1000):
+    for i in range(1000):
         valid = AugSchemeMPL.verify(public_key, message, signature)
         assert valid
         agg_sig_cost += 20
@@ -167,4 +167,4 @@ if __name__ == "__main__":
     constant = clvm_should_cost / clvm_cost
     format = float_to_str(constant)
     print(f"Constant factor: {format}")
-    print(f"CLVM RATIO MULTIPLIER: {1/constant}")
+    print(f"CLVM RATIO MULTIPLIER: {1 / constant}")

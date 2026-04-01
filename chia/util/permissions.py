@@ -1,11 +1,12 @@
+# Package: utils
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Tuple
 
 
-def verify_file_permissions(path: Path, mask: int) -> Tuple[bool, int]:
+def verify_file_permissions(path: Path, mask: int) -> tuple[bool, int]:
     """
     Check that the file's permissions are properly restricted, as compared to the
     permission mask

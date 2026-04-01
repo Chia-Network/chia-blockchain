@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import sys
 from subprocess import check_output
-from typing import Dict, Set, Tuple
 
 # check for duplicate index names
 
 
-def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set()) -> int:
+def check_create(sql_type: str, cwd: str, exemptions: set[tuple[str, str]] = set()) -> int:
     # the need for this change seems to come from the git precommit plus the python pre-commit environment
     # having GIT_DIR specified but not GIT_WORK_TREE.  this is an issue in some less common git setups
     # such as with worktrees, at least in particular uses of them.  i think that we could switch to letting
@@ -19,7 +18,7 @@ def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set
 
     ret = 0
 
-    items: Dict[str, str] = {}
+    items: dict[str, str] = {}
     for line in lines:
         if f"CREATE {sql_type}" not in line:
             continue

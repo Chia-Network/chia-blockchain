@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import List
 
 import click
 
@@ -27,8 +26,8 @@ log_levels = {
 ignores = {"__pycache__", ".pytest_cache"}
 
 
-def traverse_directory(path: pathlib.Path) -> List[pathlib.Path]:
-    of_interest: List[pathlib.Path] = []
+def traverse_directory(path: pathlib.Path) -> list[pathlib.Path]:
+    of_interest: list[pathlib.Path] = []
 
     file_found = False
 
@@ -57,7 +56,7 @@ def traverse_directory(path: pathlib.Path) -> List[pathlib.Path]:
     "-r", "--root", "root_str", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True), default="."
 )
 @click.option("-v", "--verbose", count=True, help=f"Increase verbosity up to {len(log_levels) - 1} times")
-def command(verbose, root_str):
+def command(verbose: int, root_str: str) -> None:
     logger = logging.getLogger()
     log_level = log_levels.get(verbose, min(log_levels.values()))
     logger.setLevel(log_level)
@@ -90,4 +89,4 @@ def command(verbose, root_str):
         raise click.ClickException("At least one __init__.py created or not a regular file")
 
 
-command()  # pylint: disable=no-value-for-parameter
+command()

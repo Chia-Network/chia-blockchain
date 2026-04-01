@@ -1,15 +1,21 @@
+# Package: utils
+
 from __future__ import annotations
 
+import sys
+import time
+from getpass import getpass
 from pathlib import Path
 from sys import platform
-from typing import ClassVar, Optional, Tuple, Union, overload
+from typing import ClassVar, Literal, overload
 
+import colorama
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
-from typing_extensions import Literal
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
+from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.file_keyring import FileKeyring
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
@@ -17,16 +23,16 @@ from chia.util.file_keyring import FileKeyring
 # WARNING: Changing the default passphrase will prevent passphrase-less users from accessing
 # their existing keys. Using a new default passphrase requires migrating existing users to
 # the new passphrase.
-DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"
+DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"  # noqa: S105
 
-MASTER_PASSPHRASE_SERVICE_NAME = "Chia Passphrase"
-MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"
-
-
-OSPassphraseStore = Union[MacKeyring, WinKeyring]
+MASTER_PASSPHRASE_SERVICE_NAME = "Chia Passphrase"  # noqa: S105
+MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"  # noqa: S105
 
 
-def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
+OSPassphraseStore = MacKeyring | WinKeyring
+
+
+def get_os_passphrase_store() -> OSPassphraseStore | None:
     if platform == "darwin":
         return MacKeyring()  # type: ignore[no-untyped-call]
     elif platform == "win32" or platform == "cygwin":
@@ -52,6 +58,62 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
     return False
 
 
+DEFAULT_PASSPHRASE_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
+)
+FAILED_ATTEMPT_DELAY = 0.5
+MAX_RETRIES = 3
+
+
+def prompt_for_passphrase(prompt: str) -> str:
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        print(prompt, end="", flush=True)
+        prompt = ""
+    return getpass(prompt)
+
+
+def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
+    from chia.util.keyring_wrapper import KeyringWrapper
+
+    """
+    Obtains the master passphrase for the keyring, optionally using the cached
+    value (if previously set). If the passphrase isn't already cached, the user is
+    prompted interactively to enter their passphrase a max of MAX_RETRIES times
+    before failing.
+    """
+
+    if use_passphrase_cache:
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        if passphrase:
+            # If the cached passphrase was previously validated, we assume it's... valid
+            if validated:
+                return passphrase
+
+            # Cached passphrase needs to be validated
+            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+                return passphrase
+            else:
+                # Cached passphrase is bad, clear the cache
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
+
+    # Prompt interactively with up to MAX_RETRIES attempts
+    for i in range(MAX_RETRIES):
+        colorama.init()
+
+        passphrase = prompt_for_passphrase(prompt)
+
+        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+            # If using the passphrase cache, and the user inputted a passphrase, update the cache
+            if use_passphrase_cache:
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+            return passphrase
+
+        time.sleep(FAILED_ATTEMPT_DELAY)
+        print("Incorrect passphrase\n")
+    raise KeychainMaxUnlockAttempts
+
+
 class KeyringWrapper:
     """
     KeyringWrapper provides an abstraction that the Keychain class can use
@@ -63,13 +125,13 @@ class KeyringWrapper:
     """
 
     # Static members
-    __shared_instance: ClassVar[Optional[KeyringWrapper]] = None
+    __shared_instance: ClassVar[KeyringWrapper | None] = None
     __keys_root_path: ClassVar[Path] = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
     keys_root_path: Path
     keyring: FileKeyring
-    cached_passphrase: Optional[str] = None
+    cached_passphrase: str | None = None
     cached_passphrase_is_validated: bool = False
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
@@ -93,7 +155,7 @@ class KeyringWrapper:
         """
         from chia.util.keychain import supports_os_passphrase_storage
 
-        passphrase: Optional[str] = None
+        passphrase: str | None = None
 
         if supports_os_passphrase_storage():
             passphrase = self.get_master_passphrase_from_credential_store()
@@ -120,10 +182,10 @@ class KeyringWrapper:
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]: ...
+    def get_shared_instance(create_if_necessary: bool) -> KeyringWrapper | None: ...
 
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:
+    def get_shared_instance(create_if_necessary: bool = True) -> KeyringWrapper | None:
         if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
@@ -141,14 +203,14 @@ class KeyringWrapper:
 
     # Master passphrase support
 
-    def get_cached_master_passphrase(self) -> Tuple[Optional[str], bool]:
+    def get_cached_master_passphrase(self) -> tuple[str | None, bool]:
         """
         Returns a tuple including the currently cached passphrase and a bool
         indicating whether the passphrase has been previously validated.
         """
         return self.cached_passphrase, self.cached_passphrase_is_validated
 
-    def set_cached_master_passphrase(self, passphrase: Optional[str], validated: bool = False) -> None:
+    def set_cached_master_passphrase(self, passphrase: str | None, validated: bool = False) -> None:
         """
         Cache the provided passphrase and optionally indicate whether the passphrase
         has been validated.
@@ -157,7 +219,7 @@ class KeyringWrapper:
         self.cached_passphrase_is_validated = validated
 
     def has_cached_master_passphrase(self) -> bool:
-        passphrase = self.get_cached_master_passphrase()
+        passphrase, _ = self.get_cached_master_passphrase()
         return passphrase is not None and len(passphrase) > 0
 
     def has_master_passphrase(self) -> bool:
@@ -172,11 +234,11 @@ class KeyringWrapper:
 
     def set_master_passphrase(
         self,
-        current_passphrase: Optional[str],
+        current_passphrase: str | None,
         new_passphrase: str,
         *,
         write_to_keyring: bool = True,
-        passphrase_hint: Optional[str] = None,
+        passphrase_hint: str | None = None,
         save_passphrase: bool = False,
     ) -> None:
         """
@@ -191,7 +253,7 @@ class KeyringWrapper:
             and current_passphrase is not None
             and not self.master_passphrase_is_valid(current_passphrase)
         ):
-            raise KeychainCurrentPassphraseIsInvalid()
+            raise KeychainCurrentPassphraseIsInvalid
 
         self.set_cached_master_passphrase(new_passphrase, validated=True)
 
@@ -209,7 +271,7 @@ class KeyringWrapper:
             else:
                 self.remove_master_passphrase_from_credential_store()
 
-    def remove_master_passphrase(self, current_passphrase: Optional[str]) -> None:
+    def remove_master_passphrase(self, current_passphrase: str | None) -> None:
         """
         Remove the user-specific master passphrase. We still keep the keyring contents encrypted
         using the default passphrase.
@@ -217,7 +279,7 @@ class KeyringWrapper:
         self.set_master_passphrase(current_passphrase, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
     def save_master_passphrase_to_credential_store(self, passphrase: str) -> None:
-        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        passphrase_store: OSPassphraseStore | None = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
                 passphrase_store.set_password(
@@ -228,10 +290,9 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
-        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        passphrase_store: OSPassphraseStore | None = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
                 passphrase_store.delete_password(
@@ -247,10 +308,9 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
-    def get_master_passphrase_from_credential_store(self) -> Optional[str]:
-        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+    def get_master_passphrase_from_credential_store(self) -> str | None:
+        passphrase_store: OSPassphraseStore | None = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
                 return passphrase_store.get_password(  # type: ignore[no-any-return]
@@ -262,5 +322,5 @@ class KeyringWrapper:
                     raise
         return None
 
-    def get_master_passphrase_hint(self) -> Optional[str]:
+    def get_master_passphrase_hint(self) -> str | None:
         return self.keyring.get_passphrase_hint()

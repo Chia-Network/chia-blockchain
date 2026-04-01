@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import NewType
 
-from chia.util.ints import uint64
+from chia_rs.sized_ints import uint64
 
 """
 CLVM Cost is the cost to run a CLVM program on the CLVM.
@@ -11,3 +11,7 @@ are charged a higher rate, depending on their arguments.
 """
 
 CLVMCost = NewType("CLVMCost", uint64)
+
+# For block overhead cost calculation
+QUOTE_BYTES = 2
+QUOTE_EXECUTION_COST = 20

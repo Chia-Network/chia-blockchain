@@ -1,16 +1,18 @@
+# Package: utils
+
 from __future__ import annotations
 
 import base64
 import contextlib
 import os
 import shutil
-import sys
 import threading
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, Iterator, Optional, Union, cast
+from typing import Any, cast
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -50,18 +52,6 @@ def generate_salt() -> bytes:
 
 def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
     return pbkdf2_hmac("sha256", passphrase.encode(), salt, HASH_ITERS)
-
-
-def get_symmetric_key(salt: bytes) -> bytes:
-    from chia.cmds.passphrase_funcs import obtain_current_passphrase
-
-    try:
-        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
-    except Exception as e:
-        print(f"Unable to unlock the keyring: {e}")
-        sys.exit(1)
-
-    return symmetric_key_from_passphrase(passphrase, salt)
 
 
 def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
@@ -116,9 +106,9 @@ class FileKeyringContent:
     # Encrypted and base64 encoded keyring data.
     # - The data with CHECKBYTES_VALUE prepended is encrypted using ChaCha20Poly1305.
     # - The symmetric key is derived from the master passphrase using PBKDF2.
-    data: Optional[str] = None
+    data: str | None = None
     # An optional passphrase hint
-    passphrase_hint: Optional[str] = None
+    passphrase_hint: str | None = None
 
     def __post_init__(self) -> None:
         self.salt = convert_byte_type(bytes, self.salt)
@@ -144,7 +134,7 @@ class FileKeyringContent:
         except PermissionError:
             shutil.move(str(temp_path), str(path))
 
-    def get_decrypted_data_dict(self, passphrase: str) -> Dict[str, Any]:
+    def get_decrypted_data_dict(self, passphrase: str) -> dict[str, Any]:
         if self.empty():
             return {}
         key = symmetric_key_from_passphrase(passphrase, self.salt)
@@ -165,7 +155,7 @@ class FileKeyringContent:
     def empty(self) -> bool:
         return self.data is None or len(self.data) == 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         result["salt"] = result["salt"].hex()
         result["nonce"] = result["nonce"].hex()
@@ -175,30 +165,30 @@ class FileKeyringContent:
 @dataclass(frozen=True)
 class Key:
     secret: bytes
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
     @classmethod
-    def parse(cls, data: str, metadata: Optional[Dict[str, Any]]) -> Key:
+    def parse(cls, data: str, metadata: dict[str, Any] | None) -> Key:
         return cls(
             bytes.fromhex(data),
             metadata,
         )
 
-    def to_data(self) -> Union[str, Dict[str, Any]]:
+    def to_data(self) -> str | dict[str, Any]:
         return self.secret.hex()
 
 
-Users = Dict[str, Key]
-Services = Dict[str, Users]
+Users = dict[str, Key]
+Services = dict[str, Users]
 
 
 @dataclass
 class DecryptedKeyringData:
     services: Services
-    labels: Dict[int, str]  # {fingerprint: label}
+    labels: dict[int, str]  # {fingerprint: label}
 
     @classmethod
-    def from_dict(cls, data_dict: Dict[str, Any]) -> DecryptedKeyringData:
+    def from_dict(cls, data_dict: dict[str, Any]) -> DecryptedKeyringData:
         return cls(
             {
                 service: {
@@ -210,7 +200,7 @@ class DecryptedKeyringData:
             data_dict.get("labels", {}),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "keys": {
                 service: {user: key.to_data() for user, key in users.items()}
@@ -241,9 +231,9 @@ class FileKeyring(FileSystemEventHandler):
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
     cached_data_dict: DecryptedKeyringData = field(default_factory=default_file_keyring_data)
-    keyring_last_mod_time: Optional[float] = None
+    keyring_last_mod_time: float | None = None
     # Key/value pairs to set on the outer payload on the next write
-    file_content_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
+    file_content_properties_for_next_write: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(cls, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH) -> FileKeyring:
@@ -282,19 +272,19 @@ class FileKeyring(FileSystemEventHandler):
     def setup_keyring_file_watcher(self) -> None:
         # recursive=True necessary for macOS support
         if not self.keyring_observer.is_alive():
-            self.keyring_observer.schedule(  # type: ignore[no-untyped-call]
+            self.keyring_observer.schedule(
                 self,
-                self.keyring_path.parent,
+                str(self.keyring_path.parent),
                 recursive=True,
             )
-            self.keyring_observer.start()  # type: ignore[no-untyped-call]
+            self.keyring_observer.start()
 
     def cleanup_keyring_file_watcher(self) -> None:
         if self.keyring_observer.is_alive():
-            self.keyring_observer.stop()  # type: ignore[no-untyped-call]
+            self.keyring_observer.stop()
             self.keyring_observer.join()
 
-    def on_modified(self, event: Union[FileSystemEvent, DirModifiedEvent]) -> None:
+    def on_modified(self, event: FileSystemEvent | DirModifiedEvent) -> None:
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self) -> None:
@@ -320,13 +310,13 @@ class FileKeyring(FileSystemEventHandler):
         """
         return self.cached_data_dict.services
 
-    def cached_labels(self) -> Dict[int, str]:
+    def cached_labels(self) -> dict[int, str]:
         """
         Returns keyring.data.labels
         """
         return self.cached_data_dict.labels
 
-    def get_key(self, service: str, user: str) -> Optional[Key]:
+    def get_key(self, service: str, user: str) -> Key | None:
         """
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
@@ -360,7 +350,7 @@ class FileKeyring(FileSystemEventHandler):
                     keys.pop(service)
                 self.write_keyring()
 
-    def get_label(self, fingerprint: int) -> Optional[str]:
+    def get_label(self, fingerprint: int) -> str | None:
         """
         Returns the label for the given fingerprint or None if there is no label assigned.
         """
@@ -415,8 +405,8 @@ class FileKeyring(FileSystemEventHandler):
         except Exception:
             return False
 
-    def load_keyring(self, passphrase: Optional[str] = None) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+    def load_keyring(self, passphrase: str | None = None) -> None:
+        from chia.util.keyring_wrapper import obtain_current_passphrase
 
         with self.load_keyring_lock:
             self.needs_load_keyring = False
@@ -435,8 +425,7 @@ class FileKeyring(FileSystemEventHandler):
         )
 
     def write_keyring(self, fresh_salt: bool = False) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
-        from chia.util.keyring_wrapper import KeyringWrapper
+        from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 
         # Merge in other properties like "passphrase_hint"
         if "passphrase_hint" in self.file_content_properties_for_next_write:
@@ -461,18 +450,18 @@ class FileKeyring(FileSystemEventHandler):
             # Restore the correct content if we failed to write the updated cache, let it re-raise if loading also fails
             self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
-    def get_passphrase_hint(self) -> Optional[str]:
+    def get_passphrase_hint(self) -> str | None:
         """
         Return the passphrase hint (if set). The hint data may not yet be written to the keyring, so we
         return the hint data either from the staging dict (file_content_properties_for_next_write), or
         from cached_file_content (loaded from the keyring)
         """
-        passphrase_hint: Optional[str] = self.file_content_properties_for_next_write.get("passphrase_hint", None)
+        passphrase_hint: str | None = self.file_content_properties_for_next_write.get("passphrase_hint", None)
         if passphrase_hint is None:
             passphrase_hint = self.cached_file_content.passphrase_hint
         return passphrase_hint
 
-    def set_passphrase_hint(self, passphrase_hint: Optional[str]) -> None:
+    def set_passphrase_hint(self, passphrase_hint: str | None) -> None:
         """
         Store the new passphrase hint in the staging dict (file_content_properties_for_next_write) to
         be written-out on the next write to the keyring.

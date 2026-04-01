@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from chia_rs import BlockRecord, ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.significant_bits import count_significant_bits, truncate_to_significant_bits
 
 
@@ -15,7 +13,7 @@ def _get_blocks_at_height(
     prev_b: BlockRecord,
     target_height: uint32,
     max_num_blocks: uint32 = uint32(1),
-) -> List[BlockRecord]:
+) -> list[BlockRecord]:
     """
     Return a consecutive list of BlockRecords starting at target_height, returning a maximum of
     max_num_blocks. Assumes all block records are present. Does a slot linear search, if the blocks are not
@@ -33,7 +31,7 @@ def _get_blocks_at_height(
         if header_hash == prev_b.header_hash:
             # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain. We can directly
             # use the height_to_block_record method
-            block_list: List[BlockRecord] = []
+            block_list: list[BlockRecord] = []
             for h in range(target_height, target_height + max_num_blocks):
                 assert blocks.contains_height(uint32(h))
                 block_list.append(blocks.height_to_block_record(uint32(h)))
@@ -137,11 +135,11 @@ def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     height: uint32,
-    prev_header_hash: Optional[bytes32],
+    prev_header_hash: bytes32 | None,
     deficit: uint8,
     block_at_height_included_ses: bool,
-    prev_ses_block: Optional[BlockRecord] = None,
-) -> Tuple[bool, bool]:
+    prev_ses_block: BlockRecord | None = None,
+) -> tuple[bool, bool]:
     """
     Returns a bool tuple
     first bool is true if the next sub-slot after height will form part of a new sub-epoch. Therefore
@@ -224,10 +222,9 @@ def _get_next_sub_slot_iters(
     if next_height < constants.EPOCH_BLOCKS:
         return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
@@ -304,10 +301,9 @@ def _get_next_difficulty(
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same slot as previous block, return same difficulty
     if not skip_epoch_check:
@@ -357,9 +353,9 @@ def _get_next_difficulty(
 def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
-    prev_b: Optional[BlockRecord],
+    prev_b: BlockRecord | None,
     blocks: BlockRecordsProtocol,
-) -> Tuple[uint64, uint64]:
+) -> tuple[uint64, uint64]:
     """
     Retrieves the current sub_slot iters and difficulty of the next block after prev_b.
 

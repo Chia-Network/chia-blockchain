@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from itertools import permutations
 
+from chia_rs.sized_bytes import bytes32
+
 from chia._tests.util.benchmarks import rand_hash
 from chia.types.blockchain_format.coin import hash_coin_ids
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 

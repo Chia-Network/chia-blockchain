@@ -10,7 +10,7 @@ import textwrap
 from contextlib import closing
 from pathlib import Path
 from time import monotonic
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import zstd
 
@@ -25,15 +25,15 @@ from chia.util.path import path_from_root
 # the configuration file also be updated
 def db_upgrade_func(
     root_path: Path,
-    in_db_path: Optional[Path] = None,
-    out_db_path: Optional[Path] = None,
+    in_db_path: Path | None = None,
+    out_db_path: Path | None = None,
     *,
     no_update_config: bool = False,
     force: bool = False,
 ) -> None:
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
     selected_network: str
     db_pattern: str
     if in_db_path is None or out_db_path is None:
@@ -183,7 +183,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         parameter_limit = get_host_parameter_limit()
         start_time = monotonic()
         block_start_time = start_time
-        rowids: List[int] = []
+        rowids: list[int] = []
         small_batch_size = BATCH_SIZE <= parameter_limit
         small_chain = peak_height <= parameter_limit
         current_header_hash = peak_hash
@@ -220,7 +220,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         br.block
                     FROM block_records br
                     JOIN full_blocks fb ON br.header_hash = fb.header_hash
-                    WHERE br.rowid IN ({','.join('?' * len(rowids))})
+                    WHERE br.rowid IN ({",".join("?" * len(rowids))})
                 """,
                 rowids,
             )
@@ -330,7 +330,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         coin_id,
                         hint
                     FROM hints
-                    WHERE id IN ({','.join('?' * len(rows))})
+                    WHERE id IN ({",".join("?" * len(rows))})
                 """,
                 [id_tuple[0] for id_tuple in rows],
             )

@@ -6,11 +6,13 @@ import dataclasses
 import itertools
 import logging
 import traceback
-from typing import AsyncIterator, Dict, Generic, Iterator, Optional, Protocol, TypeVar, final
+from collections.abc import AsyncIterator, Iterator
+from typing import Generic, Protocol, TypeVar, final
 
 import anyio
 
 from chia.util.log_exceptions import log_exceptions
+from chia.util.task_referencer import create_referenced_task
 
 
 class InvalidTargetWorkerCountError(Exception):
@@ -47,8 +49,8 @@ class Job(Generic[T]):
     input: T
     started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
-    exception: Optional[BaseException] = None
-    task: Optional[asyncio.Task[object]] = None
+    exception: BaseException | None = None
+    task: asyncio.Task[object] | None = None
     cancelled: bool = False
 
 
@@ -57,7 +59,7 @@ class Job(Generic[T]):
 class QueuedAsyncPool(Generic[J, R]):
     name: str
     job_queue: JobQueueProtocol[Job[J]]
-    result_queue: Optional[ResultQueueProtocol[R]]
+    result_queue: ResultQueueProtocol[R] | None
     worker_async_callable: QueuedWorkerCallable[J, R]
 
     @classmethod
@@ -68,7 +70,7 @@ class QueuedAsyncPool(Generic[J, R]):
         job_queue: JobQueueProtocol[Job[J]],
         worker_async_callable: QueuedWorkerCallable[J, R],
         target_worker_count: int,
-        result_queue: Optional[ResultQueueProtocol[R]] = None,
+        result_queue: ResultQueueProtocol[R] | None = None,
         log: logging.Logger = logging.getLogger(__name__),
     ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
         self = cls(
@@ -128,7 +130,7 @@ class AsyncPool:
     log: logging.Logger
     worker_async_callable: WorkerCallable
     _target_worker_count: int
-    _workers: Dict[asyncio.Task[object], int] = dataclasses.field(init=False, default_factory=dict)
+    _workers: dict[asyncio.Task[object], int] = dataclasses.field(init=False, default_factory=dict)
     _worker_id_counter: Iterator[int] = dataclasses.field(init=False, default_factory=itertools.count)
     _started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     _single_use_used: bool = False
@@ -152,7 +154,7 @@ class AsyncPool:
         if self._target_worker_count < 1:
             raise InvalidTargetWorkerCountError(self._target_worker_count)
 
-        task = asyncio.create_task(self._run(_check_single_use=False))
+        task = create_referenced_task(self._run(_check_single_use=False))
         try:
             # TODO: should this terminate if the run task ends?
             await self._started.wait()
@@ -186,7 +188,7 @@ class AsyncPool:
     async def _run_single(self) -> None:
         while len(self._workers) < self._target_worker_count:
             new_worker_id = next(self._worker_id_counter)
-            new_worker = asyncio.create_task(self.worker_async_callable(new_worker_id))
+            new_worker = create_referenced_task(self.worker_async_callable(new_worker_id))
             self.log.debug(f"{self.name}: adding worker {new_worker_id}")
             self._workers[new_worker] = new_worker_id
 

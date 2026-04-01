@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from chia_rs.sized_ints import int16
+
 from chia.util.errors import Err
-from chia.util.ints import int16
 
 
 def test_error_codes_int16() -> None:

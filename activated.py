@@ -33,7 +33,7 @@ def main(*args: str) -> int:
         script = "activated.sh"
         command = ["sh", os.fspath(here.joinpath(script)), env.value, *args]
 
-    completed_process = subprocess.run(command)
+    completed_process = subprocess.run(command, check=False)
 
     return completed_process.returncode
 

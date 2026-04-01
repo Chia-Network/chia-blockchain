@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import dataclasses
 from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiosqlite import Row
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.merkle_utils import list_to_binary_tree
@@ -19,11 +19,11 @@ from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
 
 @dataclasses.dataclass(frozen=True)
 class VCProofs:
-    key_value_pairs: Dict[str, str]
+    key_value_pairs: dict[str, str]
 
     def as_program(self) -> Program:
-        def byte_sort_pairs(f1: Tuple[str, str], f2: Tuple[str, str]) -> int:
-            return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.to(None) else -1
+        def byte_sort_pairs(f1: tuple[str, str], f2: tuple[str, str]) -> int:
+            return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.NIL else -1
 
         prog: Program = Program.to(
             list_to_binary_tree(
@@ -45,7 +45,7 @@ class VCProofs:
         first: Program = prog.at("f")
         rest: Program = prog.at("r")
         if first.atom is None and rest.atom is None:
-            final_dict: Dict[str, str] = {}
+            final_dict: dict[str, str] = {}
             final_dict.update(VCProofs.from_program(first).key_value_pairs)
             final_dict.update(VCProofs.from_program(rest).key_value_pairs)
             return VCProofs(final_dict)
@@ -54,7 +54,7 @@ class VCProofs:
         else:
             raise ValueError("Malformatted VCProofs program")  # pragma: no cover
 
-    def prove_keys(self, keys: List[str], tree: Optional[Program] = None) -> Program:
+    def prove_keys(self, keys: list[str], tree: Program | None = None) -> Program:
         if tree is None:
             tree = self.as_program()
 
@@ -79,9 +79,6 @@ class VCProofs:
             else:
                 new_tree: Program = first_tree.cons(rest_tree)
                 return new_tree
-
-
-_T_VCStore = TypeVar("_T_VCStore", bound="VCStore")
 
 
 @streamable
@@ -114,7 +111,7 @@ class VCStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_VCStore], db_wrapper: DBWrapper2) -> _T_VCStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -179,7 +176,7 @@ class VCStore:
                 ),
             )
 
-    async def get_vc_record(self, launcher_id: bytes32) -> Optional[VCRecord]:
+    async def get_vc_record(self, launcher_id: bytes32) -> VCRecord | None:
         """
         Checks DB for VC with specified launcher_id and returns it.
         """
@@ -191,7 +188,7 @@ class VCStore:
             return _row_to_vc_record(row)
         return None
 
-    async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:  # pragma: no cover
+    async def get_vc_records_by_providers(self, provider_ids: list[bytes32]) -> list[VCRecord]:  # pragma: no cover
         """
         Checks DB for VCs with a proof_provider in a specified list and returns them.
         """
@@ -206,7 +203,7 @@ class VCStore:
 
         return [_row_to_vc_record(row) for row in rows]
 
-    async def get_unconfirmed_vcs(self) -> List[VCRecord]:
+    async def get_unconfirmed_vcs(self) -> list[VCRecord]:
         """
         Returns all VCs that have not yet been marked confirmed (confirmed_height == 0)
         """
@@ -222,7 +219,7 @@ class VCStore:
         self,
         start_index: int = 0,
         count: int = 50,
-    ) -> List[VCRecord]:
+    ) -> list[VCRecord]:
         """
         Return all VCs
         :param start_index: Start index
@@ -237,7 +234,7 @@ class VCStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM vc_records WHERE launcher_id=?", (launcher_id.hex(),))).close()
 
-    async def get_vc_record_by_coin_id(self, coin_id: bytes32) -> Optional[VCRecord]:
+    async def get_vc_record_by_coin_id(self, coin_id: bytes32) -> VCRecord | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from vc_records WHERE coin_id=? LIMIT 1000", (coin_id.hex(),))
             row = await cursor.fetchone()
@@ -252,7 +249,7 @@ class VCStore:
                 "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
             )
 
-    async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:
+    async def get_proofs_for_root(self, root: bytes32) -> VCProofs | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT proofs FROM vc_proofs WHERE root=?", (root.hex(),))
             row = await cursor.fetchone()

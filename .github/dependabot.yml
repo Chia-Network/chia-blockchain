@@ -8,13 +8,15 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     rebase-strategy: auto
     labels:
       - dependencies
       - go
       - "Changed"
-    reviewers: ["cmmarslender", "starttoaster"]
+    reviewers: ["cmmarslender", "Starttoaster"]
     groups:
       global:
         patterns:
@@ -25,32 +27,38 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
-    open-pull-requests-limit: 10
-    rebase-strategy: disabled
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 30
+    rebase-strategy: auto
     labels:
       - dependencies
       - python
       - "Changed"
-    reviewers: ["emlowe", "altendky"]
+    reviewers: ["emlowe"]
 
   - package-ecosystem: "github-actions"
-    directory: /
+    directories: ["/", ".github/actions/*"]
     schedule:
       interval: "weekly"
       day: "tuesday"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     rebase-strategy: auto
     labels:
       - dependencies
       - github_actions
       - "Changed"
-    reviewers: ["cmmarslender", "altendky"]
+    reviewers: ["cmmarslender"]
 
   - package-ecosystem: "npm"
     directory: /
     schedule:
       interval: "weekly"
       day: "tuesday"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     rebase-strategy: auto
     labels:
@@ -64,9 +72,21 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     rebase-strategy: auto
     labels:
       - dependencies
       - rust
       - "Changed"
+
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    rebase-strategy: auto

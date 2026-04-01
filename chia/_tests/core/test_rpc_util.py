@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia.rpc.util import marshal
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
 
@@ -29,7 +28,7 @@ class TestRequestType(Streamable):
 @streamable
 @dataclass(frozen=True)
 class TestResponseObject(Streamable):
-    qat: List[str]
+    qat: list[str]
     sub: SubObject
 
 
