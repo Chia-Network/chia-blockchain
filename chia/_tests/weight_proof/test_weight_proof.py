@@ -1,16 +1,32 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    FullBlock,
+    HeaderBlock,
+    SubEpochChallengeSegment,
+    SubEpochSummary,
+    SubSlotData,
+)
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain_mock import BlockchainMock
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
-from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
+from chia.full_node.weight_proof import (
+    WeightProofHandler,
+    _map_sub_epoch_summaries,
+    _validate_summaries_weight,
+)
+from chia.full_node.weight_proof import (
+    __validate_pospace as _validate_pospace_impl,
+)
 from chia.simulator.block_tools import BlockTools
 
 
@@ -516,3 +532,33 @@ class TestWeightProof:
         valid, fork_point, _ = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
+
+    def test_validate_pospace_rejects_overflow_at_idx_0(self) -> None:
+        constants = DEFAULT_CONSTANTS
+        overflow_spi = uint8(constants.NUM_SPS_SUB_SLOT - 1)
+        overflow_sub_slot = SubSlotData(
+            None,  # proof_of_space
+            None,  # cc_signage_point
+            None,  # cc_infusion_point
+            None,  # icc_infusion_point
+            None,  # cc_sp_vdf_info
+            overflow_spi,  # signage_point_index
+            None,  # cc_slot_end
+            None,  # icc_slot_end
+            None,  # cc_slot_end_info
+            None,  # icc_slot_end_info
+            None,  # cc_ip_vdf_info
+            None,  # icc_ip_vdf_info
+            None,  # total_iters
+        )
+        segment = SubEpochChallengeSegment(uint32(0), [overflow_sub_slot], None)
+        result = _validate_pospace_impl(
+            constants,
+            segment,
+            0,
+            uint64(constants.DIFFICULTY_STARTING),
+            None,
+            True,
+            uint32(0),
+        )
+        assert result is None
