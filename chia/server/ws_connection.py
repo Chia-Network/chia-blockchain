@@ -322,9 +322,18 @@ class WSChiaConnection:
         self.connection_type = remote_node_type
         # "1" means capability is enabled
         self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+        peer_is_v3 = Capability.RATE_LIMITS_V3 in self.peer_capabilities
+        local_is_v3 = Capability.RATE_LIMITS_V3 in self.local_capabilities
+        self.log.info(
+            f"RLV3 -- perform_handshake "
+            f"peer: {self.peer_info.host} "
+            f"is_outbound: {self.is_outbound} "
+            f"peer_is_v3: {peer_is_v3} "
+            f"local_is_v3: {local_is_v3}"
+        )
         # Exchange rate limits v3 configuration if both sides support it, where
         # outbound sends first then inbound reads, validates and replies.
-        if Capability.RATE_LIMITS_V3 in self.peer_capabilities and Capability.RATE_LIMITS_V3 in self.local_capabilities:
+        if peer_is_v3 and local_is_v3:
             rl_config = make_msg(ProtocolMessageTypes.configure_rate_limits, rl_v3_to_configure_message())
             if self.is_outbound:
                 await self._send_message(rl_config)
@@ -353,6 +362,13 @@ class WSChiaConnection:
                     continue
                 if msg_type not in self.rate_limit_windows:
                     self.rate_limit_windows[msg_type] = RateLimitsV3(receive_window=0, in_flight=0)
+        else:
+            self.log.info(
+                f"RLV3 -- no config exchange "
+                f"peer: {self.peer_info.host} "
+                f"peer_is_v3: {peer_is_v3} "
+                f"local_is_v3: {local_is_v3}"
+            )
         self.outbound_task = create_referenced_task(self.outbound_handler())
         self.inbound_task = create_referenced_task(self.inbound_handler())
         self.incoming_message_task = create_referenced_task(self.incoming_message_handler())
@@ -517,11 +533,18 @@ class WSChiaConnection:
                             f"window size: {window_size}",
                         ]
                     )
-                    self.log.info(f"Peer has been rate limited (v3) and will be disconnected: {details}")
+                    self.log.info(f"RLV3 -- Peer has been rate limited and will be disconnected: {details}")
                     await self.close(RATE_LIMITER_BAN_SECONDS)
                     return None
                 rl_window.receive_window += 1
                 inbound_window_incremented = True
+                self.log.info(
+                    f"RLV3 -- inbound_window_incremented "
+                    f"peer: {self.peer_info.host} "
+                    f"msg_type: {bare_message_type.name} "
+                    f"receive_window now: {rl_window.receive_window} "
+                    f"window_size: {window_size}"
+                )
 
             timeout: int | None = 600
             if metadata.execute_task:
@@ -594,6 +617,12 @@ class WSChiaConnection:
             if inbound_window_incremented:
                 assert rl_window is not None
                 rl_window.receive_window -= 1
+                self.log.info(
+                    f"RLV3 -- receive window decremented "
+                    f"peer: {self.peer_info.host} "
+                    f"msg_type: {bare_message_type.name} "
+                    f"receive_window now: {rl_window.receive_window}"
+                )
             if task_id in self.api_tasks:
                 self.api_tasks.pop(task_id)
             if task_id in self.execute_tasks:
@@ -616,7 +645,7 @@ class WSChiaConnection:
             # expected to move on.
             self.timed_out_requests.discard(message.id)
             self.log.info(
-                f"Ignoring late response {ProtocolMessageTypes(message.type).name} "
+                f"RLV3 -- Ignoring late response {ProtocolMessageTypes(message.type).name} "
                 f"from {self.peer_info.host} version {self.version}"
             )
             return
@@ -750,6 +779,13 @@ class WSChiaConnection:
                 assert rl_window is not None
                 rl_window.in_flight += 1
                 in_flight_incremented = True
+                self.log.info(
+                    f"RLV3 -- in_flight_incremented "
+                    f"peer: {self.peer_info.host} "
+                    f"msg type: {message_type.name} "
+                    f"in_flight now: {rl_window.in_flight} "
+                    f"window_size: {self.peer_rl_settings_v3[message_type].window_size}"
+                )
 
             await self.outgoing_queue.put(message)
 
@@ -774,11 +810,23 @@ class WSChiaConnection:
                 # The request has been processed, decrement congestion window
                 assert rl_window is not None
                 rl_window.in_flight -= 1
+                self.log.info(
+                    f"RLV3 -- in_flight decremented "
+                    f"peer: {self.peer_info.host} "
+                    f"msg type: {message_type.name} "
+                    f"in_flight now: {rl_window.in_flight}"
+                )
 
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
             await self.outgoing_queue.put(msg)
+            self.log.info(
+                f"RLV3 -- retried message added to queue "
+                f"peer: {self.peer_info.host} "
+                f"msg type: {ProtocolMessageTypes(msg.type).name} "
+                f"request ID: {msg.id}"
+            )
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
@@ -795,6 +843,9 @@ class WSChiaConnection:
         peer_subject_to_rl = not is_localhost(self.peer_info.host) and not is_in_network(
             self.peer_info.host, self.exempt_peer_networks
         )
+        both_v3 = (
+            Capability.RATE_LIMITS_V3 in self.peer_capabilities and Capability.RATE_LIMITS_V3 in self.local_capabilities
+        )
         peer_rl_setting = self.peer_rl_settings_v3.get(message_type)
         window_size = peer_rl_setting.window_size if peer_rl_setting is not None else None
         tracked_v3_request = peer_rl_setting is not None and message.id in self.pending_requests
@@ -806,11 +857,14 @@ class WSChiaConnection:
             and message.id is not None
             and message.id not in self.pending_requests
         )
-        if (
-            Capability.RATE_LIMITS_V3 in self.peer_capabilities
-            and Capability.RATE_LIMITS_V3 in self.local_capabilities
-            and (tracked_v3_request or v3_response_with_nonce)
-        ):
+        if both_v3 and (tracked_v3_request or v3_response_with_nonce):
+            reason = "tracked_v3_request" if tracked_v3_request else "v3_response_with_nonce"
+            self.log.info(
+                f"RLV3 -- _send_message {reason} "
+                f"peer: {self.peer_info.host} "
+                f"msg type: {message_type.name} "
+                f"window_size: {window_size}"
+            )
             # We only check the limit for v3 tracked requests when there is a
             # window size.
             if (
@@ -829,9 +883,23 @@ class WSChiaConnection:
                         f"max concurrent: {window_size}",
                     ]
                 )
-                self.log.info(f"V3 rate limiting ourselves. Dropping and retrying outbound message: {details}")
+                self.log.info(f"RLV3 -- rate limiting ourselves. Dropping and retrying outbound message: {details}")
                 return None
         else:
+            if both_v3:
+                if peer_rl_setting is None:
+                    reason = "not in peer config"
+                elif message.id is None:
+                    reason = "no nonce"
+                elif window_size is not None:
+                    reason = "nonce not pending and not unlimited"
+                else:
+                    reason = "simply not v3 eligible"
+                self.log.info(
+                    f"RLV3 -- _send_message v2 path - {reason} "
+                    f"peer: {self.peer_info.host} "
+                    f"msg type: {message_type.name} "
+                )
             limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
                 message, self.local_capabilities, self.peer_capabilities
             )
@@ -956,7 +1024,7 @@ class WSChiaConnection:
                                 f"window size: {window_size}",
                             ]
                         )
-                        self.log.info(f"Peer has been rate limited (v3) and will be disconnected: {details}")
+                        self.log.info(f"RLV3 -- Peer has been rate limited and will be disconnected: {details}")
                         create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
                         # Yield so we let the close task cancel us
                         await asyncio.sleep(3)
