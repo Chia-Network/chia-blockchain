@@ -27,6 +27,7 @@ from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection, error_response_version, sanitize_version_string
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
 from chia.wallet.start_wallet import create_wallet_service
@@ -305,3 +306,21 @@ async def test_connection_closed_banning(bt: BlockTools, caplog: pytest.LogCaptu
         trusted_peer = FakeConnection(peer_info=PeerInfo("34.34.34.34", 8444))
         await my_test_server.connection_closed(cast(WSChiaConnection, trusted_peer), ban_time=60)
         assert f"Trying to ban trusted peer {trusted_peer.peer_info.host} for 60, but will not ban" in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_separate_handshake_message(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the scenario where we send handshake related message outside the
+    context of a handshake.
+    """
+    _, server, _ = one_node_one_block
+    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 42)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
+    await wsc.send_message(make_msg(ProtocolMessageTypes.handshake, b""))
+    await time_out_assert(5, lambda: wsc.closed)
+    await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers)
