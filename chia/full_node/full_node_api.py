@@ -368,10 +368,12 @@ class FullNodeAPI:
         self.full_node.full_node_store.serialized_wp_message = message
         return message
 
-    @metadata.request()
-    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Message | None:
-        self.log.warning("Received proof of weight too late.")
-        return None
+    @metadata.request(peer_required=True)
+    async def respond_proof_of_weight(
+        self, request: full_node_protocol.RespondProofOfWeight, peer: WSChiaConnection
+    ) -> None:
+        self.log.warning(f"unsolicited proof of weight from peer {peer.get_peer_logging()} version {peer.version}")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Message | None:
@@ -1671,11 +1673,24 @@ class FullNodeAPI:
         return None
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection
+    ) -> Message | None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.request_compact_vdf(request, peer)
-        return None
+        vdf_proof = await self.full_node.request_compact_vdf(request, peer.peer_node_id)
+        if vdf_proof is None:
+            return None
+        return make_msg(
+            ProtocolMessageTypes.respond_compact_vdf,
+            full_node_protocol.RespondCompactVDF(
+                height=request.height,
+                header_hash=request.header_hash,
+                field_vdf=request.field_vdf,
+                vdf_info=request.vdf_info,
+                vdf_proof=vdf_proof,
+            ),
+        )
 
     @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:

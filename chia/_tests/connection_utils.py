@@ -47,7 +47,10 @@ async def add_dummy_connection(
     additional_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> tuple[asyncio.Queue[Message], bytes32]:
     if additional_capabilities is None:
-        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
+        additional_capabilities = [
+            (uint16(Capability.HARD_FORK_2.value), "1"),
+            (uint16(Capability.RATE_LIMITS_V3.value), "1"),
+        ]
     wsc, peer_id = await add_dummy_connection_wsc(
         server, self_hostname, dummy_port, type, additional_capabilities=additional_capabilities
     )
@@ -63,7 +66,10 @@ async def add_dummy_connection_wsc(
     additional_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> tuple[WSChiaConnection, bytes32]:
     if additional_capabilities is None:
-        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
+        additional_capabilities = [
+            (uint16(Capability.HARD_FORK_2.value), "1"),
+            (uint16(Capability.RATE_LIMITS_V3.value), "1"),
+        ]
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     config = load_config(server.root_path, "config.yaml")

@@ -84,8 +84,10 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         """Handle proof of weight request."""
         ...
 
-    @metadata.request()
-    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def respond_proof_of_weight(
+        self, request: full_node_protocol.RespondProofOfWeight, peer: WSChiaConnection
+    ) -> None:
         """Handle proof of weight response."""
         ...
 
@@ -260,7 +262,9 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection
+    ) -> Message | None:
         """Handle compact VDF request."""
         ...
 

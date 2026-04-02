@@ -48,6 +48,11 @@ class Capability(IntEnum):
     # Signals support for Hard Fork 2
     HARD_FORK_2 = 6
 
+    # When both peers advertise this, a ConfigureRateLimits message is
+    # exchanged during the handshake and rate limits v3 replace v2 for
+    # supported protocol message types.
+    RATE_LIMITS_V3 = 7
+
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.
@@ -55,6 +60,7 @@ _capabilities: list[tuple[uint16, str]] = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+    (uint16(Capability.RATE_LIMITS_V3.value), "1"),
 ]
 _mempool_updates = [
     (uint16(Capability.MEMPOOL_UPDATES.value), "1"),
@@ -81,6 +87,13 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: list[tuple[uint16, str]]
+
+
+@streamable
+@dataclass(frozen=True)
+class ConfigureRateLimits(Streamable):
+    # List of tuples of protocol message type and window size (0 is unlimited)
+    settings: list[tuple[uint8, uint16]]
 
 
 @streamable
