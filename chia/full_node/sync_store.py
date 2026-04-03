@@ -116,7 +116,6 @@ class SyncStore:
                 continue
             if heaviest_peak is None or peak.weight > heaviest_peak.weight:
                 heaviest_peak = peak
-        assert heaviest_peak is not None
         return heaviest_peak
 
     def peer_disconnected(self, node_id: bytes32) -> None:
