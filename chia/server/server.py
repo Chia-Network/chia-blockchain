@@ -506,7 +506,15 @@ class ChiaServer:
                 session=session,
                 exempt_peer_networks=self.exempt_peer_networks,
             )
-            await connection.perform_handshake(self._network_id, server_port, self._local_type)
+            handshake_timeout: float | None = (
+                None
+                if is_localhost(target_node.host) or is_in_network(target_node.host, self.exempt_peer_networks)
+                else 120.0
+            )
+            await asyncio.wait_for(
+                connection.perform_handshake(self._network_id, server_port, self._local_type),
+                timeout=handshake_timeout,
+            )
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -525,6 +533,10 @@ class ChiaServer:
                 self.log.debug(f"Feeler connection error. {e}")
             else:
                 self.log.info(f"{e}")
+        except asyncio.TimeoutError:
+            if connection is not None:
+                await connection.close()
+            self.log.debug(f"Handshake timeout connecting to {target_node}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)

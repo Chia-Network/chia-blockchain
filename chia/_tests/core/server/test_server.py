@@ -58,6 +58,27 @@ async def test_duplicate_client_connection(
 
 
 @pytest.mark.anyio
+async def test_start_client_handshake_timeout(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    async def timeout_handshake(
+        self: WSChiaConnection, network_id: str, server_port: uint16, local_type: NodeType
+    ) -> None:
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(WSChiaConnection, "perform_handshake", timeout_handshake)
+    target_peer = PeerInfo(self_hostname, server_2.get_port())
+    with caplog.at_level(logging.DEBUG):
+        assert not await server_1.start_client(target_peer, None)
+    assert f"Handshake timeout connecting to {target_peer}" in caplog.text
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
     two_nodes_one_block: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
