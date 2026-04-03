@@ -505,13 +505,16 @@ class FullNodeSimulator(FullNodeAPI):
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             ids_to_check: set[bytes32] = set()
-            tx_names: set[bytes32] = set()
+            bundle_to_tx_names: dict[bytes32, set[bytes32]] = {}
             for record in records:
                 if record.spend_bundle is None:
                     continue
 
-                ids_to_check.add(record.spend_bundle.name())
-                tx_names.add(record.name)
+                bundle_id = record.spend_bundle.name()
+                ids_to_check.add(bundle_id)
+                bundle_to_tx_names.setdefault(bundle_id, set()).add(record.name)
+
+            pending_tx_names: set[bytes32] = {n for names in bundle_to_tx_names.values() for n in names}
 
             for backoff in backoff_times():
                 found = set()
@@ -519,15 +522,17 @@ class FullNodeSimulator(FullNodeAPI):
                     tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
                     if tx is not None:
                         found.add(spend_bundle_name)
-                ids_to_check = ids_to_check.difference(found)
+                ids_to_check -= found
+                for bundle_id in found:
+                    pending_tx_names -= bundle_to_tx_names.get(bundle_id, set())
 
                 if len(ids_to_check) == 0:
                     return
 
                 if wallet_node is not None:
-                    for tx_name in tx_names:
+                    for tx_name in pending_tx_names:
                         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx_name)
-                        if tx_record is None:
+                        if tx_record is None or tx_record.is_in_mempool():
                             continue
                         for _, status, error in tx_record.sent_to:
                             if (
