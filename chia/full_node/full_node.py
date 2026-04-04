@@ -282,6 +282,7 @@ class FullNode:
                     max_workers=num_workers,
                     dedicated=dedicated,
                     thread_name_prefix="validation-",
+                    instrument=bool(self.config.get("instrument_thread_pool", 0)),
                 )
                 self.log.info(f"Started {num_workers} threads for validation ({dedicated} dedicated)")
             selected_network = self.config.get("selected_network")

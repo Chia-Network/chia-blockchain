@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import queue
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import Future
 from dataclasses import dataclass, field
@@ -10,6 +12,8 @@ from types import TracebackType
 from typing import Any, Protocol, runtime_checkable
 
 from typing_extensions import Self
+
+log = logging.getLogger(__name__)
 
 
 class _SupportsLessThan(Protocol):
@@ -58,6 +62,7 @@ class _WorkItem:
     args: tuple[Any, ...] = field(compare=False, default=())
     kwargs: dict[str, Any] = field(compare=False, default_factory=dict)
     future: Future[Any] | None = field(compare=False, default=None)
+    enqueue_time: float = field(compare=False, default=0.0)
     _claim: threading.Lock = field(compare=False, default_factory=threading.Lock)
 
 
@@ -87,7 +92,9 @@ class PriorityThreadPoolExecutor:
     threads to contribute to dedicated work.
     """
 
-    def __init__(self, max_workers: int, *, dedicated: int = 0, thread_name_prefix: str = "") -> None:
+    def __init__(
+        self, max_workers: int, *, dedicated: int = 0, thread_name_prefix: str = "", instrument: bool = False
+    ) -> None:
         if max_workers <= 0:
             raise ValueError("max_workers must be positive")
         if dedicated < 0 or dedicated >= max_workers:
@@ -99,14 +106,28 @@ class PriorityThreadPoolExecutor:
         self._shutdown = False
         self._lock = threading.Lock()
         self._threads: list[threading.Thread] = []
+
+        self._instrument = instrument
+        self._stats_lock = threading.Lock()
+        self._retired_dedicated = 0
+        self._retired_general = 0
+        self._stop_instrument = threading.Event()
+
         for i in range(dedicated):
             name = f"{thread_name_prefix}dedicated-{i}" if thread_name_prefix else None
-            t = threading.Thread(target=self._worker, args=(self._dedicated_queue,), name=name)
+            t = threading.Thread(target=self._worker, args=(self._dedicated_queue, True), name=name)
             t.start()
             self._threads.append(t)
         for i in range(max_workers - dedicated):
             name = f"{thread_name_prefix}{i}" if thread_name_prefix else None
-            t = threading.Thread(target=self._worker, args=(self._general_queue,), name=name)
+            t = threading.Thread(target=self._worker, args=(self._general_queue, False), name=name)
+            t.start()
+            self._threads.append(t)
+
+        if instrument:
+            t = threading.Thread(
+                target=self._instrument_loop, name=f"{thread_name_prefix}instrument" if thread_name_prefix else None
+            )
             t.start()
             self._threads.append(t)
 
@@ -125,7 +146,8 @@ class PriorityThreadPoolExecutor:
             future: Future[Any] = Future()
             seq = self._seq
             self._seq += 1
-            item = _WorkItem(False, nice, seq, fn, args, kwargs, future)
+            now = time.monotonic() if self._instrument else 0.0
+            item = _WorkItem(False, nice, seq, fn, args, kwargs, future, now)
             self._general_queue.put(item)
             if dedicated and self._dedicated_count > 0:
                 self._dedicated_queue.put(item)
@@ -145,19 +167,19 @@ class PriorityThreadPoolExecutor:
     def shutdown(self, wait: bool = True) -> None:
         with self._lock:
             self._shutdown = True
+            self._stop_instrument.set()
             for _ in range(self._dedicated_count):
                 seq = self._seq
                 self._seq += 1
                 self._dedicated_queue.put(_WorkItem(_sentinel=True, nice=(0,), seq=seq))
-            for _ in range(len(self._threads) - self._dedicated_count):
+            for _ in range(len(self._threads) - self._dedicated_count - (1 if self._instrument else 0)):
                 seq = self._seq
                 self._seq += 1
                 self._general_queue.put(_WorkItem(_sentinel=True, nice=(0,), seq=seq))
         for t in self._threads:
             t.join()
 
-    @staticmethod
-    def _worker(q: queue.PriorityQueue[_WorkItem]) -> None:
+    def _worker(self, q: queue.PriorityQueue[_WorkItem], is_dedicated: bool) -> None:
         while True:
             item = q.get()
             if item.fn is None:
@@ -167,11 +189,51 @@ class PriorityThreadPoolExecutor:
             assert item.future is not None
             if not item.future.set_running_or_notify_cancel():
                 continue
+            if self._instrument:
+                with self._stats_lock:
+                    if is_dedicated:
+                        self._retired_dedicated += 1
+                    else:
+                        self._retired_general += 1
             try:
                 result = item.fn(*item.args, **item.kwargs)
                 item.future.set_result(result)
             except BaseException as e:
                 item.future.set_exception(e)
+
+    @staticmethod
+    def _oldest_pending_wait(q: queue.PriorityQueue[_WorkItem], now: float) -> float:
+        """Return the wait time of the oldest still-pending item in *q*."""
+        max_wait = 0.0
+        with q.mutex:
+            for item in q.queue:
+                if item._sentinel or item.enqueue_time == 0.0:
+                    continue
+                assert item.future is not None
+                if not item.future.running() and not item.future.done():
+                    max_wait = max(max_wait, now - item.enqueue_time)
+        return max_wait
+
+    def _instrument_loop(self) -> None:
+        prev_retired_ded = 0
+        prev_retired_gen = 0
+        while not self._stop_instrument.wait(10):
+            now = time.monotonic()
+            with self._stats_lock:
+                retired_ded = self._retired_dedicated
+                retired_gen = self._retired_general
+            if retired_ded == prev_retired_ded and retired_gen == prev_retired_gen:
+                continue
+            prev_retired_ded = retired_ded
+            prev_retired_gen = retired_gen
+            pending_ded = self._oldest_pending_wait(self._dedicated_queue, now)
+            pending_gen = self._oldest_pending_wait(self._general_queue, now)
+            log.info(
+                f"thread pool: "
+                f"Queue: {self._dedicated_queue.qsize()}, {self._general_queue.qsize()} "
+                f"Retired: {retired_ded}, {retired_gen} "
+                f"Pending: {pending_ded:.1f}s, {pending_gen:.1f}s"
+            )
 
     def __enter__(self) -> Self:
         return self

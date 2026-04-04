@@ -373,6 +373,10 @@ full_node:
   # profiled.
   single_threaded: False
 
+  # set to 1 to log thread pool statistics (queue lengths, max wait times,
+  # jobs retired) every 10 seconds at INFO level.
+  # instrument_thread_pool: 0
+
   # when enabled, logs coins additions, removals and reorgs at INFO level.
   # Requires the log level to be INFO or DEBUG as well.
   log_coins: False
