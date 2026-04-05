@@ -452,7 +452,8 @@ class Farmer:
                             and len(resp.history) > 0
                             and all(r.status in {301, 308} for r in resp.history)
                         ):
-                            new_pool_url = response_url_str.replace(f"/v{pool_config.version}/pool_info", "")
+                            new_pool_url = response_url_str.replace("/pool_info", "")
+                            new_pool_url = new_pool_url.replace(f"/v{pool_config.version}", "")
 
                         return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
                     else:
@@ -897,7 +898,7 @@ class Farmer:
                 message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
-                pool_config.pool_url + f"/login?launcher_id={pool_config.launcher_id.hex()}"
+                self._url_for_endpoint(pool_config, "login") + f"?launcher_id={pool_config.launcher_id.hex()}"
                 f"&authentication_token={auth_token}"
                 f"&signature={bytes(signature).hex()}&timestamp={timestamp}"
             )
