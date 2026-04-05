@@ -38,16 +38,15 @@ from chia._tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import MAX_SPENDS_PER_BLOCK, Mempool
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -465,6 +464,7 @@ class TestMempoolManager:
         spend_bundle = generate_test_spend_bundle(wallet_a, coin)
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
+        peer.expected_mempool_responses = 1
         await full_node_1.respond_transaction(tx, peer, test=True)
 
         await time_out_assert(
@@ -2911,9 +2911,9 @@ class TestMaliciousGenerators:
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
-        with pytest.raises(ValidationError) as e:
-            await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert e.value.code == Err.WRONG_PUZZLE_HASH
+        status, error = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.WRONG_PUZZLE_HASH
 
 
 coins = make_test_coins()
@@ -3041,32 +3041,47 @@ def test_full_mempool(items: list[int], add: int, expected: list[int]) -> None:
         assert mi.cost == expected_cost
 
 
+SCALE = 1_000_000
+
+
 @pytest.mark.parametrize("height", [True, False])
 @pytest.mark.parametrize(
     "items,expected,increase_fee",
     [
-        # the max size is 100
-        # the max block size is 50
+        # the max size is 100 * SCALE
+        # the max block size is 50 * SCALE
         # which is also the max size for expiring transactions
         # the increasing fee will order the transactions in the reverse
         # insertion order
-        ([10, 11, 12, 13, 14], [14, 13, 12, 11], True),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 14 * SCALE],
+            [14 * SCALE, 13 * SCALE, 12 * SCALE, 11 * SCALE],
+            True,
+        ),
         # decreasing fee rate will make the last one fail to be inserted
-        ([10, 11, 12, 13, 14], [10, 11, 12, 13], False),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 14 * SCALE],
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE],
+            False,
+        ),
         # the last is big enough to evict all previous ones
-        ([10, 11, 12, 13, 50], [50], True),
+        ([10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 50 * SCALE], [50 * SCALE], True),
         # the last one will not evict any earlier ones, because the fee rate is
         # lower
-        ([10, 11, 12, 13, 50], [10, 11, 12, 13], False),
+        (
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE, 50 * SCALE],
+            [10 * SCALE, 11 * SCALE, 12 * SCALE, 13 * SCALE],
+            False,
+        ),
     ],
 )
 def test_limit_expiring_transactions(height: bool, items: list[int], expected: list[int], increase_fee: bool) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
-        CLVMCost(uint64(100)),
+        CLVMCost(uint64(100 * SCALE)),
         FeeRate(uint64(1000000)),
-        CLVMCost(uint64(50)),
+        CLVMCost(uint64(50 * SCALE)),
     )
     mempool = Mempool(mempool_info, fee_estimator)
     mempool.new_tx_block(uint32(10), uint64(100000))
@@ -3075,7 +3090,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
     # fill the mempool with regular transactions (without expiration)
     fee_rate: float = 3.0
     for i in range(1, 20):
-        mempool.add_to_pool(item_cost(i, fee_rate))
+        mempool.add_to_pool(item_cost(i * SCALE, fee_rate))
         fee_rate -= 0.1
         invariant_check_mempool(mempool)
 
@@ -3112,7 +3127,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
             ttl = "No"
         print(f"- cost: {item.cost} TTL: {ttl}")
 
-    assert mempool.total_mempool_cost() > 90
+    assert mempool.total_mempool_cost() > 90 * SCALE
     invariant_check_mempool(mempool)
 
 
@@ -3399,6 +3414,95 @@ def test_create_block_generator(old: bool) -> None:
 
     assert num_additions == len(generator.additions)
     invariant_check_mempool(mempool)
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_max_spends_per_block(old: bool) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Fill up to MAX_SPENDS_PER_BLOCK - 1 with single-coin items.
+    coin_idx = 0
+    for i in range(MAX_SPENDS_PER_BLOCK - 1):
+        item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+        coin_idx += 1
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    # Add 2-coin items. These are processed next (same fee_per_cost, higher
+    # seq) and each would push new_spend_count to
+    # MAX_SPENDS_PER_BLOCK - 1 + 2 = MAX_SPENDS_PER_BLOCK + 1, which must
+    # trigger the > MAX_SPENDS_PER_BLOCK skip path.
+    num_two_coin_items = 5
+    for i in range(num_two_coin_items):
+        item = mk_item([make_coin(coin_idx), make_coin(coin_idx + 1)], cost=1_000_000, fee=100)
+        coin_idx += 2
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    # Add a final single-coin item that fits in the remaining slot.
+    item = mk_item([make_coin(coin_idx)], cost=1_000_000, fee=100)
+    coin_idx += 1
+    info = mempool.add_to_pool(item)
+    assert info.error is None
+
+    total_items = MAX_SPENDS_PER_BLOCK - 1 + num_two_coin_items + 1
+    assert mempool.size() == total_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # The 2-coin items were skipped but the final 1-coin item fits.
+    assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_max_spends_per_block_with_dedup(old: bool) -> None:
+    from chia_rs import ELIGIBLE_FOR_DEDUP
+
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    shared_coin = make_coin(0)
+
+    num_items = MAX_SPENDS_PER_BLOCK + 500
+    for i in range(num_items):
+        unique_coin = make_coin(i + 1)
+        item = mk_item(
+            [shared_coin, unique_coin],
+            cost=1_000_000,
+            fee=100,
+            flags=[ELIGIBLE_FOR_DEDUP, 0],
+        )
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+
+    # With dedup, the shared coin is only counted once. Each item contributes
+    # 1 unique spend (after the first which contributes 2), so more items fit
+    # than without dedup, but we must still respect the limit.
+    assert len(generator.removals) <= MAX_SPENDS_PER_BLOCK
+
+    # Verify dedup actually helped: without dedup each item would need 2 spend
+    # slots, limiting us to 3000 items. With dedup we should fit more.
+    assert len(generator.removals) > MAX_SPENDS_PER_BLOCK // 2
 
 
 def test_keccak() -> None:

@@ -870,3 +870,123 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
         ]
     )
     assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 1
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_datalayer_ownership_survives_rollback(wallet_environments: WalletTestFramework) -> None:
+    """Verify that store ownership is preserved after a wallet rollback to block 0.
+
+    Regression test: a rollback deletes launcher entries from the DB while
+    singleton_records survive (unconfirmed).  During re-sync the wallet must
+    restore the launcher entry so that get_owned_singletons still reports the
+    store as owned.
+    """
+    env = wallet_environments.environments[0]
+    wallet_node = env.node
+
+    env.wallet_aliases = {
+        "xch": 1,
+        "dl": 2,
+    }
+
+    async with env.wallet_state_manager.lock:
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
+
+    # --- Create a store (generation 0) ---
+    async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        launcher_id = await dl_wallet.generate_new_reporter(bytes32.zeros, action_scope)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "dl": {"init": True},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32.zeros)
+
+    owned = await dl_wallet.get_owned_singletons()
+    assert any(s.launcher_id == launcher_id for s in owned)
+
+    # --- Update the store so the singleton advances to generation > 0 ---
+    new_root = bytes32([2] * 32)
+    async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await dl_wallet.create_update_state_spend(launcher_id, new_root, action_scope)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": -1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, new_root)
+
+    owned = await dl_wallet.get_owned_singletons()
+    assert any(s.launcher_id == launcher_id for s in owned)
+
+    # --- Simulate a wallet rollback to block 0 (e.g. peer trust flip) ---
+    await wallet_node.perform_atomic_rollback(0)
+
+    # The launcher entry should be gone after rollback
+    assert await env.wallet_state_manager.dl_store.get_launcher(launcher_id) is None
+
+    # The singleton record should still exist (unconfirmed, generation > 0)
+    rec = await env.wallet_state_manager.dl_store.get_latest_singleton(launcher_id)
+    assert rec is not None
+    assert not rec.confirmed
+    assert rec.generation > 0
+
+    # Ownership is lost because the launchers row was deleted
+    owned = await dl_wallet.get_owned_singletons()
+    assert not any(s.launcher_id == launcher_id for s in owned)
+
+    # --- Re-track the launcher (simulates what the wallet sync does on resync) ---
+    peer = wallet_node.get_full_node_peer()
+    assert peer is not None
+    await dl_wallet.track_new_launcher_id(launcher_id, peer)
+
+    # --- Ownership must be restored ---
+    launcher = await env.wallet_state_manager.dl_store.get_launcher(launcher_id)
+    assert launcher is not None, "Launcher entry not restored after re-track"
+
+    owned = await dl_wallet.get_owned_singletons()
+    assert any(s.launcher_id == launcher_id for s in owned), "Store ownership lost after rollback + re-track"

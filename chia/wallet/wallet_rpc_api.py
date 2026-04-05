@@ -391,7 +391,9 @@ def tx_endpoint(
                     tx_config,
                     push=request.get("push", push),
                     merge_spends=request.get("merge_spends", merge_spends),
-                    sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+                    sign=False
+                    if func.__name__ == "take_offer"
+                    else request.get("sign", self.service.config.get("auto_sign_txs", True)),
                 ) as action_scope:
                     response = await func(
                         self,

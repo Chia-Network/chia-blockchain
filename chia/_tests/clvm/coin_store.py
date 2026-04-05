@@ -8,8 +8,7 @@ from chia_rs import CoinRecord, CoinSpend, ConsensusConstants, SpendBundle, chec
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.cost_calculator import NPCResult
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
 from chia.util.errors import Err

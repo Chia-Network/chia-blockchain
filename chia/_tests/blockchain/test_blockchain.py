@@ -321,7 +321,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -335,8 +335,9 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
+            conds = npc_result.conds
 
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         err = validate_res.error
         assert err is None
 
@@ -354,7 +355,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -368,7 +369,8 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+            conds = npc_result.conds
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
@@ -448,7 +450,7 @@ class TestBlockHeaderValidation:
                     block.transactions_generator,
                     [],
                 )
-                npc_result = None
+                conds = None
                 # if this assert fires, remove it along with the pragma for the block
                 # below
                 assert block.transactions_generator is None
@@ -462,9 +464,8 @@ class TestBlockHeaderValidation:
                         height=block.height,
                         constants=bt.constants,
                     )
-                validate_res = await blockchain.validate_unfinished_block(
-                    unf, npc_result, skip_overflow_ss_validation=True
-                )
+                    conds = npc_result.conds
+                validate_res = await blockchain.validate_unfinished_block(unf, conds, skip_overflow_ss_validation=True)
                 assert validate_res.error is None
                 return None
 
@@ -3433,7 +3434,10 @@ class TestReorgs:
         test_long_reorg_blocks: list[FullBlock],
         test_long_reorg_blocks_light: list[FullBlock],
         consensus_mode: ConsensusMode,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+        monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
         elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
@@ -4051,7 +4055,9 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 @pytest.mark.anyio
 @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
-async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+    monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
     WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]

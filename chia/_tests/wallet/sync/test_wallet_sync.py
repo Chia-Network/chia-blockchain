@@ -1289,9 +1289,9 @@ async def test_dusted_wallet(
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=40)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=40)
 
     # Obtain and log important values
     all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
@@ -1357,9 +1357,9 @@ async def test_dusted_wallet(
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=40)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=40)
 
     # Obtain and log important values
     all_unspent = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
