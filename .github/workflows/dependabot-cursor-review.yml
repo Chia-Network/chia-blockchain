@@ -1,0 +1,1045 @@
+# Managed by repo-content-updater
+# Dependabot Cursor Review workflow
+#
+# Runs Cursor CLI analysis for Dependabot PRs by using:
+# - Dependabot PR body release notes + commit list
+# - An upstream dependency checkout
+# - Local usage hints in the target repo
+#
+# Source documentation: https://cursor.com/docs/cli/github-actions
+name: Dependabot Cursor Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Dependabot PR number to analyze"
+        required: true
+        type: number
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', github.workflow_ref, github.event.inputs.pr_number) || github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependabot-review:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve target PR context
+        id: target_pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            let pr;
+            if (context.eventName === 'pull_request') {
+              pr = context.payload.pull_request;
+            } else {
+              const raw = context.payload.inputs?.pr_number;
+              const prNumber = Number(raw);
+              if (!Number.isInteger(prNumber) || prNumber <= 0) {
+                core.setFailed(`Invalid pr_number input: ${raw}`);
+                return;
+              }
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              pr = data;
+            }
+
+            if (!pr) {
+              core.setFailed('Could not resolve target pull request context.');
+              return;
+            }
+            if (pr.user?.login !== 'dependabot[bot]') {
+              core.setFailed(`Target PR #${pr.number} is not opened by dependabot[bot].`);
+              return;
+            }
+
+            core.setOutput('number', String(pr.number));
+            core.setOutput('title', pr.title || '');
+            core.setOutput('body', pr.body || '');
+            core.setOutput('head_sha', pr.head?.sha || '');
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.target_pr.outputs.head_sha }}
+          persist-credentials: false
+
+      - name: Install Cursor CLI
+        shell: bash
+        run: |
+          installer="$(mktemp)"
+          trap 'rm -f "$installer"' EXIT
+          curl https://cursor.com/install -fsSL -o "$installer"
+          if [ ! -s "$installer" ]; then
+            echo "Cursor installer download was empty."
+            exit 1
+          fi
+          bash "$installer"
+          for bin_dir in "$HOME/.cursor/bin" "$HOME/.local/bin"; do
+            if [ -d "$bin_dir" ]; then
+              echo "$bin_dir" >> "$GITHUB_PATH"
+              export PATH="$bin_dir:$PATH"
+            fi
+          done
+          if ! command -v agent >/dev/null 2>&1; then
+            echo "Could not locate 'agent' binary after Cursor CLI install."
+            exit 1
+          fi
+
+      - name: Extract Dependabot comment context
+        id: dependabot_context
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const body = ${{ toJSON(steps.target_pr.outputs.body) }} || '';
+
+            function escapeRegex(text) {
+              return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            function extractDetailsSection(text, summaryLabel) {
+              const summaryRe = new RegExp(
+                `<details[^>]*>\\s*<summary>\\s*${escapeRegex(summaryLabel)}\\s*</summary>`,
+                'i'
+              );
+              const summaryMatch = summaryRe.exec(text);
+              if (!summaryMatch) return '';
+
+              const start = summaryMatch.index;
+              const tagRe = /<details\b[^>]*>|<\/details>/gi;
+              tagRe.lastIndex = start;
+              let depth = 0;
+              let end = -1;
+              let tag;
+
+              while ((tag = tagRe.exec(text)) !== null) {
+                if (tag[0].toLowerCase().startsWith('<details')) {
+                  depth += 1;
+                } else {
+                  depth -= 1;
+                }
+                if (depth === 0) {
+                  end = tagRe.lastIndex;
+                  break;
+                }
+              }
+
+              if (end === -1) return '';
+              const block = text.slice(start, end);
+              return block
+                .replace(summaryRe, '')
+                .replace(/<\/details>\s*$/i, '')
+                .trim();
+            }
+
+            const releaseNotes = extractDetailsSection(body, 'Release notes');
+            const commits = extractDetailsSection(body, 'Commits');
+            // Prefer the dependency link from Dependabot's lead sentence.
+            // Fallback to any GitHub repo URL if that sentence format changes.
+            const dependencyRepoMatch = body.match(
+              /^\s*(?:Bumps|Update(?:s|d)?)\s+\[[^\]]+\]\(\s*https?:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:[\/#?][^)\s]*)?\s*\)/im
+            );
+            const repoMatch = dependencyRepoMatch || body.match(
+              /https?:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?=\/|$|[)\]>\s"'?#])/i
+            );
+            const upstreamRepo = repoMatch ? repoMatch[1].replace(/\.git$/i, '') : '';
+            const title = ${{ toJSON(steps.target_pr.outputs.title) }} || '';
+            const titleMatch =
+              title.match(/[Uu]pdate\s+(.+?)\s+requirement\s+from\s+([^\s]+)\s+to\s+([^\s]+)/) ||
+              title.match(/[Bb]ump\s+(.+?)\s+from\s+([^\s]+)\s+to\s+([^\s]+)/) ||
+              title.match(/[Uu]pdate\s+(.+?)\s+from\s+([^\s]+)\s+to\s+([^\s]+)/);
+            const packageName = titleMatch ? titleMatch[1].trim() : '';
+            const fromVersion = titleMatch ? titleMatch[2].trim() : '';
+            const toVersion = titleMatch ? titleMatch[3].trim() : '';
+
+            if (!upstreamRepo) {
+              core.setFailed('Dependabot PR body is missing an upstream GitHub repository link.');
+              return;
+            }
+            const normalizedReleaseNotes =
+              releaseNotes || 'Dependabot did not include a Release notes details section.';
+            const normalizedCommits =
+              commits || 'Dependabot did not include a Commits details section.';
+
+            const out = {
+              prNumber: Number('${{ steps.target_pr.outputs.number }}'),
+              upstreamRepo,
+              packageName,
+              fromVersion,
+              toVersion,
+              releaseNotes: normalizedReleaseNotes,
+              commits: normalizedCommits,
+            };
+            fs.writeFileSync('dependabot_comment_context.json', JSON.stringify(out, null, 2));
+            fs.writeFileSync('dependabot_release_notes.md', normalizedReleaseNotes);
+            fs.writeFileSync('dependabot_commits.md', normalizedCommits);
+            core.setOutput('upstream_repo', upstreamRepo);
+            core.setOutput('package_name', packageName);
+            core.setOutput('from_version', fromVersion);
+            core.setOutput('to_version', toVersion);
+
+      - name: Prepare upstream checkout directory
+        run: mkdir -p ".upstream-dependency"
+
+      - name: Checkout upstream repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.dependabot_context.outputs.upstream_repo }}
+          path: .upstream-dependency
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Remove upstream agent-instruction files
+        shell: bash
+        run: |
+          rm -rf .upstream-dependency/.cursor || true
+          rm -f .upstream-dependency/.cursorrules || true
+          rm -f .upstream-dependency/.cursorignore || true
+          rm -f .upstream-dependency/AGENTS.md || true
+          rm -f .upstream-dependency/CLAUDE.md || true
+
+      - name: Run upstream malware scan
+        id: malware_scan
+        shell: bash
+        env:
+          PACKAGE_NAME: ${{ steps.dependabot_context.outputs.package_name }}
+          FROM_VERSION: ${{ steps.dependabot_context.outputs.from_version }}
+          TO_VERSION: ${{ steps.dependabot_context.outputs.to_version }}
+          MALWARE_WARN_ONLY: >-
+            1
+          MALWARE_IOC_PATTERNS: >-
+            ["axios@1\\.14\\.1", "axios@0\\.30\\.4", "plain-crypto-js", "sfrclak\\.com", "@shadanai/openclaw", "@shadanai/[a-z0-9._-]+", "2026\\.3\\.28-2", "2026\\.3\\.28-3", "2026\\.3\\.31-1", "2026\\.3\\.31-2"]
+          MALWARE_IOC_ALLOWLIST: >-
+            []
+          MALWARE_UNICODE_ALLOWLIST: >-
+            []
+          MALWARE_CONFUSABLE_ALLOWLIST: >-
+            []
+          MALWARE_HEURISTIC_ALLOWLIST: >-
+            []
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep jq
+
+          set -euo pipefail
+
+          output_json="malware_scan_report.json"
+          output_summary="malware_scan_summary.md"
+          changed_files_txt="upstream_changed_files.txt"
+          work_dir=".malware-scan"
+          rm -rf "$work_dir"
+          mkdir -p "$work_dir"
+
+          errors_file="$work_dir/errors.txt"
+          touched_file="$work_dir/changed_files_raw.txt"
+          file_list0="$work_dir/changed_files.nul"
+
+          unicode_jsonl="$work_dir/unicode.jsonl"
+          confusable_jsonl="$work_dir/confusable.jsonl"
+          ioc_jsonl="$work_dir/ioc.jsonl"
+          heuristic_jsonl="$work_dir/heuristic.jsonl"
+          : > "$errors_file"
+          : > "$touched_file"
+          : > "$file_list0"
+          : > "$unicode_jsonl"
+          : > "$confusable_jsonl"
+          : > "$ioc_jsonl"
+          : > "$heuristic_jsonl"
+
+          if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"${MALWARE_IOC_PATTERNS:-[]}"; then MALWARE_IOC_PATTERNS="[]"; fi
+          if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"${MALWARE_IOC_ALLOWLIST:-[]}"; then MALWARE_IOC_ALLOWLIST="[]"; fi
+          if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"${MALWARE_UNICODE_ALLOWLIST:-[]}"; then MALWARE_UNICODE_ALLOWLIST="[]"; fi
+          if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"${MALWARE_CONFUSABLE_ALLOWLIST:-[]}"; then MALWARE_CONFUSABLE_ALLOWLIST="[]"; fi
+          if ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"${MALWARE_HEURISTIC_ALLOWLIST:-[]}"; then MALWARE_HEURISTIC_ALLOWLIST="[]"; fi
+
+          mapfile -t ioc_allowlist < <(jq -r '.[]?' <<<"$MALWARE_IOC_ALLOWLIST")
+          mapfile -t unicode_allowlist < <(jq -r '.[]?' <<<"$MALWARE_UNICODE_ALLOWLIST")
+          mapfile -t confusable_allowlist < <(jq -r '.[]?' <<<"$MALWARE_CONFUSABLE_ALLOWLIST")
+          mapfile -t heuristic_allowlist < <(jq -r '.[]?' <<<"$MALWARE_HEURISTIC_ALLOWLIST")
+          mapfile -t ioc_patterns < <(jq -r '.[]?' <<<"$MALWARE_IOC_PATTERNS")
+
+          warn_only=true
+          case "${MALWARE_WARN_ONLY:-1}" in
+            0|false|False|no) warn_only=false ;;
+          esac
+
+          resolve_ref() {
+            local version="$1"
+            local candidate
+            [ -n "$version" ] || return 1
+            for candidate in \
+              "refs/tags/${version}^{commit}" \
+              "refs/tags/v${version}^{commit}" \
+              "refs/tags/${version}" \
+              "refs/tags/v${version}" \
+              "${version}" \
+              "v${version}"
+            do
+              if git -C .upstream-dependency rev-parse --verify --quiet "$candidate" >/dev/null 2>&1; then
+                git -C .upstream-dependency rev-parse --verify --quiet "$candidate" | head -n1
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          from_ref=""
+          to_ref=""
+          resolved_range=""
+          resolution_strategy="unresolved"
+
+          from_ref="$(resolve_ref "${FROM_VERSION:-}" || true)"
+          to_ref="$(resolve_ref "${TO_VERSION:-}" || true)"
+
+          if [ -n "$from_ref" ] && [ -n "$to_ref" ]; then
+            resolved_range="${from_ref}..${to_ref}"
+            if ! git -C .upstream-dependency diff --name-only "$resolved_range" > "$touched_file" 2>>"$errors_file"; then
+              resolution_strategy="tag_range_failed"
+              resolved_range=""
+              : > "$touched_file"
+            else
+              resolution_strategy="tag_range"
+            fi
+          fi
+
+          if [ ! -s "$touched_file" ] && [ -f "dependabot_commits.md" ]; then
+            while IFS= read -r sha; do
+              resolved_sha="$(git -C .upstream-dependency rev-parse --verify --quiet "${sha}^{commit}" 2>/dev/null || true)"
+              [ -n "$resolved_sha" ] || continue
+              git -C .upstream-dependency show --name-only --pretty=format: "$resolved_sha" >> "$touched_file" 2>>"$errors_file" || true
+            done < <(rg -o --pcre2 '\b[0-9a-f]{7,40}\b' dependabot_commits.md | sort -u)
+            if [ -s "$touched_file" ]; then
+              resolution_strategy="commit_list"
+            fi
+          fi
+
+          if [ ! -s "$touched_file" ] && [ -n "$to_ref" ]; then
+            resolution_strategy="to_version_single_commit"
+            git -C .upstream-dependency show --name-only --pretty=format: "$to_ref" > "$touched_file" 2>>"$errors_file" || true
+          fi
+
+          repo_abs="$(cd .upstream-dependency && pwd -P)"
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            abs_path="$(readlink -f ".upstream-dependency/$rel" 2>/dev/null || true)"
+            if [ -n "$abs_path" ] && [ -f "$abs_path" ] && [[ "$abs_path" == "$repo_abs/"* ]]; then
+              printf '%s\n' "$rel"
+            fi
+          done < "$touched_file" | sort -u > "$changed_files_txt"
+
+          while IFS= read -r rel; do
+            [ -n "$rel" ] || continue
+            printf '%s\0' ".upstream-dependency/$rel" >> "$file_list0"
+          done < "$changed_files_txt"
+
+          is_allowlisted() {
+            local entry="$1"
+            shift
+            local pattern
+            for pattern in "$@"; do
+              [ -n "$pattern" ] || continue
+              if [[ "$entry" =~ $pattern ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          append_finding() {
+            local out_file="$1"
+            local kind="$2"
+            local pattern="$3"
+            local rel="$4"
+            local line="$5"
+            local match="$6"
+            local line_num=0
+            local max_match_len=500
+            if [[ "$line" =~ ^[0-9]+$ ]]; then
+              line_num="$line"
+            fi
+            if [ "${#match}" -gt "$max_match_len" ]; then
+              match="${match:0:$max_match_len}...[truncated]"
+            fi
+            jq -nc \
+              --arg kind "$kind" \
+              --arg pattern "$pattern" \
+              --arg file "$rel" \
+              --arg match "$match" \
+              --argjson line "$line_num" \
+              '{kind: $kind, pattern: $pattern, file: $file, line: $line, match: $match}' >> "$out_file"
+          }
+
+          scan_with_rg() {
+            local kind="$1"
+            local regex="$2"
+            local out_file="$3"
+            local case_flag="$4"
+            shift 4
+            local allowlist=("$@")
+            local hit file rest line text rel entry
+
+            if [ ! -s "$file_list0" ]; then
+              return 0
+            fi
+
+            local rg_args=(--pcre2 --hidden -nH --no-heading --color=never)
+            if [ "$case_flag" = "i" ]; then
+              rg_args+=(-i)
+            fi
+            rg_args+=("$regex")
+
+            while IFS= read -r hit; do
+              file="${hit%%:*}"
+              rest="${hit#*:}"
+              line="${rest%%:*}"
+              text="${rest#*:}"
+              rel="${file#.upstream-dependency/}"
+              entry="${kind}:${rel}:${line}:${text}"
+              if is_allowlisted "$entry" "${allowlist[@]}"; then
+                continue
+              fi
+              append_finding "$out_file" "$kind" "$regex" "$rel" "$line" "$text"
+            done < <(xargs -0 rg "${rg_args[@]}" < "$file_list0" || true)
+          }
+
+          # GlassWorm defense: raw-byte unicode/control scan. These characters can be
+          # visually invisible in rendered diffs, so we scan bytes before LLM review.
+          unicode_regex='[\x{FE00}-\x{FE0F}\x{E0100}-\x{E01EF}\x{200B}-\x{200D}\x{FEFF}\x{3164}\x{115F}\x{1160}\x{202A}-\x{202E}\x{2066}-\x{2069}]'
+          # Confusable glyph scan to catch visually similar operator/identifier swaps.
+          confusable_regex='[\x{FF0F}\x{2215}\x{2044}\x{2217}\x{066D}\x{01C3}\x{FF01}\x{FE57}\x{A789}\x{FF02}\x{FF07}\x{FF40}\x{FE68}\x{FF3C}]'
+
+          scan_with_rg "unicode" "$unicode_regex" "$unicode_jsonl" "" "${unicode_allowlist[@]}"
+          scan_with_rg "confusable" "$confusable_regex" "$confusable_jsonl" "" "${confusable_allowlist[@]}"
+
+          for ioc_pattern in "${ioc_patterns[@]}"; do
+            [ -n "$ioc_pattern" ] || continue
+            scan_with_rg "ioc_match" "$ioc_pattern" "$ioc_jsonl" "i" "${ioc_allowlist[@]}"
+          done
+
+          heuristic_specs=(
+            'eval_function_blank_arg::\b(?:eval|Function)\s*\(\s*([\"'"'"'`])\s*\1\s*\)'
+            'codepoint_decoder::(?:codePointAt|fromCodePoint|charCodeAt)\s*\('
+            'dynamic_require_import::\b(?:require|import)\s*\(\s*(?:atob|Buffer\.from|decodeURIComponent|[\"'"'"'`].*https?://)'
+            'shell_process_spawn::\b(?:child_process|spawn|exec|subprocess|os\.system)\b'
+            'filesystem_persistence::(?:/etc/(?:init\\.d|rc\\.local|cron\\.)|/Library/Launch(?:Agents|Daemons)|\\.config/autostart|CurrentVersion\\\\Run|crontab)'
+            'network_c2_indicator::https?://(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[^/\s\"'"'"')]+(?:\.onion|\.top|\.xyz|\.click|\.gq|\.tk|\.ml|\.cf|\.ga|\.work|\.support)|(?:pastebin\.com|raw\.githubusercontent\.com|discord(?:app)?\.com/api/webhooks|api\.telegram\.org|ipfs\.io|gateway\.pinata\.cloud|tinyurl\.com|bit\.ly|sfrclak\.com))'
+            'credential_exfil_indicator::(?:token|secret|api[_-]?key|authorization|cookie|passwd|password).{0,80}(?:fetch|axios|http|https|curl|wget|post|send)'
+            'lifecycle_script::"(?:preinstall|install|postinstall)"\s*:'
+            'obfuscation_indicator::\b(?:atob|btoa|base64|xor|decodeURIComponent)\b'
+          )
+          for spec in "${heuristic_specs[@]}"; do
+            kind="${spec%%::*}"
+            regex="${spec#*::}"
+            scan_with_rg "$kind" "$regex" "$heuristic_jsonl" "i" "${heuristic_allowlist[@]}"
+          done
+
+          if [ -s "$changed_files_txt" ]; then
+            while IFS= read -r rel; do
+              [ -n "$rel" ] || continue
+              if [[ "$rel" == .github/workflows/* ]]; then
+                entry="workflow_path_touch:${rel}:0:path"
+                if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                  append_finding "$heuristic_jsonl" "workflow_path_touch" '\.github/workflows/' "$rel" "0" "path-touch"
+                fi
+              fi
+              if [[ "$rel" =~ \.(png|jpg|jpeg|gif|bmp|webp|svg|ico|mp3|mp4|mov|avi|wav)$ ]]; then
+                entry="steganography_media_change:${rel}:0:media-file-changed"
+                if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                  append_finding "$heuristic_jsonl" "steganography_media_change" 'media-file-change' "$rel" "0" "media-file-changed"
+                fi
+              fi
+            done < "$changed_files_txt"
+          fi
+
+          # Minified/bundled payload heuristic: very long lines outside common build output dirs.
+          if [ -s "$file_list0" ]; then
+            while IFS= read -r hit; do
+              file="${hit%%:*}"
+              rest="${hit#*:}"
+              line="${rest%%:*}"
+              text="${rest#*:}"
+              rel="${file#.upstream-dependency/}"
+              if [[ "$rel" =~ ^(dist/|build/|coverage/|vendor/) ]]; then
+                continue
+              fi
+              entry="minified_payload_indicator:${rel}:${line}:${text}"
+              if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                append_finding "$heuristic_jsonl" "minified_payload_indicator" '.{1200,}' "$rel" "$line" "$text"
+              fi
+            done < <(xargs -0 rg --pcre2 --hidden -nH --no-heading --color=never '.{1200,}' < "$file_list0" || true)
+          fi
+
+          # Dependency integrity and Dependabot-context checks.
+          node_vendor_count="$( (rg -n '^(node_modules/|vendor/)' "$changed_files_txt" || true) | wc -l | tr -d ' ' )"
+          lockfile_count="$( (rg -n '(?:^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|npm-shrinkwrap\.json|Gemfile\.lock|go\.sum|Cargo\.lock|poetry\.lock|Pipfile\.lock)$' "$changed_files_txt" || true) | wc -l | tr -d ' ' )"
+
+          if [ -n "${TO_VERSION:-}" ] && [ -z "$to_ref" ]; then
+            entry="ghost_version_or_missing_tag:${TO_VERSION}:0:missing-tag"
+            if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+              append_finding "$heuristic_jsonl" "ghost_version_or_missing_tag" 'missing-tag' "${PACKAGE_NAME:-unknown}" "0" "${TO_VERSION}"
+            fi
+          fi
+
+          parse_semver_num() {
+            local version="$1"
+            version="${version#v}"
+            version="${version%%[-+]*}"
+            local major minor patch
+            IFS='.' read -r major minor patch <<< "$version"
+            if [[ "$major" =~ ^[0-9]+$ ]] && [[ "${minor:-0}" =~ ^[0-9]+$ ]] && [[ "${patch:-0}" =~ ^[0-9]+$ ]]; then
+              echo "$((10#$major)) $((10#${minor:-0})) $((10#${patch:-0}))"
+            fi
+          }
+
+          from_semver="$(parse_semver_num "${FROM_VERSION:-}" || true)"
+          to_semver="$(parse_semver_num "${TO_VERSION:-}" || true)"
+          if [ -n "$from_semver" ] && [ -n "$to_semver" ]; then
+            read -r fmaj fmin _ <<< "$from_semver"
+            read -r tmaj tmin _ <<< "$to_semver"
+            if [ "$tmaj" -gt "$fmaj" ] || { [ "$tmaj" -eq "$fmaj" ] && [ "$((tmin - fmin))" -gt 5 ]; }; then
+              entry="version_jump_anomaly:${PACKAGE_NAME:-unknown}:0:${FROM_VERSION:-}->${TO_VERSION:-}"
+              if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                append_finding "$heuristic_jsonl" "version_jump_anomaly" 'semver-jump' "${PACKAGE_NAME:-unknown}" "0" "${FROM_VERSION:-}->${TO_VERSION:-}"
+              fi
+            fi
+          fi
+
+          if [ -n "$from_ref" ] && [ -n "$to_ref" ]; then
+            from_dep_count="$(git -C .upstream-dependency show "${from_ref}:package.json" 2>/dev/null | jq -r '((.dependencies // {})|length)+((.optionalDependencies // {})|length)+((.peerDependencies // {})|length)' 2>/dev/null || true)"
+            to_dep_count="$(git -C .upstream-dependency show "${to_ref}:package.json" 2>/dev/null | jq -r '((.dependencies // {})|length)+((.optionalDependencies // {})|length)+((.peerDependencies // {})|length)' 2>/dev/null || true)"
+            if [[ "$from_dep_count" =~ ^[0-9]+$ ]] && [[ "$to_dep_count" =~ ^[0-9]+$ ]]; then
+              if [ "$to_dep_count" -gt "$((from_dep_count + 8))" ]; then
+                entry="dependency_count_jump:${PACKAGE_NAME:-unknown}:0:${from_dep_count}->${to_dep_count}"
+                if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                  append_finding "$heuristic_jsonl" "dependency_count_jump" 'dependency-count' "${PACKAGE_NAME:-unknown}" "0" "${from_dep_count}->${to_dep_count}"
+                fi
+              fi
+              if [ "${PACKAGE_NAME:-}" = "axios" ] && [ "$from_dep_count" -gt 0 ] && [ "$to_dep_count" -gt "$((from_dep_count + 2))" ]; then
+                entry="axios_dependency_count_anomaly:${PACKAGE_NAME:-unknown}:0:${from_dep_count}->${to_dep_count}"
+                if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                  append_finding "$heuristic_jsonl" "axios_dependency_count_anomaly" 'axios-dependency-jump' "${PACKAGE_NAME:-unknown}" "0" "${from_dep_count}->${to_dep_count}"
+                fi
+              fi
+            fi
+          fi
+
+          if [ -n "$resolved_range" ]; then
+            while IFS= read -r rel; do
+              [ -n "$rel" ] || continue
+              added_count="0"
+              if [[ "$rel" =~ (package-lock\.json|npm-shrinkwrap\.json)$ ]]; then
+                added_count="$( (git -C .upstream-dependency diff -U0 "$resolved_range" -- "$rel" | rg -n '^\+[^+].*"node_modules/[^"]+"\s*:' || true) | wc -l | tr -d ' ' )"
+              elif [[ "$rel" =~ yarn\.lock$ ]]; then
+                added_count="$( (git -C .upstream-dependency diff -U0 "$resolved_range" -- "$rel" | rg -n '^\+[^+].+@[^:]+:' || true) | wc -l | tr -d ' ' )"
+              elif [[ "$rel" =~ (pnpm-lock\.yaml|go\.sum|Cargo\.lock|Gemfile\.lock|poetry\.lock|Pipfile\.lock)$ ]]; then
+                added_count="$( (git -C .upstream-dependency diff -U0 "$resolved_range" -- "$rel" | rg -n '^\+[^+]' || true) | wc -l | tr -d ' ' )"
+              fi
+              if [ "${added_count:-0}" -gt 0 ]; then
+                entry="transitive_dependencies_added:${rel}:0:${added_count}"
+                if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                  append_finding "$heuristic_jsonl" "transitive_dependencies_added" 'transitive-diff' "$rel" "0" "$added_count"
+                fi
+              fi
+            done < "$changed_files_txt"
+          fi
+
+          # Lock checksum/integrity anomaly checks (structure-level, not registry verification).
+          if [ -s "$file_list0" ]; then
+            while IFS= read -r hit; do
+              file="${hit%%:*}"
+              rest="${hit#*:}"
+              line="${rest%%:*}"
+              text="${rest#*:}"
+              rel="${file#.upstream-dependency/}"
+              entry="lock_hash_anomaly:${rel}:${line}:${text}"
+              if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                append_finding "$heuristic_jsonl" "lock_hash_anomaly" 'integrity-format' "$rel" "$line" "$text"
+              fi
+            done < <(xargs -0 rg --pcre2 --hidden -nH --no-heading --color=never '"integrity"\s*:\s*"(?!sha(?:1|256|384|512)-)[^"]+"' < "$file_list0" || true)
+          fi
+
+          # Typosquatting indicators from changed dependency metadata.
+          if [ -s "$file_list0" ]; then
+            while IFS= read -r hit; do
+              file="${hit%%:*}"
+              rest="${hit#*:}"
+              line="${rest%%:*}"
+              text="${rest#*:}"
+              rel="${file#.upstream-dependency/}"
+              entry="typosquatting_indicator:${rel}:${line}:${text}"
+              if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                append_finding "$heuristic_jsonl" "typosquatting_indicator" '(xn--|[-._]{2,}|[^[:ascii:]])' "$rel" "$line" "$text"
+              fi
+            done < <(xargs -0 rg --pcre2 --hidden -nH --no-heading --color=never '(?i)(xn--[a-z0-9-]+|@[a-z0-9._-]*[._-]{2,}[a-z0-9._-]*|\"[^"]*[^[:ascii:]][^"]*\"\s*:)' < "$file_list0" || true)
+          fi
+
+          # Maintainer drift check for npm packages when npm is available.
+          if command -v npm >/dev/null 2>&1 && [ -n "${PACKAGE_NAME:-}" ] && [ -n "${FROM_VERSION:-}" ] && [ -n "${TO_VERSION:-}" ]; then
+            from_maint="$(npm view "${PACKAGE_NAME}@${FROM_VERSION}" maintainers --json 2>/dev/null | jq -cS '. // []' 2>/dev/null || true)"
+            to_maint="$(npm view "${PACKAGE_NAME}@${TO_VERSION}" maintainers --json 2>/dev/null | jq -cS '. // []' 2>/dev/null || true)"
+            if [ -n "$from_maint" ] && [ -n "$to_maint" ] && [ "$from_maint" != "$to_maint" ]; then
+              entry="maintainer_drift:${PACKAGE_NAME}:0:${FROM_VERSION}->${TO_VERSION}"
+              if ! is_allowlisted "$entry" "${heuristic_allowlist[@]}"; then
+                append_finding "$heuristic_jsonl" "maintainer_drift" 'npm-maintainers' "${PACKAGE_NAME}" "0" "${FROM_VERSION}->${TO_VERSION}"
+              fi
+            fi
+          fi
+
+          unicode_json="$work_dir/unicode.json"
+          confusable_json="$work_dir/confusable.json"
+          ioc_json="$work_dir/ioc.json"
+          heuristic_json="$work_dir/heuristic.json"
+          jq -s '.' "$unicode_jsonl" > "$unicode_json"
+          jq -s '.' "$confusable_jsonl" > "$confusable_json"
+          jq -s '.' "$ioc_jsonl" > "$ioc_json"
+          jq -s '.' "$heuristic_jsonl" > "$heuristic_json"
+
+          unicode_count="$(jq 'length' "$unicode_json")"
+          confusable_count="$(jq 'length' "$confusable_json")"
+          ioc_count="$(jq 'length' "$ioc_json")"
+          heuristic_count="$(jq 'length' "$heuristic_json")"
+          total_count=$((unicode_count + confusable_count + ioc_count + heuristic_count))
+          changed_count="$(jq -Rs 'split("\n") | map(select(length > 0)) | length' "$changed_files_txt")"
+
+          status="clean"
+          if [ "$total_count" -gt 0 ]; then
+            if [ "$warn_only" = true ]; then
+              status="warn"
+            else
+              status="fail"
+            fi
+          fi
+
+          changed_files_json_file="$work_dir/changed_files.json"
+          errors_json_file="$work_dir/errors.json"
+          jq -Rs 'split("\n") | map(select(length > 0))' "$changed_files_txt" > "$changed_files_json_file"
+          jq -Rs 'split("\n") | map(select(length > 0))' "$errors_file" > "$errors_json_file"
+          warn_only_json=false
+          if [ "$warn_only" = true ]; then warn_only_json=true; fi
+
+          jq -n \
+            --arg status "$status" \
+            --argjson warn_only "$warn_only_json" \
+            --arg resolution_strategy "$resolution_strategy" \
+            --arg resolved_range "$resolved_range" \
+            --arg resolved_from "$from_ref" \
+            --arg resolved_to "$to_ref" \
+            --argjson changed_files_count "$changed_count" \
+            --slurpfile changed_files "$changed_files_json_file" \
+            --slurpfile errors "$errors_json_file" \
+            --slurpfile unicode "$unicode_json" \
+            --slurpfile confusable "$confusable_json" \
+            --slurpfile ioc "$ioc_json" \
+            --slurpfile heuristic "$heuristic_json" \
+            '{
+              status: $status,
+              warn_only: $warn_only,
+              resolution_strategy: $resolution_strategy,
+              resolved_range: $resolved_range,
+              resolved_from: $resolved_from,
+              resolved_to: $resolved_to,
+              changed_files_count: $changed_files_count,
+              changed_files: $changed_files[0],
+              errors: $errors[0],
+              findings: {
+                unicode: $unicode[0],
+                confusable: $confusable[0],
+                ioc: $ioc[0],
+                heuristic: $heuristic[0]
+              }
+            }' > "$output_json"
+
+          {
+            echo "## Malware Scan Summary"
+            echo
+            echo "- Status: **$status**"
+            echo "- Warn only mode: \`$warn_only\`"
+            echo "- Changed upstream files scanned: \`$changed_count\`"
+            echo "- Resolution strategy: \`$resolution_strategy\`"
+            echo "- Changed node/vendor paths: \`${node_vendor_count:-0}\`"
+            echo "- Changed lockfiles: \`${lockfile_count:-0}\`"
+            if [ -n "$resolved_range" ]; then
+              echo "- Resolved upstream range: \`$resolved_range\`"
+            fi
+            echo "- Resolved refs: from=\`${from_ref:-n/a}\` to=\`${to_ref:-n/a}\`"
+            echo "- Unicode findings (post-allowlist): \`$unicode_count\`"
+            echo "- Confusable findings (post-allowlist): \`$confusable_count\`"
+            echo "- IOC findings (post-allowlist): \`$ioc_count\`"
+            echo "- Heuristic findings (post-allowlist): \`$heuristic_count\`"
+            if [ "$total_count" -gt 0 ]; then
+              echo
+              echo "### Top findings"
+              jq -r -s 'add | .[:20] | .[] | "- `\(.file):\(.line)` \(.kind) :: `\(.match | gsub("`"; ""))`"' \
+                "$unicode_json" "$confusable_json" "$ioc_json" "$heuristic_json"
+            fi
+          } > "$output_summary"
+
+          {
+            echo "status=$status"
+            echo "changed_files_count=$changed_count"
+            echo "summary<<EOF"
+            cat "$output_summary"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$total_count" -gt 0 ] && [ "$warn_only" = true ]; then
+            echo "::warning::Malware scan produced $total_count finding(s). Continuing because warn-only mode is enabled."
+          elif [ "$total_count" -gt 0 ] && [ "$warn_only" = false ]; then
+            echo "Malware scan failed with $total_count finding(s)." >&2
+            exit 1
+          fi
+
+      - name: Gather local usage hints
+        shell: bash
+        env:
+          PACKAGE_NAME: ${{ steps.dependabot_context.outputs.package_name }}
+        run: |
+          if [ -z "$PACKAGE_NAME" ]; then
+            echo "No package detected from Dependabot metadata." > package_usage.txt
+          else
+            {
+              echo "Search pattern: $PACKAGE_NAME"
+              echo
+              rg -n --fixed-strings --hidden --glob '!.git' --glob '!node_modules' --glob '!.upstream-dependency/**' -- "$PACKAGE_NAME" . || true
+            } > package_usage.txt
+          fi
+
+      - name: Run Cursor analysis
+        timeout-minutes: 10
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          PR_TITLE: ${{ steps.target_pr.outputs.title }}
+          PR_BODY: ${{ steps.target_pr.outputs.body }}
+          PACKAGE_NAME: ${{ steps.dependabot_context.outputs.package_name }}
+          FROM_VERSION: ${{ steps.dependabot_context.outputs.from_version }}
+          TO_VERSION: ${{ steps.dependabot_context.outputs.to_version }}
+        shell: bash
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped."}' > cursor_output.json
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          import os
+
+          def read_file(path):
+            try:
+              with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+            except FileNotFoundError:
+              return ""
+
+          base_context = f"""
+          This is a Dependabot PR review request.
+
+          PR title:
+          {os.getenv("PR_TITLE", "")}
+
+          PR body:
+          {os.getenv("PR_BODY", "")}
+
+          Package metadata:
+          - package: {os.getenv("PACKAGE_NAME", "")}
+          - from: {os.getenv("FROM_VERSION", "")}
+          - to: {os.getenv("TO_VERSION", "")}
+
+          Dependabot comment context JSON:
+          {read_file("dependabot_comment_context.json")}
+
+          Dependabot Release notes:
+          {read_file("dependabot_release_notes.md")}
+
+          Dependabot Commits:
+          {read_file("dependabot_commits.md")}
+
+          Local usage hints (non-authoritative rg hits):
+          {read_file("package_usage.txt")[:12000]}
+
+          Repository layout:
+          - Current repository root: .
+          - Upstream dependency repository: .upstream-dependency (full git history is available)
+          """.strip()
+
+          malware_context = f"""
+          {base_context}
+
+          Malware scan summary:
+          {read_file("malware_scan_summary.md")}
+
+          Malware scan report JSON:
+          {read_file("malware_scan_report.json")[:16000]}
+          """.strip()
+
+          malware_prompt = f"""
+          {malware_context}
+
+          Task 1: Supply-chain malware review.
+          Review the dependency update for signs of compromise. Use this checklist and explicitly consider each category:
+
+          ### Classic obfuscation
+          - Obfuscated code (base64, exec, eval, XOR, encoded strings)
+          - Network calls to unexpected hosts (non-package-related URLs)
+          - File system writes to startup/persistence locations
+          - Process spawning, shell commands
+          - Steganography or data hiding in media files
+          - Credential/token exfiltration
+          - Typosquatting indicators
+          - Suspicious npm lifecycle scripts (preinstall, install, postinstall) in package.json
+          - Dynamic require() or import() of obfuscated or encoded URLs
+          - Minified or bundled payloads added outside normal build artifacts
+
+          ### Invisible Unicode / GlassWorm technique
+          This class of attack can appear blank in rendered code review. Flag:
+          - Unicode Private Use Area characters (U+FE00–U+FE0F, U+E0100–U+E01EF)
+          - Zero-width characters (U+200B, U+200C, U+200D, U+FEFF)
+          - Hangul filler characters (U+3164, U+115F, U+1160)
+          - Bidi control characters (U+202A–U+202E, U+2066–U+2069, Trojan Source)
+          - Homoglyph substitutions in operators/identifiers (e.g. ／, ∗, ǃ)
+          - Strings that look empty in diff but have non-zero bytes
+          - eval()/Function() receiving visually blank strings
+          - Decoder patterns using codePointAt()/fromCodePoint()/charCodeAt() for hidden payload assembly
+          - Commit metadata consistency anomalies suggesting force-push/rewrite concealment
+
+          ### Dependency integrity
+          - Unexpected new transitive dependencies vs prior dependency graph
+          - Known-safe packages with sudden dependency count increase (e.g., axios expected dependency count)
+          - Lock file hashes/checksums inconsistent with expected integrity formats or release metadata
+          - Version jumps skipping many semver minors, or ghost versions missing corresponding tags/releases
+          - Maintainer/publisher identity drift from historical account patterns
+
+          ### Dependabot-specific context
+          - Focus on files changed in node_modules/, vendor/, and dependency/lock manifests (package-lock.json, yarn.lock, pnpm-lock.yaml, Gemfile.lock, go.sum, Cargo.toml, Cargo.lock, .cargo/config.toml, .cargo/config, pyproject.toml, poetry.lock, Pipfile.lock, requirements.txt, requirements-dev.txt, requirements/*.txt, etc.)
+          - Flag new transitive dependencies introduced alongside the direct update
+          - Flag new preinstall/postinstall scripts that were not present previously
+          - Treat .github/workflows/ modifications as highly suspicious in a pure dependency update PR
+
+          Use the provided malware scanner report as hard evidence and incorporate it into your conclusion.
+          If scanner findings and your interpretation disagree, call that out explicitly.
+
+          Start your response with exactly one line:
+            Verdict: malicious
+          or:
+            Verdict: benign
+          Then explain your reasoning briefly with top evidence.
+          Do not include intermediate reasoning or self-talk.
+          Keep it concise and actionable.
+          """.strip()
+
+          compatibility_prompt = f"""
+          {base_context}
+
+          Task 2: Compatibility and adoption analysis.
+          1) Where in this repo the dependency appears to be used (treat rg hints as directional, not exhaustive).
+          2) Whether those usage sites intersect with likely changed APIs based on release notes, commits, and direct inspection of .upstream-dependency.
+          3) Risks / unknowns for runtime/build compatibility.
+          4) Recommendation: merge / merge-with-caveats / hold.
+          Do not include intermediate reasoning or self-talk.
+          Keep it concise and actionable.
+          """.strip()
+
+          with open("cursor_prompt_malware.txt", "w", encoding="utf-8") as f:
+            f.write(malware_prompt)
+          with open("cursor_prompt_compatibility.txt", "w", encoding="utf-8") as f:
+            f.write(compatibility_prompt)
+          PY
+
+          run_agent_prompt() {
+            local prompt_file="$1"
+            local output_file="$2"
+            if ! agent -f --mode ask -p --output-format json < "$prompt_file" > "$output_file"; then
+              FALLBACK_PROMPT="$(python3 -c 'from pathlib import Path; import sys; path = sys.argv[1]; max_bytes = 60000; raw = Path(path).read_bytes(); text = raw[:max_bytes].decode("utf-8", errors="ignore"); text += "\n\n[Prompt truncated for CLI argument compatibility.]" if len(raw) > max_bytes else ""; print(text, end="")' "$prompt_file")"
+              agent -f --mode ask -p --output-format json "$FALLBACK_PROMPT" > "$output_file"
+            fi
+          }
+
+          run_agent_prompt "cursor_prompt_malware.txt" "cursor_output_malware.json"
+          run_agent_prompt "cursor_prompt_compatibility.txt" "cursor_output_compatibility.json"
+
+          python3 - <<'PY'
+          import json
+
+          def load_any(path):
+            try:
+              with open(path, "r", encoding="utf-8") as f:
+                raw = f.read()
+            except FileNotFoundError:
+              return {"result": f"Missing output file: {path}"}
+            try:
+              return json.loads(raw)
+            except Exception:
+              return {"result": raw}
+
+          def extract_text(payload):
+            if not isinstance(payload, dict):
+              try:
+                return json.dumps(payload, indent=2)
+              except Exception:
+                return str(payload)
+            for key in ("result", "output", "text", "message"):
+              val = payload.get(key)
+              if isinstance(val, str) and val.strip():
+                return val
+            try:
+              return json.dumps(payload, indent=2)
+            except Exception:
+              return str(payload)
+
+          malware_payload = load_any("cursor_output_malware.json")
+          compatibility_payload = load_any("cursor_output_compatibility.json")
+          malware_text = extract_text(malware_payload)
+          compatibility_text = extract_text(compatibility_payload)
+
+          combined_text = (
+            "## Supply-Chain Malware Review\n\n"
+            f"{malware_text}\n\n"
+            "## Compatibility Analysis\n\n"
+            f"{compatibility_text}"
+          )
+
+          combined = {
+            "result": combined_text,
+            "malware_review": malware_payload,
+            "compatibility_review": compatibility_payload,
+          }
+          with open("cursor_output.json", "w", encoding="utf-8") as f:
+            json.dump(combined, f, indent=2)
+          PY
+
+      - name: Upload malware scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependabot-malware-scan-${{ steps.target_pr.outputs.number }}
+          if-no-files-found: warn
+          path: |
+            malware_scan_report.json
+            malware_scan_summary.md
+            upstream_changed_files.txt
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- cursor-dependabot-review -->';
+            const analysisMaxLen = 48000;
+            const malwareMaxLen = 10000;
+            const githubCommentLimit = 65536;
+            const malwareScanStatus = ${{ toJSON(steps.malware_scan.outputs.status) }} || '';
+            const malwareScanChangedCount = ${{ toJSON(steps.malware_scan.outputs.changed_files_count) }} || '';
+            const malwareScanSummaryOutput = ${{ toJSON(steps.malware_scan.outputs.summary) }} || '';
+
+            function readText(path, fallback = '') {
+              try {
+                return fs.readFileSync(path, 'utf8');
+              } catch (_) {
+                return fallback;
+              }
+            }
+
+            const raw = readText('cursor_output.json', '{"result":"No Cursor output generated."}');
+            let parsed;
+            try {
+              parsed = JSON.parse(raw);
+            } catch (_) {
+              parsed = { result: raw };
+            }
+
+            const analysis =
+              parsed.result ||
+              parsed.output ||
+              parsed.text ||
+              parsed.message ||
+              raw;
+            const analysisText =
+              typeof analysis === 'string'
+                ? analysis
+                : JSON.stringify(analysis, null, 2) || String(analysis);
+            const malwareSummaryFallback =
+              (typeof malwareScanSummaryOutput === 'string' && malwareScanSummaryOutput.trim()) ||
+              [
+                '## Malware Scan Summary',
+                '',
+                `- Status: **${malwareScanStatus || 'unknown'}**`,
+                `- Changed upstream files scanned: \`${malwareScanChangedCount || 'unknown'}\``,
+                '- Scanner output file missing.',
+              ].join('\n');
+            const malwareSummary = readText('malware_scan_summary.md', malwareSummaryFallback);
+
+            let trimmedAnalysis = analysisText.slice(0, analysisMaxLen);
+            let trimmedMalware = malwareSummary.slice(0, malwareMaxLen);
+            const renderBody = (analysisPart, malwarePart) =>
+              [
+                marker,
+                '## 🤖 Cursor Dependency Analysis',
+                '',
+                analysisPart,
+                '',
+                '---',
+                '',
+                malwarePart,
+              ].join('\n');
+            let body = renderBody(trimmedAnalysis, trimmedMalware);
+            if (body.length > githubCommentLimit) {
+              const allowedAnalysis = Math.max(
+                0,
+                analysisMaxLen - (body.length - githubCommentLimit) - 256
+              );
+              trimmedAnalysis = analysisText.slice(0, allowedAnalysis);
+              body = renderBody(trimmedAnalysis, trimmedMalware);
+            }
+
+            const { owner, repo } = context.repo;
+            const issue_number = Number('${{ steps.target_pr.outputs.number }}');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const markerComments = comments
+              .filter((c) => typeof c.body === 'string' && c.body.includes(marker))
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            const latestMarker = markerComments.length > 0 ? markerComments[markerComments.length - 1] : null;
+
+            // Hybrid policy: default to updating the latest managed marker comment.
+            // If any non-managed commentary (human or bot) appears after it, create a
+            // new managed comment so prior discussion stays anchored to older analysis.
+            const hasNonManagedCommentaryAfterLatest =
+              latestMarker &&
+              comments.some(
+                (c) =>
+                  c.id !== latestMarker.id &&
+                  !(typeof c.body === 'string' && c.body.includes(marker)) &&
+                  new Date(c.created_at).getTime() > new Date(latestMarker.created_at).getTime()
+              );
+
+            if (latestMarker && !hasNonManagedCommentaryAfterLatest) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: latestMarker.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }

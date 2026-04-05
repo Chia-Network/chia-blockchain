@@ -5,6 +5,7 @@ import logging
 import math
 import time
 import traceback
+import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
@@ -55,6 +56,11 @@ WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")
+
+
+def sanitize_version_string(version: str) -> str:
+    """Strip Unicode control characters (Cc) and format characters (Cf) to prevent log injection."""
+    return "".join(c for c in version if unicodedata.category(c) not in {"Cc", "Cf"})
 
 
 def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
@@ -120,6 +126,9 @@ class WSChiaConnection:
 
     pending_requests: dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
     request_results: dict[uint16, Message] = field(default_factory=dict, repr=False)
+    # Nonces of `call_api` requests that timed out. Used to distinguish a late
+    # response from an unsolicited one.
+    timed_out_requests: set[uint16] = field(default_factory=set, repr=False)
     closed: bool = False
     connection_type: NodeType | None = None
     request_nonce: uint16 = uint16(0)
@@ -136,6 +145,11 @@ class WSChiaConnection:
     # Tracks compact VDF requests we've sent to this peer (hashed RequestCompactVDF).
     # Used to reject unsolicited RespondCompactVDF messages.
     pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
+
+    # Tracks expected RespondTransaction messages from old peers (< 2.6.0) that
+    # respond to RequestMempoolTransactions with RespondTransaction directly.
+    # Decremented on each such response; if 0, the message is unsolicited.
+    expected_mempool_responses: int = 0
 
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
@@ -293,7 +307,7 @@ class WSChiaConnection:
             )
             await self._send_message(outbound_handshake)
 
-        self.version = inbound_handshake.software_version
+        self.version = sanitize_version_string(inbound_handshake.software_version)
         self.protocol_version = Version(inbound_handshake.protocol_version)
         self.peer_server_port = inbound_handshake.server_port
         self.connection_type = remote_node_type
@@ -519,19 +533,31 @@ class WSChiaConnection:
             api_task = create_referenced_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
+    async def _route_incoming_message(self, message: Message) -> None:
+        if message.id in self.pending_requests:
+            self.request_results[message.id] = message
+            self.pending_requests[message.id].set()
+            return
+        if message.id in self.timed_out_requests:
+            # This is a late response for a timed out request. The caller is
+            # expected to move on.
+            self.timed_out_requests.discard(message.id)
+            self.log.info(
+                f"Ignoring late response {ProtocolMessageTypes(message.type).name} "
+                f"from {self.peer_info.host} version {self.version}"
+            )
+            return
+        await self.incoming_queue.put(message)
+
     async def inbound_handler(self) -> None:
         try:
             while not self.closed:
                 message = await self._read_one_message()
-                if message is not None:
-                    if message.id in self.pending_requests:
-                        self.request_results[message.id] = message
-                        event = self.pending_requests[message.id]
-                        event.set()
-                    else:
-                        await self.incoming_queue.put(message)
-                else:
-                    continue
+                if message is None:
+                    # This indicates a connection shutdown so there is no point
+                    # to continue.
+                    break
+                await self._route_incoming_message(message)
         except asyncio.CancelledError:
             self.log.debug("Inbound_handler task cancelled")
         except Exception as e:
@@ -590,6 +616,27 @@ class WSChiaConnection:
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
+    def _next_request_nonce(self, nonce: uint16) -> uint16:
+        if self.is_outbound:
+            return uint16(nonce + 1) if nonce != uint16(2**15 - 1) else uint16(0)
+        return uint16(nonce + 1) if nonce != uint16(2**16 - 1) else uint16(2**15)
+
+    def _select_request_nonce(self) -> uint16 | None:
+        """
+        Allocate a nonce that is not used by a pending or a timed out request
+        and advance `request_nonce` to the next candidate.
+        """
+        start_nonce = self.request_nonce
+        nonce_candidate = start_nonce
+        while True:
+            if nonce_candidate not in self.pending_requests and nonce_candidate not in self.timed_out_requests:
+                self.request_nonce = self._next_request_nonce(nonce_candidate)
+                return nonce_candidate
+            nonce_candidate = self._next_request_nonce(nonce_candidate)
+            # See if we're back to the start
+            if nonce_candidate == start_nonce:
+                return None
+
     async def send_request(self, message_no_id: Message, timeout: int) -> Message | None:
         """Sends a message and waits for a response."""
         if self.closed:
@@ -600,11 +647,13 @@ class WSChiaConnection:
 
         # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
         # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
-        request_id = self.request_nonce
-        if self.is_outbound:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**15 - 1) else uint16(0)
-        else:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
+        request_id = self._select_request_nonce()
+        if request_id is None:
+            self.log.info(
+                f"Disconnecting peer {self.peer_info.host} version {self.version} for no available request nonces"
+            )
+            await self.close()
+            return None
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
@@ -616,16 +665,14 @@ class WSChiaConnection:
         except asyncio.TimeoutError:
             self.log.debug(f"Request timeout: {message}")
 
-        self.pending_requests.pop(message.id)
-        result: Message | None = None
-        if message.id in self.request_results:
-            result = self.request_results[message.id]
-            assert result is not None
-            self.log.debug(
-                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_info.host}:{self.peer_info.port}"
-            )
-            self.request_results.pop(message.id)
-
+        result = self.request_results.pop(message.id, None)
+        if result is None:
+            # This request has timed out
+            self.timed_out_requests.add(message.id)
+            self.pending_requests.pop(message.id, None)
+            return None
+        self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_info.host}:{self.peer_info.port}")
+        self.pending_requests.pop(message.id, None)
         return result
 
     async def _wait_and_retry(self, msg: Message) -> None:
@@ -713,15 +760,19 @@ class WSChiaConnection:
                 return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
-            full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            full_message_loaded = None
             try:
+                full_message_loaded = Message.from_bytes(data)
                 message_type = ProtocolMessageTypes(full_message_loaded.type)
             except Exception:
-                self.log.error(
-                    f"Disconnecting peer for unknown message type {full_message_loaded.type}: {self.peer_info.host}"
+                reason = (
+                    "invalid message format"
+                    if full_message_loaded is None
+                    else f"unknown message type {full_message_loaded.type}"
                 )
+                self.log.error(f"Disconnecting peer for {reason}: {self.peer_info.host}")
                 create_referenced_task(
                     self.close(
                         INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
@@ -735,10 +786,8 @@ class WSChiaConnection:
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
             if limiter_msg is not None:
-                if (
-                    self.local_type == NodeType.FULL_NODE
-                    and not is_localhost(self.peer_info.host)
-                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                if not is_localhost(self.peer_info.host) and not is_in_network(
+                    self.peer_info.host, self.exempt_peer_networks
                 ):
                     details = ", ".join([f"{self.peer_info.host}", f"message: {message_type.name}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")

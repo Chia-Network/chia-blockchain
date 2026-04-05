@@ -16,6 +16,7 @@ from chia_rs import (
     EndOfSubSlotBundle,
     FullBlock,
     HeaderBlock,
+    SpendBundleConditions,
     SubEpochChallengeSegment,
     SubEpochSummary,
     UnfinishedBlock,
@@ -29,7 +30,6 @@ from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -320,7 +320,7 @@ class Blockchain:
             A StateChangeSummary iff NEW_PEAK, with:
                 - A fork point if the result is NEW_PEAK
                 - A list of coin changes as a result of rollback
-                - A list of NPCResult for any new transaction block added to the chain
+                - A list of SpendBundleConditions for any new transaction block added to the chain
         """
 
         if block.height == 0 and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
@@ -771,7 +771,7 @@ class Blockchain:
         return required_iters, None
 
     async def validate_unfinished_block(
-        self, block: UnfinishedBlock, npc_result: NPCResult | None, skip_overflow_ss_validation: bool = True
+        self, block: UnfinishedBlock, conds: SpendBundleConditions | None, skip_overflow_ss_validation: bool = True
     ) -> PreValidationResult:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
@@ -786,7 +786,6 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
-        conds = None if npc_result is None else npc_result.conds
         error_code = await validate_block_body(
             self.constants,
             self,
