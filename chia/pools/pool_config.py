@@ -122,8 +122,8 @@ class PoolingShareState:
 
 def perform_migration_from_old_config(root_path: Path) -> None:
     with lock_and_load_config(root_path, "config.yaml") as chia_config:
-        if not PoolingShareState.state_path(root_path=root_path).exists() and chia_config["pool"].get(
-            "pool_list", None
+        if chia_config["pool"].get("pool_list", None) and not PoolingShareState.get_all_p2_singleton_puzzle_hashes(
+            root_path=root_path
         ):
             pool_list = chia_config["pool"]["pool_list"]
             for pool in pool_list:
