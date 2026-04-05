@@ -3171,15 +3171,16 @@ class WalletStateManager:
 
         # First get the coin IDs specified
         if target_coin_ids is not None:
-            coins.extend(
-                cr.coin
-                for cr in (
-                    await self.coin_store.get_coin_records(
-                        wallet_id=wallet_id,
-                        coin_id_filter=HashFilter(target_coin_ids, mode=uint8(FilterMode.include.value)),
-                    )
-                ).records
-            )
+            target_records = (
+                await self.coin_store.get_coin_records(
+                    wallet_id=wallet_id,
+                    coin_id_filter=HashFilter(target_coin_ids, mode=uint8(FilterMode.include.value)),
+                )
+            ).records
+            spent_ids = [cr.coin.name() for cr in target_records if cr.spent]
+            if spent_ids:
+                raise ValueError(f"Cannot combine already-spent coins: {', '.join(c.hex() for c in spent_ids)}")
+            coins.extend(cr.coin for cr in target_records)
 
         async with action_scope.use() as interface:
             interface.side_effects.selected_coins.extend(coins)
@@ -3204,6 +3205,7 @@ class WalletStateManager:
 
         # Now let's select enough coins to get to the target number to combine
         if len(coins) < number_of_coins:
+            coin_selection_config = action_scope.config.tx_config.coin_selection_config
             async with action_scope.use() as interface:
                 coins.extend(
                     cr.coin
@@ -3217,6 +3219,11 @@ class WalletStateManager:
                                 mode=uint8(FilterMode.exclude.value),
                             ),
                             reverse=largest_first,
+                            spent_range=UInt32Range(stop=uint32(0)),
+                            amount_range=UInt64Range(
+                                start=coin_selection_config.min_coin_amount,
+                                stop=coin_selection_config.max_coin_amount,
+                            ),
                         )
                     ).records
                 )

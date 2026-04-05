@@ -110,12 +110,32 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             if peer_id not in full_node.server.all_connections:
                 continue
             random_peer = full_node.server.all_connections[peer_id]
-            request_tx = full_node_protocol.RequestTransaction(transaction_id)
-            msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-            await random_peer.send_message(msg)
-            await asyncio.sleep(5)
-            if full_node.mempool_manager.seen(transaction_id):
-                break
+            try:
+                response = await random_peer.call_api(
+                    FullNodeAPI.request_transaction, full_node_protocol.RequestTransaction(transaction_id), timeout=5
+                )
+            except Exception:
+                continue
+            if not isinstance(response, full_node_protocol.RespondTransaction):
+                continue
+            entry = TransactionQueueEntry(
+                transaction=response.transaction,
+                transaction_bytes=bytes(response.transaction),
+                spend_name=response.transaction.name(),
+                peer=random_peer,
+                test=False,
+                peers_with_tx=peers_with_tx,
+            )
+            # Try to put the transaction in this peer's queue, but if it's full
+            # then try another peer's queue. `TransactionQueue` has an internal
+            # queue for each peer.
+            for pid in [random_peer.peer_node_id, *peers_with_tx]:
+                try:
+                    full_node.transaction_queue.put(entry, pid)
+                    break
+                except TransactionQueueFull:
+                    continue
+            break
     except asyncio.CancelledError:
         pass
     finally:
@@ -314,6 +334,11 @@ class FullNodeAPI:
         spend_name = std_hash(tx_bytes)
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        elif peer.expected_mempool_responses > 0:
+            peer.expected_mempool_responses -= 1
+        else:
+            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             peers_with_tx = self.full_node.full_node_store.peers_with_tx.pop(spend_name)
@@ -1639,6 +1664,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug(f"Ignoring CompactProofOfTime: {request}, _waiters")
 
         return None
@@ -1665,6 +1691,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
@@ -1940,11 +1967,15 @@ class FullNodeAPI:
         is_done = next_min_height is None
 
         peak_height = self.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
+        if peak_height is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         height = uint32(next_min_height - 1) if next_min_height is not None else peak_height
         header_hash = self.full_node.blockchain.height_to_hash(height)
-        assert header_hash is not None
+        if header_hash is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         # Check if the request would exceed the subscription limit.
         # We do this again since we've crossed an `await` point, to prevent a race condition.
