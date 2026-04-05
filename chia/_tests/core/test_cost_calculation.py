@@ -11,10 +11,9 @@ from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_block_generator
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -97,22 +96,20 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert puzzle == coin_spend.puzzle_reveal
     assert solution == coin_spend.solution
 
-    if softfork_height >= bt.constants.HARD_FORK_HEIGHT:
+    condition_cost = ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value
+    if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
+        clvm_cost = 27360
+    elif softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
         clvm_cost = 404560
     byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
-    assert (
-        npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + clvm_cost + byte_cost
-    )
+    assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
 
     # Create condition + agg_sig_condition + length + cpu_cost
     assert (
-        npc_result.conds.cost
-        == ConditionCost.CREATE_COIN.value
-        + ConditionCost.AGG_SIG.value
-        + len(bytes(program.program)) * bt.constants.COST_PER_BYTE
-        + clvm_cost
+        npc_result.conds.cost == condition_cost + len(bytes(program.program)) * bt.constants.COST_PER_BYTE + clvm_cost
     )
 
 

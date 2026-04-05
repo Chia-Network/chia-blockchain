@@ -16,6 +16,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.full_node.ram_db import create_ram_blockchain
 from chia._tests.core.full_node.test_full_node import find_reward_coin
+from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.condition_tools import agg_sig_additional_data
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
@@ -145,8 +146,14 @@ class TestConditions:
             block_base_cost = 756064 - 12000
         else:
             block_base_cost = 761056 - 12000
+
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+        else:
+            condition_cost = 0
+
         assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+        assert new_block.transactions_info.cost - block_base_cost - condition_cost == expected_cost
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
@@ -169,11 +176,16 @@ class TestConditions:
             # generator (which includes hashing all puzzles).
             block_base_cost = 732064 - 12000
 
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+        else:
+            condition_cost = 0
+
         # the block_base_cost includes the cost of the bytes for the condition
         # with 2 bytes argument. This test works as long as the conditions it's
         # parameterized on has the same size
         assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+        assert new_block.transactions_info.cost - block_base_cost - condition_cost == expected_cost
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(

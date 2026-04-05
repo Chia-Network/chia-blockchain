@@ -51,6 +51,7 @@ class TestPerformance:
         start_height = peak_record.height if peak_record is not None else -1
         _incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         fake_peer = server_1.all_connections[node_id]
+        fake_peer.expected_mempool_responses = 10000
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
