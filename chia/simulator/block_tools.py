@@ -97,6 +97,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_max_plot_strength,
     calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
@@ -1695,10 +1696,11 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-                if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
+                max_strength = calculate_max_plot_strength(height, constants.HARD_FORK2_HEIGHT)
+                if plot_info.prover.get_strength() > max_strength:
                     self.log.warn(
-                        f"Plot strength ({plot_info.prover.get_strength()}) too high, "
-                        f"cannot be used for farming: {plot_info.prover.get_filename()}"
+                        f"Plot strength ({plot_info.prover.get_strength()}) exceeds max ({max_strength}) "
+                        f"at height {height}: {plot_info.prover.get_filename()}"
                     )
                     continue
                 # TODO: V2 predictable filter not yet wired into block_tools
