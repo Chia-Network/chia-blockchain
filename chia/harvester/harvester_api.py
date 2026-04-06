@@ -26,12 +26,15 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
+    compute_plot_group_id,
     generate_plot_public_key,
     is_v1_phased_out,
     make_pos,
     passes_plot_filter,
+    passes_plot_filter_v2,
     v1_cut_off_height,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
@@ -57,6 +60,29 @@ class HarvesterAPI:
         return True
 
     def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester2) -> bool:
+        if plot_info.prover.get_version() == PlotVersion.V2:
+            # V2 plots always use predictable filter — no fallback
+            if challenge.filter_challenge is None:
+                return False
+            param = plot_info.prover.get_param()
+            pool_info = (
+                plot_info.pool_contract_puzzle_hash
+                if plot_info.pool_contract_puzzle_hash
+                else plot_info.pool_public_key
+            )
+            assert pool_info is not None
+            assert param.strength_v2 is not None
+            plot_group_id = compute_plot_group_id(param.strength_v2, plot_info.plot_public_key, pool_info)
+            group_strength = calculate_base_plot_filter_bits(challenge.peak_height) + param.strength_v2
+            return passes_plot_filter_v2(
+                plot_group_id,
+                param.meta_group,
+                group_strength,
+                challenge.filter_challenge,
+                challenge.signage_point_index,
+            )
+
+        # V1 plots use original prefix-bits filter
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,

@@ -74,9 +74,9 @@ class V2Prover:
         return self._prover.get_filename()
 
     def get_param(self) -> PlotParam:
-        # TODO: todo_v2_plots explose plot_index and group_id from the prover
-        # and initialize them here
-        return PlotParam.make_v2(0, 0, self._prover.get_strength())
+        return PlotParam.make_v2(
+            self._prover.get_plot_index(), self._prover.get_meta_group(), self._prover.get_strength()
+        )
 
     def get_strength(self) -> uint8:
         return uint8(self._prover.get_strength())

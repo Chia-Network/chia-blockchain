@@ -69,6 +69,7 @@ def signage_point_from_block(
         pool_difficulties=[],
         peak_height=block.height,
         last_tx_height=block.height,
+        filter_challenge=challenge_hash,  # Use challenge_hash as fallback for tests
     )
 
 
@@ -143,6 +144,7 @@ async def test_new_signage_point_harvester_pool_difficulty(
         pool_difficulties=[pool_difficulty],  # add pool difficulty
         peak_height=new_challenge.peak_height,
         last_tx_height=new_challenge.last_tx_height,
+        filter_challenge=new_challenge.filter_challenge,
     )
 
     with mock_successful_proof(env.plot_info):

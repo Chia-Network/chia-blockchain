@@ -55,6 +55,7 @@ class NewSignagePointHarvester2(Streamable):
     pool_difficulties: list[PoolDifficulty]
     peak_height: uint32
     last_tx_height: uint32
+    filter_challenge: bytes32 | None = None  # SP hash from FILTER_SP_LOOKBACK SPs ago, for V2 plot filter
 
 
 @streamable

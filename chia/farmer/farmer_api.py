@@ -106,6 +106,8 @@ class FarmerAPI:
                 new_proof_of_space.sp_hash,
                 height=sp.peak_height,
                 prev_transaction_block_height=sp.last_tx_height,
+                filter_challenge=sp.filter_challenge,
+                signage_point_index=sp.signage_point_index,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = new_proof_of_space.proof.compute_plot_id()
@@ -646,6 +648,7 @@ class FarmerAPI:
                 pool_difficulties,
                 new_signage_point.peak_height,
                 new_signage_point.last_tx_height,
+                new_signage_point.filter_challenge,
             )
 
             # The plot size in the call to calculate_prefix_bits is only used
@@ -835,6 +838,8 @@ class FarmerAPI:
             response.sp_hash,
             height=peak_height,
             prev_transaction_block_height=last_tx_height,
+            filter_challenge=sps[0].filter_challenge,
+            signage_point_index=signage_point_index,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
