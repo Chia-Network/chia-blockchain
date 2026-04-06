@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass
 
 import pytest
-from chia_rs import G1Element, PlotParam
+from chia_rs import AugSchemeMPL, G1Element, PlotParam
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint8, uint32
 
@@ -14,12 +14,19 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     check_plot_param,
+    compute_plot_group_id_from_pos,
     is_v1_phased_out,
     make_pos,
     num_phase_out_epochs,
     passes_plot_filter,
+    passes_plot_filter_v2,
     verify_and_get_quality_string,
 )
+from chia.util.hash import std_hash
+
+
+def _test_pk() -> G1Element:
+    return AugSchemeMPL.key_gen(b"\x01" * 32).get_g1()
 
 
 @dataclass
@@ -111,12 +118,12 @@ def b32(key: str) -> bytes32:
         height=uint32(5496000),
     ),
     ProofOfSpaceCase(
-        id="v2 plot strength 0",
+        id="v2 plot strength 0 challenge mismatch",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 0),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        expected_error="Plot strength (0) is lower than the minimum (2)",
+        expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
         id="v2 plot strength 33",
@@ -127,14 +134,14 @@ def b32(key: str) -> bytes32:
         expected_error="Plot strength (33) is too high (max is 32)",
     ),
     ProofOfSpaceCase(
-        id="Not passing the plot filter v2",
+        id="Not passing the plot filter v2 missing filter_challenge",
         pos_challenge=b32("5862b9d5210b008c0c30e2673e327b4a6c98c34d93dd05c7a253320eb5db1712"),
         plot_size=PlotParam.make_v2(0, 0, 32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
             "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
         ),
-        expected_error="Did not pass the plot filter",
+        expected_error="V2 plot requires filter_challenge and signage_point_index",
     ),
     ProofOfSpaceCase(
         id="v2 not activated",
@@ -170,16 +177,16 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 
 @datacases(
     ProofOfSpaceCase(
-        id="not passing the plot filter v2",
+        id="v2 missing filter_challenge rejected",
         plot_size=PlotParam.make_v2(0, 0, 2),
         pos_challenge=b32("9483df4e178307ae677d86664daaef4fc52689b2b6cd7825351f2a2ad7075adb"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        expected_error="Did not pass the plot filter",
+        expected_error="V2 plot requires filter_challenge and signage_point_index",
     ),
-    # TODO: todo_v2_plots add test case that passes the plot filter
+    # TODO: todo_v2_plots add test case that passes the plot filter with filter_challenge
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     pos = make_pos(
@@ -193,21 +200,17 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
     plot_param = pos.param()
     assert plot_param.strength_v2 is not None
     assert plot_param.size_v1 is None
-    try:
-        quality_string = verify_and_get_quality_string(
-            pos=pos,
-            constants=DEFAULT_CONSTANTS,
-            original_challenge_hash=b32("73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
-            signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
-            height=case.height,
-            prev_transaction_block_height=case.height,
-        )
-    except NotImplementedError as e:
-        assert case.expected_error is not None
-        assert case.expected_error in repr(e)
-    else:
-        assert quality_string is None
-        assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
+    quality_string = verify_and_get_quality_string(
+        pos=pos,
+        constants=DEFAULT_CONSTANTS,
+        original_challenge_hash=b32("73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
+        signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
+        height=case.height,
+        prev_transaction_block_height=case.height,
+    )
+    assert quality_string is None
+    assert case.expected_error is not None
+    assert case.expected_error in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -223,7 +226,8 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v1(49), True),
         (PlotParam.make_v1(50), True),
         (PlotParam.make_v1(51), False),  # too large
-        (PlotParam.make_v2(0, 0, 1), False),  # too small
+        (PlotParam.make_v2(0, 0, 0), True),
+        (PlotParam.make_v2(0, 0, 1), True),
         (PlotParam.make_v2(0, 0, 2), True),
         (PlotParam.make_v2(0, 0, 3), True),
         (PlotParam.make_v2(0, 0, 32), True),
@@ -278,19 +282,9 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v1(32)) == expected
 
 
-@pytest.mark.parametrize(
-    argnames=["height", "expected"],
-    argvalues=[
-        (0, 5),
-        (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 4),
-        (0xFFFFFFFC, 3),
-        (0xFFFFFFFD, 2),
-        (0xFFFFFFFF, 2),
-    ],
-)
-def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
-    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
+def test_calculate_prefix_bits_rejects_v2() -> None:
+    with pytest.raises(AssertionError, match="V2 plots use the predictable filter"):
+        calculate_prefix_bits(DEFAULT_CONSTANTS, uint32(0), PlotParam.make_v2(0, 0, 28))
 
 
 def test_v1_phase_out() -> None:
@@ -318,3 +312,209 @@ def test_v1_phase_out() -> None:
             f"expect: {expect * 100.0:0.2f}%"
         )
         assert abs((num_phased_out / 1000) - expect) < 0.05
+
+
+class TestV2PlotFilter:
+    """Tests for V2 plot filter functions."""
+
+    def test_passes_plot_filter_v2_deterministic(self) -> None:
+        """Test that V2 filter is deterministic for same inputs."""
+        plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+        filter_challenge = bytes32.from_hexstr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+        meta_group = 42
+        group_strength = 8  # base_filter + plot_strength
+
+        result1 = passes_plot_filter_v2(
+            plot_group_id=plot_group_id,
+            meta_group=meta_group,
+            group_strength=group_strength,
+            filter_challenge=filter_challenge,
+            signage_point_index=5,
+        )
+        result2 = passes_plot_filter_v2(
+            plot_group_id=plot_group_id,
+            meta_group=meta_group,
+            group_strength=group_strength,
+            filter_challenge=filter_challenge,
+            signage_point_index=5,
+        )
+        assert result1 == result2
+
+    def test_passes_plot_filter_v2_changes_with_sp_index(self) -> None:
+        """Test that different SP indices can give different results."""
+        plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+        filter_challenge = bytes32.from_hexstr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+        meta_group = 42
+        group_strength = 4  # Low strength so mask = 0xF (16 values)
+
+        results = []
+        for sp_index in range(16):
+            result = passes_plot_filter_v2(
+                plot_group_id=plot_group_id,
+                meta_group=meta_group,
+                group_strength=group_strength,
+                filter_challenge=filter_challenge,
+                signage_point_index=sp_index,
+            )
+            results.append(result)
+
+        # With group_strength=4 (mask of 16 values), a plot should pass at exactly one
+        # challenge_index in a window of 16, because there's exactly one target value
+        # that matches (challenge_index ^ meta_group) & mask
+        assert sum(results) == 1, f"Expected exactly 1 pass in window of 16, got {sum(results)}"
+
+    def test_passes_plot_filter_v2_window_size(self) -> None:
+        """Test that results repeat every window_size SP indices."""
+        plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+        filter_challenge = bytes32.from_hexstr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+        meta_group = 42
+        group_strength = 8
+
+        # Test with default window_size=16
+        for sp_index in range(16):
+            result1 = passes_plot_filter_v2(
+                plot_group_id=plot_group_id,
+                meta_group=meta_group,
+                group_strength=group_strength,
+                filter_challenge=filter_challenge,
+                signage_point_index=sp_index,
+            )
+            result2 = passes_plot_filter_v2(
+                plot_group_id=plot_group_id,
+                meta_group=meta_group,
+                group_strength=group_strength,
+                filter_challenge=filter_challenge,
+                signage_point_index=sp_index + 16,  # Next window
+            )
+            assert result1 == result2, f"Results should match for SP indices {sp_index} and {sp_index + 16}"
+
+    def test_passes_plot_filter_v2_meta_group_affects_pass_index(self) -> None:
+        """Test that different meta_groups pass at different SP indices."""
+        plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+        filter_challenge = bytes32.from_hexstr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+        group_strength = 4  # mask = 0xF
+
+        # Find which SP index each meta_group passes at
+        pass_indices: dict[int, int] = {}
+        for meta_group in range(16):  # Only need 16 since mask is 0xF
+            for sp_index in range(16):
+                if passes_plot_filter_v2(
+                    plot_group_id=plot_group_id,
+                    meta_group=meta_group,
+                    group_strength=group_strength,
+                    filter_challenge=filter_challenge,
+                    signage_point_index=sp_index,
+                ):
+                    pass_indices[meta_group] = sp_index
+                    break
+
+        # All 16 meta_groups should pass at different indices
+        assert len(set(pass_indices.values())) == 16, "Each meta_group should pass at a unique SP index"
+
+    def test_passes_plot_filter_v2_statistical(self, seeded_random: random.Random) -> None:
+        """Test that filter passes at expected rate based on group_strength."""
+        num_trials = 10000
+        group_strength = 8  # 1/256 chance of passing per SP
+
+        pass_count = 0
+        for _ in range(num_trials):
+            plot_group_id = bytes32.random(seeded_random)
+            filter_challenge = bytes32.random(seeded_random)
+            meta_group = seeded_random.randint(0, 255)
+            sp_index = seeded_random.randint(0, 63)
+
+            if passes_plot_filter_v2(
+                plot_group_id=plot_group_id,
+                meta_group=meta_group,
+                group_strength=group_strength,
+                filter_challenge=filter_challenge,
+                signage_point_index=sp_index,
+            ):
+                pass_count += 1
+
+        # Expected pass rate is 1/2^group_strength = 1/256
+        expected_rate = 1 / (2**group_strength)
+        actual_rate = pass_count / num_trials
+
+        # Allow 50% variance for statistical test
+        assert abs(actual_rate - expected_rate) < expected_rate * 0.5, (
+            f"Expected pass rate ~{expected_rate:.4f}, got {actual_rate:.4f}"
+        )
+
+
+class TestComputePlotGroupId:
+    """Tests for compute_plot_group_id_from_pos().
+
+    Verified to match chia_rs compute_plot_id_v2 internals:
+    plot_group_id = sha256(strength || plot_pk || pool_info)
+    plot_id = sha256(plot_group_id || plot_index || meta_group)
+    """
+
+    def test_compute_plot_group_id_deterministic(self) -> None:
+        plot_pk = _test_pk()
+        pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
+
+        pos = make_pos(
+            challenge=bytes32.zeros,
+            pool_public_key=None,
+            pool_contract_puzzle_hash=pool_ph,
+            plot_public_key=plot_pk,
+            params=PlotParam.make_v2(0, 0, 2),
+            proof=b"",
+        )
+
+        assert compute_plot_group_id_from_pos(pos) == compute_plot_group_id_from_pos(pos)
+
+    def test_compute_plot_group_id_formula(self) -> None:
+        plot_pk = _test_pk()
+        pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
+        strength = 3
+
+        pos = make_pos(
+            challenge=bytes32.zeros,
+            pool_public_key=None,
+            pool_contract_puzzle_hash=pool_ph,
+            plot_public_key=plot_pk,
+            params=PlotParam.make_v2(0, 0, strength),
+            proof=b"",
+        )
+
+        result = compute_plot_group_id_from_pos(pos)
+        expected = std_hash(bytes([strength]) + bytes(plot_pk) + bytes(pool_ph))
+        assert result == expected
+
+    def test_compute_plot_group_id_derives_plot_id(self) -> None:
+        """Verify that sha256(group_id || plot_index || meta_group) == compute_plot_id."""
+        plot_pk = _test_pk()
+        pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
+
+        pos = make_pos(
+            challenge=bytes32.zeros,
+            pool_public_key=None,
+            pool_contract_puzzle_hash=pool_ph,
+            plot_public_key=plot_pk,
+            params=PlotParam.make_v2(7, 42, 3),
+            proof=b"",
+        )
+
+        group_id = compute_plot_group_id_from_pos(pos)
+        derived_plot_id = std_hash(group_id + (7).to_bytes(2, "big") + bytes([42]))
+        assert derived_plot_id == pos.compute_plot_id()
+
+    def test_compute_plot_group_id_different_strength(self) -> None:
+        plot_pk = _test_pk()
+        pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
+
+        results = []
+        for strength in [2, 3, 4, 5]:
+            pos = make_pos(
+                challenge=bytes32.zeros,
+                pool_public_key=None,
+                pool_contract_puzzle_hash=pool_ph,
+                plot_public_key=plot_pk,
+                params=PlotParam.make_v2(0, 0, strength),
+                proof=b"",
+            )
+            results.append(compute_plot_group_id_from_pos(pos))
+
+        assert len(set(results)) == 4, "Different strengths should produce different plot_group_ids"

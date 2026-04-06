@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock, VDFInfo, VDFProof
-from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
@@ -1402,3 +1402,172 @@ async def test_clear_old_cache_entries_evicts_future_ip(seeded_random: random.Ra
 
     assert challenge not in store.future_ip_cache, "stale IP cache entry was not evicted"
     assert challenge not in store.future_cache_key_times
+
+
+def _make_signage_point(sp_hash: bytes32) -> SignagePoint:
+    """Create a SignagePoint whose cc_vdf output hashes to a deterministic value."""
+    cge = ClassgroupElement(bytes100(sp_hash + bytes(68)))
+    vdf_info = VDFInfo(bytes32.zeros, uint64(1), cge)
+    return SignagePoint(vdf_info, None, None, None)
+
+
+def _add_second_subslot(
+    store: FullNodeStore, genesis_challenge: bytes32, seeded_random: random.Random
+) -> tuple[bytes32, list[SignagePoint | None]]:
+    """Add a second subslot to the store and return its challenge + SP list."""
+    from chia_rs import ChallengeChainSubSlot, EndOfSubSlotBundle, RewardChainSubSlot, SubSlotProofs
+
+    cc = ChallengeChainSubSlot(
+        VDFInfo(genesis_challenge, uint64(1), ClassgroupElement(bytes100.zeros)), None, None, None, None
+    )
+    rc = RewardChainSubSlot(
+        VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros)), bytes32.zeros, None, uint8(0)
+    )
+    dummy_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    proofs = SubSlotProofs(dummy_proof, None, dummy_proof)
+    eos = EndOfSubSlotBundle(cc, None, rc, proofs)
+    num_sps = DEFAULT_CONSTANTS.NUM_SPS_SUB_SLOT
+    new_sps: list[SignagePoint | None] = [None] * num_sps
+    store.finished_sub_slots.append((eos, new_sps, uint128(1000)))
+    return eos.challenge_chain.get_hash(), new_sps
+
+
+class TestGetFilterChallenge:
+    """Tests for FullNodeStore.get_filter_challenge().
+
+    filter_challenge is fixed per 16-SP window, sampled from 4 SPs before
+    the window start.  Windows: [0-15], [16-31], [32-47], [48-63].
+    """
+
+    def test_same_window_same_result(self, seeded_random: random.Random) -> None:
+        """All SPs in the same window get the same filter_challenge."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        _, sps, _ = store.finished_sub_slots[0]
+
+        for i in range(20):
+            sps[i] = _make_signage_point(bytes32.random(seeded_random))
+
+        # Window [16-31]: filter_challenge = SP at (16 - 4) = SP 12
+        results = [store.get_filter_challenge(genesis, uint8(sp)) for sp in range(16, 20)]
+        assert all(r is not None for r in results)
+        assert len(set(results)) == 1, "All SPs in same window must share filter_challenge"
+
+    def test_window1_uses_sp12(self, seeded_random: random.Random) -> None:
+        """Window [16-31] uses SP 12 as filter_challenge."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        _, sps, _ = store.finished_sub_slots[0]
+
+        sp12_hash = bytes32.random(seeded_random)
+        sps[12] = _make_signage_point(sp12_hash)
+
+        result = store.get_filter_challenge(genesis, uint8(20))
+        assert result is not None
+        sp12 = sps[12]
+        assert sp12 is not None and sp12.cc_vdf is not None
+        assert result == sp12.cc_vdf.output.get_hash()
+
+    def test_window2_uses_sp28(self, seeded_random: random.Random) -> None:
+        """Window [32-47] uses SP 28 as filter_challenge."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        _, sps, _ = store.finished_sub_slots[0]
+
+        sps[28] = _make_signage_point(bytes32.random(seeded_random))
+
+        result = store.get_filter_challenge(genesis, uint8(35))
+        assert result is not None
+        sp28 = sps[28]
+        assert sp28 is not None and sp28.cc_vdf is not None
+        assert result == sp28.cc_vdf.output.get_hash()
+
+    def test_window0_wraps_to_previous_subslot(self, seeded_random: random.Random) -> None:
+        """Window [0-15] needs SP at (0 - 4) = SP 60 from previous subslot."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        _, prev_sps, _ = store.finished_sub_slots[0]
+        prev_sps[60] = _make_signage_point(bytes32.random(seeded_random))
+
+        new_challenge, _ = _add_second_subslot(store, genesis, seeded_random)
+
+        result = store.get_filter_challenge(new_challenge, uint8(5))
+        assert result is not None
+        sp60 = prev_sps[60]
+        assert sp60 is not None and sp60.cc_vdf is not None
+        assert result == sp60.cc_vdf.output.get_hash()
+
+    def test_window0_all_sps_same_result(self, seeded_random: random.Random) -> None:
+        """All SPs 0-15 in window 0 get the same filter_challenge (SP 60 of prev)."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        _, prev_sps, _ = store.finished_sub_slots[0]
+        prev_sps[60] = _make_signage_point(bytes32.random(seeded_random))
+
+        new_challenge, _ = _add_second_subslot(store, genesis, seeded_random)
+
+        results = [store.get_filter_challenge(new_challenge, uint8(sp)) for sp in range(16)]
+        assert all(r is not None for r in results)
+        assert len(set(results)) == 1
+
+    def test_no_previous_subslot(self, seeded_random: random.Random) -> None:
+        """Window 0 at genesis (no prev subslot) returns None."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        result = store.get_filter_challenge(genesis, uint8(0))
+        assert result is None
+
+    def test_missing_target_sp(self, seeded_random: random.Random) -> None:
+        """Returns None when the target SP hasn't been received yet."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        # SP 12 is None — window [16-31] can't get filter_challenge
+        result = store.get_filter_challenge(genesis, uint8(20))
+        assert result is None
+
+    def test_target_sp_with_none_cc_vdf(self, seeded_random: random.Random) -> None:
+        """Returns None when target SP exists but has no cc_vdf."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        _, sps, _ = store.finished_sub_slots[0]
+
+        sps[12] = SignagePoint(None, None, None, None)
+
+        result = store.get_filter_challenge(genesis, uint8(20))
+        assert result is None
+
+    def test_unknown_challenge(self, seeded_random: random.Random) -> None:
+        """Returns None when challenge hash isn't in any subslot."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+
+        result = store.get_filter_challenge(bytes32.random(seeded_random), uint8(20))
+        assert result is None
+
+    def test_different_windows_different_results(self, seeded_random: random.Random) -> None:
+        """Different windows use different filter_challenges."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        _, sps, _ = store.finished_sub_slots[0]
+
+        for i in range(64):
+            sps[i] = _make_signage_point(bytes32.random(seeded_random))
+
+        # Window 1 uses SP 12, window 2 uses SP 28, window 3 uses SP 44
+        r1 = store.get_filter_challenge(genesis, uint8(16))
+        r2 = store.get_filter_challenge(genesis, uint8(32))
+        r3 = store.get_filter_challenge(genesis, uint8(48))
+        assert r1 != r2 != r3

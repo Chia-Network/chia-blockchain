@@ -1683,9 +1683,6 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
-            if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
-                continue
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
@@ -1704,8 +1701,15 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-            elif prev_tx_height >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS:
-                continue
+                # TODO: V2 predictable filter not yet wired into block_tools
+                # (needs filter_challenge threaded through get_pospaces_for_challenge)
+            else:
+                # V1 plots: prefix-bits filter + phase-out check
+                prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
+                if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
+                    continue
+                if prev_tx_height >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS:
+                    continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 

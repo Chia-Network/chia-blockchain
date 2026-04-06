@@ -842,6 +842,51 @@ class FullNodeStore:
                         return sp
         return None
 
+    def get_filter_challenge(
+        self, challenge: bytes32, index: uint8, *, lookback: int = 4, window_size: int = 16
+    ) -> bytes32 | None:
+        """
+        Get the filter_challenge for V2 plot filter.
+
+        The filter_challenge is fixed for each window_size-SP window within a
+        subslot.  It is the SP hash from ``lookback`` SPs before the window
+        start.  All SPs in the same window share the same filter_challenge.
+
+        Windows (default 16): [0-15], [16-31], [32-47], [48-63]
+        For window starting at W, filter_challenge = SP hash at (W - lookback).
+
+        Returns None when the target SP is unavailable (genesis, missing data).
+        """
+        assert len(self.finished_sub_slots) >= 1
+
+        window_start = (index // window_size) * window_size
+        target_index = window_start - lookback
+
+        for slot_idx, (sub_slot, sps, _) in enumerate(self.finished_sub_slots):
+            slot_challenge = (
+                sub_slot.challenge_chain.get_hash() if sub_slot is not None else self.constants.GENESIS_CHALLENGE
+            )
+            if slot_challenge != challenge:
+                continue
+
+            if target_index >= 0:
+                sp = sps[target_index]
+                if sp is not None and sp.cc_vdf is not None:
+                    return sp.cc_vdf.output.get_hash()
+                return None
+
+            # Target is in the previous subslot
+            if slot_idx == 0:
+                return None
+            _, prev_sps, _ = self.finished_sub_slots[slot_idx - 1]
+            prev_index = self.constants.NUM_SPS_SUB_SLOT + target_index
+            sp = prev_sps[prev_index]
+            if sp is not None and sp.cc_vdf is not None:
+                return sp.cc_vdf.output.get_hash()
+            return None
+
+        return None
+
     def get_signage_point_by_index_and_cc_output(
         self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
     ) -> SignagePoint | None:

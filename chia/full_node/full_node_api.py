@@ -923,6 +923,10 @@ class FullNodeAPI:
                 else:
                     height = peak.height
                     tx_height = tx_peak.height
+                filter_challenge = self.full_node.full_node_store.get_filter_challenge(
+                    cc_challenge_hash,
+                    request.signage_point_index,
+                )
                 quality_string: bytes32 | None = verify_and_get_quality_string(
                     request.proof_of_space,
                     self.full_node.constants,
@@ -930,6 +934,8 @@ class FullNodeAPI:
                     request.challenge_chain_sp,
                     height=height,
                     prev_transaction_block_height=tx_height,
+                    filter_challenge=filter_challenge,
+                    signage_point_index=request.signage_point_index,
                 )
                 if quality_string is None:
                     self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")

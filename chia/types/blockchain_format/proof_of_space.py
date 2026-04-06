@@ -119,6 +119,21 @@ def is_v1_phased_out(
     return proof_value >= epoch_counter
 
 
+def compute_plot_group_id(strength: int, plot_public_key: G1Element, pool_info: G1Element | bytes32) -> bytes32:
+    """
+    Compute plot_group_id for V2 filter.
+    Formula: sha256(strength || plot_pk || pool_info)
+    Verified to match chia_rs compute_plot_id_v2 internals.
+    """
+    return std_hash(bytes([strength]) + bytes(plot_public_key) + bytes(pool_info))
+
+
+def compute_plot_group_id_from_pos(pos: ProofOfSpace) -> bytes32:
+    pool_info = pos.pool_contract_puzzle_hash if pos.pool_contract_puzzle_hash else pos.pool_public_key
+    assert pool_info is not None
+    return compute_plot_group_id(pos.strength, pos.plot_public_key, pool_info)
+
+
 def verify_and_get_quality_string(
     pos: ProofOfSpace,
     constants: ConsensusConstants,
@@ -128,6 +143,8 @@ def verify_and_get_quality_string(
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
     height_agnostic: bool = False,
+    filter_challenge: bytes32 | None = None,  # For V2 plot filter
+    signage_point_index: int | None = None,  # For V2 plot filter
 ) -> bytes32 | None:
     plot_param = pos.param()
 
@@ -158,11 +175,25 @@ def verify_and_get_quality_string(
         log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
         return None
 
-    # we use different plot filter prefix sizes depending on v1 or v2 plots
-    prefix_bits = calculate_prefix_bits(constants, height, plot_param)
-    if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
-        log.error(f"Did not pass the plot filter. prefix bits: {prefix_bits} {'V1' if plot_param.size_v1 else 'V2'}")
-        return None
+    if plot_param.strength_v2 is not None:
+        # V2 plots always use the predictable filter — no fallback to prefix-bits
+        if filter_challenge is None or signage_point_index is None:
+            log.error("V2 plot requires filter_challenge and signage_point_index")
+            return None
+        plot_group_id = compute_plot_group_id_from_pos(pos)
+        group_strength = calculate_base_plot_filter_bits(height) + plot_param.strength_v2
+
+        if not passes_plot_filter_v2(
+            plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
+        ):
+            log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
+            return None
+    else:
+        # V1 plots use the original prefix-bits filter
+        prefix_bits = calculate_prefix_bits(constants, height, plot_param)
+        if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
+            log.error(f"Did not pass the plot filter. prefix bits: {prefix_bits}")
+            return None
 
     if plot_param.size_v1 is not None:
         # === V1 plots ===
@@ -208,15 +239,7 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_param: PlotParam) -> int:
-    if plot_param.strength_v2 is not None:
-        prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
-        if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 3
-        elif height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 2
-        elif height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 1
-        return max(0, prefix_bits)
+    assert plot_param.strength_v2 is None, "V2 plots use the predictable filter, not prefix bits"
 
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
@@ -233,6 +256,58 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_pa
 
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
     return std_hash(plot_id + challenge_hash + signage_point)
+
+
+# V2 Plot Filter Constants
+# TODO: Move to ConsensusConstants in chia_rs
+FILTER_SP_LOOKBACK: int = 4  # SPs before window start to sample filter_challenge
+FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
+
+# Base plot filter reduction schedule (height → bits)
+# Starts at 9 bits (512), halves every 3-6 years until 0 bits (1)
+_BASE_FILTER_SCHEDULE: list[tuple[int, int]] = [
+    (60_056_000, 0),  # 2057
+    (55_006_000, 1),  # 2054
+    (49_956_000, 2),  # 2051
+    (44_905_000, 3),  # 2047
+    (39_860_000, 4),  # 2044
+    (34_809_000, 5),  # 2041
+    (29_759_000, 6),  # 2038
+    (24_708_000, 7),  # 2035
+    (19_663_000, 8),  # 2032
+    (9_562_000, 9),  # 2026 — initial value at hard fork
+]
+
+
+def calculate_base_plot_filter_bits(height: uint32) -> int:
+    for activation_height, bits in _BASE_FILTER_SCHEDULE:
+        if height >= activation_height:
+            return bits
+    return 9
+
+
+def passes_plot_filter_v2(
+    plot_group_id: bytes32,
+    meta_group: int,
+    group_strength: int,
+    filter_challenge: bytes32,
+    signage_point_index: int,
+    window_size: int = FILTER_WINDOW_SIZE,
+) -> bool:
+    """
+    V2 plot filter - predictable passage.
+
+    passes = (effective_filter == target)
+    Where:
+        effective_filter = hash(plot_group_id + filter_challenge)[:4] & mask
+        target = (challenge_index ^ meta_group) & mask
+        mask = (1 << group_strength) - 1
+    """
+    challenge_index = signage_point_index % window_size
+    mask = (1 << group_strength) - 1
+    effective_filter = int.from_bytes(std_hash(plot_group_id + filter_challenge)[:4], "big") & mask
+    target = (challenge_index ^ meta_group) & mask
+    return effective_filter == target
 
 
 def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
