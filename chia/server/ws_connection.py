@@ -760,6 +760,7 @@ class WSChiaConnection:
         v3_outbound_semaphore: asyncio.Semaphore | None = None
         v3_outbound_slot_acquired = False
         in_flight_incremented = False
+        request_id: uint16 | None = None
         try:
             if using_rate_limits_v3:
                 window_size = self.peer_rl_settings_v3[message_type].window_size
@@ -772,32 +773,39 @@ class WSChiaConnection:
                         message_type, asyncio.Semaphore(window_size)
                     )
                     remaining_timeout = deadline - time.monotonic()
-                    try:
+                    waiting_start = time.monotonic()
+                    were_no_free_slots = v3_outbound_semaphore.locked()
+                    if were_no_free_slots:
                         self.log.info(
-                            f"RLV3 -- send_request trying to acquire outbound slot "
+                            f"RLV3 -- send_request waiting to acquire outbound slot "
                             f"peer: {self.peer_info.host} "
                             f"msg type: {message_type.name} "
                             f"remaining timeout: {remaining_timeout}s "
-                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'}"
+                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
                             f"window_size: {window_size}"
                         )
+                    try:
                         await asyncio.wait_for(v3_outbound_semaphore.acquire(), timeout=remaining_timeout)
                     except asyncio.TimeoutError:
                         self.log.info(
                             f"RLV3 -- send_request timed out waiting for outbound slot "
                             f"peer: {self.peer_info.host} "
                             f"msg type: {message_type.name} "
-                            f"timeout: {timeout}s "
-                            f"in_flight now: {rl_window.in_flight if rl_window is not None else 'None'}"
+                            f"remaining_timeout we had: {remaining_timeout}s "
+                            f"in_flight now: {rl_window.in_flight if rl_window is not None else 'None'} "
+                            f"window_size: {window_size} "
+                            f"waited for: {time.monotonic() - waiting_start}s"
                         )
                         return None
-                    self.log.info(
-                        f"RLV3 -- acquired an outbound slot "
-                        f"peer: {self.peer_info.host} "
-                        f"msg type: {message_type.name} "
-                        f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
-                        f"window_size: {window_size}"
-                    )
+                    if were_no_free_slots:
+                        self.log.info(
+                            f"RLV3 -- send_request acquired an outbound slot "
+                            f"peer: {self.peer_info.host} "
+                            f"msg type: {message_type.name} "
+                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
+                            f"window_size: {window_size} "
+                            f"waited for: {time.monotonic() - waiting_start}s"
+                        )
                     v3_outbound_slot_acquired = True
                     if self.closed:
                         return None
@@ -859,10 +867,18 @@ class WSChiaConnection:
                     f"RLV3 -- in_flight decremented "
                     f"peer: {self.peer_info.host} "
                     f"msg type: {message_type.name} "
-                    f"request id: {request_id} "
+                    f"request id: {request_id if request_id is not None else 'None'} "
                     f"in_flight now: {rl_window.in_flight}"
                 )
             if v3_outbound_slot_acquired and v3_outbound_semaphore is not None:
+                self.log.info(
+                    f"RLV3 -- send_request releasing outbound slot "
+                    f"peer: {self.peer_info.host} "
+                    f"msg type: {message_type.name} "
+                    f"request id: {request_id if request_id is not None else 'None'} "
+                    f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
+                    f"window_size: {self.peer_rl_settings_v3[message_type].window_size}"
+                )
                 v3_outbound_semaphore.release()
 
     async def _wait_and_retry(self, msg: Message) -> None:
