@@ -12,6 +12,8 @@ from chia_rs.sized_ints import uint8, uint32
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
+    calculate_max_plot_strength,
     calculate_prefix_bits,
     check_plot_param,
     compute_plot_group_id_from_pos,
@@ -135,8 +137,8 @@ def b32(key: str) -> bytes32:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2 missing filter_challenge",
-        pos_challenge=b32("5862b9d5210b008c0c30e2673e327b4a6c98c34d93dd05c7a253320eb5db1712"),
-        plot_size=PlotParam.make_v2(0, 0, 32),
+        pos_challenge=b32("a66f6a2ed7a1fb5f7c1db936e4a5833e06df80afb63fb13f1f85d72b8a018413"),
+        plot_size=PlotParam.make_v2(0, 0, 8),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
             "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
@@ -285,6 +287,25 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
 def test_calculate_prefix_bits_rejects_v2() -> None:
     with pytest.raises(AssertionError, match="V2 plots use the predictable filter"):
         calculate_prefix_bits(DEFAULT_CONSTANTS, uint32(0), PlotParam.make_v2(0, 0, 28))
+
+
+@pytest.mark.parametrize(
+    "height,expected",
+    [
+        (uint32(9_562_000), 8),  # 9 base bits -> max 8
+        (uint32(19_663_000), 9),  # 8 base bits -> max 9
+        (uint32(60_056_000), 17),  # 0 base bits -> max 17
+        (uint32(0), 8),  # before schedule -> 9 bits -> max 8
+    ],
+)
+def test_calculate_max_plot_strength(height: uint32, expected: int) -> None:
+    assert calculate_max_plot_strength(height, hard_fork2_height=9_562_000) == expected
+
+
+def test_base_filter_relative_to_fork_height() -> None:
+    assert calculate_base_plot_filter_bits(uint32(1_000_000), hard_fork2_height=1_000_000) == 9
+    assert calculate_base_plot_filter_bits(uint32(11_101_000), hard_fork2_height=1_000_000) == 8
+    assert calculate_base_plot_filter_bits(uint32(0), hard_fork2_height=1_000_000) == 9  # before fork
 
 
 def test_v1_phase_out() -> None:

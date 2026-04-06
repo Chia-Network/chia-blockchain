@@ -168,6 +168,12 @@ def verify_and_get_quality_string(
     if not check_plot_param(constants, plot_param):
         return None
 
+    if plot_param.strength_v2 is not None and not height_agnostic:
+        max_strength = calculate_max_plot_strength(height, constants.HARD_FORK2_HEIGHT)
+        if plot_param.strength_v2 > max_strength:
+            log.error(f"Plot strength ({plot_param.strength_v2}) exceeds max ({max_strength}) at height {height}")
+            return None
+
     plot_id: bytes32 = pos.compute_plot_id()
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
@@ -181,7 +187,7 @@ def verify_and_get_quality_string(
             log.error("V2 plot requires filter_challenge and signage_point_index")
             return None
         plot_group_id = compute_plot_group_id_from_pos(pos)
-        group_strength = calculate_base_plot_filter_bits(height) + plot_param.strength_v2
+        group_strength = calculate_base_plot_filter_bits(height, constants.HARD_FORK2_HEIGHT) + plot_param.strength_v2
 
         if not passes_plot_filter_v2(
             plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
@@ -263,25 +269,32 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 FILTER_SP_LOOKBACK: int = 4  # SPs before window start to sample filter_challenge
 FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
 
-# Base plot filter reduction schedule (height → bits)
-# Starts at 9 bits (512), halves every 3-6 years until 0 bits (1)
-_BASE_FILTER_SCHEDULE: list[tuple[int, int]] = [
-    (60_056_000, 0),  # 2057
-    (55_006_000, 1),  # 2054
-    (49_956_000, 2),  # 2051
-    (44_905_000, 3),  # 2047
-    (39_860_000, 4),  # 2044
-    (34_809_000, 5),  # 2041
-    (29_759_000, 6),  # 2038
-    (24_708_000, 7),  # 2035
-    (19_663_000, 8),  # 2032
-    (9_562_000, 9),  # 2026 — initial value at hard fork
+# Base plot filter reduction schedule — offsets from HARD_FORK2_HEIGHT
+# Starts at 9 bits (512), reduces every 3-6 years until 0 bits (1)
+_BASE_FILTER_OFFSETS: list[tuple[int, int]] = [
+    (50_494_000, 0),  # +~31 years
+    (45_444_000, 1),  # +~28 years
+    (40_394_000, 2),  # +~25 years
+    (35_343_000, 3),  # +~21 years
+    (30_298_000, 4),  # +~18 years
+    (25_247_000, 5),  # +~15 years
+    (20_197_000, 6),  # +~12 years
+    (15_146_000, 7),  # +~9 years
+    (10_101_000, 8),  # +~6 years
+    (0, 9),  # at hard fork
 ]
 
 
-def calculate_base_plot_filter_bits(height: uint32) -> int:
-    for activation_height, bits in _BASE_FILTER_SCHEDULE:
-        if height >= activation_height:
+def calculate_max_plot_strength(height: uint32, hard_fork2_height: int) -> int:
+    return 17 - calculate_base_plot_filter_bits(height, hard_fork2_height)
+
+
+def calculate_base_plot_filter_bits(height: uint32, hard_fork2_height: int) -> int:
+    relative_height = int(height) - hard_fork2_height
+    if relative_height < 0:
+        return 9
+    for offset, bits in _BASE_FILTER_OFFSETS:
+        if relative_height >= offset:
             return bits
     return 9
 

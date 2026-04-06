@@ -73,7 +73,10 @@ class HarvesterAPI:
             assert pool_info is not None
             assert param.strength_v2 is not None
             plot_group_id = compute_plot_group_id(param.strength_v2, plot_info.plot_public_key, pool_info)
-            group_strength = calculate_base_plot_filter_bits(challenge.peak_height) + param.strength_v2
+            group_strength = (
+                calculate_base_plot_filter_bits(challenge.peak_height, self.harvester.constants.HARD_FORK2_HEIGHT)
+                + param.strength_v2
+            )
             return passes_plot_filter_v2(
                 plot_group_id,
                 param.meta_group,
