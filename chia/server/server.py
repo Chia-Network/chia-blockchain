@@ -509,7 +509,7 @@ class ChiaServer:
             handshake_timeout: float | None = (
                 None
                 if is_localhost(target_node.host) or is_in_network(target_node.host, self.exempt_peer_networks)
-                else 120.0
+                else float(self.config.get("outbound_handshake_timeout", 120))
             )
             await asyncio.wait_for(
                 connection.perform_handshake(self._network_id, server_port, self._local_type),
