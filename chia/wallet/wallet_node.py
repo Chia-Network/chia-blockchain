@@ -1447,7 +1447,8 @@ class WalletNode:
 
         if validate_additions_result is False:
             self.log.warning("Validate false 1")
-            await peer.close(9999)
+            # TODO: Inspect
+            # await peer.close(9999)
             return False
 
         # If spent_height is None, we need to validate that the creation block is actually in the longest blockchain.

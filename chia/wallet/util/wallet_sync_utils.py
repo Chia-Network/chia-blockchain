@@ -221,6 +221,10 @@ async def request_and_validate_additions(
         FullNodeAPI.request_additions, additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
+        log.warning(
+            f"Failed to obtain additions for height {height} header_hash {header_hash} and puzzle hash {puzzle_hash} "
+            f"additions_res is {additions_res}"
+        )
         return False
     result: bool = validate_additions(
         additions_res.coins,
@@ -294,8 +298,9 @@ async def _fetch_header_blocks_inner(
         # Request to peer failed in some way, close the connection and remove the peer
         # from our local list.
         if not is_trusted:
-            log.info(f"Closing peer {peer} since it does not have the blocks we asked for")
-            await peer.close()
+            log.info(f"peer {peer} has response {response} for header blocks request")
+            # TODO: Inspect
+            # await peer.close()
 
     return None
 
