@@ -648,6 +648,7 @@ class WSChiaConnection:
             self.timed_out_requests.discard(message.id)
             self.log.info(
                 f"RLV3 -- Ignoring late response {ProtocolMessageTypes(message.type).name} "
+                f"request id: {message.id} "
                 f"from {self.peer_info.host} version {self.version}"
             )
             return
@@ -772,6 +773,14 @@ class WSChiaConnection:
                     )
                     remaining_timeout = deadline - time.monotonic()
                     try:
+                        self.log.info(
+                            f"RLV3 -- send_request trying to acquire outbound slot "
+                            f"peer: {self.peer_info.host} "
+                            f"msg type: {message_type.name} "
+                            f"remaining timeout: {remaining_timeout}s "
+                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'}"
+                            f"window_size: {window_size}"
+                        )
                         await asyncio.wait_for(v3_outbound_semaphore.acquire(), timeout=remaining_timeout)
                     except asyncio.TimeoutError:
                         self.log.info(
@@ -782,6 +791,13 @@ class WSChiaConnection:
                             f"in_flight now: {rl_window.in_flight if rl_window is not None else 'None'}"
                         )
                         return None
+                    self.log.info(
+                        f"RLV3 -- acquired an outbound slot "
+                        f"peer: {self.peer_info.host} "
+                        f"msg type: {message_type.name} "
+                        f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
+                        f"window_size: {window_size}"
+                    )
                     v3_outbound_slot_acquired = True
                     if self.closed:
                         return None
@@ -811,6 +827,7 @@ class WSChiaConnection:
                     f"RLV3 -- in_flight_incremented "
                     f"peer: {self.peer_info.host} "
                     f"msg type: {message_type.name} "
+                    f"request id: {request_id} "
                     f"in_flight now: {rl_window.in_flight} "
                     f"window_size: {self.peer_rl_settings_v3[message_type].window_size}"
                 )
@@ -842,6 +859,7 @@ class WSChiaConnection:
                     f"RLV3 -- in_flight decremented "
                     f"peer: {self.peer_info.host} "
                     f"msg type: {message_type.name} "
+                    f"request id: {request_id} "
                     f"in_flight now: {rl_window.in_flight}"
                 )
             if v3_outbound_slot_acquired and v3_outbound_semaphore is not None:
@@ -893,6 +911,7 @@ class WSChiaConnection:
                 f"RLV3 -- _send_message {reason} "
                 f"peer: {self.peer_info.host} "
                 f"msg type: {message_type.name} "
+                f"request id: {message.id} "
                 f"window_size: {window_size}"
             )
         else:
