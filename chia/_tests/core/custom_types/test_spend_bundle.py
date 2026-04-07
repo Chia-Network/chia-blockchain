@@ -60,7 +60,9 @@ def test_compute_additions_create_coin() -> None:
 
 def test_compute_additions_create_coin_max_cost() -> None:
     # make a large number of CoinSpends
-    spends, _ = create_spends(6111)
+    # chia_rs 0.42.0 reduced CREATE_COIN cost (offsetting a new per-spend cost),
+    # raising the threshold from ~6111 to ~8500 spends
+    spends, _ = create_spends(8500)
     sb = SpendBundle(spends, G2Element())
     with pytest.raises(ValueError, match="cost exceeded"):
         sb.additions()
