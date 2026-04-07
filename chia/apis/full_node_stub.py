@@ -260,7 +260,9 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection
+    ) -> Message | None:
         """Handle compact VDF request."""
         ...
 
