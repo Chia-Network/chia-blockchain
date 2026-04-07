@@ -190,16 +190,12 @@ class Timelord:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
-            for _, _, writer in self.free_clients:
-                with contextlib.suppress(Exception):
-                    writer.close()
-            self.free_clients.clear()
-
             for _ip, _reader, writer in self.free_clients:
                 writer.write(b"010")
                 await writer.drain()
                 writer.close()
                 await writer.wait_closed()
+            self.free_clients.clear()
             for _ip, _reader, writer in self.chain_type_to_stream.values():
                 writer.write(b"010")
                 await writer.drain()
