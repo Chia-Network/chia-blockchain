@@ -22,6 +22,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_store import (
+    MAX_FINISHED_SUB_SLOTS,
     MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH,
     FullNodeStore,
     UnfinishedBlockEntry,
@@ -1402,3 +1403,74 @@ async def test_clear_old_cache_entries_evicts_future_ip(seeded_random: random.Ra
 
     assert challenge not in store.future_ip_cache, "stale IP cache entry was not evicted"
     assert challenge not in store.future_cache_key_times
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_finished_sub_slots_cap(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    """finished_sub_slots must never grow beyond MAX_FINISHED_SUB_SLOTS."""
+    blockchain = empty_blockchain
+    store = FullNodeStore(custom_block_tools.constants)
+    next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+    next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+
+    num_slots = MAX_FINISHED_SUB_SLOTS + 5
+    blocks = custom_block_tools.get_consecutive_blocks(
+        1,
+        skip_slots=num_slots,
+    )
+    sub_slots = blocks[0].finished_sub_slots
+    assert len(sub_slots) == num_slots
+
+    for slot in sub_slots:
+        result = store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
+        assert result is not None
+        assert len(store.finished_sub_slots) <= MAX_FINISHED_SUB_SLOTS
+
+    assert len(store.finished_sub_slots) == MAX_FINISHED_SUB_SLOTS
+
+    assert store.finished_sub_slots[0][0] is None, "genesis placeholder must survive trimming"
+
+    last_hash = sub_slots[-1].challenge_chain.get_hash()
+    assert store.get_sub_slot(last_hash) is not None
+
+    second_last_hash = sub_slots[-2].challenge_chain.get_hash()
+    assert store.get_sub_slot(second_last_hash) is not None
+
+    first_hash = sub_slots[0].challenge_chain.get_hash()
+    assert store.get_sub_slot(first_hash) is None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_finished_sub_slots_below_cap_unchanged(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    """When the number of sub-slots stays within the cap, no trimming occurs."""
+    blockchain = empty_blockchain
+    store = FullNodeStore(custom_block_tools.constants)
+    next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+    next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+
+    num_slots = 5
+    assert num_slots < MAX_FINISHED_SUB_SLOTS
+    blocks = custom_block_tools.get_consecutive_blocks(
+        1,
+        skip_slots=num_slots,
+    )
+    sub_slots = blocks[0].finished_sub_slots
+    assert len(sub_slots) == num_slots
+
+    for slot in sub_slots:
+        result = store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
+        assert result is not None
+
+    expected_len = 1 + num_slots
+    assert len(store.finished_sub_slots) == expected_len
+
+    for slot in sub_slots:
+        assert store.get_sub_slot(slot.challenge_chain.get_hash()) is not None

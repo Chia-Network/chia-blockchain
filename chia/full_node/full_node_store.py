@@ -27,6 +27,14 @@ log = logging.getLogger(__name__)
 
 MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
 
+# Caps the number of finished sub-slots held in memory between peaks.
+# During normal operation new_peak() resets the list to at most 2 entries,
+# but between peaks (e.g. during a chain stall) each new sub-slot appends
+# one entry.  This bound prevents unbounded memory growth while retaining
+# enough history (~100 minutes at 10-minute sub-slot intervals) for any
+# legitimate block lookup.
+MAX_FINISHED_SUB_SLOTS = 10
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)
@@ -677,6 +685,11 @@ class FullNodeStore:
                 return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
+
+        if len(self.finished_sub_slots) > MAX_FINISHED_SUB_SLOTS:
+            overflow = len(self.finished_sub_slots) - MAX_FINISHED_SUB_SLOTS
+            log.info(f"Trimming {overflow} oldest finished sub-slot(s) (cap={MAX_FINISHED_SUB_SLOTS})")
+            self.finished_sub_slots = [self.finished_sub_slots[0], *self.finished_sub_slots[1 + overflow :]]
 
         new_cc_hash = eos.challenge_chain.get_hash()
         self.recent_eos.put(new_cc_hash, (eos, time.time()))
