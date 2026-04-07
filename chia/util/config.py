@@ -66,13 +66,12 @@ def lock_and_load_config(
     fill_missing_services: bool = False,
 ) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
-        config = _load_config_maybe_locked(
+        yield _load_config_maybe_locked(
             root_path=root_path,
             filename=filename,
             acquire_lock=False,
             fill_missing_services=fill_missing_services,
         )
-        yield config
 
 
 def save_config(root_path: Path, filename: str | Path, config_data: Any) -> None:

@@ -92,9 +92,7 @@ async def manage_temporary_pool_plot(
         try:
             await bt.refresh_plots()
 
-            plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=bt_plot.plot_id)
-
-            yield plot
+            yield TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=bt_plot.plot_id)
         finally:
             await bt.delete_plot(bt_plot.plot_id)
 
