@@ -178,7 +178,7 @@ class GetSyncStatusResponse(Streamable):
 class GetHeightInfoResponse(Streamable):
     height: uint32
     is_transaction_block: bool | None = None
-    latest_transaction_block_height: uint32 | None = None
+    prev_transaction_block_height: uint32 | None = None
 
 
 @streamable
