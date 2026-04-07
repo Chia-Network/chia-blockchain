@@ -310,7 +310,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             return GetHeightInfoResponse(
                 height=uint32(10),
                 is_transaction_block=True,
-                latest_transaction_block_height=uint32(9),
+                prev_transaction_block_height=uint32(9),
             )
 
         async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:

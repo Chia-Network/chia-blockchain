@@ -966,15 +966,15 @@ class WalletRpcApi:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         blockchain = self.service.wallet_state_manager.blockchain
         is_transaction_block: bool | None = None
-        latest_transaction_block_height: uint32 | None = None
+        prev_transaction_block_height: uint32 | None = None
         if blockchain.contains_height(uint32(height)):
             block_record = blockchain.height_to_block_record(uint32(height))
             is_transaction_block = block_record.is_transaction_block
-            latest_transaction_block_height = uint32(block_record.prev_transaction_block_height)
+            prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
         return GetHeightInfoResponse(
             height=height,
             is_transaction_block=is_transaction_block,
-            latest_transaction_block_height=latest_transaction_block_height,
+            prev_transaction_block_height=prev_transaction_block_height,
         )
 
     @marshal
