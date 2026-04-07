@@ -223,13 +223,13 @@ def test_announcement_inversions(
     # This leads to the large number of type ignores below
     if create_driver == CreateAnnouncement and assert_driver == AssertAnnouncement:
         with pytest.raises(ValueError, match="Must specify either"):
-            assert_driver(True)  # type: ignore[arg-type]
+            assert_driver(True)
         with pytest.raises(ValueError, match="Cannot create"):
-            create_driver(MSG, True).corresponding_assertion()  # type: ignore[arg-type]
+            create_driver(MSG, True).corresponding_assertion()
         with pytest.raises(ValueError, match="Cannot create"):
             assert_driver(True, MSG).corresponding_creation()  # type: ignore[arg-type]
-        create_instance = create_driver(MSG, True, HASH)  # type: ignore[call-arg, arg-type]
-        assert_instance = assert_driver(True, None, HASH, MSG)  # type: ignore[call-arg, arg-type]
+        create_instance = create_driver(MSG, True, HASH)
+        assert_instance = assert_driver(True, None, HASH, MSG)
     else:
         with pytest.raises(ValueError, match="Must specify either"):
             assert_driver()  # type: ignore[call-arg]
@@ -237,8 +237,8 @@ def test_announcement_inversions(
             create_driver(MSG).corresponding_assertion()  # type: ignore[call-arg]
         with pytest.raises(ValueError, match="Cannot create"):
             assert_driver(MSG).corresponding_creation()  # type: ignore[arg-type]
-        create_instance = create_driver(MSG, HASH)  # type: ignore[arg-type]
-        assert_instance = assert_driver(None, HASH, MSG)  # type: ignore[arg-type]
+        create_instance = create_driver(MSG, HASH)  # type: ignore[arg-type, assignment]
+        assert_instance = assert_driver(None, HASH, MSG)  # type: ignore[arg-type, assignment]
     assert_instance.to_program()  # Verifying that even without a specific message, we can still calculate the condition
     assert create_instance.corresponding_assertion() == assert_instance
     assert assert_instance.corresponding_creation() == create_instance
