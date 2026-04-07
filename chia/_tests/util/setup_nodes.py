@@ -515,7 +515,7 @@ async def setup_full_system_inner(
             )
         )
 
-        full_system = FullSystem(
+        yield FullSystem(
             node_1=node_1,
             node_2=node_2,
             harvester=harvester,
@@ -526,4 +526,3 @@ async def setup_full_system_inner(
             solver=solver_service,
             daemon=daemon_ws,
         )
-        yield full_system

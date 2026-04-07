@@ -95,7 +95,7 @@ async def test_fee_increase() -> None:
 
             assert short.median == -1
             assert med.median == -1
-            assert long.median == 0.0
+            assert long.median == pytest.approx(0.0)
 
             assert result.error is None
             short_estimate = result.estimates[0].estimated_fee_rate
