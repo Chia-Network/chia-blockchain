@@ -2742,7 +2742,10 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    assert (await client.get_height_info()).height > 0
+    height_info = await client.get_height_info()
+    assert height_info.height > 0
+    assert height_info.is_transaction_block is not None
+    assert height_info.latest_transaction_block_height is not None
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
