@@ -6,7 +6,7 @@ from chia.util.significant_bits import count_significant_bits, truncate_to_signi
 
 
 class TestSignificantBits(unittest.TestCase):
-    def test_truncate_to_significant_bits(self):
+    def test_truncate_to_significant_bits(self) -> None:
         a = -0b001101
         assert truncate_to_significant_bits(a, 2) == -0b1100
         a = -0b001111
@@ -26,7 +26,7 @@ class TestSignificantBits(unittest.TestCase):
         a = 0b10101
         assert truncate_to_significant_bits(a, 4) == 0b10100
 
-    def test_count_significant_bits(self):
+    def test_count_significant_bits(self) -> None:
         assert count_significant_bits(0b0001) == 1
         assert count_significant_bits(0b00010) == 1
         assert count_significant_bits(0b01010) == 3

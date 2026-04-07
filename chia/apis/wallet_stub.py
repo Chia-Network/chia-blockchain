@@ -49,6 +49,7 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
         """Handle removals response from full node."""
         ...
 
+    @metadata.request(peer_required=True)
     async def reject_removals_request(self, response: RejectRemovalsRequest, peer: WSChiaConnection) -> None:
         """Handle reject removals request from full node."""
         ...

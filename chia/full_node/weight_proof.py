@@ -1231,6 +1231,11 @@ def validate_recent_blocks(
     adjusted = False
     validated_block_count = 0
     for idx, block in enumerate(recent_chain.recent_chain_data):
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            log.info(f"invalid proof of space in weight proof recent chain block {block.height}")
+            return False, []
+
         required_iters = uint64(0)
         overflow = False
         ses = False
@@ -1366,6 +1371,9 @@ def __validate_pospace(
     sub_slot_data: SubSlotData = segment.sub_slots[idx]
 
     if sub_slot_data.signage_point_index and is_overflow_block(constants, sub_slot_data.signage_point_index):
+        if idx < 1:
+            log.error("overflow block at index 0 has no previous sub slot")
+            return None
         curr_slot = segment.sub_slots[idx - 1]
         assert curr_slot.cc_slot_end_info
         challenge = curr_slot.cc_slot_end_info.challenge

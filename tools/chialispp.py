@@ -345,10 +345,10 @@ def main() -> None:
 
             formatter.finish()
 
-            with open(filename, "wb") as f:
-                for i, line in enumerate(formatter.result):
-                    f.write(concat_byte_array(line))
-                    f.write(b"\n")
+            formatted = b"\n".join(concat_byte_array(line) for line in formatter.result) + b"\n"
+            if formatted != filedata:
+                with open(filename, "wb") as f:
+                    f.write(formatted)
 
 
 if __name__ == "__main__":

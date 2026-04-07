@@ -59,7 +59,7 @@ class TestV2Prover:
         with pytest.raises(
             AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
         ):
-            prover.get_qualities_for_challenge(bytes32(b"1" * 32), uint8(5))
+            prover.get_qualities_for_challenge(bytes32(b"1" * 32))
 
     def test_v2_prover_bytes_raises_error(self) -> None:
         prover = V2Prover.from_filename("/nonexistent/path/test.plot2")

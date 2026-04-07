@@ -179,6 +179,7 @@ async def run_mempool_benchmark() -> None:
             get_unspent_lineage_info_for_puzzle_hash,
             DEFAULT_CONSTANTS,
             single_threaded=single_threaded,
+            validation_timeout=2,
         ) as mempool:
             height = start_height
             rec = fake_block_record(height, timestamp)
@@ -204,6 +205,7 @@ async def run_mempool_benchmark() -> None:
             get_unspent_lineage_info_for_puzzle_hash,
             DEFAULT_CONSTANTS,
             single_threaded=single_threaded,
+            validation_timeout=2,
         ) as mempool:
             height = start_height
             rec = fake_block_record(height, timestamp)

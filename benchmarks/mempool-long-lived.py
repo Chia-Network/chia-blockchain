@@ -94,7 +94,11 @@ async def run_mempool_benchmark() -> None:
     timestamp = uint64(1631794488)
 
     with MempoolManager(
-        get_coin_record, get_unspent_lineage_info_for_puzzle_hash, DEFAULT_CONSTANTS, single_threaded=True
+        get_coin_record,
+        get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        validation_timeout=2,
+        single_threaded=True,
     ) as mempool:
         print("\nrunning add_spend_bundle() + new_peak()")
 

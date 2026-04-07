@@ -8,7 +8,7 @@ import functools
 import secrets
 import sqlite3
 import sys
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -132,6 +132,48 @@ def get_host_parameter_limit() -> int:
     else:
         host_parameter_limit = 999
     return host_parameter_limit
+
+
+@contextlib.contextmanager
+def _suppress_task_cancellation() -> Iterator[None]:
+    """Suppress task cancellations for the duration of a critical await.
+
+    Provides two layers of protection:
+
+    1. ``anyio.CancelScope(shield=True)`` — prevents NEW ``task.cancel()``
+       calls from anyio's cancellation delivery (e.g. scope timeouts, task
+       group cancellation) during the await.
+    2. ``task.uncancel()`` (Python 3.11+) — clears any ALREADY-PENDING
+       ``_must_cancel`` flag so the await is not immediately interrupted.
+       On exit, the flag is re-applied so cancellation fires at the next
+       *unprotected* await point.
+
+    The anyio shield alone is insufficient because its
+    ``_restart_cancellation_in_parent()`` re-calls ``task.cancel()`` when
+    each shield exits, re-arming ``_must_cancel`` before the next protected
+    await can start.
+
+    Neither layer protects against a direct ``task.cancel()`` call from code
+    outside anyio's scope tree (e.g. ``ws_connection.cancel_tasks()``).
+    Callers that need to handle that case should place the protected await
+    inside a try/except/finally for cleanup.
+
+    On Python < 3.11 (which lacks ``task.cancelling()``/``task.uncancel()``),
+    only the anyio shield is active.
+    """
+    task = asyncio.current_task()
+    assert task is not None
+    saved = 0
+    if sys.version_info >= (3, 11):
+        while task.cancelling() > 0:
+            task.uncancel()
+            saved += 1
+    with anyio.CancelScope(shield=True):
+        try:
+            yield
+        finally:
+            for _ in range(saved):
+                task.cancel()
 
 
 @final
@@ -275,16 +317,46 @@ class DBWrapper2:
     @contextlib.asynccontextmanager
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
         name = self._next_savepoint()
-        await self._write_connection.execute(f"SAVEPOINT {name}")
+        # The SAVEPOINT creation is inside the try block to prevent orphan
+        # SAVEPOINTs. An orphan SAVEPOINT (created but never released) causes
+        # all subsequent SAVEPOINTs to nest inside it, making every RELEASE a
+        # merge instead of a commit — trapping data in an uncommitted
+        # transaction invisible to reader connections.
+        #
+        # aiosqlite queues SQL synchronously (put_nowait) before awaiting the
+        # result, so the SAVEPOINT may be created on the background thread
+        # even if our await is cancelled. The except/finally ensures we
+        # ROLLBACK/RELEASE regardless.
+        #
+        # The SAVEPOINT creation itself is NOT shielded from cancellation —
+        # protecting it would only delay the inevitable, since the caller's
+        # writes after yield are unprotected and would be cancelled anyway.
+        # The ROLLBACK/RELEASE cleanup IS protected (via
+        # _suppress_task_cancellation) because it must complete to avoid
+        # orphan savepoints even when _must_cancel is True.
         try:
+            await self._write_connection.execute(f"SAVEPOINT {name}")
             yield
         except:
-            await self._write_connection.execute(f"ROLLBACK TO {name}")
+            try:
+                with _suppress_task_cancellation():
+                    await self._write_connection.execute(f"ROLLBACK TO {name}")
+            except sqlite3.OperationalError:
+                # Catches "no such savepoint" when the SAVEPOINT was never
+                # created (e.g. CancelledError interrupted execute before
+                # aiosqlite ran it). All other errors are propagated.
+                pass
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
-            await self._write_connection.execute(f"RELEASE {name}")
+            try:
+                with _suppress_task_cancellation():
+                    await self._write_connection.execute(f"RELEASE {name}")
+            except sqlite3.OperationalError:
+                # Catches "no such savepoint" when the SAVEPOINT was never
+                # created. All other errors are propagated.
+                pass
 
     @contextlib.asynccontextmanager
     async def writer(

@@ -70,6 +70,7 @@ async def make_did_wallet(
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -565,6 +566,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework):
     )
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -1161,6 +1163,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
 
 #  TODO: See Issue CHIA-1544
 #  This test should be ported to WalletTestFramework once we can replace keys in the wallet node
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -1248,6 +1251,7 @@ async def test_did_resync(
     assert did_info == did_wallet_2.did_info
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.parametrize(
     "wallet_environments",
     [

@@ -21,44 +21,44 @@ test_constants = DEFAULT_CONSTANTS.replace(
 
 
 class TestPotIterations:
-    def test_is_overflow_block(self):
+    def test_is_overflow_block(self) -> None:
         assert not is_overflow_block(test_constants, uint8(27))
         assert not is_overflow_block(test_constants, uint8(28))
         assert is_overflow_block(test_constants, uint8(29))
         assert is_overflow_block(test_constants, uint8(30))
         assert is_overflow_block(test_constants, uint8(31))
-        with raises(ValueError):
+        with raises(ValueError, match="SP index too high"):
             assert is_overflow_block(test_constants, uint8(32))
 
-    def test_calculate_sp_iters(self):
+    def test_calculate_sp_iters(self) -> None:
         ssi: uint64 = uint64(100001 * 64 * 4)
-        with raises(ValueError):
+        with raises(ValueError, match="SP index too high"):
             calculate_sp_iters(test_constants, ssi, uint8(32))
         calculate_sp_iters(test_constants, ssi, uint8(31))
 
-    def test_calculate_ip_iters(self):
+    def test_calculate_ip_iters(self) -> None:
         ssi: uint64 = uint64(100001 * 64 * 4)
         sp_interval_iters = ssi // test_constants.NUM_SPS_SUB_SLOT
 
-        with raises(ValueError):
+        with raises(ValueError, match="SP index too high"):
             # Invalid signage point index
             calculate_ip_iters(test_constants, ssi, uint8(123), uint64(100000))
 
         sp_iters = sp_interval_iters * 13
 
-        with raises(ValueError):
+        with raises(ValueError, match="Required iters"):
             # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters)
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters))
 
-        with raises(ValueError):
+        with raises(ValueError, match="Required iters"):
             # required_iters too high
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters * 12)
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(sp_interval_iters * 12))
 
-        with raises(ValueError):
+        with raises(ValueError, match="not >0"):
             # required_iters too low (0)
-            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(0))
+            calculate_ip_iters(test_constants, ssi, uint8(0), uint64(0))
 
-        required_iters = sp_interval_iters - 1
+        required_iters = uint64(sp_interval_iters - 1)
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
@@ -82,7 +82,7 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
-    def test_win_percentage(self):
+    def test_win_percentage(self) -> None:
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
         with the assumption that all farmers have access to the same VDF speed.
@@ -93,9 +93,9 @@ class TestPotIterations:
             PlotParam.make_v1(34): 100,
             PlotParam.make_v1(35): 100,
             PlotParam.make_v1(36): 100,
-            PlotParam.make_v2(2): 200,
-            PlotParam.make_v2(3): 200,
-            PlotParam.make_v2(4): 200,
+            PlotParam.make_v2(0, 0, 2): 200,
+            PlotParam.make_v2(0, 0, 3): 200,
+            PlotParam.make_v2(0, 0, 4): 200,
         }
         farmer_space = {k: _expected_plot_size(k, test_constants) * count for k, count in farmer_ks.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
@@ -141,5 +141,7 @@ def test_expected_plot_size_v1() -> None:
 
 def test_expected_plot_size_v2() -> None:
     for strength in [2, 3, 4, 5, 6, 7]:
-        plot_size = _expected_plot_size(PlotParam.make_v2(strength), test_constants)
-        assert plot_size == 988_513_566
+        for plot_index in [2, 300, 400, 500, 600, 700]:
+            for group_id in [2, 3, 4, 5, 6, 7]:
+                plot_size = _expected_plot_size(PlotParam.make_v2(plot_index, group_id, strength), test_constants)
+                assert plot_size == 988_513_566

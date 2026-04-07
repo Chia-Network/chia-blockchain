@@ -4,10 +4,12 @@ import pytest
 
 from chia import __version__
 from chia.daemon.client import connect_to_daemon
+from chia.daemon.server import WebSocketServer
+from chia.simulator.block_tools import BlockTools
 
 
 @pytest.mark.anyio
-async def test_get_version_rpc(get_daemon, bt):
+async def test_get_version_rpc(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
     client = await connect_to_daemon(

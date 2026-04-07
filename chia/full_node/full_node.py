@@ -27,6 +27,7 @@ from chia_rs import (
     HeaderBlock,
     PoolTarget,
     SpendBundle,
+    SpendBundleConditions,
     SubEpochSummary,
     UnfinishedBlock,
     get_flags_for_height_and_constants,
@@ -45,7 +46,6 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -78,6 +78,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
@@ -284,6 +285,7 @@ class FullNode:
                 get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
+                validation_timeout=self.config.get("block_creation_timeout", 2.0),
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(
@@ -940,6 +942,14 @@ class FullNode:
 
                 msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
                 await connection.send_message(msg)
+                # Old peers (< 2.6.0) respond to RequestMempoolTransactions with
+                # RespondTransaction directly. New peers send NewTransaction instead.
+                try:
+                    old_peer = Version(connection.version) < Version("2.6.0")
+                except Exception:
+                    old_peer = True
+                if old_peer:
+                    connection.expected_mempool_responses = 100
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 
@@ -1626,8 +1636,17 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
-            assert pre_validation_results[i].error is None
-            assert pre_validation_results[i].required_iters is not None
+            if pre_validation_results[i].error is not None:
+                self.log.error(
+                    f"prevalidation failed for block {header_hash.hex()} height {block.height} "
+                    f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                )
+                return agg_state_change_summary, Err(pre_validation_results[i].error)
+            if pre_validation_results[i].required_iters is None:
+                self.log.error(
+                    f"required_iters is None for block {header_hash.hex()} height {block.height} from peer {peer_info}"
+                )
+                return agg_state_change_summary, Err.UNKNOWN
             state_change_summary: StateChangeSummary | None
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
@@ -2059,6 +2078,9 @@ class FullNode:
         ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
+            pos = block.reward_chain_block.proof_of_space
+            if pos.version == 1 and pos.quality_string() is None:
+                raise ConsensusError(Err.INVALID_POSPACE)
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             foliage_hash: bytes32 | None = block.foliage.foliage_transaction_block_hash
             assert foliage_hash is not None
@@ -2324,6 +2346,10 @@ class FullNode:
             self.log.debug("Received a disconnected unfinished block")
             return None
 
+        pos = block.reward_chain_block.proof_of_space
+        if pos.version == 1 and pos.quality_string() is None:
+            raise ConsensusError(Err.INVALID_POSPACE)
+
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
         # foliages for the same trunk). This is intentional, to prevent DOS attacks.
@@ -2336,7 +2362,8 @@ class FullNode:
 
         # If we have already added the block with this reward block hash and
         # foliage hash, return
-        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
+        existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
+        if existing is not None or has_better:
             return None
 
         peak: BlockRecord | None = self.blockchain.get_peak()
@@ -2367,7 +2394,7 @@ class FullNode:
 
         # The clvm generator and aggregate signature are validated outside of the lock, to allow other blocks and
         # transactions to get validated
-        npc_result: NPCResult | None = None
+        conds: SpendBundleConditions | None = None
         pre_validation_time = None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
@@ -2423,13 +2450,13 @@ class FullNode:
                 raise ConsensusError(Err(err))
             assert conditions is not None
             assert conditions.validated_signature
-            npc_result = NPCResult(None, conditions)
+            conds = conditions
             pre_validation_time = time.monotonic() - pre_validation_start
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.monotonic()
-            validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
+            validate_result = await self.blockchain.validate_unfinished_block(block, conds)
             if validate_result.error is not None:
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.monotonic() - validation_start
@@ -2437,7 +2464,8 @@ class FullNode:
         assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
-        if self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)[0] is not None:
+        existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
+        if existing is not None or has_better:
             return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
@@ -2781,7 +2809,17 @@ class FullNode:
         if self.sync_store.get_sync_mode() or self.mempool_manager.peak is None:
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
-        cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
+        try:
+            cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
+        except ValueError as e:
+            # ValueError is used to indicate a soft failure. We don't want to
+            # ban the peer
+            self.log.info(f"Rejecting transaction {spend_name}: {e}")
+            return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
+        except ValidationError as e:
+            self.log.info(f"Rejecting transaction {spend_name}: {e.code}")
+            self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+            return MempoolInclusionStatus.FAILED, e.code
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 
@@ -2817,7 +2855,14 @@ class FullNode:
             # Now that we validated this transaction, check what fees and
             # costs the peers have advertised for it.
             for peer_id, entry in peers_with_tx.items():
-                if entry.advertised_fee == mempool_item.fee and entry.advertised_cost == mempool_item.cost:
+                # Older nodes (2.4.3 and earlier) compute the cost slightly
+                # differently. They include the byte cost and execution cost of
+                # the quote for the puzzle.
+                tolerated_diff = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+                if entry.advertised_fee == mempool_item.fee and (
+                    entry.advertised_cost == mempool_item.cost
+                    or entry.advertised_cost == mempool_item.cost + tolerated_diff
+                ):
                     continue
                 self.log.warning(
                     f"Banning peer {peer_id}. Sent us a new tx {spend_name} with mismatch "
@@ -3141,11 +3186,19 @@ class FullNode:
             peer_request = full_node_protocol.RequestCompactVDF(
                 request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
+            vdf_req_key = peer_request.get_hash()
+            peer.pending_compact_vdfs.put(vdf_req_key)
             response = await peer.call_api(FullNodeAPI.request_compact_vdf, peer_request, timeout=10)
             if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                # if we fail to receive a response within 10 seconds, we give up
+                # here, but it's stil possible it will arrive later. We leave it
+                # in pending_compact_vdfs
+                peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer_id: bytes32
+    ) -> VDFProof | None:
         header_block = await self.blockchain.get_header_block_by_height(
             request.height, request.header_hash, tx_filter=False
         )
@@ -3177,17 +3230,9 @@ class FullNode:
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
-            self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
+            self.log.info(f"{peer_id} requested compact vdf we don't have, height: {request.height}.")
             return None
-        compact_vdf = full_node_protocol.RespondCompactVDF(
-            request.height,
-            request.header_hash,
-            request.field_vdf,
-            request.vdf_info,
-            vdf_proof,
-        )
-        msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
-        await peer.send_message(msg)
+        return vdf_proof
 
     async def add_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))

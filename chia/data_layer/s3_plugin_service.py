@@ -256,6 +256,9 @@ class S3Plugin:
             url = data["url"]
             filename = data["filename"]
             group_files_by_store = data.get("group_files_by_store", False)
+            max_delta_file_size = data.get("max_delta_file_size")
+            if not isinstance(max_delta_file_size, int) or max_delta_file_size <= 0:
+                max_delta_file_size = 250
 
             # filename must follow the DataLayer naming convention
             if not is_filename_valid(filename, group_files_by_store):
@@ -279,6 +282,16 @@ class S3Plugin:
             target_filename = self.get_path_for_filename(filename_store_id, trimmed_filename, group_files_by_store)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
+            max_delta_file_size_bytes = max_delta_file_size * 1024 * 1024
+            remote_file_size = my_bucket.ObjectSummary(filename).size
+            if remote_file_size > max_delta_file_size_bytes:
+                log.warning(
+                    "Skipping %s, size %s bytes exceeds max delta size %s MiB",
+                    filename,
+                    remote_file_size,
+                    max_delta_file_size,
+                )
+                return web.json_response({"downloaded": False})
             log.info(f"downloading {url} to {target_filename}...")
             with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-download-") as pool:
                 await asyncio.get_running_loop().run_in_executor(
@@ -314,6 +327,7 @@ class S3Plugin:
 
                         if not (bytes32.fromhex(file_name[:64]) == store_id):
                             log.error(f"failed uploading file {file_name}, store id mismatch")
+                            continue
 
                     file_path = self.get_path_for_filename(store_id, file_name, group_files_by_store)
                     target_file_name = self.get_s3_target_from_path(store_id, file_path, group_files_by_store)

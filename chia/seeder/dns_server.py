@@ -248,6 +248,8 @@ def parse_dns_request(data: bytes) -> DNSRecord | None:
     dns_request: DNSRecord | None = None
     try:
         dns_request = DNSRecord.parse(data)
+        if dns_request.header.qr != 0:
+            return None
     except DNSError as e:
         log.warning(f"Received invalid DNS request: {e}. Traceback: {traceback.format_exc()}.")
     return dns_request
