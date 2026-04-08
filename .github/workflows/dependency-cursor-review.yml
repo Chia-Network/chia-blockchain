@@ -1,13 +1,13 @@
 # Managed by repo-content-updater
-# Dependabot Cursor Review workflow
+# Dependency Cursor Review workflow
 #
-# Runs Cursor CLI analysis for Dependabot PRs by using:
+# Runs Cursor CLI analysis for Dependabot/Renovate PRs by using:
 # - Dependabot PR body release notes + commit list
 # - An upstream dependency checkout
 # - Local usage hints in the target repo
 #
 # Source documentation: https://cursor.com/docs/cli/github-actions
-name: Dependabot Cursor Review
+name: Dependency Cursor Review
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: "Dependabot PR number to analyze"
+        description: "Dependabot/Renovate PR number to analyze"
         required: true
         type: number
 
@@ -28,8 +28,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  dependabot-review:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]')
+  dependency-review:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'renovate[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -60,8 +60,9 @@ jobs:
               core.setFailed('Could not resolve target pull request context.');
               return;
             }
-            if (pr.user?.login !== 'dependabot[bot]') {
-              core.setFailed(`Target PR #${pr.number} is not opened by dependabot[bot].`);
+            const allowedBots = ['dependabot[bot]', 'renovate[bot]'];
+            if (!allowedBots.includes(pr.user?.login)) {
+              core.setFailed(`Target PR #${pr.number} is not opened by an allowed bot. Author: ${pr.user?.login}`);
               return;
             }
 
@@ -111,8 +112,9 @@ jobs:
             }
 
             function extractDetailsSection(text, summaryLabel) {
+              // Allow optional trailing text after the label (e.g. Renovate appends " (pkgalias)").
               const summaryRe = new RegExp(
-                `<details[^>]*>\\s*<summary>\\s*${escapeRegex(summaryLabel)}\\s*</summary>`,
+                `<details[^>]*>\\s*<summary>\\s*${escapeRegex(summaryLabel)}[^<]*</summary>`,
                 'i'
               );
               const summaryMatch = summaryRe.exec(text);
@@ -145,34 +147,79 @@ jobs:
                 .trim();
             }
 
-            const releaseNotes = extractDetailsSection(body, 'Release notes');
-            const commits = extractDetailsSection(body, 'Commits');
             // Prefer the dependency link from Dependabot's lead sentence.
             // Fallback to any GitHub repo URL if that sentence format changes.
+            // Both github.com and redirect.github.com (used by Renovate) are matched.
             const dependencyRepoMatch = body.match(
-              /^\s*(?:Bumps|Update(?:s|d)?)\s+\[[^\]]+\]\(\s*https?:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:[\/#?][^)\s]*)?\s*\)/im
+              /^\s*(?:Bumps|Update(?:s|d)?)\s+\[[^\]]+\]\(\s*https?:\/\/(?:redirect\.)?github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:[\/#?][^)\s]*)?\s*\)/im
             );
             const repoMatch = dependencyRepoMatch || body.match(
-              /https?:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?=\/|$|[)\]>\s"'?#])/i
+              /https?:\/\/(?:redirect\.)?github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?=\/|$|[)\]>\s"'?#])/i
             );
             const upstreamRepo = repoMatch ? repoMatch[1].replace(/\.git$/i, '') : '';
+
+            // Release notes: Dependabot uses <details><summary>Release notes</summary>,
+            // Renovate uses <details><summary>org/repo (pkg)</summary> under a ### Release Notes heading.
+            let releaseNotes = extractDetailsSection(body, 'Release notes');
+            if (!releaseNotes && upstreamRepo) {
+              releaseNotes = extractDetailsSection(body, upstreamRepo);
+            }
+            if (!releaseNotes) {
+              const rnHeading = body.match(/###\s*Release\s+Notes?\s*\n([\s\S]*?)(?=\n---|\n###\s|$)/i);
+              if (rnHeading) releaseNotes = rnHeading[1].trim();
+            }
+
+            // Commits: Dependabot uses <details><summary>Commits</summary>.
+            // Renovate omits this section, so fall back to extracting any SHA-like hex strings from the body.
+            let commits = extractDetailsSection(body, 'Commits');
+            if (!commits) {
+              const shaMatches = body.match(/\b[0-9a-f]{7,40}\b/gi);
+              if (shaMatches && shaMatches.length > 0) commits = shaMatches.join('\n');
+            }
+
             const title = ${{ toJSON(steps.target_pr.outputs.title) }} || '';
+            // Dependabot-style titles (3 groups: pkg, fromVersion, toVersion).
             const titleMatch =
               title.match(/[Uu]pdate\s+(.+?)\s+requirement\s+from\s+([^\s]+)\s+to\s+([^\s]+)/) ||
               title.match(/[Bb]ump\s+(.+?)\s+from\s+([^\s]+)\s+to\s+([^\s]+)/) ||
               title.match(/[Uu]pdate\s+(.+?)\s+from\s+([^\s]+)\s+to\s+([^\s]+)/);
-            const packageName = titleMatch ? titleMatch[1].trim() : '';
-            const fromVersion = titleMatch ? titleMatch[2].trim() : '';
-            const toVersion = titleMatch ? titleMatch[3].trim() : '';
+            // Renovate-style titles (2 groups: pkg, toVersion — no "from" clause).
+            const renovateTitleMatch = !titleMatch && (
+              title.match(/(?:update|pin)\s+dependency\s+(.+?)\s+to\s+v?([^\s]+)/i) ||
+              title.match(/(?:update|pin)\s+(.+?)\s+(?:action|digest|docker\s+tag)\s+to\s+v?([^\s]+)/i) ||
+              title.match(/(?:update|pin)\s+(.+?)\s+to\s+v?([^\s]+)/i)
+            );
+            let packageName, fromVersion, toVersion;
+            if (titleMatch) {
+              packageName = titleMatch[1].trim();
+              fromVersion = titleMatch[2].trim();
+              toVersion = titleMatch[3].trim();
+            } else if (renovateTitleMatch) {
+              packageName = renovateTitleMatch[1].trim();
+              fromVersion = '';
+              toVersion = renovateTitleMatch[2].trim();
+            } else {
+              packageName = '';
+              fromVersion = '';
+              toVersion = '';
+            }
+            // Body-based version fallback: recover missing from/to from Renovate's table (e.g. `1.2.3` -> `1.2.4`).
+            if (!fromVersion || !toVersion) {
+              const bodyVersionMatch = body.match(/`([^`\s]+)`\s*(?:->|→)\s*`([^`\s]+)`/);
+              if (bodyVersionMatch) {
+                if (!fromVersion) fromVersion = bodyVersionMatch[1].replace(/^v/i, '');
+                if (!toVersion) toVersion = bodyVersionMatch[2].replace(/^v/i, '');
+              }
+            }
 
             if (!upstreamRepo) {
-              core.setFailed('Dependabot PR body is missing an upstream GitHub repository link.');
+              core.setFailed('PR body is missing an upstream GitHub repository link.');
               return;
             }
             const normalizedReleaseNotes =
-              releaseNotes || 'Dependabot did not include a Release notes details section.';
+              releaseNotes || 'PR body did not include a Release notes details section.';
             const normalizedCommits =
-              commits || 'Dependabot did not include a Commits details section.';
+              commits || 'PR body did not include a Commits details section.';
 
             const out = {
               prNumber: Number('${{ steps.target_pr.outputs.number }}'),
@@ -687,12 +734,13 @@ jobs:
             fi
           } > "$output_summary"
 
+          _gheof="GHEOF_$(uuidgen)"
           {
             echo "status=$status"
             echo "changed_files_count=$changed_count"
-            echo "summary<<EOF"
+            echo "summary<<${_gheof}"
             cat "$output_summary"
-            echo "EOF"
+            echo "${_gheof}"
           } >> "$GITHUB_OUTPUT"
 
           if [ "$total_count" -gt 0 ] && [ "$warn_only" = true ]; then
@@ -708,7 +756,7 @@ jobs:
           PACKAGE_NAME: ${{ steps.dependabot_context.outputs.package_name }}
         run: |
           if [ -z "$PACKAGE_NAME" ]; then
-            echo "No package detected from Dependabot metadata." > package_usage.txt
+            echo "No package detected from PR metadata." > package_usage.txt
           else
             {
               echo "Search pattern: $PACKAGE_NAME"
@@ -744,7 +792,7 @@ jobs:
               return ""
 
           base_context = f"""
-          This is a Dependabot PR review request.
+          This is a dependency bot PR review request.
 
           PR title:
           {os.getenv("PR_TITLE", "")}
@@ -757,13 +805,13 @@ jobs:
           - from: {os.getenv("FROM_VERSION", "")}
           - to: {os.getenv("TO_VERSION", "")}
 
-          Dependabot comment context JSON:
+          PR context JSON:
           {read_file("dependabot_comment_context.json")}
 
-          Dependabot Release notes:
+          Release notes:
           {read_file("dependabot_release_notes.md")}
 
-          Dependabot Commits:
+          Commits:
           {read_file("dependabot_commits.md")}
 
           Local usage hints (non-authoritative rg hits):
@@ -921,7 +969,7 @@ jobs:
 
       - name: Upload malware scan artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependabot-malware-scan-${{ steps.target_pr.outputs.number }}
           if-no-files-found: warn
