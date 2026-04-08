@@ -873,18 +873,22 @@ class FullNodeStore:
                 sp = sps[target_index]
                 if sp is not None and sp.cc_vdf is not None:
                     return sp.cc_vdf.output.get_hash()
+                log.debug("filter_challenge unavailable: SP %d missing or has no cc_vdf", target_index)
                 return None
 
             # Target is in the previous subslot
             if slot_idx == 0:
+                log.debug("filter_challenge unavailable: no previous subslot for window 0")
                 return None
             _, prev_sps, _ = self.finished_sub_slots[slot_idx - 1]
             prev_index = self.constants.NUM_SPS_SUB_SLOT + target_index
             sp = prev_sps[prev_index]
             if sp is not None and sp.cc_vdf is not None:
                 return sp.cc_vdf.output.get_hash()
+            log.debug("filter_challenge unavailable: prev subslot SP %d missing or has no cc_vdf", prev_index)
             return None
 
+        log.debug("filter_challenge unavailable: challenge %s not found in finished_sub_slots", challenge.hex()[:16])
         return None
 
     def get_signage_point_by_index_and_cc_output(

@@ -93,8 +93,9 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     MIN_PLOT_STRENGTH=uint8(0),
-    MAX_PLOT_STRENGTH=uint8(32),
-    # TODO: todo_v2_plots finalize plot filter schedule
+    MAX_PLOT_STRENGTH=uint8(17),
+    # TODO: todo_v2_plots remove these dead constants from chia_rs ConsensusConstants —
+    # V2 uses _BASE_FILTER_OFFSETS schedule instead of prefix-bits adjustment heights
     PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
     PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
     PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
