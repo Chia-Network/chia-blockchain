@@ -441,6 +441,56 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
+async def test_push_tx_with_fee_persists_transactions(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    client: WalletRpcClient = env.rpc_client
+
+    outputs = await create_tx_outputs(wallet, wallet_environments.tx_config, [(1234321, None)])
+    tx = (
+        await client.create_signed_transactions(
+            CreateSignedTransaction(additions=outputs, fee=uint64(0)),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).signed_tx
+    assert tx.spend_bundle is not None
+
+    initial_balance = await get_confirmed_balance(client, 1)
+
+    fee = uint64(100)
+    unconfirmed_before = await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)
+    await client.push_tx(PushTX(spend_bundle=tx.spend_bundle, fee=fee))
+
+    unconfirmed_after = await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)
+    assert len(unconfirmed_after) > len(unconfirmed_before)
+
+    fee_tx = next(t for t in unconfirmed_after if t not in unconfirmed_before)
+    assert fee_tx.spend_bundle is not None
+
+    await farm_transaction(full_node_api, wallet_node, fee_tx.spend_bundle)
+
+    fee_tx_confirmed = (await client.get_transaction(GetTransaction(transaction_id=fee_tx.name))).transaction
+    assert fee_tx_confirmed.confirmed
+
+    final_balance = await get_confirmed_balance(client, 1)
+    assert final_balance == initial_balance - tx.amount - fee
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
 async def test_get_balance(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet: Wallet = env.xch_wallet

@@ -1000,7 +1000,21 @@ class WalletRpcApi:
                 tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None
             ]
             combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
-            await self.service.push_tx(combined_bundle)
+
+            fee_txs = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=combined_bundle if i == 0 else None,
+                    name=combined_bundle.name() if i == 0 else tx.name,
+                )
+                for i, tx in enumerate(action_scope.side_effects.transactions)
+            ]
+            await self.service.wallet_state_manager.add_pending_transactions(
+                fee_txs,
+                push=True,
+                sign=False,
+                merge_spends=False,
+            )
         else:
             await self.service.push_tx(request.spend_bundle)
 
