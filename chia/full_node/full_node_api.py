@@ -44,6 +44,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
+from chia.full_node.full_node_store import MAX_SUB_SLOT_CATCHUP_DEPTH
 from chia.full_node.hard_fork_utils import get_flags
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
@@ -671,7 +672,7 @@ class FullNodeAPI:
                 challenge_hash_to_request = new_sp.challenge_hash
                 last_rc = new_sp.last_rc_infusion
                 num_non_empty_sub_slots_seen = 0
-                for _ in range(30):
+                for _ in range(MAX_SUB_SLOT_CATCHUP_DEPTH):
                     if num_non_empty_sub_slots_seen >= 3:
                         self.log.debug("Diverged from peer. Don't have the same blocks")
                         return None

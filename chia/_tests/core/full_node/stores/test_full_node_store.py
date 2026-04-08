@@ -1474,3 +1474,127 @@ async def test_finished_sub_slots_below_cap_unchanged(
 
     for slot in sub_slots:
         assert store.get_sub_slot(slot.challenge_chain.get_hash()) is not None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_finished_sub_slots_chain_integrity_after_trimming(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    """Retained sub-slots form a connected chain after trimming."""
+    blockchain = empty_blockchain
+    store = FullNodeStore(custom_block_tools.constants)
+    next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+    next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+
+    num_slots = MAX_FINISHED_SUB_SLOTS + 5
+    blocks = custom_block_tools.get_consecutive_blocks(1, skip_slots=num_slots)
+    sub_slots = blocks[0].finished_sub_slots
+    assert len(sub_slots) == num_slots
+
+    for slot in sub_slots:
+        store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
+
+    assert len(store.finished_sub_slots) == MAX_FINISHED_SUB_SLOTS
+
+    retained = [eos for eos, _, _ in store.finished_sub_slots if eos is not None]
+    assert len(retained) == MAX_FINISHED_SUB_SLOTS - 1
+
+    for i in range(len(retained) - 1):
+        output_hash = retained[i].challenge_chain.get_hash()
+        next_input = retained[i + 1].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+        assert output_hash == next_input, f"chain broken at index {i}"
+
+    assert retained[-1].challenge_chain.get_hash() == sub_slots[-1].challenge_chain.get_hash()
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_post_peak_trimming_preserves_chain_connectivity(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    """After new_peak() resets to 2 entries, subsequent trimming evicts ip_sub_slot
+    before the connecting sub-slot, preserving chain connectivity."""
+    blockchain = empty_blockchain
+    store = FullNodeStore(custom_block_tools.constants)
+    next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+    next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+
+    blocks = custom_block_tools.get_consecutive_blocks(1, skip_slots=2)
+    for slot in blocks[0].finished_sub_slots:
+        store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
+
+    await _validate_and_add_block(blockchain, blocks[0])
+    peak = blockchain.get_peak()
+    assert peak is not None
+    peak_full_block = await blockchain.get_full_peak()
+    assert peak_full_block is not None
+
+    next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+        blockchain.constants, False, peak, blockchain
+    )
+    result = await blockchain.get_sp_and_ip_sub_slots(blocks[0].header_hash)
+    assert result is not None
+    sp_sub_slot, ip_sub_slot = result
+    store.new_peak(
+        peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+    )
+
+    post_peak_count = len(store.finished_sub_slots)
+    assert post_peak_count <= 2
+
+    ip_hash = ip_sub_slot.challenge_chain.get_hash() if ip_sub_slot is not None else None
+
+    slots_to_trigger_one_trim = MAX_FINISHED_SUB_SLOTS - post_peak_count + 1
+    extended = custom_block_tools.get_consecutive_blocks(
+        1, block_list_input=blocks, skip_slots=slots_to_trigger_one_trim
+    )
+    new_sub_slots = extended[-1].finished_sub_slots
+
+    for slot in new_sub_slots:
+        store.new_finished_sub_slot(slot, blockchain, peak, next_sub_slot_iters, next_difficulty, peak_full_block)
+
+    assert len(store.finished_sub_slots) == MAX_FINISHED_SUB_SLOTS
+
+    if post_peak_count == 2 and ip_hash is not None:
+        assert store.get_sub_slot(ip_hash) is None, "ip_sub_slot should be evicted first"
+        ss_1_hash = new_sub_slots[0].challenge_chain.get_hash()
+        assert store.get_sub_slot(ss_1_hash) is not None, "connecting sub-slot SS_1 must survive"
+
+    last_hash = new_sub_slots[-1].challenge_chain.get_hash()
+    assert store.get_sub_slot(last_hash) is not None, "most recent sub-slot must be accessible"
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_trimmed_sub_slots_preserved_in_recent_eos(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    """Every retained sub-slot is also in recent_eos after trimming."""
+    blockchain = empty_blockchain
+    store = FullNodeStore(custom_block_tools.constants)
+    next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+    next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+
+    num_slots = MAX_FINISHED_SUB_SLOTS + 5
+    blocks = custom_block_tools.get_consecutive_blocks(1, skip_slots=num_slots)
+    sub_slots = blocks[0].finished_sub_slots
+    assert len(sub_slots) == num_slots
+
+    for slot in sub_slots:
+        store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
+
+    retained_hashes = {eos.challenge_chain.get_hash() for eos, _, _ in store.finished_sub_slots if eos is not None}
+    trimmed = [s for s in sub_slots if s.challenge_chain.get_hash() not in retained_hashes]
+    assert len(trimmed) > 0, "some sub-slots must have been trimmed"
+
+    for eos, _, _ in store.finished_sub_slots:
+        if eos is None:
+            continue
+        cc_hash = eos.challenge_chain.get_hash()
+        cached = store.recent_eos.get(cc_hash)
+        assert cached is not None, f"retained slot {cc_hash.hex()[:16]} missing from recent_eos"
+        assert cached[0] == eos

@@ -27,13 +27,17 @@ log = logging.getLogger(__name__)
 
 MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
 
+# Maximum number of sub-slots the peer catch-up loop in
+# full_node_api.py will walk backward when requesting predecessors.
+MAX_SUB_SLOT_CATCHUP_DEPTH = 30
+
 # Caps the number of finished sub-slots held in memory between peaks.
 # During normal operation new_peak() resets the list to at most 2 entries,
 # but between peaks (e.g. during a chain stall) each new sub-slot appends
-# one entry.  This bound prevents unbounded memory growth while retaining
-# enough history (~100 minutes at 10-minute sub-slot intervals) for any
-# legitimate block lookup.
-MAX_FINISHED_SUB_SLOTS = 10
+# one entry.  This bound prevents unbounded memory growth while ensuring
+# the serving node can satisfy the full catch-up walk and the
+# get_finished_sub_slots() chain needed for block creation.
+MAX_FINISHED_SUB_SLOTS = MAX_SUB_SLOT_CATCHUP_DEPTH + 20
 
 
 @streamable
