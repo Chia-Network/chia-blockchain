@@ -52,7 +52,6 @@ def b32(key: str) -> bytes32:
     return bytes32.from_hexstr(key)
 
 
-# TODO: todo_v2_plots more test cases, cover plot_index and group_id
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -128,12 +127,12 @@ def b32(key: str) -> bytes32:
         expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
-        id="v2 plot strength 33",
+        id="v2 plot strength 18",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(0, 0, 33),
+        plot_size=PlotParam.make_v2(0, 0, 18),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        expected_error="Plot strength (33) is too high (max is 32)",
+        expected_error="Plot strength (18) is too high (max is 17)",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2 missing filter_challenge",
@@ -232,8 +231,8 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v2(0, 0, 1), True),
         (PlotParam.make_v2(0, 0, 2), True),
         (PlotParam.make_v2(0, 0, 3), True),
-        (PlotParam.make_v2(0, 0, 32), True),
-        (PlotParam.make_v2(0, 0, 33), False),  # strength too high
+        (PlotParam.make_v2(0, 0, 17), True),
+        (PlotParam.make_v2(0, 0, 18), False),  # strength too high
     ],
 )
 def test_check_plot_param(plot_param: PlotParam, valid: bool) -> None:

@@ -182,7 +182,10 @@ def verify_and_get_quality_string(
         return None
 
     if plot_param.strength_v2 is not None:
-        # V2 plots always use the predictable filter — no fallback to prefix-bits
+        # V2 plots always use the predictable filter — no fallback to prefix-bits.
+        # During weight proof validation (height_agnostic=True), the filter
+        # check will be skipped — VDF chain integrity + PoSpace validity is
+        # sufficient. See plan Task B7.
         if filter_challenge is None or signage_point_index is None:
             log.error("V2 plot requires filter_challenge and signage_point_index")
             return None
@@ -265,7 +268,8 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 
 
 # V2 Plot Filter Constants
-# TODO: Move to ConsensusConstants in chia_rs
+# TODO: todo_v2_plots move FILTER_SP_LOOKBACK, FILTER_WINDOW_SIZE, and
+# _BASE_FILTER_OFFSETS to ConsensusConstants in chia_rs
 FILTER_SP_LOOKBACK: int = 4  # SPs before window start to sample filter_challenge
 FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
 
@@ -290,6 +294,7 @@ def calculate_max_plot_strength(height: uint32, hard_fork2_height: int) -> int:
 
 
 def calculate_base_plot_filter_bits(height: uint32, hard_fork2_height: int) -> int:
+    assert hard_fork2_height >= 0
     relative_height = int(height) - hard_fork2_height
     if relative_height < 0:
         return 9
