@@ -981,6 +981,8 @@ class WalletRpcApi:
             assert self.service.logged_in_fingerprint is not None
 
             bundle_coins = [cs.coin for cs in request.spend_bundle.coin_spends]
+            if not bundle_coins:
+                raise ValueError("Spend bundle must contain at least one coin spend.")
             async with self.service.wallet_state_manager.new_action_scope(
                 DEFAULT_TX_CONFIG,
                 push=False,
