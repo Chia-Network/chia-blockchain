@@ -97,7 +97,6 @@ pytest-xdist = { version = ">=3.6.1", optional = true }
 pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
 tach = { version = ">=0.32.0", optional = true }
 types-aiofiles = { version = ">=24.1.0.20240626", optional = true }
-types-cryptography = { version = ">=3.3.23.2", optional = true }
 types-pyyaml = { version = ">=6.0.12.20240917", optional = true }
 types-setuptools = { version = ">=75.5.0.20241122", optional = true }
 lxml = { version = ">=5.2.2", optional = true }
@@ -109,7 +108,7 @@ miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 ruff = { version = ">=0.8.1", optional = true }
 
 [project.optional-dependencies]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "lxml"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "lxml"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
