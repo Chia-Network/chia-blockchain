@@ -991,15 +991,11 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                     request.fee,
                     action_scope,
-                    extra_conditions=(
-                        AssertConcurrentSpend(bundle_coins[0].name()),
-                    ),
+                    extra_conditions=(AssertConcurrentSpend(bundle_coins[0].name()),),
                 )
 
             signed_fee_bundles = [
-                tx.spend_bundle
-                for tx in action_scope.side_effects.transactions
-                if tx.spend_bundle is not None
+                tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None
             ]
             combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
             await self.service.push_tx(combined_bundle)
