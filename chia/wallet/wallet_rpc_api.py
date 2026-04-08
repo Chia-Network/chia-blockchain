@@ -969,6 +969,9 @@ class WalletRpcApi:
         blockchain = self.service.wallet_state_manager.blockchain
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
+        peak = await blockchain.get_peak_block()
+        if peak is not None and peak.height == height:
+            is_transaction_block = peak.is_transaction_block()
         if blockchain.contains_height(uint32(height)):
             block_record = blockchain.height_to_block_record(uint32(height))
             is_transaction_block = block_record.is_transaction_block
