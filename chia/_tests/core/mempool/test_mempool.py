@@ -353,6 +353,54 @@ class TestPendingTxCache:
         assert c.get(item_high.name) is None
 
 
+    def test_drain_boundary_at_exact_height(self) -> None:
+        """
+        Test that drain(H) releases items with assert_height == H.
+
+        When the mempool peak advances to height H, items with
+        assert_height == H should be released because check_time_locks
+        accepts ASSERT_HEIGHT_ABSOLUTE(H) when peak.height >= H.
+
+        Currently drain() uses strict '<', so drain(H) does NOT release
+        items with assert_height == H. This test documents the expected
+        behavior: drain(H) SHOULD release items with assert_height <= H
+        (i.e., use '<=' not '<').
+        """
+        c = PendingTxCache(20000, 1000)
+
+        item_at_100 = make_item(1, assert_height=uint32(100))
+        item_at_101 = make_item(2, assert_height=uint32(101))
+        item_at_102 = make_item(3, assert_height=uint32(102))
+        c.add(item_at_100)
+        c.add(item_at_101)
+        c.add(item_at_102)
+
+        # drain(101) should release items with assert_height <= 101
+        # That means item_at_100 (assert_height=100) AND item_at_101
+        # (assert_height=101) should both be released, because when
+        # peak.height == 101, check_time_locks accepts
+        # ASSERT_HEIGHT_ABSOLUTE(101) (since 101 >= 101).
+        tx = c.drain(uint32(101))
+        assert item_at_100.spend_bundle_name in tx, (
+            "item with assert_height=100 should be released by drain(101)"
+        )
+        assert item_at_101.spend_bundle_name in tx, (
+            "item with assert_height=101 should be released by drain(101) "
+            "because check_time_locks accepts ASSERT_HEIGHT_ABSOLUTE(101) "
+            "when peak.height=101"
+        )
+        assert item_at_102.spend_bundle_name not in tx, (
+            "item with assert_height=102 should NOT be released by drain(101)"
+        )
+
+        # item_at_102 should still be in the cache
+        assert c.get(item_at_102.name) is not None
+
+        # drain(102) should release the remaining item
+        tx = c.drain(uint32(102))
+        assert item_at_102.spend_bundle_name in tx
+
+
 class TestMempool:
     @pytest.mark.anyio
     async def test_basic_mempool(
