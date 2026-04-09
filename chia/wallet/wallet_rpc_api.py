@@ -1013,8 +1013,12 @@ class WalletRpcApi:
                 fee_txs,
                 push=True,
                 sign=False,
-                merge_spends=False,
+                merge_spends=True,
             )
+            if action_scope.side_effects.get_unused_derivation_record_result is not None:
+                await action_scope.side_effects.get_unused_derivation_record_result.to_standard().commit(
+                    self.service.wallet_state_manager
+                )
         else:
             await self.service.push_tx(request.spend_bundle)
 
