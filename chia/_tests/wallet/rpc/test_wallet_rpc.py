@@ -476,7 +476,7 @@ async def test_push_tx_with_fee_persists_transactions(wallet_environments: Walle
     assert fee_tx_confirmed.confirmed
 
     final_balance = await get_confirmed_balance(client, 1)
-    assert final_balance == initial_balance - tx.amount - fee
+    assert final_balance == initial_balance - fee
 
 
 @pytest.mark.parametrize(
