@@ -2815,10 +2815,10 @@ class FullNode:
         except ValueError as e:
             # ValueError is used to indicate a soft failure. We don't want to
             # ban the peer
-            self.log.warning(f"Rejecting transaction {spend_name}: {e}")
+            self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
-            self.log.warning(f"Rejecting transaction {spend_name}: {e.code}")
+            self.log.info(f"Rejecting transaction {spend_name}: {e.code}")
             self.mempool_manager.add_and_maybe_pop_seen(spend_name)
             return MempoolInclusionStatus.FAILED, e.code
 
