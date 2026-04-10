@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Resolve target PR context
         id: target_pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             let pr;
@@ -101,7 +101,7 @@ jobs:
 
       - name: Extract Dependabot comment context
         id: dependabot_context
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -979,7 +979,7 @@ jobs:
             upstream_changed_files.txt
 
       - name: Post or update PR comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
