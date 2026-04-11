@@ -73,7 +73,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -1206,7 +1206,7 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
-            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+            if isinstance(e, ConsensusError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
                 self.full_node.log.info(
                     f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
                 )
