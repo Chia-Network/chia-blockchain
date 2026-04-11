@@ -159,8 +159,8 @@ class WSChiaConnection:
     # Peer's in-flight messages windows for supported protocol message
     # types when both sides support rate limits v3.
     rate_limit_windows: dict[ProtocolMessageTypes, RateLimitsV3] = field(default_factory=dict, repr=False)
-    # Outbound messages back pressure when both sides support rate limits v3
-    v3_outbound_semaphores: dict[ProtocolMessageTypes, asyncio.Semaphore] = field(default_factory=dict, repr=False)
+    # Tracked v3 request IDs that were sent
+    v3_sent_request_ids: set[uint16] = field(default_factory=set, repr=False)
 
     @classmethod
     def create(
@@ -541,9 +541,10 @@ class WSChiaConnection:
                 rl_window.receive_window += 1
                 inbound_window_incremented = True
                 self.log.info(
-                    f"RLV3 -- inbound_window_incremented "
+                    f"RLV3 -- _api_call inbound_window_incremented "
                     f"peer: {self.peer_info.host} "
                     f"msg_type: {bare_message_type.name} "
+                    f"request ID: {full_message.id} "
                     f"receive_window now: {rl_window.receive_window} "
                     f"window_size: {window_size}"
                 )
@@ -620,9 +621,11 @@ class WSChiaConnection:
                 assert rl_window is not None
                 rl_window.receive_window -= 1
                 self.log.info(
-                    f"RLV3 -- receive window decremented "
+                    f"RLV3 -- _api_call finally block, receive window decremented "
                     f"peer: {self.peer_info.host} "
                     f"msg_type: {bare_message_type.name} "
+                    f"request ID: {full_message.id} "
+                    f"window_size: {window_size} "
                     f"receive_window now: {rl_window.receive_window}"
                 )
             if task_id in self.api_tasks:
@@ -746,69 +749,8 @@ class WSChiaConnection:
         """Sends a message and waits for a response."""
         if self.closed:
             return None
-        deadline = time.monotonic() + timeout
-        message_type = ProtocolMessageTypes(message_no_id.type)
-        rl_window = self.rate_limit_windows.get(message_type)
-        # Only use rate limiting v3 if both peers advertise RATE_LIMITS_V3
-        # capability and the protocol message type is supported.
-        using_rate_limits_v3 = (
-            rl_window is not None
-            and message_type in self.peer_rl_settings_v3
-            and Capability.RATE_LIMITS_V3 in self.peer_capabilities
-            and Capability.RATE_LIMITS_V3 in self.local_capabilities
-        )
-        v3_outbound_semaphore: asyncio.Semaphore | None = None
-        v3_outbound_slot_acquired = False
-        in_flight_incremented = False
-        request_id: uint16 | None = None
+        message_id: uint16 | None = None
         try:
-            if using_rate_limits_v3:
-                window_size = self.peer_rl_settings_v3[message_type].window_size
-                if (
-                    not is_localhost(self.peer_info.host)
-                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
-                    and window_size is not None
-                ):
-                    v3_outbound_semaphore = self.v3_outbound_semaphores.setdefault(
-                        message_type, asyncio.Semaphore(window_size)
-                    )
-                    remaining_timeout = deadline - time.monotonic()
-                    waiting_start = time.monotonic()
-                    were_no_free_slots = v3_outbound_semaphore.locked()
-                    if were_no_free_slots:
-                        self.log.info(
-                            f"RLV3 -- send_request waiting to acquire outbound slot "
-                            f"peer: {self.peer_info.host} "
-                            f"msg type: {message_type.name} "
-                            f"remaining timeout: {remaining_timeout}s "
-                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
-                            f"window_size: {window_size}"
-                        )
-                    try:
-                        await asyncio.wait_for(v3_outbound_semaphore.acquire(), timeout=remaining_timeout)
-                    except asyncio.TimeoutError:
-                        self.log.info(
-                            f"RLV3 -- send_request timed out waiting for outbound slot "
-                            f"peer: {self.peer_info.host} "
-                            f"msg type: {message_type.name} "
-                            f"remaining_timeout we had: {remaining_timeout}s "
-                            f"in_flight now: {rl_window.in_flight if rl_window is not None else 'None'} "
-                            f"window_size: {window_size} "
-                            f"waited for: {time.monotonic() - waiting_start}s"
-                        )
-                        return None
-                    if were_no_free_slots:
-                        self.log.info(
-                            f"RLV3 -- send_request acquired an outbound slot "
-                            f"peer: {self.peer_info.host} "
-                            f"msg type: {message_type.name} "
-                            f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
-                            f"window_size: {window_size} "
-                            f"waited for: {time.monotonic() - waiting_start}s"
-                        )
-                    v3_outbound_slot_acquired = True
-                    if self.closed:
-                        return None
             # We will wait for this event, it will be set either by the response, or the timeout
             event = asyncio.Event()
 
@@ -824,26 +766,11 @@ class WSChiaConnection:
 
             message = Message(message_no_id.type, request_id, message_no_id.data)
             assert message.id is not None
+            message_id = message.id
             self.pending_requests[message.id] = event
-
-            # Increment the congestion window with this admitted request
-            if using_rate_limits_v3:
-                assert rl_window is not None
-                rl_window.in_flight += 1
-                in_flight_incremented = True
-                self.log.info(
-                    f"RLV3 -- in_flight_incremented "
-                    f"peer: {self.peer_info.host} "
-                    f"msg type: {message_type.name} "
-                    f"request id: {request_id} "
-                    f"in_flight now: {rl_window.in_flight} "
-                    f"window_size: {self.peer_rl_settings_v3[message_type].window_size}"
-                )
-
             await self.outgoing_queue.put(message)
-            remaining_timeout = deadline - time.monotonic()
             try:
-                await asyncio.wait_for(event.wait(), timeout=remaining_timeout)
+                await asyncio.wait_for(event.wait(), timeout=timeout)
             except asyncio.TimeoutError:
                 self.log.debug(f"Request timeout: {message}")
 
@@ -859,34 +786,27 @@ class WSChiaConnection:
             self.pending_requests.pop(message.id, None)
             return result
         finally:
-            if in_flight_incremented:
+            if message_id in self.v3_sent_request_ids:
                 # The request has been processed, decrement congestion window
-                assert rl_window is not None
+                self.v3_sent_request_ids.discard(message_id)
+                message_type = ProtocolMessageTypes(message_no_id.type)
+                rl_window = self.rate_limit_windows[message_type]
                 rl_window.in_flight -= 1
                 self.log.info(
                     f"RLV3 -- in_flight decremented "
                     f"peer: {self.peer_info.host} "
                     f"msg type: {message_type.name} "
-                    f"request id: {request_id if request_id is not None else 'None'} "
+                    f"request ID: {message_id} "
+                    f"window_size: {self.peer_rl_settings_v3[message_type].window_size} "
                     f"in_flight now: {rl_window.in_flight}"
                 )
-            if v3_outbound_slot_acquired and v3_outbound_semaphore is not None:
-                self.log.info(
-                    f"RLV3 -- send_request releasing outbound slot "
-                    f"peer: {self.peer_info.host} "
-                    f"msg type: {message_type.name} "
-                    f"request id: {request_id if request_id is not None else 'None'} "
-                    f"in_flight here: {rl_window.in_flight if rl_window is not None else 'None'} "
-                    f"window_size: {self.peer_rl_settings_v3[message_type].window_size}"
-                )
-                v3_outbound_semaphore.release()
 
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
             await self.outgoing_queue.put(msg)
             self.log.info(
-                f"RLV3 -- retried message added to queue "
+                f"RLV3 -- _wait_and_retry added retried message to outgoing queue "
                 f"peer: {self.peer_info.host} "
                 f"msg type: {ProtocolMessageTypes(msg.type).name} "
                 f"request ID: {msg.id}"
@@ -912,6 +832,16 @@ class WSChiaConnection:
         )
         peer_rl_setting = self.peer_rl_settings_v3.get(message_type)
         window_size = peer_rl_setting.window_size if peer_rl_setting is not None else None
+        if message.id in self.timed_out_requests:
+            self.log.info(
+                f"RLV3 -- _send_message dropping nonced request that timed out "
+                f"peer: {self.peer_info.host} "
+                f"msg type: {message_type.name} "
+                f"request ID: {message.id} "
+                f"window_size: {window_size} "
+                f"in_flight: {self.rate_limit_windows[message_type].in_flight}"
+            )
+            return None
         tracked_v3_request = peer_rl_setting is not None and message.id in self.pending_requests
         # Responses sent from `_api_call` reuse the peer's request nonce so they
         # have a message ID but it's not in `pending_requests`.
@@ -930,6 +860,33 @@ class WSChiaConnection:
                 f"request id: {message.id} "
                 f"window_size: {window_size}"
             )
+            if tracked_v3_request:
+                assert message.id is not None
+                rl_window = self.rate_limit_windows[message_type]
+                # Drop and retry this message if sending it exceeds the window
+                if peer_subject_to_rl and window_size is not None and rl_window.in_flight >= window_size:
+                    create_referenced_task(self._wait_and_retry(message), known_unreferenced=True)
+                    details = ", ".join(
+                        [
+                            f"{message_type.name}",
+                            f"request ID: {message.id}",
+                            f"peer: {self.peer_info.host}",
+                            f"in flight: {rl_window.in_flight}",
+                            f"max concurrent: {window_size}",
+                        ]
+                    )
+                    self.log.info(f"RLV3 -- rate limiting ourselves. Dropping and retrying outbound message: {details}")
+                    return None
+                rl_window.in_flight += 1
+                self.v3_sent_request_ids.add(message.id)
+                self.log.info(
+                    f"RLV3 -- _send_message in_flight_incremented "
+                    f"peer: {self.peer_info.host} "
+                    f"msg type: {message_type.name} "
+                    f"request ID: {message.id} "
+                    f"in_flight now: {rl_window.in_flight} "
+                    f"window_size: {window_size}"
+                )
         else:
             if both_v3:
                 if peer_rl_setting is None:

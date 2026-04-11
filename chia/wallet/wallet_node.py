@@ -1120,6 +1120,8 @@ class WalletNode:
         request = RequestBlockHeader(new_peak.height)
         response: RespondBlockHeader | None = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
+            if peer.closed:
+                return
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
             return
@@ -1445,10 +1447,11 @@ class WalletNode:
             state_block.foliage_transaction_block.additions_root,
         )
 
+        if validate_additions_result is None:
+            return False
         if validate_additions_result is False:
             self.log.warning("Validate false 1")
-            # TODO: Inspect
-            # await peer.close(9999)
+            await peer.close(9999)
             return False
 
         # If spent_height is None, we need to validate that the creation block is actually in the longest blockchain.
@@ -1474,13 +1477,15 @@ class WalletNode:
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
 
-                validate_removals_result: bool = await request_and_validate_removals(
+                validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
                     spent_state_block.header_hash,
                     coin_state.coin.name(),
                     spent_state_block.foliage_transaction_block.removals_root,
                 )
+                if validate_removals_result is None:
+                    return False
                 if validate_removals_result is False:
                     self.log.warning("Validate false 2")
                     await peer.close(9999)
@@ -1511,6 +1516,8 @@ class WalletNode:
                 coin_state.coin.name(),
                 spent_state_block.foliage_transaction_block.removals_root,
             )
+            if validate_removals_result is None:
+                return False
             if validate_removals_result is False:
                 self.log.warning("Validate false 3")
                 await peer.close(9999)
