@@ -30,7 +30,13 @@ from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
-from chia.protocols.pool_protocol import GetAuthResponse, PoolErrorCode, PostFarmerResponse, PutFarmerResponse
+from chia.protocols.pool_protocol import (
+    GetAuthResponse,
+    GetFarmerResponse,
+    PoolErrorCode,
+    PostFarmerResponse,
+    PutFarmerResponse,
+)
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import (
@@ -1281,7 +1287,7 @@ async def test_farmer_additional_headers_on_partial_submit(
 
 @pytest.mark.parametrize("pool_protocol_version", [1, 2])
 @pytest.mark.anyio
-async def test_farmer_add_farmer_to_pool(
+async def test_farmer_to_pool_protocol(
     mocker: MockerFixture,
     farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     pool_protocol_version: int,
@@ -1350,6 +1356,22 @@ async def test_farmer_add_farmer_to_pool(
     async def mock_auth_resp() -> AsyncIterator[DummyAuthResponse]:
         yield DummyAuthResponse(ok=True)
 
+    @dataclass(frozen=True)
+    class DummyGetFarmerResponse:
+        ok: bool
+
+        async def json(self) -> dict[str, Any]:
+            return GetFarmerResponse(
+                authentication_public_key=auth_sk.get_g1(),
+                payout_instructions="",
+                current_difficulty=uint64(0),
+                current_points=uint64(0),
+            ).to_json_dict()
+
+    @asynccontextmanager
+    async def mock_get_farmer_resp() -> AsyncIterator[DummyGetFarmerResponse]:
+        yield DummyGetFarmerResponse(ok=True)
+
     mocker.patch(
         "aiohttp.ClientSession.post",
         return_value=mock_post_farmer_resp(),
@@ -1370,4 +1392,11 @@ async def test_farmer_add_farmer_to_pool(
         )
         assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10), auth_sk) == PutFarmerResponse(
             authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
+        )
+        mocker.patch(
+            "aiohttp.ClientSession.get",
+            return_value=mock_get_farmer_resp(),
+        )
+        assert isinstance(
+            await farmer_service._node._pool_get_farmer(pool_config, uint8(10), auth_sk), GetFarmerResponse
         )
