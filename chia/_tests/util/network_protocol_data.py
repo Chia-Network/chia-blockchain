@@ -978,6 +978,27 @@ authentication_payload = pool_protocol.AuthenticationPayloadV1(
     uint64(4676522834655707230),
 )
 
+authentication_payload_v2 = pool_protocol.AuthenticationPayloadV2(
+    bytes32(bytes.fromhex("79431f95dcf50819633cb8ebf0fab9f061fd40ca97067ee7d29688815b7ebd9d")),
+    uint64(15556164025086007377),
+)
+
+get_auth_request = pool_protocol.GetAuthRequest(
+    authentication_payload_v2,
+    g2_element,
+)
+
+get_auth_response = pool_protocol.GetAuthResponse(
+    "auth-token-v2",
+)
+
+get_farmer_request = pool_protocol.GetFarmerRequest(
+    authentication_token=uint64(5372638457754393895),
+    launcher_id=bytes32(bytes.fromhex("65d099a76f743050f63ec3bc9f1c88f24be4f3f03264dbec95fc6ecc0eb29a0f")),
+    signature=g2_element,
+    authentication_token_v2="",
+)
+
 get_pool_info_response = pool_protocol.GetPoolInfoResponse(
     "pool_name",
     "pool_name",

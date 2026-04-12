@@ -219,6 +219,14 @@ def test_protocol_json() -> None:
     assert type(respond_peers_introducer).from_json_dict(respond_peers_introducer_json) == respond_peers_introducer
     assert str(authentication_payload_json) == str(authentication_payload.to_json_dict())
     assert type(authentication_payload).from_json_dict(authentication_payload_json) == authentication_payload
+    assert str(authentication_payload_v2_json) == str(authentication_payload_v2.to_json_dict())
+    assert type(authentication_payload_v2).from_json_dict(authentication_payload_v2_json) == authentication_payload_v2
+    assert str(get_auth_request_json) == str(get_auth_request.to_json_dict())
+    assert type(get_auth_request).from_json_dict(get_auth_request_json) == get_auth_request
+    assert str(get_auth_response_json) == str(get_auth_response.to_json_dict())
+    assert type(get_auth_response).from_json_dict(get_auth_response_json) == get_auth_response
+    assert str(get_farmer_request_json) == str(get_farmer_request.to_json_dict())
+    assert type(get_farmer_request).from_json_dict(get_farmer_request_json) == get_farmer_request
     assert str(get_pool_info_response_json) == str(get_pool_info_response.to_json_dict())
     assert type(get_pool_info_response).from_json_dict(get_pool_info_response_json) == get_pool_info_response
     assert str(post_partial_payload_json) == str(post_partial_payload.to_json_dict())

@@ -2400,6 +2400,28 @@ authentication_payload_json: dict[str, Any] = {
     "authentication_token": 4676522834655707230,
 }
 
+authentication_payload_v2_json: dict[str, Any] = {
+    "launcher_id": "0x79431f95dcf50819633cb8ebf0fab9f061fd40ca97067ee7d29688815b7ebd9d",
+    "timestamp": 15556164025086007377,
+}
+
+get_auth_request_json: dict[str, Any] = {
+    "payload": {
+        "launcher_id": "0x79431f95dcf50819633cb8ebf0fab9f061fd40ca97067ee7d29688815b7ebd9d",
+        "timestamp": 15556164025086007377,
+    },
+    "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+}
+
+get_auth_response_json: dict[str, Any] = {"authentication_token": "auth-token-v2"}
+
+get_farmer_request_json: dict[str, Any] = {
+    "authentication_token": 5372638457754393895,
+    "launcher_id": "0x65d099a76f743050f63ec3bc9f1c88f24be4f3f03264dbec95fc6ecc0eb29a0f",
+    "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "authentication_token_v2": "",
+}
+
 get_pool_info_response_json: dict[str, Any] = {
     "name": "pool_name",
     "logo_url": "pool_name",

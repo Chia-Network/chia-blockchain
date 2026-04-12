@@ -140,6 +140,10 @@ def visit_introducer_protocol(visitor: Callable[[Any, str], None]) -> None:
 
 def visit_pool_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(authentication_payload, "authentication_payload")
+    visitor(authentication_payload_v2, "authentication_payload_v2")
+    visitor(get_auth_request, "get_auth_request")
+    visitor(get_auth_response, "get_auth_response")
+    visitor(get_farmer_request, "get_farmer_request")
     visitor(get_pool_info_response, "get_pool_info_response")
     visitor(post_partial_payload, "post_partial_payload")
     visitor(post_partial_request, "post_partial_request")
