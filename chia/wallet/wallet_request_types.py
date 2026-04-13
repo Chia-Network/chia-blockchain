@@ -597,6 +597,19 @@ class GetCoinRecordsByNamesResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolution(Streamable):
+    coin_name: bytes32
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolutionResponse(Streamable):
+    puzzle_reveal: str
+    solution: str
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetCurrentDerivationIndexResponse(Streamable):
     index: uint32 | None
 

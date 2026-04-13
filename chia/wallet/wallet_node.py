@@ -553,6 +553,11 @@ class WalletNode:
         for record in records:
             if record.spend_bundle is None:
                 continue
+            if not self.wallet_state_manager.validate_spend_bundle_signature(record.spend_bundle):
+                self.log.error(
+                    f"_messages_to_resend: dropping tx {record.name.hex()} — bad aggregate signature"
+                )
+                continue
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
@@ -832,7 +837,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
                 ph_update_res: list[CoinState] = await subscribe_to_phs(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=1
                 )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
@@ -852,7 +857,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
                 c_update_res: list[CoinState] = await subscribe_to_coin_updates(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=1
                 )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
@@ -921,6 +926,7 @@ class WalletNode:
         # Ensure the list is sorted
         unique_items = set(items_input)
         before = len(unique_items)
+        pre_filter_names = {cs.coin.name() for cs in unique_items}
         items = await self.wallet_state_manager.filter_spam(sort_coin_states(unique_items))
         num_filtered = before - len(items)
         if num_filtered > 0:
@@ -978,6 +984,7 @@ class WalletNode:
                 await asyncio.gather(*all_tasks)
                 return False
             if trusted:
+                for cs in batch.entries:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     self.log.info(
                         f"new coin state received ({idx}-{idx + len(batch.entries) - 1}/ {len(updated_coin_states)})"
@@ -1254,9 +1261,11 @@ class WalletNode:
                 # (Hints are not in filter)
                 all_coin_ids: list[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: list[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-                ph_updates: list[CoinState] = await subscribe_to_phs(phs, peer, min_height_for_subscriptions)
+                ph_updates: list[CoinState] = await subscribe_to_phs(
+                    phs, peer, min_height_for_subscriptions, priority=1
+                )
                 coin_updates: list[CoinState] = await subscribe_to_coin_updates(
-                    all_coin_ids, peer, min_height_for_subscriptions
+                    all_coin_ids, peer, min_height_for_subscriptions, priority=1
                 )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
@@ -1589,7 +1598,9 @@ class WalletNode:
             return False
         all_peers_c = self.server.get_connections(NodeType.FULL_NODE)
         all_peers = [(con, self.is_trusted(con)) for con in all_peers_c]
-        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
+        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(
+            start, end, peer_request_cache, all_peers, priority=1
+        )
         if blocks is None:
             log_level = logging.DEBUG if self._shut_down or peer.closed else logging.ERROR
             self.log.log(log_level, f"Error fetching blocks {start} {end}")
@@ -1711,6 +1722,9 @@ class WalletNode:
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
     async def push_tx(self, spend_bundle: WalletSpendBundle) -> None:
+        if not self.wallet_state_manager.validate_spend_bundle_signature(spend_bundle):
+            self.log.error(f"push_tx: dropping bundle {spend_bundle.name().hex()} — bad aggregate signature")
+            return
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:

@@ -15,7 +15,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs import (
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    CoinRecord,
+    CoinSpend,
+    CoinState,
+    ConsensusConstants,
+    G1Element,
+    G2Element,
+    PrivateKey,
+    get_flags_for_height_and_constants,
+    validate_clvm_and_signature,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -2352,6 +2364,13 @@ class WalletStateManager:
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
         if push:
+            for tx_record in tx_records:
+                if tx_record.spend_bundle is not None:
+                    if not self.validate_spend_bundle_signature(tx_record.spend_bundle):
+                        raise ValueError(
+                            f"Transaction {tx_record.name.hex()} has an invalid aggregate signature "
+                            f"and will not be submitted"
+                        )
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
                 for tx_record in tx_records:
@@ -2768,6 +2787,21 @@ class WalletStateManager:
             AugSchemeMPL.aggregate([G2Element.from_bytes(sig.signature) for sig in signed_tx.signatures]),
         )
 
+    def validate_spend_bundle_signature(self, bundle: WalletSpendBundle) -> bool:
+        """Validate the aggregate signature of a spend bundle using the same flags as the full node mempool."""
+        try:
+            flags = get_flags_for_height_and_constants(0, self.constants) | MEMPOOL_MODE
+            validate_clvm_and_signature(
+                bundle,
+                self.constants.MAX_BLOCK_COST_CLVM,
+                self.constants,
+                flags,
+            )
+            return True
+        except Exception as e:
+            self.log.error(f"Spend bundle signature validation failed: {e}")
+            return False
+
     async def sign_transactions(
         self,
         tx_records: list[TransactionRecord],
@@ -2840,6 +2874,11 @@ class WalletStateManager:
     async def submit_transactions(self, signed_txs: list[SignedTransaction]) -> list[bytes32]:
         bundles: list[WalletSpendBundle] = [self.signed_tx_to_spendbundle(tx) for tx in signed_txs]
         for bundle in bundles:
+            if not self.validate_spend_bundle_signature(bundle):
+                raise ValueError(
+                    f"Transaction {bundle.name().hex()} has an invalid aggregate signature "
+                    f"and will not be submitted"
+                )
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
 
