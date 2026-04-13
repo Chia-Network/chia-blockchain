@@ -106,7 +106,10 @@ class WSChiaConnection:
     # Messaging
     received_message_callback: ConnectionCallback | None = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+    outgoing_queue: asyncio.PriorityQueue[tuple[int, int, Message]] = field(
+        default_factory=asyncio.PriorityQueue, repr=False
+    )
+    _send_seq: int = field(default=0, repr=False)
     api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
     execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
@@ -391,8 +394,9 @@ class WSChiaConnection:
     async def outbound_handler(self) -> None:
         try:
             while not self.closed:
-                msg = await self.outgoing_queue.get()
-                if msg is not None:
+                item = await self.outgoing_queue.get()
+                if item is not None:
+                    _priority, _seq, msg = item
                     await self._send_message(msg)
         except asyncio.CancelledError:
             pass
@@ -565,11 +569,13 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message) -> bool:
+    async def send_message(self, message: Message, priority: int = 0) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
             return False
-        await self.outgoing_queue.put(message)
+        seq = self._send_seq
+        self._send_seq += 1
+        await self.outgoing_queue.put((priority, seq, message))
         return True
 
     async def call_api(
@@ -577,6 +583,7 @@ class WSChiaConnection:
         request_method: Callable[..., Awaitable[Message | None]],
         message: Streamable,
         timeout: int = 60,
+        priority: int = 0,
     ) -> Any:
         if self.connection_type is None:
             raise ValueError("handshake not done yet")
@@ -592,7 +599,7 @@ class WSChiaConnection:
 
         request = Message(uint8(request_metadata.request_type.value), None, bytes(message))
         request_start_t = time.time()
-        response = await self.send_request(request, timeout)
+        response = await self.send_request(request, timeout, priority=priority)
         self.log.debug(
             f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
             f"{time.time() - request_start_t}, None? {response is None}"
@@ -637,7 +644,7 @@ class WSChiaConnection:
             if nonce_candidate == start_nonce:
                 return None
 
-    async def send_request(self, message_no_id: Message, timeout: int) -> Message | None:
+    async def send_request(self, message_no_id: Message, timeout: int, priority: int = 0) -> Message | None:
         """Sends a message and waits for a response."""
         if self.closed:
             return None
@@ -658,7 +665,9 @@ class WSChiaConnection:
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
         self.pending_requests[message.id] = event
-        await self.outgoing_queue.put(message)
+        seq = self._send_seq
+        self._send_seq += 1
+        await self.outgoing_queue.put((priority, seq, message))
 
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -678,7 +687,9 @@ class WSChiaConnection:
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
-            await self.outgoing_queue.put(msg)
+            seq = self._send_seq
+            self._send_seq += 1
+            await self.outgoing_queue.put((0, seq, msg))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None

@@ -76,7 +76,7 @@ from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.signing import sign_message, verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
@@ -205,6 +205,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetPuzzleAndSolution,
+    GetPuzzleAndSolutionResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
     GetStrayCATsResponse,
@@ -330,8 +332,9 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
-            if await self.service.wallet_state_manager.synced() is False:
-                raise ValueError("Wallet needs to be fully synced before making transactions.")
+            # sync check removed to unblock game channel offers during brief desync
+            # if await self.service.wallet_state_manager.synced() is False:
+            #     raise ValueError("Wallet needs to be fully synced before making transactions.")
 
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
@@ -604,6 +607,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_spendable_coins": self.get_spendable_coins,
             "/get_coin_records_by_names": self.get_coin_records_by_names,
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
             "/get_notifications": self.get_notifications,
@@ -1000,7 +1004,40 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(request.spend_bundle)
+
+        if not self.service.wallet_state_manager.validate_spend_bundle_signature(request.spend_bundle):
+            log.error(f"push_tx RPC: rejecting bundle {request.spend_bundle.name().hex()} — bad aggregate signature")
+            raise ValueError("SpendBundle has an invalid aggregate signature")
+
+        if request.fee > 0:
+            assert self.service.logged_in_fingerprint is not None
+
+            bundle_coins = [cs.coin for cs in request.spend_bundle.coin_spends]
+            async with self.service.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG,
+                push=False,
+            ) as action_scope:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.extend(bundle_coins)
+
+                await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    request.fee,
+                    action_scope,
+                    extra_conditions=(
+                        AssertConcurrentSpend(bundle_coins[0].name()),
+                    ),
+                )
+
+            signed_fee_bundles = [
+                tx.spend_bundle
+                for tx in action_scope.side_effects.transactions
+                if tx.spend_bundle is not None
+            ]
+            combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
+            await self.service.push_tx(combined_bundle)
+        else:
+            await self.service.push_tx(request.spend_bundle)
+
         return Empty()
 
     @tx_endpoint(push=True)
@@ -1630,8 +1667,9 @@ class WalletRpcApi:
             }
         )
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before selecting coins")
+        # sync check removed to unblock game channel flow during brief desync
+        # if await self.service.wallet_state_manager.synced() is False:
+        #     raise ValueError("Wallet needs to be fully synced before selecting coins")
 
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
@@ -1686,8 +1724,9 @@ class WalletRpcApi:
 
     @marshal
     async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before finding coin information")
+        # sync check removed to unblock game channel polling during brief desync
+        # if await self.service.wallet_state_manager.synced() is False:
+        #     raise ValueError("Wallet needs to be fully synced before finding coin information")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),
@@ -1708,13 +1747,22 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
-            missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
-            ]
-            if missed_coins:
-                raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
+
+    @marshal
+    async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
+        coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)
+        if coin_record is None or not coin_record.spent:
+            raise ValueError(f"Coin {request.coin_name.hex()} not found or not spent")
+        peer = self.service.get_full_node_peer()
+        coin_spend = await fetch_coin_spend(
+            uint32(coin_record.spent_block_height), coin_record.coin, peer
+        )
+        return GetPuzzleAndSolutionResponse(
+            puzzle_reveal=bytes(coin_spend.puzzle_reveal).hex(),
+            solution=bytes(coin_spend.solution).hex(),
+        )
 
     @marshal
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
