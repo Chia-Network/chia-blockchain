@@ -27,7 +27,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.validation_state import ValidationState
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.errors import Err
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
@@ -484,10 +483,6 @@ class FullNodeSimulator(FullNodeAPI):
             await self.farm_blocks_to_wallet(count=count, wallet=wallet, timeout=None)
             return rewards
 
-    _TEMPORARY_MEMPOOL_ERRORS: frozenset[str] = frozenset(
-        {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name}
-    )
-
     async def wait_transaction_records_entered_mempool(
         self,
         records: Collection[TransactionRecord | LightTransactionRecord],
@@ -500,8 +495,10 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to wait for.
             wallet_node: If provided, the wallet's transaction store is polled
-                for non-recoverable rejection errors so the wait can fail fast
-                instead of running until the timeout.
+                so that once the wallet has exhausted its retry attempts for a
+                transaction (``tx_record.is_valid()`` returns ``False``), the
+                wait fails fast with the last rejection error instead of running
+                until the timeout.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             ids_to_check: set[bytes32] = set()
@@ -534,16 +531,19 @@ class FullNodeSimulator(FullNodeAPI):
                         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx_name)
                         if tx_record is None or tx_record.is_in_mempool():
                             continue
-                        for _, status, error in tx_record.sent_to:
-                            if (
-                                status == MempoolInclusionStatus.FAILED.value
-                                and error is not None
-                                and error not in self._TEMPORARY_MEMPOOL_ERRORS
-                            ):
-                                raise RuntimeError(
-                                    f"Transaction {tx_name.hex()} was rejected: {error}. "
-                                    f"Failing fast instead of waiting for mempool timeout."
-                                )
+                        if not tx_record.is_valid():
+                            last_error = next(
+                                (
+                                    error
+                                    for _, status, error in reversed(tx_record.sent_to)
+                                    if status == MempoolInclusionStatus.FAILED.value and error is not None
+                                ),
+                                "unknown",
+                            )
+                            raise RuntimeError(
+                                f"Transaction {tx_name.hex()} was rejected: {last_error}. "
+                                f"Failing fast — wallet exhausted retries."
+                            )
 
                 await asyncio.sleep(backoff)
 

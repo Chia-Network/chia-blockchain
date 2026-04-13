@@ -14,6 +14,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
+from chia.wallet.transaction_record import minimum_send_attempts
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
@@ -311,9 +312,12 @@ async def test_wait_mempool_skips_in_mempool_wallet_records(
 
 
 @pytest.mark.anyio
-async def test_wait_mempool_fast_fail_on_rejection(
+async def test_wait_mempool_allows_retries_before_giving_up(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
+    """A transaction that has been rejected fewer than minimum_send_attempts
+    times is still considered valid by the wallet.  The mempool wait should
+    keep polling (not fast-fail) so the wallet's retry mechanism can succeed."""
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
     assert wallet_node.wallet_state_manager is not None
@@ -330,16 +334,66 @@ async def test_wait_mempool_fast_fail_on_rejection(
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
 
-    failed_record = dataclasses.replace(
+    few_failures_record = dataclasses.replace(
         tx,
         sent_to=[("peer1", uint8(MempoolInclusionStatus.FAILED.value), Err.INVALID_SPEND_BUNDLE.name)],
     )
+    assert few_failures_record.is_valid()
+
+    # Iteration 1: mempool empty, wallet record still valid → keep polling
+    # Iteration 2: mempool returns the bundle → success
+    with (
+        patch.object(
+            full_node_api.full_node.mempool_manager,
+            "get_spendbundle",
+            side_effect=[None, tx.spend_bundle],
+        ),
+        patch.object(
+            wallet_node.wallet_state_manager.tx_store,
+            "get_transaction_record",
+            return_value=few_failures_record,
+        ),
+    ):
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx], wallet_node=wallet_node)
+
+
+@pytest.mark.anyio
+async def test_wait_mempool_fast_fail_after_retries_exhausted(
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    """Once the wallet has exhausted its retry attempts (is_valid() returns
+    False), the mempool wait should fail fast with the rejection error instead
+    of silently waiting for the timeout."""
+    [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_api.server.get_port()), None)
+    assert wallet_node.wallet_state_manager is not None
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(amount=1, wallet=wallet)
+
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        await wallet.generate_signed_transaction(
+            amounts=[uint64(1)],
+            puzzle_hashes=[await action_scope.get_puzzle_hash(wallet.wallet_state_manager)],
+            action_scope=action_scope,
+        )
+
+    [tx] = action_scope.side_effects.transactions
+    assert tx.spend_bundle is not None
+
+    exhausted_record = dataclasses.replace(
+        tx,
+        sent_to=[
+            (f"peer{i}", uint8(MempoolInclusionStatus.FAILED.value), Err.INVALID_SPEND_BUNDLE.name)
+            for i in range(minimum_send_attempts)
+        ],
+    )
+    assert not exhausted_record.is_valid()
 
     with (
         patch.object(
             wallet_node.wallet_state_manager.tx_store,
             "get_transaction_record",
-            return_value=failed_record,
+            return_value=exhausted_record,
         ),
         pytest.raises(RuntimeError, match="was rejected"),
     ):
