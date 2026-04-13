@@ -91,13 +91,13 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
             x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
             critical=False,
         )
-        .sign(root_key, hashes.SHA256(), default_backend())  # type: ignore[arg-type]
+        .sign(root_key, hashes.SHA256(), default_backend())
     )
 
-    cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
+    cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)  # type: ignore[arg-type]
     key_pem = cert_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
+        encoding=serialization.Encoding.PEM,  # type: ignore[arg-type]
+        format=serialization.PrivateFormat.PKCS8,  # type: ignore[arg-type]
         encryption_algorithm=serialization.NoEncryption(),
     )
 
@@ -125,10 +125,10 @@ def make_ca_cert(cert_path: Path, key_path: Path):
         .sign(root_key, hashes.SHA256(), default_backend())
     )
 
-    cert_pem = root_cert.public_bytes(encoding=serialization.Encoding.PEM)
+    cert_pem = root_cert.public_bytes(encoding=serialization.Encoding.PEM)  # type: ignore[arg-type]
     key_pem = root_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
+        encoding=serialization.Encoding.PEM,  # type: ignore[arg-type]
+        format=serialization.PrivateFormat.PKCS8,  # type: ignore[arg-type]
         encryption_algorithm=serialization.NoEncryption(),
     )
 

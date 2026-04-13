@@ -102,7 +102,7 @@ def ssl_context_for_client(
 
 def calculate_node_id(cert_path: Path) -> bytes32:
     pem_cert = x509.load_pem_x509_certificate(cert_path.read_bytes(), default_backend())
-    der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+    der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)  # type: ignore[arg-type]
     der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
     return bytes32(der_cert.fingerprint(hashes.SHA256()))
 
