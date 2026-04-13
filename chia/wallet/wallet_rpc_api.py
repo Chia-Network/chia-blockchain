@@ -965,8 +965,18 @@ class WalletRpcApi:
 
     @marshal
     async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
+        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        blockchain = self.service.wallet_state_manager.blockchain
+        is_transaction_block: bool | None = None
+        prev_transaction_block_height: uint32 | None = None
+        if blockchain.contains_height(uint32(height)):
+            block_record = blockchain.height_to_block_record(uint32(height))
+            is_transaction_block = block_record.is_transaction_block
+            prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
         return GetHeightInfoResponse(
-            height=await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
+            height=height,
+            is_transaction_block=is_transaction_block,
+            prev_transaction_block_height=prev_transaction_block_height,
         )
 
     @marshal
@@ -974,7 +984,38 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(request.spend_bundle)
+
+        if request.fee > 0:
+            if await self.service.wallet_state_manager.synced() is False:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
+            assert self.service.logged_in_fingerprint is not None
+
+            bundle_coins = [cs.coin for cs in request.spend_bundle.coin_spends]
+            async with self.service.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG,
+                push=False,
+            ) as action_scope:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.extend(bundle_coins)
+
+                await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    request.fee,
+                    action_scope,
+                    extra_conditions=(
+                        AssertConcurrentSpend(bundle_coins[0].name()),
+                    ),
+                )
+
+            signed_fee_bundles = [
+                tx.spend_bundle
+                for tx in action_scope.side_effects.transactions
+                if tx.spend_bundle is not None
+            ]
+            combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
+            await self.service.push_tx(combined_bundle)
+        else:
+            await self.service.push_tx(request.spend_bundle)
+
         return Empty()
 
     @tx_endpoint(push=True)
@@ -2008,6 +2049,7 @@ class WalletRpcApi:
                 fee=request.fee,
                 validate_only=request.validate_only,
                 extra_conditions=extra_conditions,
+                coin_ids=request.coin_ids,  # the first entry in this list makes the extra_conditions
             )
 
         return CreateOfferForIDsResponse(

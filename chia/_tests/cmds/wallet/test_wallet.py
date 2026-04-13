@@ -307,7 +307,11 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
         async def get_height_info(self) -> GetHeightInfoResponse:
             self.add_to_log("get_height_info", ())
-            return GetHeightInfoResponse(height=uint32(10))
+            return GetHeightInfoResponse(
+                height=uint32(10),
+                is_transaction_block=True,
+                prev_transaction_block_height=uint32(9),
+            )
 
         async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
             self.add_to_log("get_wallet_balance", (request,))

@@ -53,7 +53,9 @@ from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program as ChiaProgram
 from chia.types.coin_spend import make_spend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -534,6 +536,249 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
     # This tests that the client returns successfully, rather than raising or returning something unexpected
     await client.get_timestamp_for_height(GetTimestampForHeight(height=uint32(1)))
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_offer_with_coin_ids(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+
+    # Get spendable XCH coins
+    coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(coins_response.coins) >= 1
+    xch_coin = coins_response.coins[0]
+
+    # Success: create offer specifying a coin to use
+    # Offer 1 mojo of XCH, request some fake CAT (validate_only so we don't need a real CAT wallet)
+    create_res = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-xch_coin.amount)},
+            validate_only=True,
+            coin_ids=[xch_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert create_res.offer is not None
+    involved = create_res.offer.get_involved_coins()
+    assert xch_coin in involved
+
+    # Failure: non-existent coin ID
+    fake_coin_id = bytes32.zeros
+    with pytest.raises(ResponseFailureError, match="not found or already spent"):
+        await client.create_offer_for_ids(
+            CreateOfferForIDs(
+                offer={str(1): "-1"},
+                validate_only=True,
+                coin_ids=[fake_coin_id],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # Failure: coin belongs to a wallet not offering in this trade
+    # Wallet 1 (XCH) is requesting (positive), not offering, so a wallet-1 coin is invalid
+    with pytest.raises(ResponseFailureError, match="not offering in this trade"):
+        await client.create_offer_for_ids(
+            CreateOfferForIDs(
+                offer={str(1): "1"},
+                validate_only=True,
+                coin_ids=[xch_coin.name()],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # Success: partial coverage -- specify a small coin, let auto-selection fill the rest
+    # First, get two separate coins (we have 2 blocks worth of rewards)
+    all_coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(3_500_000_000_000),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(all_coins_response.coins) >= 2
+    small_coin = min(all_coins_response.coins, key=lambda c: c.amount)
+    total_needed = sum(c.amount for c in all_coins_response.coins)
+
+    create_res2 = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-total_needed)},
+            validate_only=True,
+            coin_ids=[small_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert create_res2.offer is not None
+    involved2 = create_res2.offer.get_involved_coins()
+    assert small_coin in involved2
+    assert len(involved2) >= 2
+
+    # Verify first specified coin_id becomes the origin (the coin that creates outputs).
+    # When two coins are specified, coin_ids[0] should carry the CREATE_COIN conditions.
+    sorted_coins = sorted(all_coins_response.coins, key=lambda c: c.amount)
+    first_coin, second_coin = sorted_coins[0], sorted_coins[1]
+    create_res3 = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): str(-total_needed)},
+            validate_only=True,
+            coin_ids=[first_coin.name(), second_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    offer3 = create_res3.offer
+    assert offer3 is not None
+    additions_by_coin = {cs.coin: offer3._additions.get(cs.coin, []) for cs in offer3.coin_spends()}
+    assert len(additions_by_coin[first_coin]) > 0, "first specified coin should be the origin with outputs"
+    assert len(additions_by_coin[second_coin]) == 0, "second coin should not create outputs"
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_offer_with_coin_ids_cat_origin(wallet_environments: WalletTestFramework) -> None:
+    # we test that the CAT coin makes the extra_conditions
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+    env.wallet_aliases = {"xch": 1, "cat_a": 2, "cat_b": 3}
+
+    cat_a = await mint_cat(wallet_environments, env, "xch", "cat_a", uint64(100), CATWallet, "cat_a_origin")
+    cat_b = await mint_cat(wallet_environments, env, "xch", "cat_b", uint64(50), CATWallet, "cat_b_origin")
+    cat_a_id = uint32(cat_a.id())
+    cat_b_asset_id = cat_b.cat_info.limitations_program_hash
+
+    xch_coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(xch_coins_response.coins) >= 1
+    xch_coin = xch_coins_response.coins[0]
+
+    cat_coins_response = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=cat_a_id,
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(cat_coins_response.coins) >= 1
+    cat_a_coin = cat_coins_response.coins[0]
+
+    # Offer both XCH and CAT_A, request CAT_B.
+    # coin_ids[0] is the CAT coin, so extra_conditions must land on its spend.
+    remark_condition = Remark(Program.to("cat_origin_test"))
+    create_res = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={
+                str(1): str(-xch_coin.amount),
+                str(cat_a_id): str(-cat_a_coin.amount),
+                cat_b_asset_id.hex(): "1",
+            },
+            validate_only=True,
+            coin_ids=[cat_a_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+        extra_conditions=(remark_condition,),
+    )
+    assert create_res.offer is not None
+    involved = create_res.offer.get_involved_coins()
+    assert cat_a_coin in involved
+    assert xch_coin in involved
+
+    # Verify the Remark condition is on the CAT coin spend, NOT the XCH spend
+    remark_on_cat = False
+    remark_on_xch = False
+    for cs in create_res.offer.coin_spends():
+        puzzle = ChiaProgram.from_bytes(bytes(cs.puzzle_reveal))
+        solution = ChiaProgram.from_bytes(bytes(cs.solution))
+        conditions = puzzle.run(solution).as_python()
+        has_remark = any(cond[0] == ConditionOpcode.REMARK for cond in conditions)
+        if has_remark:
+            if cs.coin == cat_a_coin:
+                remark_on_cat = True
+            elif cs.coin == xch_coin:
+                remark_on_xch = True
+    assert remark_on_cat
+    assert not remark_on_xch
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_offer_with_coin_ids_xch_and_cat(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+    env.wallet_aliases = {"xch": 1, "cat_a": 2, "cat_b": 3}
+
+    cat_a = await mint_cat(wallet_environments, env, "xch", "cat_a", uint64(100), CATWallet, "cat_a_nonce")
+    cat_b = await mint_cat(wallet_environments, env, "xch", "cat_b", uint64(50), CATWallet, "cat_b_nonce")
+    cat_a_id = uint32(cat_a.id())
+    cat_b_asset_id = cat_b.cat_info.limitations_program_hash
+
+    # Select an XCH coin
+    xch_coins = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(xch_coins.coins) >= 1
+    xch_coin = xch_coins.coins[0]
+
+    # Select a CAT A coin
+    cat_a_coins = await client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1),
+            wallet_id=cat_a_id,
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(cat_a_coins.coins) >= 1
+    cat_a_coin = cat_a_coins.coins[0]
+
+    # Offer XCH + CAT A for CAT B, specifying both coins
+    create_res = await client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={
+                str(1): str(-xch_coin.amount),
+                str(cat_a_id): str(-cat_a_coin.amount),
+                cat_b_asset_id.hex(): "1",
+            },
+            validate_only=True,
+            coin_ids=[xch_coin.name(), cat_a_coin.name()],
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert create_res.offer is not None
+    involved = create_res.offer.get_involved_coins()
+    assert xch_coin in involved, "specified XCH coin should be in the offer"
+    assert cat_a_coin in involved, "specified CAT A coin should be in the offer"
+
+    # XCH coin (coin_ids[0]) should be the origin with outputs
+    additions_by_coin = {cs.coin: create_res.offer._additions.get(cs.coin, []) for cs in create_res.offer.coin_spends()}
+    assert len(additions_by_coin[xch_coin]) > 0
 
 
 @pytest.mark.parametrize(
@@ -2497,7 +2742,10 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    assert (await client.get_height_info()).height > 0
+    height_info = await client.get_height_info()
+    assert height_info.height > 0
+    assert height_info.is_transaction_block is not None
+    assert height_info.prev_transaction_block_height is not None
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)

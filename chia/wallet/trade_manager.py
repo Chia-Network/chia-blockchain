@@ -16,6 +16,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program, run
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
+from chia.util.streamable import UInt32Range
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -420,7 +421,7 @@ class TradeManager:
 
     async def create_offer_for_ids(
         self,
-        offer: dict[int | bytes32, int],
+        offer: dict[int | bytes32, int],  # wallet id and relative amount of the asset to offer/request
         action_scope: WalletActionScope,
         driver_dict: dict[bytes32, PuzzleInfo] | None = None,
         solver: Solver | None = None,
@@ -428,6 +429,7 @@ class TradeManager:
         validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
+        coin_ids: list[bytes32] | None = None,  # the first entry in this list makes the extra_conditions
     ) -> tuple[Literal[True], TradeRecord, None]:
         if driver_dict is None:
             driver_dict = {}
@@ -441,6 +443,7 @@ class TradeManager:
             fee=fee,
             extra_conditions=extra_conditions,
             taking=taking,
+            coin_ids=coin_ids,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -477,6 +480,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
+        coin_ids: list[bytes32] | None = None,
     ) -> tuple[Literal[True], Offer, None] | tuple[Literal[False], None, str]:
         """
         Offer is dictionary of wallet ids and amount
@@ -489,6 +493,24 @@ class TradeManager:
             coins_to_offer: dict[int | bytes32, set[Coin]] = {}
             requested_payments: dict[bytes32 | None, list[CreateCoin]] = {}
             offer_dict_no_ints: dict[bytes32 | None, int] = {}
+
+            # Pre-resolve specified coins so we can validate and group them by wallet
+            specified_coins_by_wallet: dict[int, set[Coin]] = {}
+            if coin_ids is not None and len(coin_ids) > 0:
+                records_result = await self.wallet_state_manager.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(coin_ids),
+                    spent_range=UInt32Range(stop=uint32(0)),
+                )
+                found_ids: set[bytes32] = set()
+                for record in records_result.records:
+                    found_ids.add(record.coin.name())
+                    if record.wallet_id not in specified_coins_by_wallet:
+                        specified_coins_by_wallet[record.wallet_id] = set()
+                    specified_coins_by_wallet[record.wallet_id].add(record.coin)
+                for cid in coin_ids:
+                    if cid not in found_ids:
+                        raise ValueError(f"Coin {cid} not found or already spent")
+
             for id, amount in offer_dict.items():
                 asset_id: bytes32 | None = None
                 # asset_id can either be none if asset is XCH or
@@ -539,7 +561,30 @@ class TradeManager:
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         amount_to_select += fee
                     assert isinstance(wallet, (CATWallet, DataLayerWallet, NFTWallet, Wallet))
-                    if isinstance(wallet, DataLayerWallet):
+
+                    wallet_specified = specified_coins_by_wallet.pop(wallet.id(), set())
+                    if wallet_specified:
+                        if isinstance(wallet, (DataLayerWallet, NFTWallet)):
+                            raise ValueError(
+                                f"Cannot specify coins for wallet {wallet.id()} "
+                                f"(non-fungible wallets select coins by asset ID)"
+                            )
+                        specified_total = sum(c.amount for c in wallet_specified)
+                        if specified_total >= amount_to_select:
+                            coins_to_offer[id] = wallet_specified
+                        else:
+                            remaining = amount_to_select - specified_total
+                            adjusted_tx_config = dataclasses.replace(
+                                action_scope.config.tx_config,
+                                excluded_coin_ids=[
+                                    *action_scope.config.tx_config.excluded_coin_ids,
+                                    *(c.name() for c in wallet_specified),
+                                ],
+                            )
+                            async with self.wallet_state_manager.new_action_scope(adjusted_tx_config) as sandbox:
+                                additional = await wallet.select_coins(uint64(remaining), sandbox)
+                            coins_to_offer[id] = wallet_specified | additional
+                    elif isinstance(wallet, DataLayerWallet):
                         assert asset_id is not None
                         coins_to_offer[id] = await wallet.get_coins_to_offer(launcher_id=asset_id)
                     elif isinstance(wallet, NFTWallet):
@@ -574,6 +619,13 @@ class TradeManager:
                     else:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
+            # Verify all specified coins were claimed by an offering wallet
+            if specified_coins_by_wallet:
+                unused_wallet_ids = list(specified_coins_by_wallet.keys())
+                raise ValueError(
+                    f"Specified coins belong to wallet(s) {unused_wallet_ids} which are not offering in this trade"
+                )
+
             requested_payments = await self.check_for_requested_payment_modifications(
                 requested_payments, driver_dict, taking
             )
@@ -598,10 +650,32 @@ class TradeManager:
 
             all_transactions: list[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
+
+            # Resolve the preferred origin coin from coin_ids[0] so it carries extra_conditions
+            preferred_origin: Coin | None = None
+            if coin_ids:
+                target_id = coin_ids[0]
+                for coin_set in coins_to_offer.values():
+                    for c in coin_set:
+                        if c.name() == target_id:
+                            preferred_origin = c
+                            break
+                    if preferred_origin is not None:
+                        break
+
             # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
             # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
             for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
                 selected_coins = coins_to_offer[id]
+                origin_in_this_wallet = False
+                if preferred_origin is not None and preferred_origin in selected_coins:
+                    origin_in_this_wallet = True
+
+                if preferred_origin is not None:
+                    conditions_for_this_wallet = extra_conditions if origin_in_this_wallet else tuple()
+                else:
+                    conditions_for_this_wallet = extra_conditions
+
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets.get(uint32(id))
                 else:
@@ -623,25 +697,32 @@ class TradeManager:
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            extra_conditions=(*conditions_for_this_wallet, *announcements_to_assert),
                         )
                     else:
                         # ATTENTION: new_wallets
                         assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet))
+                        origin_id: bytes32 | None = None
+                        if origin_in_this_wallet:
+                            # if we have origin in this wallet, we can assume we have a preferred origin
+                            assert preferred_origin is not None
+                            origin_id = preferred_origin.name()
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
-                            extra_conditions=(*extra_conditions, *announcements_to_assert),
+                            extra_conditions=(*conditions_for_this_wallet, *announcements_to_assert),
                             add_authorizations_to_cr_cats=False,
+                            origin_id=origin_id,
                         )
 
                 all_transactions.extend(inner_action_scope.side_effects.transactions)
 
                 fee_left_to_pay = uint64(0)
-                extra_conditions = tuple()
+                if preferred_origin is None or origin_in_this_wallet:
+                    extra_conditions = tuple()
 
             async with action_scope.use() as interface:
                 interface.side_effects.transactions.extend(all_transactions)

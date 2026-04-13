@@ -177,12 +177,15 @@ class GetSyncStatusResponse(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
+    is_transaction_block: bool | None = None
+    prev_transaction_block_height: uint32 | None = None
 
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class PushTX(Streamable):
     spend_bundle: WalletSpendBundle
+    fee: uint64 = uint64(0)
 
     # We allow for flexibility in transaction parsing here so we need to override
     @classmethod
@@ -2136,6 +2139,7 @@ class CreateOfferForIDs(TransactionEndpointRequest):
     driver_dict: dict[bytes32, PuzzleInfo] | None = None
     solver: Solver | None = None
     validate_only: bool = False
+    coin_ids: list[bytes32] | None = None
 
     @property
     def offer_spec(self) -> dict[int | bytes32, int]:
