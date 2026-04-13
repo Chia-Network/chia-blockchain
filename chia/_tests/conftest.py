@@ -278,6 +278,14 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     return ret
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _install_plot_cache() -> None:
+    from chia._tests.util.plot_cache import install as install_plot_cache
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    install_plot_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
+
+
 @pytest.fixture(scope="session", name="bt")
 async def block_tools_fixture(
     get_keychain, blockchain_constants, anyio_backend, testrun_uid: str
