@@ -514,6 +514,23 @@ class WalletNode:
             return None
         create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
+    def _tx_message_in_flight(self, peer_id: bytes32, msg_name: bytes32) -> bool:
+        return peer_id in self._tx_messages_in_progress and msg_name in self._tx_messages_in_progress[peer_id]
+
+    async def _send_transaction_message(
+        self, peer: WSChiaConnection, msg: Message, msg_name: bytes32 | None = None
+    ) -> None:
+        # Bail out before touching _tx_messages_in_progress so we never
+        # create an in-flight marker that on_disconnect has already passed
+        # and therefore will never clean up.
+        if peer.closed:
+            return
+        if msg_name is None:
+            msg_name = std_hash(msg.data)
+        in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+        in_progress.append(msg_name)
+        await peer.send_message(msg)
+
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return None
@@ -526,15 +543,10 @@ class WalletNode:
                 if peer.peer_node_id in sent_peers:
                     continue
                 msg_name: bytes32 = std_hash(msg.data)
-                if (
-                    peer.peer_node_id in self._tx_messages_in_progress
-                    and msg_name in self._tx_messages_in_progress[peer.peer_node_id]
-                ):
+                if self._tx_message_in_flight(peer.peer_node_id, msg_name):
                     continue
                 self.log.debug(f"sending: {msg}")
-                await peer.send_message(msg)
-                self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-                self._tx_messages_in_progress[peer.peer_node_id].append(msg_name)
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _messages_to_resend(self) -> list[tuple[Message, set[bytes32]]]:
         if self._wallet_state_manager is None or self._shut_down:
@@ -751,7 +763,9 @@ class WalletNode:
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
-            await peer.send_message(msg)
+            # if we are connecting to this peer, _tx_messages_in_progress is empty,
+            # so we don't need to check if the message is already in flight.
+            await self._send_transaction_message(peer, msg)
 
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
@@ -1714,7 +1728,7 @@ class WalletNode:
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
-            await peer.send_message(msg)
+            await self._send_transaction_message(peer, msg)
 
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"
