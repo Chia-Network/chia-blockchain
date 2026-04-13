@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 import anyio
 from chia_rs import (
+    SIMPLE_GENERATOR,
     AugSchemeMPL,
     BlockRecord,
     CoinRecord,
@@ -1283,8 +1284,10 @@ class FullNodeAPI:
         else:
             return msg
 
-    @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_block_header(
+        self, request: wallet_protocol.RequestBlockHeader, peer: WSChiaConnection
+    ) -> Message | None:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
@@ -1305,14 +1308,22 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
             flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
-            additions, removals = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
-                additions_and_removals,
-                bytes(block.transactions_generator),
-                block_generator.generator_refs,
-                flags,
-                self.full_node.constants,
-            )
+            # malicious generators may exist on-chain. An untrusted peer
+            # could make us waste compute by requesting such blocks.
+            # SIMPLE_GENERATOR restricts the generator to safe operations.
+            if not self.is_trusted(peer):
+                flags |= SIMPLE_GENERATOR
+            try:
+                additions, removals = await asyncio.get_running_loop().run_in_executor(
+                    self.executor,
+                    additions_and_removals,
+                    bytes(block.transactions_generator),
+                    block_generator.generator_refs,
+                    flags,
+                    self.full_node.constants,
+                )
+            except ValueError:
+                return make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
             # strip the hint from additions, and compute the puzzle hash for
             # removals
             removals_and_additions = ([name for name, _ in removals], [name for name, _ in additions])
@@ -1509,8 +1520,10 @@ class FullNodeAPI:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Message | None:
         coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
@@ -1532,6 +1545,12 @@ class FullNodeAPI:
             self.full_node.blockchain.lookup_block_generators, block
         )
         assert block_generator is not None
+        flags = get_flags_for_height_and_constants(height, self.full_node.constants)
+        # malicious generators may exist on-chain. An untrusted peer
+        # could make us waste compute by requesting such blocks.
+        # SIMPLE_GENERATOR restricts the generator to safe operations.
+        if not self.is_trusted(peer):
+            flags |= SIMPLE_GENERATOR
         try:
             puzzle, solution = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
@@ -1540,7 +1559,7 @@ class FullNodeAPI:
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                get_flags_for_height_and_constants(height, self.full_node.constants),
+                flags,
             )
         except ValueError:
             return reject_msg

@@ -6,11 +6,12 @@ import functools
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
 from chia_rs import (
+    SIMPLE_GENERATOR,
     BlockRecord,
     CoinState,
     ConsensusConstants,
@@ -200,11 +201,116 @@ async def test_request_block_headers_transactions_filter(
     assert block_headers_res.header_blocks == block_headers
     assert block_headers_res.header_blocks[0].transactions_filter == expected_transactions_filter
     # Go even further and compare this to the outcome of request_block_header
-    msg = await full_node_api.request_block_header(wallet_protocol.RequestBlockHeader(uint32(new_block.height)))
+    _, peer_id = await add_dummy_connection(full_node_api.full_node.server, "127.0.0.1", 12312)
+    peer = full_node_api.full_node.server.all_connections[peer_id]
+    msg = await full_node_api.request_block_header(wallet_protocol.RequestBlockHeader(uint32(new_block.height)), peer)
     assert msg is not None
     block_header_res = RespondBlockHeader.from_bytes(msg.data)
     assert block_header_res.header_block == block_header
     assert block_header_res.header_block.transactions_filter == expected_transactions_filter
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_simple_generator_flag_for_untrusted_peers(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    Verify that request_block_header and request_puzzle_solution set the
+    SIMPLE_GENERATOR flag when the requesting peer is untrusted.
+    """
+    full_node_api, server, bt = one_node_one_block
+    ph = SerializedProgram.to(1).get_tree_hash()
+    for _ in range(2):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+    [parent_coin] = [c.coin for c in coins if c.coin.amount == 250_000_000_000]
+    sb = SpendBundle(
+        [
+            make_spend(
+                parent_coin, SerializedProgram.to(1), SerializedProgram.to([[ConditionOpcode.CREATE_COIN, ph, 42]])
+            )
+        ],
+        G2Element(),
+    )
+    blocks = await full_node_api.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(1, blocks, guarantee_transaction_block=True, transaction_data=sb)
+    new_block = blocks[-1]
+    await full_node_api.full_node.add_block(new_block)
+
+    _, peer_id = await add_dummy_connection(server, "127.0.0.1", 12312)
+    peer = server.all_connections[peer_id]
+
+    from typing import Any
+
+    from chia_rs import additions_and_removals
+    from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
+
+    captured_flags: list[int] = []
+
+    def capturing_additions_and_removals(*args: Any, **kwargs: Any) -> Any:
+        captured_flags.append(args[2])
+        return additions_and_removals(*args, **kwargs)
+
+    def capturing_get_puzzle_and_solution(*args: Any, **kwargs: Any) -> Any:
+        captured_flags.append(args[4])
+        return get_puzzle_and_solution_for_coin(*args, **kwargs)
+
+    # -- request_block_header with untrusted peer --
+    with (
+        patch.object(full_node_api, "is_trusted", return_value=False),
+        patch("chia.full_node.full_node_api.additions_and_removals", capturing_additions_and_removals),
+    ):
+        msg = await full_node_api.request_block_header(
+            wallet_protocol.RequestBlockHeader(uint32(new_block.height)), peer
+        )
+    assert msg is not None
+    assert msg.type == ProtocolMessageTypes.respond_block_header.value
+    assert len(captured_flags) == 1
+    assert captured_flags[0] & SIMPLE_GENERATOR != 0
+
+    # -- request_block_header with trusted peer --
+    captured_flags.clear()
+    with (
+        patch.object(full_node_api, "is_trusted", return_value=True),
+        patch("chia.full_node.full_node_api.additions_and_removals", capturing_additions_and_removals),
+    ):
+        msg = await full_node_api.request_block_header(
+            wallet_protocol.RequestBlockHeader(uint32(new_block.height)), peer
+        )
+    assert msg is not None
+    assert msg.type == ProtocolMessageTypes.respond_block_header.value
+    assert len(captured_flags) == 1
+    assert captured_flags[0] & SIMPLE_GENERATOR == 0
+
+    # -- request_puzzle_solution with untrusted peer --
+    captured_flags.clear()
+    with (
+        patch.object(full_node_api, "is_trusted", return_value=False),
+        patch("chia.full_node.full_node_api.get_puzzle_and_solution_for_coin", capturing_get_puzzle_and_solution),
+    ):
+        msg = await full_node_api.request_puzzle_solution(
+            wallet_protocol.RequestPuzzleSolution(parent_coin.name(), new_block.height), peer
+        )
+    assert msg is not None
+    assert msg.type == ProtocolMessageTypes.respond_puzzle_solution.value
+    assert len(captured_flags) == 1
+    assert captured_flags[0] & SIMPLE_GENERATOR != 0
+
+    # -- request_puzzle_solution with trusted peer --
+    captured_flags.clear()
+    with (
+        patch.object(full_node_api, "is_trusted", return_value=True),
+        patch("chia.full_node.full_node_api.get_puzzle_and_solution_for_coin", capturing_get_puzzle_and_solution),
+    ):
+        msg = await full_node_api.request_puzzle_solution(
+            wallet_protocol.RequestPuzzleSolution(parent_coin.name(), new_block.height), peer
+        )
+    assert msg is not None
+    assert msg.type == ProtocolMessageTypes.respond_puzzle_solution.value
+    assert len(captured_flags) == 1
+    assert captured_flags[0] & SIMPLE_GENERATOR == 0
 
 
 # @pytest.mark.parametrize(
@@ -1524,10 +1630,14 @@ async def test_retry_store(
     request_puzzle_solution_failure_tested = False
 
     def flaky_request_puzzle_solution(
-        func: Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]],
-    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]]:
+        func: Callable[
+            [FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message | None]
+        ],
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message | None]]:
         @functools.wraps(func)
-        async def new_func(self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+        async def new_func(
+            self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+        ) -> Message | None:
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1535,7 +1645,7 @@ async def test_retry_store(
                 reject = wallet_protocol.RejectPuzzleSolution(bytes32.zeros, uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
-                return await func(self, request)
+                return await func(self, request, peer)
 
         return new_func
 
