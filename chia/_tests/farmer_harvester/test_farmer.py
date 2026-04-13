@@ -1213,7 +1213,7 @@ async def test_farmer_pool_info_config_update(
         target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
         version=pool_protocol_version,
     ).add(root_path=farmer_service.root_path)
-    mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
+    mock_http_get = mocker.patch("aiohttp.ClientSession.request", return_value=case.pool_response)
 
     await farmer_service._node.update_pool_state()
 
@@ -1321,10 +1321,6 @@ async def test_farmer_to_pool_protocol(
         async def json(self) -> dict[str, Any]:
             return PostFarmerResponse(welcome_message="welcome to the pool").to_json_dict()
 
-    @asynccontextmanager
-    async def mock_post_farmer_resp() -> AsyncIterator[DummyPostFarmerResponse]:
-        yield DummyPostFarmerResponse(ok=True)
-
     @dataclass(frozen=True)
     class DummyPutFarmerResponse:
         ok: bool
@@ -1333,10 +1329,6 @@ async def test_farmer_to_pool_protocol(
             return PutFarmerResponse(
                 authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
             ).to_json_dict()
-
-    @asynccontextmanager
-    async def mock_put_farmer_resp() -> AsyncIterator[DummyPutFarmerResponse]:
-        yield DummyPutFarmerResponse(ok=True)
 
     @dataclass(frozen=True)
     class DummyAuthResponse:
@@ -1352,10 +1344,6 @@ async def test_farmer_to_pool_protocol(
                 )
             ).to_json_dict()
 
-    @asynccontextmanager
-    async def mock_auth_resp() -> AsyncIterator[DummyAuthResponse]:
-        yield DummyAuthResponse(ok=True)
-
     @dataclass(frozen=True)
     class DummyGetFarmerResponse:
         ok: bool
@@ -1369,21 +1357,20 @@ async def test_farmer_to_pool_protocol(
             ).to_json_dict()
 
     @asynccontextmanager
-    async def mock_get_farmer_resp() -> AsyncIterator[DummyGetFarmerResponse]:
-        yield DummyGetFarmerResponse(ok=True)
+    async def client_session_request(method: str, url: str, **kwargs: Any) -> AsyncIterator[Any]:
+        path = str(URL(url).path).rstrip("/")
+        if path.endswith("/auth"):
+            assert method == "GET"
+            yield DummyAuthResponse(ok=True)
+        if path.endswith("/farmer"):
+            if method == "POST":
+                yield DummyPostFarmerResponse(ok=True)
+            if method == "PUT":
+                yield DummyPutFarmerResponse(ok=True)
+            if method == "GET":
+                yield DummyGetFarmerResponse(ok=True)
 
-    mocker.patch(
-        "aiohttp.ClientSession.post",
-        return_value=mock_post_farmer_resp(),
-    )
-    mocker.patch(
-        "aiohttp.ClientSession.put",
-        return_value=mock_put_farmer_resp(),
-    )
-    mocker.patch(
-        "aiohttp.ClientSession.get",
-        return_value=mock_auth_resp(),
-    )
+    mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_request)
     with PoolingShareState.acquire(
         root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
     ) as pool_config:
@@ -1392,10 +1379,6 @@ async def test_farmer_to_pool_protocol(
         )
         assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10), auth_sk) == PutFarmerResponse(
             authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
-        )
-        mocker.patch(
-            "aiohttp.ClientSession.get",
-            return_value=mock_get_farmer_resp(),
         )
         assert isinstance(
             await farmer_service._node._pool_get_farmer(pool_config, uint8(10), auth_sk), GetFarmerResponse

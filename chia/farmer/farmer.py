@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from math import floor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 
 import aiohttp
 import jwt
@@ -37,6 +37,7 @@ from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.util.profiler import profile_task
+from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
@@ -98,6 +99,57 @@ def increment_pool_stats(
         cutoff_24h = current_time - (24 * 60 * 60)
         pool_state[f"{name}_24h"] = strip_old_entries(pairs=pool_state[f"{name}_24h"], before=cutoff_24h)
     return
+
+
+_T_Response = TypeVar("_T_Response", bound=Streamable)
+
+
+async def make_pool_protocol_request(
+    *,
+    self: Farmer,
+    pool_config: PoolingShareState,
+    method: Literal["GET", "POST", "PUT"],
+    endpoint_name: str,
+    request: Streamable | None,
+    response_type: type[_T_Response],
+) -> tuple[_T_Response | pool_protocol.ErrorResponse | None, aiohttp.ClientResponse | None]:
+    self.log.debug("%s /%s request %s", method, endpoint_name, request)
+    try:
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.request(
+                method,
+                self._url_for_endpoint(pool_config, endpoint_name),
+                json=request.to_json_dict() if request else None,
+                ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
+            ) as resp:
+                if resp.ok:
+                    json_response = await resp.json()
+                    log_level = logging.INFO
+                    if "error_code" in json_response:
+                        log_level = logging.WARNING
+                        increment_pool_stats(
+                            self.pool_state,
+                            pool_config.p2_singleton_puzzle_hash,
+                            "pool_errors",
+                            time.time(),
+                            value=json_response,
+                        )
+                    self.log.log(log_level, f"{method} /{endpoint_name} response: {json_response}")
+                    if "error_code" in json_response:
+                        return (pool_protocol.ErrorResponse.from_json_dict(json_response), resp)
+                    else:
+                        return (response_type.from_json_dict(json_response), resp)
+                else:
+                    self.handle_failed_pool_response(
+                        pool_config.p2_singleton_puzzle_hash,
+                        f"Error in {method} /{endpoint_name} {pool_config.pool_url}, {resp.status}",
+                    )
+                    return None, resp
+    except Exception as e:
+        self.handle_failed_pool_response(
+            pool_config.p2_singleton_puzzle_hash, f"Exception in {method} /{endpoint_name} {pool_config.pool_url}, {e}"
+        )
+    return None, None
 
 
 """
@@ -379,95 +431,54 @@ class Farmer:
     async def _pool_get_auth(
         self, pool_config: PoolingShareState
     ) -> pool_protocol.GetAuthResponse | pool_protocol.ErrorResponse | None:
-        try:
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                url = self._url_for_endpoint(pool_config, "auth")
-                timestamp = self.get_current_time()
-                message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
-                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
-                if authentication_sk is None:
-                    self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
-                    return None
-                signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-                async with session.get(
-                    url,
-                    json=pool_protocol.GetAuthRequest(
-                        payload=pool_protocol.AuthenticationPayloadV2(
-                            launcher_id=pool_config.launcher_id,
-                            timestamp=timestamp,
-                        ),
-                        signature=signature,
-                    ).to_json_dict(),
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
-                ) as resp:
-                    if resp.ok:
-                        json_response = await resp.json()
-                        log_level = logging.INFO
-                        if "error_code" in json_response:
-                            log_level = logging.WARNING
-                            increment_pool_stats(
-                                self.pool_state,
-                                pool_config.p2_singleton_puzzle_hash,
-                                "pool_errors",
-                                time.time(),
-                                value=json_response,
-                            )
-                        self.log.log(log_level, f"GET /auth response: {json_response}")
-                        if "error_code" in json_response:
-                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
-                        else:
-                            return pool_protocol.GetAuthResponse.from_json_dict(json_response)
-                    else:
-                        self.handle_failed_pool_response(
-                            pool_config.p2_singleton_puzzle_hash,
-                            f"Error in GET /auth {pool_config.pool_url}, {resp.status}",
-                        )
-        except Exception as e:
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /auth {pool_config.pool_url}, {e}"
-            )
-        return None
+        timestamp = self.get_current_time()
+        message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
+        authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
+        if authentication_sk is None:
+            self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
+            return None
+        signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+        response, _ = await make_pool_protocol_request(
+            self=self,
+            pool_config=pool_config,
+            method="GET",
+            endpoint_name="auth",
+            request=pool_protocol.GetAuthRequest(
+                payload=pool_protocol.AuthenticationPayloadV2(
+                    launcher_id=pool_config.launcher_id,
+                    timestamp=timestamp,
+                ),
+                signature=signature,
+            ),
+            response_type=pool_protocol.GetAuthResponse,
+        )
+        return response
 
     async def _pool_get_pool_info(self, pool_config: PoolingShareState) -> GetPoolInfoResult | None:
-        try:
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                url = self._url_for_endpoint(pool_config, "pool_info")
-                async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
-                    if resp.ok:
-                        json_response = await resp.json()
-                        if "error_code" in json_response:
-                            error_response = pool_protocol.ErrorResponse.from_json_dict(json_response)
-                            self.handle_failed_pool_response(
-                                pool_config.p2_singleton_puzzle_hash,
-                                f"Error in GET /pool_info {pool_config.pool_url}, "
-                                f"code: {error_response.error_code}, message: {error_response.error_message}",
-                            )
-                            return None
-                        response = pool_protocol.GetPoolInfoResponse.from_json_dict(json_response)
-                        self.log.info(f"GET /pool_info response: {response}")
-                        new_pool_url: str | None = None
-                        response_url_str = f"{resp.url}"
-                        if (
-                            response_url_str != url
-                            and len(resp.history) > 0
-                            and all(r.status in {301, 308} for r in resp.history)
-                        ):
-                            new_pool_url = response_url_str.replace("/pool_info", "")
-                            new_pool_url = new_pool_url.replace(f"/v{pool_config.version}", "")
+        response, client_response = await make_pool_protocol_request(
+            self=self,
+            pool_config=pool_config,
+            method="GET",
+            endpoint_name="pool_info",
+            request=None,
+            response_type=pool_protocol.GetPoolInfoResponse,
+        )
+        if client_response is None:
+            return None
+        new_pool_url: str | None = None
+        response_url_str = f"{client_response.url}"
+        if (
+            response_url_str != self._url_for_endpoint(pool_config, "pool_info")
+            and len(client_response.history) > 0
+            and all(r.status in {301, 308} for r in client_response.history)
+        ):
+            new_pool_url = response_url_str.replace("/pool_info", "")
+            new_pool_url = new_pool_url.replace(f"/v{pool_config.version}", "")
 
-                        return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
-                    else:
-                        self.handle_failed_pool_response(
-                            pool_config.p2_singleton_puzzle_hash,
-                            f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}",
-                        )
-
-        except Exception as e:
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /pool_info {pool_config.pool_url}, {e}"
-            )
-
-        return None
+        if isinstance(response, pool_protocol.GetPoolInfoResponse):
+            return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
+        else:
+            return None
 
     async def _pool_get_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, authentication_sk: PrivateKey
@@ -494,42 +505,17 @@ class Farmer:
             launcher_id=pool_config.launcher_id,
             signature=signature,
             authentication_token_v2=authentication_token,
-        ).to_json_dict()
+        )
 
-        try:
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(
-                    self._url_for_endpoint(pool_config, "farmer"),
-                    params=get_farmer_params,
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
-                ) as resp:
-                    if resp.ok:
-                        json_response = await resp.json()
-                        log_level = logging.INFO
-                        if "error_code" in json_response:
-                            log_level = logging.WARNING
-                            increment_pool_stats(
-                                self.pool_state,
-                                pool_config.p2_singleton_puzzle_hash,
-                                "pool_errors",
-                                time.time(),
-                                value=json_response,
-                            )
-                        self.log.log(log_level, f"GET /farmer response: {json_response}")
-                        if "error_code" in json_response:
-                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
-                        else:
-                            return pool_protocol.GetFarmerResponse.from_json_dict(json_response)
-                    else:
-                        self.handle_failed_pool_response(
-                            pool_config.p2_singleton_puzzle_hash,
-                            f"Error in GET /farmer {pool_config.pool_url}, {resp.status}",
-                        )
-        except Exception as e:
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /farmer {pool_config.pool_url}, {e}"
-            )
-        return None
+        response, _ = await make_pool_protocol_request(
+            self=self,
+            pool_config=pool_config,
+            method="GET",
+            endpoint_name="farmer",
+            request=get_farmer_params,
+            response_type=pool_protocol.GetFarmerResponse,
+        )
+        return response
 
     async def _pool_post_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
@@ -551,41 +537,15 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = pool_protocol.PostFarmerRequest(post_farmer_payload, signature)
-        self.log.debug("POST /farmer request %s", post_farmer_request)
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self._url_for_endpoint(pool_config, "farmer"),
-                    json=post_farmer_request.to_json_dict(),
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
-                ) as resp:
-                    if resp.ok:
-                        json_response = await resp.json()
-                        log_level = logging.INFO
-                        if "error_code" in json_response:
-                            log_level = logging.WARNING
-                            increment_pool_stats(
-                                self.pool_state,
-                                pool_config.p2_singleton_puzzle_hash,
-                                "pool_errors",
-                                time.time(),
-                                value=json_response,
-                            )
-                        self.log.log(log_level, f"POST /farmer response: {json_response}")
-                        if "error_code" in json_response:
-                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
-                        else:
-                            return pool_protocol.PostFarmerResponse.from_json_dict(json_response)
-                    else:
-                        self.handle_failed_pool_response(
-                            pool_config.p2_singleton_puzzle_hash,
-                            f"Error in POST /farmer {pool_config.pool_url}, {resp.status}",
-                        )
-        except Exception as e:
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in POST /farmer {pool_config.pool_url}, {e}"
-            )
-        return None
+        response, _ = await make_pool_protocol_request(
+            self=self,
+            pool_config=pool_config,
+            method="POST",
+            endpoint_name="farmer",
+            request=post_farmer_request,
+            response_type=pool_protocol.PostFarmerResponse,
+        )
+        return response
 
     async def _pool_put_farmer(
         self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
@@ -607,41 +567,15 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
         put_farmer_request = pool_protocol.PutFarmerRequest(put_farmer_payload, signature)
-        self.log.debug(f"PUT /farmer request {put_farmer_request}")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.put(
-                    self._url_for_endpoint(pool_config, "farmer"),
-                    json=put_farmer_request.to_json_dict(),
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
-                ) as resp:
-                    if resp.ok:
-                        json_response = await resp.json()
-                        log_level = logging.INFO
-                        if "error_code" in json_response:
-                            log_level = logging.WARNING
-                            increment_pool_stats(
-                                self.pool_state,
-                                pool_config.p2_singleton_puzzle_hash,
-                                "pool_errors",
-                                time.time(),
-                                value=json_response,
-                            )
-                        self.log.log(log_level, f"POST /farmer response: {json_response}")
-                        if "error_code" in json_response:
-                            return pool_protocol.ErrorResponse.from_json_dict(json_response)
-                        else:
-                            return pool_protocol.PutFarmerResponse.from_json_dict(json_response)
-                    else:
-                        self.handle_failed_pool_response(
-                            pool_config.p2_singleton_puzzle_hash,
-                            f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}",
-                        )
-        except Exception as e:
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
-            )
-        return None
+        response, _ = await make_pool_protocol_request(
+            self=self,
+            pool_config=pool_config,
+            method="PUT",
+            endpoint_name="farmer",
+            request=put_farmer_request,
+            response_type=pool_protocol.PutFarmerResponse,
+        )
+        return response
 
     def get_authentication_sk(self, pool_config: PoolingShareState) -> PrivateKey | None:
         if pool_config.version == 1:
