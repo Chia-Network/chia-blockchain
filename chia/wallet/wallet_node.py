@@ -984,7 +984,6 @@ class WalletNode:
                 await asyncio.gather(*all_tasks)
                 return False
             if trusted:
-                for cs in batch.entries:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     self.log.info(
                         f"new coin state received ({idx}-{idx + len(batch.entries) - 1}/ {len(updated_coin_states)})"
