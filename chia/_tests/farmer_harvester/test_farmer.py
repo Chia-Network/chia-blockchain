@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -23,12 +24,12 @@ from chia import __version__
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.authentication import create_token
+from chia.farmer.authentication import create_token, verify_token
 from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolingShareState
-from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols import farmer_protocol, harvester_protocol, pool_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import (
     GetAuthResponse,
@@ -1011,7 +1012,7 @@ class DummyPoolInfoResponse:
 
     async def json(self) -> dict[str, Any]:
         if self.pool_info is None:
-            return {}
+            return {}  # pragma: no cover
 
         return self.pool_info
 
@@ -1223,6 +1224,26 @@ async def test_farmer_pool_info_config_update(
     ) as pool_config:
         assert pool_config.pool_url == case.expected_pool_url_in_config
 
+    if not case.pool_response.ok:
+        return
+    login_link = await farmer_service._node.generate_login_link(pool_config.launcher_id)
+    assert login_link is not None
+    escaped_base = re.escape(case.expected_pool_url_in_config)
+    launcher_hex = re.escape(pool_config.launcher_id.hex())
+    if pool_protocol_version == 1:
+        expected = (
+            escaped_base
+            + rf"/login\?launcher_id={launcher_hex}"
+            + r"&authentication_token=\d+&signature=[0-9a-f]+&timestamp=\d+"
+        )
+    else:
+        expected = (
+            escaped_base
+            + rf"/v2/login\?launcher_id={launcher_hex}"
+            + r"&authentication_token=&signature=[0-9a-f]+&timestamp=\d+"
+        )
+    assert re.fullmatch(expected, login_link) is not None
+
 
 @dataclass
 class PartialSubmitHeaderCase(DataCase):
@@ -1291,6 +1312,7 @@ async def test_farmer_to_pool_protocol(
     mocker: MockerFixture,
     farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     pool_protocol_version: int,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
     p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
@@ -1339,7 +1361,7 @@ async def test_farmer_to_pool_protocol(
                 authentication_token=create_token(
                     token_sk=bytes32.zeros.hex(),
                     plotnft_id=plotnft_id,
-                    current_time=datetime.datetime.fromtimestamp(farmer_service._node.get_current_time()),
+                    current_time=datetime.datetime.fromtimestamp(1_000_000_000, tz=datetime.timezone.utc),
                     expires_minutes=uint8(10),
                 )
             ).to_json_dict()
@@ -1356,6 +1378,16 @@ async def test_farmer_to_pool_protocol(
                 current_points=uint64(0),
             ).to_json_dict()
 
+    @dataclass(frozen=True)
+    class DummyErrorResponse:
+        ok: bool
+        status: int | None = None
+
+        async def json(self) -> dict[str, Any]:
+            return pool_protocol.ErrorResponse(
+                error_code=uint16(pool_protocol.PoolErrorCode.SERVER_EXCEPTION.value), error_message=None
+            ).to_json_dict()
+
     @asynccontextmanager
     async def client_session_request(method: str, url: str, **kwargs: Any) -> AsyncIterator[Any]:
         path = str(URL(url).path).rstrip("/")
@@ -1370,6 +1402,19 @@ async def test_farmer_to_pool_protocol(
             if method == "GET":
                 yield DummyGetFarmerResponse(ok=True)
 
+    @asynccontextmanager
+    async def client_session_error(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        yield DummyErrorResponse(ok=True)
+
+    @asynccontextmanager
+    async def client_session_error_not_ok(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        yield DummyErrorResponse(ok=False, status=404)
+
+    @asynccontextmanager
+    async def client_session_exception(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        raise Exception("foo bar")
+        yield  # pragma: no cover
+
     mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_request)
     with PoolingShareState.acquire(
         root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
@@ -1383,3 +1428,37 @@ async def test_farmer_to_pool_protocol(
         assert isinstance(
             await farmer_service._node._pool_get_farmer(pool_config, uint8(10), auth_sk), GetFarmerResponse
         )
+
+        # Test some errors and especially with getting authentication
+        if pool_protocol_version == 2:
+            assert verify_token(
+                token_sk=bytes32.zeros.hex(),
+                token=farmer_service._node.authentication_tokens[plotnft_id],  # type: ignore[arg-type]
+                plotnft_id=plotnft_id,
+                current_time=datetime.datetime.fromtimestamp(1_000_000_000, tz=datetime.timezone.utc),
+            )
+            assert not verify_token(
+                token_sk=bytes32.zeros.hex(),
+                token=farmer_service._node.authentication_tokens[plotnft_id],  # type: ignore[arg-type]
+                plotnft_id=plotnft_id,
+                current_time=datetime.datetime.fromtimestamp(1_000_000_601, tz=datetime.timezone.utc),
+            )
+            farmer_service._node.authentication_tokens = {}
+            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
+            with caplog.at_level(logging.WARNING):
+                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+                assert "GET /auth response: " in caplog.text
+
+            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error_not_ok)
+            with caplog.at_level(logging.ERROR):
+                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+                assert "Error in GET /auth http://doesntmatter.com, 404" in caplog.text
+
+            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_exception)
+            with caplog.at_level(logging.ERROR):
+                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+                assert "Exception in GET /auth http://doesntmatter.com, foo bar" in caplog.text
+
+            pool_config.version = 1337
+            with pytest.raises(ValueError, match=r"Unknown pool protocol version specified in pooling config"):
+                await farmer_service._node._get_current_authentication_token(pool_config, uint8(10))
