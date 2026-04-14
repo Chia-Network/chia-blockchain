@@ -1730,6 +1730,11 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+            missed_coins: list[str] = [
+                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.coin.name() for cr in coin_records]
+            ]
+            if missed_coins:
+                raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
 

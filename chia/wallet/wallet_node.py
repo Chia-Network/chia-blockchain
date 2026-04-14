@@ -926,7 +926,6 @@ class WalletNode:
         # Ensure the list is sorted
         unique_items = set(items_input)
         before = len(unique_items)
-        pre_filter_names = {cs.coin.name() for cs in unique_items}
         items = await self.wallet_state_manager.filter_spam(sort_coin_states(unique_items))
         num_filtered = before - len(items)
         if num_filtered > 0:
