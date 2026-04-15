@@ -55,7 +55,7 @@ chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
 chia_rs = ">=0.42.0, <0.43"
 chiavdf = ">=1.1.10"  # timelord and vdf verification
-click = ">=8.1.7"  # For the CLI
+click = ">=8.3.2"  # For the CLI
 clvm = ">=0.9.14"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 chialisp = ">=0.4.1"  # Rust implementation of ChiaLisp compiler
