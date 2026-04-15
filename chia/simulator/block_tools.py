@@ -210,6 +210,11 @@ def compute_block_cost(
                 return uint64(conds.cost)
         except Exception:
             pass
+        # Invalid blocks (e.g. wrong announcements) cause run_block_generator2
+        # to fail before returning cost. Use MAX_BLOCK_COST_CLVM so the
+        # block validator can run with enough headroom to reach the real
+        # condition error instead of bailing with BLOCK_COST_EXCEEDS_MAX.
+        return uint64(constants.MAX_BLOCK_COST_CLVM)
 
     condition_cost = 0
     clvm_cost = 0
