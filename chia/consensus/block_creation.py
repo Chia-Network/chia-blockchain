@@ -286,10 +286,9 @@ def create_foliage(
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
-    sub_slot_iters: uint64,
+    infusion_point_total_iters: uint128,
     signage_point_index: uint8,
     sp_iters: uint64,
-    ip_iters: uint64,
     proof_of_space: ProofOfSpace,
     slot_cc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
@@ -312,7 +311,7 @@ def create_unfinished_block(
     Args:
         constants: consensus constants being used for this chain
         sub_slot_start_total_iters: the starting sub-slot iters at the signage point sub-slot
-        sub_slot_iters: sub-slot-iters at the infusion point epoch
+        infusion_point_total_iters: total iters at the infusion point
         signage_point_index: signage point index of the block to create
         sp_iters: sp_iters of the block to create
         ip_iters: ip_iters of the block to create
@@ -337,7 +336,6 @@ def create_unfinished_block(
         finished_sub_slots: list[EndOfSubSlotBundle] = []
     else:
         finished_sub_slots = finished_sub_slots_input.copy()
-    overflow: bool = sp_iters > ip_iters
     total_iters_sp: uint128 = uint128(sub_slot_start_total_iters + sp_iters)
     is_genesis: bool = prev_block is None
 
@@ -371,10 +369,8 @@ def create_unfinished_block(
     assert rc_sp_signature is not None
     assert chia_rs.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
-    total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
-
     rc_block = RewardChainBlockUnfinished(
-        total_iters,
+        infusion_point_total_iters,
         signage_point_index,
         slot_cc_challenge,
         proof_of_space,
@@ -515,3 +511,13 @@ def unfinished_block_to_full_block(
         new_generator_ref_list,
     )
     return ret
+
+
+def calculate_infusion_point_total_iters(
+    sub_slot_start_total_iters: uint128, sp_iters: uint64, ip_iters: uint64, sub_slot_iters: uint64
+) -> uint128:
+    """
+    Calculates the candidate's infusion point total iterations
+    """
+    overflow = sp_iters > ip_iters
+    return uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))

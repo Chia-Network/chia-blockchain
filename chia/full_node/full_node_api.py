@@ -35,7 +35,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_creation import create_unfinished_block
+from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
@@ -1072,7 +1072,36 @@ class FullNodeAPI:
                 request.signage_point_index,
                 required_iters,
             )
-
+            # Candidate position at infusion time in total iterations
+            infusion_point_total_iters = calculate_infusion_point_total_iters(
+                sub_slot_start_total_iters=total_iters_pos_slot,
+                sp_iters=sp_iters,
+                ip_iters=ip_iters,
+                sub_slot_iters=sub_slot_iters,
+            )
+            # If this candidate would be infused before the current finished
+            # head then it's already too late and it should be dropped. This
+            # indicates latency issues.
+            peak = self.full_node.blockchain.get_peak()
+            if peak is not None and infusion_point_total_iters < peak.total_iters:
+                self.log.warning(
+                    "Dropping farmed unfinished block candidate as it's "
+                    "behind the current head (latency issues). "
+                    f"Signage point index: {request.signage_point_index} "
+                    f"unfinished block infusion point total iters: {infusion_point_total_iters} "
+                    f"current head total iters: {peak.total_iters} "
+                    f"peak height: {peak.height}"
+                )
+                return None
+            # Candidate signage point position in total iterations
+            candidate_sp_total_iters = uint128(total_iters_pos_slot + sp_iters)
+            # If this candidate would be infused at or after the current
+            # finished head, and its signage point's position is at or before
+            # the end of the window where the last transaction block prevents a
+            # new transaction block from being created, then we should create
+            # an empty block.
+            if tx_peak is not None and candidate_sp_total_iters <= tx_peak.total_iters:
+                new_block_gen = None
             # The block's timestamp must be greater than the previous transaction block's timestamp
             timestamp = uint64(time.time())
             curr: BlockRecord | None = prev_b
@@ -1087,10 +1116,9 @@ class FullNodeAPI:
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
-                sub_slot_iters,
+                infusion_point_total_iters,
                 request.signage_point_index,
                 sp_iters,
-                ip_iters,
                 request.proof_of_space,
                 cc_challenge_hash,
                 farmer_ph,
@@ -1143,10 +1171,9 @@ class FullNodeAPI:
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
-                    sub_slot_iters,
+                    infusion_point_total_iters,
                     request.signage_point_index,
                     sp_iters,
-                    ip_iters,
                     request.proof_of_space,
                     cc_challenge_hash,
                     farmer_ph,

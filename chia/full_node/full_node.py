@@ -2370,8 +2370,18 @@ class FullNode:
 
         peak: BlockRecord | None = self.blockchain.get_peak()
         if peak is not None:
-            if block.total_iters < peak.sp_total_iters(self.constants):
-                # This means this unfinished block is pretty far behind, it will not add weight to our chain
+            if block.total_iters < peak.total_iters:
+                # This unfinished block would be infused before the current
+                # finished head so it's already too late.
+                self.log.log(
+                    logging.WARNING if farmed_block else logging.INFO,
+                    f"Dropping{' farmed' if farmed_block else ''} unfinished block as it would be "
+                    "infused before the current head. "
+                    f"Signage point index: {block.reward_chain_block.signage_point_index}, "
+                    f"block total iters: {block.total_iters}, "
+                    f"current head total iters: {peak.total_iters}, "
+                    f"peak height: {peak.height}.",
+                )
                 return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
