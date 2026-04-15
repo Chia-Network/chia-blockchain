@@ -39,6 +39,8 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
+    run_block_generator2,
     solution_generator,
     solve_proof,
 )
@@ -185,12 +187,29 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     return ret
 
 
+DONT_VALIDATE_SIGNATURE = 0x10000
+
+
 def compute_block_cost(
     generator: SerializedProgram, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
 ) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
     # need to be able to compute the cost of it
+
+    if height >= constants.HARD_FORK2_HEIGHT:
+        # INTERNED_GENERATOR changes the serialization cost model. Use
+        # run_block_generator2 (with signature validation disabled) to get
+        # the correct cost including tree-based serialization cost.
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+        try:
+            err, conds = run_block_generator2(
+                bytes(generator), [], constants.MAX_BLOCK_COST_CLVM, flags, G2Element(), None, constants
+            )
+            if err is None and conds is not None:
+                return uint64(conds.cost)
+        except Exception:
+            pass
 
     condition_cost = 0
     clvm_cost = 0
