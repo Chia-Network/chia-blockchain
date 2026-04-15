@@ -17,6 +17,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.inline_executor import InlineExecutor
 
 
 @contextlib.asynccontextmanager
@@ -29,7 +30,7 @@ async def create_blockchain(
         store = await BlockStore.create(wrapper)
         path = Path(".")
         height_map = await BlockHeightMap.create(path, wrapper)
-        bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
+        bc1 = await Blockchain.create(coin_store, store, height_map, constants, InlineExecutor(), log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper

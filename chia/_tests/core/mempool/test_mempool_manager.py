@@ -70,6 +70,7 @@ from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineage
 from chia.util.casts import int_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
+from chia.util.inline_executor import InlineExecutor
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -265,6 +266,7 @@ async def instantiate_mempool_manager(
         get_coin_records,
         zero_calls_get_unspent_lineage_info_for_puzzle_hash,
         constants,
+        InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
         validation_timeout=10,
     ) as mempool_manager:
@@ -718,6 +720,7 @@ async def test_validation_timeout() -> None:
         zero_calls_get_coin_records,
         zero_calls_get_unspent_lineage_info_for_puzzle_hash,
         DEFAULT_CONSTANTS,
+        InlineExecutor(),
         validation_timeout=0,
     ) as mempool_manager:
         await mempool_manager.new_peak(create_test_block_record(), None)
@@ -2316,10 +2319,12 @@ async def test_fill_rate_block_validation(
         # Check for the peak change after farming the block
         assert peak.prev_hash == current_peak.header_hash
         # Check our coin(s)
+        _, peer_id = await add_dummy_connection(full_node_api.server, self_hostname, 12313)
+        peer = full_node_api.server.all_connections[peer_id]
         for i in range(expected_block_items):
             coin_name, puzzle, _ = sbs_info[i]
             rps_res = await full_node_api.request_puzzle_solution(
-                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height)
+                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height), peer
             )
             assert rps_res is not None
             rps_res_parsed = wallet_protocol.RespondPuzzleSolution.from_bytes(rps_res.data)
@@ -2448,6 +2453,7 @@ async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        InlineExecutor(),
         validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
@@ -2702,6 +2708,7 @@ def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        InlineExecutor(),
         validation_timeout=10,
     ) as mempool_manager:
         create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
