@@ -100,17 +100,18 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
         condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
         clvm_cost = 27360
+        # INTERNED_GENERATOR: serialization cost is tree-based, not byte-length-based
+        assert npc_result.conds.cost > condition_cost + clvm_cost
+        assert npc_result.conds.execution_cost == clvm_cost
+        assert npc_result.conds.condition_cost == condition_cost
     elif softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
+        byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
+        assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
     else:
         clvm_cost = 404560
-    byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
-    assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
-
-    # Create condition + agg_sig_condition + length + cpu_cost
-    assert (
-        npc_result.conds.cost == condition_cost + len(bytes(program.program)) * bt.constants.COST_PER_BYTE + clvm_cost
-    )
+        byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
+        assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
 
 
 @pytest.mark.anyio
