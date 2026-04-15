@@ -730,8 +730,20 @@ class TestMempoolManager:
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
         await send_sb(full_node_1, dummy_peer, sb1234_1)
-        # sb1234_1 should not be in pool as it decreases total fees per cost
-        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
+        constants = full_node_1.full_node.blockchain.constants
+        peak = full_node_1.full_node.blockchain.get_peak()
+        assert peak is not None
+        interned = peak.height >= constants.HARD_FORK2_HEIGHT
+        if interned:
+            # Under INTERNED_GENERATOR, aggregating 4 spends with shared
+            # puzzles is cheaper than separate bundles (interning deduplicates
+            # the puzzle tree), so sb1234_1 has *higher* fee-per-cost than
+            # the conflicts and replaces them.
+            assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
+        else:
+            # Under the byte-based cost model, sb1234_1 decreases total
+            # fees per cost, so it should not replace the conflicts.
+            assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
