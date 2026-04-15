@@ -3336,18 +3336,20 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
         invariant_check_mempool(mempool)
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, test_constants.HARD_FORK2_HEIGHT, 10.0)
+    height = test_constants.HARD_FORK2_HEIGHT
+    generator = create_block(test_constants, height, 10.0)
     assert generator is not None
 
     assert generator.signature == G2Element()
 
     removals = set(generator.removals)
 
+    flags = get_flags_for_height_and_constants(height, test_constants)
     err, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,
-        0,
+        flags,
         generator.signature,
         None,
         test_constants,
