@@ -13,7 +13,6 @@ from chia_rs import (
     FullBlock,
     SpendBundleConditions,
     SubEpochSummary,
-    get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
@@ -23,6 +22,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
 from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
