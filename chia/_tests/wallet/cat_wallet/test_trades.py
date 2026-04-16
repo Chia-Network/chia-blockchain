@@ -2204,53 +2204,23 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
     bundle = WalletSpendBundle(coin_spends=offer._bundle.coin_spends, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     fee = uint64(10)
-    async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, sign=False
-    ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
-    env_taker.node.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
+    with pytest.raises(ValueError, match="invalid aggregate signature"):
+        async with trade_manager_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True, sign=False
+        ) as action_scope:
+            await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
 
-    def check_wallet_cache_empty() -> bool:
-        return env_taker.node._tx_messages_in_progress == {}
+    # The bad bundle was rejected before being stored, so no wallet state changed.
+    # Verify the maker's offer is still pending (it was never taken).
+    await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
 
-    for _ in range(10):
-        await env_taker.node._resend_queue()
-        await time_out_assert(5, check_wallet_cache_empty, True)
-
+    # Confirm neither wallet's balances shifted.
     await wallet_environments.process_pending_states(
         [
-            # We use set_remainder=True for both pre- and post-block on all wallets here.
-            # The forced resend above means the bad spend may or may not have been rejected
-            # by the time the pre-block snapshot is taken, making the CAT unconfirmed balance
-            # non-deterministic (either 4 or 0). After the block is farmed the wallet always
-            # settles to 0, but "cat": {} would assert "no change from pre-block" and fail if
-            # the pre-block snapshot happened to capture the pending value. The important
-            # behavioral assertion (trade is FAILED) is checked below via get_trade_and_status.
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"init": True, "set_remainder": True},
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "cat": {"set_remainder": True},
-                },
-            ),
-        ],
-        invalid_transactions=[tx.name for tx in action_scope.side_effects.transactions],
+            WalletStateTransition(),
+            WalletStateTransition(),
+        ]
     )
-
-    await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
 @pytest.mark.parametrize(
