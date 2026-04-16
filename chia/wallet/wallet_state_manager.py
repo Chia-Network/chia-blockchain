@@ -2876,8 +2876,7 @@ class WalletStateManager:
         for bundle in bundles:
             if not self.validate_spend_bundle_signature(bundle):
                 raise ValueError(
-                    f"Transaction {bundle.name().hex()} has an invalid aggregate signature "
-                    f"and will not be submitted"
+                    f"Transaction {bundle.name().hex()} has an invalid aggregate signature and will not be submitted"
                 )
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]

@@ -1023,15 +1023,11 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                     request.fee,
                     action_scope,
-                    extra_conditions=(
-                        AssertConcurrentSpend(bundle_coins[0].name()),
-                    ),
+                    extra_conditions=(AssertConcurrentSpend(bundle_coins[0].name()),),
                 )
 
             signed_fee_bundles = [
-                tx.spend_bundle
-                for tx in action_scope.side_effects.transactions
-                if tx.spend_bundle is not None
+                tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None
             ]
             combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
             await self.service.push_tx(combined_bundle)
@@ -1756,9 +1752,7 @@ class WalletRpcApi:
         if coin_record is None or not coin_record.spent:
             raise ValueError(f"Coin {request.coin_name.hex()} not found or not spent")
         peer = self.service.get_full_node_peer()
-        coin_spend = await fetch_coin_spend(
-            uint32(coin_record.spent_block_height), coin_record.coin, peer
-        )
+        coin_spend = await fetch_coin_spend(uint32(coin_record.spent_block_height), coin_record.coin, peer)
         return GetPuzzleAndSolutionResponse(
             puzzle_reveal=bytes(coin_spend.puzzle_reveal).hex(),
             solution=bytes(coin_spend.solution).hex(),

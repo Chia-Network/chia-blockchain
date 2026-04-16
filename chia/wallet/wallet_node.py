@@ -566,9 +566,7 @@ class WalletNode:
             if record.spend_bundle is None:
                 continue
             if not self.wallet_state_manager.validate_spend_bundle_signature(record.spend_bundle):
-                self.log.error(
-                    f"_messages_to_resend: dropping tx {record.name.hex()} — bad aggregate signature"
-                )
+                self.log.error(f"_messages_to_resend: dropping tx {record.name.hex()} — bad aggregate signature")
                 continue
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
