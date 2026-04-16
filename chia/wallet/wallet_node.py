@@ -1740,9 +1740,6 @@ class WalletNode:
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
     async def push_tx(self, spend_bundle: WalletSpendBundle) -> None:
-        if not self.wallet_state_manager.validate_spend_bundle_signature(spend_bundle):
-            self.log.error(f"push_tx: dropping bundle {spend_bundle.name().hex()} — bad aggregate signature")
-            return
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
