@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals
 from chia_rs.sized_ints import uint64
 
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.simulator.block_tools import BlockTools
 
 # These test targets are used to trigger a build of the test chains.
