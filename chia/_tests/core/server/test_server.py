@@ -243,8 +243,8 @@ async def test_error_receive(
         return f"ApiError: {error} from {connection.peer_node_id}, {connection.peer_info}" in caplog.text
 
     with caplog.at_level(logging.WARNING):
-        await full_node_connection.outgoing_queue.put(message)
-        await wallet_connection.outgoing_queue.put(message)
+        await full_node_connection.outgoing_queue.put((0, 0, message))
+        await wallet_connection.outgoing_queue.put((0, 1, message))
         await time_out_assert(10, error_log_found, True, full_node_connection)
         await time_out_assert(10, error_log_found, True, wallet_connection)
 
