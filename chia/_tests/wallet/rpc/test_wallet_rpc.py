@@ -2034,8 +2034,10 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
     )
     assert {record.coin for record in rpc_result.coin_records} == filter_coins
     # 8. Verify spent coins are excluded when include_spent_coins=False
-    result = await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
-    assert all(not cr.spent for cr in result.coin_records)
+    exclude_spent_result = await client.get_coin_records_by_names(
+        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False)
+    )
+    assert all(not cr.spent for cr in exclude_spent_result.coin_records)
 
 
 @pytest.mark.parametrize(
