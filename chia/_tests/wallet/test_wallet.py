@@ -21,7 +21,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings

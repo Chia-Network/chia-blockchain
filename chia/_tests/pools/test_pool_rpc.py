@@ -18,7 +18,6 @@ from chia_rs import ConsensusConstants, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
-
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
