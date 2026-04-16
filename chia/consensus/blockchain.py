@@ -20,7 +20,6 @@ from chia_rs import (
     SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
-    get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
@@ -31,6 +30,7 @@ from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height

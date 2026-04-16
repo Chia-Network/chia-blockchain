@@ -13,7 +13,6 @@ from chia_rs import (
     ConsensusConstants,
     FullBlock,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
@@ -22,6 +21,7 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo

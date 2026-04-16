@@ -17,7 +17,6 @@ from chia_rs import (
     ConsensusConstants,
     G2Element,
     SpendBundle,
-    get_flags_for_height_and_constants,
     run_block_generator2,
     solution_generator_backrefs,
 )
@@ -25,6 +24,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.eligible_coin_spends import (
     IdenticalSpendDedup,
     SingletonFastForward,

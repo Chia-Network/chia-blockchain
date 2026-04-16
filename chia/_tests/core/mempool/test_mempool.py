@@ -15,7 +15,6 @@ from chia_rs import (
     G2Element,
     SpendBundle,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     run_block_generator2,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
@@ -43,6 +42,7 @@ from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI

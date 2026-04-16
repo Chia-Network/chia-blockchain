@@ -30,7 +30,6 @@ from chia_rs import (
     SpendBundleConditions,
     SubEpochSummary,
     UnfinishedBlock,
-    get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
@@ -47,6 +46,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
