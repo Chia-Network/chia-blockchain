@@ -987,9 +987,9 @@ class WalletRpcApi:
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
 
-        if not self.service.wallet_state_manager.validate_spend_bundle_signature(request.spend_bundle):
-            log.error(f"push_tx RPC: rejecting bundle {request.spend_bundle.name().hex()} — bad aggregate signature")
-            raise ValueError("SpendBundle has an invalid aggregate signature")
+        err = self.service.wallet_state_manager.validate_spend_bundle(request.spend_bundle)
+        if err is not None:
+            raise ValueError(err)
 
         if request.fee > 0:
             # sync check removed to unblock game channel tx push during brief desync
