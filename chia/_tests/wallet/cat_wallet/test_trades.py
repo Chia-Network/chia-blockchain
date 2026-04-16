@@ -2211,16 +2211,20 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
             await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
 
     # The bad bundle was rejected before being stored, so no wallet state changed.
-    # Verify the maker's offer is still pending (it was never taken).
-    await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+    # Farm a couple of blocks and confirm balances are unchanged.
+    maker_xch_before = await env_maker.xch_wallet.get_confirmed_balance()
+    taker_xch_before = await env_taker.xch_wallet.get_confirmed_balance()
 
-    # Confirm neither wallet's balances shifted.
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(),
-            WalletStateTransition(),
-        ]
-    )
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=2)
+    for env in [env_maker, env_taker]:
+        await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+
+    maker_xch_after = await env_maker.xch_wallet.get_confirmed_balance()
+    taker_xch_after = await env_taker.xch_wallet.get_confirmed_balance()
+    assert maker_xch_after == maker_xch_before
+    assert taker_xch_after == taker_xch_before
+
+    await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
 
 
 @pytest.mark.parametrize(
