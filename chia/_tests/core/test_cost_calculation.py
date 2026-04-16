@@ -4,7 +4,7 @@ import logging
 import pathlib
 
 import pytest
-from chia_rs import G1Element, get_flags_for_height_and_constants
+from chia_rs import G1Element
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -15,6 +15,7 @@ from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzz
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin

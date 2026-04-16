@@ -18,7 +18,6 @@ from chia_rs import (
     SpendBundle,
     SpendBundleConditions,
     check_time_locks,
-    get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -28,6 +27,7 @@ from chiabip158 import PyBIP158
 from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
