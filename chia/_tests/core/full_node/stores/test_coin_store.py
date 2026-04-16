@@ -6,7 +6,7 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -19,6 +19,7 @@ from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
