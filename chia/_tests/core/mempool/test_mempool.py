@@ -290,23 +290,31 @@ class TestPendingTxCache:
         for i in items:
             c.add(i)
 
+        # drain(101) uses <=, so it releases items with assert_height <= 101:
+        # items[0] (assert_height=100) and items[1] (assert_height=101)
         tx = c.drain(uint32(101))
-        assert tx == {items[0].spend_bundle_name: items[0]}
+        assert tx == {
+            items[0].spend_bundle_name: items[0],
+            items[1].spend_bundle_name: items[1],
+        }
 
+        # drain(105) releases items with assert_height <= 105:
+        # items[2] (102), items[3] (103), items[4] (104), items[5] (105)
         tx = c.drain(uint32(105))
         assert tx == {
-            items[1].spend_bundle_name: items[1],
             items[2].spend_bundle_name: items[2],
             items[3].spend_bundle_name: items[3],
             items[4].spend_bundle_name: items[4],
+            items[5].spend_bundle_name: items[5],
         }
 
         tx = c.drain(uint32(105))
         assert tx == {}
 
+        # drain(110) releases items with assert_height <= 110:
+        # items[6] (106), items[7] (107), items[8] (108), items[9] (109)
         tx = c.drain(uint32(110))
         assert tx == {
-            items[5].spend_bundle_name: items[5],
             items[6].spend_bundle_name: items[6],
             items[7].spend_bundle_name: items[7],
             items[8].spend_bundle_name: items[8],
