@@ -796,8 +796,8 @@ async def get_offers(
                 new_records: list[TradeRecord] = (
                     await wallet_client.get_all_offers(
                         GetAllOffers(
-                            start=uint16(start),
-                            end=uint16(end),
+                            start=uint32(start),
+                            end=uint32(end),
                             sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
                             reverse=reverse,
                             file_contents=file_contents,
