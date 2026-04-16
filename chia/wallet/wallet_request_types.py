@@ -492,7 +492,7 @@ class GetTransactionCount(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetTransactionCountResponse(Streamable):
     wallet_id: uint32
-    count: uint16
+    count: uint32
 
 
 @streamable

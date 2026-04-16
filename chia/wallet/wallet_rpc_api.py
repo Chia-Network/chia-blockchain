@@ -1405,7 +1405,7 @@ class WalletRpcApi:
     async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
         return GetTransactionCountResponse(
             wallet_id=request.wallet_id,
-            count=uint16(
+            count=uint32(
                 await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
                     request.wallet_id, confirmed=request.confirmed, type_filter=request.type_filter
                 )
