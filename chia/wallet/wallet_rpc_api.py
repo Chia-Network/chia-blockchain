@@ -1009,35 +1009,7 @@ class WalletRpcApi:
         if err is not None:
             raise ValueError(err)
 
-        if request.fee > 0:
-            # sync check removed to unblock game channel tx push during brief desync
-            assert self.service.logged_in_fingerprint is not None
-
-            bundle_coins = [cs.coin for cs in request.spend_bundle.coin_spends]
-            async with self.service.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG,
-                push=False,
-            ) as action_scope:
-                async with action_scope.use() as interface:
-                    interface.side_effects.selected_coins.extend(bundle_coins)
-
-                await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                    request.fee,
-                    action_scope,
-                    extra_conditions=(
-                        AssertConcurrentSpend(bundle_coins[0].name()),
-                    ),
-                )
-
-            signed_fee_bundles = [
-                tx.spend_bundle
-                for tx in action_scope.side_effects.transactions
-                if tx.spend_bundle is not None
-            ]
-            combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
-            await self.service.push_tx(combined_bundle)
-        else:
-            await self.service.push_tx(request.spend_bundle)
+        await self.service.push_tx(request.spend_bundle)
 
         return Empty()
 

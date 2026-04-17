@@ -2368,9 +2368,7 @@ class WalletStateManager:
                 if tx_record.spend_bundle is not None:
                     err = self.validate_spend_bundle(tx_record.spend_bundle)
                     if err is not None:
-                        raise ValueError(
-                            f"Transaction {tx_record.name.hex()} rejected: {err}"
-                        )
+                        raise ValueError(f"Transaction {tx_record.name.hex()} rejected: {err}")
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
                 for tx_record in tx_records:
@@ -2787,27 +2785,6 @@ class WalletStateManager:
             AugSchemeMPL.aggregate([G2Element.from_bytes(sig.signature) for sig in signed_tx.signatures]),
         )
 
-    # chia_rs ValidationError codes (from chia-consensus/src/validation_error.rs)
-    _VALIDATION_ERROR_NAMES: dict[int, str] = {
-        2: "invalid puzzle reveal",
-        3: "invalid coin solution",
-        4: "duplicate output (two CREATE_COINs with same puzzle_hash and amount)",
-        5: "double spend",
-        7: "bad aggregate signature",
-        10: "invalid condition (bad opcode, pubkey, message, amount, or announcement)",
-        11: "ASSERT_MY_COIN_ID failed",
-        12: "ASSERT_ANNOUNCEMENT failed",
-        13: "ASSERT_HEIGHT_RELATIVE failed",
-        14: "ASSERT_HEIGHT_ABSOLUTE failed",
-        15: "ASSERT_SECONDS_ABSOLUTE failed",
-        16: "coin amount exceeds maximum",
-        17: "s-expression error",
-        20: "minting coin (outputs exceed input amount)",
-        23: "cost exceeded",
-        105: "ASSERT_SECONDS_RELATIVE failed",
-        117: "CLVM generator runtime error",
-    }
-
     def validate_spend_bundle(self, bundle: WalletSpendBundle) -> str | None:
         """Validate a spend bundle (CLVM execution, conditions, and signature).
 
@@ -2824,7 +2801,10 @@ class WalletStateManager:
             return None
         except Exception as e:
             code = e.args[1] if len(e.args) >= 2 and isinstance(e.args[1], int) else None
-            reason = self._VALIDATION_ERROR_NAMES.get(code, str(e)) if code is not None else str(e)
+            try:
+                reason = Err(code).name if code is not None else str(e)
+            except ValueError:
+                reason = str(e)
             msg = f"spend bundle validation failed (code {code}): {reason}"
             self.log.error(
                 f"{msg} | bundle={bundle.name().hex()} "
@@ -2908,9 +2888,7 @@ class WalletStateManager:
         for bundle in bundles:
             err = self.validate_spend_bundle(bundle)
             if err is not None:
-                raise ValueError(
-                    f"Transaction {bundle.name().hex()} rejected: {err}"
-                )
+                raise ValueError(f"Transaction {bundle.name().hex()} rejected: {err}")
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
 
