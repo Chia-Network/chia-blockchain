@@ -2204,7 +2204,7 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
     bundle = WalletSpendBundle(coin_spends=offer._bundle.coin_spends, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     fee = uint64(10)
-    with pytest.raises(ValueError, match="invalid aggregate signature"):
+    with pytest.raises(ValueError, match="BAD_AGGREGATE_SIGNATURE"):
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True, sign=False
         ) as action_scope:

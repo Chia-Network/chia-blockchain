@@ -1880,7 +1880,7 @@ class TestWalletSimulator:
             removals=[],
             name=stolen_sb.name(),
         )
-        with pytest.raises(ValueError, match="invalid aggregate signature"):
+        with pytest.raises(ValueError, match="ASSERT_ANNOUNCE_CONSUMED_FAILED"):
             await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
 
     @pytest.mark.parametrize(
