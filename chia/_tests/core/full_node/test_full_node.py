@@ -3517,6 +3517,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize("mismatch_cost", [True, False])
 @pytest.mark.parametrize("mismatch_fee", [True, False])
 @pytest.mark.parametrize("tx_already_seen", [True, False])
@@ -3595,8 +3596,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     async def send_from_node_3() -> None:
         await ws_con_3.send_message(msg)
 
-    for node in [full_node_1.full_node, full_node_2.full_node, full_node_3.full_node]:
-        await time_out_assert(5, node.synced)
+    for node_api in [full_node_1, full_node_2, full_node_3]:
+        await time_out_assert(5, lambda: node_height_at_least(node_api, blocks[-1].height))
     await asyncio.gather(send_from_node_2(), send_from_node_3())
     if mismatch_on_reannounce and (mismatch_cost or mismatch_fee):
         # Send a second NewTransaction that doesn't match the first
@@ -3615,7 +3616,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
         # hasn't seen the transaction before, it will issue a transaction
         # request. We need to wait until it receives the transaction and add it
         # to its mempool.
-        await time_out_assert(30, lambda: full_node_1.full_node.mempool_manager.seen(mempool_item.name))
+        await time_out_assert(
+            30, lambda: full_node_1.full_node.mempool_manager.get_spendbundle(mempool_item.name) is not None
+        )
     # Make sure the first full node has banned the second as the item it has
     # already seen has a different validation cost and/or fee than the one from
     # the NewTransaction message.
