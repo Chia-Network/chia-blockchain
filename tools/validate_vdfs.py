@@ -30,9 +30,10 @@ from pathlib import Path
 
 import zstd
 from chia_rs import FullBlock
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.vdf import validate_vdf
+from chia.types.blockchain_format.vdf import set_vdf_mode, validate_vdf
 
 IDENTITY = ClassgroupElement.get_default_element()
 
@@ -80,6 +81,8 @@ def verify_one(height: int, label: str, proof: object, vdf_info: object, constan
 
 
 def main() -> None:
+    set_vdf_mode("rust")
+
     default_db = str(Path.home() / ".chia/mainnet/db/blockchain_v2_mainnet.sqlite")
 
     parser = argparse.ArgumentParser(description="Validate VDF proofs using the pure-Rust verifier")
@@ -92,7 +95,7 @@ def main() -> None:
     print(f"DB: {args.db}")
     print(f"Range: {args.start} - {args.end or 'end'}")
     print(f"Workers: {args.workers}")
-    print(f"Verifier: chia_vdf_verify (pure Rust, malachite bigints)")
+    print("Verifier: chia_vdf_verify (pure Rust, malachite bigints)")
     print()
     sys.stdout.flush()
 

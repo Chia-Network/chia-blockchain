@@ -298,6 +298,8 @@ timelord:
 full_node:
   # The full node server (if run) will run on this port
   port: 8444
+  # VDF verification backend: "classic" (chiavdf C++), "rust" (chia-vdf-verify), or "both" (run both, warn on mismatch)
+  vdf_verifier: classic
   # The full node will attempt to connect to these full nodes
   full_node_peers: []
 

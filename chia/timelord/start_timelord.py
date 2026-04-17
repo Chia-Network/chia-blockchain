@@ -18,6 +18,7 @@ from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_rpc_api import TimelordRpcApi
 from chia.timelord.timelord_service import TimelordService
+from chia.types.blockchain_format.vdf import apply_vdf_verifier_config
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -70,6 +71,7 @@ async def async_main(root_path: pathlib.Path) -> int:
     config = load_config(root_path, "config.yaml")
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
+    apply_vdf_verifier_config(config)
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
     service = create_timelord_service(root_path, config, DEFAULT_CONSTANTS)

@@ -18,6 +18,7 @@ from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
+from chia.types.blockchain_format.vdf import apply_vdf_verifier_config
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli, override_config
@@ -126,7 +127,9 @@ async def async_main(
         logging_config=service_config["logging"],
         root_path=root_path,
     )
-    service = await create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
+    merged_config = override_config(config, overrides)
+    apply_vdf_verifier_config(merged_config)
+    service = await create_full_node_simulator_service(root_path, merged_config, bt)
     if not test_mode:
         async with SignalHandlers.manage() as signal_handlers:
             await service.setup_process_global_state(signal_handlers=signal_handlers)

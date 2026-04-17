@@ -20,6 +20,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.blockchain_format.vdf import apply_vdf_verifier_config
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -79,6 +80,7 @@ async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) ->
     # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
     config[SERVICE_NAME] = service_config
+    apply_vdf_verifier_config(config)
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
