@@ -5,7 +5,6 @@ import logging
 import time
 import traceback
 from collections.abc import Collection
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -73,7 +72,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -110,12 +109,32 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             if peer_id not in full_node.server.all_connections:
                 continue
             random_peer = full_node.server.all_connections[peer_id]
-            request_tx = full_node_protocol.RequestTransaction(transaction_id)
-            msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-            await random_peer.send_message(msg)
-            await asyncio.sleep(5)
-            if full_node.mempool_manager.seen(transaction_id):
-                break
+            try:
+                response = await random_peer.call_api(
+                    FullNodeAPI.request_transaction, full_node_protocol.RequestTransaction(transaction_id), timeout=5
+                )
+            except Exception:
+                continue
+            if not isinstance(response, full_node_protocol.RespondTransaction):
+                continue
+            entry = TransactionQueueEntry(
+                transaction=response.transaction,
+                transaction_bytes=bytes(response.transaction),
+                spend_name=response.transaction.name(),
+                peer=random_peer,
+                test=False,
+                peers_with_tx=peers_with_tx,
+            )
+            # Try to put the transaction in this peer's queue, but if it's full
+            # then try another peer's queue. `TransactionQueue` has an internal
+            # queue for each peer.
+            for pid in [random_peer.peer_node_id, *peers_with_tx]:
+                try:
+                    full_node.transaction_queue.put(entry, pid)
+                    break
+                except TransactionQueueFull:
+                    continue
+            break
     except asyncio.CancelledError:
         pass
     finally:
@@ -138,13 +157,11 @@ class FullNodeAPI:
 
     log: logging.Logger
     full_node: FullNode
-    executor: ThreadPoolExecutor
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -1186,7 +1203,7 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
-            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+            if isinstance(e, ConsensusError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
                 self.full_node.log.info(
                     f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
                 )
@@ -1263,8 +1280,10 @@ class FullNodeAPI:
         else:
             return msg
 
-    @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_block_header(
+        self, request: wallet_protocol.RequestBlockHeader, peer: WSChiaConnection
+    ) -> Message | None:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
@@ -1285,13 +1304,17 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
             flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
-            additions, removals = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            # trusted peers use dedicated threads at high priority;
+            # untrusted peers are deprioritized
+            trusted = self.is_trusted(peer)
+            additions, removals = await self.full_node.pool.run_in_loop(
                 additions_and_removals,
                 bytes(block.transactions_generator),
                 block_generator.generator_refs,
                 flags,
                 self.full_node.constants,
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
@@ -1489,8 +1512,10 @@ class FullNodeAPI:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Message | None:
         coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
@@ -1512,15 +1537,19 @@ class FullNodeAPI:
             self.full_node.blockchain.lookup_block_generators, block
         )
         assert block_generator is not None
+        # trusted peers use dedicated threads at high priority;
+        # untrusted peers are deprioritized
+        trusted = self.is_trusted(peer)
         try:
-            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 block_generator.program,
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
                 get_flags_for_height_and_constants(height, self.full_node.constants),
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
         except ValueError:
             return reject_msg
@@ -1644,6 +1673,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug(f"Ignoring CompactProofOfTime: {request}, _waiters")
 
         return None
@@ -1670,17 +1700,31 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
+            self.full_node.compact_vdf_requests.discard(name)
             self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
         return None
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection
+    ) -> Message | None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.request_compact_vdf(request, peer)
-        return None
+        vdf_proof = await self.full_node.request_compact_vdf(request, peer.peer_node_id)
+        if vdf_proof is None:
+            return None
+        return make_msg(
+            ProtocolMessageTypes.respond_compact_vdf,
+            full_node_protocol.RespondCompactVDF(
+                height=request.height,
+                header_hash=request.header_hash,
+                field_vdf=request.field_vdf,
+                vdf_info=request.vdf_info,
+                vdf_proof=vdf_proof,
+            ),
+        )
 
     @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
@@ -1945,11 +1989,15 @@ class FullNodeAPI:
         is_done = next_min_height is None
 
         peak_height = self.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
+        if peak_height is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         height = uint32(next_min_height - 1) if next_min_height is not None else peak_height
         header_hash = self.full_node.blockchain.height_to_hash(height)
-        assert header_hash is not None
+        if header_hash is None:
+            reject = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            return make_msg(ProtocolMessageTypes.reject_puzzle_state, reject)
 
         # Check if the request would exceed the subscription limit.
         # We do this again since we've crossed an `await` point, to prevent a race condition.

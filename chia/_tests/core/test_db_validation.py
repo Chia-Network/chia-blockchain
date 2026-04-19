@@ -20,6 +20,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.inline_executor import InlineExecutor
 
 
 def rand_hash() -> bytes32:
@@ -141,7 +142,7 @@ async def make_db(db_file: Path, blocks: list[FullBlock], constants: ConsensusCo
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, height_map, constants, reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, constants, InlineExecutor())
         sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:

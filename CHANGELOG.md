@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.7.0 Chia blockchain 2026-3-26
+
+## What's Changed
+
+### Added
+
+- Remote Wallet and new RPC calls
+
+### Changed
+
+- Numerous hardening measures and soft fork: Please read our blog post for more information
+  https://www.chia.net/2026/03/26/chia-2-7-0-combatting-the-ai-siege/
+- Make the mempool a bit more defensive on slow machines
+- Harden connection handling and message validation in `WSChiaConnection`
+- Improve `register_for_coin_updates`
+- Early check of proof of space in a few places
+- Ignore unsolicited `RespondTransaction`
+- Mempool spend limit
+- Harden `Streamable.from_bytes()` to raise `ValueError` on unconsumed trailing bytes
+- Bump `chia_rs` to `0.41.1`
+
+### Fixed
+
+- Fix timelord to skip processing after failed VDF proof validation
+- Apply `client_timeout` to all DataLayer plugin HTTP calls
+- DataLayer hardening related to DAT file downloading
+
 ## 2.6.1 Chia blockchain 2026-3-18
 
 ## What's Changed

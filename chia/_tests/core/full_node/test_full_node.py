@@ -9,7 +9,7 @@ import platform
 import random
 import sqlite3
 import time
-from collections.abc import Awaitable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 
 import pytest
@@ -38,7 +38,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
-from chia._tests.conftest import ConsensusMode
+from chia._tests.conftest import ConsensusMode, make_old_setup_simulators_and_wallets
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
@@ -60,8 +60,9 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node import FullNode, WalletUpdate
-from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.sync_store import Peak
+from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols.farmer_protocol import DeclareProofOfSpace
@@ -111,6 +112,7 @@ from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.recursive_replace import recursive_replace
+from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.transaction_record import TransactionRecord
@@ -550,6 +552,25 @@ async def test_inbound_connection_limit(setup_four_nodes: OldSimulatorsAndWallet
         server_i = full_node_i.full_node.server
         await server_i.start_client(PeerInfo(self_hostname, server_1.get_port()))
     assert len(server_1.get_connections(NodeType.FULL_NODE)) == 2
+
+
+@pytest.mark.anyio
+async def test_timelord_inbound_connection(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    _, server, _ = one_node_one_block
+    from ipaddress import ip_network
+
+    # Timelord from localhost should be accepted
+    assert server.should_accept_inbound(NodeType.TIMELORD, "127.0.0.1") is True
+    assert server.should_accept_inbound(NodeType.TIMELORD, "::1") is True
+
+    # Timelord from non-localhost, non-exempt should be rejected
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is False
+
+    # Timelord from non-localhost, exempt network should be accepted
+    server.exempt_peer_networks = [ip_network("8.8.8.0/24")]
+    assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is True
 
 
 @pytest.mark.anyio
@@ -1169,7 +1190,7 @@ async def test_request_respond_transaction(
     spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    peer.expected_mempool_responses += 1
+    peer.expected_mempool_responses = 1
     res = await full_node_1.respond_transaction(respond_transaction, peer)
     assert res is None
 
@@ -1225,7 +1246,7 @@ async def test_respond_transaction_fail(
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    peer.expected_mempool_responses += 1
+    peer.expected_mempool_responses = 1
     msg = await full_node_1.respond_transaction(respond_transaction, peer)
     assert msg is None
 
@@ -1824,30 +1845,27 @@ async def test_request_unfinished_block2(
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-    # the "best" unfinished block according to the metric we use to pick one
-    # deterministically
-    best_unf: UnfinishedBlock | None = None
-
+    # Generate all unfinished blocks up front, each with a different
+    # transaction (different foliage) but the same reward block (same plot).
+    unfinished_blocks: list[UnfinishedBlock] = []
     for idx in range(6):
-        # we include a different transaction in each block. This makes the
-        # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)
-
-        # note that we use the same chain to build the new block on top of every time
         block = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )[-1]
         unf = make_unfinished_block(block, bt.constants)
         assert unf.foliage.foliage_transaction_block_hash is not None
+        unfinished_blocks.append(unf)
 
-        if best_unf is None:
-            best_unf = unf
-        elif (
-            best_unf.foliage.foliage_transaction_block_hash is not None
-            and unf.foliage.foliage_transaction_block_hash < best_unf.foliage.foliage_transaction_block_hash
-        ):
-            best_unf = unf
+    # Sort worst-to-best (descending foliage hash), so every block we send is
+    # strictly better than what the node already has and will be accepted.
+    def foliage_tx_hash(b: UnfinishedBlock) -> bytes32:
+        assert b.foliage.foliage_transaction_block_hash is not None
+        return b.foliage.foliage_transaction_block_hash
 
+    unfinished_blocks.sort(key=foliage_tx_hash, reverse=True)
+
+    for unf in unfinished_blocks:
         # Don't have
         res = await full_node_1.request_unfinished_block2(
             fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
@@ -1855,6 +1873,7 @@ async def test_request_unfinished_block2(
         assert res is None
 
         await full_node_1.full_node.add_unfinished_block(unf, peer)
+
         # Have
         res = await full_node_1.request_unfinished_block2(
             fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
@@ -1862,13 +1881,14 @@ async def test_request_unfinished_block2(
         assert res is not None
         assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
+        # The current block is always the best so far
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
+        assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
         res = await full_node_1.request_unfinished_block2(fnp.RequestUnfinishedBlock2(unf.partial_hash, None))
         assert res is not None
-        assert res.data == bytes(fnp.RespondUnfinishedBlock(best_unf))
+        assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
 
 
 @pytest.mark.anyio
@@ -3700,6 +3720,25 @@ async def test_request_header_blocks_non_tx_block(
     assert len(response.header_blocks) == 2
 
 
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_add_block_missing_prev_record_raises_value_error(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_api, _server, bt = one_node_one_block
+    blocks = bt.get_consecutive_blocks(1, await full_node_api.get_all_full_blocks())
+    block = blocks[-1]
+
+    async def missing_block_record(_header_hash: bytes32) -> None:
+        return None
+
+    monkeypatch.setattr(full_node_api.full_node.blockchain, "get_block_record_from_db", missing_block_record)
+
+    with pytest.raises(ValueError, match="Previous block record not found"):
+        await full_node_api.full_node.add_block(block)
+
+
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize(
@@ -3724,7 +3763,7 @@ async def test_node_type_message_typechecking(
     [
         (NodeType.HARVESTER, None),
         (NodeType.FARMER, "max_inbound_farmer"),
-        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.TIMELORD, None),
         (NodeType.INTRODUCER, None),
         (NodeType.WALLET, "max_inbound_wallet"),
         (NodeType.DATA_LAYER, None),
@@ -3821,3 +3860,132 @@ async def test_register_for_coin_updates(
     assert {cs.coin.name() for cs in response_data.coin_states} == set(first_coin)
     for coin_id in remaining_coins:
         assert coin_id not in response_data.coin_ids
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_tx_request_and_timeout_call_api_exception(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Covers the case where `call_api` raises an exception in
+    `tx_request_and_timeout` to make sure that's handled properly.
+    """
+    full_node_api, server, _ = one_node_one_block
+    full_node = full_node_api.full_node
+    _, peer_id = await add_dummy_connection(server, self_hostname, 42)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    server_connection = server.all_connections[peer_id]
+    transaction_id = bytes32.random()
+    full_node.full_node_store.peers_with_tx[transaction_id] = {
+        peer_id: PeerWithTx(peer_host=self_hostname, advertised_fee=uint64(0), advertised_cost=uint64(1))
+    }
+
+    async def test_call_api(
+        request_method: Callable[..., Awaitable[Message | None]], message: Streamable, timeout: int = 60
+    ) -> Any:
+        raise ValueError
+
+    monkeypatch.setattr(server_connection, "call_api", test_call_api)
+    await tx_request_and_timeout(full_node=full_node, transaction_id=transaction_id, task_id=bytes32.random())
+    assert transaction_id not in full_node.full_node_store.peers_with_tx
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_tx_request_and_timeout_queue_full(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Covers the case where a peer's transaction queue is full when attempting to
+    put a transaction into it via `tx_request_and_timeout`.
+    """
+    full_node_api, server, _ = one_node_one_block
+    full_node = full_node_api.full_node
+    _, peer_id = await add_dummy_connection(server, self_hostname, 42)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    server_connection = server.all_connections[peer_id]
+    sb = SpendBundle([], G2Element())
+    transaction_id = sb.name()
+    full_node.full_node_store.peers_with_tx[transaction_id] = {
+        peer_id: PeerWithTx(peer_host=self_hostname, advertised_fee=uint64(0), advertised_cost=uint64(1))
+    }
+    full_node.transaction_queue.peer_size_limit = 0
+
+    async def test_call_api(
+        request_method: Callable[..., Awaitable[Message | None]], message: Streamable, timeout: int = 60
+    ) -> Any:
+        return full_node_protocol.RespondTransaction(sb)
+
+    monkeypatch.setattr(server_connection, "call_api", test_call_api)
+    await tx_request_and_timeout(full_node=full_node, transaction_id=transaction_id, task_id=bytes32.random())
+    assert transaction_id not in full_node.full_node_store.peers_with_tx
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_request_puzzle_state_rejects_before_peak(
+    blockchain_constants: ConsensusConstants, self_hostname: str
+) -> None:
+    """
+    request_puzzle_state must return RejectPuzzleState instead of crashing
+    when the node has no peak (before any blocks are synced).
+    """
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
+        (nodes, _, _bt) = make_old_setup_simulators_and_wallets(new=new)
+        full_node_api = nodes[0]
+        server = full_node_api.full_node.server
+
+        assert full_node_api.full_node.blockchain.get_peak_height() is None
+
+        dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1338, NodeType.WALLET)
+
+        request = wallet_protocol.RequestPuzzleState(
+            puzzle_hashes=[bytes32.random()],
+            previous_height=None,
+            header_hash=blockchain_constants.GENESIS_CHALLENGE,
+            filters=wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            subscribe_when_finished=False,
+        )
+        response = await full_node_api.request_puzzle_state(request, dummy_peer)
+
+        assert response is not None
+        assert response.type == ProtocolMessageTypes.reject_puzzle_state.value
+        reject = wallet_protocol.RejectPuzzleState.from_bytes(response.data)
+        assert reject.reason == uint8(wallet_protocol.RejectStateReason.REORG)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_request_puzzle_state_responds_normally(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Happy-path: request_puzzle_state returns RespondPuzzleState on a synced node.
+    """
+    full_node_api, server, _bt = one_node_one_block
+
+    assert full_node_api.full_node.blockchain.get_peak_height() is not None
+
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1339, NodeType.WALLET)
+
+    peak_height = full_node_api.full_node.blockchain.get_peak_height()
+    assert peak_height is not None
+    header_hash = full_node_api.full_node.blockchain.height_to_hash(peak_height)
+    assert header_hash is not None
+
+    request = wallet_protocol.RequestPuzzleState(
+        puzzle_hashes=[bytes32.random()],
+        previous_height=peak_height,
+        header_hash=header_hash,
+        filters=wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+        subscribe_when_finished=False,
+    )
+    response = await full_node_api.request_puzzle_state(request, dummy_peer)
+
+    assert response is not None
+    assert response.type == ProtocolMessageTypes.respond_puzzle_state.value

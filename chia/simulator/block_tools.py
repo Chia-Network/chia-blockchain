@@ -2236,14 +2236,16 @@ CONDITION_COSTS = compute_cost_table()
 
 
 def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
-    condition_cost = 0
+    condition_cost = ConditionCost.SPEND_COST.value if charge_for_conditions else 0
     for cond in conds.as_iter():
         condition = cond.first().as_atom()
 
         # this is new in hard fork 2
 
         if condition == ConditionOpcode.CREATE_COIN:
-            condition_cost += ConditionCost.CREATE_COIN.value
+            condition_cost += (
+                ConditionCost.NEW_CREATE_COIN.value if charge_for_conditions else ConditionCost.CREATE_COIN.value
+            )
         # after the 2.0 hard fork, two byte conditions (with no leading 0)
         # have costs. Account for that.
         elif len(condition) == 2 and condition[0] != 0:

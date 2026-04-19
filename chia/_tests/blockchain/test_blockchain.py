@@ -321,7 +321,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -335,8 +335,9 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
+            conds = npc_result.conds
 
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         err = validate_res.error
         assert err is None
 
@@ -354,7 +355,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -368,7 +369,8 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+            conds = npc_result.conds
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
@@ -448,7 +450,7 @@ class TestBlockHeaderValidation:
                     block.transactions_generator,
                     [],
                 )
-                npc_result = None
+                conds = None
                 # if this assert fires, remove it along with the pragma for the block
                 # below
                 assert block.transactions_generator is None
@@ -462,9 +464,8 @@ class TestBlockHeaderValidation:
                         height=block.height,
                         constants=bt.constants,
                     )
-                validate_res = await blockchain.validate_unfinished_block(
-                    unf, npc_result, skip_overflow_ss_validation=True
-                )
+                    conds = npc_result.conds
+                validate_res = await blockchain.validate_unfinished_block(unf, conds, skip_overflow_ss_validation=True)
                 assert validate_res.error is None
                 return None
 
@@ -863,7 +864,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
         reason="After the phase out, when we have v2-only plots. It seems like "
         "we never get an overflow block. get_consecutive_blocks(..., force_overflow=True) "
         "loops until we time out",
@@ -1496,8 +1497,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v2 PoS with pool keys, "
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
         "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
     )
     async def test_pool_target_contract(
@@ -2665,7 +2666,7 @@ class TestBodyValidation:
     @pytest.mark.anyio
     @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2681,7 +2682,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        for i in range(7_000):
+        num_coins = 7_000
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # after the hard fork, CREATE_COIN is 25% cheaper, so we need more
+            # coins to exceed the block cost
+            num_coins += num_coins // 3
+        for i in range(num_coins):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -3440,7 +3446,10 @@ class TestReorgs:
         test_long_reorg_blocks: list[FullBlock],
         test_long_reorg_blocks_light: list[FullBlock],
         consensus_mode: ConsensusMode,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+        monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
         elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
@@ -4058,7 +4067,9 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 @pytest.mark.anyio
 @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
-async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+    monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
     WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]

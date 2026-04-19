@@ -255,7 +255,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             # we don't have very much v2 space, and no phase-out means the
             # difficulty won't adjust gradually. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(2),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
@@ -266,7 +266,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             HARD_FORK2_HEIGHT=uint32(0),
             # we don't have very much v2 space. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(7),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
@@ -276,6 +276,14 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
         )
 
     return ret
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _install_plot_cache() -> None:
+    from chia._tests.util.plot_cache import install as install_plot_cache
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    install_plot_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
 
 
 @pytest.fixture(scope="session", name="bt")
