@@ -57,11 +57,18 @@ class WalletBlockchain:
         self.constants = constants
         self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS * 3
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
-        self._sub_slot_iters = await self._basic_store.get_object("SUB_SLOT_ITERS", uint64)
-        self._difficulty = await self._basic_store.get_object("DIFFICULTY", uint64)
-        self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
-        if self._finished_sync_up_to is None:
-            self._finished_sync_up_to = uint32(0)
+        sub_slot_iters = await self._basic_store.get_object("SUB_SLOT_ITERS", uint64)
+        difficulty = await self._basic_store.get_object("DIFFICULTY", uint64)
+        if sub_slot_iters is not None:
+            assert difficulty is not None
+            self._sub_slot_iters = sub_slot_iters
+            self._difficulty = difficulty
+        else:
+            assert difficulty is None
+            self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
+            self._difficulty = constants.DIFFICULTY_STARTING
+        finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
+        self._finished_sync_up_to = finished_sync_up_to if finished_sync_up_to is not None else uint32(0)
         self._peak = None
         self._peak = await self.get_peak_block()
         self._latest_timestamp = uint64(0)

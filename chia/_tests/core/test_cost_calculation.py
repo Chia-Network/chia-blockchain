@@ -11,10 +11,9 @@ from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_block_generator
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, test_constants

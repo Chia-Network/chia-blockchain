@@ -40,6 +40,7 @@ from chia.data_layer.data_layer_util import (
     _debug_dump,
     get_delta_filename_path,
     get_full_tree_filename_path,
+    internal_hash,
     leaf_hash,
 )
 from chia.data_layer.data_store import DataStore
@@ -1227,12 +1228,15 @@ async def test_server_http_ban(
         server_info: ServerInfo,
         timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
+        max_delta_file_size: int,
     ) -> None:
         if error:
             raise aiohttp.ClientConnectionError
 
-    start_timestamp = int(time.time())
+    frozen_time = time.time()
+    start_timestamp = int(frozen_time)
     with monkeypatch.context() as m:
+        m.setattr(time, "time", lambda: frozen_time)
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
         success = await insert_from_delta_file(
             data_store=data_store,
@@ -1253,10 +1257,11 @@ async def test_server_http_ban(
     subscriptions = await data_store.get_subscriptions()
     sinfo = subscriptions[0].servers_info[0]
     assert sinfo.num_consecutive_failures == 1
-    assert sinfo.ignore_till >= start_timestamp + 5 * 60  # ban for 5 minutes
+    assert sinfo.ignore_till == start_timestamp + 5 * 60  # ban for 5 minutes
     start_timestamp = sinfo.ignore_till
 
     with monkeypatch.context() as m:
+        m.setattr(time, "time", lambda: frozen_time)
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
         success = await insert_from_delta_file(
             data_store=data_store,
@@ -1334,6 +1339,142 @@ async def write_tree_to_file_old_format(
 
     writer.write(len(to_write).to_bytes(4, byteorder="big"))
     writer.write(to_write)
+
+
+def create_graph_util(path: Path, edges: list[tuple[int, int]]) -> bytes32:
+    """
+    Utility for tests: write a *full tree* file that `insert_into_data_store_from_file()` can consume.
+
+    This is a low-level writer which generates `SerializedNode` entries directly from `edges`
+    without relying on `DataStore.write_tree_to_file()`.
+    """
+
+    if len(edges) == 0:
+        raise ValueError("edges must be non-empty")
+
+    # `edges` define a binary Merkle DAG: each internal node id has exactly 2 outgoing edges
+    # which define the left/right child ordering (the edge list order is preserved).
+    normalized_edges: list[tuple[int, int]] = [(int(u), int(v)) for (u, v) in edges]
+
+    children_by_parent: dict[int, list[int]] = {}
+    all_children: set[int] = set()
+    for u, v in normalized_edges:
+        children_by_parent.setdefault(u, []).append(v)
+        all_children.add(v)
+
+    if len(children_by_parent) == 0:
+        raise ValueError("edges must contain at least one parent->child relationship")
+    if not all(len(vs) == 2 for vs in children_by_parent.values()):
+        raise ValueError("each parent must have exactly 2 children (binary Merkle DAG)")
+
+    roots = sorted(set(children_by_parent.keys()) - all_children)
+    if len(roots) != 1:
+        raise ValueError(f"expected exactly one root, found {len(roots)}")
+    root_id = roots[0]
+
+    # Leaves are nodes with no outgoing edges.
+    all_nodes: set[int] = set(children_by_parent.keys()) | all_children
+    leaf_ids = sorted(all_nodes - set(children_by_parent.keys()))
+    if len(leaf_ids) == 0:
+        raise ValueError("graph has no leaves")
+
+    # Depth-first, postorder write (children first, then parent), de-duplicating nodes.
+    # Implemented iteratively to avoid Python recursion limits for deep graphs (e.g. line graphs).
+    serialized_nodes: list[SerializedNode] = []
+    node_hashes: dict[int, bytes32] = {}
+
+    def leaf_key_value(node_id: int) -> tuple[bytes, bytes]:
+        key = int(node_id).to_bytes(4, byteorder="big", signed=False)
+        value = b""
+        return key, value
+
+    # Stack holds (node_id, state) where state 0=enter, 1=exit.
+    stack: list[tuple[int, int]] = [(root_id, 0)]
+    while stack:
+        node_id, state = stack.pop()
+        if state == 0:
+            if node_id in node_hashes:
+                continue
+            stack.append((node_id, 1))
+            children = children_by_parent.get(node_id)
+            if children is None:
+                continue
+            left_child, right_child = children
+            # Push in reverse order so left is processed first.
+            stack.append((right_child, 0))
+            stack.append((left_child, 0))
+        else:
+            if node_id in node_hashes:
+                continue
+            children = children_by_parent.get(node_id)
+            if children is None:
+                key, value = leaf_key_value(node_id)
+                h = leaf_hash(key=key, value=value)
+                serialized_nodes.append(SerializedNode(True, key, value))
+                node_hashes[node_id] = h
+                continue
+
+            left_child, right_child = children
+            left_hash = node_hashes[left_child]
+            right_hash = node_hashes[right_child]
+            h = internal_hash(left_hash=left_hash, right_hash=right_hash)
+            serialized_nodes.append(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
+            node_hashes[node_id] = h
+
+    root_hash = node_hashes[root_id]
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as writer:
+        for node in serialized_nodes:
+            to_write = bytes(node)
+            writer.write(len(to_write).to_bytes(4, byteorder="big"))
+            writer.write(to_write)
+
+    return root_hash
+
+
+def create_dag_edges(levels: int) -> list[tuple[int, int]]:
+    """
+    Create a directed acyclic graph with 3 nodes per level and branching factor 2
+    Expect number of paths in the graph to be 2^levels.
+    On the second level, the three nodes are aggregated into two, then finally the top level contains the root.
+    The returned edges are intended to be fed into `create_graph_util(path, edges)`.
+    """
+    per_level = 3
+
+    def node_id(level: int, idx: int) -> int:
+        return 1 + level * per_level + idx
+
+    # We'll add a dedicated root node above the top level, and two aggregator nodes so the
+    # overall structure remains strictly binary (each parent has exactly 2 children).
+    root_node = 1 + levels * per_level
+    top_ab_agg = root_node + 1
+    top_c_agg = root_node + 2
+
+    edges: list[tuple[int, int]] = []
+
+    # Inter-level edges.
+    for level in range(1, levels):
+        # 3 internal nodes per level, each consuming 2 distinct children from the previous level,
+        # in a rotated pattern to guarantee distinct internal hashes.
+        for idx in range(per_level):
+            parent = node_id(level, idx)
+            left = node_id(level - 1, idx)
+            right = node_id(level - 1, (idx + 1) % per_level)
+            edges.append((parent, left))
+            edges.append((parent, right))
+
+    # Aggregate top A/B and top C separately, then root combines those two.
+    edges.append((top_ab_agg, node_id(levels - 1, 0)))
+    edges.append((top_ab_agg, node_id(levels - 1, 1)))
+
+    edges.append((top_c_agg, node_id(levels - 1, 2)))
+    edges.append((top_c_agg, node_id(levels - 1, 0)))
+
+    edges.append((root_node, top_ab_agg))
+    edges.append((root_node, top_c_agg))
+
+    return edges
 
 
 @pytest.mark.parametrize(argnames="test_delta", argvalues=["full", "delta", "old"])
@@ -1418,6 +1559,91 @@ async def test_data_server_files(
         current_root = await data_store.get_tree_root(store_id=store_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
+
+
+@pytest.mark.anyio
+async def test_insert_into_data_store_from_file_graph_util(
+    data_store: DataStore, store_id: bytes32, tmp_path: Path
+) -> None:
+    # Simple binary tree:
+    #   1
+    #  / \
+    # 2   3
+    # / \
+    # 4  5
+    edges: list[tuple[int, int]] = [(1, 2), (1, 3), (2, 4), (2, 5)]
+    filename = tmp_path / "graph_full_v1.dat"
+
+    root_hash = create_graph_util(filename, edges)
+
+    await data_store.insert_into_data_store_from_file(store_id, root_hash, filename)
+    current_root = await data_store.get_tree_root(store_id=store_id)
+    assert current_root.node_hash == root_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("depth", [1000, 100_000])
+async def test_insert_into_data_store_from_file_line_graph_depth(
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    depth: int,
+) -> None:
+    # Binary "line graph":
+    #   1 -> leaf_1, 2
+    #   2 -> leaf_2, 3
+    #   ...
+    #   depth -> leaf_depth, leaf_end
+    #
+    # This stresses depth/stack handling while staying strictly binary.
+    #
+    # Node IDs:
+    # - internal nodes: 1..depth
+    # - per-level leaf nodes: (depth+1)..(2*depth)
+    # - final leaf: (2*depth+1)
+    internal_first = 1
+    internal_last = depth
+    leaf_base = internal_last + 1
+    leaf_end = (2 * depth) + 1
+
+    edges: list[tuple[int, int]] = []
+    for i in range(internal_first, internal_last):
+        # Order matters: first edge is left child, second edge is right child.
+        edges.append((i, leaf_base + (i - internal_first)))  # unique leaf for this internal node
+        edges.append((i, i + 1))  # next internal node
+
+    # last internal points to its leaf and a final leaf
+    edges.append((internal_last, leaf_base + (internal_last - internal_first)))
+    edges.append((internal_last, leaf_end))
+
+    filename = tmp_path / f"line_graph_depth_{depth}.dat"
+    root_hash = create_graph_util(filename, edges)
+
+    with pytest.raises(chia_rs.datalayer.RecursionDepthExceededError):
+        await data_store.insert_into_data_store_from_file(store_id, root_hash, filename)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "levels",
+    [
+        10,
+        25,
+        50,
+    ],
+)
+async def test_insert_into_data_store_from_file_fails_for_dag(
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    levels: int,
+) -> None:
+    edges = create_dag_edges(levels=levels)
+    filename = tmp_path / f"merkle_dag_{levels}_levels_full_v1.dat"
+
+    root_hash = create_graph_util(filename, edges)
+    with pytest.raises(chia_rs.datalayer.CycleFoundError):
+        await data_store.insert_into_data_store_from_file(store_id, root_hash, filename)
 
 
 @pytest.mark.anyio
@@ -1762,8 +1988,9 @@ async def test_insert_from_delta_file(
         filename: str,
         proxy_url: str | None,
         server_info: ServerInfo,
-        timeout: int,
+        timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
+        max_delta_file_size: int,
     ) -> None:
         pass
 
@@ -1772,8 +1999,9 @@ async def test_insert_from_delta_file(
         filename: str,
         proxy_url: str | None,
         server_info: ServerInfo,
-        timeout: int,
+        timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
+        max_delta_file_size: int,
     ) -> None:
         try:
             os.rmdir(store_path)
@@ -2002,6 +2230,141 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     with os.scandir(store_path) as entries:
         filenames = [entry.name for entry in entries if entry.name.endswith(".dat")]
         assert len(filenames) == 0
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "max_delta_file_size_mib,value_size_mib,use_default_limit,expected_success",
+    [
+        (250, 200, True, False),
+        (100, 75, False, False),
+        (250, 100, True, True),
+        (100, 25, False, True),
+    ],
+)
+async def test_insert_from_delta_file_exceeds_max_limit(
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    max_delta_file_size_mib: int,
+    value_size_mib: int,
+    use_default_limit: bool,
+    expected_success: bool,
+) -> None:
+    key_a = b"\x00"
+    key_b = b"\x01"
+    large_value = b"\xaa" * value_size_mib * 1024 * 1024
+    leaf_a_hash = leaf_hash(key=key_a, value=large_value)
+    leaf_b_hash = leaf_hash(key=key_b, value=large_value)
+    root_hash = internal_hash(left_hash=leaf_a_hash, right_hash=leaf_b_hash)
+
+    delta_file_path = get_delta_filename_path(tmp_path, store_id, root_hash, 1)
+    with open(delta_file_path, "wb") as writer:
+        for serialized_node in (
+            SerializedNode(True, key_a, large_value),
+            SerializedNode(True, key_b, large_value),
+            SerializedNode(False, bytes(leaf_a_hash), bytes(leaf_b_hash)),
+        ):
+            serialized_node_bytes = bytes(serialized_node)
+            writer.write(len(serialized_node_bytes).to_bytes(4, byteorder="big"))
+            writer.write(serialized_node_bytes)
+
+    assert (await data_store.get_tree_root(store_id=store_id)).generation == 0
+
+    insert_kwargs: dict[str, Any] = {}
+    if not use_default_limit:
+        insert_kwargs["max_delta_file_size"] = max_delta_file_size_mib
+
+    success = await insert_from_delta_file(
+        data_store=data_store,
+        store_id=store_id,
+        existing_generation=0,
+        target_generation=1,
+        root_hashes=[root_hash],
+        server_info=ServerInfo("http://127.0.0.1/8003", 0, 0),
+        client_foldername=tmp_path,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
+        log=log,
+        proxy_url="",
+        downloader=None,
+        **insert_kwargs,
+    )
+
+    assert success is expected_success
+
+    root = await data_store.get_tree_root(store_id=store_id)
+    if expected_success:
+        assert root.generation == 1
+        assert root.node_hash == root_hash
+        node_a = await data_store.get_node_by_key(store_id=store_id, key=key_a)
+        node_b = await data_store.get_node_by_key(store_id=store_id, key=key_b)
+        assert node_a.value == large_value
+        assert node_b.value == large_value
+        assert delta_file_path.exists()
+    else:
+        assert root.generation == 0
+        assert not delta_file_path.exists()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "expected_file_size_bytes,expected_success",
+    [
+        (1_048_576, True),  # 1 MiB
+        (1_048_577, False),  # 1 MiB + 1 byte
+    ],
+)
+async def test_insert_from_delta_file_limit_boundary(
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    expected_file_size_bytes: int,
+    expected_success: bool,
+) -> None:
+    max_delta_file_size_mib = 1
+    # 4-byte length prefix + 10-byte SerializedNode terminal framing overhead.
+    delta_file_overhead_bytes = 14
+
+    key = b"\x42"
+    value_size_bytes = expected_file_size_bytes - delta_file_overhead_bytes
+    assert value_size_bytes >= 0
+    value = b"\xcc" * value_size_bytes
+    serialized_leaf = bytes(SerializedNode(True, key, value))
+    assert len(serialized_leaf) == expected_file_size_bytes - 4
+
+    root_hash = leaf_hash(key=key, value=value)
+    delta_file_path = get_delta_filename_path(tmp_path, store_id, root_hash, 1)
+    with open(delta_file_path, "wb") as writer:
+        writer.write(len(serialized_leaf).to_bytes(4, byteorder="big"))
+        writer.write(serialized_leaf)
+    assert delta_file_path.stat().st_size == expected_file_size_bytes
+
+    success = await insert_from_delta_file(
+        data_store=data_store,
+        store_id=store_id,
+        existing_generation=0,
+        target_generation=1,
+        root_hashes=[root_hash],
+        server_info=ServerInfo("http://127.0.0.1/8003", 0, 0),
+        client_foldername=tmp_path,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
+        log=log,
+        proxy_url="",
+        downloader=None,
+        max_delta_file_size=max_delta_file_size_mib,
+    )
+
+    assert success is expected_success
+    root = await data_store.get_tree_root(store_id=store_id)
+    if expected_success:
+        assert root.generation == 1
+        assert root.node_hash == root_hash
+        node = await data_store.get_node_by_key(store_id=store_id, key=key)
+        assert node.value == value
+        assert delta_file_path.exists()
+    else:
+        assert root.generation == 0
+        assert not delta_file_path.exists()
 
 
 @pytest.mark.anyio

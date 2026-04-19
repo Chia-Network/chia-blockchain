@@ -38,11 +38,10 @@ from chia._tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
@@ -291,23 +290,31 @@ class TestPendingTxCache:
         for i in items:
             c.add(i)
 
+        # drain(101) uses <=, so it releases items with assert_height <= 101:
+        # items[0] (assert_height=100) and items[1] (assert_height=101)
         tx = c.drain(uint32(101))
-        assert tx == {items[0].spend_bundle_name: items[0]}
+        assert tx == {
+            items[0].spend_bundle_name: items[0],
+            items[1].spend_bundle_name: items[1],
+        }
 
+        # drain(105) releases items with assert_height <= 105:
+        # items[2] (102), items[3] (103), items[4] (104), items[5] (105)
         tx = c.drain(uint32(105))
         assert tx == {
-            items[1].spend_bundle_name: items[1],
             items[2].spend_bundle_name: items[2],
             items[3].spend_bundle_name: items[3],
             items[4].spend_bundle_name: items[4],
+            items[5].spend_bundle_name: items[5],
         }
 
         tx = c.drain(uint32(105))
         assert tx == {}
 
+        # drain(110) releases items with assert_height <= 110:
+        # items[6] (106), items[7] (107), items[8] (108), items[9] (109)
         tx = c.drain(uint32(110))
         assert tx == {
-            items[5].spend_bundle_name: items[5],
             items[6].spend_bundle_name: items[6],
             items[7].spend_bundle_name: items[7],
             items[8].spend_bundle_name: items[8],
@@ -465,7 +472,7 @@ class TestMempoolManager:
         spend_bundle = generate_test_spend_bundle(wallet_a, coin)
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        peer.expected_mempool_responses += 1
+        peer.expected_mempool_responses = 1
         await full_node_1.respond_transaction(tx, peer, test=True)
 
         await time_out_assert(
@@ -2912,9 +2919,9 @@ class TestMaliciousGenerators:
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
-        with pytest.raises(ValidationError) as e:
-            await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert e.value.code == Err.WRONG_PUZZLE_HASH
+        status, error = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.WRONG_PUZZLE_HASH
 
 
 coins = make_test_coins()
@@ -3337,18 +3344,20 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
         invariant_check_mempool(mempool)
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, test_constants.HARD_FORK2_HEIGHT, 10.0)
+    height = test_constants.HARD_FORK2_HEIGHT
+    generator = create_block(test_constants, height, 10.0)
     assert generator is not None
 
     assert generator.signature == G2Element()
 
     removals = set(generator.removals)
 
+    flags = get_flags_for_height_and_constants(height, test_constants)
     err, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,
-        0,
+        flags,
         generator.signature,
         None,
         test_constants,
