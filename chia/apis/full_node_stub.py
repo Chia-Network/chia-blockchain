@@ -272,8 +272,10 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         ...
 
     # WALLET PROTOCOL
-    @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_block_header(
+        self, request: wallet_protocol.RequestBlockHeader, peer: WSChiaConnection
+    ) -> Message | None:
         """Handle block header request from wallet."""
         ...
 
@@ -294,8 +296,10 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         """Handle transaction send from wallet."""
         ...
 
-    @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Message | None:
         """Handle puzzle solution request from wallet."""
         ...
 

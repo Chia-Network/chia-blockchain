@@ -661,7 +661,7 @@ async def test_create_signed_transaction(
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={  # type: ignore[arg-type]
+                pre_block_balance_updates={
                     "xch": {
                         "unconfirmed_wallet_balance": -xch_delta,
                         "<=#spendable_balance": -xch_delta,
@@ -672,7 +672,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
@@ -683,7 +683,7 @@ async def test_create_signed_transaction(
                     if is_cat
                     else {}
                 ),
-                post_block_balance_updates={  # type: ignore[arg-type]
+                post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": -xch_delta,
                         ">=#spendable_balance": 0,
@@ -695,7 +695,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "confirmed_wallet_balance": -cat_delta,
                             ">=#spendable_balance": 1 if is_cat else 0,
                             ">=#max_send_amount": 1 if is_cat else 0,
@@ -1782,15 +1782,15 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(1)))
     ).trade_records
     assert len(all_offers) == 1
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(10)))
     ).trade_records
     assert len(all_offers) == 0
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(50)))
     ).trade_records
     assert len(all_offers) == 2
 

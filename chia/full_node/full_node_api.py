@@ -5,7 +5,6 @@ import logging
 import time
 import traceback
 from collections.abc import Collection
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -73,7 +72,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -158,13 +157,11 @@ class FullNodeAPI:
 
     log: logging.Logger
     full_node: FullNode
-    executor: ThreadPoolExecutor
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -337,7 +334,10 @@ class FullNodeAPI:
         elif peer.expected_mempool_responses > 0:
             peer.expected_mempool_responses -= 1
         else:
-            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            self.log.info(
+                f"Received unsolicited transaction {spend_name} from peer "
+                f"{peer.peer_node_id} / {peer.peer_info.host} version {peer.version}"
+            )
             return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
@@ -1206,7 +1206,7 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
-            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+            if isinstance(e, ConsensusError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
                 self.full_node.log.info(
                     f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
                 )
@@ -1283,8 +1283,10 @@ class FullNodeAPI:
         else:
             return msg
 
-    @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_block_header(
+        self, request: wallet_protocol.RequestBlockHeader, peer: WSChiaConnection
+    ) -> Message | None:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
@@ -1305,13 +1307,17 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
             flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
-            additions, removals = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            # trusted peers use dedicated threads at high priority;
+            # untrusted peers are deprioritized
+            trusted = self.is_trusted(peer)
+            additions, removals = await self.full_node.pool.run_in_loop(
                 additions_and_removals,
                 bytes(block.transactions_generator),
                 block_generator.generator_refs,
                 flags,
                 self.full_node.constants,
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
@@ -1509,8 +1515,10 @@ class FullNodeAPI:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Message | None:
         coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
@@ -1532,15 +1540,19 @@ class FullNodeAPI:
             self.full_node.blockchain.lookup_block_generators, block
         )
         assert block_generator is not None
+        # trusted peers use dedicated threads at high priority;
+        # untrusted peers are deprioritized
+        trusted = self.is_trusted(peer)
         try:
-            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 block_generator.program,
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
                 get_flags_for_height_and_constants(height, self.full_node.constants),
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
         except ValueError:
             return reject_msg
