@@ -334,7 +334,10 @@ class FullNodeAPI:
         elif peer.expected_mempool_responses > 0:
             peer.expected_mempool_responses -= 1
         else:
-            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            self.log.info(
+                f"Received unsolicited transaction {spend_name} from peer "
+                f"{peer.peer_node_id} / {peer.peer_info.host} version {peer.version}"
+            )
             return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
