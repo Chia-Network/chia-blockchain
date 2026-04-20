@@ -3720,6 +3720,25 @@ async def test_request_header_blocks_non_tx_block(
     assert len(response.header_blocks) == 2
 
 
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_add_block_missing_prev_record_raises_value_error(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_api, _server, bt = one_node_one_block
+    blocks = bt.get_consecutive_blocks(1, await full_node_api.get_all_full_blocks())
+    block = blocks[-1]
+
+    async def missing_block_record(_header_hash: bytes32) -> None:
+        return None
+
+    monkeypatch.setattr(full_node_api.full_node.blockchain, "get_block_record_from_db", missing_block_record)
+
+    with pytest.raises(ValueError, match="Previous block record not found"):
+        await full_node_api.full_node.add_block(block)
+
+
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize(

@@ -492,7 +492,7 @@ class GetTransactionCount(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetTransactionCountResponse(Streamable):
     wallet_id: uint32
-    count: uint16
+    count: uint32
 
 
 @streamable
@@ -613,9 +613,9 @@ class ExtendDerivationIndexResponse(Streamable):
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetOffersCountResponse(Streamable):
-    total: uint16
-    my_offers_count: uint16
-    taken_offers_count: uint16
+    total: uint32
+    my_offers_count: uint32
+    taken_offers_count: uint32
 
 
 @streamable
@@ -1650,7 +1650,7 @@ class NFTSetDIDBulk(TransactionEndpointRequest):
 @dataclass(kw_only=True, frozen=True)
 class NFTSetDIDBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
-    tx_num: uint16
+    tx_num: uint32
     spend_bundle: WalletSpendBundle
 
 
@@ -1665,7 +1665,7 @@ class NFTTransferBulk(TransactionEndpointRequest):
 @dataclass(kw_only=True, frozen=True)
 class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
-    tx_num: uint16
+    tx_num: uint32
     spend_bundle: WalletSpendBundle
 
 
@@ -1820,8 +1820,8 @@ class NFTMintBulk(TransactionEndpointRequest):
     royalty_address: str | None = None
     royalty_percentage: uint16 | None = None
     target_list: list[str] = field(default_factory=list)
-    mint_number_start: uint16 = uint16(1)
-    mint_total: uint16 | None = None
+    mint_number_start: uint32 = uint32(1)
+    mint_total: uint32 | None = None
     xch_coins: list[Coin] | None = None
     xch_change_target: str | None = None
     new_innerpuzhash: bytes32 | None = None
@@ -2207,8 +2207,8 @@ class GetOfferResponse(Streamable):
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetAllOffers(Streamable):
-    start: uint16 = uint16(0)
-    end: uint16 = uint16(10)
+    start: uint32 = uint32(0)
+    end: uint32 = uint32(10)
     exclude_my_offers: bool = False
     exclude_taken_offers: bool = False
     include_completed: bool = False

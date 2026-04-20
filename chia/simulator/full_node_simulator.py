@@ -202,7 +202,7 @@ class FullNodeSimulator(FullNodeAPI):
                     self.full_node.blockchain.constants,
                     AugmentedBlockchain(self.full_node.blockchain),
                     genesis,
-                    self.full_node.blockchain.pool,
+                    self.full_node.pool,
                     None,
                     ValidationState(ssi, diff, None),
                 )
@@ -261,7 +261,7 @@ class FullNodeSimulator(FullNodeAPI):
                     self.full_node.blockchain.constants,
                     AugmentedBlockchain(self.full_node.blockchain),
                     genesis,
-                    self.full_node.blockchain.pool,
+                    self.full_node.pool,
                     None,
                     ValidationState(ssi, diff, None),
                 )

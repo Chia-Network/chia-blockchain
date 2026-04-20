@@ -146,7 +146,9 @@ async def test_request_block_headers_transactions_filter(
         `request_block_headers` in this regard, to `request_header_blocks` as
         well as `request_block_header`.
     """
-    full_node_api, _, bt = one_node_one_block
+    full_node_api, server, bt = one_node_one_block
+    _, peer_id = await add_dummy_connection(server, "127.0.0.1", 12312)
+    peer = server.all_connections[peer_id]
     ph = SerializedProgram.to(1).get_tree_hash()
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -200,7 +202,7 @@ async def test_request_block_headers_transactions_filter(
     assert block_headers_res.header_blocks == block_headers
     assert block_headers_res.header_blocks[0].transactions_filter == expected_transactions_filter
     # Go even further and compare this to the outcome of request_block_header
-    msg = await full_node_api.request_block_header(wallet_protocol.RequestBlockHeader(uint32(new_block.height)))
+    msg = await full_node_api.request_block_header(wallet_protocol.RequestBlockHeader(uint32(new_block.height)), peer)
     assert msg is not None
     block_header_res = RespondBlockHeader.from_bytes(msg.data)
     assert block_header_res.header_block == block_header
@@ -1524,10 +1526,14 @@ async def test_retry_store(
     request_puzzle_solution_failure_tested = False
 
     def flaky_request_puzzle_solution(
-        func: Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]],
-    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]]:
+        func: Callable[
+            [FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message | None]
+        ],
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message | None]]:
         @functools.wraps(func)
-        async def new_func(self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+        async def new_func(
+            self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+        ) -> Message | None:
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1535,7 +1541,7 @@ async def test_retry_store(
                 reject = wallet_protocol.RejectPuzzleSolution(bytes32.zeros, uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
-                return await func(self, request)
+                return await func(self, request, peer)
 
         return new_func
 

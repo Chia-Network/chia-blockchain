@@ -91,7 +91,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
             x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
             critical=False,
         )
-        .sign(root_key, hashes.SHA256(), default_backend())
+        .sign(root_key, hashes.SHA256(), default_backend())  # type: ignore[arg-type]
     )
 
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
