@@ -8,6 +8,7 @@ from typing import TypedDict
 
 import yaml
 from chia_rs import G1Element
+from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import NotRequired, Self
 
@@ -132,7 +133,7 @@ def perform_migration_from_old_config(root_path: Path) -> None:
                     pool_url=pool["pool_url"],
                     payout_instructions=pool["payout_instructions"],
                     target_puzzle_hash=bytes32.from_hexstr(pool["target_puzzle_hash"]),
-                    owner_public_key=G1Element.from_bytes(bytes.fromhex(pool["owner_public_key"])),
+                    owner_public_key=G1Element.from_bytes(hexstr_to_bytes(pool["owner_public_key"])),
                     p2_singleton_puzzle_hash=bytes32.from_hexstr(pool["p2_singleton_puzzle_hash"]),
                 ).add(root_path=root_path)
             chia_config["pool"]["pool_list"] = []
