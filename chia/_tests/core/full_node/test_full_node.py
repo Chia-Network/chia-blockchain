@@ -3505,9 +3505,9 @@ async def test_pending_tx_cache_retry_on_new_peak(
         # Make sure it ends up in the pending cache, not the mempool
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=True) is not None
-        # Advance peak to meet the asserted height condition
+        # Advance peak to exactly the asserted height condition
         with caplog.at_level(logging.DEBUG):
-            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
             for block in blocks:
                 await full_node_api.full_node.add_block(block)
         # This should trigger peak post processing with the added transaction
