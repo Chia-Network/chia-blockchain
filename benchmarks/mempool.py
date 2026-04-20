@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import cProfile
 from collections.abc import Collection, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
@@ -20,6 +20,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.batches import to_batches
+from chia.util.inline_executor import InlineExecutor
+from chia.util.priority_thread_pool_executor import Executor, PriorityThreadPoolExecutor
 from chia.util.task_referencer import create_referenced_task
 
 NUM_ITERS = 200
@@ -169,18 +171,26 @@ async def run_mempool_benchmark() -> None:
 
     start_height = height
     for single_threaded in [False, True]:
+        pool: Executor
         if single_threaded:
             print("\n== Single-threaded")
+            pool = InlineExecutor()
         else:
             print("\n== Multi-threaded")
+            pool = PriorityThreadPoolExecutor(max_workers=2, thread_name_prefix="mempool-")
 
-        with MempoolManager(
-            get_coin_records,
-            get_unspent_lineage_info_for_puzzle_hash,
-            DEFAULT_CONSTANTS,
-            single_threaded=single_threaded,
-            validation_timeout=2,
-        ) as mempool:
+        with ExitStack() as stack:
+            stack.enter_context(pool)
+
+            mempool = stack.enter_context(
+                MempoolManager(
+                    get_coin_records,
+                    get_unspent_lineage_info_for_puzzle_hash,
+                    DEFAULT_CONSTANTS,
+                    pool,
+                    validation_timeout=2,
+                )
+            )
             height = start_height
             rec = fake_block_record(height, timestamp)
             await mempool.new_peak(rec, None)
@@ -200,13 +210,16 @@ async def run_mempool_benchmark() -> None:
             print(f"  time: {stop - start:0.4f}s")
             print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-        with MempoolManager(
-            get_coin_records,
-            get_unspent_lineage_info_for_puzzle_hash,
-            DEFAULT_CONSTANTS,
-            single_threaded=single_threaded,
-            validation_timeout=2,
-        ) as mempool:
+            mempool.shut_down()
+            mempool = stack.enter_context(
+                MempoolManager(
+                    get_coin_records,
+                    get_unspent_lineage_info_for_puzzle_hash,
+                    DEFAULT_CONSTANTS,
+                    pool,
+                    validation_timeout=2,
+                )
+            )
             height = start_height
             rec = fake_block_record(height, timestamp)
             await mempool.new_peak(rec, None)

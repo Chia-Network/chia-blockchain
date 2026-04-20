@@ -60,7 +60,7 @@ def test_compute_additions_create_coin() -> None:
 
 def test_compute_additions_create_coin_max_cost() -> None:
     # make a large number of CoinSpends
-    spends, _ = create_spends(6111)
+    spends, _ = create_spends(8148)
     sb = SpendBundle(spends, G2Element())
     with pytest.raises(ValueError, match="cost exceeded"):
         sb.additions()

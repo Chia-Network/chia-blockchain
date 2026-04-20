@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
-from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from types import TracebackType
 from typing import TypeVar
@@ -43,7 +41,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
-from chia.util.inline_executor import InlineExecutor
+from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
 
@@ -319,9 +317,9 @@ class MempoolManager:
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
+        pool: Executor,
         *,
         validation_timeout: float,
-        single_threaded: bool = False,
         max_tx_clvm_cost: uint64 | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
@@ -353,10 +351,7 @@ class MempoolManager:
         self.seen_cache_size = 10000
         self._worker_queue_size = 0
         self.validation_timeout = validation_timeout
-        if single_threaded:
-            self.pool = InlineExecutor()
-        else:
-            self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mempool-")
+        self.pool = pool
 
         # The mempool will correspond to a certain peak
         self.peak: BlockRecordProtocol | None = None
@@ -375,16 +370,16 @@ class MempoolManager:
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
+        pool: Executor,
         *,
         validation_timeout: float,
-        single_threaded: bool = False,
         max_tx_clvm_cost: uint64 | None = None,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
             get_unspent_lineage_info_for_puzzle_hash,
             consensus_constants,
-            single_threaded=single_threaded,
+            pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
             validation_timeout=validation_timeout,
         )
@@ -394,7 +389,6 @@ class MempoolManager:
             self.shut_down()
 
     def shut_down(self) -> None:
-        self.pool.shutdown(wait=True)
         self.mempool.close()
 
     def __enter__(self) -> Self:
@@ -475,7 +469,12 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self, spend_bundle: SpendBundle, spend_bundle_id: bytes32 | None = None, bls_cache: BLSCache | None = None
+        self,
+        spend_bundle: SpendBundle,
+        spend_bundle_id: bytes32 | None = None,
+        bls_cache: BLSCache | None = None,
+        *,
+        fee_per_cost: float = 0.0,
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
@@ -490,13 +489,14 @@ class MempoolManager:
         self._worker_queue_size += 1
         try:
             flags = get_flags_for_height_and_constants(self.peak.height, self.constants)
-            sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
-                self.pool,
+            sbc: SpendBundleConditions
+            sbc, new_cache_entries, duration = await self.pool.run_in_loop(
                 validate_clvm_and_signature,
                 spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
                 flags | MEMPOOL_MODE,
+                nice=(5, -fee_per_cost),
             )
         # validate_clvm_and_signature raises a ValueError with an error code
         except ValueError as e:

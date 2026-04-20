@@ -19,6 +19,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.inline_executor import InlineExecutor
 
 
 @pytest.mark.anyio
@@ -63,7 +64,7 @@ async def test_blocks(default_1000_blocks: list[FullBlock], with_hints: bool) ->
                     await hint_store1.add_hints([(h[0], h[1])])
 
             height_map = await BlockHeightMap.create(Path("."), db_wrapper1)
-            bc = await Blockchain.create(coin_store1, block_store1, height_map, test_constants, reserved_cores=0)
+            bc = await Blockchain.create(coin_store1, block_store1, height_map, test_constants, InlineExecutor())
             sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
                 if block.height != 0 and len(block.finished_sub_slots) > 0:
