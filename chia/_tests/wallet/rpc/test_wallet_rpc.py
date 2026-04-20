@@ -1782,15 +1782,15 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(1)))
     ).trade_records
     assert len(all_offers) == 1
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(10)))
     ).trade_records
     assert len(all_offers) == 0
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(50)))
     ).trade_records
     assert len(all_offers) == 2
 
