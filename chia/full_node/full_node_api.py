@@ -933,10 +933,6 @@ class FullNodeAPI:
                     return None
 
                 if peak is not None:
-                    # Finds the last transaction block before this one
-                    curr_l_tb: BlockRecord = peak
-                    while not curr_l_tb.is_transaction_block:
-                        curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         block_version = self.full_node.config.get("block_creation", 1)
                         block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
@@ -948,7 +944,8 @@ class FullNodeAPI:
                             self.log.warning(f"Unknown 'block_creation' config: {block_version}")
                             create_block = self.full_node.mempool_manager.create_block_generator
 
-                        new_block_gen = create_block(curr_l_tb.header_hash, block_timeout)
+                        assert tx_peak is not None
+                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
 
                         if (
                             new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
