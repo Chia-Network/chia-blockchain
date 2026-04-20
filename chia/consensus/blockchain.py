@@ -5,7 +5,6 @@ import dataclasses
 import enum
 import logging
 import traceback
-from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -43,11 +42,10 @@ from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.inline_executor import InlineExecutor
 from chia.util.priority_mutex import PriorityMutex
+from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
 
@@ -126,9 +124,8 @@ class Blockchain:
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        reserved_cores: int,
+        pool: Executor,
         *,
-        single_threaded: bool = False,
         log_coins: bool = False,
     ) -> Blockchain:
         """
@@ -142,17 +139,7 @@ class Blockchain:
         # be validated first.
         self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
         self.compact_proof_lock = asyncio.Lock()
-        if single_threaded:
-            self.pool = InlineExecutor()
-        else:
-            cpu_count = available_logical_cores()
-            num_workers = max(cpu_count - reserved_cores, 1)
-            self.pool = ThreadPoolExecutor(
-                max_workers=num_workers,
-                thread_name_prefix="block-validation-",
-            )
-            log.info(f"Started {num_workers} processes for block validation")
-
+        self.pool = pool
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
@@ -163,7 +150,6 @@ class Blockchain:
 
     def shut_down(self) -> None:
         self._shut_down = True
-        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
         """
