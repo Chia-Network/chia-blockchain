@@ -1134,6 +1134,8 @@ class WalletNode:
         request = RequestBlockHeader(new_peak.height)
         response: RespondBlockHeader | None = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
+            if peer.closed:
+                return
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
             return
