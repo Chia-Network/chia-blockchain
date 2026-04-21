@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pytest
 from chia_rs import G2Element, Program
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.data_layer.singleton_record import SingletonRecord
@@ -44,6 +44,7 @@ class MockWalletStateManager:
             list[SigningResponse],
             list[WalletSpendBundle],
             list[SingletonRecord],
+            tuple[uint32, uint64] | None,
         ]
         | None
     ) = None
@@ -57,6 +58,7 @@ class MockWalletStateManager:
         additional_signing_responses: list[SigningResponse],
         extra_spends: list[WalletSpendBundle],
         singleton_records: list[SingletonRecord],
+        plotnft_exiting_info: tuple[uint32, uint64] | None,
     ) -> list[TransactionRecord]:
         self.most_recent_call = (
             txs,
@@ -66,6 +68,7 @@ class MockWalletStateManager:
             additional_signing_responses,
             extra_spends,
             singleton_records,
+            plotnft_exiting_info,
         )
         return txs
 
@@ -92,7 +95,7 @@ async def test_wallet_action_scope() -> None:
             action_scope.side_effects
 
     assert action_scope.side_effects.transactions == [STD_TX]
-    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [])
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
         DEFAULT_TX_CONFIG,
@@ -107,4 +110,4 @@ async def test_wallet_action_scope() -> None:
             interface.side_effects.transactions = []
 
     assert action_scope.side_effects.transactions == []
-    assert wsm.most_recent_call == ([], False, True, True, [], [], [])
+    assert wsm.most_recent_call == ([], False, True, True, [], [], [], None)

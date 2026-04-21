@@ -1,111 +1,139 @@
 from __future__ import annotations
 
-import logging
-from collections.abc import Callable
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
+import yaml
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
+from typing_extensions import NotRequired, Self
 
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.streamable import Streamable, streamable
-
-"""
-Config example
-This is what goes into the user's config file, to communicate between the wallet and the farmer processes.
-pool_list:
-    launcher_id: ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa
-    owner_public_key: 84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5
-    payout_instructions: c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8
-    pool_url: localhost
-    p2_singleton_puzzle_hash: 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-    target_puzzle_hash: 344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58
-"""
-
-log = logging.getLogger(__name__)
+from chia.util.config import lock_and_load_config, save_config
+from chia.util.lock import Lockfile
 
 
-@streamable
-@dataclass(frozen=True)
-class PoolWalletConfig(Streamable):
+class _PoolConfig(TypedDict):
+    launcher_id: str
+    pool_url: str
+    payout_instructions: str
+    target_puzzle_hash: str
+    p2_singleton_puzzle_hash: str
+    owner_public_key: str
+    version: NotRequired[int]
+
+
+@dataclass(kw_only=True)
+class PoolingShareState:
     launcher_id: bytes32
     pool_url: str
     payout_instructions: str
     target_puzzle_hash: bytes32
     p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
+    version: int = 1
 
+    @staticmethod
+    def state_path(root_path: Path) -> Path:
+        return root_path / "pooling" / "pooling_share_state.yaml"
 
-def load_pool_config(root_path: Path) -> list[PoolWalletConfig]:
-    config = load_config(root_path, "config.yaml")
-    ret_list: list[PoolWalletConfig] = []
-    pool_list = config["pool"].get("pool_list", [])
-    if pool_list is None:
-        return ret_list
+    @staticmethod
+    def lock(root_path: Path) -> Lockfile:
+        return Lockfile.create(root_path / "pooling" / "pooling_share_state.lock")
 
-    for pool_config_dict in pool_list:
-        try:
-            pool_config = PoolWalletConfig(
-                bytes32.from_hexstr(pool_config_dict["launcher_id"]),
-                pool_config_dict["pool_url"],
-                pool_config_dict["payout_instructions"],
-                bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
-                bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
-                G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
+    @classmethod
+    @contextmanager
+    def _get_raw_content(cls, *, root_path: Path, read_only: bool = False) -> Iterator[list[_PoolConfig]]:
+        if not cls.state_path(root_path).parent.exists():
+            cls.state_path(root_path).parent.mkdir(exist_ok=True)
+        if not cls.state_path(root_path).exists():
+            cls.state_path(root_path).touch(exist_ok=True)
+        with (
+            cls.lock(root_path),
+            open(cls.state_path(root_path), "r" if read_only else "r+") as f,
+        ):
+            loaded_content = yaml.safe_load(f)
+            if loaded_content is None:
+                loaded_list = []
+            else:
+                loaded_list = loaded_content["pooling_information"]
+            yield loaded_list
+            if loaded_list != [] and not read_only:
+                f.seek(0)
+                f.truncate()
+                yaml.dump({"pooling_information": loaded_list}, f)
+
+    @staticmethod
+    def _p2_singleton_puzzle_hashes_from_list(loaded_list: list[_PoolConfig]) -> list[bytes32]:
+        return [bytes32.from_hexstr(p["p2_singleton_puzzle_hash"]) for p in loaded_list]
+
+    @classmethod
+    def get_all_p2_singleton_puzzle_hashes(cls, *, root_path: Path) -> list[bytes32]:
+        with cls._get_raw_content(root_path=root_path) as loaded_list:
+            return cls._p2_singleton_puzzle_hashes_from_list(loaded_list)
+
+    def add(self, *, root_path: Path) -> None:
+        with self._get_raw_content(root_path=root_path) as loaded_list:
+            if self.p2_singleton_puzzle_hash in self._p2_singleton_puzzle_hashes_from_list(loaded_list):
+                raise ValueError("Can only call .add() for new singleton entries")
+            loaded_list.append(self.to_json_dict())
+
+    @classmethod
+    @contextmanager
+    def acquire(cls, *, root_path: Path, p2_singleton_puzzle_hash: bytes32, read_only: bool = False) -> Iterator[Self]:
+        with cls._get_raw_content(root_path=root_path, read_only=read_only) as loaded_list:
+            if p2_singleton_puzzle_hash not in cls._p2_singleton_puzzle_hashes_from_list(loaded_list):
+                raise ValueError(f"Attempting to load non-existent pooling state for {p2_singleton_puzzle_hash.hex()}")
+            config = loaded_list[
+                next(
+                    i
+                    for i, c in enumerate(loaded_list)
+                    if c["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
+                )
+            ]
+            self = cls(
+                launcher_id=bytes32.from_hexstr(config["launcher_id"]),
+                pool_url=config["pool_url"],
+                payout_instructions=config["payout_instructions"],
+                target_puzzle_hash=bytes32.from_hexstr(config["target_puzzle_hash"]),
+                p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+                owner_public_key=G1Element.from_bytes(bytes.fromhex(config["owner_public_key"])),
+                version=config.get("version", 1),
             )
-            ret_list.append(pool_config)
-        except Exception as e:
-            log.error(f"Exception loading config: {pool_config_dict} {e}")
+            yield self
+            for i, conf in enumerate(loaded_list):
+                if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
+                    loaded_list[i] = self.to_json_dict()
+                    break
 
-    return ret_list
-
-
-def update_pool_url(root_path: Path, pool_wallet_config: PoolWalletConfig, pool_url: str) -> None:
-    def update_pool_url_for_entry(config_entry: dict[str, Any]) -> bool:
-        if config_entry.get("pool_url", "") != pool_url:
-            config_entry["pool_url"] = pool_url
-
-            return True
-
-        return False
-
-    update_pool_config_entry(
-        root_path=root_path,
-        pool_wallet_config=pool_wallet_config,
-        update_closure=update_pool_url_for_entry,
-        update_log_message=f"Updating pool config for pool_url change: {pool_wallet_config.pool_url} -> {pool_url}",
-    )
+    def to_json_dict(self) -> _PoolConfig:
+        return {
+            "launcher_id": self.launcher_id.hex(),
+            "pool_url": self.pool_url,
+            "payout_instructions": self.payout_instructions,
+            "target_puzzle_hash": self.target_puzzle_hash.hex(),
+            "owner_public_key": bytes(self.owner_public_key).hex(),
+            "p2_singleton_puzzle_hash": self.p2_singleton_puzzle_hash.hex(),
+            "version": self.version,
+        }
 
 
-def update_pool_config_entry(
-    root_path: Path,
-    pool_wallet_config: PoolWalletConfig,
-    update_closure: Callable[[dict[str, Any]], bool],
-    update_log_message: str,
-) -> None:
-    with lock_and_load_config(root_path, "config.yaml") as config:
-        pool_list = config["pool"].get("pool_list", [])
-        if pool_list is None:
-            return
-        updated = False
-        for pool_config_dict in pool_list:
-            launcher_id = pool_wallet_config.launcher_id
-            try:
-                if hexstr_to_bytes(pool_config_dict["launcher_id"]) == bytes(launcher_id):
-                    if update_closure(pool_config_dict):
-                        updated = True
-            except Exception as e:
-                log.error(f"Exception updating pool config {pool_config_dict} for launcher_id {launcher_id}: {e}")
-    if updated:
-        log.info(update_log_message)
-        config["pool"]["pool_list"] = pool_list
-        save_config(root_path, "config.yaml", config)
-
-
-async def update_pool_config(root_path: Path, pool_config_list: list[PoolWalletConfig]) -> None:
-    with lock_and_load_config(root_path, "config.yaml") as full_config:
-        full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
-        save_config(root_path, "config.yaml", full_config)
+def perform_migration_from_old_config(root_path: Path) -> None:
+    with lock_and_load_config(root_path, "config.yaml") as chia_config:
+        if not PoolingShareState.state_path(root_path=root_path).exists() and chia_config["pool"].get(
+            "pool_list", None
+        ):
+            pool_list = chia_config["pool"]["pool_list"]
+            for pool in pool_list:
+                PoolingShareState(
+                    launcher_id=bytes32.from_hexstr(pool["launcher_id"]),
+                    pool_url=pool["pool_url"],
+                    payout_instructions=pool["payout_instructions"],
+                    target_puzzle_hash=bytes32.from_hexstr(pool["target_puzzle_hash"]),
+                    owner_public_key=G1Element.from_bytes(bytes.fromhex(pool["owner_public_key"])),
+                    p2_singleton_puzzle_hash=bytes32.from_hexstr(pool["p2_singleton_puzzle_hash"]),
+                ).add(root_path=root_path)
+            chia_config["pool"]["pool_list"] = []
+            save_config(root_path, "config.yaml", chia_config)
