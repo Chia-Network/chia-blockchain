@@ -1283,8 +1283,8 @@ class WalletNode:
                 # Don't process blocks at the same weight
                 return False
 
-            # For every block, we need to apply the cache from race_cache
-            for potential_height in range(backtrack_fork_height + 1, new_peak_hb.height + 1):
+            # Include exact fork height to avoid dropping boundary race-cache entries.
+            for potential_height in range(backtrack_fork_height, new_peak_hb.height + 1):
                 try:
                     race_cache = cache.get_race_cache(potential_height)
                 except KeyError:
