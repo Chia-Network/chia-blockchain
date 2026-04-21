@@ -46,6 +46,7 @@ from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.cpu import available_logical_cores
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
@@ -139,6 +140,7 @@ async def setup_full_node(
     else:
         service_config["introducer_peer"] = None
     service_config["dns_servers"] = []
+    service_config["reserved_cores"] = available_logical_cores() - 1
     service_config["port"] = 0
     service_config["rpc_port"] = 0
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests

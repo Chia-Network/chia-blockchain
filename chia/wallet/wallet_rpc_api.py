@@ -1378,8 +1378,8 @@ class WalletRpcApi:
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
             wallet_id=request.wallet_id,
-            start=uint16(0) if request.start is None else request.start,
-            end=uint16(50) if request.end is None else request.end,
+            start=uint32(0) if request.start is None else request.start,
+            end=uint32(50) if request.end is None else request.end,
             sort_key=request.sort_key,
             reverse=request.reverse,
             to_puzzle_hash=to_puzzle_hash,
@@ -1416,7 +1416,7 @@ class WalletRpcApi:
     async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
         return GetTransactionCountResponse(
             wallet_id=request.wallet_id,
-            count=uint16(
+            count=uint32(
                 await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
                     request.wallet_id, confirmed=request.confirmed, type_filter=request.type_filter
                 )
@@ -2173,7 +2173,7 @@ class WalletRpcApi:
         ) = await self.service.wallet_state_manager.trade_manager.trade_store.get_trades_count()
 
         return GetOffersCountResponse(
-            total=uint16(total), my_offers_count=uint16(my_offers_count), taken_offers_count=uint16(taken_offers_count)
+            total=uint32(total), my_offers_count=uint32(my_offers_count), taken_offers_count=uint32(taken_offers_count)
         )
 
     @tx_endpoint(push=True)
@@ -2629,7 +2629,7 @@ class WalletRpcApi:
                 transactions=[],
                 wallet_id=list(nft_dict.keys()),
                 spend_bundle=WalletSpendBundle([], G2Element()),
-                tx_num=uint16(len(interface.side_effects.transactions)),
+                tx_num=uint32(len(interface.side_effects.transactions)),
             )
 
     @tx_endpoint(push=True)
@@ -2694,7 +2694,7 @@ class WalletRpcApi:
                 transactions=[],
                 wallet_id=list(nft_dict.keys()),
                 spend_bundle=WalletSpendBundle([], G2Element()),
-                tx_num=uint16(len(interface.side_effects.transactions)),
+                tx_num=uint32(len(interface.side_effects.transactions)),
             )
 
     @marshal

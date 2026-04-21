@@ -58,6 +58,52 @@ async def test_duplicate_client_connection(
 
 
 @pytest.mark.anyio
+async def test_start_client_handshake_timeout(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    async def timeout_handshake(
+        self: WSChiaConnection, network_id: str, server_port: uint16, local_type: NodeType
+    ) -> None:
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(WSChiaConnection, "perform_handshake", timeout_handshake)
+    target_peer = PeerInfo(self_hostname, server_2.get_port())
+    with caplog.at_level(logging.DEBUG):
+        assert not await server_1.start_client(target_peer, None)
+    assert f"Handshake timeout connecting to {target_peer}" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_start_client_handshake_timeout_configurable(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    recorded_timeouts: list[float | None] = []
+    original_wait_for = asyncio.wait_for
+
+    async def capturing_wait_for(fut: object, *, timeout: float | None = None) -> object:
+        recorded_timeouts.append(timeout)
+        return await original_wait_for(fut, timeout=timeout)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(asyncio, "wait_for", capturing_wait_for)
+    monkeypatch.setattr("chia.server.server.is_localhost", lambda _host: False)
+    server_1.config["outbound_handshake_timeout"] = 42
+    target_peer = PeerInfo(self_hostname, server_2.get_port())
+    with caplog.at_level(logging.DEBUG):
+        await server_1.start_client(target_peer, None)
+    assert 42.0 in recorded_timeouts
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
     two_nodes_one_block: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],

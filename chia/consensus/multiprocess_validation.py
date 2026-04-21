@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import copy
 import logging
 import time
 import traceback
 from collections.abc import Awaitable, Collection
-from concurrent.futures import Executor
 from dataclasses import dataclass
 
 from chia_rs import (
@@ -37,6 +35,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
+from chia.util.priority_thread_pool_executor import Executor, _SupportsLessThan
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -170,6 +169,8 @@ async def pre_validate_block(
     vs: ValidationState,
     *,
     wp_summaries: list[SubEpochSummary] | None = None,
+    nice: _SupportsLessThan = (0,),
+    dedicated: bool = True,
 ) -> Awaitable[PreValidationResult]:
     """
     This method must be called under the blockchain lock
@@ -268,8 +269,7 @@ async def pre_validate_block(
     except ValueError:
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
 
-    future = asyncio.get_running_loop().run_in_executor(
-        pool,
+    future = pool.run_in_loop(
         _pre_validate_block,
         constants,
         blockchain.read_only_snapshot(),
@@ -277,6 +277,8 @@ async def pre_validate_block(
         previous_generators,
         conds,
         copy.copy(vs),
+        nice=nice,
+        dedicated=dedicated,
     )
 
     if block_rec.sub_epoch_summary_included is not None:
