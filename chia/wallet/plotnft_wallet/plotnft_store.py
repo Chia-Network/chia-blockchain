@@ -199,7 +199,6 @@ class PlotNFTStore:
                         parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])
                     ),
                     singleton_id=bytes32(row[4]),
-                    height=uint32(row[5]),
                 )
                 for row in rows
             ]
