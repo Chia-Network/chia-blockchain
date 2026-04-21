@@ -970,8 +970,11 @@ class WalletRpcApi:
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
 
-        if blockchain.contains_height(uint32(height)):
+        try:
             block_record = blockchain.height_to_block_record(uint32(height))
+        except KeyError:
+            pass
+        else:
             is_transaction_block = block_record.is_transaction_block
             prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
         return GetHeightInfoResponse(
