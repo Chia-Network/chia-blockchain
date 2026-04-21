@@ -456,9 +456,7 @@ class PlotNFT2Wallet:
         elif coin_data is None and coin.puzzle_hash == self.p2_singleton_puzzle_hash:
             if coin.parent_coin_info[0:16] == self.wallet_state_manager.constants.GENESIS_CHALLENGE[0:16]:
                 await self.wallet_state_manager.plotnft2_store.add_pool_reward(
-                    pool_reward=PoolReward(
-                        singleton_id=self.plotnft_id, coin=coin, height=uint32.from_bytes(coin.parent_coin_info[28:32])
-                    )
+                    pool_reward=PoolReward(singleton_id=self.plotnft_id, coin=coin)
                 )
             else:
                 raise ValueError(f"A non-pooling reward coin was paid to PlotNFT with id: {self.plotnft_id}")

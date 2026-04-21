@@ -10,6 +10,7 @@ from typing_extensions import Self
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConfig
 from chia.types.blockchain_format.program import Program
 from chia.util.db_wrapper import DBWrapper2
+from chia.wallet.conditions import Remark
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 
@@ -31,7 +32,7 @@ def _row_to_plotnft(row: Row, genesis_challenge: bytes32) -> PlotNFT:
         else None,
         genesis_challenge=genesis_challenge,
         exiting=False if row[10] == 0 else True,
-        remarks=[row[11]] if row[11] is not None else [],
+        remarks=[Remark(Program.to(row[11]))] if row[11] is not None else [],
     )
 
 
@@ -210,7 +211,6 @@ class PlotNFTStore:
                         parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])
                     ),
                     singleton_id=bytes32(row[4]),
-                    height=uint32(row[5]),
                 )
                 for row in rows
             ]
