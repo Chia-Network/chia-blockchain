@@ -122,6 +122,8 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.DECENTRALIZED_ID
         elif str(self.fingerprint).startswith(str(WalletType.POOLING_WALLET.value + 1)):
             w_type = WalletType.POOLING_WALLET
+        elif str(self.fingerprint).startswith(str(WalletType.PLOTNFT_2.value + 1)):
+            w_type = WalletType.PLOTNFT_2
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return GetWalletsResponse(

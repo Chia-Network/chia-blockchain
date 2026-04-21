@@ -110,4 +110,5 @@ async def test_wallet_action_scope() -> None:
             interface.side_effects.transactions = []
 
     assert action_scope.side_effects.transactions == []
-    assert wsm.most_recent_call == ([], False, True, True, [], [], [], None)
+    # same as above because the lack of transactions prevents the add_pending_transactions call
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
