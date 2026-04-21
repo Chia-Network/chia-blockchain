@@ -258,7 +258,7 @@ async def process_plotnft_create(
     summaries_response = await wallet_rpc.get_wallets(
         GetWallets(type=uint16(WalletType.POOLING_WALLET) if version == 1 else uint16(WalletType.PLOTNFT_2))
     )
-    assert len(summaries_response.wallets) == 2 if second_nft else 1
+    assert len(summaries_response.wallets) == (2 if second_nft else 1)
     wallet_id: int = summaries_response.wallets[-1].id
 
     await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
