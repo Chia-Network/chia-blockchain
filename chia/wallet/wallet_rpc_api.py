@@ -965,6 +965,18 @@ class WalletRpcApi:
 
     @marshal
     async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
+        """
+        Returns height info for the current wallet. `height` is the height of the last block
+        that the wallet has synced to. Note that is_transaction_block and
+        prev_transaction_block_height may both be None if the wallet has not yet synced to a block.
+
+        :param request: None
+        :return: GetHeightInfoResponse
+
+        height: uint32
+        is_transaction_block: bool | None = None
+        prev_transaction_block_height: uint32 | None = None
+        """
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         blockchain = self.service.wallet_state_manager.blockchain
         is_transaction_block: bool | None = None
