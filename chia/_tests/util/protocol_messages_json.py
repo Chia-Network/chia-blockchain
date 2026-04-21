@@ -2410,6 +2410,7 @@ get_pool_info_response_json: dict[str, Any] = {
     "description": "pool description.",
     "target_puzzle_hash": "0xf6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36",
     "authentication_token_timeout": 76,
+    "pool_memoization": "0x80",
 }
 
 post_partial_payload_json: dict[str, Any] = {
@@ -2452,6 +2453,7 @@ post_partial_request_json: dict[str, Any] = {
         "end_of_sub_slot": False,
         "harvester_id": "0xf98dff6bdcc3926b33cb8ab22e11bd15c13d6a9b6832ac948b3273f5ccd8e7ec",
     },
+    "authentication_token_v2": "",
     "aggregate_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }
 
@@ -2470,6 +2472,7 @@ post_farmer_payload_json: dict[str, Any] = {
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payout_instructions",
     "suggested_difficulty": 1996244065095983466,
+    "authentication_token_v2": "",
 }
 
 post_farmer_request_json: dict[str, Any] = {
@@ -2479,6 +2482,7 @@ post_farmer_request_json: dict[str, Any] = {
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payout_instructions",
         "suggested_difficulty": 1996244065095983466,
+        "authentication_token_v2": "",
     },
     "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }
@@ -2491,6 +2495,7 @@ put_farmer_payload_json: dict[str, Any] = {
     "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "payout_instructions": "payload",
     "suggested_difficulty": 201241879360854600,
+    "authentication_token_v2": "",
 }
 
 put_farmer_request_json: dict[str, Any] = {
@@ -2500,6 +2505,7 @@ put_farmer_request_json: dict[str, Any] = {
         "authentication_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
         "payout_instructions": "payload",
         "suggested_difficulty": 201241879360854600,
+        "authentication_token_v2": "",
     },
     "signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }

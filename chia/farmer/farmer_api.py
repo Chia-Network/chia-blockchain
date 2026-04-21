@@ -347,7 +347,15 @@ class FarmerAPI:
 
                 agg_sig: G2Element = AugSchemeMPL.aggregate([plot_signature, authentication_signature])
 
-                post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
+                current_auth_token = await self.farmer._get_current_authentication_token(
+                    pool_state_dict["pool_config"], authentication_token_timeout
+                )
+                if current_auth_token is None:
+                    self.farmer.log.error(
+                        f"Not logged into pool while trying to POST partial: {pool_state_dict['pool_config'].pool_url}"
+                    )
+                    return
+                post_partial_request: PostPartialRequest = PostPartialRequest(payload, current_auth_token, agg_sig)
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
@@ -363,7 +371,7 @@ class FarmerAPI:
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
-                            f"{pool_url}/partial",
+                            self.farmer._url_for_endpoint(pool_state_dict["pool_config"], "partial"),
                             json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.farmer.log),
                             headers={

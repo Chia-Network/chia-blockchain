@@ -198,7 +198,11 @@ def test_missing_messages() -> None:
     introducer_msgs = {"RequestPeersIntroducer", "RespondPeersIntroducer"}
 
     pool_msgs = {
-        "AuthenticationPayload",
+        "AuthenticationPayloadV1",
+        "AuthenticationPayloadV2",
+        "GetAuthRequest",
+        "GetFarmerRequest",
+        "GetAuthResponse",
         "ErrorResponse",
         "GetFarmerResponse",
         "GetPoolInfoResponse",

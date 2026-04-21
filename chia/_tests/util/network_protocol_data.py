@@ -15,6 +15,7 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     PartialProof,
     PoolTarget,
+    Program,
     ProofOfSpace,
     RespondToPhUpdates,
     RewardChainBlock,
@@ -970,7 +971,7 @@ respond_peers_introducer = introducer_protocol.RespondPeersIntroducer(
 
 
 # POOL PROTOCOL
-authentication_payload = pool_protocol.AuthenticationPayload(
+authentication_payload = pool_protocol.AuthenticationPayloadV1(
     "method",
     bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
     bytes32(bytes.fromhex("9de241b508b5e9e2073b7645291cfaa9458d33935340399a861acf2ee1770440")),
@@ -987,10 +988,12 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
     "pool description.",
     bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
     uint8(76),
+    Program.to(None),
 )
 
 post_partial_request = pool_protocol.PostPartialRequest(
     post_partial_payload,
+    "",
     g2_element,
 )
 
@@ -1019,6 +1022,7 @@ post_farmer_payload = pool_protocol.PostFarmerPayload(
     ),
     "payout_instructions",
     uint64(1996244065095983466),
+    authentication_token_v2="",
 )
 
 post_farmer_request = pool_protocol.PostFarmerRequest(
@@ -1040,6 +1044,7 @@ put_farmer_payload = pool_protocol.PutFarmerPayload(
     ),
     "payload",
     uint64(201241879360854600),
+    authentication_token_v2="",
 )
 
 put_farmer_request = pool_protocol.PutFarmerRequest(
