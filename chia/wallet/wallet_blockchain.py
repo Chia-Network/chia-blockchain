@@ -74,8 +74,6 @@ class WalletBlockchain:
         self._latest_timestamp = uint64(0)
         self._height_to_hash = {}
         self._block_records = {}
-        self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
-        self._difficulty = constants.DIFFICULTY_STARTING
         self.mmr_manager = StubMMRManager()
 
         return self
