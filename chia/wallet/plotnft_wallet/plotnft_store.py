@@ -10,6 +10,7 @@ from typing_extensions import Self
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConfig
 from chia.types.blockchain_format.program import Program
 from chia.util.db_wrapper import DBWrapper2
+from chia.wallet.conditions import Remark
 from chia.wallet.lineage_proof import LineageProof
 
 DEFAULT_POOL_REWARDS_PER_CLAIM = 20
@@ -30,7 +31,7 @@ def _row_to_plotnft(row: Row, genesis_challenge: bytes32) -> PlotNFT:
         else None,
         genesis_challenge=genesis_challenge,
         exiting=False if row[10] == 0 else True,
-        remarks=[row[11]] if row[11] is not None else [],
+        remarks=[Remark(Program.to(row[11]))] if row[11] is not None else [],
     )
 
 
