@@ -1284,7 +1284,7 @@ class WalletNode:
                 return False
 
             # Include exact fork height to avoid dropping boundary race-cache entries.
-            for potential_height in range(backtrack_fork_height, new_peak_hb.height + 1):
+            for potential_height in range(fork_height, new_peak_hb.height + 1):
                 try:
                     race_cache = cache.get_race_cache(potential_height)
                 except KeyError:
