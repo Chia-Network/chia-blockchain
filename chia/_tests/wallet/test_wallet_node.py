@@ -18,6 +18,7 @@ from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
+from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
@@ -493,6 +494,35 @@ async def test_get_timestamp_for_height_from_peer(
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+@pytest.mark.standard_block_tools
+async def test_request_fee_estimates(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
+
+    now_utc = int(time.time())
+    time_targets = [uint64(now_utc)]
+    estimates: FeeEstimateGroup = await wallet_node.request_fee_estimates(full_node_peer, time_targets)
+
+    assert estimates.error is None
+    assert len(estimates.estimates) == 1
+    assert estimates.estimates[0].time_target == uint64(now_utc)
+    assert estimates.estimates[0].error is None
+    assert int(estimates.estimates[0].estimated_fee_rate.mojos_per_clvm_cost) >= 0
+
+    # test failure in wallet_node.py request_fee_estimates
+    async def request_fee_estimates(self: Self, request: wallet_protocol.RequestFeeEstimates) -> Message:
+        return Message(uint8(ProtocolMessageTypes.respond_fee_estimates.value), None, b"")
+
+    assert full_node_api.full_node._server is not None
+    fn_connection = full_node_api.full_node._server.get_connections()[0]
+    with patch_request_handler(api=fn_connection.api, handler=request_fee_estimates):
+        with pytest.raises(PeerRequestException, match="Failed to get fee estimates from full node"):
+            await wallet_node.request_fee_estimates(full_node_peer, time_targets)
+
+
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], _ = simulator_and_wallet
