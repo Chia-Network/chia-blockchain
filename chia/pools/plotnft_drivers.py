@@ -711,4 +711,7 @@ class RewardPuzzle:
 @dataclass(kw_only=True, frozen=True)
 class PoolReward(RewardPuzzle):
     coin: Coin
-    height: uint32
+
+    @property
+    def height(self) -> uint32:
+        return uint32.from_bytes(self.coin.parent_coin_info[28:])

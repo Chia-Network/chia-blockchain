@@ -276,7 +276,6 @@ async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes3
     coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash())
     return PoolReward(
         coin=coin_1.coin if coin_1.coin.amount > coin_2.coin.amount else coin_2.coin,
-        height=sim.block_height,
         singleton_id=singleton_id,
     )
 
