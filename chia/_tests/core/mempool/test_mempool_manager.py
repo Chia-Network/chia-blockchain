@@ -3450,7 +3450,7 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
     Tests that deferred transactions because of time-lock are retried once the
     time-lock allows them to be reconsidered.
 
-    drain() uses <=, so when new_peak.height == condition_height the item is
+    PendingTxCache's drain() uses <=, so when new_peak.height == condition_height the item is
     promoted immediately (check_time_locks accepts ASSERT_HEIGHT_ABSOLUTE(H)
     when peak.height >= H, and ASSERT_HEIGHT_RELATIVE(R) when
     peak.height >= coin_confirmed + R).
@@ -3465,24 +3465,18 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
         _, status, error = result
         assert status == MempoolInclusionStatus.PENDING
         assert error == expected_error
-        # Advance the mempool to exactly the asserted height.
-        # drain() uses <=, so the item is promoted at condition_height (not condition_height + 1).
+        # Advance the mempool to exactly the asserted height condition and
+        # retry the test item.
         if optimized_path:
             spent_coins: list[bytes32] | None = []
-            new_peak_info = await mempool_manager.new_peak(
-                create_test_block_record(height=uint32(condition_height)), spent_coins
-            )
-            # The item is retried and promoted at exactly condition_height
-            assert new_peak_info.spend_bundle_ids == [sb_name]
-            assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
         else:
             spent_coins = None
-            new_peak_info = await mempool_manager.new_peak(
-                create_test_block_record(height=uint32(condition_height)), spent_coins
-            )
-            # The item is retried and promoted at exactly condition_height
-            assert new_peak_info.spend_bundle_ids == [sb_name]
-            assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
+        new_peak_info = await mempool_manager.new_peak(
+            create_test_block_record(height=uint32(condition_height)), spent_coins
+        )
+        # The item gets retried successfully now
+        assert new_peak_info.spend_bundle_ids == [sb_name]
+        assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
 
 
 @pytest.mark.anyio
