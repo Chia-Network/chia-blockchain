@@ -15,10 +15,8 @@ from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
-from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
@@ -64,15 +62,6 @@ class PlotNFT2Wallet:
                 data=wallet_info.data,
                 id=wallet_info.id,
             )
-        async with wallet_state_manager.new_action_scope(
-            tx_config=wallet_state_manager.tx_config, push=True
-        ) as action_scope:
-            if wallet_state_manager.config.get("plotnft2_claim_address", None) is None:
-                claim_address = encode_puzzle_hash(
-                    await action_scope.get_puzzle_hash(wallet_state_manager),
-                    AddressType.XCH.hrp(wallet_state_manager.config),
-                )
-                wallet_state_manager.config["plotnft2_claim_address"] = claim_address
         return self
 
     @property
@@ -89,7 +78,10 @@ class PlotNFT2Wallet:
 
     @property
     def rewards_claim_puzhash(self) -> bytes32:
-        return decode_puzzle_hash(self.wallet_state_manager.config["plotnft2_claim_address"])
+        with PoolingShareState.acquire(
+            root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
+        ) as pool_config:
+            return bytes32.from_hexstr(pool_config.payout_instructions)
 
     @classmethod
     def type(cls) -> WalletType:
@@ -431,6 +423,10 @@ class PlotNFT2Wallet:
                     else:
                         pool_config.target_puzzle_hash = bytes32.from_hexstr(pool_config.payout_instructions)
             else:
+                async with self.wallet_state_manager.new_action_scope(
+                    self.wallet_state_manager.tx_config, push=True
+                ) as action_scope:
+                    payout_puzzle_hash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
                 PoolingShareState(
                     launcher_id=coin_data.launcher_id,
                     pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(coin_data.launcher_id)
@@ -439,9 +435,9 @@ class PlotNFT2Wallet:
                     owner_public_key=coin_data.user_config.synthetic_pubkey,
                     target_puzzle_hash=coin_data.pool_config.pool_puzzle_hash
                     if coin_data.pool_config is not None
-                    else self.rewards_claim_puzhash,
+                    else payout_puzzle_hash,
                     p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
-                    payout_instructions=self.rewards_claim_puzhash.hex(),
+                    payout_instructions=payout_puzzle_hash.hex(),
                     version=2,
                 ).add(root_path=self.wallet_state_manager.root_path)
 
