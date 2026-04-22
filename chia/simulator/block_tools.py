@@ -39,7 +39,6 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
-    get_flags_for_height_and_constants,
     run_block_generator2,
     solution_generator,
     solve_proof,
@@ -56,6 +55,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
