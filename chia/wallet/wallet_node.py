@@ -1294,7 +1294,7 @@ class WalletNode:
                 await self.add_states_from_peer(list(race_cache), peer)
 
             # Clear old entries that are no longer relevant
-            cache.cleanup_race_cache(min_height=backtrack_fork_height)
+            cache.cleanup_race_cache(min_height=backtrack_fork_height + 1)
 
             self.wallet_state_manager.state_changed("new_block")
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
