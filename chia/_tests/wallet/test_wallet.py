@@ -21,6 +21,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.errors import Err
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
@@ -1880,8 +1881,14 @@ class TestWalletSimulator:
             removals=[],
             name=stolen_sb.name(),
         )
-        with pytest.raises(ValueError, match="ASSERT_ANNOUNCE_CONSUMED_FAILED"):
-            await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
+        [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
+
+        async def transaction_has_failed(tx_id: bytes32) -> bool:
+            tx = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx_id)
+            assert tx is not None
+            return any(error_str == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.name for _, _, error_str in tx.sent_to)
+
+        await time_out_assert(10, transaction_has_failed, True, stolen_tx.name)
 
     @pytest.mark.parametrize(
         "wallet_environments",

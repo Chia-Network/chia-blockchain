@@ -627,7 +627,7 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     """
     The purpose of this test is to test that calling _resend_queue on the wallet node does not result in resending a
     spend to a peer that has already received that spend and is currently processing it. It also tests that once we
-    have heard that the peer is done processing the spend, we _do_ properly resend it.
+    have heard that the peer rejected the spend, we do NOT resend it to the same peer.
     """
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
@@ -664,7 +664,7 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
         with pytest.raises(AssertionError):
             await time_out_assert(5, logged_spends_len, 2)
 
-        # Tell the wallet that we received the spend (but failed to process it so it should send again)
+        # Tell the wallet that we received the spend (and it failed)
         msg = make_msg(
             ProtocolMessageTypes.transaction_ack,
             wallet_protocol.TransactionAck(
@@ -680,10 +680,10 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
 
         await time_out_assert(5, check_wallet_cache_empty, True)
 
-        # Re-process the queue again and this time it should result in a resend
+        # Re-process the queue — the peer already rejected it, so it should NOT be resent
         await wallet_node._resend_queue()
-        await time_out_assert(5, logged_spends_len, 2)
-        assert logged_spends == [tx.name, tx.name]
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, logged_spends_len, 2)
 
     await time_out_assert(5, check_wallet_cache_empty, False)
 
