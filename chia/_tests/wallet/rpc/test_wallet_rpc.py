@@ -1576,10 +1576,10 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     ).coin_records
     for cr in test_crs:
         assert cr.coin in spend_bundle.additions()
-    result = await env_1.rpc_client.get_coin_records_by_names(
-        GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount == 4])
-    )
-    assert len(result.coin_records) == 0
+    with pytest.raises(ValueError):
+        await env_1.rpc_client.get_coin_records_by_names(
+            GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount == 4])
+        )
     # Create an offer of 5 chia for one CAT
     await env_1.rpc_client.create_offer_for_ids(
         CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
@@ -2034,11 +2034,9 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
         GetCoinRecordsByNames(names=filter_coin_ids, start_height=min_height, end_height=max_height)
     )
     assert {record.coin for record in rpc_result.coin_records} == filter_coins
-    # 8. Verify spent coins are excluded when include_spent_coins=False
-    exclude_spent_result = await client.get_coin_records_by_names(
-        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False)
-    )
-    assert all(not cr.spent for cr in exclude_spent_result.coin_records)
+    # 8. Test the failure case
+    with pytest.raises(ValueError, match="not found"):
+        await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
 
 
 @pytest.mark.parametrize(

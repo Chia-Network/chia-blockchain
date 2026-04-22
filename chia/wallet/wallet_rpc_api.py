@@ -193,6 +193,7 @@ from chia.wallet.wallet_request_types import (
     GetFarmedAmountResponse,
     GetHeightInfo,
     GetHeightInfoResponse,
+    GetHeightInfoV2Response,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
     GetNextAddressResponse,
@@ -590,6 +591,7 @@ class WalletRpcApi:
             "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
+            "/get_height_info_v2": self.get_height_info_v2,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/get_timestamp_for_height": self.get_timestamp_for_height,
@@ -976,25 +978,30 @@ class WalletRpcApi:
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     @marshal
-    async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
+    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
+        return GetHeightInfoResponse(
+            height=await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        )
+
+    @marshal
+    async def get_height_info_v2(self, request: GetHeightInfo) -> GetHeightInfoV2Response:
         """
-        Returns height info for the current wallet. `height` is the height of the last block
-        that the wallet has synced to. Note that is_transaction_block and
-        prev_transaction_block_height may both be None if the wallet has not yet synced to a block.
+        Returns height info for the current wallet with optional peak height mode.
+
+        If use_peak_height is true, returns the peak height from the blockchain tip.
+        Otherwise returns the height of the last block the wallet has synced to.
+        is_transaction_block and prev_transaction_block_height may both be None
+        if the wallet has not yet synced to a block at the returned height.
 
         :param request: GetHeightInfo
-        :return: GetHeightInfoResponse
-
-        height: uint32
-        is_transaction_block: bool | None = None
-        prev_transaction_block_height: uint32 | None = None
+        :return: GetHeightInfoV2Response
         """
         blockchain = self.service.wallet_state_manager.blockchain
         if request.use_peak_height:
             peak = blockchain._peak
             height = uint32(peak.height) if peak is not None else uint32(0)
         else:
-            height = await blockchain.get_finished_sync_up_to()
+            height = (await self.get_height_info(Empty())).height
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
 
@@ -1005,7 +1012,7 @@ class WalletRpcApi:
         else:
             is_transaction_block = block_record.is_transaction_block
             prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
-        return GetHeightInfoResponse(
+        return GetHeightInfoV2Response(
             height=height,
             is_transaction_block=is_transaction_block,
             prev_transaction_block_height=prev_transaction_block_height,
