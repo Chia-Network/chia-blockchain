@@ -687,6 +687,19 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
+        message_type = ProtocolMessageTypes(message.type)
+        # If a request timed out while being queued, there is no point in
+        # sending it while tracking it as a timed out request and having the
+        # receiver respond to it only to drop that response.
+        if message.id in self.timed_out_requests:
+            self.log.info(
+                f"Dropping timed out request ID {message.id} "
+                f"with msg type {message_type.name} "
+                f"to peer {self.peer_node_id} / {self.peer_info.host} "
+                f"version {self.version}"
+            )
+            self.timed_out_requests.discard(message.id)
+            return None
         limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
             message, self.local_capabilities, self.peer_capabilities
         )
@@ -694,7 +707,6 @@ class WSChiaConnection:
             if not is_localhost(self.peer_info.host) and not is_in_network(
                 self.peer_info.host, self.exempt_peer_networks
             ):
-                message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
                 if now - last_time >= 30:
