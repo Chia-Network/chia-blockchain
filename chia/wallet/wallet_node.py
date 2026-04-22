@@ -568,7 +568,7 @@ class WalletNode:
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
-                if status in (MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value):
+                if status in {MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value}:
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
