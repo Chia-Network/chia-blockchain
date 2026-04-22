@@ -409,7 +409,7 @@ class TestBlockHeaderValidation:
             height=block.height,
             constants=bt.constants,
         )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, npc_result.conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
