@@ -741,12 +741,7 @@ class WalletStateManager:
         if peak is not None and "simulator" in self.config.get("selected_network", ""):
             return SyncStatus.SYNCED
 
-        if (
-            peak is None
-            or len(self.server.get_connections(NodeType.FULL_NODE)) == 0
-            or len(self.wallet_node.synced_peers) == 0
-            or (self.blockchain._peak_last_updated > 0 and time.time() - self.blockchain._peak_last_updated > 300)
-        ):
+        if peak is None or len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return SyncStatus.DISCONNECTED
 
         height_gap = peak.height - await self.blockchain.get_finished_sync_up_to()
