@@ -88,7 +88,6 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMet
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
-from chia.wallet.wallet_state_manager import SyncStatus
 from chia.wallet.wallet_request_types import (
     Addition,
     AddKey,
@@ -318,6 +317,7 @@ from chia.wallet.wallet_request_types import (
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import SyncStatus
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
