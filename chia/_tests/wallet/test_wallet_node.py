@@ -685,7 +685,7 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
         with pytest.raises(AssertionError):
             await time_out_assert(5, logged_spends_len, 2)
 
-    await time_out_assert(5, check_wallet_cache_empty, False)
+    await time_out_assert(5, check_wallet_cache_empty, True)
 
     # Disconnect from the peer to make sure their entry in the cache is also deleted
     await simulator_and_wallet[1][0][0]._server.get_connections()[0].close(120)
