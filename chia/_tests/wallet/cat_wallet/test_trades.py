@@ -2145,6 +2145,7 @@ async def test_trade_bad_spend(
     wallet_environments: WalletTestFramework, wallet_type: type[CATWallet], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr("chia.wallet.transaction_record.minimum_send_attempts", 1)
+    monkeypatch.setattr("chia.wallet.wallet_transaction_store.minimum_send_attempts", 1)
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
