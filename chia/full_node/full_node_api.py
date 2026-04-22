@@ -2016,7 +2016,11 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
-    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
+    @metadata.request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_coin_state],
+        list_limits=lambda self, peer: {"coin_ids": self.max_subscribe_response_items(peer)},
+    )
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
