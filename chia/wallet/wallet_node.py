@@ -565,14 +565,10 @@ class WalletNode:
         for record in records:
             if record.spend_bundle is None:
                 continue
-            err = self.wallet_state_manager.validate_spend_bundle(record.spend_bundle)
-            if err is not None:
-                self.log.error(f"_messages_to_resend: dropping tx {record.name.hex()} — {err}")
-                continue
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
-                if status == MempoolInclusionStatus.SUCCESS.value:
+                if status in (MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value):
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
@@ -1741,10 +1737,6 @@ class WalletNode:
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
     async def push_tx(self, spend_bundle: WalletSpendBundle) -> None:
-        err = self.wallet_state_manager.validate_spend_bundle(spend_bundle)
-        if err is not None:
-            self.log.error(f"push_tx: dropping bundle {spend_bundle.name().hex()} — {err}")
-            return
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:

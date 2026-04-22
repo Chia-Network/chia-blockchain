@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
@@ -35,6 +36,7 @@ class WalletBlockchain:
     _finished_sync_up_to: uint32
 
     _peak: HeaderBlock | None
+    _peak_last_updated: float
     _height_to_hash: dict[uint32, bytes32]
     _block_records: dict[bytes32, BlockRecord]
     _latest_timestamp: uint64
@@ -68,6 +70,7 @@ class WalletBlockchain:
         self._finished_sync_up_to = finished_sync_up_to if finished_sync_up_to is not None else uint32(0)
         self._peak = None
         self._peak = await self.get_peak_block()
+        self._peak_last_updated = 0.0
         self._latest_timestamp = uint64(0)
         self._height_to_hash = {}
         self._block_records = {}
@@ -167,6 +170,7 @@ class WalletBlockchain:
     async def set_peak_block(self, block: HeaderBlock, timestamp: uint64 | None = None) -> None:
         await self._basic_store.set_object("PEAK_BLOCK", block)
         self._peak = block
+        self._peak_last_updated = time.time()
         if timestamp is not None:
             self._latest_timestamp = timestamp
         elif block.foliage_transaction_block is not None:

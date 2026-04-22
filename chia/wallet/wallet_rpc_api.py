@@ -88,6 +88,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMet
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_state_manager import SyncStatus
 from chia.wallet.wallet_request_types import (
     Addition,
     AddKey,
@@ -190,6 +191,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetHeightInfo,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -332,9 +334,12 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
-            # sync check removed to unblock game channel offers during brief desync
-            # if await self.service.wallet_state_manager.synced() is False:
-            #     raise ValueError("Wallet needs to be fully synced before making transactions.")
+            sync_status = await self.service.wallet_state_manager.get_sync_status()
+            allow_unsynced = request.get("allow_unsynced", False)
+            if sync_status == SyncStatus.DISCONNECTED:
+                raise ValueError("Wallet is not connected to any synced peers.")
+            if sync_status != SyncStatus.SYNCED and not allow_unsynced:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
 
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
@@ -407,10 +412,12 @@ def tx_endpoint(
 
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint
+                response["sync_status"] = sync_status.value
                 return response
 
             if "action_scope_override" in kwargs:
                 # deferring to parent action scope
+                response["sync_status"] = sync_status.value
                 return response
 
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
@@ -523,6 +530,7 @@ def tx_endpoint(
                         dataclasses.replace(tx, trade_id=new_trade.trade_id)
                     )
 
+            response["sync_status"] = sync_status.value
             return response
 
         return rpc_endpoint
@@ -968,21 +976,25 @@ class WalletRpcApi:
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     @marshal
-    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
+    async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         """
         Returns height info for the current wallet. `height` is the height of the last block
         that the wallet has synced to. Note that is_transaction_block and
         prev_transaction_block_height may both be None if the wallet has not yet synced to a block.
 
-        :param request: None
+        :param request: GetHeightInfo
         :return: GetHeightInfoResponse
 
         height: uint32
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
         """
-        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         blockchain = self.service.wallet_state_manager.blockchain
+        if request.use_peak_height:
+            peak = blockchain._peak
+            height = uint32(peak.height) if peak is not None else uint32(0)
+        else:
+            height = await blockchain.get_finished_sync_up_to()
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
 
@@ -1004,10 +1016,6 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-
-        err = self.service.wallet_state_manager.validate_spend_bundle(request.spend_bundle)
-        if err is not None:
-            raise ValueError(err)
 
         await self.service.push_tx(request.spend_bundle)
 
@@ -1640,9 +1648,11 @@ class WalletRpcApi:
             }
         )
 
-        # sync check removed to unblock game channel flow during brief desync
-        # if await self.service.wallet_state_manager.synced() is False:
-        #     raise ValueError("Wallet needs to be fully synced before selecting coins")
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
+            raise ValueError("Wallet needs to be fully synced before selecting coins")
 
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
@@ -1652,7 +1662,10 @@ class WalletRpcApi:
 
     @marshal
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
-        if await self.service.wallet_state_manager.synced() is False:
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
@@ -1697,9 +1710,11 @@ class WalletRpcApi:
 
     @marshal
     async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
-        # sync check removed to unblock game channel polling during brief desync
-        # if await self.service.wallet_state_manager.synced() is False:
-        #     raise ValueError("Wallet needs to be fully synced before finding coin information")
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
+            raise ValueError("Wallet needs to be fully synced before finding coin information")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),
@@ -1720,6 +1735,12 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+
+            missed_coins: list[str] = [
+                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
+            ]
+            if missed_coins:
+                raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
 

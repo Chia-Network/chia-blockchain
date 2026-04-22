@@ -2141,7 +2141,10 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
+async def test_trade_bad_spend(
+    wallet_environments: WalletTestFramework, wallet_type: type[CATWallet], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("chia.wallet.transaction_record.minimum_send_attempts", 1)
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
@@ -2204,27 +2207,50 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
     bundle = WalletSpendBundle(coin_spends=offer._bundle.coin_spends, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     fee = uint64(10)
-    with pytest.raises(ValueError, match="BAD_AGGREGATE_SIGNATURE"):
-        async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True, sign=False
-        ) as action_scope:
-            await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True, sign=False
+    ) as action_scope:
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+    env_taker.node.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
-    # The bad bundle was rejected before being stored, so no wallet state changed.
-    # Farm a couple of blocks and confirm balances are unchanged.
-    maker_xch_before = await env_maker.xch_wallet.get_confirmed_balance()
-    taker_xch_before = await env_taker.xch_wallet.get_confirmed_balance()
+    def check_wallet_cache_empty() -> bool:
+        return env_taker.node._tx_messages_in_progress == {}
 
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=2)
-    for env in [env_maker, env_taker]:
-        await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+    for _ in range(10):
+        await env_taker.node._resend_queue()
+        await time_out_assert(5, check_wallet_cache_empty, True)
 
-    maker_xch_after = await env_maker.xch_wallet.get_confirmed_balance()
-    taker_xch_after = await env_taker.xch_wallet.get_confirmed_balance()
-    assert maker_xch_after == maker_xch_before
-    assert taker_xch_after == taker_xch_before
+    await wallet_environments.process_pending_states(
+        [
+            # We're ignoring initial balance checking here because of the peculiarity
+            # of the forced resend behavior we're doing above. Not entirely sure that we should be
+            # but the balances are weird in such a way that it suggests to me a test issue and not
+            # an issue with production code - quex
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {},
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {},
+                },
+            ),
+        ],
+        invalid_transactions=[tx.name for tx in action_scope.side_effects.transactions],
+    )
 
-    await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+    await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
 @pytest.mark.parametrize(

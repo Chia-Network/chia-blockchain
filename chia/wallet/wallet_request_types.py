@@ -175,6 +175,12 @@ class GetSyncStatusResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetHeightInfo(Streamable):
+    use_peak_height: bool = False
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
     is_transaction_block: bool | None = None
@@ -524,6 +530,7 @@ class SelectCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
     amount: uint64
     exclude_coins: list[Coin] | None = None  # for backwards compatibility
+    allow_unsynced: bool = False
 
     def __post_init__(self) -> None:
         if self.excluded_coin_ids is not None and self.exclude_coins is not None:
@@ -559,6 +566,7 @@ class SelectCoinsResponse(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetSpendableCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
+    allow_unsynced: bool = False
 
     @classmethod
     def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
@@ -586,6 +594,7 @@ class GetCoinRecordsByNames(Streamable):
     start_height: uint32 | None = None
     end_height: uint32 | None = None
     include_spent_coins: bool = True
+    allow_unsynced: bool = False
 
 
 @streamable

@@ -11,23 +11,12 @@ import time
 import traceback
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import aiosqlite
-from chia_rs import (
-    MEMPOOL_MODE,
-    AugSchemeMPL,
-    CoinRecord,
-    CoinSpend,
-    CoinState,
-    ConsensusConstants,
-    G1Element,
-    G2Element,
-    PrivateKey,
-    get_flags_for_height_and_constants,
-    validate_clvm_and_signature,
-)
+from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -167,6 +156,13 @@ if TYPE_CHECKING:
 
 
 PendingTxCallback = Callable[[], None]
+
+
+class SyncStatus(IntEnum):
+    SYNCED = 0
+    SLIGHTLY_BEHIND = 1
+    LONG_SYNC = 2
+    DISCONNECTED = 3
 
 
 class WalletStateManager:
@@ -739,6 +735,25 @@ class WalletStateManager:
         if latest_timestamp > block_is_current_at and not has_pending_queue_items:
             return True
         return False
+
+    async def get_sync_status(self) -> SyncStatus:
+        peak = self.blockchain._peak
+        if (
+            peak is None
+            or len(self.server.get_connections(NodeType.FULL_NODE)) == 0
+            or len(self.wallet_node.synced_peers) == 0
+            or (self.blockchain._peak_last_updated > 0 and time.time() - self.blockchain._peak_last_updated > 300)
+        ):
+            return SyncStatus.DISCONNECTED
+
+        height_gap = peak.height - await self.blockchain.get_finished_sync_up_to()
+        if height_gap > 10:
+            return SyncStatus.LONG_SYNC
+
+        if not await self.synced():
+            return SyncStatus.SLIGHTLY_BEHIND
+
+        return SyncStatus.SYNCED
 
     @property
     def sync_mode(self) -> bool:
@@ -2364,11 +2379,6 @@ class WalletStateManager:
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
         if push:
-            for tx_record in tx_records:
-                if tx_record.spend_bundle is not None:
-                    err = self.validate_spend_bundle(tx_record.spend_bundle)
-                    if err is not None:
-                        raise ValueError(f"Transaction {tx_record.name.hex()} rejected: {err}")
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
                 for tx_record in tx_records:
@@ -2785,35 +2795,6 @@ class WalletStateManager:
             AugSchemeMPL.aggregate([G2Element.from_bytes(sig.signature) for sig in signed_tx.signatures]),
         )
 
-    def validate_spend_bundle(self, bundle: WalletSpendBundle) -> str | None:
-        """Validate a spend bundle (CLVM execution, conditions, and signature).
-
-        Returns None on success, or a human-readable error string on failure.
-        """
-        try:
-            flags = get_flags_for_height_and_constants(0, self.constants) | MEMPOOL_MODE
-            validate_clvm_and_signature(
-                bundle,
-                self.constants.MAX_BLOCK_COST_CLVM,
-                self.constants,
-                flags,
-            )
-            return None
-        except Exception as e:
-            code = e.args[1] if len(e.args) >= 2 and isinstance(e.args[1], int) else None
-            try:
-                reason = Err(code).name if code is not None else str(e)
-            except ValueError:
-                reason = str(e)
-            msg = f"spend bundle validation failed (code {code}): {reason}"
-            self.log.error(
-                f"{msg} | bundle={bundle.name().hex()} "
-                f"agg_sig={bytes(bundle.aggregated_signature).hex()} "
-                f"num_spends={len(bundle.coin_spends)} "
-                f"flags={flags:#x}"
-            )
-            return msg
-
     async def sign_transactions(
         self,
         tx_records: list[TransactionRecord],
@@ -2886,9 +2867,6 @@ class WalletStateManager:
     async def submit_transactions(self, signed_txs: list[SignedTransaction]) -> list[bytes32]:
         bundles: list[WalletSpendBundle] = [self.signed_tx_to_spendbundle(tx) for tx in signed_txs]
         for bundle in bundles:
-            err = self.validate_spend_bundle(bundle)
-            if err is not None:
-                raise ValueError(f"Transaction {bundle.name().hex()} rejected: {err}")
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
 
