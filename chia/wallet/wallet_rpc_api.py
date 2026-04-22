@@ -1001,7 +1001,7 @@ class WalletRpcApi:
             peak = blockchain._peak
             height = uint32(peak.height) if peak is not None else uint32(0)
         else:
-            height = (await self.get_height_info(Empty())).height
+            height = await blockchain.get_finished_sync_up_to()
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
 
