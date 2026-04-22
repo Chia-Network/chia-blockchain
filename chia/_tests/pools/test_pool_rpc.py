@@ -17,6 +17,7 @@ from _pytest.fixtures import SubRequest
 from chia_rs import ConsensusConstants, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from pytest_mock import MockerFixture
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
@@ -55,7 +56,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_service import WalletService
-from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_state_manager import SyncStatus, WalletStateManager
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -1393,6 +1394,7 @@ class TestPoolWalletRpc:
         self,
         fee: uint64,
         wallet_environments: WalletTestFramework,
+        mocker: MockerFixture,
     ) -> None:
         wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
         wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -1404,8 +1406,9 @@ class TestPoolWalletRpc:
         # Create a farming plotnft to url http://pool.example.com
         wallet_id = await create_new_plotnft(wallet_environments)
 
-        # The sync guard was removed; joining the same pool now hits the duplicate-pool check instead
-        with pytest.raises(ResponseFailureError, match="Already farming to pool"):
+        mock = mocker.patch.object(wallet_state_manager, "get_sync_status")
+        mock.return_value = SyncStatus.SLIGHTLY_BEHIND
+        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced"):
             await wallet_rpc.pw_join_pool(
                 PWJoinPool(
                     wallet_id=uint32(wallet_id),
