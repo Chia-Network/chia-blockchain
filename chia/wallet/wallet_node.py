@@ -846,7 +846,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
                 ph_update_res: list[CoinState] = await subscribe_to_phs(
-                    batch.entries, full_node, min_height_for_subscriptions, priority=1
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
@@ -866,7 +866,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
                 c_update_res: list[CoinState] = await subscribe_to_coin_updates(
-                    batch.entries, full_node, min_height_for_subscriptions, priority=1
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
@@ -1271,10 +1271,10 @@ class WalletNode:
                 all_coin_ids: list[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: list[bytes32] = await self.get_puzzle_hashes_to_subscribe()
                 ph_updates: list[CoinState] = await subscribe_to_phs(
-                    phs, peer, min_height_for_subscriptions, priority=1
+                    phs, peer, min_height_for_subscriptions, priority=2
                 )
                 coin_updates: list[CoinState] = await subscribe_to_coin_updates(
-                    all_coin_ids, peer, min_height_for_subscriptions, priority=1
+                    all_coin_ids, peer, min_height_for_subscriptions, priority=2
                 )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
