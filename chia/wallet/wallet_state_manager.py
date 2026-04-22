@@ -738,6 +738,9 @@ class WalletStateManager:
 
     async def get_sync_status(self) -> SyncStatus:
         peak = self.blockchain._peak
+        if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            return SyncStatus.SYNCED
+
         if (
             peak is None
             or len(self.server.get_connections(NodeType.FULL_NODE)) == 0

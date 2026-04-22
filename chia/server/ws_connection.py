@@ -396,8 +396,8 @@ class WSChiaConnection:
             while not self.closed:
                 item = await self.outgoing_queue.get()
                 if item is not None:
-                    _priority, _seq, msg = item
-                    await self._send_message(msg)
+                    priority, _seq, msg = item
+                    await self._send_message(msg, priority=priority)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -684,17 +684,17 @@ class WSChiaConnection:
         self.pending_requests.pop(message.id, None)
         return result
 
-    async def _wait_and_retry(self, msg: Message) -> None:
+    async def _wait_and_retry(self, msg: Message, priority: int = 0) -> None:
         try:
             await asyncio.sleep(1)
             seq = self._send_seq
             self._send_seq += 1
-            await self.outgoing_queue.put((0, seq, msg))
+            await self.outgoing_queue.put((priority, seq, msg))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
-    async def _send_message(self, message: Message) -> None:
+    async def _send_message(self, message: Message, priority: int = 0) -> None:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
@@ -734,7 +734,7 @@ class WSChiaConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    create_referenced_task(self._wait_and_retry(message), known_unreferenced=True)
+                    create_referenced_task(self._wait_and_retry(message, priority=priority), known_unreferenced=True)
 
                 return None
             else:
