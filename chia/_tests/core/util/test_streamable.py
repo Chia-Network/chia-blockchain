@@ -985,6 +985,17 @@ def test_from_bytes_with_list_limits() -> None:
     parsed = MsgWithList.from_bytes(blob, list_limits={"nonexistent": 5})
     assert len(parsed.coin_ids) == 100
 
+    # Primitive list type (hits _FIXED_SIZE_PRIMITIVES path)
+    @streamable
+    @dataclass(frozen=True)
+    class MsgWithBools(Streamable):
+        flags: list[bool]
+
+    bools_msg = MsgWithBools([True, False, True, False, True])
+    bools_blob = bytes(bools_msg)
+    parsed_bools = MsgWithBools.from_bytes(bools_blob, list_limits={"flags": 2})
+    assert parsed_bools.flags == [True, False]
+
 
 def test_parse_tuple() -> None:
     assert parse_tuple(io.BytesIO(b""), []) == ()
