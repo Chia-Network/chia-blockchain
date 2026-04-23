@@ -8,10 +8,10 @@ from datetime import datetime
 from enum import Enum
 from time import monotonic, sleep
 
-from chia_rs import (
+from chia_rs import (  # type: ignore[attr-defined]  # Block2026Builder: stubs not yet regenerated
     DONT_VALIDATE_SIGNATURE,
     AugSchemeMPL,
-    Block2026Builder,  # type: ignore[attr-defined]  # stubs not yet regenerated in chia_rs
+    Block2026Builder,
     BlockBuilder,
     Coin,
     CoinSpend,
