@@ -59,6 +59,11 @@ class NullBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
+    def get_mmr_root_for_block(
+        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
+    ) -> bytes32 | None:
+        return None  # pragma: no cover
+
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
 
@@ -72,7 +77,7 @@ class InMemoryBlockchain(BlockCache):
         _protocol_check: ClassVar[BlocksProtocol] = cast("InMemoryBlockchain", None)
 
     def __init__(self) -> None:
-        super().__init__({})
+        super().__init__({}, mmr_manager=StubMMRManager())
 
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover
