@@ -383,9 +383,11 @@ class TestBlockHeaderValidation:
     ) -> None:
         """Post-HF2 unfinished transaction blocks with tree_hash generator_root must be accepted."""
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
-        await _validate_and_add_block(blockchain, blocks[0])
-        block = blocks[1]
+        blocks = bt.get_consecutive_blocks(5, guarantee_transaction_block=True, include_transactions=True)
+        gen_idx = next(i for i, bl in enumerate(blocks) if bl.transactions_generator is not None)
+        for bl in blocks[:gen_idx]:
+            await _validate_and_add_block(blockchain, bl)
+        block = blocks[gen_idx]
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
         assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
@@ -421,9 +423,11 @@ class TestBlockHeaderValidation:
     ) -> None:
         """Post-HF2 unfinished blocks with std_hash (old) generator_root must be rejected."""
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
-        await _validate_and_add_block(blockchain, blocks[0])
-        block = blocks[1]
+        blocks = bt.get_consecutive_blocks(5, guarantee_transaction_block=True, include_transactions=True)
+        gen_idx = next(i for i, bl in enumerate(blocks) if bl.transactions_generator is not None)
+        for bl in blocks[:gen_idx]:
+            await _validate_and_add_block(blockchain, bl)
+        block = blocks[gen_idx]
         assert block.transactions_generator is not None
         wrong_root = std_hash(bytes(block.transactions_generator))
         block_2 = recursive_replace(block, "transactions_info.generator_root", wrong_root)
@@ -2667,11 +2671,10 @@ class TestBodyValidation:
     async def test_generator_root_is_std_hash_pre_hf2(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         """Pre-HF2 transaction blocks must use std_hash for generator_root."""
         b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
-        await _validate_and_add_block(b, blocks[0])
-        await _validate_and_add_block(b, blocks[1])
-        block = blocks[1]
-        assert block.transactions_generator is not None
+        blocks = bt.get_consecutive_blocks(5, guarantee_transaction_block=True, include_transactions=True)
+        for bl in blocks:
+            await _validate_and_add_block(b, bl)
+        block = next(bl for bl in blocks if bl.transactions_generator is not None)
         assert block.transactions_info is not None
         assert block.transactions_info.generator_root == std_hash(bytes(block.transactions_generator))
 
@@ -2682,11 +2685,10 @@ class TestBodyValidation:
     async def test_generator_root_is_tree_hash_post_hf2(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         """Post-HF2 transaction blocks must use tree_hash for generator_root."""
         b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
-        await _validate_and_add_block(b, blocks[0])
-        await _validate_and_add_block(b, blocks[1])
-        block = blocks[1]
-        assert block.transactions_generator is not None
+        blocks = bt.get_consecutive_blocks(5, guarantee_transaction_block=True, include_transactions=True)
+        for bl in blocks:
+            await _validate_and_add_block(b, bl)
+        block = next(bl for bl in blocks if bl.transactions_generator is not None)
         assert block.transactions_info is not None
         assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
 
@@ -2699,9 +2701,11 @@ class TestBodyValidation:
     ) -> None:
         """Post-HF2, a block whose generator_root is std_hash (old format) must be rejected."""
         b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
-        await _validate_and_add_block(b, blocks[0])
-        block = blocks[1]
+        blocks = bt.get_consecutive_blocks(5, guarantee_transaction_block=True, include_transactions=True)
+        gen_idx = next(i for i, bl in enumerate(blocks) if bl.transactions_generator is not None)
+        for bl in blocks[:gen_idx]:
+            await _validate_and_add_block(b, bl)
+        block = blocks[gen_idx]
         assert block.transactions_generator is not None
         wrong_root = std_hash(bytes(block.transactions_generator))
         block_2 = recursive_replace(block, "transactions_info.generator_root", wrong_root)
