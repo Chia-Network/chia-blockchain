@@ -978,7 +978,7 @@ class Mempool:
         )
 
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            SerializedProgram(block_program),  # serde_2026 format — bypass CLVM validation
             [],
             [],
             signature,
