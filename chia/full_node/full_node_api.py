@@ -1826,6 +1826,8 @@ class FullNodeAPI:
         # RespondToCoinUpdates even when subscribing to the same coin multiple
         # times, so we can't optimize away such DB lookups (yet)
         coin_ids = request.coin_ids
+        if len(coin_ids) > max_subscriptions:
+            coin_ids = coin_ids[:max_subscriptions]
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
         states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
@@ -1952,7 +1954,10 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        puzzle_hashes = list(dict.fromkeys(request.puzzle_hashes))
+        puzzle_hashes = request.puzzle_hashes
+        if len(puzzle_hashes) > CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE:
+            puzzle_hashes = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+        puzzle_hashes = list(dict.fromkeys(puzzle_hashes))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
@@ -2030,7 +2035,10 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        coin_ids = list(dict.fromkeys(request.coin_ids))
+        coin_ids = request.coin_ids
+        if len(coin_ids) > max_items:
+            coin_ids = coin_ids[:max_items]
+        coin_ids = list(dict.fromkeys(coin_ids))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
