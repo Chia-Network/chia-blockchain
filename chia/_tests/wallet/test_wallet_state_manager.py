@@ -28,12 +28,19 @@ from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
     ExtendDerivationIndex,
+    GetCoinRecordsByNames,
+    GetHeightInfo,
+    GetHeightInfoV2Response,
+    GetPuzzleAndSolution,
+    GetPuzzleAndSolutionResponse,
+    GetSpendableCoins,
     GetWalletBalance,
     PushTransactions,
+    SelectCoins,
 )
 from chia.wallet.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_state_manager import SyncStatus, WalletStateManager
 
 
 @asynccontextmanager
@@ -545,3 +552,236 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     ).index == expected_state.highest_index + 5
     expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+    full_nodes, wallets, _ = simulator_and_wallet
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.full_node.server
+    wallet_node, wallet_server = wallets[0]
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+
+    # Farm enough blocks so peak height > 10 (needed for LONG_SYNC test)
+    await full_node_api.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    original_network = wsm.config["selected_network"]
+
+    # SYNCED via simulator shortcut (line 742)
+    wsm.config["selected_network"] = "simulator0"
+    try:
+        assert await wsm.get_sync_status() == SyncStatus.SYNCED
+    finally:
+        wsm.config["selected_network"] = original_network
+
+    # SYNCED via normal path (line 754) — wallet is fully synced
+    assert await wsm.get_sync_status() == SyncStatus.SYNCED
+
+    # SLIGHTLY_BEHIND (line 752) — height gap small but synced() returns False
+    peak = wsm.blockchain._peak
+    assert peak is not None
+    assert peak.height > 10, f"Need peak > 10 for sync tests, got {peak.height}"
+    original_network = wsm.config["selected_network"]
+    wsm.config["selected_network"] = "mainnet"
+    try:
+        await wsm.blockchain.set_finished_sync_up_to(peak.height - 5, in_rollback=True)
+        status = await wsm.get_sync_status()
+        assert status == SyncStatus.SLIGHTLY_BEHIND, f"Expected SLIGHTLY_BEHIND, got {status}"
+    finally:
+        wsm.config["selected_network"] = original_network
+
+    # LONG_SYNC (line 749) — set finished_sync_up_to far behind peak
+    await wsm.blockchain.set_finished_sync_up_to(0, in_rollback=True)
+    assert await wsm.get_sync_status() == SyncStatus.LONG_SYNC
+
+    # DISCONNECTED (line 745) — disconnect from peer
+    await wallet_server.close_all_connections()
+    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+    assert await wsm.get_sync_status() == SyncStatus.DISCONNECTED
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_get_spendable_coins(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+
+    response = await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
+    assert len(response.confirmed_records) > 0
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_select_coins(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+
+    response = await rpc_client.select_coins(
+        SelectCoins(wallet_id=uint32(1), amount=uint64(1))
+    )
+    assert len(response.coins) > 0
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_get_coin_records_by_names(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+    wsm = env.wallet_state_manager
+
+    spendable = list(await wsm.get_spendable_coins_for_wallet(uint32(1)))
+    assert len(spendable) > 0
+    coin_name = spendable[0].coin.name()
+
+    response = await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[coin_name]))
+    assert len(response.coin_records) == 1
+    assert response.coin_records[0].name == coin_name
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_get_height_info_v2(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+
+    response = GetHeightInfoV2Response.from_json_dict(
+        await rpc_client.fetch("get_height_info_v2", GetHeightInfo().to_json_dict())
+    )
+    assert response.height > 0
+    assert response.latest_timestamp > 0
+
+    response_peak = GetHeightInfoV2Response.from_json_dict(
+        await rpc_client.fetch("get_height_info_v2", GetHeightInfo(use_peak_height=True).to_json_dict())
+    )
+    assert response_peak.height >= response.height
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_get_puzzle_and_solution(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+    wsm = env.wallet_state_manager
+    full_node = wallet_environments.full_node
+
+    async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await wsm.main_wallet.generate_signed_transaction(
+            [uint64(1)],
+            [bytes32.zeros],
+            action_scope,
+        )
+
+    [tx] = action_scope.side_effects.transactions
+    spent_coin = tx.removals[0]
+
+    await full_node.wait_transaction_records_entered_mempool([tx])
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+
+    request = GetPuzzleAndSolution(coin_name=spent_coin.name()).to_json_dict()
+    response = GetPuzzleAndSolutionResponse.from_json_dict(
+        await rpc_client.fetch("get_puzzle_and_solution", request)
+    )
+    assert response.puzzle_reveal != ""
+    assert response.solution != ""
+
+    with pytest.raises(ValueError):
+        await rpc_client.fetch(
+            "get_puzzle_and_solution", GetPuzzleAndSolution(coin_name=bytes32.zeros).to_json_dict()
+        )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework) -> None:
+    """Verify that RPC endpoints raise when the wallet has no full node peers."""
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+    wsm = env.wallet_state_manager
+
+    # Build a dummy PushTransactions request while still connected
+    async with wsm.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        await wsm.main_wallet.generate_signed_transaction(
+            [uint64(1)], [bytes32.zeros], action_scope
+        )
+    txs = action_scope.side_effects.transactions
+
+    # Disconnect from all full node peers
+    await env.peer_server.close_all_connections()
+    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+
+    # tx_endpoint decorator DISCONNECTED check (line 341)
+    with pytest.raises(ValueError, match="not connected"):
+        await rpc_client.push_transactions(
+            PushTransactions(transactions=txs, sign=False),
+            wallet_environments.tx_config,
+        )
+
+    # select_coins DISCONNECTED check (line 1646)
+    with pytest.raises(ValueError, match="not connected"):
+        await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
+
+    # get_spendable_coins DISCONNECTED check (line 1660)
+    with pytest.raises(ValueError, match="not connected"):
+        await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
+
+    # get_coin_records_by_names DISCONNECTED check (line 1708)
+    with pytest.raises(ValueError, match="not connected"):
+        await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [4], "trusted": False, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_height_info_v2_with_block_record(wallet_environments: WalletTestFramework) -> None:
+    """Ensure the contains_height branch is hit (untrusted sync populates block records)."""
+    env = wallet_environments.environments[0]
+    rpc_client = env.rpc_client
+    blockchain = env.wallet_state_manager.blockchain
+
+    synced_height = await blockchain.get_finished_sync_up_to()
+    if not blockchain.contains_height(synced_height):
+        pytest.skip("Block record store not populated in this test configuration")
+
+    response = GetHeightInfoV2Response.from_json_dict(
+        await rpc_client.fetch("get_height_info_v2", GetHeightInfo(use_peak_height=False).to_json_dict())
+    )
+    assert response.height == synced_height
+    assert response.is_transaction_block is not None

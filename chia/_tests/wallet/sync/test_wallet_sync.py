@@ -77,7 +77,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.util.wallet_sync_utils import PeerRequestException
+from chia.wallet.util.wallet_sync_utils import PeerRequestException, request_header_blocks
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -212,6 +212,31 @@ async def test_request_block_headers_transactions_filter(
     block_header_res = RespondBlockHeader.from_bytes(msg.data)
     assert block_header_res.header_block == block_header
     assert block_header_res.header_block.transactions_filter == expected_transactions_filter
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_request_header_blocks_without_block_headers_capability(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+) -> None:
+    """Exercise the legacy request_header_blocks path for peers that lack BLOCK_HEADERS capability."""
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    full_node_server = full_node_api.full_node.server
+
+    await wallet_server.start_client(PeerInfo("127.0.0.1", full_node_server.get_port()), None)
+    peer = wallet_server.get_connections()[0]
+
+    await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    original_capabilities = peer.peer_capabilities
+    peer.peer_capabilities = [c for c in original_capabilities if c != Capability.BLOCK_HEADERS]
+    try:
+        result = await request_header_blocks(peer, uint32(0), uint32(1))
+        assert result is not None
+        assert len(result) == 2
+    finally:
+        peer.peer_capabilities = original_capabilities
 
 
 # @pytest.mark.parametrize(
