@@ -619,6 +619,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
         assert coin_record.confirmed_block_index <= 10
 
     # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
+    saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
     CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
     oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
     resp = await simulator.request_puzzle_state(
@@ -627,6 +628,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
         ),
         peer,
     )
+    CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
     assert resp is not None
 
 
