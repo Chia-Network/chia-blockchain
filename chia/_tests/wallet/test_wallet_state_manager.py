@@ -30,7 +30,7 @@ from chia.wallet.wallet_request_types import (
     ExtendDerivationIndex,
     GetCoinRecordsByNames,
     GetHeightInfo,
-    GetHeightInfoV2Response,
+    GetHeightInfoResponse,
     GetPuzzleAndSolution,
     GetPuzzleAndSolutionResponse,
     GetSpendableCoins,
@@ -661,18 +661,17 @@ async def test_rpc_get_coin_records_by_names(wallet_environments: WalletTestFram
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_rpc_get_height_info_v2(wallet_environments: WalletTestFramework) -> None:
+async def test_rpc_get_height_info_use_peak(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     rpc_client = env.rpc_client
 
-    response = GetHeightInfoV2Response.from_json_dict(
-        await rpc_client.fetch("get_height_info_v2", GetHeightInfo().to_json_dict())
+    response = GetHeightInfoResponse.from_json_dict(
+        await rpc_client.fetch("get_height_info", GetHeightInfo().to_json_dict())
     )
     assert response.height > 0
-    assert response.latest_timestamp > 0
 
-    response_peak = GetHeightInfoV2Response.from_json_dict(
-        await rpc_client.fetch("get_height_info_v2", GetHeightInfo(use_peak_height=True).to_json_dict())
+    response_peak = GetHeightInfoResponse.from_json_dict(
+        await rpc_client.fetch("get_height_info", GetHeightInfo(use_peak_height=True).to_json_dict())
     )
     assert response_peak.height >= response.height
 
@@ -762,8 +761,8 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_height_info_v2_with_block_record(wallet_environments: WalletTestFramework) -> None:
-    """Ensure the contains_height branch is hit (untrusted sync populates block records)."""
+async def test_get_height_info_with_block_record(wallet_environments: WalletTestFramework) -> None:
+    """Ensure the block record branch is hit (untrusted sync populates block records)."""
     env = wallet_environments.environments[0]
     rpc_client = env.rpc_client
     blockchain = env.wallet_state_manager.blockchain
@@ -771,8 +770,8 @@ async def test_get_height_info_v2_with_block_record(wallet_environments: WalletT
     synced_height = await blockchain.get_finished_sync_up_to()
     assert blockchain.contains_height(synced_height)
 
-    response = GetHeightInfoV2Response.from_json_dict(
-        await rpc_client.fetch("get_height_info_v2", GetHeightInfo(use_peak_height=False).to_json_dict())
+    response = GetHeightInfoResponse.from_json_dict(
+        await rpc_client.fetch("get_height_info", GetHeightInfo(use_peak_height=False).to_json_dict())
     )
     assert response.height == synced_height
     assert response.is_transaction_block is not None

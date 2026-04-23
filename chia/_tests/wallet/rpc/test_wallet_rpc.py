@@ -134,6 +134,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetHeightInfo,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
@@ -2519,7 +2520,7 @@ async def test_get_height_info_response_variants(
     api_self = SimpleNamespace(
         service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
     )
-    raw = await WalletRpcApi.get_height_info(api_self, {})
+    raw = await WalletRpcApi.get_height_info(api_self, GetHeightInfo())
     response = GetHeightInfoResponse.from_json_dict(raw)
     assert isinstance(response, GetHeightInfoResponse)
     assert response.height == sync_height

@@ -183,13 +183,6 @@ class GetHeightInfo(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
-
-
-@streamable
-@dataclass(kw_only=True, frozen=True)
-class GetHeightInfoV2Response(Streamable):
-    height: uint32
-    latest_timestamp: uint64
     is_transaction_block: bool | None = None
     prev_transaction_block_height: uint32 | None = None
 
