@@ -134,7 +134,6 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
-    GetHeightInfo,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
