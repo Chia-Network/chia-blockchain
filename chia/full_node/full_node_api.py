@@ -947,6 +947,11 @@ class FullNodeAPI:
                             create_block = self.full_node.mempool_manager.create_block_generator
                         elif block_version == 1:
                             create_block = self.full_node.mempool_manager.create_block_generator2
+                        elif block_version == 2 and height >= self.full_node.constants.HARD_FORK2_HEIGHT:
+                            create_block = self.full_node.mempool_manager.create_block_generator_2026
+                        elif block_version == 2:
+                            self.log.info("block_creation=2 but pre-HF2, falling back to version 1")
+                            create_block = self.full_node.mempool_manager.create_block_generator2
                         else:
                             self.log.warning(f"Unknown 'block_creation' config: {block_version}")
                             create_block = self.full_node.mempool_manager.create_block_generator

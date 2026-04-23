@@ -428,6 +428,14 @@ class MempoolManager:
             return None
         return self.mempool.create_block_generator2(self.constants, self.peak.height, timeout)
 
+    def create_block_generator_2026(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
+        """
+        Returns a block generator using Block2026Builder (anytime builder + serde_2026).
+        """
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
+            return None
+        return self.mempool.create_block_generator_2026(self.constants, self.peak.height, timeout)
+
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()
         byte_array_list = []
