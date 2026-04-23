@@ -27,6 +27,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     is_canonical_serialization,
+    run_block_generator2,
     tree_hash,
 )
 from chia_rs.sized_bytes import bytes32
@@ -46,6 +47,7 @@ from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditio
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_creation import generator_root
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -403,16 +405,19 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
-        assert block_generator is not None
-        npc_result = get_name_puzzle_conditions(
-            block_generator,
+        flags = get_flags_for_height_and_constants(block.height, bt.constants)
+        err, conds = run_block_generator2(
+            bytes(block.transactions_generator),
+            [],
             block.transactions_info.cost,
-            mempool_mode=False,
-            height=block.height,
-            constants=bt.constants,
+            flags,
+            block.transactions_info.aggregated_signature,
+            None,
+            bt.constants,
         )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result.conds, False)
+        assert err is None
+        assert conds is not None
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
