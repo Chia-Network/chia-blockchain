@@ -970,6 +970,7 @@ async def test_new_transaction_and_mempool(
     ],
     self_hostname: str,
     seeded_random: random.Random,
+    consensus_mode: ConsensusMode,
 ) -> None:
     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     wallet_ph = wallet_a.get_new_puzzlehash()
@@ -1092,8 +1093,13 @@ async def test_new_transaction_and_mempool(
     # these numbers reflect the capacity of the mempool. In these
     # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
     # and MAX_BLOCK_COST_CLVM
-    assert included_tx == 20
-    assert not_included_tx == 7
+    # INTERNED_GENERATOR changes the cost model so more transactions fit
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert included_tx == 22
+        assert not_included_tx == 5
+    else:
+        assert included_tx == 20
+        assert not_included_tx == 7
     assert seen_bigger_transaction_has_high_fee
 
     # Mempool is full
