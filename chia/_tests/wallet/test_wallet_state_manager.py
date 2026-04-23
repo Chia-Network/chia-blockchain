@@ -769,8 +769,7 @@ async def test_get_height_info_v2_with_block_record(wallet_environments: WalletT
     blockchain = env.wallet_state_manager.blockchain
 
     synced_height = await blockchain.get_finished_sync_up_to()
-    if not blockchain.contains_height(synced_height):
-        pytest.skip("Block record store not populated in this test configuration")
+    assert blockchain.contains_height(synced_height)
 
     response = GetHeightInfoV2Response.from_json_dict(
         await rpc_client.fetch("get_height_info_v2", GetHeightInfo(use_peak_height=False).to_json_dict())
