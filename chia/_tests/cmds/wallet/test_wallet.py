@@ -309,6 +309,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             self.add_to_log("get_height_info", ())
             return GetHeightInfoResponse(
                 height=uint32(10),
+                latest_timestamp=uint64(1700000000),
                 is_transaction_block=True,
                 prev_transaction_block_height=uint32(9),
             )

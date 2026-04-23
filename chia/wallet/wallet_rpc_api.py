@@ -1007,6 +1007,7 @@ class WalletRpcApi:
             prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
         return GetHeightInfoResponse(
             height=height,
+            latest_timestamp=blockchain.get_latest_timestamp(),
             is_transaction_block=is_transaction_block,
             prev_transaction_block_height=prev_transaction_block_height,
         )

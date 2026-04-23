@@ -2512,6 +2512,7 @@ async def test_get_height_info_response_variants(
     sync_height = uint32(875)
     mock_blockchain = MagicMock()
     mock_blockchain.get_finished_sync_up_to = AsyncMock(return_value=sync_height)
+    mock_blockchain.get_latest_timestamp = MagicMock(return_value=uint64(1700000000))
     if block_record is _GET_HEIGHT_INFO_NO_CACHED_RECORD:
         mock_blockchain.height_to_block_record = MagicMock(side_effect=KeyError(sync_height))
     else:
@@ -2520,7 +2521,7 @@ async def test_get_height_info_response_variants(
     api_self = SimpleNamespace(
         service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
     )
-    raw = await WalletRpcApi.get_height_info(api_self, GetHeightInfo())
+    raw = await WalletRpcApi.get_height_info(api_self, {})
     response = GetHeightInfoResponse.from_json_dict(raw)
     assert isinstance(response, GetHeightInfoResponse)
     assert response.height == sync_height
