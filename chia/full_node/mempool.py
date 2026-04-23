@@ -18,13 +18,14 @@ from chia_rs import (
     G2Element,
     SpendBundle,
     run_block_generator2,
+    solution_generator_2026,
     solution_generator_backrefs,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
+from chia.consensus.flags import INTERNED_GENERATOR, get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.eligible_coin_spends import (
     IdenticalSpendDedup,
     SingletonFastForward,
@@ -532,12 +533,13 @@ class Mempool:
         removals = spend_bundle.removals()
         log.info(f"Add rem: {len(additions)} {len(removals)}")
 
-        # since the hard fork has activated, block generators are
-        # allowed to be serialized with CLVM back-references. We can do that
-        # unconditionally.
         start_time = monotonic()
         spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
-        block_program = solution_generator_backrefs(spends)
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants)
+        if flags & INTERNED_GENERATOR:
+            block_program = solution_generator_2026(spends)
+        else:
+            block_program = solution_generator_backrefs(spends)
 
         duration = monotonic() - start_time
         log.log(
@@ -546,7 +548,7 @@ class Mempool:
             f"spends: {len(removals)} additions: {len(additions)}",
         )
 
-        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+        flags |= DONT_VALIDATE_SIGNATURE
 
         err, conds = run_block_generator2(
             block_program,
