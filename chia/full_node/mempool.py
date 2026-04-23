@@ -11,7 +11,7 @@ from time import monotonic, sleep
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     AugSchemeMPL,
-    Block2026Builder,
+    Block2026Builder,  # type: ignore[attr-defined]  # stubs not yet regenerated in chia_rs
     BlockBuilder,
     Coin,
     CoinSpend,
@@ -26,7 +26,8 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.flags import INTERNED_GENERATOR, get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
+from chia.consensus.flags import INTERNED_GENERATOR
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.eligible_coin_spends import (
     IdenticalSpendDedup,
     SingletonFastForward,
