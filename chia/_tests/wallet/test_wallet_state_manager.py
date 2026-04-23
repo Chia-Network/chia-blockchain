@@ -629,9 +629,7 @@ async def test_rpc_select_coins(wallet_environments: WalletTestFramework) -> Non
     env = wallet_environments.environments[0]
     rpc_client = env.rpc_client
 
-    response = await rpc_client.select_coins(
-        SelectCoins(wallet_id=uint32(1), amount=uint64(1))
-    )
+    response = await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
     assert len(response.coins) > 0
 
 
@@ -707,16 +705,12 @@ async def test_rpc_get_puzzle_and_solution(wallet_environments: WalletTestFramew
     await full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
 
     request = GetPuzzleAndSolution(coin_name=spent_coin.name()).to_json_dict()
-    response = GetPuzzleAndSolutionResponse.from_json_dict(
-        await rpc_client.fetch("get_puzzle_and_solution", request)
-    )
+    response = GetPuzzleAndSolutionResponse.from_json_dict(await rpc_client.fetch("get_puzzle_and_solution", request))
     assert response.puzzle_reveal != ""
     assert response.solution != ""
 
     with pytest.raises(ValueError):
-        await rpc_client.fetch(
-            "get_puzzle_and_solution", GetPuzzleAndSolution(coin_name=bytes32.zeros).to_json_dict()
-        )
+        await rpc_client.fetch("get_puzzle_and_solution", GetPuzzleAndSolution(coin_name=bytes32.zeros).to_json_dict())
 
 
 @pytest.mark.parametrize(
@@ -734,9 +728,7 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
 
     # Build a dummy PushTransactions request while still connected
     async with wsm.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
-        await wsm.main_wallet.generate_signed_transaction(
-            [uint64(1)], [bytes32.zeros], action_scope
-        )
+        await wsm.main_wallet.generate_signed_transaction([uint64(1)], [bytes32.zeros], action_scope)
     txs = action_scope.side_effects.transactions
 
     # Disconnect from all full node peers
