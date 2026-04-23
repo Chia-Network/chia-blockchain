@@ -6,11 +6,12 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from time import monotonic
+from time import monotonic, sleep
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     AugSchemeMPL,
+    Block2026Builder,
     BlockBuilder,
     Coin,
     CoinSpend,
@@ -857,6 +858,116 @@ class Mempool:
             logging.INFO if duration < 2 else logging.WARNING,
             f"create_block_generator2() took {duration:0.4f} seconds. "
             f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
+        )
+
+        return NewBlockGenerator(
+            SerializedProgram.from_bytes(block_program),
+            [],
+            [],
+            signature,
+            additions,
+            removals,
+            uint64(cost),
+        )
+
+    def create_block_generator_2026(
+        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
+    ) -> NewBlockGenerator | None:
+        """Build a block using Block2026Builder (anytime builder + serde_2026).
+
+        Snapshots mempool candidates into the builder (resolving dedup/FF in
+        priority order), then lets the builder pack and optimize in a background
+        thread for the remaining timeout.
+        """
+        dedup_coin_spends = IdenticalSpendDedup()
+        singleton_ff = SingletonFastForward()
+        committed_ff = singleton_ff.copy()
+
+        log.info(f"Starting to make block (2026), max cost: {self.mempool_info.max_block_clvm_cost}")
+        generator_creation_start = monotonic()
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
+
+        # Per-candidate metadata for reconstructing additions/removals after
+        # the builder decides which candidates are included.
+        candidate_additions: list[list[Coin]] = []
+        candidate_removals: list[list[Coin]] = []
+
+        fee_sum = 0
+        num_spends = 0
+
+        with Block2026Builder(constants) as builder:
+            for row in cursor:
+                name = bytes32(row[0])
+                fee = int(row[1])
+                item = self._items[name]
+
+                try:
+                    assert item.conds is not None
+                    irreducible_cost = item.conds.condition_cost + item.conds.execution_cost
+
+                    bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
+                        mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
+                    )
+                    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+                        bundle_coin_spends=bundle_coin_spends
+                    )
+
+                    new_fee_sum = fee_sum + fee
+                    if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                        break
+
+                    new_spend_count = num_spends + len(unique_coin_spends)
+                    if new_spend_count > MAX_SPENDS_PER_BLOCK:
+                        continue
+
+                    singleton_ff.update_fast_forward_spends(ff_state_update)
+                    committed_ff = singleton_ff.copy()
+
+                    bundle = SpendBundle(unique_coin_spends, item.aggregated_signature)
+                    builder.add_candidate(bundle, uint64(max(0, irreducible_cost - cost_saving)))
+
+                    candidate_additions.append(unique_additions)
+                    candidate_removals.append([cs.coin for cs in unique_coin_spends])
+
+                    fee_sum = new_fee_sum
+                    num_spends = new_spend_count
+
+                except SkipDedup as e:
+                    log.info(f"{e}")
+                    singleton_ff = committed_ff.copy()
+                    continue
+                except Exception as e:
+                    log.info(f"Exception while processing mempool item for 2026 block: {e}")
+                    singleton_ff = committed_ff.copy()
+                    continue
+
+            if not candidate_additions:
+                return None
+
+            builder.start()
+
+            elapsed = monotonic() - generator_creation_start
+            remaining = max(0.0, timeout - elapsed)
+            if remaining > 0:
+                sleep(remaining)
+
+            block_program, signature, cost, included_indices = builder.best()
+            # __exit__ joins the thread
+
+        if not block_program:
+            return None
+
+        additions: list[Coin] = []
+        removals: list[Coin] = []
+        for idx in included_indices:
+            additions.extend(candidate_additions[idx])
+            removals.extend(candidate_removals[idx])
+
+        duration = monotonic() - generator_creation_start
+        log.log(
+            logging.INFO if duration < 2 else logging.WARNING,
+            f"create_block_generator_2026() took {duration:0.4f} seconds. "
+            f"block cost: {cost} spends: {len(removals)} additions: {len(additions)}",
         )
 
         return NewBlockGenerator(
