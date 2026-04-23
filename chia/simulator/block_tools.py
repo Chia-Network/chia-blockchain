@@ -70,7 +70,11 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
+from chia.full_node.bundle_tools import (
+    simple_solution_generator,
+    simple_solution_generator_2026,
+    simple_solution_generator_backrefs,
+)
 from chia.plotting.cache import cached_master_sk_to_local_sk
 from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
@@ -470,7 +474,10 @@ class BlockTools:
             assert rng is not None
             bundle, additions = make_spend_bundle(available_coins, wallet, rng)
             removals = bundle.removals()
-            program = simple_solution_generator(bundle).program
+            if curr.height >= self.constants.HARD_FORK2_HEIGHT:
+                program = simple_solution_generator_2026(bundle).program
+            else:
+                program = simple_solution_generator(bundle).program
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
                 program,
@@ -971,7 +978,9 @@ class BlockTools:
         if transaction_data is not None:
             additions = compute_additions_unchecked(transaction_data)
             removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+            if curr.height >= self.constants.HARD_FORK2_HEIGHT:
+                program = simple_solution_generator_2026(transaction_data).program
+            elif curr.height >= self.constants.HARD_FORK_HEIGHT:
                 program = simple_solution_generator_backrefs(transaction_data).program
             else:
                 program = simple_solution_generator(transaction_data).program
