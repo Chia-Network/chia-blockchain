@@ -45,6 +45,7 @@ from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkAdd, ForkInfo
+from chia.consensus.block_creation import generator_root
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -3966,7 +3967,8 @@ class TestReorgs:
         assert not is_canonical_serialization(bytes(generator))
 
         block = recursive_replace(original_block, "transactions_generator", generator)
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        gen_root = generator_root(bytes(generator), original_block.height, bt.constants)
+        block = recursive_replace(block, "transactions_info.generator_root", gen_root)
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )
