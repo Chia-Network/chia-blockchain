@@ -659,7 +659,7 @@ async def test_rpc_get_puzzle_and_solution(wallet_environments: WalletTestFramew
     assert response.puzzle_reveal != ""
     assert response.solution != ""
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not found or not spent"):
         await rpc_client.fetch("get_puzzle_and_solution", GetPuzzleAndSolution(coin_name=bytes32.zeros).to_json_dict())
 
 
