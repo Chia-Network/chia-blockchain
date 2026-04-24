@@ -886,8 +886,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/richardkiss/chia_rs.git"
-reference = "6afc223e"
-resolved_reference = "6afc223e6df322b0b3e9e3058a4ce8f0763ef33d"
+reference = "bce770ae"
+resolved_reference = "bce770aecdaabc42f0261e2a59860eada52c7ee9"
 subdirectory = "wheel"
 
 [[package]]
@@ -4105,4 +4105,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "4252e81c503136f418467a96d6eb5569979da59860169d2dc4190d608be7057d"
+content-hash = "341a6165447c56e0d5b620dd63bb3788b59fd5ba0bf812c061fadc896847c9b4"
