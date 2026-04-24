@@ -227,6 +227,30 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(new_txs)
 
+    rpc_client = env.rpc_client
+
+    spendable_response = await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
+    assert len(spendable_response.confirmed_records) > 0
+
+    select_response = await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
+    assert len(select_response.coins) > 0
+
+    spendable = list(await wsm.get_spendable_coins_for_wallet(uint32(1)))
+    assert len(spendable) > 0
+    coin_name = spendable[0].coin.name()
+    records_response = await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[coin_name]))
+    assert len(records_response.coin_records) == 1
+    assert records_response.coin_records[0].name == coin_name
+
+    height_response = GetHeightInfoResponse.from_json_dict(
+        await rpc_client.fetch("get_height_info", GetHeightInfo().to_json_dict())
+    )
+    assert height_response.height > 0
+    height_peak_response = GetHeightInfoResponse.from_json_dict(
+        await rpc_client.fetch("get_height_info", GetHeightInfo(use_peak_height=True).to_json_dict())
+    )
+    assert height_peak_response.height >= height_response.height
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
@@ -601,79 +625,6 @@ async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, se
     await wallet_server.close_all_connections()
     await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
     assert await wsm.get_sync_status() == SyncStatus.DISCONNECTED
-
-
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
-    indirect=True,
-)
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-@pytest.mark.anyio
-async def test_rpc_get_spendable_coins(wallet_environments: WalletTestFramework) -> None:
-    env = wallet_environments.environments[0]
-    rpc_client = env.rpc_client
-
-    response = await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
-    assert len(response.confirmed_records) > 0
-
-
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
-    indirect=True,
-)
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-@pytest.mark.anyio
-async def test_rpc_select_coins(wallet_environments: WalletTestFramework) -> None:
-    env = wallet_environments.environments[0]
-    rpc_client = env.rpc_client
-
-    response = await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
-    assert len(response.coins) > 0
-
-
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
-    indirect=True,
-)
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-@pytest.mark.anyio
-async def test_rpc_get_coin_records_by_names(wallet_environments: WalletTestFramework) -> None:
-    env = wallet_environments.environments[0]
-    rpc_client = env.rpc_client
-    wsm = env.wallet_state_manager
-
-    spendable = list(await wsm.get_spendable_coins_for_wallet(uint32(1)))
-    assert len(spendable) > 0
-    coin_name = spendable[0].coin.name()
-
-    response = await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[coin_name]))
-    assert len(response.coin_records) == 1
-    assert response.coin_records[0].name == coin_name
-
-
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
-    indirect=True,
-)
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-@pytest.mark.anyio
-async def test_rpc_get_height_info_use_peak(wallet_environments: WalletTestFramework) -> None:
-    env = wallet_environments.environments[0]
-    rpc_client = env.rpc_client
-
-    response = GetHeightInfoResponse.from_json_dict(
-        await rpc_client.fetch("get_height_info", GetHeightInfo().to_json_dict())
-    )
-    assert response.height > 0
-
-    response_peak = GetHeightInfoResponse.from_json_dict(
-        await rpc_client.fetch("get_height_info", GetHeightInfo(use_peak_height=True).to_json_dict())
-    )
-    assert response_peak.height >= response.height
 
 
 @pytest.mark.parametrize(
