@@ -22,7 +22,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
-    tree_hash,
+    tree_hash_auto,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -44,7 +44,7 @@ log = logging.getLogger(__name__)
 def generator_root(program: bytes, height: int, constants: ConsensusConstants) -> bytes32:
     """Return the generator_root hash for a block at the given height."""
     if height >= constants.HARD_FORK2_HEIGHT:
-        return bytes32(tree_hash(program))
+        return bytes32(tree_hash_auto(program))
     return std_hash(program)
 
 
