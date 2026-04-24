@@ -24,6 +24,7 @@ from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.validation_state import ValidationState
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -486,20 +487,31 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         records: Collection[TransactionRecord | LightTransactionRecord],
         timeout: float | None = 5,
+        wallet_node: WalletNode | None = None,
     ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
         records with no spend bundle are ignored.
 
         Arguments:
             records: The transaction records to wait for.
+            wallet_node: If provided, the wallet's transaction store is polled
+                so that once the wallet has exhausted its retry attempts for a
+                transaction (``tx_record.is_valid()`` returns ``False``), the
+                wait fails fast with the last rejection error instead of running
+                until the timeout.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             ids_to_check: set[bytes32] = set()
+            bundle_to_tx_names: dict[bytes32, set[bytes32]] = {}
             for record in records:
                 if record.spend_bundle is None:
                     continue
 
-                ids_to_check.add(record.spend_bundle.name())
+                bundle_id = record.spend_bundle.name()
+                ids_to_check.add(bundle_id)
+                bundle_to_tx_names.setdefault(bundle_id, set()).add(record.name)
+
+            pending_tx_names: set[bytes32] = {n for names in bundle_to_tx_names.values() for n in names}
 
             for backoff in backoff_times():
                 found = set()
@@ -507,10 +519,31 @@ class FullNodeSimulator(FullNodeAPI):
                     tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
                     if tx is not None:
                         found.add(spend_bundle_name)
-                ids_to_check = ids_to_check.difference(found)
+                ids_to_check -= found
+                for bundle_id in found:
+                    pending_tx_names -= bundle_to_tx_names.get(bundle_id, set())
 
                 if len(ids_to_check) == 0:
                     return
+
+                if wallet_node is not None:
+                    for tx_name in pending_tx_names:
+                        tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx_name)
+                        if tx_record is None or tx_record.is_in_mempool():
+                            continue
+                        if not tx_record.is_valid():
+                            last_error = next(
+                                (
+                                    error
+                                    for _, status, error in reversed(tx_record.sent_to)
+                                    if status == MempoolInclusionStatus.FAILED.value and error is not None
+                                ),
+                                "unknown",
+                            )
+                            raise RuntimeError(
+                                f"Transaction {tx_name.hex()} was rejected: {last_error}. "
+                                f"Failing fast — wallet exhausted retries."
+                            )
 
                 await asyncio.sleep(backoff)
 
