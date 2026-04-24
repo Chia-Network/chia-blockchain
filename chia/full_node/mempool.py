@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from time import monotonic, sleep
 
-from chia_rs import (  # type: ignore[attr-defined]  # Block2026Builder: stubs not yet regenerated
+from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     AugSchemeMPL,
     Block2026Builder,
@@ -972,7 +972,7 @@ class Mempool:
         )
 
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            SerializedProgram.from_program_bytes(block_program),
             [],
             [],
             signature,
