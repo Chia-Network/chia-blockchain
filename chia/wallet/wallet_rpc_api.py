@@ -410,14 +410,14 @@ def tx_endpoint(
                         **kwargs,
                     )
 
+            response["sync_status"] = sync_status.value
+
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint
-                response["sync_status"] = sync_status.value
                 return response
 
             if "action_scope_override" in kwargs:
                 # deferring to parent action scope
-                response["sync_status"] = sync_status.value
                 return response
 
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
@@ -530,7 +530,6 @@ def tx_endpoint(
                         dataclasses.replace(tx, trade_id=new_trade.trade_id)
                     )
 
-            response["sync_status"] = sync_status.value
             return response
 
         return rpc_endpoint
