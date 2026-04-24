@@ -226,6 +226,8 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(new_txs)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
 
     rpc_client = env.rpc_client
 
