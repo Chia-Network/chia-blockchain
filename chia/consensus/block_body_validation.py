@@ -383,8 +383,11 @@ async def validate_block_body(
         assert conds.validated_signature
 
         if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
-            if not is_canonical_serialization(bytes(block.transactions_generator)):
-                return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+            # serde_2026 blocks use a different serialization format that
+            # is_canonical_serialization doesn't understand
+            if prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
+                if not is_canonical_serialization(bytes(block.transactions_generator)):
+                    return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
