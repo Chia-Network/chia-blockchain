@@ -574,8 +574,9 @@ class Mempool:
         assert conds is not None
         assert conds.cost > 0
 
+        wrap = SerializedProgram.from_program_bytes if (flags & INTERNED_GENERATOR) else SerializedProgram.from_bytes
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            wrap(block_program),
             [],
             [],
             spend_bundle.aggregated_signature,
