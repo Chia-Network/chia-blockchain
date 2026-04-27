@@ -1348,6 +1348,7 @@ class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: bool | None = None
     sign: bool | None = None
+    allow_unsynced: bool = False
 
     def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
         if not _avoid_ban:
