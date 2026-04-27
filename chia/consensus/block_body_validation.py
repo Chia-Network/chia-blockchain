@@ -383,10 +383,11 @@ async def validate_block_body(
         assert conds.validated_signature
 
         if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
-            # serde_2026 blocks use a different serialization format that
-            # is_canonical_serialization doesn't understand
-            if prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
-                if not is_canonical_serialization(bytes(block.transactions_generator)):
+            generator_bytes = bytes(block.transactions_generator)
+            # serde_2026 generators start with magic prefix \xfd\xff2026;
+            # is_canonical_serialization only applies to classic CLVM
+            if not generator_bytes.startswith(b"\xfd\xff2026"):
+                if not is_canonical_serialization(generator_bytes):
                     return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 
         for spend in conds.spends:
