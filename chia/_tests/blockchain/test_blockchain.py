@@ -28,7 +28,7 @@ from chia_rs import (
     UnfinishedBlock,
     is_canonical_serialization,
     run_block_generator2,
-    tree_hash,
+    tree_hash_auto,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -393,7 +393,7 @@ class TestBlockHeaderValidation:
         block = blocks[gen_idx]
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
-        assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
+        assert block.transactions_info.generator_root == bytes32(tree_hash_auto(bytes(block.transactions_generator)))
         unf = UnfinishedBlock(
             block.finished_sub_slots,
             block.reward_chain_block.get_unfinished(),
@@ -2698,7 +2698,7 @@ class TestBodyValidation:
         block = next(bl for bl in blocks if bl.transactions_generator is not None)
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
-        assert block.transactions_info.generator_root == bytes32(tree_hash(bytes(block.transactions_generator)))
+        assert block.transactions_info.generator_root == bytes32(tree_hash_auto(bytes(block.transactions_generator)))
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(
