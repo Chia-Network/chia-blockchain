@@ -662,10 +662,7 @@ class TestCoinSelection:
         )
 
         cat_wallet = env.wallet_state_manager.wallets[uint32(env.wallet_aliases["cat"])]
-        async with env.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config.override(primary_coin=other_coin_id),
-            push=True,
-        ) as action_scope:
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             puzhash = await action_scope.get_puzzle_hash(env.wallet_state_manager)
             # split the coin in two
             await cat_wallet.generate_signed_transaction([uint64(2), uint64(1)], [puzhash, puzhash], action_scope)
