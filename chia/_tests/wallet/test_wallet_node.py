@@ -691,6 +691,47 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     await simulator_and_wallet[1][0][0]._server.get_connections()[0].close(120)
     await time_out_assert(5, check_wallet_cache_empty, True)
 
+    # --- Fee-failure retry on new transaction block ---
+    # Reconnect and create a second transaction to test fee-failure retry behavior.
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    logged_spends.clear()
+
+    assert full_node_api.full_node._server is not None
+    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
+        [tx2] = action_scope.side_effects.transactions
+
+        await wallet_node._resend_queue()
+        await time_out_assert(5, logged_spends_len, 1)
+
+        # Ack with a fee error — this is a temporary rejection
+        fee_ack = make_msg(
+            ProtocolMessageTypes.transaction_ack,
+            wallet_protocol.TransactionAck(
+                tx2.name, uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name
+            ),
+        )
+        assert simulator_and_wallet[1][0][0]._server is not None
+        await simulator_and_wallet[1][0][0]._server.get_connections()[0].incoming_queue.put(fee_ack)
+        await time_out_assert(5, check_wallet_cache_empty, True)
+
+        # _resend_queue should NOT resend (peer is in already_sent with FAILED status)
+        await wallet_node._resend_queue()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, logged_spends_len, 2)
+
+        # But _retry_fee_failed_transactions should resend to the same peer
+        await wallet_node._retry_fee_failed_transactions()
+        await time_out_assert(5, logged_spends_len, 2)
+
+        # When shutting down, _retry_fee_failed_transactions is a no-op
+        wallet_node._shut_down = True
+        await wallet_node._retry_fee_failed_transactions()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, logged_spends_len, 3)
+        wallet_node._shut_down = False
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
