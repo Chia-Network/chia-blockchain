@@ -1411,15 +1411,14 @@ def _make_signage_point(sp_hash: bytes32) -> SignagePoint:
     return SignagePoint(vdf_info, None, None, None)
 
 
-def _add_second_subslot(
-    store: FullNodeStore, genesis_challenge: bytes32, seeded_random: random.Random
+def _add_subslot(
+    store: FullNodeStore, prev_challenge: bytes32, vdf_output_seed: int = 0
 ) -> tuple[bytes32, list[SignagePoint | None]]:
-    """Add a second subslot to the store and return its challenge + SP list."""
+    """Add a sub-slot with a distinguishable VDF output and return (new_challenge, sp_list)."""
     from chia_rs import ChallengeChainSubSlot, EndOfSubSlotBundle, RewardChainSubSlot, SubSlotProofs
 
-    cc = ChallengeChainSubSlot(
-        VDFInfo(genesis_challenge, uint64(1), ClassgroupElement(bytes100.zeros)), None, None, None, None
-    )
+    cc_vdf_output = ClassgroupElement(bytes100(bytes([vdf_output_seed]) * 100))
+    cc = ChallengeChainSubSlot(VDFInfo(prev_challenge, uint64(1), cc_vdf_output), None, None, None, None)
     rc = RewardChainSubSlot(
         VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros)), bytes32.zeros, None, uint8(0)
     )
@@ -1428,146 +1427,115 @@ def _add_second_subslot(
     eos = EndOfSubSlotBundle(cc, None, rc, proofs)
     num_sps = DEFAULT_CONSTANTS.NUM_SPS_SUB_SLOT
     new_sps: list[SignagePoint | None] = [None] * num_sps
-    store.finished_sub_slots.append((eos, new_sps, uint128(1000)))
+    store.finished_sub_slots.append((eos, new_sps, uint128(len(store.finished_sub_slots) * 1000)))
     return eos.challenge_chain.get_hash(), new_sps
 
 
 class TestGetFilterChallenge:
-    """Tests for FullNodeStore.get_filter_challenge().
+    """Tests for sub-slot-based filter_challenge.
 
-    filter_challenge is fixed per 16-SP window, sampled from 4 SPs before
-    the window start.  Windows: [0-15], [16-31], [32-47], [48-63].
+    - Window [0-15]:  uses SS(n-2) — penultimate sub-slot
+    - Windows [16-63]: use SS(n-1) — last completed sub-slot
+    filter_challenge = cc end-of-slot VDF output hash of the referenced sub-slot.
     """
 
-    def test_same_window_same_result(self, seeded_random: random.Random) -> None:
-        """All SPs in the same window get the same filter_challenge."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-        _, sps, _ = store.finished_sub_slots[0]
-
-        for i in range(20):
-            sps[i] = _make_signage_point(bytes32.random(seeded_random))
-
-        # Window [16-31]: filter_challenge = SP at (16 - 4) = SP 12
-        results = [store.get_filter_challenge(genesis, uint8(sp)) for sp in range(16, 20)]
-        assert all(r is not None for r in results)
-        assert len(set(results)) == 1, "All SPs in same window must share filter_challenge"
-
-    def test_window1_uses_sp12(self, seeded_random: random.Random) -> None:
-        """Window [16-31] uses SP 12 as filter_challenge."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-        _, sps, _ = store.finished_sub_slots[0]
-
-        sp12_hash = bytes32.random(seeded_random)
-        sps[12] = _make_signage_point(sp12_hash)
-
-        result = store.get_filter_challenge(genesis, uint8(20))
-        assert result is not None
-        sp12 = sps[12]
-        assert sp12 is not None and sp12.cc_vdf is not None
-        assert result == sp12.cc_vdf.output.get_hash()
-
-    def test_window2_uses_sp28(self, seeded_random: random.Random) -> None:
-        """Window [32-47] uses SP 28 as filter_challenge."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-        _, sps, _ = store.finished_sub_slots[0]
-
-        sps[28] = _make_signage_point(bytes32.random(seeded_random))
-
-        result = store.get_filter_challenge(genesis, uint8(35))
-        assert result is not None
-        sp28 = sps[28]
-        assert sp28 is not None and sp28.cc_vdf is not None
-        assert result == sp28.cc_vdf.output.get_hash()
-
-    def test_window0_wraps_to_previous_subslot(self, seeded_random: random.Random) -> None:
-        """Window [0-15] needs SP at (0 - 4) = SP 60 from previous subslot."""
+    def test_genesis_returns_none(self) -> None:
+        """At genesis (only 1 slot), all windows return None."""
         store = FullNodeStore(DEFAULT_CONSTANTS)
         store.initialize_genesis_sub_slot()
         genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
 
-        _, prev_sps, _ = store.finished_sub_slots[0]
-        prev_sps[60] = _make_signage_point(bytes32.random(seeded_random))
+        assert store.get_filter_challenge(genesis, uint8(0)) is None
+        assert store.get_filter_challenge(genesis, uint8(20)) is None
 
-        new_challenge, _ = _add_second_subslot(store, genesis, seeded_random)
-
-        result = store.get_filter_challenge(new_challenge, uint8(5))
-        assert result is not None
-        sp60 = prev_sps[60]
-        assert sp60 is not None and sp60.cc_vdf is not None
-        assert result == sp60.cc_vdf.output.get_hash()
-
-    def test_window0_all_sps_same_result(self, seeded_random: random.Random) -> None:
-        """All SPs 0-15 in window 0 get the same filter_challenge (SP 60 of prev)."""
+    def test_second_slot_window_16_uses_genesis(self) -> None:
+        """In second slot, SS(n-1) is genesis — returns GENESIS_CHALLENGE."""
         store = FullNodeStore(DEFAULT_CONSTANTS)
         store.initialize_genesis_sub_slot()
         genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
 
-        _, prev_sps, _ = store.finished_sub_slots[0]
-        prev_sps[60] = _make_signage_point(bytes32.random(seeded_random))
+        assert store.get_filter_challenge(ch1, uint8(5)) is None  # window 0 needs SS(n-2), only 2 entries
+        assert store.get_filter_challenge(ch1, uint8(20)) == genesis
 
-        new_challenge, _ = _add_second_subslot(store, genesis, seeded_random)
+    def test_third_slot_windows_16_to_63_use_ss_n1(self) -> None:
+        """In third slot, windows [16-63] use SS(n-1) challenge hash = ch1."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
 
-        results = [store.get_filter_challenge(new_challenge, uint8(sp)) for sp in range(16)]
+        for sp_idx in [16, 20, 32, 35, 48, 50, 63]:
+            result = store.get_filter_challenge(ch2, uint8(sp_idx))
+            assert result == ch1, f"SP {sp_idx} should use SS(n-1) challenge hash"
+
+    def test_third_slot_window_0_uses_genesis(self) -> None:
+        """In third slot, window [0-15] uses SS(n-2) = genesis."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        assert store.get_filter_challenge(ch2, uint8(5)) == genesis
+
+    def test_fourth_slot_window_0_uses_ss_n2(self) -> None:
+        """In fourth slot, window [0-15] uses SS(n-2) challenge hash = ch1."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        for sp_idx in range(16):
+            result = store.get_filter_challenge(ch3, uint8(sp_idx))
+            assert result == ch1, f"SP {sp_idx} in window 0 should use SS(n-2) challenge hash"
+
+    def test_window_0_differs_from_windows_16_to_63(self) -> None:
+        """Window [0-15] uses SS(n-2) while windows [16-63] use SS(n-1)."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        r_w0 = store.get_filter_challenge(ch3, uint8(5))
+        r_w1 = store.get_filter_challenge(ch3, uint8(20))
+        assert r_w0 is not None and r_w1 is not None
+        assert r_w0 != r_w1, "Window 0 (SS(n-2)) and window 1 (SS(n-1)) should differ"
+
+    def test_windows_16_to_63_share_filter_challenge(self) -> None:
+        """Windows [16-31], [32-47], [48-63] all use the same sub-slot."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        r1 = store.get_filter_challenge(ch2, uint8(20))
+        r2 = store.get_filter_challenge(ch2, uint8(35))
+        r3 = store.get_filter_challenge(ch2, uint8(50))
+        assert r1 is not None
+        assert r1 == r2 == r3, "Windows 1-3 should share the same filter_challenge"
+
+    def test_same_window_same_result(self) -> None:
+        """All SPs within a single window get the same filter_challenge."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        results = [store.get_filter_challenge(ch2, uint8(sp)) for sp in range(16, 32)]
         assert all(r is not None for r in results)
         assert len(set(results)) == 1
 
-    def test_no_previous_subslot(self, seeded_random: random.Random) -> None:
-        """Window 0 at genesis (no prev subslot) returns None."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-
-        result = store.get_filter_challenge(genesis, uint8(0))
-        assert result is None
-
-    def test_missing_target_sp(self, seeded_random: random.Random) -> None:
-        """Returns None when the target SP hasn't been received yet."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-
-        # SP 12 is None — window [16-31] can't get filter_challenge
-        result = store.get_filter_challenge(genesis, uint8(20))
-        assert result is None
-
-    def test_target_sp_with_none_cc_vdf(self, seeded_random: random.Random) -> None:
-        """Returns None when target SP exists but has no cc_vdf."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-        _, sps, _ = store.finished_sub_slots[0]
-
-        sps[12] = SignagePoint(None, None, None, None)
-
-        result = store.get_filter_challenge(genesis, uint8(20))
-        assert result is None
-
     def test_unknown_challenge(self, seeded_random: random.Random) -> None:
-        """Returns None when challenge hash isn't in any subslot."""
+        """Returns None when challenge hash isn't in any sub-slot."""
         store = FullNodeStore(DEFAULT_CONSTANTS)
         store.initialize_genesis_sub_slot()
 
-        result = store.get_filter_challenge(bytes32.random(seeded_random), uint8(20))
-        assert result is None
-
-    def test_different_windows_different_results(self, seeded_random: random.Random) -> None:
-        """Different windows use different filter_challenges."""
-        store = FullNodeStore(DEFAULT_CONSTANTS)
-        store.initialize_genesis_sub_slot()
-        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
-        _, sps, _ = store.finished_sub_slots[0]
-
-        for i in range(64):
-            sps[i] = _make_signage_point(bytes32.random(seeded_random))
-
-        # Window 1 uses SP 12, window 2 uses SP 28, window 3 uses SP 44
-        r1 = store.get_filter_challenge(genesis, uint8(16))
-        r2 = store.get_filter_challenge(genesis, uint8(32))
-        r3 = store.get_filter_challenge(genesis, uint8(48))
-        assert r1 != r2 != r3
+        assert store.get_filter_challenge(bytes32.random(seeded_random), uint8(20)) is None
