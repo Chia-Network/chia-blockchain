@@ -183,19 +183,20 @@ def verify_and_get_quality_string(
 
     if plot_param.strength_v2 is not None:
         # V2 plots always use the predictable filter — no fallback to prefix-bits.
-        # During weight proof validation (height_agnostic=True), the filter
-        # check will be skipped — VDF chain integrity + PoSpace validity is
-        # sufficient. See plan Task B7.
-        if filter_challenge is None or signage_point_index is None:
+        # Weight proofs (height_agnostic=True) skip the filter check:
+        # VDF chain integrity + PoSpace validity is sufficient there.
+        if filter_challenge is not None and signage_point_index is not None:
+            plot_group_id = compute_plot_group_id_from_pos(pos)
+            group_strength = (
+                calculate_base_plot_filter_bits(height, constants.HARD_FORK2_HEIGHT) + plot_param.strength_v2
+            )
+            if not passes_plot_filter_v2(
+                plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
+            ):
+                log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
+                return None
+        elif not height_agnostic:
             log.error("V2 plot requires filter_challenge and signage_point_index")
-            return None
-        plot_group_id = compute_plot_group_id_from_pos(pos)
-        group_strength = calculate_base_plot_filter_bits(height, constants.HARD_FORK2_HEIGHT) + plot_param.strength_v2
-
-        if not passes_plot_filter_v2(
-            plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
-        ):
-            log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
             return None
     else:
         # V1 plots use the original prefix-bits filter
@@ -268,9 +269,7 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 
 
 # V2 Plot Filter Constants
-# TODO: todo_v2_plots move FILTER_SP_LOOKBACK, FILTER_WINDOW_SIZE, and
-# _BASE_FILTER_OFFSETS to ConsensusConstants in chia_rs
-FILTER_SP_LOOKBACK: int = 4  # SPs before window start to sample filter_challenge
+# TODO: todo_v2_plots move FILTER_WINDOW_SIZE and _BASE_FILTER_OFFSETS to ConsensusConstants in chia_rs
 FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
 
 # Base plot filter reduction schedule — offsets from HARD_FORK2_HEIGHT

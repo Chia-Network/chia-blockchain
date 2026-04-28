@@ -57,7 +57,7 @@ class NewSignagePoint(Streamable):
     peak_height: uint32
     last_tx_height: uint32
     sp_source_data: SignagePointSourceData | None = None
-    filter_challenge: bytes32 | None = None  # SP hash from FILTER_SP_LOOKBACK SPs ago, for V2 plot filter
+    filter_challenge: bytes32 | None = None  # cc end-of-slot VDF output hash for V2 plot filter
 
 
 @streamable

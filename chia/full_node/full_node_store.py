@@ -842,53 +842,52 @@ class FullNodeStore:
                         return sp
         return None
 
-    def get_filter_challenge(
-        self, challenge: bytes32, index: uint8, *, lookback: int = 4, window_size: int = 16
-    ) -> bytes32 | None:
+    def get_filter_challenge(self, challenge: bytes32, index: uint8, *, window_size: int = 16) -> bytes32 | None:
         """
         Get the filter_challenge for V2 plot filter.
 
-        The filter_challenge is fixed for each window_size-SP window within a
-        subslot.  It is the SP hash from ``lookback`` SPs before the window
-        start.  All SPs in the same window share the same filter_challenge.
+        The filter_challenge is the cc sub-slot challenge hash of a previously
+        completed sub-slot.  All SPs in the same window share the same value.
 
         Windows (default 16): [0-15], [16-31], [32-47], [48-63]
-        For window starting at W, filter_challenge = SP hash at (W - lookback).
+        - Window [0-15]:  uses SS(n-2) challenge hash (~10 min notice)
+        - Window [16-63]: uses SS(n-1) challenge hash (~2.5-7.5 min notice)
 
-        Returns None when the target SP is unavailable (genesis, missing data).
+        This value is also available during sync via
+        BlockRecord.finished_challenge_slot_hashes, enabling trustless
+        verification without extra VDF proofs.
+
+        Returns None when the target sub-slot is unavailable (not enough history).
         """
         assert len(self.finished_sub_slots) >= 1
 
         window_start = (index // window_size) * window_size
-        target_index = window_start - lookback
 
-        for slot_idx, (sub_slot, sps, _) in enumerate(self.finished_sub_slots):
+        for slot_idx, (sub_slot, _, _) in enumerate(self.finished_sub_slots):
             slot_challenge = (
                 sub_slot.challenge_chain.get_hash() if sub_slot is not None else self.constants.GENESIS_CHALLENGE
             )
             if slot_challenge != challenge:
                 continue
 
-            if target_index >= 0:
-                sp = sps[target_index]
-                if sp is not None and sp.cc_vdf is not None:
-                    return sp.cc_vdf.output.get_hash()
-                log.debug("filter_challenge unavailable: SP %d missing or has no cc_vdf", target_index)
-                return None
+            if window_start == 0:
+                # Window [0-15]: use SS(n-2) challenge hash
+                if slot_idx < 2:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+                target_sub_slot = self.finished_sub_slots[slot_idx - 2][0]
+            else:
+                # Windows [16-31], [32-47], [48-63]: use SS(n-1) challenge hash
+                if slot_idx < 1:
+                    log.debug("filter_challenge unavailable: no previous sub-slot")
+                    return None
+                target_sub_slot = self.finished_sub_slots[slot_idx - 1][0]
 
-            # Target is in the previous subslot
-            if slot_idx == 0:
-                log.debug("filter_challenge unavailable: no previous subslot for window 0")
-                return None
-            _, prev_sps, _ = self.finished_sub_slots[slot_idx - 1]
-            prev_index = self.constants.NUM_SPS_SUB_SLOT + target_index
-            sp = prev_sps[prev_index]
-            if sp is not None and sp.cc_vdf is not None:
-                return sp.cc_vdf.output.get_hash()
-            log.debug("filter_challenge unavailable: prev subslot SP %d missing or has no cc_vdf", prev_index)
-            return None
+            if target_sub_slot is None:
+                return self.constants.GENESIS_CHALLENGE
+            return target_sub_slot.challenge_chain.get_hash()
 
-        log.debug("filter_challenge unavailable: challenge %s not found in finished_sub_slots", challenge.hex()[:16])
+        log.debug("filter_challenge unavailable: challenge %s not found", challenge.hex()[:16])
         return None
 
     def get_signage_point_by_index_and_cc_output(
