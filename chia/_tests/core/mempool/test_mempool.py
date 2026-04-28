@@ -3327,8 +3327,8 @@ create_coins_loop: str = (
         (create_coins_loop, "ff8201f580"),
     ],
 )
-@pytest.mark.parametrize("old", [True, False])
-def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bool) -> None:
+@pytest.mark.parametrize("mode", ["old", "new", "2026"])
+def test_create_block_generator_custom_spend(puzzle: str, solution: str, mode: str) -> None:
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
         FeeRate(uint64(1000000)),
@@ -3355,7 +3355,12 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
-    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    if mode == "old":
+        create_block = mempool.create_block_generator
+    elif mode == "new":
+        create_block = mempool.create_block_generator2
+    else:
+        create_block = mempool.create_block_generator_2026
     height = test_constants.HARD_FORK2_HEIGHT
     generator = create_block(test_constants, height, 10.0)
     assert generator is not None
@@ -3386,6 +3391,88 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
         assert removal in removals
 
     invariant_check_mempool(mempool)
+
+
+def test_create_block_generator_2026_empty_mempool() -> None:
+    """Empty mempool: 2026 generator returns None when there are no candidates."""
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
+    mempool = Mempool(mempool_info, fee_estimator)
+    height = test_constants.HARD_FORK2_HEIGHT
+    assert mempool.create_block_generator_2026(test_constants, height, 1.0) is None
+
+
+def test_create_block_generator_2026_skip_dedup() -> None:
+    """SkipDedup branch: two items spend the same dedup-eligible coin with
+    different solutions, so the second item triggers SkipDedup in the 2026 path.
+    """
+    from chia_rs import ELIGIBLE_FOR_DEDUP
+
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    shared_coin = make_coin(0)
+    item_a = mk_item([shared_coin, make_coin(1)], cost=1_000_000, fee=100, flags=[ELIGIBLE_FOR_DEDUP, 0])
+    # different solution on the same dedup coin -> SkipDedup
+    item_b = mk_item(
+        [shared_coin, make_coin(2)],
+        cost=1_000_000,
+        fee=100,
+        flags=[ELIGIBLE_FOR_DEDUP, 0],
+        solution="ff0180",
+    )
+    assert mempool.add_to_pool(item_a).error is None
+    assert mempool.add_to_pool(item_b).error is None
+
+    height = test_constants.HARD_FORK2_HEIGHT
+    generator = mempool.create_block_generator_2026(test_constants, height, 1.0)
+    assert generator is not None
+    # item_b is skipped via SkipDedup, so its unique coin (idx 2) is not in the block.
+    removals = set(generator.removals)
+    assert make_coin(1) in removals
+    assert make_coin(2) not in removals
+
+
+def test_create_block_generator_2026_zero_timeout() -> None:
+    """Zero timeout: 2026 generator skips the sleep branch and still returns a block."""
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
+    puzzle_reveal = SerializedProgram.fromhex(
+        "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"
+        "ffff03ffff09ff05ffff010180ff80ffff01ff04ffff04ffff0133ffff04ffff"
+        "01a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        "ffffffff04ff05ff80808080ffff02ff02ffff04ff02ffff04ffff11ff05ffff"
+        "010180ff808080808080ff0180ff018080"
+    )
+    solution_str = SerializedProgram.fromhex("ff6480")  # create 100 coins
+    puzzle_hash = puzzle_reveal.get_tree_hash()
+    mempool = Mempool(mempool_info, fee_estimator)
+    coins = [Coin(bytes32.random(), puzzle_hash, uint64(amount)) for amount in range(100000000, 100000005)]
+    for coin in coins:
+        sb = SpendBundle(
+            coin_spends=[CoinSpend(coin, puzzle_reveal=puzzle_reveal, solution=solution_str)],
+            aggregated_signature=G2Element(),
+        )
+        mempool.add_to_pool(mempool_item_from_spendbundle(sb))
+
+    height = test_constants.HARD_FORK2_HEIGHT
+    generator = mempool.create_block_generator_2026(test_constants, height, 0.0)
+    assert generator is not None
+    assert len(generator.removals) > 0
 
 
 @pytest.mark.parametrize("old", [True, False])
@@ -3438,8 +3525,8 @@ def test_create_block_generator(old: bool) -> None:
     invariant_check_mempool(mempool)
 
 
-@pytest.mark.parametrize("old", [True, False])
-def test_max_spends_per_block(old: bool) -> None:
+@pytest.mark.parametrize("mode", ["old", "new", "2026"])
+def test_max_spends_per_block(mode: str) -> None:
     max_cost = uint64(11_000_000_000)
     fee_estimator = create_bitcoin_fee_estimator(max_cost)
     mempool_info = MempoolInfo(
@@ -3477,8 +3564,14 @@ def test_max_spends_per_block(old: bool) -> None:
     total_items = MAX_SPENDS_PER_BLOCK - 1 + num_two_coin_items + 1
     assert mempool.size() == total_items
 
-    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    if mode == "old":
+        create_block = mempool.create_block_generator
+    elif mode == "new":
+        create_block = mempool.create_block_generator2
+    else:
+        create_block = mempool.create_block_generator_2026
+    height = test_constants.HARD_FORK2_HEIGHT if mode == "2026" else uint32(0)
+    generator = create_block(test_constants, height, 30.0)
     assert generator is not None
     # The 2-coin items were skipped but the final 1-coin item fits.
     assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
