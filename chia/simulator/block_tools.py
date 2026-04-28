@@ -212,7 +212,7 @@ def compute_block_cost(
             )
             if err is None and conds is not None:
                 return uint64(conds.cost)
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
         # Invalid blocks (e.g. wrong announcements) cause run_block_generator2
         # to fail before returning cost. Use MAX_BLOCK_COST_CLVM so the
