@@ -725,6 +725,11 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
         await wallet_node._retry_fee_failed_transactions()
         await time_out_assert(5, logged_spends_len, 2)
 
+        # While the message is still in flight, a second retry should skip the peer
+        await wallet_node._retry_fee_failed_transactions()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, logged_spends_len, 3)
+
         # When shutting down, _retry_fee_failed_transactions is a no-op
         wallet_node._shut_down = True
         await wallet_node._retry_fee_failed_transactions()
