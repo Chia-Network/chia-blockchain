@@ -46,7 +46,7 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
-from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
@@ -573,6 +573,33 @@ class WalletNode:
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _retry_fee_failed_transactions(self) -> None:
+        """Re-send transactions to peers that rejected them for insufficient fee.
+
+        Called on each new transaction block.  The mempool may have room now,
+        so we poke the same peers again without touching the sent_to history.
+        """
+        if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            return
+        fee_errors = {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name}
+        peer_map = {
+            p.peer_node_id: p for p in self.server.get_connections(NodeType.FULL_NODE)
+        }
+        records = await self.wallet_state_manager.tx_store.get_not_sent()
+        for record in records:
+            if record.spend_bundle is None:
+                continue
+            msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
+            msg_name = std_hash(msg.data)
+            for peer_id_hex, status, err in record.sent_to:
+                if status != MempoolInclusionStatus.FAILED.value or err not in fee_errors:
+                    continue
+                peer_node_id = bytes32.from_hexstr(peer_id_hex)
+                peer = peer_map.get(peer_node_id)
+                if peer is None or self._tx_message_in_flight(peer_node_id, msg_name):
+                    continue
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _retry_failed_states(self) -> None:
         while not self._shut_down:
@@ -1178,6 +1205,9 @@ class WalletNode:
             # Check if any coin needs auto spending
             if self.config.get("auto_claim", {}).get("enabled", False):
                 await self.wallet_state_manager.auto_claim_coins()
+
+        if new_peak_hb.foliage_transaction_block is not None:
+            await self._retry_fee_failed_transactions()
 
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
