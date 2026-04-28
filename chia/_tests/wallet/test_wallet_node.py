@@ -29,6 +29,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -731,6 +732,115 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
         with pytest.raises(AssertionError):
             await time_out_assert(5, logged_spends_len, 3)
         wallet_node._shut_down = False
+
+
+@pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
+@pytest.mark.anyio
+async def test_retry_fee_failed_skips_disconnected_and_in_flight(
+    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets
+) -> None:
+    """
+    Covers the ``continue`` on wallet_node.py line 599 inside
+    ``_retry_fee_failed_transactions``, which skips sending when the peer is
+    unavailable.  It exercises both branches of the guard condition on line 598
+    (``if peer is None or self._tx_message_in_flight(...)``):
+
+    Case 1 — peer disconnected:
+        A transaction is sent, receives a fee-error ack (INVALID_FEE_LOW_FEE),
+        and then the peer disconnects.  When ``_retry_fee_failed_transactions``
+        runs, ``peer_map.get(peer_node_id)`` returns ``None``, so the
+        ``continue`` fires and no resend occurs.
+
+    Case 2 — message already in flight:
+        A fresh transaction gets a fee-error ack
+        (INVALID_FEE_TOO_CLOSE_TO_ZERO), and then the message is manually
+        marked as in-flight in ``_tx_messages_in_progress``.  When
+        ``_retry_fee_failed_transactions`` runs, ``_tx_message_in_flight()``
+        returns ``True``, so the ``continue`` fires and no resend occurs.
+    """
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+
+    logged_spends: list[bytes32] = []
+
+    async def send_transaction(
+        self: Self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
+    ) -> Message | None:
+        logged_spends.append(request.transaction.name())
+        return None
+
+    def check_wallet_cache_empty() -> bool:
+        return wallet_node._tx_messages_in_progress == {}
+
+    assert full_node_api.full_node._server is not None
+    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
+        [tx] = action_scope.side_effects.transactions
+
+        await wallet_node._resend_queue()
+        await time_out_assert(5, lambda: len(logged_spends), 1)
+
+        fee_ack = make_msg(
+            ProtocolMessageTypes.transaction_ack,
+            wallet_protocol.TransactionAck(
+                tx.name, uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name
+            ),
+        )
+        assert simulator_and_wallet[1][0][0]._server is not None
+        wallet_conn = simulator_and_wallet[1][0][0]._server.get_connections()[0]
+        await wallet_conn.incoming_queue.put(fee_ack)
+        await time_out_assert(5, check_wallet_cache_empty, True)
+
+        # --- Case 1: peer disconnected -----------------------------------------------
+        # Disconnect and call _retry_fee_failed_transactions; the peer is no longer in
+        # the connection list so peer_map.get() returns None → continue (line 599).
+        await wallet_conn.close(120)
+        await wallet_node._retry_fee_failed_transactions()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, lambda: len(logged_spends), 2)
+
+    # --- Case 2: message already in flight ----------------------------------------
+    # Reconnect, re-create the fee-failed state, then manually mark the message as
+    # in-flight so _retry_fee_failed_transactions hits the second branch of line 598.
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    logged_spends.clear()
+
+    assert full_node_api.full_node._server is not None
+    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
+        [tx2] = action_scope.side_effects.transactions
+
+        await wallet_node._resend_queue()
+        await time_out_assert(5, lambda: len(logged_spends), 1)
+
+        fee_ack2 = make_msg(
+            ProtocolMessageTypes.transaction_ack,
+            wallet_protocol.TransactionAck(
+                tx2.name, uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name
+            ),
+        )
+        assert simulator_and_wallet[1][0][0]._server is not None
+        wallet_conn2 = simulator_and_wallet[1][0][0]._server.get_connections()[0]
+        await wallet_conn2.incoming_queue.put(fee_ack2)
+        await time_out_assert(5, check_wallet_cache_empty, True)
+
+        peer = full_node_api.full_node._server.get_connections()[0]
+        sb = tx2.spend_bundle
+        assert sb is not None
+        msg = make_msg(ProtocolMessageTypes.send_transaction, wallet_protocol.SendTransaction(sb))
+        msg_name = std_hash(msg.data)
+        wallet_node._tx_messages_in_progress.setdefault(peer.peer_node_id, []).append(msg_name)
+
+        await wallet_node._retry_fee_failed_transactions()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, lambda: len(logged_spends), 2)
+
+        wallet_node._tx_messages_in_progress.clear()
 
 
 @pytest.mark.parametrize(
