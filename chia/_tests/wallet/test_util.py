@@ -88,7 +88,7 @@ def test_cs_config() -> None:
         )
     with pytest.raises(ValueError, match="Some coin selection restrictions eliminated coins specified for inclusion"):
         a_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
-        CoinSelectionConfigLoader(included_coin_ids=[bytes32.zeros], excluded_coin_amounts=[uint64(0)]).autofill(
+        CoinSelectionConfigLoader(included_coin_ids=[a_coin.name()], excluded_coin_amounts=[uint64(0)]).autofill(
             constants=DEFAULT_CONSTANTS
         ).filter_coins({a_coin})
 
