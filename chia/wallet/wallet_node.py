@@ -583,9 +583,7 @@ class WalletNode:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return
         fee_errors = {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name}
-        peer_map = {
-            p.peer_node_id: p for p in self.server.get_connections(NodeType.FULL_NODE)
-        }
+        peer_map = {p.peer_node_id: p for p in self.server.get_connections(NodeType.FULL_NODE)}
         records = await self.wallet_state_manager.tx_store.get_not_sent()
         for record in records:
             if record.spend_bundle is None:
