@@ -486,3 +486,42 @@ async def test_inbound_handler_none_msg(
     assert read_calls == 1
     assert wsc.incoming_queue.qsize() == 0
     await wsc.close()
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_send_message_timed_out_nonced_request(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Covers the scenario where a nonced request gets timed out while it's in the
+    outgoing queue to make sure it gets dropped.
+    """
+    _, server, _ = one_node_one_block
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 1337)
+    event = asyncio.Event()
+    original_send_message = wsc._send_message
+    request_id: uint16 | None = None
+
+    async def test_send_message(message: Message) -> None:
+        nonlocal request_id
+        request_id = message.id
+        await event.wait()
+        await original_send_message(message)
+
+    monkeypatch.setattr(wsc, "_send_message", test_send_message)
+    msg_type = ProtocolMessageTypes.request_block
+    msg = make_msg(msg_type, b"")
+    response = await wsc.send_request(message_no_id=msg, timeout=0)
+    assert response is None
+    assert request_id in wsc.timed_out_requests
+    caplog.clear()
+    caplog.set_level(logging.INFO)
+    event.set()
+    await time_out_assert(
+        5, lambda: f"Dropping timed out request ID {request_id} with msg type {msg_type.name}" in caplog.text
+    )
+    assert request_id not in wsc.timed_out_requests
