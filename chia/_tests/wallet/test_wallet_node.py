@@ -791,9 +791,7 @@ async def test_retry_fee_failed_skips_disconnected_and_in_flight(
 
         fee_ack = make_msg(
             ProtocolMessageTypes.transaction_ack,
-            wallet_protocol.TransactionAck(
-                tx.name, uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name
-            ),
+            wallet_protocol.TransactionAck(tx.name, uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name),
         )
         assert simulator_and_wallet[1][0][0]._server is not None
         wallet_conn = simulator_and_wallet[1][0][0]._server.get_connections()[0]
