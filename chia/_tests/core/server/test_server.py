@@ -506,11 +506,11 @@ async def test_send_message_timed_out_nonced_request(
     original_send_message = wsc._send_message
     request_id: uint16 | None = None
 
-    async def test_send_message(message: Message) -> None:
+    async def test_send_message(message: Message, priority: int = 0) -> None:
         nonlocal request_id
         request_id = message.id
         await event.wait()
-        await original_send_message(message)
+        await original_send_message(message, priority=priority)
 
     monkeypatch.setattr(wsc, "_send_message", test_send_message)
     msg_type = ProtocolMessageTypes.request_block
