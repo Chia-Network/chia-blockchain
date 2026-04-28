@@ -1000,7 +1000,54 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(request.spend_bundle)
+
+        if request.fee > 0:
+            if await self.service.wallet_state_manager.synced() is False:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
+            assert self.service.logged_in_fingerprint is not None
+
+            bundle_coins = [cs.coin for cs in request.spend_bundle.coin_spends]
+            if len(bundle_coins) == 0:
+                raise ValueError("Spend bundle must contain at least one coin spend.")
+            async with self.service.wallet_state_manager.new_action_scope(
+                self.service.wallet_state_manager.tx_config,
+                push=False,
+            ) as action_scope:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.extend(bundle_coins)
+
+                await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    request.fee,
+                    action_scope,
+                    extra_conditions=(AssertConcurrentSpend(bundle_coins[0].name()),),
+                )
+
+            signed_fee_bundles = [
+                tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None
+            ]
+            combined_bundle = WalletSpendBundle.aggregate([request.spend_bundle, *signed_fee_bundles])
+
+            fee_txs = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=combined_bundle if i == 0 else None,
+                    name=combined_bundle.name() if i == 0 else tx.name,
+                )
+                for i, tx in enumerate(action_scope.side_effects.transactions)
+            ]
+            await self.service.wallet_state_manager.add_pending_transactions(
+                fee_txs,
+                push=True,
+                sign=False,
+                merge_spends=True,
+            )
+            if action_scope.side_effects.get_unused_derivation_record_result is not None:
+                await action_scope.side_effects.get_unused_derivation_record_result.to_standard().commit(
+                    self.service.wallet_state_manager
+                )
+        else:
+            await self.service.push_tx(request.spend_bundle)
+
         return Empty()
 
     @tx_endpoint(push=True)

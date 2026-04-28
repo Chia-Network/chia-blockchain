@@ -185,6 +185,7 @@ class GetHeightInfoResponse(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class PushTX(Streamable):
     spend_bundle: WalletSpendBundle
+    fee: uint64 = uint64(0)
 
     # We allow for flexibility in transaction parsing here so we need to override
     @classmethod
