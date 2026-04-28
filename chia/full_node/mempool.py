@@ -916,7 +916,9 @@ class Mempool:
 
                     new_fee_sum = fee_sum + fee
                     if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
-                        break
+                        # Such a fee is very unlikely to happen but we're defensively
+                        # accounting for it
+                        break  # pragma: no cover
 
                     new_spend_count = num_spends + len(unique_coin_spends)
                     if new_spend_count > MAX_SPENDS_PER_BLOCK:
@@ -938,7 +940,7 @@ class Mempool:
                     log.info(f"{e}")
                     singleton_ff = committed_ff.copy()
                     continue
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     log.info(f"Exception while processing mempool item for 2026 block: {e}")
                     singleton_ff = committed_ff.copy()
                     continue
@@ -956,7 +958,7 @@ class Mempool:
             block_program, signature, cost, included_indices = builder.best()
             # __exit__ joins the thread
 
-        if not block_program:
+        if not block_program:  # pragma: no cover
             return None
 
         additions: list[Coin] = []
