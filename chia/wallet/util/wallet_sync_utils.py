@@ -195,14 +195,23 @@ def validate_removals(
 
 async def request_and_validate_removals(
     peer: WSChiaConnection, height: uint32, header_hash: bytes32, coin_name: bytes32, removals_root: bytes32
-) -> bool:
+) -> bool | None:
+    """
+    Returns None on failure to obtain removals, otherwise it returns True or
+    False depending on the outcome of validation.
+    """
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
     removals_res: RespondRemovals | RejectRemovalsRequest | None = await peer.call_api(
         FullNodeAPI.request_removals, removals_request
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
-        return False
+        log.info(
+            f"Failed to obtain removals for height {height} header hash {header_hash} "
+            f"coin name {coin_name} from peer {peer.peer_node_id} / {peer.peer_info.host} "
+            f"version {peer.version} response: {removals_res}"
+        )
+        return None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
@@ -213,7 +222,7 @@ async def request_and_validate_additions(
     header_hash: bytes32,
     puzzle_hash: bytes32,
     additions_root: bytes32,
-) -> bool:
+) -> bool | None:
     if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
         return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
@@ -221,7 +230,12 @@ async def request_and_validate_additions(
         FullNodeAPI.request_additions, additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
-        return False
+        log.info(
+            f"Failed to obtain additions for height {height} header hash {header_hash} "
+            f"puzzle hash {puzzle_hash} from peer {peer.peer_node_id} / {peer.peer_info.host} "
+            f"version {peer.version} response: {additions_res}"
+        )
+        return None
     result: bool = validate_additions(
         additions_res.coins,
         additions_res.proofs,

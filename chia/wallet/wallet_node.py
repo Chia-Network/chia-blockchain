@@ -1459,6 +1459,8 @@ class WalletNode:
             state_block.foliage_transaction_block.additions_root,
         )
 
+        if validate_additions_result is None:
+            return False
         if validate_additions_result is False:
             self.log.warning("Validate false 1")
             await peer.close(9999)
@@ -1487,13 +1489,15 @@ class WalletNode:
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
 
-                validate_removals_result: bool = await request_and_validate_removals(
+                validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
                     spent_state_block.header_hash,
                     coin_state.coin.name(),
                     spent_state_block.foliage_transaction_block.removals_root,
                 )
+                if validate_removals_result is None:
+                    return False
                 if validate_removals_result is False:
                     self.log.warning("Validate false 2")
                     await peer.close(9999)
@@ -1524,6 +1528,8 @@ class WalletNode:
                 coin_state.coin.name(),
                 spent_state_block.foliage_transaction_block.removals_root,
             )
+            if validate_removals_result is None:
+                return False
             if validate_removals_result is False:
                 self.log.warning("Validate false 3")
                 await peer.close(9999)
