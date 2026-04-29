@@ -3260,10 +3260,10 @@ deep_recursion: str = (
         pytest.param(deep_recursion, "ff6480", id="recurse-100"),
     ],
 )
-@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("mode", ["old", "new", "2026"])
 @pytest.mark.anyio
 async def test_create_block_generator_custom_spend(
-    puzzle: str, solution: str, old: bool, softfork_height: uint32
+    puzzle: str, solution: str, mode: str, softfork_height: uint32
 ) -> None:
     solution_str = SerializedProgram.fromhex(solution)
     puzzle_reveal = SerializedProgram.fromhex(puzzle)
@@ -3292,7 +3292,12 @@ async def test_create_block_generator_custom_spend(
                 for cs in sb.coin_spends:
                     coins.remove(cs.coin)
 
-        create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+        if mode == "old":
+            create_block = mempool_manager.create_block_generator
+        elif mode == "new":
+            create_block = mempool_manager.create_block_generator2
+        else:
+            create_block = mempool_manager.create_block_generator_2026
         assert mempool_manager.peak is not None
         generator = create_block(mempool_manager.peak.header_hash, 10.0)
 
@@ -3305,11 +3310,14 @@ async def test_create_block_generator_custom_spend(
 
             removals = set(generator.removals)
 
+            from chia.consensus.flags import INTERNED_GENERATOR
+
+            flags = INTERNED_GENERATOR if mode == "2026" else 0
             err, conds = run_block_generator2(
                 bytes(generator.program),
                 generator.generator_refs,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-                0,
+                flags,
                 generator.signature,
                 None,
                 DEFAULT_CONSTANTS,
@@ -3326,6 +3334,13 @@ async def test_create_block_generator_custom_spend(
                 assert removal in removals
 
         invariant_check_mempool(mempool_manager.mempool)
+
+
+@pytest.mark.anyio
+async def test_create_block_generator_2026_wrong_header_hash() -> None:
+    """Mismatched header hash: the wrapper returns None without invoking the mempool."""
+    async with setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000005))) as (mempool_manager, _):
+        assert mempool_manager.create_block_generator_2026(bytes32(b"\xaa" * 32), 1.0) is None
 
 
 @pytest.mark.anyio

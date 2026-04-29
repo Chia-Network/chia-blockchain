@@ -39,6 +39,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    run_block_generator2,
     solution_generator,
     solve_proof,
 )
@@ -58,6 +59,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -72,7 +74,11 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
+from chia.full_node.bundle_tools import (
+    simple_solution_generator,
+    simple_solution_generator_2026,
+    simple_solution_generator_backrefs,
+)
 from chia.plotting.cache import cached_master_sk_to_local_sk
 from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
@@ -189,12 +195,34 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     return ret
 
 
+DONT_VALIDATE_SIGNATURE = 0x10000
+
+
 def compute_block_cost(
     generator: SerializedProgram, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
 ) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
     # need to be able to compute the cost of it
+
+    if height >= constants.HARD_FORK2_HEIGHT:
+        # INTERNED_GENERATOR changes the serialization cost model. Use
+        # run_block_generator2 (with signature validation disabled) to get
+        # the correct cost including tree-based serialization cost.
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+        try:
+            err, conds = run_block_generator2(
+                bytes(generator), [], constants.MAX_BLOCK_COST_CLVM, flags, G2Element(), None, constants
+            )
+            if err is None and conds is not None:
+                return uint64(conds.cost)
+        except Exception:  # pragma: no cover
+            pass
+        # Invalid blocks (e.g. wrong announcements) cause run_block_generator2
+        # to fail before returning cost. Use MAX_BLOCK_COST_CLVM so the
+        # block validator can run with enough headroom to reach the real
+        # condition error instead of bailing with BLOCK_COST_EXCEEDS_MAX.
+        return uint64(constants.MAX_BLOCK_COST_CLVM)
 
     condition_cost = 0
     clvm_cost = 0
@@ -450,7 +478,10 @@ class BlockTools:
             assert rng is not None
             bundle, additions = make_spend_bundle(available_coins, wallet, rng)
             removals = bundle.removals()
-            program = simple_solution_generator(bundle).program
+            if curr.height >= self.constants.HARD_FORK2_HEIGHT:
+                program = simple_solution_generator_2026(bundle).program
+            else:
+                program = simple_solution_generator(bundle).program
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
                 program,
@@ -951,7 +982,9 @@ class BlockTools:
         if transaction_data is not None:
             additions = compute_additions_unchecked(transaction_data)
             removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+            if curr.height >= self.constants.HARD_FORK2_HEIGHT:
+                program = simple_solution_generator_2026(transaction_data).program
+            elif curr.height >= self.constants.HARD_FORK_HEIGHT:
                 program = simple_solution_generator_backrefs(transaction_data).program
             else:
                 program = simple_solution_generator(transaction_data).program
