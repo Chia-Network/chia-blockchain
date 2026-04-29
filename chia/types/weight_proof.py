@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia_rs import EndOfSubSlotBundle, HeaderBlock, RewardChainBlock, SubEpochChallengeSegment, SubEpochData
+from chia_rs import (
+    EndOfSubSlotBundle,
+    HeaderBlock,
+    RewardChainBlock,
+    SubEpochChallengeSegment,
+    SubEpochData,
+)
 
 from chia.util.streamable import Streamable, streamable
 

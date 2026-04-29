@@ -13,14 +13,14 @@ def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
         finished_sub_slots=0,
     ) == uint32(0)
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(1),
         finished_sub_slots=1,
@@ -41,7 +41,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -54,7 +54,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -67,7 +67,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -93,7 +93,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert pre_sp_tx_block_height(
         constants=bt.constants,
-        blocks=BlockCache(blocks),
+        blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(block.finished_sub_slots),
@@ -117,7 +117,9 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
             )
         if curr.foliage_transaction_block is not None and before_sp:
             break
+
         if len(curr.finished_sub_slots) > 0:
             slots_crossed += 1
         idx -= 1
+
     return curr

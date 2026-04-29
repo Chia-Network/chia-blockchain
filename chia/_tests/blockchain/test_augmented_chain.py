@@ -12,6 +12,8 @@ from chia_rs.sized_ints import uint32
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.augmented_chain import AugmentedBlockchain, AugmentedBlockchainValidationError
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.simulator.block_tools import BlockTools
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
@@ -26,6 +28,7 @@ class NullBlockchain:
 
     added_blocks: set[bytes32] = field(default_factory=set)
     heights: dict[uint32, bytes32] = field(default_factory=dict)
+    mmr_manager: MMRManagerProtocol = StubMMRManager()
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -56,6 +59,11 @@ class NullBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
+    def get_mmr_root_for_block(
+        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
+    ) -> bytes32 | None:
+        return None  # pragma: no cover
+
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
 
@@ -69,7 +77,7 @@ class InMemoryBlockchain(BlockCache):
         _protocol_check: ClassVar[BlocksProtocol] = cast("InMemoryBlockchain", None)
 
     def __init__(self) -> None:
-        super().__init__({})
+        super().__init__({}, mmr_manager=StubMMRManager())
 
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover

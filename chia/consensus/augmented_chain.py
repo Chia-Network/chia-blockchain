@@ -6,7 +6,7 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.blockchain_interface import BlocksProtocol
+from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
 from chia.util.errors import Err
 
 
@@ -32,13 +32,17 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    _fork_height: uint32 | None
     _read_only: bool
+    mmr_manager: MMRManagerProtocol
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._fork_height = None
         self._read_only = False
+        self.mmr_manager = underlying.mmr_manager.copy()
 
     def _ensure_mutable(self) -> None:
         if self._read_only:
@@ -49,7 +53,9 @@ class AugmentedBlockchain:
         snapshot._underlying = self._underlying
         snapshot._extra_blocks = self._extra_blocks.copy()
         snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._fork_height = self._fork_height
         snapshot._read_only = True
+        snapshot.mmr_manager = self.mmr_manager.copy()
         return snapshot
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
@@ -64,8 +70,8 @@ class AugmentedBlockchain:
         curr_hash = prev_hash
         while True:
             br = self._underlying.block_record(curr_hash)
-            # if common block, break,
             if self._underlying.height_to_hash(br.height) == curr_hash:
+                self._fork_height = br.height
                 break
             self._height_to_hash[br.height] = curr_hash
             if br.height == 0:
@@ -111,6 +117,7 @@ class AugmentedBlockchain:
                 if h not in self._height_to_hash:
                     break
                 del self._height_to_hash[uint32(h)]
+            self._fork_height = block_record.height
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -198,3 +205,16 @@ class AugmentedBlockchain:
             else:
                 ret.extend(await self._underlying.prev_block_hash([hh]))
         return ret
+
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(
+            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._fork_height
+        )
+
+    def compute_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.compute_current_mmr_root()
