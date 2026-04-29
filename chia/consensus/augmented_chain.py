@@ -216,5 +216,5 @@ class AugmentedBlockchain:
             prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._fork_height
         )
 
-    def get_current_mmr_root(self) -> bytes32 | None:
-        return self.mmr_manager.get_current_mmr_root()
+    def compute_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.compute_current_mmr_root()

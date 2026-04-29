@@ -27,6 +27,7 @@ def make_sub_epoch_summary(
     prev_prev_block: BlockRecord,
     new_difficulty: uint64 | None,
     new_sub_slot_iters: uint64 | None,
+    *,
     make_challenge_root: bool = False,
     prev_ses_block: BlockRecord | None = None,
 ) -> SubEpochSummary:
@@ -216,5 +217,11 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants, blocks, uint32(prev_b.height + 2), prev_b, next_difficulty, next_sub_slot_iters, with_challenge_root
+        constants,
+        blocks,
+        uint32(prev_b.height + 2),
+        prev_b,
+        next_difficulty,
+        next_sub_slot_iters,
+        make_challenge_root=with_challenge_root,
     )

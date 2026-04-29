@@ -15,13 +15,14 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.util.hash import std_hash
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class SlotChallengeData:
+@streamable
+@dataclass(frozen=True)
+class SlotChallengeData(Streamable):
     """
     Represents challenge data for a single slot in a sub-epoch.
     Groups blocks by their slot challenge and tracks the count.
@@ -121,14 +122,8 @@ def build_challenge_merkle_tree(slot_data: list[SlotChallengeData]) -> bytes32:
         log.warning("No slot data provided for challenge merkle tree")
         return bytes32.zeros
 
-    # Create merkle set leaves: hash(challenge_hash + block_count) for each slot
-    merkle_leaves: list[bytes32] = []
-    for slot in slot_data:
-        # Create leaf: hash(challenge_hash || block_count)
-        # block_count is serialized as 4-byte big-endian uint32
-        leaf_data = slot.challenge_hash + slot.block_count.to_bytes(4, "big")
-        leaf_hash = std_hash(leaf_data)
-        merkle_leaves.append(leaf_hash)
+    # Create merkle set leaves from the streamable slot payload.
+    merkle_leaves = [slot.get_hash() for slot in slot_data]
 
     # Build merkle set (order-independent)
     return bytes32(compute_merkle_set_root(merkle_leaves))

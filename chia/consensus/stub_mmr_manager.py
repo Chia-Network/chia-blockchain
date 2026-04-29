@@ -28,7 +28,7 @@ class StubMMRManager:
         # Return empty bytes for test contexts
         return None
 
-    def get_current_mmr_root(self) -> bytes32 | None:
+    def compute_current_mmr_root(self) -> bytes32 | None:
         return None
 
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:

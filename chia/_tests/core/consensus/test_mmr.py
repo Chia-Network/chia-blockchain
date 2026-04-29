@@ -469,7 +469,7 @@ def test_mmr_rollback_to_empty_when_already_empty() -> None:
     mmr.rollback_to_height(-1, blocks)
     assert mmr._last_height is None
     assert mmr._last_header_hash is None
-    assert mmr.get_current_mmr_root() is None
+    assert mmr.compute_current_mmr_root() is None
 
 
 def test_mmr_genesis_block_handling() -> None:
@@ -490,7 +490,7 @@ def test_mmr_genesis_block_handling() -> None:
     # Verify the MMR state hasn't changed
     assert mmr._last_height is None
     assert mmr._last_header_hash is None
-    assert mmr.get_current_mmr_root() is None
+    assert mmr.compute_current_mmr_root() is None
 
 
 def test_mmr_aggregate_from_filtering() -> None:
@@ -513,7 +513,7 @@ def test_mmr_aggregate_from_filtering() -> None:
     # MMR should still be empty (no blocks added)
     assert mmr._last_height is None
     assert mmr._last_header_hash is None
-    assert mmr.get_current_mmr_root() is None
+    assert mmr.compute_current_mmr_root() is None
 
     # Now add blocks from aggregate_from onwards - should be added
     for height in range(500, 505):
@@ -523,10 +523,32 @@ def test_mmr_aggregate_from_filtering() -> None:
 
     # MMR should now contain 5 blocks (500-504)
     assert mmr._last_height == uint32(504)
-    assert mmr.get_current_mmr_root() is not None
+    assert mmr.compute_current_mmr_root() is not None
 
     # Verify the MMR has nodes for these 5 blocks
     assert len(mmr._mmr.nodes) > 0
+
+
+def test_mmr_enforces_sequential_heights_from_aggregate_from() -> None:
+    aggregate_from = uint32(500)
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
+
+    with pytest.raises(AssertionError):
+        mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(501))
+
+    first_hash = bytes32([1] * 32)
+    mmr.add_block_to_mmr(first_hash, bytes32.zeros, aggregate_from)
+
+    with pytest.raises(AssertionError):
+        mmr.add_block_to_mmr(bytes32([2] * 32), first_hash, uint32(502))
+
+
+def test_compute_current_mmr_root_reflects_current_state() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    assert mmr.compute_current_mmr_root() is None
+
+    mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(0))
+    assert mmr.compute_current_mmr_root() == mmr._mmr.compute_root()
 
 
 def test_mmr_init_validation() -> None:
@@ -575,11 +597,11 @@ def test_mmr_rollback_below_aggregate_from() -> None:
     blocks = BlockCache(block_records, mmr_manager=mmr)
 
     assert mmr._last_height == uint32(504)
-    assert mmr.get_current_mmr_root() is not None
+    assert mmr.compute_current_mmr_root() is not None
 
     # Rollback to height 99 (below aggregate_from) - should clear MMR
     mmr.rollback_to_height(99, blocks)
 
     assert mmr._last_height is None
     assert mmr._last_header_hash is None
-    assert mmr.get_current_mmr_root() is None
+    assert mmr.compute_current_mmr_root() is None

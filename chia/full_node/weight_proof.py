@@ -1282,7 +1282,7 @@ def validate_recent_blocks(
                     block,
                     False,
                     expected_vs,
-                    ses_blocks > 2,
+                    check_sub_epoch_summary=ses_blocks > 2,
                     skip_commitment_validation=True,
                 )
                 if error is not None:

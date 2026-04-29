@@ -85,6 +85,7 @@ def _pre_validate_block(
     prev_generators: list[bytes] | None,
     conds: SpendBundleConditions | None,
     expected_vs: ValidationState,
+    *,
     skip_commitment_validation: bool = False,
 ) -> PreValidationResult:
     """
@@ -284,7 +285,7 @@ async def pre_validate_block(
         previous_generators,
         conds,
         copy.copy(vs),
-        skip_commitment_validation,
+        skip_commitment_validation=skip_commitment_validation,
         nice=nice,
         dedicated=dedicated,
     )

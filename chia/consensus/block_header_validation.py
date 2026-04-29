@@ -441,8 +441,8 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_vs.difficulty if can_finish_epoch else None,
                         expected_vs.ssi if can_finish_epoch else None,
-                        pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT,
-                        expected_vs.prev_ses_block,
+                        make_challenge_root=pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT,
+                        prev_ses_block=expected_vs.prev_ses_block,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
@@ -851,6 +851,7 @@ def validate_finished_header_block(
     header_block: HeaderBlock,
     check_filter: bool,
     expected_vs: ValidationState,
+    *,
     check_sub_epoch_summary: bool = True,
     skip_commitment_validation: bool = False,
 ) -> tuple[uint64 | None, ValidationError | None]:

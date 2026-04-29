@@ -27,7 +27,7 @@ class BlockchainMMRManager:
     aggregate_from: uint32 = field(default=uint32(0))  # Height from which to start aggregating blocks into MMR
 
     def __repr__(self) -> str:
-        return f"BlockchainMMRManager(height={self._last_height}, root={self.get_current_mmr_root()!r})"
+        return f"BlockchainMMRManager(height={self._last_height}, root={self.compute_current_mmr_root()!r})"
 
     def copy(self) -> BlockchainMMRManager:
         """Create a deep copy of this MMR manager."""
@@ -43,18 +43,25 @@ class BlockchainMMRManager:
         if height < self.aggregate_from:
             return
 
-        # Only add blocks that are the next expected height
-        assert self._last_header_hash is None or (prev_hash == self._last_header_hash)
+        # Only add blocks that are the next expected height.
+        if self._last_header_hash is None:
+            assert self._last_height is None
+            assert height == self.aggregate_from
+        else:
+            assert prev_hash == self._last_header_hash
+            assert self._last_height is not None
+            assert height == self._last_height + 1
+
         # Add block's header hash to the MMR
         self._mmr.append(header_hash)
         # Store minimal block info for validation
         self._last_header_hash = header_hash
         self._last_height = height
 
-        log.debug(f"Added block {height} to MMR, new root: {self._mmr.compute_root()}")
+        log.debug(f"Added block {height} to MMR, new root: {self.compute_current_mmr_root()}")
 
-    def get_current_mmr_root(self) -> bytes32 | None:
-        """Get the current MMR root representing all blocks added so far"""
+    def compute_current_mmr_root(self) -> bytes32 | None:
+        """Compute the current MMR root representing all blocks added so far."""
         return self._mmr.compute_root()
 
     def _build_mmr_to_block(
@@ -74,7 +81,7 @@ class BlockchainMMRManager:
             and self._last_height == target_height
             and self._last_header_hash == target_block.header_hash
         ):
-            return self._mmr.compute_root()
+            return self.compute_current_mmr_root()
 
         # Case 2: Build from scratch when we don't have usable fork context
         if self._last_height is None or fork_height is None:
@@ -158,7 +165,6 @@ class BlockchainMMRManager:
                 )
                 break
 
-            # TODO: do we include all from genesis or from the fork point?
             if current.height == 0:
                 # Reached genesis without finding cutoff
                 break

@@ -254,14 +254,14 @@ def test_mmr_manager_deep_copy() -> None:
     mmr1.add_block_to_mmr(bytes32([3] * 32), bytes32([2] * 32), uint32(2))
 
     original_height = mmr1._last_height
-    original_root = mmr1.get_current_mmr_root()
+    original_root = mmr1.compute_current_mmr_root()
 
     # Create a copy
     mmr2 = mmr1.copy()
 
     # Verify initial state matches
     assert mmr2._last_height == original_height
-    assert mmr2.get_current_mmr_root() == original_root
+    assert mmr2.compute_current_mmr_root() == original_root
 
     # Mutate the copy
     mmr2.add_block_to_mmr(bytes32([4] * 32), bytes32([3] * 32), uint32(3))
@@ -269,11 +269,11 @@ def test_mmr_manager_deep_copy() -> None:
 
     # Verify original is unchanged (deep copy worked)
     assert mmr1._last_height == original_height
-    assert mmr1.get_current_mmr_root() == original_root
+    assert mmr1.compute_current_mmr_root() == original_root
 
     # Verify copy has new state
     assert mmr2._last_height == uint32(4)
-    assert mmr2.get_current_mmr_root() != original_root
+    assert mmr2.compute_current_mmr_root() != original_root
 
     # Verify they are truly independent objects
     assert mmr1._mmr is not mmr2._mmr

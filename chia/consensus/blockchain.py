@@ -1107,8 +1107,8 @@ class Blockchain:
     ) -> bytes32 | None:
         return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
 
-    def get_current_mmr_root(self) -> bytes32 | None:
-        return self.mmr_manager.get_current_mmr_root()
+    def compute_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.compute_current_mmr_root()
 
     def add_block_to_mmr(self, block_record: BlockRecord) -> None:
         self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
