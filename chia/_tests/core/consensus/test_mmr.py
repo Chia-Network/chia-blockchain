@@ -29,8 +29,10 @@ def _serialize_expected_proof(flags_bits: list[int], siblings: list[bytes32]) ->
         flags |= (bit & 1) << i
 
     num_flag_bytes = (len(flags_bits) + 7) // 8 if flags_bits else 1
-    return len(siblings).to_bytes(2, "big") + flags.to_bytes(num_flag_bytes, "little") + b"".join(
-        bytes(sibling) for sibling in siblings
+    return (
+        len(siblings).to_bytes(2, "big")
+        + flags.to_bytes(num_flag_bytes, "little")
+        + b"".join(bytes(sibling) for sibling in siblings)
     )
 
 
