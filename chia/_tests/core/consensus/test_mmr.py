@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import logging
 import random
-import time
 
 import pytest
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia._tests.util.misc import BenchmarkRunner
+from chia._tests.wallet.wallet_block_tools import load_block_list
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.mmr import (
@@ -18,16 +18,87 @@ from chia.consensus.mmr import (
     leaf_index_to_pos,
     verify_mmr_inclusion,
 )
+from chia.simulator.block_tools import BlockTools
 from chia.util.block_cache import BlockCache
+from chia.util.hash import std_hash
 
-logger = logging.getLogger(__name__)
+
+def _serialize_expected_proof(flags_bits: list[int], siblings: list[bytes32]) -> bytes:
+    flags = 0
+    for i, bit in enumerate(flags_bits):
+        flags |= (bit & 1) << i
+
+    num_flag_bytes = (len(flags_bits) + 7) // 8 if flags_bits else 1
+    return len(siblings).to_bytes(2, "big") + flags.to_bytes(num_flag_bytes, "little") + b"".join(
+        bytes(sibling) for sibling in siblings
+    )
+
+
+def _proof_by_index(mmr: MerkleMountainRange, leaf_index: int) -> tuple[uint32, bytes, list[bytes32], bytes32]:
+    proof = mmr.get_inclusion_proof_by_index(leaf_index)
+    assert proof is not None
+    return proof
+
+
+def _assert_inclusion_proof(
+    mmr: MerkleMountainRange,
+    *,
+    leaf_index: int,
+    leaf: bytes32,
+    root: bytes32 | None = None,
+    expected_peak_index: int | None = None,
+    expected_proof_bytes: bytes | None = None,
+    expected_other_peaks: list[bytes32] | None = None,
+    expected_peak: bytes32 | None = None,
+) -> tuple[uint32, bytes, list[bytes32], bytes32]:
+    computed_root = root if root is not None else mmr.compute_root()
+    assert computed_root is not None
+
+    proof = _proof_by_index(mmr, leaf_index)
+    peak_index, proof_bytes, other_peaks, peak = proof
+    for expected, actual in (
+        (expected_peak_index, peak_index),
+        (expected_proof_bytes, proof_bytes),
+        (expected_other_peaks, other_peaks),
+        (expected_peak, peak),
+    ):
+        if expected is not None:
+            assert actual == expected
+
+    assert verify_mmr_inclusion(computed_root, leaf, peak_index, proof_bytes, other_peaks, peak)
+    return proof
+
+
+def _pre_sp_cutoff_height(
+    block_records_by_height: list[BlockRecord],
+    prev_height: int,
+    new_sp_index: int,
+    starts_new_slot: bool,
+) -> int | None:
+    if prev_height < 0:
+        return None
+
+    if starts_new_slot:
+        return prev_height
+
+    current_height = prev_height
+    while current_height >= 0:
+        current = block_records_by_height[current_height]
+        if current.signage_point_index < new_sp_index:
+            return current_height
+        if current.height == 0:
+            return None
+        if current.first_in_sub_slot:
+            return current_height - 1
+        current_height -= 1
+
+    return None
 
 
 def test_empty_mmr_root() -> None:
     mmr = MerkleMountainRange()
     assert mmr.compute_root() is None  # Empty MMR returns None
-    # Note: get_inclusion_proof not yet implemented
-    # assert mmr.get_inclusion_proof(random_bytes32()) is None
+    assert mmr.get_inclusion_proof_by_index(0) is None
 
 
 def test_single_leaf() -> None:
@@ -36,10 +107,93 @@ def test_single_leaf() -> None:
     mmr.append(leaf)
     root = mmr.compute_root()
     assert root is not None
-    proof = mmr.get_inclusion_proof_by_index(0)
-    assert proof is not None
-    peak_index, proof_bytes, other_peaks, peak = proof
-    assert verify_mmr_inclusion(root, leaf, peak_index, proof_bytes, other_peaks, peak)
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=0,
+        leaf=leaf,
+        root=root,
+        expected_peak_index=0,
+        expected_proof_bytes=_serialize_expected_proof([], []),
+        expected_other_peaks=[],
+        expected_peak=leaf,
+    )
+    assert mmr.get_inclusion_proof_by_index(1) is None
+
+
+def test_two_leaf_proof_shapes() -> None:
+    left_leaf = bytes32([1] * 32)
+    right_leaf = bytes32([2] * 32)
+    expected_root = std_hash(left_leaf + right_leaf)
+
+    mmr = MerkleMountainRange()
+    mmr.append(left_leaf)
+    mmr.append(right_leaf)
+
+    assert mmr.compute_root() == expected_root
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=0,
+        leaf=left_leaf,
+        root=expected_root,
+        expected_peak_index=0,
+        expected_proof_bytes=_serialize_expected_proof([1], [right_leaf]),
+        expected_other_peaks=[],
+        expected_peak=expected_root,
+    )
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=1,
+        leaf=right_leaf,
+        root=expected_root,
+        expected_peak_index=0,
+        expected_proof_bytes=_serialize_expected_proof([0], [left_leaf]),
+        expected_other_peaks=[],
+        expected_peak=expected_root,
+    )
+
+
+def test_three_leaf_proof_shapes() -> None:
+    leaf_a = bytes32([1] * 32)
+    leaf_b = bytes32([2] * 32)
+    leaf_c = bytes32([3] * 32)
+    left_peak = std_hash(leaf_a + leaf_b)
+    expected_root = std_hash(left_peak + leaf_c)
+
+    mmr = MerkleMountainRange()
+    for leaf in [leaf_a, leaf_b, leaf_c]:
+        mmr.append(leaf)
+
+    assert mmr.compute_root() == expected_root
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=0,
+        leaf=leaf_a,
+        root=expected_root,
+        expected_peak_index=1,
+        expected_proof_bytes=_serialize_expected_proof([1], [leaf_b]),
+        expected_other_peaks=[leaf_c],
+        expected_peak=left_peak,
+    )
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=1,
+        leaf=leaf_b,
+        root=expected_root,
+        expected_peak_index=1,
+        expected_proof_bytes=_serialize_expected_proof([0], [leaf_a]),
+        expected_other_peaks=[leaf_c],
+        expected_peak=left_peak,
+    )
+    _assert_inclusion_proof(
+        mmr,
+        leaf_index=2,
+        leaf=leaf_c,
+        root=expected_root,
+        expected_peak_index=0,
+        expected_proof_bytes=_serialize_expected_proof([], []),
+        expected_other_peaks=[left_peak],
+        expected_peak=leaf_c,
+    )
 
 
 def test_multiple_leaves() -> None:
@@ -50,10 +204,7 @@ def test_multiple_leaves() -> None:
     root = mmr.compute_root()
     assert root is not None
     for idx, leaf in enumerate(leaves):
-        proof = mmr.get_inclusion_proof_by_index(idx)
-        assert proof is not None
-        peak_index, proof_bytes, other_peaks, peak = proof
-        assert verify_mmr_inclusion(root, leaf, peak_index, proof_bytes, other_peaks, peak)
+        _assert_inclusion_proof(mmr, leaf_index=idx, leaf=leaf, root=root)
     # Root should be stable
     mmr2 = MerkleMountainRange()
     for leaf in leaves:
@@ -71,12 +222,9 @@ def test_duplicate_leaves() -> None:
         mmr.append(leaf)
     # All should be provable by index
     for i in range(3):
-        proof = mmr.get_inclusion_proof_by_index(i)
-        assert proof is not None
-        peak_index, proof_bytes, other_peaks, peak = proof
         root = mmr.compute_root()
         assert root is not None
-        assert verify_mmr_inclusion(root, leaf, peak_index, proof_bytes, other_peaks, peak)
+        _assert_inclusion_proof(mmr, leaf_index=i, leaf=leaf, root=root)
 
 
 def test_mmr_height() -> None:
@@ -92,9 +240,7 @@ def test_mmr_height() -> None:
         assert mmr.get_tree_height() == expected_height
 
 
-@pytest.mark.anyio
-@pytest.mark.skip("skip untill we add the chains with new format")
-async def test_mmr_block_inclusion_by_header_hash(default_1000_blocks: list[FullBlock]) -> None:
+def test_mmr_block_inclusion_by_header_hash(default_1000_blocks: list[FullBlock]) -> None:
     mmr = MerkleMountainRange()
     header_hashes = [block.header_hash for block in default_1000_blocks]
     for hh in header_hashes:
@@ -102,43 +248,27 @@ async def test_mmr_block_inclusion_by_header_hash(default_1000_blocks: list[Full
     # Test first, middle, last
     indices = [0, len(header_hashes) // 2, len(header_hashes) - 1]
     for idx in indices:
-        hh = header_hashes[idx]
-        proof = mmr.get_inclusion_proof_by_index(idx)
-        assert proof is not None
-        peak_index, proof_bytes, other_peaks, peak = proof
         root = mmr.compute_root()
-        assert root is not None
-        assert verify_mmr_inclusion(root, hh, peak_index, proof_bytes, other_peaks, peak)
+        _assert_inclusion_proof(mmr, leaf_index=idx, leaf=header_hashes[idx], root=root)
 
 
-@pytest.mark.anyio
-@pytest.mark.skip("skip untill we add the chains with new format")
-async def test_mmr_benchmark_default_10000_blocks(default_10000_blocks: list[FullBlock]) -> None:
-    mmr = MerkleMountainRange()
+def test_mmr_benchmark_default_10000_blocks(
+    default_10000_blocks: list[FullBlock], benchmark_runner: BenchmarkRunner
+) -> None:
     header_hashes = [block.header_hash for block in default_10000_blocks]
-    t0 = time.time()
-    for hh in header_hashes:
-        mmr.append(hh)
+    sample_indices = random.Random(0).sample(range(len(header_hashes)), 1000)
 
-    t1 = time.time()
-    append_time = t1 - t0
-    sample_indices = random.sample(range(len(header_hashes)), 1000)
-    proof_times = []
-    for idx in sample_indices:
-        hh = header_hashes[idx]
-        t_start = time.time()
-        proof = mmr.get_inclusion_proof_by_index(idx)
-        t_end = time.time()
-        proof_times.append(t_end - t_start)
-        assert proof is not None
-        peak_index, proof_bytes, other_peaks, peak = proof
+    with benchmark_runner.assert_runtime(seconds=1.75):
+        mmr = MerkleMountainRange()
+        for hh in header_hashes:
+            mmr.append(hh)
+
         root = mmr.compute_root()
         assert root is not None
-        assert verify_mmr_inclusion(root, hh, peak_index, proof_bytes, other_peaks, peak)
 
-    avg_proof_time = sum(proof_times) / len(proof_times)
-    logger.info(f"MMR append time for 10,000 blocks: {append_time:.4f} seconds")
-    logger.info(f"Average proof time for 1,000 random blocks: {avg_proof_time:.6f} seconds")
+        for idx in sample_indices:
+            hh = header_hashes[idx]
+            _assert_inclusion_proof(mmr, leaf_index=idx, leaf=hh, root=root)
 
 
 # New tests for flat MMR structure
@@ -228,8 +358,6 @@ def test_mmr_pop_single() -> None:
 
 def test_mmr_pop_multiple() -> None:
     """Test popping multiple leaves"""
-    from chia.util.hash import std_hash
-
     mmr = MerkleMountainRange()
     leaf1 = bytes32.random()
     leaf2 = bytes32.random()
@@ -257,6 +385,20 @@ def test_mmr_pop_multiple() -> None:
     # After pop: [leaf1]
     assert len(mmr.nodes) == 1
     assert mmr.compute_root() == leaf1
+
+
+def test_mmr_pop_restores_previous_roots() -> None:
+    mmr = MerkleMountainRange()
+    leaves = [bytes32.random() for _ in range(8)]
+    roots_after_append: list[bytes32 | None] = []
+
+    for leaf in leaves:
+        mmr.append(leaf)
+        roots_after_append.append(mmr.compute_root())
+
+    for expected_root_after_pop in reversed([None, *roots_after_append[:-1]]):
+        mmr.pop()
+        assert mmr.compute_root() == expected_root_after_pop
 
 
 def test_mmr_append_and_rewind() -> None:
@@ -472,6 +614,26 @@ def test_mmr_rollback_to_empty_when_already_empty() -> None:
     assert mmr.compute_current_mmr_root() is None
 
 
+def test_mmr_rollback_to_same_height_asserts() -> None:
+    aggregate_from = uint32(500)
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
+    prev_hash = bytes32.zeros
+    for height in range(500, 505):
+        block_hash = bytes32([height % 256] + [0] * 31)
+        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+        prev_hash = block_hash
+
+    blocks = BlockCache({}, mmr_manager=mmr)
+    original_root = mmr.compute_current_mmr_root()
+
+    with pytest.raises(AssertionError):
+        mmr.rollback_to_height(504, blocks)
+
+    assert mmr._last_height == uint32(504)
+    assert mmr._last_header_hash == prev_hash
+    assert mmr.compute_current_mmr_root() == original_root
+
+
 def test_mmr_genesis_block_handling() -> None:
     mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
     blocks = BlockCache({}, mmr_manager=mmr)
@@ -495,11 +657,6 @@ def test_mmr_genesis_block_handling() -> None:
 
 def test_mmr_aggregate_from_filtering() -> None:
     """Test that add_block_to_mmr respects aggregate_from and skips blocks before it."""
-    from chia_rs.sized_ints import uint32
-
-    from chia.consensus.blockchain_mmr import BlockchainMMRManager
-    from chia.consensus.default_constants import DEFAULT_CONSTANTS
-
     # Create MMR with aggregate_from = 500 (simulating HARD_FORK2_HEIGHT)
     aggregate_from = uint32(500)
     mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
@@ -551,6 +708,88 @@ def test_compute_current_mmr_root_reflects_current_state() -> None:
     assert mmr.compute_current_mmr_root() == mmr._mmr.compute_root()
 
 
+def test_get_mmr_root_for_block_matches_expected_cutoff(bt: BlockTools) -> None:
+    block_list = bt.get_consecutive_blocks(200, block_list_input=[])
+    _, _, block_records = load_block_list(block_list, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    block_cache = BlockCache(block_records, mmr_manager=mmr_manager)
+    roots_by_height: dict[uint32, bytes32 | None] = {}
+    block_records_by_height: list[BlockRecord] = []
+
+    for block in block_list:
+        record = block_records[block.header_hash]
+        block_records_by_height.append(record)
+        mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
+        roots_by_height[record.height] = mmr_manager.compute_current_mmr_root()
+
+    saw_new_slot = False
+    saw_same_slot = False
+
+    for block in block_list:
+        starts_new_slot = len(block.finished_sub_slots) > 0
+        saw_new_slot = saw_new_slot or starts_new_slot
+        saw_same_slot = saw_same_slot or (block.height > 0 and not starts_new_slot)
+
+        expected_height = _pre_sp_cutoff_height(
+            block_records_by_height,
+            int(block.height) - 1,
+            int(block.reward_chain_block.signage_point_index),
+            starts_new_slot,
+        )
+        expected_root = None if expected_height is None else roots_by_height[uint32(expected_height)]
+
+        assert (
+            block_cache.get_mmr_root_for_block(
+                block.prev_header_hash,
+                block.reward_chain_block.signage_point_index,
+                starts_new_slot,
+            )
+            == expected_root
+        )
+
+    assert saw_new_slot
+    assert saw_same_slot
+
+
+def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> None:
+    canonical_blocks = bt.get_consecutive_blocks(5, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(2, block_list_input=canonical_blocks[:3], seed=b"mmr-fork")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    prev_hash = bt.constants.GENESIS_CHALLENGE
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
+        prev_hash = block.header_hash
+
+    expected_canonical_mmr = MerkleMountainRange()
+    for block in canonical_blocks:
+        expected_canonical_mmr.append(block.header_hash)
+    canonical_root = expected_canonical_mmr.compute_root()
+    assert mmr_manager.compute_current_mmr_root() == canonical_root
+
+    fork_root = mmr_manager.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        new_sp_index=0,
+        starts_new_slot=True,
+        blocks=BlockCache(fork_records, mmr_manager=mmr_manager),
+        fork_height=uint32(2),
+    )
+
+    expected_fork_mmr = MerkleMountainRange()
+    for block in [*canonical_blocks[:3], *fork_blocks[3:]]:
+        expected_fork_mmr.append(block.header_hash)
+    assert fork_root == expected_fork_mmr.compute_root()
+
+    assert mmr_manager.compute_current_mmr_root() == canonical_root
+    assert mmr_manager._last_height == canonical_blocks[-1].height
+    assert mmr_manager._last_header_hash == canonical_blocks[-1].header_hash
+
+
 def test_mmr_init_validation() -> None:
     mmr = MerkleMountainRange()
     for _ in range(10):
@@ -582,6 +821,47 @@ def test_verify_mmr_inclusion_malformed_proof() -> None:
 
     result = verify_mmr_inclusion(mmr_root, leaf, peak_index, malformed_proof, other_peaks, expected_peak)
     assert result is False, "Should reject proof with insufficient sibling data"
+
+
+def test_verify_mmr_inclusion_rejects_wrong_leaf_and_corrupted_proofs() -> None:
+    leaves = [bytes32([i] * 32) for i in range(1, 4)]
+    mmr = MerkleMountainRange()
+    for leaf in leaves:
+        mmr.append(leaf)
+
+    mmr_root = mmr.compute_root()
+    assert mmr_root is not None
+
+    peak_index_0, proof_bytes_0, other_peaks_0, expected_peak_0 = _proof_by_index(mmr, 0)
+    peak_index_1, proof_bytes_1, other_peaks_1, expected_peak_1 = _proof_by_index(mmr, 1)
+
+    assert not verify_mmr_inclusion(
+        mmr_root,
+        leaves[0],
+        peak_index_0,
+        proof_bytes_0 + b"\x00",
+        other_peaks_0,
+        expected_peak_0,
+    )
+
+    corrupted_proof = proof_bytes_0[:-1] + bytes([proof_bytes_0[-1] ^ 0x01])
+    assert not verify_mmr_inclusion(
+        mmr_root,
+        leaves[0],
+        peak_index_0,
+        corrupted_proof,
+        other_peaks_0,
+        expected_peak_0,
+    )
+
+    assert not verify_mmr_inclusion(
+        mmr_root,
+        leaves[0],
+        peak_index_1,
+        proof_bytes_1,
+        other_peaks_1,
+        expected_peak_1,
+    )
 
 
 def test_mmr_rollback_below_aggregate_from() -> None:
