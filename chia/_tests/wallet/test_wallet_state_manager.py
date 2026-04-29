@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from unittest.mock import AsyncMock
 
 import pytest
 from chia_rs import CoinState, G2Element
@@ -16,7 +17,6 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -252,22 +252,12 @@ async def test_add_coin_states_skips_parent_fetch_for_tracked_dl_singleton(
         )
     )
 
-    parent_fetch_calls: list[tuple[bytes32, ...]] = []
+    get_coin_state_mock = AsyncMock(return_value=[])
+    get_timestamp_mock = AsyncMock(return_value=uint64(0))
 
-    async def _record_get_coin_state(
-        self_arg: WalletNode,
-        coin_names: list[bytes32],
-        peer: WSChiaConnection,
-        fork_height: uint32 | None = None,
-    ) -> list[CoinState]:
-        parent_fetch_calls.append(tuple(coin_names))
-        return []
-
-    async def _stub_timestamp(self_arg: WalletNode, height: uint32) -> uint64:
-        return uint64(0)
-
-    monkeypatch.setattr(WalletNode, "get_coin_state", _record_get_coin_state)
-    monkeypatch.setattr(WalletNode, "get_timestamp_for_height", _stub_timestamp)
+    monkeypatch.setattr(WalletNode, "get_coin_state", get_coin_state_mock)
+    monkeypatch.setattr(WalletNode, "get_timestamp_for_height", get_timestamp_mock)
+    assert await wallet_node.get_timestamp_for_height(uint32(0)) == uint64(0)
 
     coin_state = CoinState(singleton_coin, None, uint32(10))
     # Drive through ``add_coin_states``, the same entry point
@@ -275,9 +265,11 @@ async def test_add_coin_states_skips_parent_fetch_for_tracked_dl_singleton(
     assert await wsm.add_coin_states([coin_state], peer, None)
 
     coin_record = await wsm.coin_store.get_coin_record(singleton_coin.name())
-    assert coin_record is not None, f"tracked DL singleton was not added; parent fetches: {parent_fetch_calls}"
+    assert coin_record is not None, (
+        f"tracked DL singleton was not added; parent fetches: {get_coin_state_mock.await_args_list}"
+    )
     assert coin_record.wallet_id == dl_wallet.id()
-    assert parent_fetch_calls == [], (
+    assert get_coin_state_mock.await_count == 0, (
         "determine_coin_type performed a parent get_coin_state for a locally classified DL "
         "singleton instead of short-circuiting through _data_layer_identifier_for_coin"
     )
