@@ -36,7 +36,9 @@ STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
         min_coin_amount=cli_amount_none,
         max_coin_amount=cli_amount_none,
         coins_to_exclude=(),
+        coins_to_include=(),
         amounts_to_exclude=(),
+        primary_coin=None,
         reuse=None,
     ),
     transaction_writer=TransactionsOut(transaction_file_out=None),
@@ -322,6 +324,8 @@ class WalletTestFramework:
                 min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
                 max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
                 coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                coins_to_include=tuple(self.tx_config.included_coin_ids),
+                primary_coin=self.tx_config.primary_coin,
                 amounts_to_exclude=tuple(
                     CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
                 ),
