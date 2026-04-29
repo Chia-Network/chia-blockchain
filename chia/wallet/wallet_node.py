@@ -45,7 +45,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
-from chia.util.db_wrapper import manage_connection
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, manage_connection
 from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -988,7 +988,7 @@ class WalletNode:
 
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
-        chunk_size: int = 900 if trusted else 10
+        chunk_size: int = SQLITE_MAX_VARIABLE_NUMBER if trusted else 10
 
         reorged_coin_states = []
         updated_coin_states = []
