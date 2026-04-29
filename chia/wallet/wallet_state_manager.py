@@ -860,6 +860,37 @@ class WalletStateManager:
         trade_removals: dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
         return {**removals, **{coin_id: cr.coin for coin_id, cr in trade_removals.items() if cr.wallet_id == wallet_id}}
 
+    async def _data_layer_identifier_for_coin(self, coin: Coin) -> WalletIdentifier | None:
+        """
+        Returns the ``DataLayer`` ``WalletIdentifier`` for ``coin`` when local
+        DL metadata already classifies it — without fetching the coin's parent
+        or its puzzle solution.
+
+        Two cases are handled:
+
+        * ``coin.puzzle_hash == MIRROR_PUZZLE_HASH``: every DL mirror coin
+          shares this fixed puzzle hash, so a hash compare is sufficient.
+        * ``dl_wallet.get_singleton_record(coin.name())`` returns non-None:
+          a ``SingletonRecord`` was previously written to ``dl_store`` (e.g.
+          by ``DataLayerWallet._track_new_launcher_id``) for this coin id.
+
+        ``determine_coin_type`` calls this helper before the parent-fetch +
+        CLVM-uncurry round-trip so the bulk-subscription case (e.g. CADT
+        replaying tens of thousands of DL singleton coin states for a tracked
+        launcher) doesn't pay a ``request_puzzle_solution`` plus a parent
+        ``get_coin_state`` per coin.
+
+        Returns ``None`` when this wallet has no ``DataLayerWallet`` or when
+        neither DL match condition holds.
+        """
+        try:
+            dl_wallet = await self.get_dl_wallet()
+        except ValueError:
+            return None
+        if coin.puzzle_hash == MIRROR_PUZZLE_HASH or await dl_wallet.get_singleton_record(coin.name()) is not None:
+            return WalletIdentifier.create(dl_wallet)
+        return None
+
     async def determine_coin_type(
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: uint32 | None
     ) -> tuple[WalletIdentifier | None, Streamable | None]:
@@ -868,6 +899,21 @@ class WalletStateManager:
             or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
         ):
             return None, None
+
+        # If local DL metadata already classifies this coin, skip the
+        # parent-fetch + CLVM-uncurry round-trip. ``coin_data`` is None on
+        # this path: ``DataLayerWallet.coin_added`` does not consume
+        # ``coin_data``, so DL classification works the same as before
+        # (where the post-call DL override in ``_add_coin_states`` produced
+        # the same identifier with ``coin_data == None``).
+        dl_identifier = await self._data_layer_identifier_for_coin(coin_state.coin)
+        if dl_identifier is not None:
+            self.log.debug(
+                "Classified coin via DL metadata; skipping parent fetch: coin=%s wallet=%s",
+                coin_state.coin.name(),
+                dl_identifier,
+            )
+            return dl_identifier, None
 
         response: list[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
@@ -1743,17 +1789,11 @@ class WalletStateManager:
                         # rather than relying on add_coin_record() replacement semantics.
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
+                        # ``determine_coin_type`` short-circuits to the DL
+                        # wallet via ``_data_layer_identifier_for_coin`` for
+                        # mirror coins and tracked singletons before any
+                        # parent fetch.
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
-                        try:
-                            dl_wallet = await self.get_dl_wallet()
-                        except ValueError:
-                            pass
-                        else:
-                            if (
-                                await dl_wallet.get_singleton_record(coin_name) is not None
-                                or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
-                            ):
-                                wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     # If this coin was previously only stored as an "interest-only" record (REMOTE),
                     # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
