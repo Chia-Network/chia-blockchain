@@ -661,6 +661,7 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
+    await time_out_assert(5, lambda: len(fn_server.all_connections) == 1)
     con = next(iter(fn_server.all_connections.values()))
     phs = []
     phs.append(bytes32(32 * b"\0"))
@@ -703,6 +704,7 @@ async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWalle
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
+    await time_out_assert(5, lambda: len(fn_server.all_connections) == 1)
     con = next(iter(fn_server.all_connections.values()))
     coins = []
     coins.append(bytes32(32 * b"\0"))
