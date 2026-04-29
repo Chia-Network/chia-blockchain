@@ -186,7 +186,8 @@ class Blockchain:
         # todo WPv2: persist MMR state to avoid rebuilding on startup
         for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
             header_hash = self.__height_map.get_hash(uint32(height))
-            block_record = self.block_record(header_hash)
+            block_record = await self.get_block_record_from_db(header_hash)
+            assert block_record is not None
             self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
 
     def get_peak(self) -> BlockRecord | None:

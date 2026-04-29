@@ -15,7 +15,8 @@ from chia.consensus.challenge_tree import (
     extract_slot_challenge_data,
 )
 from chia.consensus.get_block_challenge import get_block_challenge
-from chia.simulator.block_tools import BlockTools
+from chia.simulator.block_tools import BlockTools, load_block_list
+from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
 
@@ -122,6 +123,79 @@ def test_build_challenge_merkle_tree_multiple_slots() -> None:
 
     # With merkle sets, different order should produce the SAME root
     assert root1 == root2
+
+
+def test_extract_slot_challenge_data_covers_single_and_multi_slot_updates(bt: BlockTools) -> None:
+    def find_slot_rollover_window(
+        full_blocks: list[FullBlock],
+    ) -> tuple[BlockCache, int | None, int | None]:
+        _, _, block_records = load_block_list(full_blocks, bt.constants)
+        cache = BlockCache(block_records, bt.constants.GENESIS_CHALLENGE)
+        multi_height: int | None = None
+        single_height: int | None = None
+
+        for height in range(1, len(full_blocks)):
+            block_record = cache.height_to_block_record(uint32(height))
+            hashes = block_record.finished_challenge_slot_hashes
+            if multi_height is None and block_record.first_in_sub_slot and hashes is not None and len(hashes) >= 2:
+                multi_height = height
+            elif (
+                multi_height is not None and block_record.first_in_sub_slot and hashes is not None and len(hashes) == 1
+            ):
+                single_height = height
+                break
+
+        return cache, multi_height, single_height
+
+    full_blocks = bt.get_consecutive_blocks(1, seed=b"challenge-tree-genesis")
+    full_blocks = bt.get_consecutive_blocks(
+        1,
+        block_list_input=full_blocks,
+        skip_slots=2,
+        seed=b"challenge-tree-multi-slot",
+    )
+    full_blocks = bt.get_consecutive_blocks(
+        2,
+        block_list_input=full_blocks,
+        seed=b"challenge-tree-after-multi",
+    )
+    full_blocks = bt.get_consecutive_blocks(
+        1,
+        block_list_input=full_blocks,
+        skip_slots=1,
+        seed=b"challenge-tree-single-slot",
+    )
+    full_blocks = bt.get_consecutive_blocks(
+        2,
+        block_list_input=full_blocks,
+        seed=b"challenge-tree-after-single",
+    )
+    blocks, multi_slot_height, single_slot_height = find_slot_rollover_window(full_blocks)
+
+    assert multi_slot_height is not None
+    assert single_slot_height is not None
+
+    start_height = uint32(multi_slot_height)
+    end_height_int = min(len(full_blocks), single_slot_height + 3)
+    end_height = uint32(end_height_int)
+    expected_slot_data: list[SlotChallengeData] = []
+
+    for block in full_blocks[multi_slot_height:end_height_int]:
+        block_record = blocks.height_to_block_record(uint32(block.height))
+        block_challenge = get_block_challenge(
+            bt.constants,
+            block,
+            blocks,
+            block.height == 0,
+            block_record.overflow,
+            False,
+        )
+        if not expected_slot_data or expected_slot_data[-1].challenge_hash != block_challenge:
+            expected_slot_data.append(SlotChallengeData(block_challenge, uint32(1)))
+        else:
+            expected_slot_data[-1] = SlotChallengeData(block_challenge, uint32(expected_slot_data[-1].block_count + 1))
+
+    assert extract_slot_challenge_data(blocks, start_height, end_height) == expected_slot_data
 
 
 @pytest.mark.anyio

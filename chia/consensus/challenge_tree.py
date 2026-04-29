@@ -60,6 +60,7 @@ def extract_slot_challenge_data(
             reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
             if len(reversed_challenge_hashes) >= challenges_to_look_for:
                 break
+            assert curr.height != 0, "genesis block must include enough finished challenge slot hashes"
         elif curr.height == 0:
             assert curr.finished_challenge_slot_hashes is not None
             assert len(curr.finished_challenge_slot_hashes) > 0

@@ -206,6 +206,8 @@ class BlockchainMMRManager:
             self._last_height = None
             return
 
+        assert self.aggregate_from < current_height
+
         assert target_height < current_height
 
         # Pop blocks one by one until we reach target height

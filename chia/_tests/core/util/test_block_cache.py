@@ -8,7 +8,7 @@ from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.util.block_cache import BlockCache
 
 
@@ -26,7 +26,7 @@ def BR(height: int, header_hash: bytes32, prev_hash: bytes32) -> BlockRecord:
 
 @pytest.mark.anyio
 async def test_block_cache(seeded_random: random.Random) -> None:
-    a = BlockCache({}, DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    a = BlockCache({}, mmr_manager=StubMMRManager())
     prev = bytes32.zeros
     hashes = [bytes32.random(seeded_random) for _ in range(10)]
     for i, hh in enumerate(hashes):
