@@ -175,8 +175,15 @@ class GetSyncStatusResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetHeightInfo(Streamable):
+    use_peak_height: bool = False
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
+    latest_timestamp: uint64
     is_transaction_block: bool | None = None
     prev_transaction_block_height: uint32 | None = None
 
@@ -524,6 +531,7 @@ class SelectCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
     amount: uint64
     exclude_coins: list[Coin] | None = None  # for backwards compatibility
+    allow_unsynced: bool = False
 
     def __post_init__(self) -> None:
         if self.excluded_coin_ids is not None and self.exclude_coins is not None:
@@ -559,6 +567,7 @@ class SelectCoinsResponse(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetSpendableCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
+    allow_unsynced: bool = False
 
     @classmethod
     def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
@@ -586,12 +595,26 @@ class GetCoinRecordsByNames(Streamable):
     start_height: uint32 | None = None
     end_height: uint32 | None = None
     include_spent_coins: bool = True
+    allow_unsynced: bool = False
 
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolution(Streamable):
+    coin_name: bytes32
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolutionResponse(Streamable):
+    puzzle_reveal: str
+    solution: str
 
 
 @streamable
@@ -1325,6 +1348,7 @@ class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: bool | None = None
     sign: bool | None = None
+    allow_unsynced: bool = False
 
     def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
         if not _avoid_ban:

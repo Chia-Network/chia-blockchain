@@ -46,7 +46,7 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
-from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
@@ -568,11 +568,36 @@ class WalletNode:
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
-                if status == MempoolInclusionStatus.SUCCESS.value:
+                if status in {MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value}:
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _retry_fee_failed_transactions(self) -> None:
+        """Re-send transactions to peers that rejected them for insufficient fee.
+
+        Called on each new transaction block.  The mempool may have room now,
+        so we poke the same peers again without touching the sent_to history.
+        """
+        if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            return
+        fee_errors = {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name}
+        peer_map = {p.peer_node_id: p for p in self.server.get_connections(NodeType.FULL_NODE)}
+        records = await self.wallet_state_manager.tx_store.get_not_sent()
+        for record in records:
+            if record.spend_bundle is None:
+                continue
+            msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
+            msg_name = std_hash(msg.data)
+            for peer_id_hex, status, err in record.sent_to:
+                if status != MempoolInclusionStatus.FAILED.value or err not in fee_errors:
+                    continue
+                peer_node_id = bytes32.from_hexstr(peer_id_hex)
+                peer = peer_map.get(peer_node_id)
+                if peer is None or self._tx_message_in_flight(peer_node_id, msg_name):
+                    continue
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _retry_failed_states(self) -> None:
         while not self._shut_down:
@@ -846,7 +871,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
                 ph_update_res: list[CoinState] = await subscribe_to_phs(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
@@ -866,7 +891,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
                 c_update_res: list[CoinState] = await subscribe_to_coin_updates(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
@@ -1179,6 +1204,9 @@ class WalletNode:
             if self.config.get("auto_claim", {}).get("enabled", False):
                 await self.wallet_state_manager.auto_claim_coins()
 
+        if new_peak_hb.foliage_transaction_block is not None:
+            await self._retry_fee_failed_transactions()
+
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
 
@@ -1270,9 +1298,11 @@ class WalletNode:
                 # (Hints are not in filter)
                 all_coin_ids: list[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: list[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-                ph_updates: list[CoinState] = await subscribe_to_phs(phs, peer, min_height_for_subscriptions)
+                ph_updates: list[CoinState] = await subscribe_to_phs(
+                    phs, peer, min_height_for_subscriptions, priority=2
+                )
                 coin_updates: list[CoinState] = await subscribe_to_coin_updates(
-                    all_coin_ids, peer, min_height_for_subscriptions
+                    all_coin_ids, peer, min_height_for_subscriptions, priority=2
                 )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
@@ -1611,7 +1641,9 @@ class WalletNode:
             return False
         all_peers_c = self.server.get_connections(NodeType.FULL_NODE)
         all_peers = [(con, self.is_trusted(con)) for con in all_peers_c]
-        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
+        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(
+            start, end, peer_request_cache, all_peers, priority=1
+        )
         if blocks is None:
             log_level = logging.DEBUG if self._shut_down or peer.closed else logging.ERROR
             self.log.log(log_level, f"Error fetching blocks {start} {end}")

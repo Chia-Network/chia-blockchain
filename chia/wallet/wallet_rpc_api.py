@@ -76,7 +76,7 @@ from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.signing import sign_message, verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
@@ -190,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetHeightInfo,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -205,6 +206,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetPuzzleAndSolution,
+    GetPuzzleAndSolutionResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
     GetStrayCATsResponse,
@@ -313,6 +316,7 @@ from chia.wallet.wallet_request_types import (
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import SyncStatus
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -330,7 +334,11 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
-            if await self.service.wallet_state_manager.synced() is False:
+            sync_status = await self.service.wallet_state_manager.get_sync_status()
+            allow_unsynced = request.get("allow_unsynced", False)
+            if sync_status == SyncStatus.DISCONNECTED:
+                raise ValueError("Wallet is not connected to any synced peers.")
+            if sync_status != SyncStatus.SYNCED and not allow_unsynced:
                 raise ValueError("Wallet needs to be fully synced before making transactions.")
 
             assert self.service.logged_in_fingerprint is not None
@@ -401,6 +409,8 @@ def tx_endpoint(
                         extra_conditions=extra_conditions,
                         **kwargs,
                     )
+
+            response["sync_status"] = sync_status.value
 
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint
@@ -604,6 +614,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_spendable_coins": self.get_spendable_coins,
             "/get_coin_records_by_names": self.get_coin_records_by_names,
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
             "/get_notifications": self.get_notifications,
@@ -964,21 +975,25 @@ class WalletRpcApi:
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     @marshal
-    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
+    async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         """
-        Returns height info for the current wallet. `height` is the height of the last block
-        that the wallet has synced to. Note that is_transaction_block and
-        prev_transaction_block_height may both be None if the wallet has not yet synced to a block.
+        Returns height info for the current wallet.
 
-        :param request: None
+        If use_peak_height is true, returns the peak height from the blockchain tip
+        (works even while syncing). Otherwise returns the height of the last block
+        the wallet has finished syncing to. is_transaction_block and
+        prev_transaction_block_height may both be None if the wallet has not yet
+        synced to a block at the returned height.
+
+        :param request: GetHeightInfo
         :return: GetHeightInfoResponse
-
-        height: uint32
-        is_transaction_block: bool | None = None
-        prev_transaction_block_height: uint32 | None = None
         """
-        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         blockchain = self.service.wallet_state_manager.blockchain
+        if request.use_peak_height:
+            peak = blockchain._peak
+            height = uint32(peak.height) if peak is not None else uint32(0)
+        else:
+            height = await blockchain.get_finished_sync_up_to()
         is_transaction_block: bool | None = None
         prev_transaction_block_height: uint32 | None = None
 
@@ -991,6 +1006,7 @@ class WalletRpcApi:
             prev_transaction_block_height = uint32(block_record.prev_transaction_block_height)
         return GetHeightInfoResponse(
             height=height,
+            latest_timestamp=blockchain.get_latest_timestamp(),
             is_transaction_block=is_transaction_block,
             prev_transaction_block_height=prev_transaction_block_height,
         )
@@ -1000,7 +1016,9 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
+
         await self.service.push_tx(request.spend_bundle)
+
         return Empty()
 
     @tx_endpoint(push=True)
@@ -1508,9 +1526,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionMultiResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
-
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
         async with self.service.wallet_state_manager.lock:
@@ -1630,7 +1645,10 @@ class WalletRpcApi:
             }
         )
 
-        if await self.service.wallet_state_manager.synced() is False:
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
@@ -1641,7 +1659,10 @@ class WalletRpcApi:
 
     @marshal
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
-        if await self.service.wallet_state_manager.synced() is False:
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
@@ -1686,7 +1707,10 @@ class WalletRpcApi:
 
     @marshal
     async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
-        if await self.service.wallet_state_manager.synced() is False:
+        sync_status = await self.service.wallet_state_manager.get_sync_status()
+        if sync_status == SyncStatus.DISCONNECTED:
+            raise ValueError("Wallet is not connected to any synced peers.")
+        if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
 
         kwargs: dict[str, Any] = {
@@ -1708,6 +1732,7 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+
             missed_coins: list[str] = [
                 "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
             ]
@@ -1715,6 +1740,18 @@ class WalletRpcApi:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
+
+    @marshal
+    async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
+        coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)
+        if coin_record is None or not coin_record.spent:
+            raise ValueError(f"Coin {request.coin_name.hex()} not found or not spent")
+        peer = self.service.get_full_node_peer()
+        coin_spend = await fetch_coin_spend(uint32(coin_record.spent_block_height), coin_record.coin, peer)
+        return GetPuzzleAndSolutionResponse(
+            puzzle_reveal=bytes(coin_spend.puzzle_reveal).hex(),
+            solution=bytes(coin_spend.solution).hex(),
+        )
 
     @marshal
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
