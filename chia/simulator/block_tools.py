@@ -1240,7 +1240,9 @@ class BlockTools:
                     blocks=block_cache,
                     prev_b_hash=latest_block.prev_hash,
                     sp_index=latest_block.signage_point_index,
-                    finished_sub_slots=1,
+                    finished_sub_slots=len(latest_block.finished_challenge_slot_hashes)
+                    if latest_block.finished_challenge_slot_hashes is not None
+                    else 0,
                 )
 
                 sub_epoch_summary = next_sub_epoch_summary(

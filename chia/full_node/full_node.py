@@ -879,7 +879,9 @@ class FullNode:
                 self.blockchain,
                 prev_b_hash=peak.prev_hash,
                 sp_index=peak.signage_point_index,
-                finished_sub_slots=int(peak.first_in_sub_slot),
+                finished_sub_slots=len(peak.finished_challenge_slot_hashes)
+                if peak.finished_challenge_slot_hashes is not None
+                else 0,
             )
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,

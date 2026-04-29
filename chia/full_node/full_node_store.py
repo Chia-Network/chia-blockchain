@@ -535,7 +535,11 @@ class FullNodeStore:
                     blocks=blocks,
                     prev_b_hash=peak.prev_hash,
                     sp_index=peak.signage_point_index,
-                    finished_sub_slots=1,
+                    finished_sub_slots=(
+                        len(peak.finished_challenge_slot_hashes)
+                        if peak.finished_challenge_slot_hashes is not None
+                        else 0
+                    ),
                 )
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,

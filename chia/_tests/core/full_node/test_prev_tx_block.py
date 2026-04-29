@@ -90,7 +90,6 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     _, _, blocks = load_block_list(block_list, bt.constants)
     block = block_list[-1]
     latest_tx_before_sp = find_tx_before_sp(block_list, bt.constants)
-    latest_tx_before_sp = find_tx_before_sp(block_list, bt.constants)
     assert latest_tx_before_sp is not None
     assert pre_sp_tx_block_height(
         constants=bt.constants,
@@ -122,6 +121,5 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
         if len(curr.finished_sub_slots) > 0:
             slots_crossed += 1
         idx -= 1
-        curr = block_list[idx]
 
     return curr
