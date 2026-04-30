@@ -1351,6 +1351,17 @@ class FullNode:
                     # shouldn't be skipping any.
                     blocks_to_validate = await self.skip_blocks(blockchain, blocks, fork_info, vs)
                     assert first_batch or len(blocks_to_validate) == len(blocks)
+                    # Snapshot vs BEFORE the per-block prevalidate loop so the
+                    # ingest side (add_prevalidated_blocks) consumes the
+                    # pre-batch state. Load-bearing: pre_validate_block
+                    # mutates the shared `vs` in-place after each block's
+                    # synchronous checks pass (so block N+1's checks see
+                    # block N's ssi/difficulty contributions). That mutation
+                    # must not leak into the ingest path; this copy is the
+                    # isolation boundary. The AugmentedBlockchain overlay is
+                    # also batch-local and is abandoned on the first failure.
+                    # See the "Caller invariants" block in
+                    # pre_validate_block's docstring.
                     next_validation_state = copy.copy(vs)
 
                     if len(blocks_to_validate) == 0:
@@ -1540,6 +1551,16 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, None
 
+        # Pass a throwaway copy of vs: pre_validate_block mutates its vs
+        # argument in-place after each block's synchronous checks pass (so
+        # block N+1 sees block N's ssi / difficulty contributions), and
+        # does not revert that mutation on failure. We isolate those
+        # batch-local mutations inside the copy; the caller's vs is then
+        # re-advanced from each block's challenge_chain by
+        # add_prevalidated_blocks. The AugmentedBlockchain overlay is the
+        # other batch-local state carrier and is likewise abandoned on the
+        # first failure. See the "Caller invariants" block in
+        # pre_validate_block's docstring.
         futures = await self.prevalidate_blocks(
             blockchain,
             blocks_to_validate,
@@ -1615,21 +1636,23 @@ class FullNode:
         wp_summaries: list[SubEpochSummary] | None = None,
     ) -> Sequence[Awaitable[PreValidationResult]]:
         """
-        This is a thin wrapper over pre_validate_block().
+        This is a thin wrapper over pre_validate_block(). Signature validation
+        runs in multiprocessing because it is expensive and, unlike normal
+        single-block processing, the batch-sync path has no cached transaction
+        signatures to reuse.
 
         Args:
             blockchain:
             blocks_to_validate:
             vs: The ValidationState for the first block in the batch. This is an in-out
                 parameter. It will be updated to be the validation state for the next
-                batch of blocks.
+                batch of blocks. See pre_validate_block() for the mutation contract
+                and the caller invariants callers must uphold (either isolate with
+                a per-batch copy, or abort on the first PreValidationResult error).
+                The AugmentedBlockchain passed here is also batch-local state
+                and is discarded on the first failure.
             wp_summaries:
         """
-        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
-        # for these blocks (unlike during normal operation where we validate one at a time)
-        # We have to copy the ValidationState object to preserve it for the add_block()
-        # call below. pre_validate_block() will update the
-        # object we pass in.
         ret: list[Awaitable[PreValidationResult]] = []
         for block in blocks_to_validate:
             ret.append(
