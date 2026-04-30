@@ -1849,8 +1849,8 @@ async def test_long_reorg_nodes_and_wallet(
     assert last_blk.weight < last_reorg_blk.weight
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_1.server.get_port()), None)
-    assert len(wallet_server.all_connections) == 1
-    assert len(full_node_1.server.all_connections) == 1
+    await time_out_assert(5, lambda: len(wallet_server.all_connections) == 1)
+    await time_out_assert(5, lambda: len(full_node_1.server.all_connections) == 1)
 
     await add_blocks_in_batches(blocks, full_node_1.full_node)
     node_1_peak = full_node_1.full_node.blockchain.get_peak()
@@ -1906,7 +1906,9 @@ async def test_validate_received_state_from_peer_no_additions(
     peer_request_cache.add_to_blocks(new_block_header)
     ph = bytes32.random()
     coin_state = CoinState(Coin(bytes32.random(), ph, uint64(1)), None, created_height)
-    wsc, _ = await add_dummy_connection_wsc(full_node_api.full_node.server, self_hostname, 42, NodeType.WALLET)
+    wsc, _ = await add_dummy_connection_wsc(
+        full_node_api.full_node.server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False
+    )
     caplog.clear()
     caplog.set_level(logging.INFO)
     result = await wallet_node.validate_received_state_from_peer(
@@ -1960,7 +1962,7 @@ async def test_validate_received_state_from_peer_no_removals(
             )
         )
         coin_state = CoinState(coin, None, created_height)
-    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
     caplog.clear()
     caplog.set_level(logging.INFO)
     request_removals_calls: list[uint32] = []

@@ -2443,6 +2443,8 @@ async def test_unsolicited_compact_vdf(
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
 
@@ -3554,6 +3556,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
     server_3 = full_node_3.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
     await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 2)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_3.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
     ws_con_3 = next(iter(server_3.all_connections.values()))
@@ -3642,6 +3647,8 @@ async def test_new_tx_zero_cost(
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
     await full_node_1.full_node.add_block(bt.get_consecutive_blocks(1)[0])
@@ -3697,7 +3704,9 @@ async def test_send_transaction_peer_tx_queue_full(
     # Set limit to 0 to trigger queue full exception
     full_node_api.full_node.transaction_queue.peer_size_limit = 0
     spend_bundle = SpendBundle([], G2Element())
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
+    )
     response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
     assert response_msg is not None
     response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
@@ -3753,7 +3762,7 @@ async def test_node_type_message_typechecking(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str, node_type: NodeType
 ) -> None:
     _, server, _ = one_node_one_block
-    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type, wait_for_peer_added=False)
     await time_out_assert(5, lambda: peer_id in server.all_connections)
     server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
     await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
@@ -3789,7 +3798,7 @@ async def test_node_types_inbound_connections_limit(
     assert server.accept_inbound_connections(node_type) is True
     # Set a low limit for this test and reach it with a dummy connection
     server.config[config_key] = 1
-    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type)
+    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type, wait_for_peer_added=False)
     await time_out_assert(5, lambda: peer_id in server.all_connections)
     # New inbound connections should be refused
     assert server.accept_inbound_connections(node_type) is False
@@ -3810,7 +3819,7 @@ async def test_hard_fork_version_enforcement(
     _, server, _ = one_node_one_block
     additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_hard_fork2_capability else []
     wsc, peer_id = await add_dummy_connection_wsc(
-        server, self_hostname, 42, NodeType.FULL_NODE, additional_capabilities=additional_capabilities
+        server, self_hostname, 42, additional_capabilities=additional_capabilities, wait_for_peer_added=False
     )
     staying_connected = consensus_mode < ConsensusMode.HARD_FORK_3_0 or has_hard_fork2_capability
     if staying_connected:
@@ -3853,7 +3862,9 @@ async def test_register_for_coin_updates(
     remaining_coins = real_coin_ids[1:]
     fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
     request_ids = first_coin + fake_coin_ids + remaining_coins
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
+    )
     msg = wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0))
     response = await full_node_api.register_for_coin_updates(bytes(msg), dummy_peer)
     assert response is not None
@@ -3879,7 +3890,6 @@ async def test_tx_request_and_timeout_call_api_exception(
     full_node_api, server, _ = one_node_one_block
     full_node = full_node_api.full_node
     _, peer_id = await add_dummy_connection(server, self_hostname, 42)
-    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server_connection = server.all_connections[peer_id]
     transaction_id = bytes32.random()
     full_node.full_node_store.peers_with_tx[transaction_id] = {
@@ -3910,7 +3920,6 @@ async def test_tx_request_and_timeout_queue_full(
     full_node_api, server, _ = one_node_one_block
     full_node = full_node_api.full_node
     _, peer_id = await add_dummy_connection(server, self_hostname, 42)
-    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server_connection = server.all_connections[peer_id]
     sb = SpendBundle([], G2Element())
     transaction_id = sb.name()
@@ -3974,7 +3983,9 @@ async def test_request_puzzle_state_responds_normally(
 
     assert full_node_api.full_node.blockchain.get_peak_height() is not None
 
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1339, NodeType.WALLET)
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1339, NodeType.WALLET, wait_for_peer_added=False
+    )
 
     peak_height = full_node_api.full_node.blockchain.get_peak_height()
     assert peak_height is not None

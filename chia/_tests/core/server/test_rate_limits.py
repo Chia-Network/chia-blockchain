@@ -399,8 +399,8 @@ async def test_different_versions(
 
     await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
 
-    assert len(full_node_server_b.get_connections()) == 1
-    assert len(full_node_server_a.get_connections()) == 1
+    await time_out_assert(5, lambda: len(full_node_server_b.get_connections()) == 1)
+    await time_out_assert(5, lambda: len(full_node_server_a.get_connections()) == 1)
 
     a_con: WSChiaConnection = full_node_server_a.get_connections()[0]
     b_con: WSChiaConnection = full_node_server_b.get_connections()[0]
@@ -520,8 +520,8 @@ async def test_unsolicited_responses(
 
     await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
 
-    assert len(full_node_server_b.get_connections()) == 1
-    assert len(full_node_server_a.get_connections()) == 1
+    await time_out_assert(5, lambda: len(full_node_server_b.get_connections()) == 1)
+    await time_out_assert(5, lambda: len(full_node_server_a.get_connections()) == 1)
 
     a_con: WSChiaConnection = full_node_server_a.get_connections()[0]
     b_con: WSChiaConnection = full_node_server_b.get_connections()[0]
