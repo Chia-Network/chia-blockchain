@@ -633,6 +633,7 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await time_out_assert(5, lambda: len(full_node_api.full_node.server.get_connections()) == 1)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
 
@@ -695,6 +696,7 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
     # --- Fee-failure retry on new transaction block ---
     # Reconnect and create a second transaction to test fee-failure retry behavior.
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await time_out_assert(5, lambda: len(full_node_api.full_node.server.get_connections()) == 1)
     logged_spends.clear()
 
     assert full_node_api.full_node._server is not None
@@ -766,6 +768,7 @@ async def test_retry_fee_failed_skips_disconnected_and_in_flight(
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await time_out_assert(5, lambda: len(full_node_api.full_node.server.get_connections()) == 1)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
 
@@ -810,6 +813,7 @@ async def test_retry_fee_failed_skips_disconnected_and_in_flight(
     # Reconnect, re-create the fee-failed state, then manually mark the message as
     # in-flight so _retry_fee_failed_transactions hits the second branch of line 598.
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await time_out_assert(5, lambda: len(full_node_api.full_node.server.get_connections()) == 1)
     logged_spends.clear()
 
     assert full_node_api.full_node._server is not None
@@ -930,6 +934,7 @@ async def test_wallet_node_bad_coin_state_ignore(
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    await time_out_assert(5, lambda: len(full_node_api.full_node.server.get_connections()) == 1)
 
     async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False

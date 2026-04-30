@@ -52,6 +52,7 @@ async def test_unknown_messages(
     assert await crawler.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
+    await time_out_assert(5, lambda: crawler.server.node_id in full_node.server.all_connections)
     connection = full_node.server.all_connections[crawler.server.node_id]
 
     def receiving_failed() -> bool:
@@ -76,6 +77,7 @@ async def test_valid_message(
     assert await crawler.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
+    await time_out_assert(5, lambda: crawler.server.node_id in full_node.server.all_connections)
     connection = full_node.server.all_connections[crawler.server.node_id]
 
     def peer_added() -> bool:
