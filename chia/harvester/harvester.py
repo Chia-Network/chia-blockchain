@@ -191,24 +191,26 @@ class Harvester:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
                 param = prover.get_param()
+                plot_dict: dict[str, Any] = {
+                    "filename": str(path),
+                    "plot_id": prover.get_id(),
+                    "pool_public_key": plot_info.pool_public_key,
+                    "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
+                    "plot_public_key": plot_info.plot_public_key,
+                    "file_size": plot_info.file_size,
+                    "time_modified": int(plot_info.time_modified),
+                    "compression_level": prover.get_compression_level(),
+                }
                 if param.size_v1 is not None:
-                    k = uint8(param.size_v1)
+                    plot_dict["version"] = 1
+                    plot_dict["size"] = uint8(param.size_v1)
                 else:
                     assert param.strength_v2 is not None
-                    k = uint8(0x80 | param.strength_v2)
-                response_plots.append(
-                    {
-                        "filename": str(path),
-                        "size": k,
-                        "plot_id": prover.get_id(),
-                        "pool_public_key": plot_info.pool_public_key,
-                        "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
-                        "plot_public_key": plot_info.plot_public_key,
-                        "file_size": plot_info.file_size,
-                        "time_modified": int(plot_info.time_modified),
-                        "compression_level": prover.get_compression_level(),
-                    }
-                )
+                    plot_dict["version"] = 2
+                    plot_dict["strength"] = param.strength_v2
+                    plot_dict["plot_index"] = param.plot_index
+                    plot_dict["meta_group"] = param.meta_group
+                response_plots.append(plot_dict)
             self.log.debug(
                 f"get_plots response: plots: {len(response_plots)}, "
                 f"failed_to_open_filenames: {len(self.plot_manager.failed_to_open_filenames)}, "
