@@ -1,0 +1,34 @@
+---
+description: Chia test harness selection and routing to domain-specific guides
+alwaysApply: true
+---
+
+# Chia Test Guide
+
+When writing or modifying tests under `chia/_tests/`, follow this sequence:
+
+## 1. Route to the right guide
+
+Identify the area from the user-provided path or intent, then read the matching guide **before any code search**:
+
+- `chia/_tests/blockchain/**` or consensus/reorg/overflow intent -> `testing-guide-blockchain.mdc`
+- `chia/_tests/core/full_node/**` or sync/full-node intent -> `testing-guide-full-node.mdc`
+- `chia/_tests/core/mempool/**` or mempool intent -> `testing-guide-mempool.mdc`
+- `chia/_tests/core/data_layer/**` or data-layer intent -> `testing-guide-data-layer.mdc`
+- `chia/_tests/core/server/**` or server/network intent -> `testing-guide-server.mdc`
+
+After reading, state: `Guide loaded: <guide-file> (area: <area>)`.
+If area is ambiguous, ask one clarifying question instead of broad repository search.
+
+## 2. Pick the right harness
+
+1. **Pure logic / parsing / utility** — no simulator, standard pytest.
+2. **Chain state / farming / wallets / mempool / reorg** — simulator fixtures from `chia/_tests/conftest.py`:
+   - `simulator_and_wallet`, `one_node`, `two_nodes`, `one_node_one_block`
+   - `wallet_environments` for wallet-heavy tests
+3. **Service wiring (farmer/harvester/solver/timelord)** — `setup_*` in `chia/_tests/util/setup_nodes.py`.
+4. **Lightweight CLVM spend sim** — `sim_and_client()` from `chia/_tests/util/spend_sim.py`.
+
+Key shared utilities: `chia/_tests/conftest.py`, `chia/simulator/block_tools.py`, `chia/_tests/util/time_out_assert.py`, `chia/_tests/environments/wallet.py`.
+
+For detailed block/tx/assertion patterns, see `testing-guide-patterns.mdc`.

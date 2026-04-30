@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+SCRIPT_DIRECTORY=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
+REPO_ROOT=$(
+  cd -- "${SCRIPT_DIRECTORY}/.."
+  pwd
+)
+
+PYTHON_BIN=""
+if [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+  PYTHON_BIN="${REPO_ROOT}/.venv/bin/python"
+elif [ -x "${REPO_ROOT}/venv/bin/python" ]; then
+  PYTHON_BIN="${REPO_ROOT}/venv/bin/python"
+else
+  echo "error: missing virtualenv python. expected ${REPO_ROOT}/.venv/bin/python or ${REPO_ROOT}/venv/bin/python" >&2
+  exit 1
+fi
+
+exec "${PYTHON_BIN}" "$@"
