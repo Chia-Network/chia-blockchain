@@ -98,17 +98,59 @@ class TestDos:
             )
 
     @pytest.mark.anyio
-    async def test_large_message_disconnect_and_ban(
+    async def test_large_message_disconnect(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # The max_message_size (50MB) is enforced at the aiohttp websocket
+        # layer for all connections, including localhost. Verify that a message
+        # exceeding this limit is rejected even without the is_localhost
+        # monkeypatch.
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        timeout = ClientTimeout(total=10)
+        session = ClientSession(timeout=timeout)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+
+        ssl_context = server_2.ssl_client_context
+        ws = await session.ws_connect(
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+        )
+        assert not ws.closed
+
+        large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
+        with caplog.at_level(logging.ERROR):
+            await ws.send_bytes(large_msg)
+
+            response: WSMessage = await ws.receive()
+            assert response.type == WSMsgType.CLOSE
+            assert response.data == WSCloseCode.MESSAGE_TOO_BIG
+
+        assert "WebSocket Error" in caplog.text
+        assert "WSCloseCode.MESSAGE_TOO_BIG: 1009" in caplog.text
+        assert "Message size 62914560 exceeds limit 52428800" in caplog.text
+
+        await ws.close()
+        await session.close()
+
+    @pytest.mark.anyio
+    async def test_large_message_ban(
         self,
         setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        # Localhost peers are never banned (they may be our own farmer,
+        # harvester, etc.). Pretend we're not localhost to verify that
+        # remote peers get banned after sending an oversized message.
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
@@ -127,10 +169,10 @@ class TestDos:
             response: WSMessage = await ws.receive()
             await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
-        print(response)
         assert response.type == WSMsgType.CLOSE
         assert response.data == WSCloseCode.MESSAGE_TOO_BIG
         await ws.close()
+        await session.close()
 
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
