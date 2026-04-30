@@ -380,10 +380,8 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
 
     # Fetch the coin records using the wallet protocol,
     # with more coin ids than the limit of 100,000, but only after height 10000.
-    resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False),
-        peer,
-    )
+    msg = wallet_protocol.RequestCoinState(list(coin_records.keys()), uint32(1), h1, False)
+    resp = await simulator.request_coin_state(bytes(msg), peer)
     assert resp is not None
 
     response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
@@ -395,6 +393,12 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
         coin_record = coin_records[coin_state.coin.name()]
         assert coin_record.coin_state == coin_state
         assert coin_record.confirmed_block_index > 1
+
+    # Exercise the Python-object guard (bypasses list_limits deserialization)
+    resp = await simulator.request_coin_state(msg, peer)
+    assert resp is not None
+    response = wallet_protocol.RespondCoinState.from_bytes(resp.data)
+    assert response.coin_ids == list(coin_records.keys())[:100000]
 
 
 @pytest.mark.anyio
@@ -613,6 +617,19 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
         assert coin_record.coin_state == coin_state
         # Unlike requesting coin state by ids, the order is enforced here so block 11 should be excluded
         assert coin_record.confirmed_block_index <= 10
+
+    # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
+    saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+    CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
+    oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
+    resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState(
+            oversized_phs, uint32(1), h1, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+        ),
+        peer,
+    )
+    CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
+    assert resp is not None
 
 
 @dataclass(frozen=True)

@@ -3854,9 +3854,8 @@ async def test_register_for_coin_updates(
     fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
     request_ids = first_coin + fake_coin_ids + remaining_coins
     dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
-    response = await full_node_api.register_for_coin_updates(
-        wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0)), dummy_peer
-    )
+    msg = wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0))
+    response = await full_node_api.register_for_coin_updates(bytes(msg), dummy_peer)
     assert response is not None
     assert response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     response_data = wallet_protocol.RespondToCoinUpdates.from_bytes(response.data)

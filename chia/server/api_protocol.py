@@ -38,6 +38,7 @@ class ApiRequest:
     bytes_required: bool = False
     execute_task: bool = False
     reply_types: list[ProtocolMessageTypes] = field(default_factory=list)
+    list_limits: Callable[..., dict[str, int]] | None = None
 
 
 @final
@@ -64,6 +65,7 @@ class ApiMetadata:
         execute_task: bool = False,
         reply_types: list[ProtocolMessageTypes] | None = None,
         request_type: ProtocolMessageTypes | None = None,
+        list_limits: Callable[..., dict[str, int]] | None = None,
     ) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, bytes | S, P], R]]:
         non_optional_reply_types: list[ProtocolMessageTypes]
         if reply_types is None:
@@ -78,7 +80,13 @@ class ApiMetadata:
                 if isinstance(original, bytes):
                     if request.bytes_required:
                         kwargs[message_name_bytes] = original
-                    arg = message_class.from_bytes(original)
+                    resolved_limits = None
+                    if request.list_limits is not None:
+                        if request.peer_required and args:
+                            resolved_limits = request.list_limits(self, args[0])
+                        else:
+                            resolved_limits = request.list_limits(self)
+                    arg = message_class.from_bytes(original, list_limits=resolved_limits)
                 else:
                     arg = original
                     if request.bytes_required:
@@ -104,6 +112,7 @@ class ApiMetadata:
                 reply_types=non_optional_reply_types,
                 message_class=message_class,
                 method=wrapper,
+                list_limits=list_limits,
             )
 
             if request_type in self.message_type_to_request:

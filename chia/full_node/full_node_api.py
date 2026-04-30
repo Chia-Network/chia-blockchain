@@ -1769,7 +1769,10 @@ class FullNodeAPI:
         await self.full_node.add_compact_vdf(request, peer)
         return None
 
-    @metadata.request(peer_required=True)
+    @metadata.request(
+        peer_required=True,
+        list_limits=lambda self, peer: {"puzzle_hashes": self.max_subscriptions(peer)},
+    )
     async def register_for_ph_updates(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1832,7 +1835,10 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 
-    @metadata.request(peer_required=True)
+    @metadata.request(
+        peer_required=True,
+        list_limits=lambda self, peer: {"coin_ids": self.max_subscriptions(peer)},
+    )
     async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1842,7 +1848,9 @@ class FullNodeAPI:
         # TODO: apparently we have tests that expect to receive a
         # RespondToCoinUpdates even when subscribing to the same coin multiple
         # times, so we can't optimize away such DB lookups (yet)
-        coin_ids = request.coin_ids[:max_subscriptions]
+        coin_ids = request.coin_ids
+        if len(coin_ids) > max_subscriptions:
+            coin_ids = coin_ids[:max_subscriptions]
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
         states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
@@ -1957,7 +1965,11 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_remove_coin_subscriptions, response)
         return msg
 
-    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
+    @metadata.request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_puzzle_state],
+        list_limits=lambda self, peer: {"puzzle_hashes": CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE},
+    )
     async def request_puzzle_state(
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
     ) -> Message:
@@ -1965,13 +1977,10 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        request_puzzle_hashes = list(dict.fromkeys(request.puzzle_hashes))
-
-        # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
-        # It can be increased in the future, and this protocol should be written and tested in a way that
-        # this increase would not break the API.
-        count = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-        puzzle_hashes = request_puzzle_hashes[:count]
+        puzzle_hashes = request.puzzle_hashes
+        if len(puzzle_hashes) > CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE:
+            puzzle_hashes = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+        puzzle_hashes = list(dict.fromkeys(puzzle_hashes))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
@@ -2039,14 +2048,20 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
-    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
+    @metadata.request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_coin_state],
+        list_limits=lambda self, peer: {"coin_ids": self.max_subscribe_response_items(peer)},
+    )
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        request_coin_ids = list(dict.fromkeys(request.coin_ids))
-        coin_ids = request_coin_ids[:max_items]
+        coin_ids = request.coin_ids
+        if len(coin_ids) > max_items:
+            coin_ids = coin_ids[:max_items]
+        coin_ids = list(dict.fromkeys(coin_ids))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
