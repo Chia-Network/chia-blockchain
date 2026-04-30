@@ -52,6 +52,10 @@ class PeerRequestCache:
     def in_states_validated(self, coin_state_hash: bytes32) -> bool:
         return self._states_validated.get(coin_state_hash) is not None
 
+    def coin_state_validation_recorded(self, coin_state_hash: bytes32) -> bool:
+        """True if we recorded validation for this coin state (including reorg markers stored as None)."""
+        return coin_state_hash in self._states_validated.cache
+
     def add_to_states_validated(self, coin_state: CoinState) -> None:
         cs_height: uint32 | None = None
         if coin_state.spent_height is not None:
