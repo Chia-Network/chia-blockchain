@@ -23,8 +23,6 @@ version_data = [
     for name in ["chia-blockchain", "chiapos"]
 ]
 
-block_cipher = None
-
 SERVERS = [
     "data_layer",
     "wallet",
@@ -140,11 +138,10 @@ def add_binary(name, path_to_script, collect_args):
         excludes=[],
         win_no_prefer_redirects=False,
         win_private_assemblies=False,
-        cipher=block_cipher,
         noarchive=False,
     )
 
-    binary_pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
+    binary_pyz = PYZ(analysis.pure, analysis.zipped_data)
 
     binary_exe = EXE(
         binary_pyz,
