@@ -12,6 +12,7 @@ from shutil import copy
 from typing import Any, cast
 
 import pytest
+from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -32,13 +33,14 @@ from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
+from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.solver.solver_service import SolverService
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.config import load_config, lock_and_load_config
 from chia.util.harvester_config import add_plot_directory
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
@@ -204,21 +206,22 @@ async def test_farmer_get_pool_state(
     farmer_api = farmer_service._api
 
     assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
-    pool_list = [
-        {
-            "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
-            "owner_public_key": "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0",  # noqa
-            "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-            "pool_url": self_hostname,
-            "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
-            "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-        }
-    ]
 
     root_path = farmer_api.farmer._root_path
-    with lock_and_load_config(root_path, "config.yaml") as config:
-        config["pool"]["pool_list"] = pool_list
-        save_config(root_path, "config.yaml", config)
+    PoolingShareState(
+        launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
+        owner_public_key=G1Element.from_bytes(
+            bytes.fromhex(
+                "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0"
+            )
+        ),
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        pool_url=self_hostname,
+        p2_singleton_puzzle_hash=bytes32.from_hexstr(
+            "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17"
+        ),
+        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+    ).add(root_path=root_path)
     await farmer_api.farmer.update_pool_state()
 
     pool_state = (await farmer_rpc_client.get_pool_state())["pool_state"]
@@ -275,21 +278,20 @@ async def test_farmer_get_pool_state_plot_count(
     pool_contract_puzzle_hash: bytes32 = bytes32.from_hexstr(
         "1b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c087"
     )
-    pool_list = [
-        {
-            "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
-            "owner_public_key": "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0",  # noqa
-            "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-            "pool_url": self_hostname,
-            "p2_singleton_puzzle_hash": pool_contract_puzzle_hash.hex(),
-            "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-        }
-    ]
 
     root_path = farmer_api.farmer._root_path
-    with lock_and_load_config(root_path, "config.yaml") as config:
-        config["pool"]["pool_list"] = pool_list
-        save_config(root_path, "config.yaml", config)
+    PoolingShareState(
+        launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
+        owner_public_key=G1Element.from_bytes(
+            bytes.fromhex(
+                "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0"
+            )
+        ),
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        pool_url=self_hostname,
+        p2_singleton_puzzle_hash=pool_contract_puzzle_hash,
+        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+    ).add(root_path=root_path)
     await farmer_api.farmer.update_pool_state()
 
     pool_plot_count: int = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
