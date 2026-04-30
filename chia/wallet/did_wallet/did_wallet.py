@@ -124,15 +124,10 @@ class DIDWallet:
             name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
-        if amount > bal:
-            raise ValueError("Not enough balance")
-
         try:
             await self.generate_new_decentralised_id(amount, action_scope, fee, extra_conditions)
         except Exception:
-            await wallet_state_manager.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.wallet_id)
             raise
 
         await self.wallet_state_manager.add_new_wallet(self)
