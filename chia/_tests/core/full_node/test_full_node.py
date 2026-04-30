@@ -1590,7 +1590,7 @@ async def test_new_unfinished_block2_forward_limit(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "committment,expected",
+    "commitment,expected",
     [
         (0, Err.INVALID_TRANSACTIONS_GENERATOR_HASH),
         (1, Err.INVALID_TRANSACTIONS_INFO_HASH),
@@ -1607,7 +1607,7 @@ async def test_unfinished_block_with_replaced_generator(
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
     self_hostname: str,
-    committment: int,
+    commitment: int,
     expected: Err,
 ) -> None:
     full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
@@ -1621,7 +1621,7 @@ async def test_unfinished_block_with_replaced_generator(
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")
 
-    if committment > 0:
+    if commitment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
@@ -1636,7 +1636,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.transactions_info is not None
         transactions_info = block.transactions_info
 
-    if committment > 1:
+    if commitment > 1:
         tb = block.foliage_transaction_block
         assert tb is not None
         transaction_block = FoliageTransactionBlock(
@@ -1651,7 +1651,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.foliage_transaction_block is not None
         transaction_block = block.foliage_transaction_block
 
-    if committment > 2:
+    if commitment > 2:
         fl = block.foliage
         foliage = Foliage(
             fl.prev_block_hash,
@@ -1664,7 +1664,7 @@ async def test_unfinished_block_with_replaced_generator(
     else:
         foliage = block.foliage
 
-    if committment > 3:
+    if commitment > 3:
         fl = block.foliage
 
         secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
@@ -1680,10 +1680,10 @@ async def test_unfinished_block_with_replaced_generator(
             signature,
         )
 
-        if committment > 4:
+        if commitment > 4:
             pos = block.reward_chain_block.proof_of_space
 
-            if committment > 5:
+            if commitment > 5:
                 if pos.pool_public_key is None:
                     assert pos.pool_contract_puzzle_hash is not None
                     plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
@@ -1732,7 +1732,7 @@ async def test_unfinished_block_with_replaced_generator(
         reward_chain_block = block.reward_chain_block.get_unfinished()
 
     generator_refs: list[uint32] = []
-    if committment > 6:
+    if commitment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
     unf = UnfinishedBlock(
