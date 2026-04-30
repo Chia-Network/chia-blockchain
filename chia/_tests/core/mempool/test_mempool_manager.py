@@ -459,6 +459,7 @@ class TestCheckTimeLocks:
             conds,
             self.PREV_BLOCK_HEIGHT,
             self.PREV_BLOCK_TIMESTAMP,
+            nowrap=True,
         )
         e: Err | None = None
         if res is not None:
