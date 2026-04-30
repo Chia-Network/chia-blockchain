@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -392,3 +393,8 @@ def test_invalid_condition(
 
     with pytest.raises((ValueError, EvalError, KeyError)):
         cond.from_program(Program.from_bytes(prg))
+
+
+def test_create_coin_initialization_error() -> None:
+    with pytest.raises(ValueError, match=re.escape("Cannot have both memos and memo_blob")):
+        CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(0), memos=[b""], memo_blob=Program.to("not both"))
