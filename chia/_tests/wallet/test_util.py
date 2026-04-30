@@ -86,6 +86,10 @@ def test_cs_config() -> None:
         CoinSelectionConfigLoader(excluded_coin_ids=[bytes32.zeros], included_coin_ids=[bytes32.zeros]).autofill(
             constants=DEFAULT_CONSTANTS
         )
+    with pytest.raises(ValueError, match="`primary_coin` is also specified in `excluded_coin_ids`"):
+        CoinSelectionConfigLoader(excluded_coin_ids=[bytes32.zeros], primary_coin=bytes32.zeros).autofill(
+            constants=DEFAULT_CONSTANTS
+        )
     with pytest.raises(ValueError, match="Some coin selection restrictions eliminated coins specified for inclusion"):
         a_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
         CoinSelectionConfigLoader(included_coin_ids=[a_coin.name()], excluded_coin_amounts=[uint64(0)]).autofill(
