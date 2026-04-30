@@ -651,6 +651,24 @@ class TestCoinSelection:
 
         assert action_scope.side_effects.transactions[0].additions[0].parent_coin_info == other_coin_id
 
+        # origin_id conflicts with primary_coin
+        with pytest.raises(ValueError, match="`origin_id` must match `primary_coin` if both are specified"):
+            async with env.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config.override(primary_coin=other_coin_id),
+                push=False,
+            ) as action_scope:
+                await env.xch_wallet.generate_signed_transaction(
+                    [whole_balance], [bytes32.zeros], action_scope, origin_id=origin_coin_id
+                )
+
+        # create_tandem_xch_tx rejects primary_coin
+        with pytest.raises(ValueError, match="Using a primary coin is not supported for this wallet"):
+            async with env.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config.override(primary_coin=other_coin_id),
+                push=False,
+            ) as action_scope:
+                await env.xch_wallet.create_tandem_xch_tx(uint64(0), action_scope)
+
         await mint_cat(
             wallet_environments,
             env,
