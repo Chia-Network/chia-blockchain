@@ -155,8 +155,7 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
     # we won't use this port, this fixture is for _just_ a data layer rpc
     port = uint16(1)
     async with init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port))) as data_layer:
-        data_rpc_api = DataLayerRpcApi(data_layer)
-        yield data_rpc_api
+        yield DataLayerRpcApi(data_layer)
 
 
 async def init_wallet_and_node(
