@@ -1457,9 +1457,9 @@ async def test_new_unfinished_block(
     await full_node_1.full_node.add_block(blocks[-2])
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
-    msg = peer.outgoing_queue.get_nowait()
+    _, _, msg = peer.outgoing_queue.get_nowait()
     assert msg.type == ProtocolMessageTypes.new_peak.value
-    msg = peer.outgoing_queue.get_nowait()
+    _, _, msg = peer.outgoing_queue.get_nowait()
     if peer_version == "0.0.35":
         assert msg.type == ProtocolMessageTypes.new_unfinished_block.value
         assert msg.data == bytes(fnp.NewUnfinishedBlock(unf.partial_hash))
@@ -2443,6 +2443,8 @@ async def test_unsolicited_compact_vdf(
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
 
@@ -3295,11 +3297,9 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
     return unfinished_block_expected
 
 
-async def declare_pos_unfinished_block(
-    full_node_api: FullNodeAPI,
-    dummy_peer: WSChiaConnection,
-    block: FullBlock,
-) -> UnfinishedBlock:
+async def declare_pos_unfinished_block_pos_request(
+    full_node_api: FullNodeAPI, dummy_peer: WSChiaConnection, block: FullBlock
+) -> tuple[UnfinishedBlock, DeclareProofOfSpace]:
     blockchain = full_node_api.full_node.blockchain
     full_node_store = full_node_api.full_node.full_node_store
     overflow = is_overflow_block(blockchain.constants, block.reward_chain_block.signage_point_index)
@@ -3393,7 +3393,13 @@ async def declare_pos_unfinished_block(
         foliage_transaction_block=block.foliage_transaction_block,
         foliage=block.foliage,
     )
+    return unfinised_block, pospace
 
+
+async def declare_pos_unfinished_block(
+    full_node_api: FullNodeAPI, dummy_peer: WSChiaConnection, block: FullBlock
+) -> UnfinishedBlock:
+    unfinised_block, _ = await declare_pos_unfinished_block_pos_request(full_node_api, dummy_peer, block)
     return unfinised_block
 
 
@@ -3505,9 +3511,9 @@ async def test_pending_tx_cache_retry_on_new_peak(
         # Make sure it ends up in the pending cache, not the mempool
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=True) is not None
-        # Advance peak to meet the asserted height condition
+        # Advance peak to exactly the asserted height condition
         with caplog.at_level(logging.DEBUG):
-            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
             for block in blocks:
                 await full_node_api.full_node.add_block(block)
         # This should trigger peak post processing with the added transaction
@@ -3550,6 +3556,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
     server_3 = full_node_3.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
     await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 2)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_3.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
     ws_con_3 = next(iter(server_3.all_connections.values()))
@@ -3638,6 +3647,8 @@ async def test_new_tx_zero_cost(
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
+    await time_out_assert(5, lambda: len(server_2.all_connections) == 1)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
     await full_node_1.full_node.add_block(bt.get_consecutive_blocks(1)[0])
@@ -3693,7 +3704,9 @@ async def test_send_transaction_peer_tx_queue_full(
     # Set limit to 0 to trigger queue full exception
     full_node_api.full_node.transaction_queue.peer_size_limit = 0
     spend_bundle = SpendBundle([], G2Element())
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
+    )
     response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
     assert response_msg is not None
     response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
@@ -3749,7 +3762,7 @@ async def test_node_type_message_typechecking(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str, node_type: NodeType
 ) -> None:
     _, server, _ = one_node_one_block
-    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type, wait_for_peer_added=False)
     await time_out_assert(5, lambda: peer_id in server.all_connections)
     server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
     await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
@@ -3785,7 +3798,7 @@ async def test_node_types_inbound_connections_limit(
     assert server.accept_inbound_connections(node_type) is True
     # Set a low limit for this test and reach it with a dummy connection
     server.config[config_key] = 1
-    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type)
+    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type, wait_for_peer_added=False)
     await time_out_assert(5, lambda: peer_id in server.all_connections)
     # New inbound connections should be refused
     assert server.accept_inbound_connections(node_type) is False
@@ -3806,7 +3819,7 @@ async def test_hard_fork_version_enforcement(
     _, server, _ = one_node_one_block
     additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_hard_fork2_capability else []
     wsc, peer_id = await add_dummy_connection_wsc(
-        server, self_hostname, 42, NodeType.FULL_NODE, additional_capabilities=additional_capabilities
+        server, self_hostname, 42, additional_capabilities=additional_capabilities, wait_for_peer_added=False
     )
     staying_connected = consensus_mode < ConsensusMode.HARD_FORK_3_0 or has_hard_fork2_capability
     if staying_connected:
@@ -3849,10 +3862,11 @@ async def test_register_for_coin_updates(
     remaining_coins = real_coin_ids[1:]
     fake_coin_ids = [bytes32.random() for _ in range(max_subscribe_items)]
     request_ids = first_coin + fake_coin_ids + remaining_coins
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
-    response = await full_node_api.register_for_coin_updates(
-        wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0)), dummy_peer
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1337, NodeType.WALLET, wait_for_peer_added=False
     )
+    msg = wallet_protocol.RegisterForCoinUpdates(request_ids, uint32(0))
+    response = await full_node_api.register_for_coin_updates(bytes(msg), dummy_peer)
     assert response is not None
     assert response.type == ProtocolMessageTypes.respond_to_coin_updates.value
     response_data = wallet_protocol.RespondToCoinUpdates.from_bytes(response.data)
@@ -3876,7 +3890,6 @@ async def test_tx_request_and_timeout_call_api_exception(
     full_node_api, server, _ = one_node_one_block
     full_node = full_node_api.full_node
     _, peer_id = await add_dummy_connection(server, self_hostname, 42)
-    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server_connection = server.all_connections[peer_id]
     transaction_id = bytes32.random()
     full_node.full_node_store.peers_with_tx[transaction_id] = {
@@ -3907,7 +3920,6 @@ async def test_tx_request_and_timeout_queue_full(
     full_node_api, server, _ = one_node_one_block
     full_node = full_node_api.full_node
     _, peer_id = await add_dummy_connection(server, self_hostname, 42)
-    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server_connection = server.all_connections[peer_id]
     sb = SpendBundle([], G2Element())
     transaction_id = sb.name()
@@ -3971,7 +3983,9 @@ async def test_request_puzzle_state_responds_normally(
 
     assert full_node_api.full_node.blockchain.get_peak_height() is not None
 
-    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1339, NodeType.WALLET)
+    dummy_peer, _ = await add_dummy_connection_wsc(
+        server, self_hostname, 1339, NodeType.WALLET, wait_for_peer_added=False
+    )
 
     peak_height = full_node_api.full_node.blockchain.get_peak_height()
     assert peak_height is not None
@@ -3989,3 +4003,161 @@ async def test_request_puzzle_state_responds_normally(
 
     assert response is not None
     assert response.type == ProtocolMessageTypes.respond_puzzle_state.value
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_add_unfinished_block_farmed_behind_current_head(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    Covers the scenario where we call `add_unfinished_block` on a farmed
+    unfinished block that would be infused before the current finished head, so
+    it's already too late, to make sure it gets properly dropped.
+    """
+    full_node_api, _, bt = one_node_one_block
+    blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True)
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    # Build a valid unfinished block candidate extending the chain
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
+    unfinished_block = unfinished_from_full_block(blocks[-1])
+    peak = full_node_api.full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.total_iters > 0
+    # Create an unfinished block that would be infused before the current
+    # finished head.
+    lower_total_iters = uint128(peak.total_iters - 1)
+    reward_chain_block = unfinished_block.reward_chain_block.replace(total_iters=lower_total_iters)
+    late_unfinished_block = unfinished_block.replace(reward_chain_block=reward_chain_block)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        await full_node_api.full_node.add_unfinished_block(late_unfinished_block, None, farmed_block=True)
+    assert "Dropping farmed unfinished block as it would be infused before the current head" in caplog.text
+    # Make sure we didn't add this unfinished block
+    assert full_node_api.full_node.full_node_store.get_unfinished_block(late_unfinished_block.partial_hash) is None
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_declare_proof_of_space_late_unfinished_block(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Covers the scenario where an unfinished block is already too late as it
+    would be infused before the current finished head, to make sure it gets dropped.
+    """
+    full_node_api, server, bt = one_node_one_block
+    _, dummy_node_id = await add_dummy_connection_wsc(server, self_hostname, 1337)
+    dummy_peer = server.all_connections[dummy_node_id]
+    wallet = WalletTool(test_constants)
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        num_blocks=3, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+    )
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    blocks = bt.get_consecutive_blocks(
+        block_list_input=blocks,
+        num_blocks=1,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+    candidate_block = blocks[-1]
+    # Run one normal declare proof of space call first so this SP/challenge is
+    # known to the node and grab the `DeclareProofOfSpace` request.
+    _, declare_pos_request = await declare_pos_unfinished_block_pos_request(full_node_api, dummy_peer, candidate_block)
+    peak = full_node_api.full_node.blockchain.get_peak()
+    assert peak is not None
+    # Now make the same unfinished block candidate look behind the current
+    # finished head.
+    monkeypatch.setattr(
+        full_node_api.full_node.blockchain, "get_peak", lambda: peak.replace(total_iters=uint128(123456789))
+    )
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        await full_node_api.declare_proof_of_space(declare_pos_request, dummy_peer)
+    assert "Dropping farmed unfinished block candidate as it's behind the current head" in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_declare_proof_of_space_empty_block_no_new_tx_window_yet(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Covers the scenario where the unfinished block signage point is at or
+    before the end of the window where the last transaction block prevents a
+    new transaction block from being created, to make sure we properly create
+    an empty block.
+    """
+    full_node_api, server, bt = one_node_one_block
+    _, dummy_node_id = await add_dummy_connection_wsc(server, self_hostname, 1337)
+    dummy_peer = server.all_connections[dummy_node_id]
+    wallet = WalletTool(test_constants)
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        num_blocks=3, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+    )
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    sb = await add_tx_to_mempool(
+        full_node_api, dummy_peer, wallet, blocks[-1], coinbase_puzzlehash, bytes32.random(), uint64(42)
+    )
+    assert sb is not None
+    blocks = bt.get_consecutive_blocks(
+        block_list_input=blocks,
+        num_blocks=1,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        guarantee_transaction_block=True,
+        transaction_data=sb,
+    )
+    candidate_block = blocks[-1]
+    tx_peak = full_node_api.full_node.blockchain.get_tx_peak()
+    assert tx_peak is not None
+    # Force candidate's signage point position to be before the latest
+    # transaction block's infusion position.
+    monkeypatch.setattr(
+        full_node_api.full_node.blockchain, "get_tx_peak", lambda: tx_peak.replace(total_iters=uint128(123456789))
+    )
+    unfinished_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, candidate_block)
+    # Make sure we created an empty block
+    assert unfinished_block.transactions_generator is None
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_declare_proof_of_space_unfinished_block_includes_block_generator(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the scenario where the unfinished block includes a block generator
+    created from the mempool.
+    """
+    full_node_api, server, bt = one_node_one_block
+    _, dummy_node_id = await add_dummy_connection_wsc(server, self_hostname, 1337)
+    dummy_peer = server.all_connections[dummy_node_id]
+    wallet = WalletTool(test_constants)
+    coinbase_puzzlehash = wallet.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        num_blocks=3, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+    )
+    await add_blocks_in_batches(blocks, full_node_api.full_node)
+    sb = await add_tx_to_mempool(
+        full_node_api, dummy_peer, wallet, blocks[-1], coinbase_puzzlehash, bytes32.random(), uint64(42)
+    )
+    assert sb is not None
+    blocks = bt.get_consecutive_blocks(
+        block_list_input=blocks,
+        num_blocks=1,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        guarantee_transaction_block=True,
+        transaction_data=sb,
+    )
+    candidate_block = blocks[-1]
+    unfinished_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, candidate_block)
+    assert unfinished_block.transactions_generator is not None
+    assert unfinished_block.transactions_info is not None
+    assert unfinished_block.transactions_info.cost > 0

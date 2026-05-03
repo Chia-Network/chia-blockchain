@@ -55,13 +55,14 @@ async def subscribe_to_phs(
     puzzle_hashes: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
+    priority: int = 0,
 ) -> list[CoinState]:
     """
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
     all_coins_state: RespondToPhUpdates | None = await peer.call_api(
-        FullNodeAPI.register_for_ph_updates, msg, timeout=300
+        FullNodeAPI.register_for_ph_updates, msg, timeout=300, priority=priority
     )
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_ph_updates")
@@ -72,13 +73,14 @@ async def subscribe_to_coin_updates(
     coin_names: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
+    priority: int = 0,
 ) -> list[CoinState]:
     """
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
     all_coins_state: RespondToCoinUpdates | None = await peer.call_api(
-        FullNodeAPI.register_for_coin_updates, msg, timeout=300
+        FullNodeAPI.register_for_coin_updates, msg, timeout=300, priority=priority
     )
 
     if all_coins_state is None:
@@ -195,14 +197,23 @@ def validate_removals(
 
 async def request_and_validate_removals(
     peer: WSChiaConnection, height: uint32, header_hash: bytes32, coin_name: bytes32, removals_root: bytes32
-) -> bool:
+) -> bool | None:
+    """
+    Returns None on failure to obtain removals, otherwise it returns True or
+    False depending on the outcome of validation.
+    """
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
     removals_res: RespondRemovals | RejectRemovalsRequest | None = await peer.call_api(
         FullNodeAPI.request_removals, removals_request
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
-        return False
+        log.info(
+            f"Failed to obtain removals for height {height} header hash {header_hash} "
+            f"coin name {coin_name} from peer {peer.peer_node_id} / {peer.peer_info.host} "
+            f"version {peer.version} response: {removals_res}"
+        )
+        return None
     return validate_removals(removals_res.coins, removals_res.proofs, removals_root)
 
 
@@ -213,7 +224,7 @@ async def request_and_validate_additions(
     header_hash: bytes32,
     puzzle_hash: bytes32,
     additions_root: bytes32,
-) -> bool:
+) -> bool | None:
     if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
         return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
@@ -221,7 +232,12 @@ async def request_and_validate_additions(
         FullNodeAPI.request_additions, additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
-        return False
+        log.info(
+            f"Failed to obtain additions for height {height} header hash {header_hash} "
+            f"puzzle hash {puzzle_hash} from peer {peer.peer_node_id} / {peer.peer_info.host} "
+            f"version {peer.version} response: {additions_res}"
+        )
+        return None
     result: bool = validate_additions(
         additions_res.coins,
         additions_res.proofs,
@@ -253,14 +269,16 @@ def sort_coin_states(coin_states: set[CoinState]) -> list[CoinState]:
 
 
 async def request_header_blocks(
-    peer: WSChiaConnection, start_height: uint32, end_height: uint32
+    peer: WSChiaConnection, start_height: uint32, end_height: uint32, priority: int = 0
 ) -> list[HeaderBlock] | None:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
         response = await peer.call_api(
-            FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False)
+            FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False), priority=priority
         )
     else:
-        response = await peer.call_api(FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height))
+        response = await peer.call_api(
+            FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height), priority=priority
+        )
     if response is None or isinstance(response, (RejectBlockHeaders, RejectHeaderBlocks)):
         return None
     assert isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders))
@@ -271,6 +289,7 @@ async def _fetch_header_blocks_inner(
     all_peers: list[tuple[WSChiaConnection, bool]],
     request_start: uint32,
     request_end: uint32,
+    priority: int = 0,
 ) -> RespondHeaderBlocks | RespondBlockHeaders | None:
     # We will modify this list, don't modify passed parameters.
     bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].peer_capabilities]
@@ -281,11 +300,15 @@ async def _fetch_header_blocks_inner(
     for peer, is_trusted in bytes_api_peers + other_peers:
         if Capability.BLOCK_HEADERS in peer.peer_capabilities:
             response = await peer.call_api(
-                FullNodeAPI.request_block_headers, RequestBlockHeaders(request_start, request_end, False)
+                FullNodeAPI.request_block_headers,
+                RequestBlockHeaders(request_start, request_end, False),
+                priority=priority,
             )
         else:
             response = await peer.call_api(
-                FullNodeAPI.request_header_blocks, RequestHeaderBlocks(request_start, request_end)
+                FullNodeAPI.request_header_blocks,
+                RequestHeaderBlocks(request_start, request_end),
+                priority=priority,
             )
 
         if isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders)):
@@ -305,6 +328,7 @@ async def fetch_header_blocks_in_range(
     end: uint32,
     peer_request_cache: PeerRequestCache,
     all_peers: list[tuple[WSChiaConnection, bool]],
+    priority: int = 0,
 ) -> list[HeaderBlock] | None:
     blocks: list[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
@@ -321,7 +345,7 @@ async def fetch_header_blocks_in_range(
         else:
             log.debug(f"Fetching: {start}-{end}")
             res_h_blocks_task = create_referenced_task(
-                _fetch_header_blocks_inner(all_peers, request_start, request_end)
+                _fetch_header_blocks_inner(all_peers, request_start, request_end, priority=priority)
             )
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task

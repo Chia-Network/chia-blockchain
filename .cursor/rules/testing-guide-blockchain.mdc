@@ -1,0 +1,90 @@
+---
+description: Blockchain consensus test patterns — block validation, reorgs, overflow slots, fork behavior
+globs:
+  - chia/_tests/blockchain/**
+---
+
+# Blockchain Tests
+
+## Scope
+
+Use this for consensus-level chain behavior in `chia/_tests/blockchain/**`:
+
+- block validation outcomes (`NEW_PEAK`, `ADDED_AS_ORPHAN`, `INVALID_BLOCK`)
+- reorgs and fork preference behavior
+- overflow/slot edge cases
+- block-record / fork-info invariants
+
+Primary references:
+
+- `chia/_tests/blockchain/test_blockchain.py`
+- `chia/_tests/blockchain/blockchain_test_utils.py`
+
+## Preferred Harness
+
+- `empty_blockchain` fixture for most unit/integration-style blockchain tests.
+- `bt` (`BlockTools`) for deterministic block construction.
+- `create_blockchain(...)` when two-chain comparisons are needed.
+
+## Common Build/Add Pattern
+
+1. Build deterministic blocks with `bt.get_consecutive_blocks(...)`.
+2. Add with `_validate_and_add_block(...)` (or multi-result helper variants).
+3. Assert expected add result/error at each step.
+
+Useful options in `get_consecutive_blocks(...)`:
+
+- `block_list_input` to continue a chain
+- `seed` for alternate fork chain
+- `force_overflow` for overflow peak/slot scenarios
+- `skip_slots` for sub-slot boundary behavior
+
+## Reorg Pattern
+
+For fork validation flows:
+
+- Initialize `fork_info = ForkInfo(...)`.
+- Reuse a single `AugmentedBlockchain(b)` while validating fork blocks.
+- Expect:
+  - `ALREADY_HAVE_BLOCK` for shared prefix blocks
+  - `ADDED_AS_ORPHAN` before fork wins
+  - default success (`NEW_PEAK`) once heavier fork overtakes
+
+## Overflow-Specific Guidance
+
+- Use `is_overflow_block(constants, block.reward_chain_block.signage_point_index)` for assertions.
+- If a test requires overflow peak precondition, enforce it explicitly with `force_overflow=True`.
+- Keep reorg assertions layered: precondition peak state -> fork progression results -> final peak state.
+
+## Starter Template
+
+```python
+from __future__ import annotations
+
+import pytest
+from chia_rs.sized_ints import uint32
+
+from chia._tests.blockchain.blockchain_test_utils import (
+    _validate_and_add_block,
+    _validate_and_add_block_multi_result,
+)
+from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.pot_iterations import is_overflow_block
+from chia.simulator.block_tools import BlockTools
+
+
+@pytest.mark.anyio
+async def test_example(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    # Build a base chain
+    blocks = bt.get_consecutive_blocks(5)
+    for block in blocks:
+        await _validate_and_add_block(empty_blockchain, block)
+
+    # Fork from earlier point with different seed
+    fork_blocks = bt.get_consecutive_blocks(
+        3, block_list_input=blocks[:3], seed=b"fork"
+    )
+    # Add fork blocks and assert results...
+```

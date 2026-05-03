@@ -48,6 +48,14 @@ class Capability(IntEnum):
     # Signals support for Hard Fork 2
     HARD_FORK_2 = 6
 
+    # When both peers advertise this, a ConfigureWindowSizes message is
+    # required immediately following the handshake, and rate limits v3 replace
+    # v2 for supported protocol message types.
+    # Sequence: outbound sends ConfigureWindowSizes then inbound validates and
+    # replies with ConfigureWindowSizes.
+    # Settings must be non empty and window_size == 0 means unlimited.
+    RATE_LIMITS_V3 = 7
+
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.
@@ -81,6 +89,13 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: list[tuple[uint16, str]]
+
+
+@streamable
+@dataclass(frozen=True)
+class ConfigureWindowSizes(Streamable):
+    # List of tuples of protocol message type and window size (0 is unlimited)
+    settings: list[tuple[uint8, uint16]]
 
 
 @streamable

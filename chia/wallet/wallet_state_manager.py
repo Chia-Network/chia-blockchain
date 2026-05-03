@@ -11,6 +11,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
@@ -155,6 +156,13 @@ if TYPE_CHECKING:
 
 
 PendingTxCallback = Callable[[], None]
+
+
+class SyncStatus(IntEnum):
+    SYNCED = 0
+    SLIGHTLY_BEHIND = 1
+    LONG_SYNC = 2
+    DISCONNECTED = 3
 
 
 class WalletStateManager:
@@ -727,6 +735,23 @@ class WalletStateManager:
         if latest_timestamp > block_is_current_at and not has_pending_queue_items:
             return True
         return False
+
+    async def get_sync_status(self) -> SyncStatus:
+        peak = self.blockchain._peak
+        if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            return SyncStatus.SYNCED
+
+        if peak is None or len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
+            return SyncStatus.DISCONNECTED
+
+        height_gap = peak.height - await self.blockchain.get_finished_sync_up_to()
+        if height_gap > 10:
+            return SyncStatus.LONG_SYNC
+
+        if not await self.synced():
+            return SyncStatus.SLIGHTLY_BEHIND
+
+        return SyncStatus.SYNCED
 
     @property
     def sync_mode(self) -> bool:

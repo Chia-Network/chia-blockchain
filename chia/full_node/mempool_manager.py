@@ -781,6 +781,7 @@ class MempoolManager:
             conds,
             self.peak.height,
             self.peak.timestamp,
+            nowrap=self.peak.height >= self.constants.HARD_FORK2_HEIGHT,
         )
         tl_error: Err | None = None
         if tl_error_rust is not None:

@@ -1,0 +1,15 @@
+---
+description: Auto-attach consensus context when working in consensus code
+globs:
+  - chia/consensus/**
+---
+
+# Consensus Context Available
+
+Deep context for this subsystem exists at `.cursor/context/consensus.md`.
+Read it before exploring code — it documents `add_block()`, `_reconsider_peak()`,
+`ForkInfo`, `validate_block_body()`, difficulty adjustment, VDF iteration math,
+block rewards, and `AugmentedBlockchain` with line-level analysis and invariants.
+
+If the change involves reorgs or cross-module state, also read
+`.cursor/context/global-invariants.md`.
