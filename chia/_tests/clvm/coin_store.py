@@ -88,6 +88,7 @@ class CoinStore:
             # TODO: this is technically not right, it's supposed to be the
             # previous transaction block's timestamp
             uint64(now.seconds),
+            nowrap=now.height >= self._constants.HARD_FORK2_HEIGHT,
         )
 
         if err is not None:

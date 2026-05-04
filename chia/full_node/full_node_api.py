@@ -5,7 +5,6 @@ import logging
 import time
 import traceback
 from collections.abc import Collection
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -35,7 +34,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_creation import create_unfinished_block
+from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
@@ -73,7 +72,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -158,13 +157,11 @@ class FullNodeAPI:
 
     log: logging.Logger
     full_node: FullNode
-    executor: ThreadPoolExecutor
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="node-api-")
 
     @property
     def server(self) -> ChiaServer:
@@ -337,7 +334,10 @@ class FullNodeAPI:
         elif peer.expected_mempool_responses > 0:
             peer.expected_mempool_responses -= 1
         else:
-            self.log.warning(f"Received unsolicited transaction from peer {peer.peer_node_id}")
+            self.log.info(
+                f"Received unsolicited transaction {spend_name} from peer "
+                f"{peer.peer_node_id} / {peer.peer_info.host} version {peer.version}"
+            )
             return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
@@ -936,10 +936,6 @@ class FullNodeAPI:
                     return None
 
                 if peak is not None:
-                    # Finds the last transaction block before this one
-                    curr_l_tb: BlockRecord = peak
-                    while not curr_l_tb.is_transaction_block:
-                        curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         block_version = self.full_node.config.get("block_creation", 1)
                         block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
@@ -951,7 +947,8 @@ class FullNodeAPI:
                             self.log.warning(f"Unknown 'block_creation' config: {block_version}")
                             create_block = self.full_node.mempool_manager.create_block_generator
 
-                        new_block_gen = create_block(curr_l_tb.header_hash, block_timeout)
+                        assert tx_peak is not None
+                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
 
                         if (
                             new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
@@ -1057,7 +1054,6 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            tx_peak = self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,
@@ -1072,7 +1068,36 @@ class FullNodeAPI:
                 request.signage_point_index,
                 required_iters,
             )
-
+            # Candidate position at infusion time in total iterations
+            infusion_point_total_iters = calculate_infusion_point_total_iters(
+                sub_slot_start_total_iters=total_iters_pos_slot,
+                sp_iters=sp_iters,
+                ip_iters=ip_iters,
+                sub_slot_iters=sub_slot_iters,
+            )
+            # If this candidate would be infused before the current finished
+            # head then it's already too late and it should be dropped. This
+            # indicates latency issues.
+            peak = self.full_node.blockchain.get_peak()
+            if peak is not None and infusion_point_total_iters < peak.total_iters:
+                self.log.warning(
+                    "Dropping farmed unfinished block candidate as it's "
+                    "behind the current head (latency issues). "
+                    f"Signage point index: {request.signage_point_index} "
+                    f"unfinished block infusion point total iters: {infusion_point_total_iters} "
+                    f"current head total iters: {peak.total_iters} "
+                    f"peak height: {peak.height}"
+                )
+                return None
+            # Candidate signage point position in total iterations
+            candidate_sp_total_iters = uint128(total_iters_pos_slot + sp_iters)
+            # If this candidate would be infused at or after the current
+            # finished head, and its signage point's position is at or before
+            # the end of the window where the last transaction block prevents a
+            # new transaction block from being created, then we should create
+            # an empty block.
+            if tx_peak is not None and candidate_sp_total_iters <= tx_peak.total_iters:
+                new_block_gen = None
             # The block's timestamp must be greater than the previous transaction block's timestamp
             timestamp = uint64(time.time())
             curr: BlockRecord | None = prev_b
@@ -1087,10 +1112,9 @@ class FullNodeAPI:
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
-                sub_slot_iters,
+                infusion_point_total_iters,
                 request.signage_point_index,
                 sp_iters,
-                ip_iters,
                 request.proof_of_space,
                 cc_challenge_hash,
                 farmer_ph,
@@ -1143,10 +1167,9 @@ class FullNodeAPI:
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
-                    sub_slot_iters,
+                    infusion_point_total_iters,
                     request.signage_point_index,
                     sp_iters,
-                    ip_iters,
                     request.proof_of_space,
                     cc_challenge_hash,
                     farmer_ph,
@@ -1206,7 +1229,7 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
-            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+            if isinstance(e, ConsensusError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
                 self.full_node.log.info(
                     f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
                 )
@@ -1283,8 +1306,10 @@ class FullNodeAPI:
         else:
             return msg
 
-    @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_block_header(
+        self, request: wallet_protocol.RequestBlockHeader, peer: WSChiaConnection
+    ) -> Message | None:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
@@ -1305,13 +1330,17 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
             flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
-            additions, removals = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            # trusted peers use dedicated threads at high priority;
+            # untrusted peers are deprioritized
+            trusted = self.is_trusted(peer)
+            additions, removals = await self.full_node.pool.run_in_loop(
                 additions_and_removals,
                 bytes(block.transactions_generator),
                 block_generator.generator_refs,
                 flags,
                 self.full_node.constants,
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
@@ -1509,8 +1538,10 @@ class FullNodeAPI:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Message | None:
         coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
@@ -1532,15 +1563,19 @@ class FullNodeAPI:
             self.full_node.blockchain.lookup_block_generators, block
         )
         assert block_generator is not None
+        # trusted peers use dedicated threads at high priority;
+        # untrusted peers are deprioritized
+        trusted = self.is_trusted(peer)
         try:
-            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
-                self.executor,
+            puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 block_generator.program,
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
                 get_flags_for_height_and_constants(height, self.full_node.constants),
+                nice=(5,) if trusted else (15,),
+                dedicated=trusted,
             )
         except ValueError:
             return reject_msg
@@ -1734,7 +1769,10 @@ class FullNodeAPI:
         await self.full_node.add_compact_vdf(request, peer)
         return None
 
-    @metadata.request(peer_required=True)
+    @metadata.request(
+        peer_required=True,
+        list_limits=lambda self, peer: {"puzzle_hashes": self.max_subscriptions(peer)},
+    )
     async def register_for_ph_updates(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1797,7 +1835,10 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_updates, response)
         return msg
 
-    @metadata.request(peer_required=True)
+    @metadata.request(
+        peer_required=True,
+        list_limits=lambda self, peer: {"coin_ids": self.max_subscriptions(peer)},
+    )
     async def register_for_coin_updates(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1807,7 +1848,9 @@ class FullNodeAPI:
         # TODO: apparently we have tests that expect to receive a
         # RespondToCoinUpdates even when subscribing to the same coin multiple
         # times, so we can't optimize away such DB lookups (yet)
-        coin_ids = request.coin_ids[:max_subscriptions]
+        coin_ids = request.coin_ids
+        if len(coin_ids) > max_subscriptions:
+            coin_ids = coin_ids[:max_subscriptions]
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
 
         states: list[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
@@ -1922,7 +1965,11 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_remove_coin_subscriptions, response)
         return msg
 
-    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
+    @metadata.request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_puzzle_state],
+        list_limits=lambda self, peer: {"puzzle_hashes": CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE},
+    )
     async def request_puzzle_state(
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
     ) -> Message:
@@ -1930,13 +1977,10 @@ class FullNodeAPI:
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        request_puzzle_hashes = list(dict.fromkeys(request.puzzle_hashes))
-
-        # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
-        # It can be increased in the future, and this protocol should be written and tested in a way that
-        # this increase would not break the API.
-        count = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-        puzzle_hashes = request_puzzle_hashes[:count]
+        puzzle_hashes = request.puzzle_hashes
+        if len(puzzle_hashes) > CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE:
+            puzzle_hashes = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+        puzzle_hashes = list(dict.fromkeys(puzzle_hashes))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)
@@ -2004,14 +2048,20 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
-    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
+    @metadata.request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_coin_state],
+        list_limits=lambda self, peer: {"coin_ids": self.max_subscribe_response_items(peer)},
+    )
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
         subs = self.full_node.subscriptions
 
-        request_coin_ids = list(dict.fromkeys(request.coin_ids))
-        coin_ids = request_coin_ids[:max_items]
+        coin_ids = request.coin_ids
+        if len(coin_ids) > max_items:
+            coin_ids = coin_ids[:max_items]
+        coin_ids = list(dict.fromkeys(coin_ids))
 
         previous_header_hash = (
             self.full_node.blockchain.height_to_hash(request.previous_height)

@@ -6,8 +6,9 @@ import json
 import logging
 import re
 from operator import attrgetter
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
@@ -133,6 +134,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -651,11 +653,12 @@ async def test_create_signed_transaction(
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
-    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+
+    main_tx = next(tx for tx in txs if tx.amount > 0)
+    assert_tx_amounts(main_tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = txs[0].spend_bundle
-    assert spend_bundle is not None
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     xch_delta = amount_total if not is_cat else amount_fee
     cat_delta = amount_total if is_cat else 0
     await wallet_environments.process_pending_states(
@@ -1782,15 +1785,15 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(1)))
     ).trade_records
     assert len(all_offers) == 1
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(10)))
     ).trade_records
     assert len(all_offers) == 0
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(50)))
     ).trade_records
     assert len(all_offers) == 2
 
@@ -2477,6 +2480,55 @@ async def _check_delete_key(
     assert resp.used_for_pool_rewards is False
 
 
+_GET_HEIGHT_INFO_NO_CACHED_RECORD = object()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "block_record,expected_is_tx,expected_prev",
+    [
+        pytest.param(_GET_HEIGHT_INFO_NO_CACHED_RECORD, None, None, id="is_transaction_block_none_prev_none"),
+        pytest.param(
+            SimpleNamespace(is_transaction_block=True, prev_transaction_block_height=uint32(21)),
+            True,
+            uint32(21),
+            id="is_transaction_block_true_prev_uint32",
+        ),
+        pytest.param(
+            SimpleNamespace(is_transaction_block=False, prev_transaction_block_height=uint32(0)),
+            False,
+            uint32(0),
+            id="is_transaction_block_false_prev_uint32",
+        ),
+    ],
+)
+async def test_get_height_info_response_variants(
+    block_record: object,
+    expected_is_tx: bool | None,
+    expected_prev: uint32 | None,
+) -> None:
+    """Covers GetHeightInfoResponse optional fields for missing cache vs tx vs non-tx block records."""
+    sync_height = uint32(875)
+    mock_blockchain = MagicMock()
+    mock_blockchain.get_finished_sync_up_to = AsyncMock(return_value=sync_height)
+    mock_blockchain.get_latest_timestamp = MagicMock(return_value=uint64(1700000000))
+    if block_record is _GET_HEIGHT_INFO_NO_CACHED_RECORD:
+        mock_blockchain.height_to_block_record = MagicMock(side_effect=KeyError(sync_height))
+    else:
+        mock_blockchain.height_to_block_record = MagicMock(return_value=block_record)
+
+    api_self = SimpleNamespace(
+        service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
+    )
+    raw = await WalletRpcApi.get_height_info(api_self, {})
+    response = GetHeightInfoResponse.from_json_dict(raw)
+    assert isinstance(response, GetHeightInfoResponse)
+    assert response.height == sync_height
+    assert response.is_transaction_block == expected_is_tx
+    assert response.prev_transaction_block_height == expected_prev
+    mock_blockchain.height_to_block_record.assert_called_once_with(sync_height)
+
+
 @pytest.mark.parametrize(
     "wallet_environments",
     [{"num_environments": 1, "blocks_needed": [1]}],
@@ -2497,7 +2549,9 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    assert (await client.get_height_info()).height > 0
+    height_info = await client.get_height_info()
+    assert height_info.height > 0
+    assert (height_info.is_transaction_block is None) == (height_info.prev_transaction_block_height is None)
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)

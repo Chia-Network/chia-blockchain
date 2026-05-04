@@ -258,7 +258,7 @@ class TestDos:
 
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
-        assert len(server_1.all_connections) == 1
+        await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
 
         ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
         ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
@@ -317,7 +317,7 @@ class TestDos:
 
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
-        assert len(server_1.all_connections) == 1
+        await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
 
         ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
         ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
@@ -370,7 +370,7 @@ class TestDos:
 
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
-        assert len(server_1.all_connections) == 1
+        await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
 
         ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
         ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
@@ -444,7 +444,7 @@ class TestDos:
                     first = await ws.receive()
                     assert first.type == WSMsgType.BINARY, "Expected handshake response"
 
-                    assert len(server.all_connections) == 1
+                    await time_out_assert(5, lambda: len(server.all_connections) == 1)
                     ws_con = next(iter(server.all_connections.values()))
                     ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
 

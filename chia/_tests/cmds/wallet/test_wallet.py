@@ -307,7 +307,12 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
         async def get_height_info(self) -> GetHeightInfoResponse:
             self.add_to_log("get_height_info", ())
-            return GetHeightInfoResponse(height=uint32(10))
+            return GetHeightInfoResponse(
+                height=uint32(10),
+                latest_timestamp=uint64(1700000000),
+                is_transaction_block=True,
+                prev_transaction_block_height=uint32(9),
+            )
 
         async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
             self.add_to_log("get_wallet_balance", (request,))
@@ -491,6 +496,10 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "-l10",
         "--exclude-coin",
         bytes32_hexstr,
+        "--include-coin",
+        f"0x{bytes32([99] * 32).hex()}",
+        "--primary-coin",
+        f"0x{bytes32([99] * 32).hex()}",
         "--valid-at",
         "100",
         "--expires-at",
@@ -527,6 +536,8 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     max_coin_amount=uint64(10000000000000),
                     excluded_coin_amounts=[],
                     excluded_coin_ids=[bytes32([98] * 32)],
+                    included_coin_ids=[bytes32([99] * 32)],
+                    primary_coin=bytes32([99] * 32),
                     reuse_puzhash=True,
                 ),
                 500000000000,
@@ -544,6 +555,8 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     max_coin_amount=uint64(10000),
                     excluded_coin_amounts=[],
                     excluded_coin_ids=[bytes32([98] * 32)],
+                    included_coin_ids=[bytes32([99] * 32)],
+                    primary_coin=bytes32([99] * 32),
                     reuse_puzhash=True,
                 ),
                 1000,

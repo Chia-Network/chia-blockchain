@@ -329,6 +329,7 @@ async def test_sync_bad_peak_while_synced(
     # trigger long sync in full node 2
     peak_block = default_1500_blocks[1050]
     await server_2.start_client(PeerInfo(self_hostname, server_3.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: full_node_3.full_node.server.node_id in server_2.all_connections)
     con = server_2.all_connections[full_node_3.full_node.server.node_id]
     peak = full_node_protocol.NewPeak(
         peak_block.header_hash,

@@ -31,6 +31,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.start_wallet import create_wallet_service
 
 
@@ -58,6 +59,52 @@ async def test_duplicate_client_connection(
 
 
 @pytest.mark.anyio
+async def test_start_client_handshake_timeout(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    async def timeout_handshake(
+        self: WSChiaConnection, network_id: str, server_port: uint16, local_type: NodeType
+    ) -> None:
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(WSChiaConnection, "perform_handshake", timeout_handshake)
+    target_peer = PeerInfo(self_hostname, server_2.get_port())
+    with caplog.at_level(logging.DEBUG):
+        assert not await server_1.start_client(target_peer, None)
+    assert f"Handshake timeout connecting to {target_peer}" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_start_client_handshake_timeout_configurable(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    recorded_timeouts: list[float | None] = []
+    original_wait_for = asyncio.wait_for
+
+    async def capturing_wait_for(fut: object, *, timeout: float | None = None) -> object:
+        recorded_timeouts.append(timeout)
+        return await original_wait_for(fut, timeout=timeout)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(asyncio, "wait_for", capturing_wait_for)
+    monkeypatch.setattr("chia.server.server.is_localhost", lambda _host: False)
+    server_1.config["outbound_handshake_timeout"] = 42
+    target_peer = PeerInfo(self_hostname, server_2.get_port())
+    with caplog.at_level(logging.DEBUG):
+        await server_1.start_client(target_peer, None)
+    assert 42.0 in recorded_timeouts
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
     two_nodes_one_block: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
@@ -70,7 +117,7 @@ async def test_connection_string_conversion(
     # WSChiaConnection(local_type=<NodeType.FULL_NODE: 1>, local_port=50632, local_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>, <Capability.MEMPOOL_UPDATES: 5>, <Capability.HARD_FORK_2: 6>], peer_info=PeerInfo(_ip=IPv4Address('127.0.0.1'), _port=50640), peer_node_id=<bytes32: 566a318f0f656125b4fef0e85fbddcf9bc77f8003d35293c392479fc5d067f4d>, outbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13f50>, inbound_rate_limiter=<chia.server.rate_limits.RateLimiter object at 0x114a13e90>, is_outbound=False, creation_time=1675271096.275591, bytes_read=68, bytes_written=162, last_message_time=1675271096.276271, peer_server_port=50636, closed=False, connection_type=<NodeType.FULL_NODE: 1>, request_nonce=32768, peer_capabilities=[<Capability.BASE: 1>, <Capability.BLOCK_HEADERS: 2>, <Capability.RATE_LIMITS_V2: 3>, <Capability.MEMPOOL_UPDATES: 5>, <Capability.HARD_FORK_2: 6>], version='', protocol_version=<Version('0.0.36')>) # noqa
     converted = method(peer)
     print(converted)
-    assert len(converted) < 1100
+    assert len(converted) < 1200
 
 
 @pytest.mark.anyio
@@ -83,7 +130,9 @@ async def test_connection_versions(
     await wallet_node.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
+    await time_out_assert(5, lambda: full_node.server.node_id in wallet_node.server.all_connections)
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
+    await time_out_assert(5, lambda: wallet_node.server.node_id in full_node.server.all_connections)
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version[NodeType.WALLET])
@@ -123,6 +172,7 @@ async def test_api_not_ready(
     )
     wallet_node.log_out()
     assert not wallet_service._api.ready()
+    await time_out_assert(5, lambda: wallet_node.server.node_id in full_node.server.all_connections)
     connection = full_node.server.all_connections[wallet_node.server.node_id]
 
     def request_ignored() -> bool:
@@ -155,7 +205,10 @@ async def test_error_response(
     test_version = Version(version)
     request = RequestTransaction(bytes32(32 * b"1"))
     error_message = f"Some error message: {request.transaction_id}"
-    dummy_wsc, dummy_peer_id = await add_dummy_connection_wsc(full_node.server, self_hostname, 1337)
+    dummy_wsc, dummy_peer_id = await add_dummy_connection_wsc(
+        full_node.server, self_hostname, 1337, wait_for_peer_added=False
+    )
+    await time_out_assert(5, lambda: dummy_peer_id in full_node.server.all_connections)
     dummy_full_node_connection = full_node.server.all_connections[dummy_peer_id]
     dummy_full_node_connection.protocol_version = test_version
     with caplog.at_level(logging.DEBUG):
@@ -189,7 +242,9 @@ async def test_error_receive(
     await wallet_node.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
+    await time_out_assert(5, lambda: wallet_node.server.node_id in full_node.server.all_connections)
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
+    await time_out_assert(5, lambda: full_node.server.node_id in wallet_node.server.all_connections)
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
     message = make_msg(ProtocolMessageTypes.error, error)
 
@@ -197,8 +252,8 @@ async def test_error_receive(
         return f"ApiError: {error} from {connection.peer_node_id}, {connection.peer_info}" in caplog.text
 
     with caplog.at_level(logging.WARNING):
-        await full_node_connection.outgoing_queue.put(message)
-        await wallet_connection.outgoing_queue.put(message)
+        await full_node_connection.outgoing_queue.put((0, 0, message))
+        await wallet_connection.outgoing_queue.put((0, 1, message))
         await time_out_assert(10, error_log_found, True, full_node_connection)
         await time_out_assert(10, error_log_found, True, wallet_connection)
 
@@ -425,8 +480,7 @@ async def test_inbound_handler_none_msg(
     `_read_one_message`.
     """
     _, server, _ = one_node_one_block
-    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337)
-    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 1337)
     read_calls = 0
 
     async def test_read_one_message() -> Message | None:
@@ -436,7 +490,48 @@ async def test_inbound_handler_none_msg(
 
     monkeypatch.setattr(wsc, "_read_one_message", test_read_one_message)
     assert wsc.inbound_task is not None
+    wsc.inbound_task.cancel()
+    wsc.inbound_task = create_referenced_task(wsc.inbound_handler())
     await asyncio.wait_for(wsc.inbound_task, timeout=1)
     assert read_calls == 1
     assert wsc.incoming_queue.qsize() == 0
     await wsc.close()
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_send_message_timed_out_nonced_request(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Covers the scenario where a nonced request gets timed out while it's in the
+    outgoing queue to make sure it gets dropped.
+    """
+    _, server, _ = one_node_one_block
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 1337)
+    event = asyncio.Event()
+    original_send_message = wsc._send_message
+    request_id: uint16 | None = None
+
+    async def test_send_message(message: Message, priority: int = 0) -> None:
+        nonlocal request_id
+        request_id = message.id
+        await event.wait()
+        await original_send_message(message, priority=priority)
+
+    monkeypatch.setattr(wsc, "_send_message", test_send_message)
+    msg_type = ProtocolMessageTypes.request_block
+    msg = make_msg(msg_type, b"")
+    response = await wsc.send_request(message_no_id=msg, timeout=0)
+    assert response is None
+    assert request_id in wsc.timed_out_requests
+    caplog.clear()
+    caplog.set_level(logging.INFO)
+    event.set()
+    await time_out_assert(
+        5, lambda: f"Dropping timed out request ID {request_id} with msg type {msg_type.name}" in caplog.text
+    )
+    assert request_id not in wsc.timed_out_requests

@@ -864,7 +864,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
         reason="After the phase out, when we have v2-only plots. It seems like "
         "we never get an overflow block. get_consecutive_blocks(..., force_overflow=True) "
         "loops until we time out",
@@ -1497,8 +1497,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v2 PoS with pool keys, "
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
         "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
     )
     async def test_pool_target_contract(
@@ -2659,7 +2659,7 @@ class TestBodyValidation:
     @pytest.mark.anyio
     @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2675,7 +2675,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        for i in range(7_000):
+        num_coins = 7_000
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # after the hard fork, CREATE_COIN is 25% cheaper, so we need more
+            # coins to exceed the block cost
+            num_coins += num_coins // 3
+        for i in range(num_coins):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 

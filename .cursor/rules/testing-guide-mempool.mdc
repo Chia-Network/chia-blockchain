@@ -1,0 +1,142 @@
+---
+description: Mempool manager test patterns — acceptance/rejection, replacement, fee-per-cost, eviction, bundle selection
+globs:
+  - chia/_tests/core/mempool/**
+---
+
+# Mempool Tests
+
+## Scope
+
+Use this for mempool rule correctness:
+
+- acceptance/rejection status (`SUCCESS`, `PENDING`, `FAILED`)
+- replacement and conflict rules
+- fee-per-cost behavior
+- eviction and expiration behavior
+- bundle construction from mempool (`create_bundle_from_mempool`)
+
+Primary references:
+
+- `chia/_tests/core/mempool/test_mempool_manager.py`
+- `chia/_tests/core/mempool/test_mempool.py`
+- `chia/_tests/core/mempool/test_mempool_fee_protocol.py`
+
+## Preferred Harness (Fast and Deterministic)
+
+For most mempool logic, avoid full network setup:
+
+- `instantiate_mempool_manager(...)` for isolated mempool manager tests
+- `setup_mempool_with_coins(...)` for synthetic coin sets and controlled constants
+
+Core helper flow:
+
+1. Build a spend bundle from conditions (`spend_bundle_from_conditions(...)`).
+2. Pre-validate/add with `add_spendbundle(...)`.
+3. Assert `MempoolInclusionStatus` and `Err` exactly.
+4. Validate pool content with:
+   - `assert_sb_in_pool(...)`
+   - `assert_sb_not_in_pool(...)`
+
+## When To Use Full Node Integration
+
+Use `one_node_one_block` or related node fixtures only when testing:
+
+- peer-facing protocol behavior (`send_transaction`, `respond_transaction`)
+- pending tx cache interaction with chain advancement
+- network propagation interactions not visible in isolated manager tests
+
+## Transaction and Bundle Patterns
+
+Common builder patterns:
+
+- `make_test_spendbundle(coin, fee=...)`
+- aggregated replacements: `SpendBundle.aggregate([...])`
+- generated conditions for specific policy checks
+
+For block assembly checks:
+
+- `result = mempool_manager.create_bundle_from_mempool(peak.header_hash)`
+- assert which spends are included/excluded, not only that result is non-None
+
+## How To Assert Steps Happened
+
+1. **Admission status**
+   - assert tuple `(status, error)` from add path
+2. **Pool state**
+   - assert exact presence/absence of old/new conflicting bundles
+3. **Invariants**
+   - keep `invariant_check_mempool(...)` in the loop for complex mutation tests
+4. **On-new-peak behavior**
+   - advance peak and verify expiration/retention conditions
+5. **Bundle selection**
+   - verify selected spends for cost/priority behavior, not just count
+
+## Anti-Flake Guidance
+
+- Prefer isolated manager fixtures for policy tests; full node setup adds non-essential timing variability.
+- Seed deterministic coins and fees.
+- Assert precise errors (`Err.MEMPOOL_CONFLICT`, etc.), not generic failure.
+- Keep each test focused on one replacement rule or one limit family.
+
+## Quick Checklist
+
+- Isolated harness chosen unless protocol/network behavior is required.
+- Spend bundles constructed to isolate one rule at a time.
+- Status + error + pool content all asserted.
+- Peak advancement tested when rule depends on height/time.
+
+## Starter Template
+
+Key helpers are defined in `test_mempool_manager.py` itself (not importable from a separate module):
+
+```python
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from chia_rs import CoinRecord, G2Element, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.mempool_manager import MempoolManager
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.errors import Err
+
+IDENTITY_PUZZLE = SerializedProgram.to(1)
+IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
+TEST_COIN_AMOUNT = uint64(1000000000)
+TEST_COIN = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT)
+TEST_COIN_ID = TEST_COIN.name()
+TEST_TIMESTAMP = uint64(10040)
+TEST_COIN_RECORD = CoinRecord(TEST_COIN, uint32(0), uint32(0), False, TEST_TIMESTAMP)
+TEST_HEIGHT = uint32(5)
+
+
+# Re-use these local helpers from test_mempool_manager.py as reference:
+#   instantiate_mempool_manager(get_coin_records, ...)
+#   spend_bundle_from_conditions(conditions, coin=TEST_COIN)
+#   add_spendbundle(mempool_manager, sb, sb_name)
+#   assert_sb_in_pool(mempool_manager, sb)
+#   assert_sb_not_in_pool(mempool_manager, sb)
+
+
+@pytest.mark.anyio
+async def test_example() -> None:
+    # Coin record lookup for the mempool manager
+    async def get_coin_records(coin_ids):
+        return [TEST_COIN_RECORD] if TEST_COIN_ID in coin_ids else []
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_records)
+    conditions = [[ConditionOpcode.CREATE_COIN, bytes(32), 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert error is None
+    assert_sb_in_pool(mempool_manager, sb)
+```

@@ -56,7 +56,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_service import WalletService
-from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_state_manager import SyncStatus, WalletStateManager
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -1406,10 +1406,8 @@ class TestPoolWalletRpc:
         # Create a farming plotnft to url http://pool.example.com
         wallet_id = await create_new_plotnft(wallet_environments)
 
-        mock = mocker.patch.object(wallet_state_manager, "synced")
-        mock.return_value = False
-
-        # Test joining the same pool via the RPC client
+        mock = mocker.patch.object(wallet_state_manager, "get_sync_status")
+        mock.return_value = SyncStatus.SLIGHTLY_BEHIND
         with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced"):
             await wallet_rpc.pw_join_pool(
                 PWJoinPool(
