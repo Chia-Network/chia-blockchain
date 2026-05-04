@@ -192,19 +192,19 @@ class Timelord:
                 self.bluebox_pool.shutdown()
             for _, _, writer in self.free_clients:
                 with contextlib.suppress(Exception):
+                    writer.write(b"010")
+                    await writer.drain()
                     writer.close()
+                    await writer.wait_closed()
             self.free_clients.clear()
 
-            for _ip, _reader, writer in self.free_clients:
-                writer.write(b"010")
-                await writer.drain()
-                writer.close()
-                await writer.wait_closed()
             for _ip, _reader, writer in self.chain_type_to_stream.values():
-                writer.write(b"010")
-                await writer.drain()
-                writer.close()
-                await writer.wait_closed()
+                with contextlib.suppress(Exception):
+                    writer.write(b"010")
+                    await writer.drain()
+                    writer.close()
+                    await writer.wait_closed()
+            self.chain_type_to_stream.clear()
             if self.vdf_server is not None:
                 self.vdf_server.close()
 

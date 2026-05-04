@@ -1431,17 +1431,17 @@ def launch_plotter(
             plotter_path.unlink()
     else:
         plotter_path.parent.mkdir(parents=True, exist_ok=True)
-    outfile = open(plotter_path.resolve(), "w")
-    log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
-    process = subprocess.Popen(
-        service_array,
-        shell=False,
-        stderr=outfile,
-        stdout=outfile,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
-    )
-    outfile.close()  # subprocess.Popen opens the file handle internally, we should close it here
+
+    with open(plotter_path.resolve(), "w") as outfile:
+        log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
+        process = subprocess.Popen(
+            service_array,
+            shell=False,
+            stderr=outfile,
+            stdout=outfile,
+            startupinfo=startupinfo,
+            creationflags=creationflags,
+        )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
