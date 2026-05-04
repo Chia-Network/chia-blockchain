@@ -136,7 +136,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Set Env
         uses: Chia-Network/actions/setjobenv@main
