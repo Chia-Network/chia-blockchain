@@ -6,7 +6,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +90,7 @@ def leaf_index_to_pos(leaf_index: int) -> int:
 # ------------------------------------------------------------------------------
 
 
-class MerkleMountainRange(Streamable):
+class MerkleMountainRange:
     """
     Flat MMR implementation.
     """

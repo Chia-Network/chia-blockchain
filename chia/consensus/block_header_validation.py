@@ -1087,7 +1087,7 @@ def validate_finished_header_block(
         starts_new_slot = len(header_block.finished_sub_slots) > 0
 
         expected_mmr_root = blocks.get_mmr_root_for_block(
-            header_block.foliage.prev_block_hash,
+            header_block.prev_header_hash,
             sp_index,
             starts_new_slot,
         )

@@ -422,7 +422,6 @@ def unfinished_block_to_full_block(
     total_iters_sp: uint128,
     difficulty: uint64,
     header_mmr_root: bytes32 | None,
-    constants: ConsensusConstants,
 ) -> FullBlock:
     """
     Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
@@ -575,5 +574,4 @@ def unfinished_block_to_full_block_with_mmr(
         total_iters_sp,
         difficulty,
         header_mmr_root,
-        constants,
     )
