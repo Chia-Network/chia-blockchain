@@ -761,7 +761,7 @@ def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> No
     _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
     _, _, fork_records = load_block_list(fork_blocks, bt.constants)
 
-    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)    
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
     for block in canonical_blocks:
         record = canonical_records[block.header_hash]
         mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
