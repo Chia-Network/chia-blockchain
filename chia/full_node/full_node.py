@@ -877,7 +877,7 @@ class FullNode:
             post_hard_fork = post_hard_fork2(
                 self.constants,
                 self.blockchain,
-                prev_b_hash=peak.prev_hash,
+                prev_b_hash=peak.header_hash,
                 sp_index=peak.signage_point_index,
                 finished_sub_slots=len(peak.finished_challenge_slot_hashes)
                 if peak.finished_challenge_slot_hashes is not None
