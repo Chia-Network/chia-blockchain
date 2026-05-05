@@ -199,6 +199,7 @@ class Err(Enum):
     INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
     # block or spendbundle had too many spends
     TOO_MANY_SPENDS = 149
+    INVALID_HEADER_MMR_ROOT = 150
 
 
 class ValidationError(Exception):

@@ -1098,6 +1098,6 @@ def validate_finished_header_block(
             log.error(
                 f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
             )
-            return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
+            return None, ValidationError(Err.INVALID_HEADER_MMR_ROOT)
 
     return required_iters, None

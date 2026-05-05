@@ -28,7 +28,6 @@ class TestCommitments:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    @pytest.mark.skip("skip untill we add the chains with new format")
     async def test_add_fork_height_zero_blocks(
         self, fork_height2_0_1000_blocks: list[FullBlock], consensus_mode: ConsensusMode
     ) -> None:
@@ -43,12 +42,12 @@ class TestCommitments:
         async with create_blockchain(constants, 2) as (blockchain, _):
             for i, block in enumerate(blocks):
                 if block.height in {50, 200, 499}:
+                    reward_chain_block = block.reward_chain_block.replace(header_mmr_root=None)
                     block_no_mmr = block.replace(
-                        reward_chain_block=block.reward_chain_block.replace(header_mmr_root=None)
+                        reward_chain_block=reward_chain_block,
+                        foliage=block.foliage.replace(reward_block_hash=reward_chain_block.get_hash()),
                     )
-                    await _validate_and_add_block(
-                        blockchain, block_no_mmr, expected_error=Err.INVALID_REWARD_BLOCK_HASH
-                    )
+                    await _validate_and_add_block(blockchain, block_no_mmr, expected_error=Err.INVALID_HEADER_MMR_ROOT)
                 if (
                     len(block.finished_sub_slots) > 0
                     and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
@@ -81,7 +80,6 @@ class TestCommitments:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    @pytest.mark.skip("skip untill we add the chains with new format")
     async def test_verify_fork_transition_point(
         self, fork_height2_500_1000_blocks: list[FullBlock], consensus_mode: ConsensusMode
     ) -> None:
@@ -105,13 +103,13 @@ class TestCommitments:
                     )
                     passed_fork = pre_sp_tx_height >= 500
 
-                if block.height in {50, 200, 499, 550, 700}:
+                if passed_fork and block.height in {50, 200, 499, 550, 700}:
+                    reward_chain_block = block.reward_chain_block.replace(header_mmr_root=bytes32.zeros)
                     block_no_mmr = block.replace(
-                        reward_chain_block=block.reward_chain_block.replace(header_mmr_root=bytes32.zeros)
+                        reward_chain_block=reward_chain_block,
+                        foliage=block.foliage.replace(reward_block_hash=reward_chain_block.get_hash()),
                     )
-                    await _validate_and_add_block(
-                        blockchain, block_no_mmr, expected_error=Err.INVALID_REWARD_BLOCK_HASH
-                    )
+                    await _validate_and_add_block(blockchain, block_no_mmr, expected_error=Err.INVALID_HEADER_MMR_ROOT)
                 if (
                     len(block.finished_sub_slots) > 0
                     and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
@@ -150,7 +148,6 @@ class TestSyncWithCommitments:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    @pytest.mark.skip("skip untill we add the chains with new format")
     async def test_sync_fork_height_zero_blocks(
         self, fork_height2_0_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
     ) -> None:
@@ -243,7 +240,6 @@ class TestSyncWithCommitments:
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=500 between two nodes")
 
 
-@pytest.mark.skip("skip untill we add the chains with new format")
 def test_mmr_manager_deep_copy() -> None:
     # Create original MMR manager
     mmr1 = BlockchainMMRManager(test_constants.GENESIS_CHALLENGE)
