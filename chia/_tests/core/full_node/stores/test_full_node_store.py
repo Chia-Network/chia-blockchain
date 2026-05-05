@@ -116,7 +116,7 @@ async def test_unfinished_block_rank(
     # shuffle them to ensure the order we add them to the store isn't relevant
     seeded_random.shuffle(unfinished)
     for new_unf in unfinished:
-        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, None, uint64(123532), None, uint32(0)))
 
     # now ask for "the" unfinished block given the proof-of-space.
     # the FullNodeStore should return the one with the lowest foliage tx block
@@ -240,7 +240,7 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
+            uint32(height), unf_block, PreValidationResult(None, None, uint64(123532), None, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
@@ -296,7 +296,9 @@ async def test_basic_store(
     assert unf3.foliage.foliage_transaction_block_hash is None
     assert unf4.foliage.foliage_transaction_block_hash is None
     for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
-        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(val), None, uint32(0)))
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, None, uint64(val), None, uint32(0))
+        )
 
     # when not specifying a foliage hash, you get the "best" one
     # best is defined as the lowest foliage hash
@@ -1267,7 +1269,7 @@ async def test_unfinished_block_eviction(
     seeded_random.shuffle(unfinished)
 
     for new_unf in unfinished:
-        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, None, uint64(123532), None, uint32(0)))
 
     # the best (lowest) foliage hashes should be kept
     for idx, fh in enumerate(foliage_hashes):
@@ -1298,7 +1300,7 @@ async def test_unfinished_block_eviction_none_added_last(
 
     for i, fh in enumerate(foliage_hashes):
         block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
-        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, None, uint64(i), None, uint32(0)))
 
     _, count, _ = store.get_unfinished_block2(unf.partial_hash, foliage_hashes[0])
     assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
@@ -1332,7 +1334,7 @@ async def test_unfinished_block_eviction_none_added_first(
 
     for i, fh in enumerate(foliage_hashes):
         block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
-        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, None, uint64(i), None, uint32(0)))
 
     # the None entry was evicted; all known hashes still present
     for fh in foliage_hashes:
