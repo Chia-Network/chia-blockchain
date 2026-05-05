@@ -645,18 +645,18 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             # Unlike requesting coin state by ids, the order is enforced here so block 11 should be excluded
             assert coin_record.confirmed_block_index <= 10
 
-    # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
-    saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-    CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
-    oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
-    resp = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState(
-            oversized_phs, uint32(1), h1, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
-        ),
-        peer,
-    )
-    CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
-    assert resp is not None
+        # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
+        saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
+        oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
+        resp = await simulator.request_puzzle_state(
+            wallet_protocol.RequestPuzzleState(
+                oversized_phs, uint32(1), h1, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+            ),
+            peer,
+        )
+        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
+        assert resp is not None
 
 
 @dataclass(frozen=True)
