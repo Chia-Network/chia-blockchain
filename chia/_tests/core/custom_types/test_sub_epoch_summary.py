@@ -9,6 +9,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     SlotChallengeData,
     build_challenge_merkle_tree,
@@ -130,7 +131,7 @@ def test_extract_slot_challenge_data_covers_single_and_multi_slot_updates(bt: Bl
         full_blocks: list[FullBlock],
     ) -> tuple[BlockCache, int | None, int | None]:
         _, _, block_records = load_block_list(full_blocks, bt.constants)
-        cache = BlockCache(block_records, bt.constants.GENESIS_CHALLENGE)
+        cache = BlockCache(block_records, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
         multi_height: int | None = None
         single_height: int | None = None
 

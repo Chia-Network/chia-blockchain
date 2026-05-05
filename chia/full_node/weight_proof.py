@@ -28,6 +28,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
@@ -541,7 +542,7 @@ class WeightProofHandler:
                     curr.finished_sub_slots,
                     block_record.overflow,
                     None if curr.height == 0 else blocks[curr.prev_header_hash],
-                    BlockCache(blocks, self.constants.GENESIS_CHALLENGE),
+                    BlockCache(blocks, BlockchainMMRManager(self.constants.GENESIS_CHALLENGE)),
                     block_record.sp_total_iters(self.constants),
                     block_record.sp_iters(self.constants),
                 )
@@ -740,7 +741,7 @@ async def _challenge_block_vdfs(
         header_block.finished_sub_slots,
         block_rec.overflow,
         None if header_block.height == 0 else sub_blocks[header_block.prev_header_hash],
-        BlockCache(sub_blocks, constants.GENESIS_CHALLENGE),
+        BlockCache(sub_blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE)),
         block_rec.sp_total_iters(constants),
         block_rec.sp_iters(constants),
     )

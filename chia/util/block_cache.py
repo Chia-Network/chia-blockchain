@@ -7,7 +7,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_interface import MMRManagerProtocol
-from chia.consensus.blockchain_mmr import BlockchainMMRManager
 
 
 # implements BlockRecordsProtocol
@@ -24,16 +23,11 @@ class BlockCache:
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
-        genesis_challenge: bytes32 | None = None,
-        mmr_manager: MMRManagerProtocol | None = None,
+        mmr_manager: MMRManagerProtocol,
     ):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
-        if mmr_manager is not None:
-            self.mmr_manager = mmr_manager
-        else:
-            assert genesis_challenge is not None
-            self.mmr_manager = BlockchainMMRManager(genesis_challenge)
+        self.mmr_manager = mmr_manager
 
     def add_block(self, block: BlockRecord) -> None:
         hh = block.header_hash

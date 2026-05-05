@@ -5,6 +5,7 @@ from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint8, uint32
 
 import chia.consensus.get_block_challenge as get_block_challenge_module
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
@@ -15,14 +16,14 @@ def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
+        blocks=BlockCache({}, BlockchainMMRManager(test_constants.GENESIS_CHALLENGE)),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
         finished_sub_slots=0,
     ) == uint32(0)
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
+        blocks=BlockCache({}, BlockchainMMRManager(test_constants.GENESIS_CHALLENGE)),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(1),
         finished_sub_slots=1,
@@ -43,7 +44,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
+            blocks=BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -56,7 +57,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
+            blocks=BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -69,7 +70,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=bt.constants,
-            blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
+            blocks=BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
@@ -95,7 +96,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert pre_sp_tx_block_height(
         constants=bt.constants,
-        blocks=BlockCache(blocks, bt.constants.GENESIS_CHALLENGE),
+        blocks=BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)),
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(block.finished_sub_slots),
@@ -126,7 +127,7 @@ def test_post_hard_fork2_uses_actual_finished_sub_slot_count(bt: BlockTools) -> 
         overflow_blocks.append(block_list[-1])
 
     _, _, blocks = load_block_list(block_list, bt.constants)
-    block_cache = BlockCache(blocks, bt.constants.GENESIS_CHALLENGE)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
 
     for block in reversed(overflow_blocks):
         sp_index = block.reward_chain_block.signage_point_index
@@ -190,7 +191,7 @@ def test_post_hard_fork2_matches_real_chain_cutoff(bt: BlockTools) -> None:
     latest_tx_before_sp = find_tx_before_sp(block_list, bt.constants)
     assert latest_tx_before_sp is not None
 
-    block_cache = BlockCache(blocks, bt.constants.GENESIS_CHALLENGE)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
     at_cutoff = bt.constants.replace(HARD_FORK2_HEIGHT=uint32(latest_tx_before_sp.height))
     above_cutoff = bt.constants.replace(HARD_FORK2_HEIGHT=uint32(latest_tx_before_sp.height + 1))
 
@@ -213,7 +214,7 @@ def test_post_hard_fork2_matches_real_chain_cutoff(bt: BlockTools) -> None:
 def test_post_hard_fork2_skips_slow_path_outside_fork_window(bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
     block_list = bt.get_consecutive_blocks(int(bt.constants.SUB_EPOCH_BLOCKS) + 5, guarantee_transaction_block=True)
     _, _, blocks = load_block_list(block_list, bt.constants)
-    block_cache = BlockCache(blocks, bt.constants.GENESIS_CHALLENGE)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
 
     def fail_if_called(*args: object, **kwargs: object) -> uint32:
         raise AssertionError("pre_sp_tx_block_height() should not be called")
