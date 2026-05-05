@@ -242,6 +242,14 @@ def test_mmr_height() -> None:
         assert mmr.get_tree_height() == expected_height
 
 
+def test_mmr_height_asserts_on_inconsistent_non_empty_state() -> None:
+    mmr = MerkleMountainRange()
+    mmr.leaf_count = uint32(1)
+
+    with pytest.raises(AssertionError):
+        mmr.get_tree_height()
+
+
 def test_mmr_block_inclusion_by_header_hash(default_1000_blocks: list[FullBlock]) -> None:
     mmr = MerkleMountainRange()
     header_hashes = [block.header_hash for block in default_1000_blocks]

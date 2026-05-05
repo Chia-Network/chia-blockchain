@@ -192,8 +192,7 @@ class MerkleMountainRange:
         if self.leaf_count == 0:
             return 0
         peak_indices = get_peak_positions(len(self.nodes))
-        if not peak_indices:
-            return 0
+        assert len(peak_indices) > 0
         return get_height(peak_indices[-1])
 
     def copy(self) -> MerkleMountainRange:
