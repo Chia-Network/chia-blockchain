@@ -116,6 +116,7 @@ class FullNodeRpcApi:
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_aggsig_additional_data": self.get_aggsig_additional_data,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
+            "/get_constants": self.get_constants,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
@@ -685,6 +686,9 @@ class FullNodeRpcApi:
             * eligible_plots_filter_multiplier
         )
         return {"space": uint128(network_space_bytes_estimate)}
+
+    async def get_constants(self, request: dict[str, Any]) -> EndpointResult:
+        return {"constants": self.service.constants.to_json_dict()}
 
     async def get_coin_records_by_puzzle_hash(self, request: dict[str, Any]) -> EndpointResult:
         """
