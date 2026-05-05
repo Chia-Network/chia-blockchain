@@ -14,13 +14,12 @@ from chia_rs import (
     UnfinishedBlock,
     check_time_locks,
     compute_merkle_set_root,
-    is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_creation import generator_root
+from chia.consensus.block_creation import generator_root, validate_generator_encoding
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -382,13 +381,14 @@ async def validate_block_body(
         assert conds is not None
         assert conds.validated_signature
 
-        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
-            generator_bytes = bytes(block.transactions_generator)
-            # serde_2026 generators start with magic prefix \xfd\xff2026;
-            # is_canonical_serialization only applies to classic CLVM
-            if not generator_bytes.startswith(b"\xfd\xff2026"):
-                if not is_canonical_serialization(generator_bytes):
-                    return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+        encoding_err = validate_generator_encoding(
+            bytes(block.transactions_generator),
+            height,
+            prev_transaction_block_height,
+            constants,
+        )
+        if encoding_err is not None:
+            return encoding_err
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))

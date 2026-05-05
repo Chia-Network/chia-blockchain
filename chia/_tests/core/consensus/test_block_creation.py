@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import is_canonical_serialization, solution_generator_2026, tree_hash, tree_hash_auto
+from chia_rs import (
+    SERDE_2026_MAGIC_PREFIX,
+    is_canonical_serialization,
+    solution_generator_2026,
+    tree_hash,
+    tree_hash_auto,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.block_creation import compute_block_fee, generator_root
+from chia.consensus.block_creation import compute_block_fee, generator_root, validate_generator_encoding
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 
 
@@ -85,3 +92,69 @@ def test_serde_2026_generator_root_works_post_hf2() -> None:
 
     # but tree_hash_auto handles it
     assert bytes32(tree_hash_auto(serde_2026_bytes)) == result
+
+
+# --- validate_generator_encoding ---------------------------------------------
+#
+# Pre-HF2, a serde_2026 generator MUST be rejected: the deserializer is
+# height-blind (Streamable can't take a height), so the only thing standing
+# between a node-with-the-parser and a unilateral fork is an explicit
+# consensus-layer check.  Post-HF2 the same bytes are allowed.  The classic
+# canonical-encoding check (active from SOFT_FORK9_HEIGHT) continues to apply
+# only to non-serde_2026 generators.
+
+CLASSIC_NIL = b"\x80"
+CLASSIC_OVERLONG_NIL = b"\x81\x00"  # overlong encoding of nil — flagged by SOFT_FORK_2_7
+
+
+def test_validate_generator_encoding_rejects_serde_2026_pre_hf2() -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
+    )
+    # any height < HARD_FORK2_HEIGHT must reject, regardless of prev_tx_height
+    blob = SERDE_2026_MAGIC_PREFIX + b"\x01\x01\x01\x80\x80"  # plausible-looking serde_2026 body
+    assert validate_generator_encoding(blob, 0, 0, constants) == Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+    assert validate_generator_encoding(blob, 999, 998, constants) == Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+
+
+def test_validate_generator_encoding_accepts_serde_2026_at_and_after_hf2() -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
+    )
+    blob = SERDE_2026_MAGIC_PREFIX + b"\x01\x01\x01\x80\x80"
+    assert validate_generator_encoding(blob, 1000, 999, constants) is None
+    assert validate_generator_encoding(blob, 9999, 9998, constants) is None
+
+
+def test_validate_generator_encoding_accepts_classic_canonical_any_height() -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
+    )
+    assert validate_generator_encoding(CLASSIC_NIL, 0, 0, constants) is None
+    assert validate_generator_encoding(CLASSIC_NIL, 499, 498, constants) is None
+    assert validate_generator_encoding(CLASSIC_NIL, 500, 499, constants) is None
+    assert validate_generator_encoding(CLASSIC_NIL, 9999, 9998, constants) is None
+
+
+def test_validate_generator_encoding_classic_overlong_gated_by_prev_tx_height() -> None:
+    # The canonical-encoding rule is keyed on prev_transaction_block_height
+    # (preserving pre-existing semantics, where the rule activates with the
+    # first transaction block after SOFT_FORK9_HEIGHT). We pin that here
+    # explicitly so a future refactor can't quietly shift activation by one
+    # block.
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
+    )
+
+    # prev_tx_height < SOFT_FORK9: rule inactive, overlong tolerated
+    assert validate_generator_encoding(CLASSIC_OVERLONG_NIL, 600, 499, constants) is None
+    # prev_tx_height == SOFT_FORK9: rule ACTIVE — first transaction block after fork
+    assert (
+        validate_generator_encoding(CLASSIC_OVERLONG_NIL, 600, 500, constants)
+        == Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+    )
+    # well after the fork, still rejected
+    assert (
+        validate_generator_encoding(CLASSIC_OVERLONG_NIL, 9999, 9998, constants)
+        == Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+    )
