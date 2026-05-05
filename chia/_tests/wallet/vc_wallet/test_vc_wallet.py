@@ -729,6 +729,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
+    # When reuse_puzhash=False, get_puzzle_hash derives a new key and commit() enqueues
+    # puzzle-hash subscriptions on the new_peak_queue.  Wait for the queue to drain so
+    # the wallet reports SYNCED before the RPC call that follows.
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node_0)
     vc_record = (
         await client_0.vc_mint(
             VCMint(
