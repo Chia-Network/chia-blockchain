@@ -3,9 +3,10 @@
 # since a new one might be infused by the time the block is infused
 from __future__ import annotations
 
-from chia_rs import ConsensusConstants, FullBlock, get_flags_for_height_and_constants
+from chia_rs import ConsensusConstants, FullBlock
 
 from chia.consensus.blockchain_interface import BlocksProtocol
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.pot_iterations import is_overflow_block
 
 

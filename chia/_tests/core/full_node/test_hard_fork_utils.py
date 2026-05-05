@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import BlockRecord, get_flags_for_height_and_constants
+from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.full_node.hard_fork_utils import get_flags
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants

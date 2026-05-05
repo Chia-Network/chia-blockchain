@@ -18,7 +18,6 @@ from chia_rs import (
     SpendBundle,
     SpendBundleConditions,
     check_time_locks,
-    get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -28,6 +27,7 @@ from chiabip158 import PyBIP158
 from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -427,6 +427,14 @@ class MempoolManager:
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
         return self.mempool.create_block_generator2(self.constants, self.peak.height, timeout)
+
+    def create_block_generator_2026(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
+        """
+        Returns a block generator using Block2026Builder (anytime builder + serde_2026).
+        """
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
+            return None
+        return self.mempool.create_block_generator_2026(self.constants, self.peak.height, timeout)
 
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()

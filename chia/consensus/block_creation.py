@@ -3,9 +3,11 @@ from __future__ import annotations
 import logging
 import random
 from collections.abc import Callable, Sequence
+from typing import Optional
 
 import chia_rs
 from chia_rs import (
+    SERDE_2026_MAGIC_PREFIX,
     BlockRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -22,6 +24,8 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
+    is_canonical_serialization,
+    tree_hash_auto,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -35,9 +39,56 @@ from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import NewBlockGenerator
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
+
+
+def generator_root(program: bytes, height: int, constants: ConsensusConstants) -> bytes32:
+    """Return the generator_root hash for a block at the given height."""
+    if height >= constants.HARD_FORK2_HEIGHT:
+        return bytes32(tree_hash_auto(program))
+    return std_hash(program)
+
+
+def validate_generator_encoding(
+    generator_bytes: bytes,
+    height: int,
+    prev_transaction_block_height: int,
+    constants: ConsensusConstants,
+) -> Optional[Err]:
+    """Reject generators whose wire-format encoding is not allowed at this height.
+
+    Two height-gated rules:
+
+    1. **serde_2026 is HF2-gated.** Pre-HF2, the deserializer recognising the
+       new format is purely a code path — no node should *accept* a serde_2026
+       block until consensus says so, otherwise a single such block would split
+       the chain between updated and non-updated nodes. Once the gate is fully
+       in the past (well after HF2 activation), this branch can be deleted.
+       Keyed on ``height`` (consistent with ``generator_root``).
+
+    2. **Classic CLVM canonical-encoding gate** (existing rule, SOFT_FORK_2_7):
+       once ``prev_transaction_block_height >= SOFT_FORK9_HEIGHT`` (i.e. starting
+       with the first transaction block after the soft fork), classic CLVM
+       generators must use canonical (no-overlong) encoding. Doesn't apply to
+       serde_2026 because it has its own wire-level encoding rules. Keyed on
+       ``prev_transaction_block_height`` to preserve the pre-existing
+       activation semantics.
+
+    Returns ``None`` if the encoding is allowed, otherwise the corresponding
+    ``Err`` code.
+    """
+    is_serde_2026 = generator_bytes.startswith(SERDE_2026_MAGIC_PREFIX)
+    if is_serde_2026:
+        if height < constants.HARD_FORK2_HEIGHT:
+            return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+        return None
+    if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
+        if not is_canonical_serialization(generator_bytes):
+            return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
+    return None
 
 
 def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:
@@ -226,7 +277,7 @@ def create_foliage(
 
         generator_hash = bytes32.zeros
         if new_block_gen is not None:
-            generator_hash = std_hash(new_block_gen.program)
+            generator_hash = generator_root(bytes(new_block_gen.program), height, constants)
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
