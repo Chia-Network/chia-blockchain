@@ -216,10 +216,11 @@ class TimestampError(Exception):
 
 
 class ConsensusError(Exception):
-    def __init__(self, code: Err, errors: list[Any] = []):
-        super().__init__(f"Error code: {code.name} {errors}")
+    def __init__(self, code: Err, errors: list[Any] = [], error_msg: str | None = None):
+        super().__init__(f"Error code: {code.name} {errors}" + (f" ({error_msg})" if error_msg else ""))
         self.code = code
         self.errors = errors
+        self.error_msg = error_msg
 
 
 class ProtocolError(Exception):

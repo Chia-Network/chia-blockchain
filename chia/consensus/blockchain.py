@@ -785,7 +785,7 @@ class Blockchain:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.value), None, None, uint32(0))
+            return PreValidationResult(uint16(error.value), None, None, None, uint32(0))
 
         prev_height = (
             -1
@@ -807,9 +807,9 @@ class Blockchain:
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
+            return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
-        return PreValidationResult(None, required_iters, conds, uint32(0))
+        return PreValidationResult(None, None, required_iters, conds, uint32(0))
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         block_hash_from_hh = self.height_to_hash(height)

@@ -1001,7 +1001,7 @@ class FullNodeRpcApi:
 
             if maybe_gen is not None:
                 # this also validates the signature
-                err, conds = await self.service.pool.run_in_loop(
+                err, err_msg, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
@@ -1014,7 +1014,7 @@ class FullNodeRpcApi:
                     dedicated=True,
                 )
                 if err is not None:
-                    self.service.log.error(f"failed to validate block: {err}")
+                    self.service.log.error(f"failed to validate block: {err} {err_msg}")
                 else:
                     assert conds is not None
                     if conds.cost != gen.cost:

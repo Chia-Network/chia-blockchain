@@ -136,11 +136,11 @@ def find_reward_coin(b: FullBlock, puzzle_hash: bytes32) -> Coin:
 
 def test_pre_validation_result() -> None:
     conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
-    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
     assert results.validated_signature is True
 
     conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0, 0, 0, 0)
-    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
     assert results.validated_signature is False
 
 
