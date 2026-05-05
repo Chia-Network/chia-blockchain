@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pytest
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint8, uint32
 
+import chia.consensus.get_block_challenge as get_block_challenge_module
 from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
@@ -205,6 +207,41 @@ def test_post_hard_fork2_matches_real_chain_cutoff(bt: BlockTools) -> None:
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(block.finished_sub_slots),
+    )
+
+
+def test_post_hard_fork2_skips_slow_path_outside_fork_window(bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    block_list = bt.get_consecutive_blocks(int(bt.constants.SUB_EPOCH_BLOCKS) + 5, guarantee_transaction_block=True)
+    _, _, blocks = load_block_list(block_list, bt.constants)
+    block_cache = BlockCache(blocks, bt.constants.GENESIS_CHALLENGE)
+
+    def fail_if_called(*args: object, **kwargs: object) -> uint32:
+        raise AssertionError("pre_sp_tx_block_height() should not be called")
+
+    monkeypatch.setattr(get_block_challenge_module, "pre_sp_tx_block_height", fail_if_called)
+
+    early_block = block_list[1]
+    early_prev = block_cache.block_record(early_block.prev_header_hash)
+    early_constants = bt.constants.replace(HARD_FORK2_HEIGHT=uint32(early_prev.height + 2))
+    assert not post_hard_fork2(
+        constants=early_constants,
+        blocks=block_cache,
+        prev_b_hash=early_block.prev_header_hash,
+        sp_index=early_block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(early_block.finished_sub_slots),
+    )
+
+    late_block = block_list[-1]
+    late_prev = block_cache.block_record(late_block.prev_header_hash)
+    late_constants = bt.constants.replace(
+        HARD_FORK2_HEIGHT=uint32(late_prev.height - bt.constants.SUB_EPOCH_BLOCKS + 1)
+    )
+    assert post_hard_fork2(
+        constants=late_constants,
+        blocks=block_cache,
+        prev_b_hash=late_block.prev_header_hash,
+        sp_index=late_block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(late_block.finished_sub_slots),
     )
 
 

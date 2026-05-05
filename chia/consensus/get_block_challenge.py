@@ -161,6 +161,17 @@ def post_hard_fork2(
     sp_index: uint8,
     finished_sub_slots: int,
 ) -> bool:
+    prev_b = blocks.try_block_record(prev_b_hash)
+    if prev_b is None:
+        assert prev_b_hash == constants.GENESIS_CHALLENGE
+        return uint32(0) == constants.HARD_FORK2_HEIGHT
+
+    candidate_height = prev_b.height + 1
+    if candidate_height < constants.HARD_FORK2_HEIGHT:
+        return False
+    if candidate_height >= constants.HARD_FORK2_HEIGHT + constants.SUB_EPOCH_BLOCKS:
+        return True
+
     return (
         pre_sp_tx_block_height(
             constants=constants,
