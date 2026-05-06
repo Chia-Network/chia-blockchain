@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from chia_rs import BlockRecord, CoinRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, SpendBundle
+from chia_rs import BlockRecord, CoinRecord, CoinSpend, ConsensusConstants, EndOfSubSlotBundle, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -78,6 +78,10 @@ class FullNodeRpcClient(RpcClient):
         )
 
         return cast(int, network_space_bytes_estimate["space"])
+
+    async def get_constants(self) -> ConsensusConstants:
+        response = await self.fetch("get_constants", {})
+        return ConsensusConstants.from_json_dict(response["constants"])
 
     async def get_coin_record_by_name(self, coin_id: bytes32) -> CoinRecord:
         response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
