@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import cProfile
 import logging
 import shutil
+import sys
 import tempfile
 import time
 from collections.abc import Callable, Iterator
@@ -131,7 +133,8 @@ async def run_sync_test(
     check_log = ExitOnError()
     logger.addHandler(check_log)
 
-    with tempfile.TemporaryDirectory() as root_dir:
+    root_dir = tempfile.mkdtemp()
+    try:
         root_path = Path(root_dir, "root")
         if start_at_checkpoint is not None:
             shutil.copytree(start_at_checkpoint, root_path)
@@ -252,3 +255,17 @@ async def run_sync_test(
                 logger.warning(f"end-height: {height}")
             if node_profiler:
                 (root_path / "profile-node").rename("./profile-node")
+    finally:
+        # On Windows, SQLite WAL/SHM handles may not be released immediately
+        # after closing, causing PermissionError on cleanup.  Retry with
+        # backoff — same pattern CPython uses in its own test infrastructure:
+        #   https://github.com/python/cpython/issues/59701
+        #   https://github.com/python/cpython/issues/98219
+        for attempt in range(5):
+            try:
+                shutil.rmtree(root_dir)
+                break
+            except PermissionError:
+                if attempt == 4 or sys.platform != "win32":
+                    raise
+                await asyncio.sleep(0.5)
