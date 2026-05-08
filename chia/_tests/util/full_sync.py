@@ -261,11 +261,11 @@ async def run_sync_test(
         # backoff — same pattern CPython uses in its own test infrastructure:
         #   https://github.com/python/cpython/issues/59701
         #   https://github.com/python/cpython/issues/98219
-        for attempt in range(5):
+        for attempt in range(10):
             try:
                 shutil.rmtree(root_dir)
                 break
             except PermissionError:
-                if attempt == 4 or sys.platform != "win32":
+                if attempt == 9 or sys.platform != "win32":
                     raise
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)

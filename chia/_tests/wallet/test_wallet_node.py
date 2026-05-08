@@ -682,6 +682,15 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
 
         await time_out_assert(5, check_wallet_cache_empty, True)
 
+        # Wait for the rejection to be persisted to sent_to before testing resend behavior
+        async def check_sent_to_has_failed() -> bool:
+            record = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx.name)
+            return record is not None and any(
+                status == MempoolInclusionStatus.FAILED.value for _, status, _ in record.sent_to
+            )
+
+        await time_out_assert(10, check_sent_to_has_failed, True)
+
         # Re-process the queue — the peer already rejected it, so it should NOT be resent
         await wallet_node._resend_queue()
         with pytest.raises(AssertionError):
