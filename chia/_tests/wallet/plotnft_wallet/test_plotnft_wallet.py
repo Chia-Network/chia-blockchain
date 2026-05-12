@@ -198,7 +198,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
                         "unconfirmed_wallet_balance": -REWARDS_GAINED,
                         "spendable_balance": -REWARDS_GAINED,
                         "max_send_amount": -REWARDS_GAINED,
-                        "pending_coin_removal_count": NUM_REWARDS_FARMED,
+                        "pending_coin_removal_count": NUM_REWARDS_FARMED + 1,
                     }
                 },
                 post_block_balance_updates={
@@ -211,7 +211,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
                     },
                     "plotnft": {
                         "confirmed_wallet_balance": -REWARDS_GAINED,
-                        "pending_coin_removal_count": -NUM_REWARDS_FARMED,
+                        "pending_coin_removal_count": -NUM_REWARDS_FARMED - 1,
                         "unspent_coin_count": -NUM_REWARDS_FARMED,
                     },
                 },
@@ -247,7 +247,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
                     },
                     "plotnft": {
                         "confirmed_wallet_balance": REWARDS_GAINED,
-                        "pending_coin_removal_count": NUM_REWARDS_FARMED,
+                        "pending_coin_removal_count": NUM_REWARDS_FARMED + 1,
                         "unspent_coin_count": NUM_REWARDS_FARMED,
                     },
                 },
@@ -261,7 +261,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
                     },
                     "plotnft": {
                         "confirmed_wallet_balance": -REWARDS_GAINED,
-                        "pending_coin_removal_count": -NUM_REWARDS_FARMED,
+                        "pending_coin_removal_count": -NUM_REWARDS_FARMED - 1,
                         "unspent_coin_count": -NUM_REWARDS_FARMED,
                     },
                 },
