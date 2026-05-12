@@ -196,7 +196,13 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             only_key = next(iter(spends_to_prove.keys()))
             proven_spend = spends_to_prove[only_key]
             proof = self._merkle_tree.generate_proof(only_key)
-            return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution])
+            return Program.to(
+                [
+                    (proof[0], proof[1][0]),
+                    proven_spend.puzzle_reveal,
+                    proven_spend.solution,
+                ]
+            )
 
     def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
@@ -230,6 +236,7 @@ class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
     restrictions: list[Restriction[MemberOrDPuz]]
     puzzle: MIPSComponent
+    additional_memos: Program | None = None
     spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
 
     def memo(self) -> Program:
@@ -257,12 +264,16 @@ class PuzzleWithRestrictions:
         return Program.to(
             (
                 self.spec_namespace,
-                [
+                (
                     self.nonce,
-                    [hint.to_program() for hint in restriction_hints],
-                    1 if isinstance(self.puzzle, MofN) else 0,
-                    puzzle_hint.to_program(),
-                ],
+                    (
+                        [hint.to_program() for hint in restriction_hints],
+                        (
+                            1 if isinstance(self.puzzle, MofN) else 0,
+                            (puzzle_hint.to_program(), self.additional_memos),
+                        ),
+                    ),
+                ),
             )
         )
 
@@ -270,13 +281,18 @@ class PuzzleWithRestrictions:
     def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
         if memo.atom is not None or memo.first() != Program.to(cls.spec_namespace):
             raise ValueError("Attempting to parse a memo that does not belong to this spec")
-        nonce, restriction_hints_prog, further_branching_prog, puzzle_hint_prog = memo.rest().as_iter()
+        nonce = memo.at("rf")
+        restriction_hints_prog = memo.at("rrf")
+        further_branching_prog = memo.at("rrrf")
+        puzzle_hint_prog = memo.at("rrrrf")
+        additional_memos = memo.at("rrrrr")
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
             puzzle: MIPSComponent = MofN(
-                m=m_of_n_hint.m, members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
+                m=m_of_n_hint.m,
+                members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos],
             )
         else:
             puzzle_hint = MemberHint.from_program(puzzle_hint_prog)
@@ -286,6 +302,7 @@ class PuzzleWithRestrictions:
             nonce=nonce.as_int(),
             restrictions=[UnknownRestriction(hint) for hint in restriction_hints],
             puzzle=puzzle,
+            additional_memos=additional_memos if additional_memos != Program.to(None) else None,
         )
 
     @property
@@ -341,6 +358,7 @@ class PuzzleWithRestrictions:
             nonce=self.nonce,
             restrictions=new_restrictions,
             puzzle=new_puzzle,
+            additional_memos=self.additional_memos,
         )
 
     def puzzle_reveal(self, _top_level: bool = True) -> Program:
@@ -386,7 +404,10 @@ class PuzzleWithRestrictions:
                     inner_puzzle_hash,
                 )
                 .get_tree_hash_precalc(
-                    *member_validator_hashes, *dpuz_validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash
+                    *member_validator_hashes,
+                    *dpuz_validator_hashes,
+                    RESTRICTION_MOD_HASH,
+                    inner_puzzle_hash,
                 )
             )
         else:
@@ -417,7 +438,11 @@ class PuzzleWithRestrictions:
 
         if delegated_puzzle_and_solution is not None:
             solution = Program.to(
-                [delegated_puzzle_and_solution.puzzle, delegated_puzzle_and_solution.solution, *solution.as_iter()]
+                [
+                    delegated_puzzle_and_solution.puzzle,
+                    delegated_puzzle_and_solution.solution,
+                    *solution.as_iter(),
+                ]
             )
 
         return solution
