@@ -252,7 +252,15 @@ def check_plots(
                                 f"\tQuality doesn't match with proof. Filepath: {plot_path} "
                                 "This can occasionally happen with a compressed plot."
                             )
-                    except AssertionError as e:
+                    except RuntimeError as e:
+                        if str(e) == "GRResult_NoProof received":
+                            log.info(f"Proof dropped due to line point compression. Filepath: {plot_path}")
+                            continue
+                        else:
+                            log.error(f"{type(e)}: {e} error in getting full proof for plot {plot_path}")
+                            caught_exception = True
+                            continue
+                    except Exception as e:
                         log.error(
                             f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
                         )
