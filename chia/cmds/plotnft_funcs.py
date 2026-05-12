@@ -367,7 +367,10 @@ async def join_pool(
         raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}.")
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
+            async with session.get(
+                f"{pool_url}/{'v2/' if pool_wallet_info.current.version == 2 else ''}pool_info",
+                ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+            ) as response:
                 if response.ok:
                     json_dict = json.loads(await response.text())
                 else:
@@ -378,9 +381,9 @@ async def join_pool(
     if json_dict["relative_lock_height"] > 1000:
         raise CliRpcConnectionError("Relative lock height too high for this pool, cannot join")
 
-    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
+    if json_dict["protocol_version"] != pool_wallet_info.current.version:
         raise CliRpcConnectionError(
-            f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}"
+            f"Incorrect version: {json_dict['protocol_version']}, should be {pool_wallet_info.current.version}"
         )
 
     pprint(json_dict)
