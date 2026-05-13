@@ -26,6 +26,7 @@ jobs:
           curl --silent --show-error --location https://curl.se/ca/cacert.pem -o chia/ssl/cacert.pem
 
       - name: Set up commit signing
+        if: github.repository == 'Chia-Network/chia-blockchain'
         uses: Chia-Network/actions/commit-sign/gpg@main
         with:
           gpg_private_key: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_KEY }}
