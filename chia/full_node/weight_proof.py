@@ -30,7 +30,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import get_filter_challenge_from_chain, pre_sp_tx_block_height
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
@@ -1332,10 +1332,22 @@ def _validate_pospace_recent_chain(
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     assert cc_sp_hash is not None
 
+    challenge = challenge if not overflow else prev_challenge
+    filter_challenge = None
+    if block.reward_chain_block.proof_of_space.version == 1:
+        filter_challenge = get_filter_challenge_from_chain(
+            constants,
+            blocks,
+            block,
+            challenge,
+            block.reward_chain_block.signage_point_index,
+            block.height == 0,
+        )
+
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         block.reward_chain_block.proof_of_space,
-        challenge if not overflow else prev_challenge,
+        challenge,
         cc_sp_hash,
         block.height,
         diff,
@@ -1346,6 +1358,8 @@ def _validate_pospace_recent_chain(
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
         ),
+        filter_challenge=filter_challenge,
+        signage_point_index=block.reward_chain_block.signage_point_index,
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
