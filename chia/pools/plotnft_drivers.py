@@ -342,6 +342,7 @@ class PlotNFT(PlotNFTPuzzle):
         hint: bytes32,
         pool_config: PoolConfig | None = None,
         exiting: bool = False,
+        remark: Remark | None = None,
     ) -> tuple[tuple[AssertCoinAnnouncement, AssertCoinAnnouncement], list[CoinSpend], Self]:
         origin_coin = origin_coins[0]
         launcher_coin = Coin(origin_coin.name(), cls.singleton_puzzles.singleton_launcher_hash, uint64(1))
@@ -364,6 +365,7 @@ class PlotNFT(PlotNFTPuzzle):
                         memo_blob=Program.to((hint, plotnft_puzzle.puzzle_with_restrictions().memo())),
                     ).to_program(),
                     CreateCoinAnnouncement(msg=b"").to_program(),
+                    *([] if remark is None else [remark.to_program()]),
                 ],
             )
         )
