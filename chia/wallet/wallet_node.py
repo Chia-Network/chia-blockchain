@@ -46,7 +46,7 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
-from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
@@ -514,6 +514,23 @@ class WalletNode:
             return None
         create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
+    def _tx_message_in_flight(self, peer_id: bytes32, msg_name: bytes32) -> bool:
+        return peer_id in self._tx_messages_in_progress and msg_name in self._tx_messages_in_progress[peer_id]
+
+    async def _send_transaction_message(
+        self, peer: WSChiaConnection, msg: Message, msg_name: bytes32 | None = None
+    ) -> None:
+        # Bail out before touching _tx_messages_in_progress so we never
+        # create an in-flight marker that on_disconnect has already passed
+        # and therefore will never clean up.
+        if peer.closed:
+            return
+        if msg_name is None:
+            msg_name = std_hash(msg.data)
+        in_progress = self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
+        in_progress.append(msg_name)
+        await peer.send_message(msg)
+
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return None
@@ -526,15 +543,10 @@ class WalletNode:
                 if peer.peer_node_id in sent_peers:
                     continue
                 msg_name: bytes32 = std_hash(msg.data)
-                if (
-                    peer.peer_node_id in self._tx_messages_in_progress
-                    and msg_name in self._tx_messages_in_progress[peer.peer_node_id]
-                ):
+                if self._tx_message_in_flight(peer.peer_node_id, msg_name):
                     continue
                 self.log.debug(f"sending: {msg}")
-                await peer.send_message(msg)
-                self._tx_messages_in_progress.setdefault(peer.peer_node_id, [])
-                self._tx_messages_in_progress[peer.peer_node_id].append(msg_name)
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _messages_to_resend(self) -> list[tuple[Message, set[bytes32]]]:
         if self._wallet_state_manager is None or self._shut_down:
@@ -556,11 +568,36 @@ class WalletNode:
             msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
-                if status == MempoolInclusionStatus.SUCCESS.value:
+                if status in {MempoolInclusionStatus.SUCCESS.value, MempoolInclusionStatus.FAILED.value}:
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _retry_fee_failed_transactions(self) -> None:
+        """Re-send transactions to peers that rejected them for insufficient fee.
+
+        Called on each new transaction block.  The mempool may have room now,
+        so we poke the same peers again without touching the sent_to history.
+        """
+        if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            return
+        fee_errors = {Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name}
+        peer_map = {p.peer_node_id: p for p in self.server.get_connections(NodeType.FULL_NODE)}
+        records = await self.wallet_state_manager.tx_store.get_not_sent()
+        for record in records:
+            if record.spend_bundle is None:
+                continue
+            msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
+            msg_name = std_hash(msg.data)
+            for peer_id_hex, status, err in record.sent_to:
+                if status != MempoolInclusionStatus.FAILED.value or err not in fee_errors:
+                    continue
+                peer_node_id = bytes32.from_hexstr(peer_id_hex)
+                peer = peer_map.get(peer_node_id)
+                if peer is None or self._tx_message_in_flight(peer_node_id, msg_name):
+                    continue
+                await self._send_transaction_message(peer, msg, msg_name)
 
     async def _retry_failed_states(self) -> None:
         while not self._shut_down:
@@ -751,7 +788,9 @@ class WalletNode:
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
-            await peer.send_message(msg)
+            # if we are connecting to this peer, _tx_messages_in_progress is empty,
+            # so we don't need to check if the message is already in flight.
+            await self._send_transaction_message(peer, msg)
 
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
@@ -832,7 +871,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
                 ph_update_res: list[CoinState] = await subscribe_to_phs(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
@@ -852,7 +891,7 @@ class WalletNode:
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
                 c_update_res: list[CoinState] = await subscribe_to_coin_updates(
-                    batch.entries, full_node, min_height_for_subscriptions
+                    batch.entries, full_node, min_height_for_subscriptions, priority=2
                 )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
@@ -1120,6 +1159,8 @@ class WalletNode:
         request = RequestBlockHeader(new_peak.height)
         response: RespondBlockHeader | None = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
+            if peer.closed:
+                return
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
             return
@@ -1162,6 +1203,9 @@ class WalletNode:
             # Check if any coin needs auto spending
             if self.config.get("auto_claim", {}).get("enabled", False):
                 await self.wallet_state_manager.auto_claim_coins()
+
+        if new_peak_hb.foliage_transaction_block is not None:
+            await self._retry_fee_failed_transactions()
 
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
@@ -1254,9 +1298,11 @@ class WalletNode:
                 # (Hints are not in filter)
                 all_coin_ids: list[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: list[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-                ph_updates: list[CoinState] = await subscribe_to_phs(phs, peer, min_height_for_subscriptions)
+                ph_updates: list[CoinState] = await subscribe_to_phs(
+                    phs, peer, min_height_for_subscriptions, priority=2
+                )
                 coin_updates: list[CoinState] = await subscribe_to_coin_updates(
-                    all_coin_ids, peer, min_height_for_subscriptions
+                    all_coin_ids, peer, min_height_for_subscriptions, priority=2
                 )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
@@ -1445,6 +1491,8 @@ class WalletNode:
             state_block.foliage_transaction_block.additions_root,
         )
 
+        if validate_additions_result is None:
+            return False
         if validate_additions_result is False:
             self.log.warning("Validate false 1")
             await peer.close(9999)
@@ -1473,13 +1521,15 @@ class WalletNode:
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
 
-                validate_removals_result: bool = await request_and_validate_removals(
+                validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
                     spent_state_block.header_hash,
                     coin_state.coin.name(),
                     spent_state_block.foliage_transaction_block.removals_root,
                 )
+                if validate_removals_result is None:
+                    return False
                 if validate_removals_result is False:
                     self.log.warning("Validate false 2")
                     await peer.close(9999)
@@ -1510,6 +1560,8 @@ class WalletNode:
                 coin_state.coin.name(),
                 spent_state_block.foliage_transaction_block.removals_root,
             )
+            if validate_removals_result is None:
+                return False
             if validate_removals_result is False:
                 self.log.warning("Validate false 3")
                 await peer.close(9999)
@@ -1589,7 +1641,9 @@ class WalletNode:
             return False
         all_peers_c = self.server.get_connections(NodeType.FULL_NODE)
         all_peers = [(con, self.is_trusted(con)) for con in all_peers_c]
-        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
+        blocks: list[HeaderBlock] | None = await fetch_header_blocks_in_range(
+            start, end, peer_request_cache, all_peers, priority=1
+        )
         if blocks is None:
             log_level = logging.DEBUG if self._shut_down or peer.closed else logging.ERROR
             self.log.log(log_level, f"Error fetching blocks {start} {end}")
@@ -1714,7 +1768,7 @@ class WalletNode:
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
-            await peer.send_message(msg)
+            await self._send_transaction_message(peer, msg)
 
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"

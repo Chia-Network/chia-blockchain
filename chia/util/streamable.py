@@ -98,9 +98,26 @@ class Field:
     parse_function: ParseFunctionType
     convert_function: ConvertFunctionType
     post_init_function: ConvertFunctionType
+    list_inner_parse_function: ParseFunctionType | None = None
+    list_element_fixed_size: int | None = None
 
 
 StreamableFields = tuple[Field, ...]
+
+
+_FIXED_SIZE_PRIMITIVES: dict[type, int] = {
+    bool: 1,
+}
+
+
+def _element_fixed_size(inner_type: type[Any]) -> int | None:
+    """Return the fixed byte size of a streamable element type, or None if variable-size."""
+    if inner_type in _FIXED_SIZE_PRIMITIVES:
+        return _FIXED_SIZE_PRIMITIVES[inner_type]
+    size = getattr(inner_type, "_size", None)
+    if isinstance(size, int):
+        return size
+    return None
 
 
 def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
@@ -108,6 +125,12 @@ def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
     fields = []
     for field in dataclasses.fields(cls):
         hint = hints[field.name]
+        list_inner_parse: ParseFunctionType | None = None
+        list_elem_size: int | None = None
+        if is_type_List(hint):
+            inner_type = get_args(hint)[0]
+            list_inner_parse = function_to_parse_one_item(inner_type)
+            list_elem_size = _element_fixed_size(inner_type)
         fields.append(
             Field(
                 name=field.name,
@@ -118,6 +141,8 @@ def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
                 parse_function=function_to_parse_one_item(hint),
                 convert_function=function_to_convert_one_item(hint),
                 post_init_function=function_to_post_init_process_one_item(hint),
+                list_inner_parse_function=list_inner_parse,
+                list_element_fixed_size=list_elem_size,
             )
         )
 
@@ -399,6 +424,28 @@ def parse_list(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> list[objec
     return full_list
 
 
+def parse_list_limited(
+    f: BinaryIO,
+    parse_inner_type_f: ParseFunctionType,
+    max_items: int,
+    element_fixed_size: int | None = None,
+) -> object:
+    """Parse a list, stopping after max_items and seeking past the remainder."""
+    list_size = parse_uint32(f)
+    items_to_parse = min(list_size, max_items)
+    full_list: list[object] = []
+    for _ in range(items_to_parse):
+        full_list.append(parse_inner_type_f(f))
+    remaining = list_size - items_to_parse
+    if remaining > 0:
+        if element_fixed_size is not None:
+            f.seek(remaining * element_fixed_size, 1)
+        else:
+            for _ in range(remaining):
+                parse_inner_type_f(f)
+    return full_list
+
+
 def parse_tuple(f: BinaryIO, list_parse_inner_type_f: list[ParseFunctionType]) -> tuple[object, ...]:
     full_list: list[object] = []
     for parse_f in list_parse_inner_type_f:
@@ -665,11 +712,20 @@ class Streamable:
             raise
 
     @classmethod
-    def parse(cls, f: BinaryIO) -> Self:
+    def parse(cls, f: BinaryIO, list_limits: dict[str, int] | None = None) -> Self:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Self = object.__new__(cls)
         for field in cls.streamable_fields():
-            object.__setattr__(obj, field.name, field.parse_function(f))
+            if list_limits and field.name in list_limits and field.list_inner_parse_function is not None:
+                value = parse_list_limited(
+                    f,
+                    field.list_inner_parse_function,
+                    list_limits[field.name],
+                    field.list_element_fixed_size,
+                )
+            else:
+                value = field.parse_function(f)
+            object.__setattr__(obj, field.name, value)
         return obj
 
     def stream(self, f: BinaryIO) -> None:
@@ -680,9 +736,9 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> Self:
+    def from_bytes(cls, blob: bytes, list_limits: dict[str, int] | None = None) -> Self:
         f = io.BytesIO(blob)
-        parsed = cls.parse(f)
+        parsed = cls.parse(f, list_limits=list_limits)
         remainder = f.read()
         if remainder != b"":
             raise ValueError(f"{cls.__name__}: {len(remainder)} bytes not consumed")

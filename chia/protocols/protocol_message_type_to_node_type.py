@@ -9,6 +9,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 ProtocolMessageTypeToNodeType: dict[ProtocolMessageTypes, set[NodeType]] = {
     # Shared protocol (all services)
     ProtocolMessageTypes.handshake: set(NodeType),
+    ProtocolMessageTypes.configure_window_sizes: set(NodeType),
     # Harvester protocol (harvester <-> farmer)
     ProtocolMessageTypes.harvester_handshake: {NodeType.FARMER},
     ProtocolMessageTypes.new_proof_of_space: {NodeType.HARVESTER},

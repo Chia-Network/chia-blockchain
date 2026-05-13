@@ -36,7 +36,9 @@ STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
         min_coin_amount=cli_amount_none,
         max_coin_amount=cli_amount_none,
         coins_to_exclude=(),
+        coins_to_include=(),
         amounts_to_exclude=(),
+        primary_coin=None,
         reuse=None,
     ),
     transaction_writer=TransactionsOut(transaction_file_out=None),
@@ -278,7 +280,7 @@ class WalletEnvironment:
             if tx.type not in CLAWBACK_INCOMING_TRANSACTION_TYPES and tx.name not in _exclude_from_mempool_check
         ]
         # Ensure txs enter mempool and are marked as such locally
-        await full_node_api.wait_transaction_records_entered_mempool(pending_txs)
+        await full_node_api.wait_transaction_records_entered_mempool(pending_txs, wallet_node=self.node)
         await full_node_api.wait_transaction_records_marked_as_in_mempool([tx.name for tx in pending_txs], self.node)
 
         return pending_txs
@@ -322,6 +324,8 @@ class WalletTestFramework:
                 min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
                 max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
                 coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                coins_to_include=tuple(self.tx_config.included_coin_ids),
+                primary_coin=self.tx_config.primary_coin,
                 amounts_to_exclude=tuple(
                     CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
                 ),
@@ -383,8 +387,8 @@ class WalletTestFramework:
                         await env.check_balances(transition.pre_block_additional_balance_info)
                 except Exception:
                     raise ValueError(f"Error with env index {i}")
-        except Exception:
-            raise ValueError("Error before block was farmed")
+        except Exception as e:
+            raise ValueError(f"Error before block was farmed: {e}") from e
 
         # Farm block
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
@@ -409,8 +413,8 @@ class WalletTestFramework:
                         await env.check_balances(transition.post_block_additional_balance_info)
                 except Exception:
                     raise ValueError(f"Error with env {i}")
-        except Exception:
-            raise ValueError("Error after block was farmed")
+        except Exception as e:
+            raise ValueError(f"Error after block was farmed: {e}") from e
 
         # Make sure all pending txs from before the block are now confirmed
         for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):

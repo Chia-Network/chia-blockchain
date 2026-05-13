@@ -47,7 +47,11 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
 from typing_extensions import Self
 
-from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from chia.consensus.block_creation import (
+    calculate_infusion_point_total_iters,
+    create_unfinished_block,
+    unfinished_block_to_full_block,
+)
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.condition_costs import ConditionCost
@@ -1575,13 +1579,18 @@ class BlockTools:
                     if len(finished_sub_slots) < skip_slots:
                         continue
 
+                    infusion_point_total_iters = calculate_infusion_point_total_iters(
+                        sub_slot_start_total_iters=sub_slot_total_iters,
+                        sp_iters=sp_iters,
+                        ip_iters=ip_iters,
+                        sub_slot_iters=constants.SUB_SLOT_ITERS_STARTING,
+                    )
                     unfinished_block = create_unfinished_block(
                         constants,
                         sub_slot_total_iters,
-                        constants.SUB_SLOT_ITERS_STARTING,
+                        infusion_point_total_iters,
                         uint8(signage_point_index),
                         sp_iters,
-                        ip_iters,
                         proof_of_space,
                         cc_challenge,
                         constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
@@ -2217,14 +2226,19 @@ def get_full_block_and_block_record(
         timestamp = last_timestamp + time_per_block
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
+    infusion_point_total_iters = calculate_infusion_point_total_iters(
+        sub_slot_start_total_iters=sub_slot_start_total_iters,
+        sp_iters=sp_iters,
+        ip_iters=ip_iters,
+        sub_slot_iters=sub_slot_iters,
+    )
 
     unfinished_block = create_unfinished_block(
         constants,
         sub_slot_start_total_iters,
-        sub_slot_iters,
+        infusion_point_total_iters,
         signage_point_index,
         sp_iters,
-        ip_iters,
         proof_of_space,
         slot_cc_challenge,
         farmer_reward_puzzle_hash,
@@ -2293,14 +2307,16 @@ CONDITION_COSTS = compute_cost_table()
 
 
 def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
-    condition_cost = 0
+    condition_cost = ConditionCost.SPEND_COST.value if charge_for_conditions else 0
     for cond in conds.as_iter():
         condition = cond.first().as_atom()
 
         # this is new in hard fork 2
 
         if condition == ConditionOpcode.CREATE_COIN:
-            condition_cost += ConditionCost.CREATE_COIN.value
+            condition_cost += (
+                ConditionCost.NEW_CREATE_COIN.value if charge_for_conditions else ConditionCost.CREATE_COIN.value
+            )
         # after the 2.0 hard fork, two byte conditions (with no leading 0)
         # have costs. Account for that.
         elif len(condition) == 2 and condition[0] != 0:

@@ -1233,8 +1233,10 @@ async def test_server_http_ban(
         if error:
             raise aiohttp.ClientConnectionError
 
-    start_timestamp = int(time.time())
+    frozen_time = time.time()
+    start_timestamp = int(frozen_time)
     with monkeypatch.context() as m:
+        m.setattr(time, "time", lambda: frozen_time)
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
         success = await insert_from_delta_file(
             data_store=data_store,
@@ -1255,10 +1257,11 @@ async def test_server_http_ban(
     subscriptions = await data_store.get_subscriptions()
     sinfo = subscriptions[0].servers_info[0]
     assert sinfo.num_consecutive_failures == 1
-    assert sinfo.ignore_till >= start_timestamp + 5 * 60  # ban for 5 minutes
+    assert sinfo.ignore_till == start_timestamp + 5 * 60  # ban for 5 minutes
     start_timestamp = sinfo.ignore_till
 
     with monkeypatch.context() as m:
+        m.setattr(time, "time", lambda: frozen_time)
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
         success = await insert_from_delta_file(
             data_store=data_store,

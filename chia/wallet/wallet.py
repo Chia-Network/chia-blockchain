@@ -385,6 +385,14 @@ class Wallet:
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
         non_change_amount = uint64(sum(amounts))
+        if (
+            origin_id is not None
+            and action_scope.config.tx_config.coin_selection_config.primary_coin is not None
+            and origin_id != action_scope.config.tx_config.coin_selection_config.primary_coin
+        ):
+            raise ValueError("`origin_id` must match `primary_coin` if both are specified")
+        elif origin_id is None:
+            origin_id = action_scope.config.tx_config.coin_selection_config.primary_coin
 
         self.log.debug("Generating transaction for: %s %s %r", puzzle_hashes, amounts, coins)
         transaction = await self._generate_unsigned_transaction(
@@ -439,6 +447,8 @@ class Wallet:
         reserve_fee: uint64 | None = None,
         preferred_change_puzzle_hash: bytes32 | None = None,
     ) -> None:
+        if action_scope.config.tx_config.primary_coin is not None:
+            raise ValueError("Using a primary coin is not supported for this wallet")
         if coins is None:
             coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
