@@ -16,7 +16,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_max_plot_strength,
     calculate_prefix_bits,
     check_plot_param,
-    compute_plot_group_id_from_pos,
+    compute_plot_group_id,
     is_v1_phased_out,
     make_pos,
     num_phase_out_epochs,
@@ -463,7 +463,7 @@ class TestV2PlotFilter:
 
 
 class TestComputePlotGroupId:
-    """Tests for compute_plot_group_id_from_pos().
+    """Tests for compute_plot_group_id().
 
     Verified to match chia_rs compute_plot_id_v2 internals:
     plot_group_id = sha256(strength || plot_pk || pool_info)
@@ -474,32 +474,14 @@ class TestComputePlotGroupId:
         plot_pk = _test_pk()
         pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
 
-        pos = make_pos(
-            challenge=bytes32.zeros,
-            pool_public_key=None,
-            pool_contract_puzzle_hash=pool_ph,
-            plot_public_key=plot_pk,
-            params=PlotParam.make_v2(0, 0, 2),
-            proof=b"",
-        )
-
-        assert compute_plot_group_id_from_pos(pos) == compute_plot_group_id_from_pos(pos)
+        assert compute_plot_group_id(2, plot_pk, pool_ph) == compute_plot_group_id(2, plot_pk, pool_ph)
 
     def test_compute_plot_group_id_formula(self) -> None:
         plot_pk = _test_pk()
         pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
         strength = 3
 
-        pos = make_pos(
-            challenge=bytes32.zeros,
-            pool_public_key=None,
-            pool_contract_puzzle_hash=pool_ph,
-            plot_public_key=plot_pk,
-            params=PlotParam.make_v2(0, 0, strength),
-            proof=b"",
-        )
-
-        result = compute_plot_group_id_from_pos(pos)
+        result = compute_plot_group_id(strength, plot_pk, pool_ph)
         expected = std_hash(bytes([strength]) + bytes(plot_pk) + bytes(pool_ph))
         assert result == expected
 
@@ -517,7 +499,7 @@ class TestComputePlotGroupId:
             proof=b"",
         )
 
-        group_id = compute_plot_group_id_from_pos(pos)
+        group_id = compute_plot_group_id(3, plot_pk, pool_ph)
         derived_plot_id = std_hash(group_id + (7).to_bytes(2, "big") + bytes([42]))
         assert derived_plot_id == pos.compute_plot_id()
 
@@ -527,14 +509,6 @@ class TestComputePlotGroupId:
 
         results = []
         for strength in [2, 3, 4, 5]:
-            pos = make_pos(
-                challenge=bytes32.zeros,
-                pool_public_key=None,
-                pool_contract_puzzle_hash=pool_ph,
-                plot_public_key=plot_pk,
-                params=PlotParam.make_v2(0, 0, strength),
-                proof=b"",
-            )
-            results.append(compute_plot_group_id_from_pos(pos))
+            results.append(compute_plot_group_id(strength, plot_pk, pool_ph))
 
         assert len(set(results)) == 4, "Different strengths should produce different plot_group_ids"
