@@ -431,6 +431,9 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
+                # pre-allocate memory for height to hash map. We don't want it
+                # to fail once the DB transaction is committed.
+                self.__height_map.ensure_capacity(records[-1].height)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,

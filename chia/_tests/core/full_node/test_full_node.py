@@ -13,6 +13,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 
 import pytest
+from aiohttp import WSCloseCode
 from chia_rs import (
     AugSchemeMPL,
     Coin,
@@ -69,6 +70,7 @@ from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
@@ -107,7 +109,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.casts import int_to_bytes
-from chia.util.errors import ConsensusError, Err
+from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
@@ -1255,6 +1257,200 @@ async def test_respond_transaction_fail(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    reason="We can no longer (reliably) farm blocks from before the hard fork",
+)
+async def test_add_transaction_seen_before_validation(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+) -> None:
+    """Regression test for SEC-111: tx must be marked in-flight before the
+    expensive pre_validate_spendbundle call so concurrent workers don't
+    redundantly validate the same transaction."""
+    full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+    cb_ph = wallet_a.get_new_puzzlehash()
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    blocks = bt.get_consecutive_blocks(
+        3,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=cb_ph,
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block, peer)
+
+    receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+    coin = find_reward_coin(blocks[-1], cb_ph)
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
+    assert spend_bundle is not None
+    spend_name = spend_bundle.name()
+
+    validation_started = asyncio.Event()
+    original_pre_validate = full_node_1.full_node.mempool_manager.pre_validate_spendbundle
+
+    async def slow_pre_validate(
+        sb: SpendBundle, sb_id: bytes32 | None = None, bls_cache: Any = None
+    ) -> SpendBundleConditions:
+        validation_started.set()
+        await asyncio.sleep(0.1)
+        return await original_pre_validate(sb, sb_id, bls_cache)
+
+    full_node_1.full_node.mempool_manager.pre_validate_spendbundle = slow_pre_validate  # type: ignore[assignment]
+    try:
+        task1 = create_referenced_task(full_node_1.full_node.add_transaction(spend_bundle, spend_name, peer, test=True))
+        await validation_started.wait()
+        # Task 1 is now inside pre_validate_spendbundle. If the in-flight guard
+        # was populated before the await, this second call is rejected
+        # immediately without churning seen-cache.
+        assert full_node_1.full_node.mempool_manager.in_flight(spend_name)
+        assert not full_node_1.full_node.mempool_manager.seen(spend_name)
+        status2, err2 = await full_node_1.full_node.add_transaction(spend_bundle, spend_name, peer, test=True)
+        status1, err1 = await task1
+    finally:
+        full_node_1.full_node.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+
+    assert status1 == MempoolInclusionStatus.SUCCESS
+    assert err1 is None
+    assert status2 == MempoolInclusionStatus.FAILED
+    assert err2 == Err.ALREADY_INCLUDING_TRANSACTION
+    assert not full_node_1.full_node.mempool_manager.in_flight(spend_name)
+    assert full_node_1.full_node.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_sync_mode_does_not_mark_in_flight_or_seen(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """Sync-mode rejections should not create in-flight or seen entries."""
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+    try:
+        fn.sync_store.set_sync_mode(True)
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.sync_store.set_sync_mode(False)
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.NO_TRANSACTIONS_WHILE_SYNCING
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert not fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_no_peak_does_not_mark_in_flight_or_seen(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """No-peak rejections should not create in-flight or seen entries."""
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+    original_peak = fn.mempool_manager.peak
+    fn.mempool_manager.peak = None
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.peak = original_peak
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.NO_TRANSACTIONS_WHILE_SYNCING
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert not fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_remove_seen_on_value_error(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """When pre_validate_spendbundle raises ValueError, the seen-cache entry
+    must be removed so the transaction can be retried."""
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+
+    original_pre_validate = fn.mempool_manager.pre_validate_spendbundle
+
+    async def raise_value_error(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        raise ValueError("simulated soft failure")
+
+    fn.mempool_manager.pre_validate_spendbundle = raise_value_error  # type: ignore[method-assign]
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.INVALID_SPEND_BUNDLE
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert not fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_adds_seen_on_validation_error(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """ValidationError should keep the tx in seen-cache to avoid re-validation."""
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+    original_pre_validate = fn.mempool_manager.pre_validate_spendbundle
+
+    async def raise_validation_error(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        raise ValidationError(Err.INVALID_SPEND_BUNDLE)
+
+    fn.mempool_manager.pre_validate_spendbundle = raise_validation_error  # type: ignore[method-assign]
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.INVALID_SPEND_BUNDLE
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_remove_seen_on_unexpected_exception(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """When pre_validate_spendbundle raises an unexpected exception, the
+    seen-cache entry must be removed and the exception re-raised."""
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+
+    original_pre_validate = fn.mempool_manager.pre_validate_spendbundle
+
+    async def raise_runtime_error(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        raise RuntimeError("simulated unexpected failure")
+
+    fn.mempool_manager.pre_validate_spendbundle = raise_runtime_error  # type: ignore[method-assign]
+    try:
+        with pytest.raises(RuntimeError, match="simulated unexpected failure"):
+            await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert not fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
 async def test_unsolicited_transaction_ignored(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
     self_hostname: str,
@@ -2038,6 +2234,73 @@ async def test_new_signage_point_caching(
 
 
 @pytest.mark.anyio
+async def test_respond_signage_point_bans_invalid_vdf(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    empty_blockchain: Blockchain,
+    self_hostname: str,
+) -> None:
+    full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
+    blocks = await full_node_1.get_all_full_blocks()
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+    peer.peer_info = PeerInfo("192.168.1.100", peer.peer_info.port)
+    blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
+    await full_node_1.full_node.add_block(blocks[-3])
+    await full_node_1.full_node.add_block(blocks[-2])
+    await full_node_1.full_node.add_block(blocks[-1])
+
+    blockchain = full_node_1.full_node.blockchain
+
+    second_blockchain = empty_blockchain
+    for block in blocks:
+        await _validate_and_add_block(second_blockchain, block)
+
+    peak_2 = second_blockchain.get_peak()
+    assert peak_2 is not None
+    sp: SignagePoint = get_signage_point(
+        bt.constants,
+        blockchain,
+        peak_2,
+        peak_2.ip_sub_slot_total_iters(bt.constants),
+        uint8(4),
+        [],
+        peak_2.sub_slot_iters,
+    )
+    assert sp.cc_vdf is not None
+    assert sp.cc_proof is not None
+    assert sp.rc_vdf is not None
+    assert sp.rc_proof is not None
+
+    corrupted_cc_proof = sp.cc_proof.replace(witness=b"\xff" * len(sp.cc_proof.witness))
+    corrupted_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, corrupted_cc_proof, sp.rc_vdf, sp.rc_proof)
+
+    original_close = peer.close
+    close_calls: list[tuple[int, bool]] = []
+
+    async def tracking_close(
+        ban_time: int = 0,
+        ws_close_code: WSCloseCode = WSCloseCode.OK,
+        error: Err | None = None,
+    ) -> None:
+        lock_held = full_node_1.full_node.timelord_lock.locked()
+        close_calls.append((ban_time, lock_held))
+        await original_close(ban_time, ws_close_code, error)
+
+    peer.close = tracking_close  # type: ignore[method-assign]
+
+    await full_node_1.respond_signage_point(corrupted_request, peer)
+
+    assert len(close_calls) == 1, f"expected exactly one close call, got {len(close_calls)}"
+    ban_time, lock_was_held = close_calls[0]
+    assert ban_time == CONSENSUS_ERROR_BAN_SECONDS, (
+        f"expected CONSENSUS_ERROR_BAN_SECONDS ({CONSENSUS_ERROR_BAN_SECONDS}), got {ban_time}"
+    )
+    assert not lock_was_held, "peer.close() must be called after timelord_lock is released"
+
+
+@pytest.mark.anyio
 async def test_slot_catch_up_genesis(
     setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     self_hostname: str,
@@ -2070,6 +2333,124 @@ async def test_slot_catch_up_genesis(
         return len(full_node_2.full_node.full_node_store.finished_sub_slots) >= num_slots
 
     await time_out_assert(20, caught_up_slots)
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_sp_catchup_semaphore_rejects_when_full(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+) -> None:
+    nodes, _, _bt = setup_two_nodes_fixture
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    sem = full_node_1.full_node.sp_catchup_sem
+    original_count = sem._available_count
+    sem._available_count = 0
+
+    try:
+        unknown_hash = bytes32(b"\xab" * 32)
+        msg = fnp.NewSignagePointOrEndOfSubSlot(unknown_hash, unknown_hash, uint8(0), unknown_hash)
+        result = await full_node_1.new_signage_point_or_end_of_sub_slot(msg, peer)
+        assert result is None
+    finally:
+        sem._available_count = original_count
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_sp_catchup_invalid_response(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    nodes, _, _bt = setup_two_nodes_fixture
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    async def mock_call_api(request_method: Any, message: Any, timeout: int = 60) -> None:
+        return None
+
+    monkeypatch.setattr(peer, "call_api", mock_call_api)
+
+    unknown_hash = bytes32(b"\xab" * 32)
+    msg = fnp.NewSignagePointOrEndOfSubSlot(unknown_hash, unknown_hash, uint8(0), unknown_hash)
+    result = await full_node_1.new_signage_point_or_end_of_sub_slot(msg, peer)
+    assert result is None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_sp_catchup_diverged_from_peer(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    blocks = bt.get_consecutive_blocks(1, skip_slots=5)
+    slot = blocks[-1].finished_sub_slots[1]
+
+    rc = slot.reward_chain
+    cc_iters = slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+    modified_rc = rc.replace(end_of_slot_vdf=rc.end_of_slot_vdf.replace(number_of_iterations=uint64(cc_iters + 1)))
+    non_empty_slot = slot.replace(reward_chain=modified_rc)
+
+    async def mock_call_api(request_method: Any, message: Any, timeout: int = 60) -> fnp.RespondEndOfSubSlot:
+        return fnp.RespondEndOfSubSlot(non_empty_slot)
+
+    monkeypatch.setattr(peer, "call_api", mock_call_api)
+
+    unknown_hash = bytes32(b"\xab" * 32)
+    msg = fnp.NewSignagePointOrEndOfSubSlot(unknown_hash, unknown_hash, uint8(0), unknown_hash)
+    result = await full_node_1.new_signage_point_or_end_of_sub_slot(msg, peer)
+    assert result is None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_sp_catchup_loop_exhausted(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    blocks = bt.get_consecutive_blocks(1, skip_slots=5)
+    slot = blocks[-1].finished_sub_slots[1]
+
+    call_count = 0
+
+    async def mock_call_api(request_method: Any, message: Any, timeout: int = 60) -> fnp.RespondEndOfSubSlot:
+        nonlocal call_count
+        call_count += 1
+        return fnp.RespondEndOfSubSlot(slot)
+
+    monkeypatch.setattr(peer, "call_api", mock_call_api)
+
+    unknown_hash = bytes32(b"\xab" * 32)
+    msg = fnp.NewSignagePointOrEndOfSubSlot(unknown_hash, unknown_hash, uint8(0), unknown_hash)
+    result = await full_node_1.new_signage_point_or_end_of_sub_slot(msg, peer)
+    assert result is None
+    assert call_count == 30
+    assert peer.closed
 
 
 @pytest.mark.anyio
@@ -2609,8 +2990,10 @@ async def test_wallet_sync_task_failure(
     bad_wallet_update = WalletUpdate(-10, peak, [], {})  # type: ignore[arg-type]
     await full_node.wallet_sync_queue.put(bad_wallet_update)
     await time_out_assert(30, full_node.wallet_sync_queue.empty)
+    await time_out_assert(30, lambda: "dropping update after 3 attempts" in caplog.text)
     assert "update_wallets - fork_height: -10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" in caplog.text
+    assert "dropping update after 3 attempts" in caplog.text
     assert not full_node.wallet_sync_task.done()
     caplog.clear()
     # WalletUpdate with valid args to test continued processing after failure
@@ -2620,6 +3003,115 @@ async def test_wallet_sync_task_failure(
     assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" not in caplog.text
     assert not full_node.wallet_sync_task.done()
+
+
+@pytest.mark.anyio
+async def test_sync_from_fork_point_logs_fetch_stage_exception(
+    one_node: SimulatorsAndWalletsServices,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    [full_node_service], _, _ = one_node
+    full_node = full_node_service._node
+
+    class DummyPeer:
+        def __init__(self) -> None:
+            self.closed = False
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            raise RuntimeError("forced fetch failure")
+
+        async def close(self, *args: object, **kwargs: object) -> None:
+            self.closed = True
+
+    peer = DummyPeer()
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+
+    caplog.set_level(logging.ERROR)
+    await asyncio.wait_for(full_node.sync_from_fork_point(uint32(0), uint32(5), std_hash(b"peak"), []), timeout=20)
+
+    assert "Exception fetching" in caplog.text
+    assert "sync from fork point failed" in caplog.text
+    await peer.close()
+    assert peer.closed
+
+
+@pytest.mark.anyio
+async def test_sync_from_fork_point_logs_validate_stage_exception(
+    one_node: SimulatorsAndWalletsServices,
+    default_1000_blocks: list[FullBlock],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    [full_node_service], _, _ = one_node
+    full_node = full_node_service._node
+
+    class DummyPeer:
+        def __init__(self, blocks: list[FullBlock]) -> None:
+            self.closed = False
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self._blocks = blocks
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            request = args[1]
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, self._blocks)
+
+        async def close(self, *args: object, **kwargs: object) -> None:
+            self.closed = True
+
+    peer = DummyPeer(default_1000_blocks[:6])
+
+    async def raise_in_prevalidate(*args: object, **kwargs: object) -> list[PreValidationResult]:
+        raise RuntimeError("forced prevalidation failure")
+
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+    monkeypatch.setattr(full_node, "prevalidate_blocks", raise_in_prevalidate)
+
+    caplog.set_level(logging.ERROR)
+    await asyncio.wait_for(full_node.sync_from_fork_point(uint32(0), uint32(5), std_hash(b"peak"), []), timeout=20)
+
+    assert "Exception validating" in caplog.text
+    assert "sync from fork point failed" in caplog.text
+    await peer.close()
+    assert peer.closed
+
+
+@pytest.mark.anyio
+async def test_wallet_sync_task_failure_before_receiving_update_logs_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class DummyNode:
+        _shut_down: bool
+        wallet_sync_queue: Any
+        log: logging.Logger
+
+        def __init__(self) -> None:
+            self._shut_down = False
+            self.log = logging.getLogger(__name__)
+
+            class FailingQueue:
+                def __init__(self, node: DummyNode) -> None:
+                    self.node = node
+
+                async def get(self) -> WalletUpdate:
+                    self.node._shut_down = True
+                    raise RuntimeError("forced wallet queue failure")
+
+                async def put(self, wallet_update: WalletUpdate) -> None:
+                    raise AssertionError(f"unexpected requeue attempt: {wallet_update}")  # pragma: no cover
+
+            self.wallet_sync_queue = FailingQueue(self)
+
+        async def update_wallets(self, wallet_update: WalletUpdate) -> None:
+            raise AssertionError(f"unexpected wallet update: {wallet_update}")  # pragma: no cover
+
+    dummy_node = DummyNode()
+    caplog.set_level(logging.ERROR)
+    await FullNode._wallets_sync_task_handler(dummy_node)  # type: ignore[arg-type]
+
+    assert "Wallet sync task failure before receiving update" in caplog.text
 
 
 def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: no cover

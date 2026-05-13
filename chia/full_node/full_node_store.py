@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import enum
 import logging
 import time
 
@@ -20,12 +21,31 @@ from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
-from chia.util.lru_cache import LRUCache, LRUSet
+from chia.util.lru_cache import LRUCache, LRUKeyedListCache, LRUSet
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
+
+# Future caches store untrusted timelord/full-node gossip and must stay small
+# even when peers send max-size protocol messages with unique challenges.
+FUTURE_CACHE_ENTRY_TTL_SECONDS = 300
+
+FUTURE_SP_CACHE_MAX_KEYS = 128
+FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY = 64
+
+FUTURE_EOS_CACHE_MAX_KEYS = 128
+FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY = 4
+
+FUTURE_IP_CACHE_MAX_KEYS = 128
+FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY = 8
+
+
+class SignagePointAddResult(enum.Enum):
+    ADDED = "added"
+    NOT_ADDED = "not_added"
+    INVALID_VDF = "invalid_vdf"
 
 
 @streamable
@@ -131,16 +151,13 @@ class FullNodeStore:
     # might receive before the blocks themselves. The dict keys are the reward chain challenge hashes.
 
     # End of slots which depend on infusions that we don't have
-    future_eos_cache: dict[bytes32, list[EndOfSubSlotBundle]]
+    future_eos_cache: LRUKeyedListCache[bytes32, EndOfSubSlotBundle]
 
     # Signage points which depend on infusions that we don't have
-    future_sp_cache: dict[bytes32, list[tuple[uint8, SignagePoint]]]
+    future_sp_cache: LRUKeyedListCache[bytes32, tuple[uint8, SignagePoint]]
 
     # Infusion point VDFs which depend on infusions that we don't have
-    future_ip_cache: dict[bytes32, list[timelord_protocol.NewInfusionPointVDF]]
-
-    # This stores the time that each key was added to the future cache, so we can clear old keys
-    future_cache_key_times: dict[bytes32, int]
+    future_ip_cache: LRUKeyedListCache[bytes32, timelord_protocol.NewInfusionPointVDF]
 
     # These recent caches are for pooling support
     recent_signage_points: LRUCache[bytes32, tuple[SignagePoint, float]]
@@ -160,12 +177,17 @@ class FullNodeStore:
         self.seen_unfinished_blocks = LRUSet(1000)
         self._unfinished_blocks = {}
         self.finished_sub_slots = []
-        self.future_eos_cache = {}
-        self.future_sp_cache = {}
-        self.future_ip_cache = {}
+        self.future_eos_cache = LRUKeyedListCache(
+            FUTURE_EOS_CACHE_MAX_KEYS, FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
+        self.future_sp_cache = LRUKeyedListCache(
+            FUTURE_SP_CACHE_MAX_KEYS, FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
+        self.future_ip_cache = LRUKeyedListCache(
+            FUTURE_IP_CACHE_MAX_KEYS, FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
         self.recent_signage_points = LRUCache(500)
         self.recent_eos = LRUCache(50)
-        self.future_cache_key_times = {}
         self.constants = constants
         self.clear_slots()
         self.initialize_genesis_sub_slot()
@@ -353,10 +375,7 @@ class FullNodeStore:
 
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
-        if ch not in self.future_ip_cache:
-            self.future_ip_cache[ch] = []
-        self.future_ip_cache[ch].append(infusion_point)
-        self.future_cache_key_times[ch] = int(time.time())
+        self.future_ip_cache.append(ch, infusion_point)
 
     def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
         if signage_point.rc_vdf is None:
@@ -370,7 +389,6 @@ class FullNodeStore:
         return False
 
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8) -> None:
-        # We are missing a block here
         if (
             signage_point.cc_vdf is None
             or signage_point.rc_vdf is None
@@ -378,29 +396,20 @@ class FullNodeStore:
             or signage_point.rc_proof is None
         ):
             return None
-        if signage_point.rc_vdf.challenge not in self.future_sp_cache:
-            self.future_sp_cache[signage_point.rc_vdf.challenge] = []
+        challenge = signage_point.rc_vdf.challenge
         if self.in_future_sp_cache(signage_point, index):
             return None
-
-        self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
-        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
-        log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge.hex()}. caching signage point {index}.")
+        if not self.future_sp_cache.append(challenge, (index, signage_point)):
+            return None
+        log.info(f"Don't have rc hash {challenge.hex()}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> list[timelord_protocol.NewInfusionPointVDF]:
         return self.future_ip_cache.get(rc_challenge_hash, [])
 
     def clear_old_cache_entries(self) -> None:
-        current_time: int = int(time.time())
-        remove_keys: list[bytes32] = []
-        for rc_hash, time_added in self.future_cache_key_times.items():
-            if current_time - time_added > 3600:
-                remove_keys.append(rc_hash)
-        for k in remove_keys:
-            self.future_cache_key_times.pop(k, None)
-            self.future_ip_cache.pop(k, [])
-            self.future_eos_cache.pop(k, [])
-            self.future_sp_cache.pop(k, [])
+        self.future_ip_cache.evict_expired()
+        self.future_eos_cache.evict_expired()
+        self.future_sp_cache.evict_expired()
 
     def clear_slots(self) -> None:
         self.finished_sub_slots.clear()
@@ -480,11 +489,8 @@ class FullNodeStore:
             cc_start_element = peak.challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
-                # We don't have this challenge hash yet
-                if rc_challenge not in self.future_eos_cache:
-                    self.future_eos_cache[rc_challenge] = []
-                self.future_eos_cache[rc_challenge].append(eos)
-                self.future_cache_key_times[rc_challenge] = int(time.time())
+                if not self.future_eos_cache.append(rc_challenge, eos):
+                    return None
                 log.info(f"Don't have challenge hash {rc_challenge}, caching EOS")
                 return None
 
@@ -695,9 +701,14 @@ class FullNodeStore:
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation: bool = False,
-    ) -> bool:
+    ) -> SignagePointAddResult:
         """
-        Returns true if sp successfully added
+        Returns:
+            ADDED: SP was stored successfully.
+            NOT_ADDED: SP was rejected for structural reasons (wrong sub-slot, future SP,
+                info mismatch). May be cached for later retry via add_to_future_sp.
+            INVALID_VDF: Challenge hash and VDF info matched expectations but the
+                cryptographic proof failed verification. Caller should ban the peer.
         """
         assert len(self.finished_sub_slots) >= 1
 
@@ -706,9 +717,8 @@ class FullNodeStore:
         else:
             sub_slot_iters = peak.sub_slot_iters
 
-        # If we don't have this slot, return False
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
-            return False
+            return SignagePointAddResult.NOT_ADDED
         assert (
             signage_point.cc_vdf is not None
             and signage_point.cc_proof is not None
@@ -781,34 +791,35 @@ class FullNodeStore:
                     )
                 if not signage_point.cc_vdf == cc_vdf_info_expected.replace(number_of_iterations=delta_iters):
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
                 if check_from_start_of_ss:
                     start_ele = ClassgroupElement.get_default_element()
                 else:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
+                    # A Wesolowski VDF proof cannot be accidentally invalid when the challenge
+                    # and iteration count match — forging one requires the sequential computation.
+                    # Proof failure here is definitively malicious.
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
                         start_ele,
                         cc_vdf_info_expected,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
                     if signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.cc_vdf,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
                 if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
                     # This signage point is probably outdated
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
 
                 if not skip_vdf_validation:
                     if not validate_vdf(
@@ -818,14 +829,13 @@ class FullNodeStore:
                         signage_point.rc_vdf,
                         rc_vdf_info_expected,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
                 sp_arr[index] = signage_point
                 self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
-                return True
+                return SignagePointAddResult.ADDED
         self.add_to_future_sp(signage_point, index)
-        return False
+        return SignagePointAddResult.NOT_ADDED
 
     def get_signage_point(self, cc_signage_point: bytes32) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
@@ -999,15 +1009,15 @@ class FullNodeStore:
         ).copy()
         for index, sp in future_sps:
             assert sp.cc_vdf is not None
-            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
+            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp) == SignagePointAddResult.ADDED:
                 new_sps.append((index, sp))
 
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):
             new_ips.append(ip)
 
-        self.future_eos_cache.pop(peak.reward_infusion_new_challenge, [])
-        self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
-        self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
+        self.future_eos_cache.pop(peak.reward_infusion_new_challenge)
+        self.future_sp_cache.pop(peak.reward_infusion_new_challenge)
+        self.future_ip_cache.pop(peak.reward_infusion_new_challenge)
 
         for eos_op, _, _ in self.finished_sub_slots:
             if eos_op is not None:

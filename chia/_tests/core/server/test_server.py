@@ -5,7 +5,9 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import ClassVar, cast
+from unittest.mock import patch
 
+import aiohttp
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16, uint32
@@ -24,12 +26,14 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.api_protocol import ApiMetadata
-from chia.server.server import ChiaServer
+from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection, error_response_version, sanitize_version_string
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.errors import ApiError, Err
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.start_wallet import create_wallet_service
@@ -535,3 +539,52 @@ async def test_send_message_timed_out_nonced_request(
         5, lambda: f"Dropping timed out request ID {request_id} with msg type {msg_type.name}" in caplog.text
     )
     assert request_id not in wsc.timed_out_requests
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_inbound_handshake_timeout(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """Testing handshake timeout"""
+    _, _, server_1, server_2, _ = two_nodes
+
+    server_1.config["peer_connect_timeout"] = 2
+
+    config = load_config(server_1.root_path, "config.yaml")
+    chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server_1.root_path, config)
+
+    dummy_crt_path = server_1.root_path / "dummy_slowloris.crt"
+    dummy_key_path = server_1.root_path / "dummy_slowloris.key"
+    generate_ca_signed_cert(
+        chia_ca_crt_path.read_bytes(),
+        chia_ca_key_path.read_bytes(),
+        dummy_crt_path,
+        dummy_key_path,
+    )
+    ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, dummy_crt_path, dummy_key_path)
+
+    session = aiohttp.ClientSession()
+    try:
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+        with patch("chia.server.server.is_localhost", return_value=False):
+            ws = await session.ws_connect(
+                url,
+                autoclose=True,
+                autoping=True,
+                ssl=ssl_context,
+                max_msg_size=50 * 1024 * 1024,
+            )
+
+            msg = await asyncio.wait_for(ws.receive(), timeout=10)
+        assert msg.type in {
+            aiohttp.WSMsgType.CLOSE,
+            aiohttp.WSMsgType.CLOSED,
+            aiohttp.WSMsgType.CLOSING,
+        }, f"Expected close message, got {msg.type}"
+    finally:
+        await session.close()
+
+    # A normal peer can still connect after the slowloris attempt was cleaned up
+    assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
