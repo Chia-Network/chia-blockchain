@@ -6,6 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.7.1 Chia blockchain 2026-05-13
+
+## What's Changed
+
+### Added
+
+- Add Cursor AI context rules for modules and testing
+- Introduce a new window based rate limits capability
+- Add ability to specify coins to include in `CoinSelectionConfig`
+
+### Changed
+
+- Remove several wallet modules from mypy strict exclusions
+- Improve requesting transactions advertised via `NewTransaction`
+- Give callers of `SingletonFastForward.process_fast_forward_spends` control over the state update
+- Update inbound timelord connection handling
+- Move `NPCResults` into tests
+- Improve compact VDF request handling
+- Replace multiple thread pool executors with a shared `PriorityThreadPoolExecutor` to improve CPU utilization
+- Optimize handling of unfinished blocks
+- Reject malformed weight proof segments with overflow block at index 0
+- Improve active requests tracking
+- Fix mypy 1.20.0 compatibility
+- Add outbound handshake timeout in `start_client`
+- Add more detailed information to `get_height_info()`
+- Improve proof of space unfinished block handling
+- Improve logging for unfinished blocks that overflow in the first sub-slot of a new epoch
+- Remove no longer needed tx peak computation in `declare_proof_of_space`
+- Various changes for chia gaming support
+- Avoid recomputing tx peak when creating a block generator in `declare_proof_of_space`
+- Improve logging for unsolicited transactions in `FullNodeAPI.respond_transaction`
+- Improve handling of nonced timed-out requests in `WSChiaConnection`
+- Avoid redundant close handling on already-closed peers in `WalletNode.new_peak_wallet`
+- Add dynamic list-limited deserialization for Streamable types
+- Improve handling of additions/removals requests in `WalletNode.validate_received_state_from_peer`
+- Remove unused wallet outbound rate-limit config key
+- Bump `chia_rs` to 0.42.1
+- Update GUI pin to release/2.7.1
+
+### Fixed
+
+- Use read-only snapshots for block pre-validation to prevent concurrent mutation
+- Ensure malformed websocket frames trigger a proper disconnect
+- Fix `combine_coins` ignoring `--max-coin-amount` and including spent coins
+- Fix wallet transaction inflight tracking
+- Restore DL wallet launcher entry after rollback
+- Fix invalid third-party harvester signage point fixture data
+- Fix `SyncStore` handling of stale peaks and empty peer entries
+- Replace assert with explicit check for unknown parent block
+- Replace assert with explicit None check in `get_heaviest_peak()`
+- Prevent unnecessary farming delays of height-asserted spends at exact match height
+- Widen wallet request protocol fields from `uint16` to `uint32` (fixes #20255)
+
 ## 2.7.0 Chia blockchain 2026-3-26
 
 ## What's Changed
