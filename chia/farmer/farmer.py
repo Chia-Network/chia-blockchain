@@ -820,11 +820,11 @@ class Farmer:
         time_slept = 0
         while not self._shut_down:
             # Every time the config file changes, read it to check the pool state
-            stat_info = PoolingShareState.state_path(self._root_path).stat()
-            if stat_info.st_mtime > self.last_config_access_time:
+            state_path = PoolingShareState.state_path(self._root_path)
+            if state_path.exists() and state_path.stat().st_mtime > self.last_config_access_time:
                 # If we detect the config file changed, refresh private keys first just in case
                 self.all_root_sks = [sk for sk, _ in await self.get_all_private_keys()]
-                self.last_config_access_time = stat_info.st_mtime
+                self.last_config_access_time = state_path.stat().st_mtime
                 await self.update_pool_state()
                 time_slept = 0
             elif time_slept > 60:
