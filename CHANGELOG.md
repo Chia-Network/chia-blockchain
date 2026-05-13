@@ -18,6 +18,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
+- WalletConnect: Upgraded to WalletConnect v2
+- WalletConnect: unified commands, redesigned permissions, and added support for chia gaming
 - Remove several wallet modules from mypy strict exclusions
 - Improve requesting transactions advertised via `NewTransaction`
 - Give callers of `SingletonFastForward.process_fast_forward_spends` control over the state update
