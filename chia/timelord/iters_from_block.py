@@ -33,7 +33,8 @@ def iters_from_block(
         height,
         difficulty,
         prev_transaction_block_height,
-        # Timelords calculate iterations before the block is available in the full node's chain context.
+        # Timelords only calculate iterations for blocks already validated by the full node.
+        # The full node has checked the V2 filter, so this caller can ignore height-aware filter inputs.
         height_agnostic=True,
     )
     assert required_iters is not None
