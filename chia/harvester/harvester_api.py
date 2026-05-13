@@ -20,7 +20,7 @@ from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import PartialProofsData, Plot, PlotSyncResponse
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot2, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -59,10 +59,15 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester2) -> bool:
+    def _plot_passes_filter(
+        self,
+        plot_info: PlotInfo,
+        challenge: harvester_protocol.NewSignagePointHarvester2,
+    ) -> bool:
         if plot_info.prover.get_version() == PlotVersion.V2:
             # V2 plots always use predictable filter — no fallback
-            if challenge.filter_challenge is None:
+            filter_challenge = getattr(challenge, "filter_challenge", None)
+            if filter_challenge is None:
                 return False
             param = plot_info.prover.get_param()
             pool_info = (
@@ -81,7 +86,7 @@ class HarvesterAPI:
                 plot_group_id,
                 param.meta_group,
                 group_strength,
-                challenge.filter_challenge,
+                filter_challenge,
                 challenge.signage_point_index,
             )
 
@@ -254,7 +259,6 @@ class HarvesterAPI:
                     plot_info.pool_contract_puzzle_hash,
                     plot_info.plot_public_key,
                 )
-                return None
             except Exception:
                 self.harvester.log.exception("Failed V2 partial proof lookup")
                 return None
@@ -554,24 +558,46 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @metadata.request()
-    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
-        plots_response = []
+    @metadata.request(peer_required=True)
+    async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
+        plots_response: list[Plot] = []
+        plots_response2: list[Plot2] = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         for plot in plots:
-            plots_response.append(
-                Plot(
-                    plot["filename"],
-                    plot["size"],
-                    plot["plot_id"],
-                    plot["pool_public_key"],
-                    plot["pool_contract_puzzle_hash"],
-                    plot["plot_public_key"],
-                    plot["file_size"],
-                    plot["time_modified"],
-                    plot["compression_level"],
+            if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
+                plots_response2.append(
+                    Plot2(
+                        plot["filename"],
+                        plot["size"],
+                        plot["plot_id"],
+                        plot["pool_public_key"],
+                        plot["pool_contract_puzzle_hash"],
+                        plot["plot_public_key"],
+                        plot["file_size"],
+                        plot["time_modified"],
+                        plot["compression_level"],
+                        plot["plot_index"],
+                        plot["meta_group"],
+                    )
                 )
-            )
+            else:
+                plots_response.append(
+                    Plot(
+                        plot["filename"],
+                        plot["size"],
+                        plot["plot_id"],
+                        plot["pool_public_key"],
+                        plot["pool_contract_puzzle_hash"],
+                        plot["plot_public_key"],
+                        plot["file_size"],
+                        plot["time_modified"],
+                        plot["compression_level"],
+                    )
+                )
+
+        if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
+            response2 = harvester_protocol.RespondPlots2(plots_response2, failed_to_open_filenames, no_key_filenames)
+            return make_msg(ProtocolMessageTypes.respond_plots2, response2)
 
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)

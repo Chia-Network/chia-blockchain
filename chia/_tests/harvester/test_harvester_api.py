@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
+from packaging.version import Version
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
@@ -48,6 +50,29 @@ async def harvester_environment(
     plot_path, plot_info = next(iter(plot_manager.plots.items()))
     yield HarvesterTestEnvironment(harvester_api, plot_info, plot_path)
     plot_manager.stop_refreshing()
+
+
+@pytest.mark.parametrize(
+    "protocol_version,expected_message_type",
+    [
+        (Version("0.0.37"), ProtocolMessageTypes.respond_plots),
+        (Version("0.0.38"), ProtocolMessageTypes.respond_plots2),
+    ],
+)
+@pytest.mark.anyio
+async def test_request_plots_uses_plot_serialization_for_farmer_protocol(
+    harvester_environment: HarvesterTestEnvironment,
+    seeded_random: random.Random,
+    protocol_version: Version,
+    expected_message_type: ProtocolMessageTypes,
+) -> None:
+    peer = MagicMock(spec=WSChiaConnection)
+    peer.protocol_version = protocol_version
+    peer.peer_node_id = bytes32.random(seeded_random)
+
+    response = await harvester_environment.harvester_api.request_plots(harvester_protocol.RequestPlots(), peer)
+
+    assert response.type == expected_message_type.value
 
 
 def signage_point_from_block(

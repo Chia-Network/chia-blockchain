@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from chia_rs.sized_ints import int16, uint8, uint32, uint64
+from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -18,12 +18,15 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
+    Plot2,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotList2,
     PlotSyncResponse,
     PlotSyncStart,
+    supports_new_plot_serialization,
 )
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -34,16 +37,19 @@ from chia.util.task_referencer import create_referenced_task
 log = logging.getLogger(__name__)
 
 
+def _plot_fields(plot_info: PlotInfo) -> tuple[uint8, uint16, uint8]:
+    param = plot_info.prover.get_param()
+    if param.size_v1 is not None:
+        return param.size_v1, uint16(0), uint8(0)
+
+    assert param.strength_v2 is not None
+    return uint8(0x80 | param.strength_v2), param.plot_index, param.meta_group
+
+
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
-        param = plot_info.prover.get_param()
-        k: uint8
-        if param.size_v1 is not None:
-            k = param.size_v1
-        else:
-            assert param.strength_v2 is not None
-            k = uint8(0x80 | param.strength_v2)
+        k, _plot_index, _meta_group = _plot_fields(plot_info)
 
         converted.append(
             Plot(
@@ -56,6 +62,29 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(plot_info.time_modified),
                 compression_level=plot_info.prover.get_compression_level(),
+            )
+        )
+    return converted
+
+
+def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
+    converted: list[Plot2] = []
+    for plot_info in plot_infos:
+        k, plot_index, meta_group = _plot_fields(plot_info)
+
+        converted.append(
+            Plot2(
+                filename=plot_info.prover.get_filename(),
+                size=uint8(k),
+                plot_id=plot_info.prover.get_id(),
+                pool_public_key=plot_info.pool_public_key,
+                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                plot_public_key=plot_info.plot_public_key,
+                file_size=uint64(plot_info.file_size),
+                time_modified=uint64(plot_info.time_modified),
+                compression_level=plot_info.prover.get_compression_level(),
+                plot_index=plot_index,
+                meta_group=meta_group,
             )
         )
     return converted
@@ -292,8 +321,12 @@ class Sender:
     def process_batch(self, loaded: list[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            converted = _convert_plot_info_list(loaded)
-            self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
+            if self._connection is not None and supports_new_plot_serialization(self._connection.protocol_version):
+                converted2 = _convert_plot_info_list2(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded2, PlotSyncPlotList2, converted2, remaining == 0)
+            else:
+                converted = _convert_plot_info_list(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
 
     def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
