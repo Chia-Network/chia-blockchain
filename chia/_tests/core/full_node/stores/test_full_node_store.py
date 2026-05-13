@@ -1493,6 +1493,24 @@ class TestGetFilterChallenge:
             result = store.get_filter_challenge(ch3, uint8(sp_idx))
             assert result == ch1, f"SP {sp_idx} in window 0 should use SS(n-2) challenge hash"
 
+    def test_window_0_uses_recent_eos_after_active_slot_trim(self) -> None:
+        """new_peak keeps only active slots, but window 0 still needs SS(n-2)."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        for sub_slot, _, _ in store.finished_sub_slots:
+            if sub_slot is not None:
+                store.recent_eos.put(sub_slot.challenge_chain.get_hash(), (sub_slot, time.time()))
+
+        store.finished_sub_slots = store.finished_sub_slots[-1:]
+
+        assert store.get_filter_challenge(ch3, uint8(0)) == ch1
+        assert store.get_filter_challenge(ch3, uint8(20)) == ch2
+
     def test_window_0_differs_from_windows_16_to_63(self) -> None:
         """Window [0-15] uses SS(n-2) while windows [16-63] use SS(n-1)."""
         store = FullNodeStore(DEFAULT_CONSTANTS)

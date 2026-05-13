@@ -33,6 +33,8 @@ def iters_from_block(
         height,
         difficulty,
         prev_transaction_block_height,
+        # Timelords calculate iterations before the block is available in the full node's chain context.
+        height_agnostic=True,
     )
     assert required_iters is not None
 

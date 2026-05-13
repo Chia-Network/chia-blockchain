@@ -861,9 +861,23 @@ class FullNodeStore:
         """
         assert len(self.finished_sub_slots) >= 1
 
+        def previous_sub_slot_challenge(sub_slot: EndOfSubSlotBundle) -> bytes32:
+            return sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+
+        def get_active_or_recent_sub_slot(slot_challenge: bytes32) -> EndOfSubSlotBundle | None:
+            for active_sub_slot, _, _ in self.finished_sub_slots:
+                if active_sub_slot is not None and active_sub_slot.challenge_chain.get_hash() == slot_challenge:
+                    return active_sub_slot
+
+            recent_eos = self.recent_eos.get(slot_challenge)
+            if recent_eos is None:
+                return None
+
+            return recent_eos[0]
+
         window_start = (index // window_size) * window_size
 
-        for slot_idx, (sub_slot, _, _) in enumerate(self.finished_sub_slots):
+        for sub_slot, _, _ in self.finished_sub_slots:
             slot_challenge = (
                 sub_slot.challenge_chain.get_hash() if sub_slot is not None else self.constants.GENESIS_CHALLENGE
             )
@@ -872,20 +886,27 @@ class FullNodeStore:
 
             if window_start == 0:
                 # Window [0-15]: use SS(n-2) challenge hash
-                if slot_idx < 2:
+                if sub_slot is None:
                     log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
                     return None
-                target_sub_slot = self.finished_sub_slots[slot_idx - 2][0]
+
+                previous_challenge = previous_sub_slot_challenge(sub_slot)
+                if previous_challenge == self.constants.GENESIS_CHALLENGE:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+
+                previous_sub_slot = get_active_or_recent_sub_slot(previous_challenge)
+                if previous_sub_slot is None:
+                    log.debug("filter_challenge unavailable: missing previous sub-slot for window 0")
+                    return None
+
+                return previous_sub_slot_challenge(previous_sub_slot)
             else:
                 # Windows [16-31], [32-47], [48-63]: use SS(n-1) challenge hash
-                if slot_idx < 1:
+                if sub_slot is None:
                     log.debug("filter_challenge unavailable: no previous sub-slot")
                     return None
-                target_sub_slot = self.finished_sub_slots[slot_idx - 1][0]
-
-            if target_sub_slot is None:
-                return self.constants.GENESIS_CHALLENGE
-            return target_sub_slot.challenge_chain.get_hash()
+                return previous_sub_slot_challenge(sub_slot)
 
         log.debug("filter_challenge unavailable: challenge %s not found", challenge.hex()[:16])
         return None
