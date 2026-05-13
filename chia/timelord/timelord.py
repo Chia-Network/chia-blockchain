@@ -190,10 +190,21 @@ class Timelord:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
-            for _, _, writer in self.free_clients:
-                with contextlib.suppress(Exception):
-                    writer.close()
-            self.free_clients.clear()
+            await self._shutdown_vdf_clients()
+            if self.vdf_server is not None:
+                self.vdf_server.close()
+
+    async def _shutdown_vdf_clients(self) -> None:
+        """Send stop signal and close all VDF client writers, suppressing errors."""
+        for _, _, writer in [*self.free_clients, *self.chain_type_to_stream.values()]:
+            with contextlib.suppress(Exception):
+                writer.write(b"010")
+                await writer.drain()
+            with contextlib.suppress(Exception):
+                writer.close()
+                await writer.wait_closed()
+        self.free_clients.clear()
+        self.chain_type_to_stream.clear()
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)

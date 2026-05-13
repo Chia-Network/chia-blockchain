@@ -103,6 +103,16 @@ jobs:
             exclude_from:
               limited: True
               main: True
+          - name: "3.14"
+            file_name: "3.14"
+            action: "3.14"
+            apt: "3.14"
+            install_sh: "3.14"
+            matrix: "3.14"
+            exclude_from:
+              limited: True
+              main: True
+
         exclude:
           - arch:
               matrix: arm
