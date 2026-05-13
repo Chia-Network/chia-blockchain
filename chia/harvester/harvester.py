@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from chia_rs import ConsensusConstants
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint16, uint32
 
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
@@ -193,9 +193,13 @@ class Harvester:
                 param = prover.get_param()
                 if param.size_v1 is not None:
                     k = uint8(param.size_v1)
+                    plot_index = uint16(0)
+                    meta_group = uint8(0)
                 else:
                     assert param.strength_v2 is not None
                     k = uint8(0x80 | param.strength_v2)
+                    plot_index = param.plot_index
+                    meta_group = param.meta_group
                 response_plots.append(
                     {
                         "filename": str(path),
@@ -207,6 +211,8 @@ class Harvester:
                         "file_size": plot_info.file_size,
                         "time_modified": int(plot_info.time_modified),
                         "compression_level": prover.get_compression_level(),
+                        "plot_index": plot_index,
+                        "meta_group": meta_group,
                     }
                 )
             self.log.debug(
