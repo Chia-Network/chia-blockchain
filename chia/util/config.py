@@ -66,13 +66,12 @@ def lock_and_load_config(
     fill_missing_services: bool = False,
 ) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
-        config = _load_config_maybe_locked(
+        yield _load_config_maybe_locked(
             root_path=root_path,
             filename=filename,
             acquire_lock=False,
             fill_missing_services=fill_missing_services,
         )
-        yield config
 
 
 def save_config(root_path: Path, filename: str | Path, config_data: Any) -> None:
@@ -278,9 +277,7 @@ def process_config_start_method(
         log.warning(f"Configured start method {from_config!r} not available in: {start_methods_string}")
         choice = "default"
     else:
-        # mypy doesn't realize that by the time we get here from_config must be one of
-        # the keys in `start_methods` due to the above `not in` condition.
-        choice = from_config  # type: ignore[assignment]
+        choice = from_config
 
     processed_method = start_methods[choice]
     log.info(f"Selected multiprocessing start method: {choice}")

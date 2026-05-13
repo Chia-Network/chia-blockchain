@@ -73,6 +73,7 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, RLSettings | Unlimited]] = {
         ProtocolMessageTypes.transaction_ack: RLSettings(False, 5000, 2048),
         # All non-transaction apis also have an aggregate limit
         ProtocolMessageTypes.handshake: RLSettings(True, 5, 10 * 1024, 5 * 10 * 1024),
+        ProtocolMessageTypes.configure_window_sizes: RLSettings(True, 5, 1024, 1024),
         ProtocolMessageTypes.harvester_handshake: RLSettings(True, 5, 1024 * 1024),
         ProtocolMessageTypes.new_signage_point_harvester: RLSettings(True, 100, 4886),  # Size with 100 pool list
         ProtocolMessageTypes.new_proof_of_space: RLSettings(True, 100, 2048),

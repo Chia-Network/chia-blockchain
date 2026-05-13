@@ -116,17 +116,19 @@ class SyncStore:
                 continue
             if heaviest_peak is None or peak.weight > heaviest_peak.weight:
                 heaviest_peak = peak
-        assert heaviest_peak is not None
         return heaviest_peak
 
     def peer_disconnected(self, node_id: bytes32) -> None:
         if node_id in self.peer_to_peak:
             del self.peer_to_peak[node_id]
 
+        empty_hashes: list[bytes32] = []
         for peak, peers in self.peak_to_peer.items():
-            if node_id in peers:
-                self.peak_to_peer[peak].remove(node_id)
-            assert node_id not in self.peak_to_peer[peak]
+            peers.discard(node_id)
+            if not peers:
+                empty_hashes.append(peak)
+        for h in empty_hashes:
+            del self.peak_to_peer[h]
 
         self._backtrack_syncing.pop(node_id, None)
 

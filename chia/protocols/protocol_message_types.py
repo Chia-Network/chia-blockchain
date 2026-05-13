@@ -6,6 +6,7 @@ from enum import Enum
 class ProtocolMessageTypes(Enum):
     # Shared protocol (all services)
     handshake = 1
+    configure_window_sizes = 111
 
     # Harvester protocol (harvester <-> farmer)
     harvester_handshake = 3

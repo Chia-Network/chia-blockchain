@@ -864,7 +864,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
         reason="After the phase out, when we have v2-only plots. It seems like "
         "we never get an overflow block. get_consecutive_blocks(..., force_overflow=True) "
         "loops until we time out",
@@ -1705,7 +1705,14 @@ class TestBlockHeaderValidation:
                 return None
 
     @pytest.mark.anyio
-    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Monkey patch add_block_to_mmr otherwise we will throw an error in the mmr invariant
+        # assetion and not in the block header validation code
+        monkeypatch.setattr(
+            "chia.consensus.blockchain_mmr.BlockchainMMRManager.add_block_to_mmr",
+            lambda *args, **kwargs: None,
+        )
+
         # 27
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -2647,7 +2654,7 @@ class TestBodyValidation:
     @pytest.mark.anyio
     @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2663,7 +2670,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        for i in range(7_000):
+        num_coins = 7_000
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # after the hard fork, CREATE_COIN is 25% cheaper, so we need more
+            # coins to exceed the block cost
+            num_coins += num_coins // 3
+        for i in range(num_coins):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -2692,7 +2704,9 @@ class TestBodyValidation:
         err = (
             await b.add_block(
                 blocks[-1],
-                PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+                PreValidationResult(
+                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)
+                ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
             )
@@ -2768,7 +2782,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2802,7 +2816,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2841,7 +2855,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3422,7 +3436,10 @@ class TestReorgs:
         test_long_reorg_blocks: list[FullBlock],
         test_long_reorg_blocks_light: list[FullBlock],
         consensus_mode: ConsensusMode,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+        monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
         elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
@@ -4040,7 +4057,9 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 @pytest.mark.anyio
 @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
-async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+    monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
     WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]

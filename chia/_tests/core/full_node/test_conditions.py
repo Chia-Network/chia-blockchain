@@ -148,7 +148,7 @@ class TestConditions:
             block_base_cost = 761056 - 12000
 
         if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
-            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value + ConditionCost.SPEND_COST.value
         else:
             condition_cost = 0
 
@@ -177,7 +177,7 @@ class TestConditions:
             block_base_cost = 732064 - 12000
 
         if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
-            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value
+            condition_cost = ConditionCost.GENERIC_CONDITION_COST.value + ConditionCost.SPEND_COST.value
         else:
             condition_cost = 0
 

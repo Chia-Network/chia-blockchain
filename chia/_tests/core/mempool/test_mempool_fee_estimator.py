@@ -14,6 +14,7 @@ from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
+from chia.util.inline_executor import InlineExecutor
 
 
 @pytest.mark.anyio
@@ -66,6 +67,7 @@ async def test_fee_increase() -> None:
             coin_store.get_coin_records,
             coin_store.get_unspent_lineage_info_for_puzzle_hash,
             test_constants,
+            InlineExecutor(),
             validation_timeout=10,
         ) as mempool_manager:
             assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM

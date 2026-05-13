@@ -19,8 +19,10 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.util.cpu import available_logical_cores
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.priority_thread_pool_executor import PriorityThreadPoolExecutor
 
 # the first transaction block. Each byte in transaction_height_delta is the
 # number of blocks to skip forward to get to the next transaction block
@@ -66,10 +68,12 @@ async def main(db_path: Path) -> None:
         coin_store = await CoinStore.create(db_wrapper)
 
         start_time = monotonic()
-        # make configurable
         reserved_cores = 4
+        cpu_count = available_logical_cores()
+        num_workers = max(cpu_count - reserved_cores, 1)
+        pool = PriorityThreadPoolExecutor(max_workers=num_workers, thread_name_prefix="validation-")
         height_map = await BlockHeightMap.create(db_path.parent, db_wrapper)
-        blockchain = await Blockchain.create(coin_store, block_store, height_map, DEFAULT_CONSTANTS, reserved_cores)
+        blockchain = await Blockchain.create(coin_store, block_store, height_map, DEFAULT_CONSTANTS, pool)
 
         peak = blockchain.get_peak()
         assert peak is not None
@@ -90,6 +94,7 @@ async def main(db_path: Path) -> None:
         print(f"get_block_generator(): {timing / REPETITIONS:0.3f}s")
 
         blockchain.shut_down()
+        pool.shutdown()
 
 
 @click.command()

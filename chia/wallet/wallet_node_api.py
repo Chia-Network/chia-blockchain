@@ -106,12 +106,22 @@ class WalletNodeAPI:
         async with self.wallet_node.wallet_state_manager.lock:
             assert peer.peer_node_id is not None
             name = peer.peer_node_id.hex()
+            matched_in_flight_send = False
             if peer.peer_node_id in self.wallet_node._tx_messages_in_progress:
-                self.wallet_node._tx_messages_in_progress[peer.peer_node_id] = [
-                    txid for txid in self.wallet_node._tx_messages_in_progress[peer.peer_node_id] if txid != ack.txid
-                ]
-                if self.wallet_node._tx_messages_in_progress[peer.peer_node_id] == []:
+                in_progress = self.wallet_node._tx_messages_in_progress[peer.peer_node_id]
+                if ack.txid in in_progress:
+                    matched_in_flight_send = True
+                    in_progress.remove(ack.txid)
+                if in_progress == []:
                     del self.wallet_node._tx_messages_in_progress[peer.peer_node_id]
+
+            # Ignore stale/unsolicited acknowledgements that don't correspond to an in-flight send.
+            if not matched_in_flight_send:
+                self.wallet_node.log.debug(
+                    "Ignoring unsolicited transaction ack from peer %s for tx %s", name, ack.txid
+                )
+                return None
+
             status = MempoolInclusionStatus(ack.status)
             try:
                 wallet_state_manager = self.wallet_node.wallet_state_manager

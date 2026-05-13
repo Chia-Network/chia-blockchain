@@ -566,6 +566,7 @@ async def validate_block_body(
             conds,
             prev_transaction_block_height,
             prev_transaction_block_timestamp,
+            nowrap=(prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT),
         )
         if error is not None:
             # TODO: standardise errors across Rust and Python so cast is not necesary here

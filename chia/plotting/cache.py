@@ -181,7 +181,7 @@ class Cache:
                         # Estimated C2 size + memo size + 2000 (static data + path)
                         # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
                         # path: up to ~1870, all above will lead to false positive.
-                        # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
+                        # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287
 
                         # Use experimental measurements if more than estimates
                         # https://github.com/Chia-Network/chia-blockchain/issues/16063
