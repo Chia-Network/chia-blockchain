@@ -224,14 +224,16 @@ async def pre_validate_block(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    filter_challenge = get_filter_challenge_from_chain(
-        constants,
-        blockchain,
-        block,
-        challenge,
-        block.reward_chain_block.signage_point_index,
-        prev_b is None,
-    )
+    filter_challenge = None
+    if block.reward_chain_block.proof_of_space.version == 1:
+        filter_challenge = get_filter_challenge_from_chain(
+            constants,
+            blockchain,
+            block,
+            challenge,
+            block.reward_chain_block.signage_point_index,
+            prev_b is None,
+        )
 
     required_iters = validate_pospace_and_get_required_iters(
         constants,

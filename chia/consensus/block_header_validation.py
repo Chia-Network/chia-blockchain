@@ -499,14 +499,16 @@ def validate_unfinished_header_block(
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    filter_challenge = get_filter_challenge_from_chain(
-        constants,
-        blocks,
-        header_block,
-        challenge,
-        header_block.reward_chain_block.signage_point_index,
-        genesis_block,
-    )
+    filter_challenge = None
+    if header_block.reward_chain_block.proof_of_space.version == 1:
+        filter_challenge = get_filter_challenge_from_chain(
+            constants,
+            blocks,
+            header_block,
+            challenge,
+            header_block.reward_chain_block.signage_point_index,
+            genesis_block,
+        )
 
     required_iters = validate_pospace_and_get_required_iters(
         constants,
