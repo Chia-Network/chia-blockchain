@@ -411,16 +411,16 @@ class FullNode:
                         if one_tx_task.done():
                             self.log.info(f"TX task {one_tx_task.get_name()} done")
                         else:
-                            with contextlib.suppress(asyncio.CancelledError):
+                            with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
                                 self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
-                                await one_tx_task
+                                await asyncio.wait_for(asyncio.shield(one_tx_task), timeout=10)
                     for one_sync_task in self._sync_task_list:
                         if one_sync_task.done():
                             self.log.info(f"Long sync task {one_sync_task.get_name()} done")
                         else:
-                            with contextlib.suppress(asyncio.CancelledError):
+                            with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
                                 self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
-                                await one_sync_task
+                                await asyncio.wait_for(asyncio.shield(one_sync_task), timeout=10)
                     await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
