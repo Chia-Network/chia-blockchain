@@ -268,12 +268,39 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        if: inputs.collect-junit
+        if: ${{ always() && inputs.collect-junit }}
         uses: actions/upload-artifact@v7
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
           if-no-files-found: error
+
+      - name: Collect node logs and pytest tmp on failure
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ci-debug-artifacts
+          if [ -d /tmp/pytest-of-runner ]; then
+            tar -czf ci-debug-artifacts/pytest-tmp.tar.gz \
+              --exclude='*.sqlite' --exclude='*.db' \
+              -C /tmp pytest-of-runner 2>/dev/null || true
+          fi
+          find /tmp -maxdepth 6 -name 'debug.log*' -mtime -1 2>/dev/null \
+            | head -200 \
+            | tar -czf ci-debug-artifacts/node-debug-logs.tar.gz -T - 2>/dev/null || true
+          find /tmp -maxdepth 6 -name '*traceback*' -mtime -1 2>/dev/null \
+            | head -200 \
+            | xargs -I {} cp {} ci-debug-artifacts/ 2>/dev/null || true
+          ls -la ci-debug-artifacts/ || true
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-debug-${{ env.JOB_FILE_NAME }}
+          path: ci-debug-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Process coverage data
         run: |
