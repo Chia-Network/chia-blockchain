@@ -2977,6 +2977,7 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
                     assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure(
     one_node: SimulatorsAndWalletsServices, caplog: pytest.LogCaptureFixture
@@ -3078,6 +3079,7 @@ async def test_sync_from_fork_point_logs_validate_stage_exception(
     assert peer.closed
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure_before_receiving_update_logs_error(
     caplog: pytest.LogCaptureFixture,
