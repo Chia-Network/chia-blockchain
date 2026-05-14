@@ -4014,6 +4014,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 @pytest.mark.parametrize("mismatch_cost", [True, False])
 @pytest.mark.parametrize("mismatch_fee", [True, False])
