@@ -266,13 +266,12 @@ class PuzzleWithRestrictions:
                 self.spec_namespace,
                 (
                     self.nonce,
-                    (
+                    [
                         [hint.to_program() for hint in restriction_hints],
-                        (
-                            1 if isinstance(self.puzzle, MofN) else 0,
-                            (puzzle_hint.to_program(), self.additional_memos),
-                        ),
-                    ),
+                        1 if isinstance(self.puzzle, MofN) else 0,
+                        puzzle_hint.to_program(),
+                        self.additional_memos,
+                    ],
                 ),
             )
         )
@@ -285,14 +284,13 @@ class PuzzleWithRestrictions:
         restriction_hints_prog = memo.at("rrf")
         further_branching_prog = memo.at("rrrf")
         puzzle_hint_prog = memo.at("rrrrf")
-        additional_memos = memo.at("rrrrr")
+        additional_memos = memo.at("rrrrrf")
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
             puzzle: MIPSComponent = MofN(
-                m=m_of_n_hint.m,
-                members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos],
+                m=m_of_n_hint.m, members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:
             puzzle_hint = MemberHint.from_program(puzzle_hint_prog)
@@ -404,10 +402,7 @@ class PuzzleWithRestrictions:
                     inner_puzzle_hash,
                 )
                 .get_tree_hash_precalc(
-                    *member_validator_hashes,
-                    *dpuz_validator_hashes,
-                    RESTRICTION_MOD_HASH,
-                    inner_puzzle_hash,
+                    *member_validator_hashes, *dpuz_validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash
                 )
             )
         else:
@@ -438,11 +433,7 @@ class PuzzleWithRestrictions:
 
         if delegated_puzzle_and_solution is not None:
             solution = Program.to(
-                [
-                    delegated_puzzle_and_solution.puzzle,
-                    delegated_puzzle_and_solution.solution,
-                    *solution.as_iter(),
-                ]
+                [delegated_puzzle_and_solution.puzzle, delegated_puzzle_and_solution.solution, *solution.as_iter()]
             )
 
         return solution
