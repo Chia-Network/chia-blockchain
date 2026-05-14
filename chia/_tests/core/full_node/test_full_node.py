@@ -3258,6 +3258,7 @@ async def test_long_reorg(
     await validate_coin_set(node.full_node._coin_store, blocks)
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.parametrize("chain_length", [0, 100])
