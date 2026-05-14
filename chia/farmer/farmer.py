@@ -604,8 +604,8 @@ class Farmer:
                     if pool_info_result is not None and pool_info_result.new_pool_url is not None:
                         with PoolingShareState.acquire(
                             root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
-                        ) as pool_config:
-                            pool_config.pool_url = pool_info_result.new_pool_url
+                        ) as editable_pool_config:
+                            editable_pool_config.pool_url = pool_info_result.new_pool_url
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
