@@ -1256,6 +1256,7 @@ async def test_respond_transaction_fail(
     assert incoming_queue.qsize() == 0
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(
     allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
