@@ -338,7 +338,16 @@ class ChiaServer:
                 stub_metadata_for_type=self.stub_metadata_for_type,
                 exempt_peer_networks=self.exempt_peer_networks,
             )
-            await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
+            peer_host = request.remote
+            handshake_timeout = (
+                None
+                if is_localhost(peer_host) or is_in_network(peer_host, self.exempt_peer_networks)
+                else float(self.config.get("peer_connect_timeout", 30))
+            )
+            await asyncio.wait_for(
+                connection.perform_handshake(self._network_id, self.get_port(), self._local_type),
+                timeout=handshake_timeout,
+            )
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Full nodes should only accept peers, post hard fork 2, that
@@ -368,6 +377,12 @@ class ChiaServer:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
+        except asyncio.TimeoutError:
+            if connection is not None:
+                await connection.close(
+                    self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_HANDSHAKE
+                )
+            self.log.warning(f"Handshake timeout from {request.remote}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
