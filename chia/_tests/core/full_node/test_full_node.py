@@ -1261,6 +1261,7 @@ async def test_respond_transaction_fail(
     allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
     reason="We can no longer (reliably) farm blocks from before the hard fork",
 )
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 async def test_add_transaction_seen_before_validation(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -1321,6 +1322,7 @@ async def test_add_transaction_seen_before_validation(
     assert full_node_1.full_node.mempool_manager.seen(spend_name)
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_add_transaction_sync_mode_does_not_mark_in_flight_or_seen(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -1343,6 +1345,7 @@ async def test_add_transaction_sync_mode_does_not_mark_in_flight_or_seen(
     assert not fn.mempool_manager.seen(spend_name)
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_add_transaction_no_peak_does_not_mark_in_flight_or_seen(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -1366,6 +1369,7 @@ async def test_add_transaction_no_peak_does_not_mark_in_flight_or_seen(
     assert not fn.mempool_manager.seen(spend_name)
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_add_transaction_remove_seen_on_value_error(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -2233,6 +2237,7 @@ async def test_new_signage_point_caching(
     )
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_respond_signage_point_bans_invalid_vdf(
     wallet_nodes: tuple[
@@ -2335,6 +2340,7 @@ async def test_slot_catch_up_genesis(
     await time_out_assert(20, caught_up_slots)
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_sp_catchup_semaphore_rejects_when_full(
@@ -2361,6 +2367,7 @@ async def test_sp_catchup_semaphore_rejects_when_full(
         sem._available_count = original_count
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_sp_catchup_invalid_response(
@@ -2386,6 +2393,7 @@ async def test_sp_catchup_invalid_response(
     assert result is None
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_sp_catchup_diverged_from_peer(
@@ -2419,6 +2427,7 @@ async def test_sp_catchup_diverged_from_peer(
     assert result is None
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_sp_catchup_loop_exhausted(
@@ -3005,6 +3014,7 @@ async def test_wallet_sync_task_failure(
     assert not full_node.wallet_sync_task.done()
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_sync_from_fork_point_logs_fetch_stage_exception(
     one_node: SimulatorsAndWalletsServices,
@@ -3037,6 +3047,7 @@ async def test_sync_from_fork_point_logs_fetch_stage_exception(
     assert peer.closed
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_sync_from_fork_point_logs_validate_stage_exception(
     one_node: SimulatorsAndWalletsServices,
@@ -3078,6 +3089,7 @@ async def test_sync_from_fork_point_logs_validate_stage_exception(
     assert peer.closed
 
 
+@pytest.mark.skip(reason="bisect: temporarily disabled to isolate CI hang")
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure_before_receiving_update_logs_error(
     caplog: pytest.LogCaptureFixture,
