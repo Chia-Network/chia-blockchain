@@ -1257,68 +1257,53 @@ async def test_respond_transaction_fail(
 
 
 @pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-    reason="We can no longer (reliably) farm blocks from before the hard fork",
-)
 async def test_add_transaction_seen_before_validation(
-    wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
-    ],
-    self_hostname: str,
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
 ) -> None:
     """Regression test for SEC-111: tx must be marked in-flight before the
-    expensive pre_validate_spendbundle call so concurrent workers don't
-    redundantly validate the same transaction."""
-    full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
-    cb_ph = wallet_a.get_new_puzzlehash()
+    pre_validate_spendbundle call so concurrent workers don't redundantly
+    validate the same transaction.
+    """
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
 
-    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-
-    blocks = bt.get_consecutive_blocks(
-        3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=cb_ph,
-    )
-    for block in blocks:
-        await full_node_1.full_node.add_block(block, peer)
-
-    receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-    coin = find_reward_coin(blocks[-1], cb_ph)
-    spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
-    assert spend_bundle is not None
+    spend_bundle = make_spend_bundle(1)
     spend_name = spend_bundle.name()
 
-    validation_started = asyncio.Event()
-    original_pre_validate = full_node_1.full_node.mempool_manager.pre_validate_spendbundle
+    inside_validate = asyncio.Event()
+    release_validate = asyncio.Event()
 
-    async def slow_pre_validate(
-        sb: SpendBundle, sb_id: bytes32 | None = None, bls_cache: Any = None
-    ) -> SpendBundleConditions:
-        validation_started.set()
-        await asyncio.sleep(0.1)
-        return await original_pre_validate(sb, sb_id, bls_cache)
+    async def gated_pre_validate(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        inside_validate.set()
+        await release_validate.wait()
+        # Short-circuit add_transaction; we only care that the in-flight guard
+        # was populated before this await.
+        raise ValueError("test abort")
 
-    full_node_1.full_node.mempool_manager.pre_validate_spendbundle = slow_pre_validate  # type: ignore[assignment]
-    try:
-        task1 = create_referenced_task(full_node_1.full_node.add_transaction(spend_bundle, spend_name, peer, test=True))
-        await validation_started.wait()
-        # Task 1 is now inside pre_validate_spendbundle. If the in-flight guard
-        # was populated before the await, this second call is rejected
-        # immediately without churning seen-cache.
-        assert full_node_1.full_node.mempool_manager.in_flight(spend_name)
-        assert not full_node_1.full_node.mempool_manager.seen(spend_name)
-        status2, err2 = await full_node_1.full_node.add_transaction(spend_bundle, spend_name, peer, test=True)
-        status1, err1 = await task1
-    finally:
-        full_node_1.full_node.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(fn.mempool_manager, "pre_validate_spendbundle", gated_pre_validate)
 
-    assert status1 == MempoolInclusionStatus.SUCCESS
-    assert err1 is None
-    assert status2 == MempoolInclusionStatus.FAILED
-    assert err2 == Err.ALREADY_INCLUDING_TRANSACTION
-    assert not full_node_1.full_node.mempool_manager.in_flight(spend_name)
-    assert full_node_1.full_node.mempool_manager.seen(spend_name)
+        task = create_referenced_task(fn.add_transaction(spend_bundle, spend_name, test=True))
+        await asyncio.wait_for(inside_validate.wait(), timeout=5)
+
+        # While task is paused inside gated_pre_validate, the guard must be set
+        # and the seen-cache must be untouched.
+        assert fn.mempool_manager.in_flight(spend_name)
+        assert not fn.mempool_manager.seen(spend_name)
+
+        # A concurrent caller for the same tx hits the guard and bails.
+        status2, err2 = await fn.add_transaction(spend_bundle, spend_name, test=True)
+        assert status2 == MempoolInclusionStatus.FAILED
+        assert err2 == Err.ALREADY_INCLUDING_TRANSACTION
+
+        # Let task resume; ValueError exits add_transaction at the soft-failure path.
+        release_validate.set()
+        status1, err1 = await asyncio.wait_for(task, timeout=5)
+
+    assert status1 == MempoolInclusionStatus.FAILED
+    assert err1 == Err.INVALID_SPEND_BUNDLE
+    assert not fn.mempool_manager.in_flight(spend_name)
+    assert not fn.mempool_manager.seen(spend_name)
 
 
 @pytest.mark.anyio
