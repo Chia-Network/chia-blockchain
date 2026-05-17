@@ -55,6 +55,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                     [],
                     0,
                     memo.to_program(),
+                    None,
                 ],
             )
         )
@@ -155,6 +156,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                     [],
                     0,
                     memo.to_program(),
+                    None,
                 ],
             )
         )
@@ -293,6 +295,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                     [],
                     0,
                     memo.to_program(),
+                    None,
                 ],
             )
         )
@@ -386,6 +389,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                     [],
                     0,
                     memo.to_program(),
+                    None,
                 ],
             )
         )

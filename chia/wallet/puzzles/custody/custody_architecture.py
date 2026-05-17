@@ -196,13 +196,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             only_key = next(iter(spends_to_prove.keys()))
             proven_spend = spends_to_prove[only_key]
             proof = self._merkle_tree.generate_proof(only_key)
-            return Program.to(
-                [
-                    (proof[0], proof[1][0]),
-                    proven_spend.puzzle_reveal,
-                    proven_spend.solution,
-                ]
-            )
+            return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution])
 
     def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
@@ -264,15 +258,13 @@ class PuzzleWithRestrictions:
         return Program.to(
             (
                 self.spec_namespace,
-                (
+                [
                     self.nonce,
-                    [
-                        [hint.to_program() for hint in restriction_hints],
-                        1 if isinstance(self.puzzle, MofN) else 0,
-                        puzzle_hint.to_program(),
-                        self.additional_memos,
-                    ],
-                ),
+                    [hint.to_program() for hint in restriction_hints],
+                    1 if isinstance(self.puzzle, MofN) else 0,
+                    puzzle_hint.to_program(),
+                    self.additional_memos,
+                ],
             )
         )
 
