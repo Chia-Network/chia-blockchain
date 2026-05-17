@@ -263,8 +263,8 @@ class PuzzleWithRestrictions:
                     [hint.to_program() for hint in restriction_hints],
                     1 if isinstance(self.puzzle, MofN) else 0,
                     puzzle_hint.to_program(),
-                    self.additional_memos,
-                ],
+                ]
+                + ([self.additional_memos] if self.additional_memos is not None else []),
             )
         )
 
@@ -276,7 +276,7 @@ class PuzzleWithRestrictions:
         restriction_hints_prog = memo.at("rrf")
         further_branching_prog = memo.at("rrrf")
         puzzle_hint_prog = memo.at("rrrrf")
-        additional_memos = memo.at("rrrrrf")
+        additional_memos = memo.at("rrrrrf") if memo.at("rrrrr").atom is None else None
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
@@ -292,7 +292,7 @@ class PuzzleWithRestrictions:
             nonce=nonce.as_int(),
             restrictions=[UnknownRestriction(hint) for hint in restriction_hints],
             puzzle=puzzle,
-            additional_memos=additional_memos if additional_memos != Program.to(None) else None,
+            additional_memos=additional_memos,
         )
 
     @property
