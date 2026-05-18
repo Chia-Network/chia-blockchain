@@ -915,6 +915,7 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
     first_confirmed = first_tx_record.confirmed
 
     # Duplicate acks without another send should all be ignored.
+    caplog.clear()
     with caplog.at_level(logging.DEBUG, logger="chia.wallet.wallet_node"):
         for _ in range(10):
             await conn.incoming_queue.put(msg)
@@ -926,7 +927,7 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
     assert second_tx_record.sent == first_sent
     assert second_tx_record.sent_to == first_sent_to
     assert second_tx_record.confirmed == first_confirmed
-    assert sum("Ignoring unsolicited transaction ack" in record.getMessage() for record in caplog.records) >= 10
+    assert caplog.text.count("Ignoring unsolicited transaction ack") == 10
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
