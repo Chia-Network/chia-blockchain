@@ -416,10 +416,6 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
-            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
-                response.pop("trade_record", None)
-                return response
-
             if "action_scope_override" in kwargs:
                 # deferring to parent action scope
                 return response
@@ -533,6 +529,12 @@ def tx_endpoint(
                     await self.service.wallet_state_manager.tx_store.add_transaction_record(
                         dataclasses.replace(tx, trade_id=new_trade.trade_id)
                     )
+
+            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
+                response.pop("trade_record", None)
+                response.pop("transactions", None)
+                response.pop("unsigned_transactions", None)
+                return response
 
             return response
 

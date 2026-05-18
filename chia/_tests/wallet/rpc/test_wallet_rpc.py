@@ -1588,16 +1588,16 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 0
 
-    offer_only_res = await env_1.rpc_client.fetch(
-        "create_offer_for_ids",
+    offer_only_res = await env_1.rpc_client.create_offer_for_ids(
         CreateOfferForIDs(
             offer={str(1): "-5", cat_asset_id.hex(): "1"},
             validate_only=True,
             offer_only=True,
-        ).json_serialize_for_transport(wallet_environments.tx_config, tuple(), ConditionValidTimes()),
+        ),
+        tx_config=wallet_environments.tx_config,
     )
-    assert "offer" in offer_only_res
-    assert "trade_record" not in offer_only_res
+    assert offer_only_res.offer is not None
+    assert not hasattr(offer_only_res, "trade_record")
 
     driver_dict = {
         cat_asset_id: PuzzleInfo(

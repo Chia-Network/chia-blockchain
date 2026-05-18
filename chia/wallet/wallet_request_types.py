@@ -2188,6 +2188,19 @@ class CreateOfferForIDsResponse(_OfferEndpointResponse):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class CreateOfferForIDsOfferOnlyResponse(Streamable):
+    offer: Offer
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {"offer": self.offer.to_bech32()}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(offer=Offer.from_bech32(json_dict["offer"]))
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class TakeOffer(TransactionEndpointRequest):
     offer: str
     solver: Solver | None = None
