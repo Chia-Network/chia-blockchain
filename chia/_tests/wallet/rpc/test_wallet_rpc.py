@@ -114,6 +114,7 @@ from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
     CreateOfferForIDs,
+    CreateOfferForIDsResponse,
     CreateSignedTransaction,
     DefaultCAT,
     DeleteKey,
@@ -1687,6 +1688,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
         tx_config=wallet_environments.tx_config,
     )
+    assert isinstance(create_res, CreateOfferForIDsResponse)
     all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 2
     offer_count = await env_1.rpc_client.get_offers_count()
