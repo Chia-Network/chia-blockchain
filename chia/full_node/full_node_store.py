@@ -798,16 +798,16 @@ class FullNodeStore:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
-                    # A Wesolowski VDF proof cannot be accidentally invalid when the challenge
-                    # and iteration count match — forging one requires the sequential computation.
-                    # Proof failure here is definitively malicious.
+                    # Non-normalized CC proofs depend on the previous in-slot block. If we don't know the fork
+                    # that produced this SP, a valid proof can fail against our current start element.
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
                         start_ele,
                         cc_vdf_info_expected,
                     ):
-                        return SignagePointAddResult.INVALID_VDF
+                        self.add_to_future_sp(signage_point, index)
+                        return SignagePointAddResult.NOT_ADDED
                     if signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
@@ -818,6 +818,10 @@ class FullNodeStore:
 
                 if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
                     # This signage point is probably outdated
+                    self.add_to_future_sp(signage_point, index)
+                    return SignagePointAddResult.NOT_ADDED
+
+                if rc_vdf_info_expected != signage_point.rc_vdf:
                     self.add_to_future_sp(signage_point, index)
                     return SignagePointAddResult.NOT_ADDED
 

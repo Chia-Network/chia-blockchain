@@ -2258,8 +2258,8 @@ async def test_respond_signage_point_bans_invalid_vdf(
     assert sp.rc_vdf is not None
     assert sp.rc_proof is not None
 
-    corrupted_cc_proof = sp.cc_proof.replace(witness=b"\xff" * len(sp.cc_proof.witness))
-    corrupted_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, corrupted_cc_proof, sp.rc_vdf, sp.rc_proof)
+    corrupted_rc_proof = sp.rc_proof.replace(witness=b"\xff" * len(sp.rc_proof.witness))
+    corrupted_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, corrupted_rc_proof)
 
     original_close = peer.close
     close_calls: list[tuple[int, bool]] = []
