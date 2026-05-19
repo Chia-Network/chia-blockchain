@@ -175,9 +175,39 @@ async def pre_validate_block(
     """
     This method must be called under the blockchain lock
     The block passed to this function is submitted to be validated in the
-    executor passed in as "pool". The future for the job is then returned.
-    When awaited, the return value is the PreValidationResult for the block.
-    The PreValidationResult indicates whether the block was valid or not.
+    executor passed in as "pool". Signature validation runs in the executor
+    because it is expensive and the batch-sync path (unlike normal single-block
+    processing) has no cached transaction signatures to reuse. The future for
+    the job is then returned. When awaited, the return value is the
+    PreValidationResult for the block. The PreValidationResult indicates
+    whether the block was valid or not.
+
+    Mutation contract:
+      - If any synchronous check fails before the state-commit point,
+        `vs` is left untouched. Untrusted new_difficulty / new_sub_slot_iters
+        values from `block.finished_sub_slots` therefore cannot propagate into
+        the caller's `vs` unless proof-of-space verification has succeeded for
+        this block.
+      - The passed-in AugmentedBlockchain is batch-local mutable state. Once
+        `blockchain.add_extra_block()` runs, callers must treat that overlay as
+        committed for this batch and abandon it on the first downstream error.
+      - If the synchronous checks pass, `vs` is updated in-place so the next
+        block in a batch observes this block's ssi / difficulty / prev_ses_block
+        contributions (batch callers do not await the returned awaitable
+        between blocks). The mutation is intentionally NOT reverted on
+        executor failure: callers that cannot tolerate a mutated `vs` on
+        failure MUST isolate by passing a copy, and MUST abort downstream
+        use of `vs` on the first error. See call-site invariants below.
+
+    Caller invariants (required for safe reuse of batch-local state):
+      - Either the caller passes a private `copy.copy(vs)` per batch, or
+      - The caller aborts the batch / sync pipeline on the first
+        PreValidationResult with a non-None `error`.
+      - The caller treats the supplied AugmentedBlockchain as batch-local
+        state and discards that overlay on the first failure.
+      Both `FullNode.add_block_batch` (per-batch copy) and
+      `FullNode.sync_from_fork_point` (pre-batch snapshot +
+      abort-on-first-error in `ingest_blocks`) satisfy this.
 
     Args:
         constants:
@@ -192,7 +222,7 @@ async def pre_validate_block(
         vs: The ValidationState refers to the state for the block.
             This is an in-out parameter that will be updated to the validation state
             for the next block. It includes subslot iterators, difficulty and
-            the previous sub epoch summary (ses) block.
+            the previous sub epoch summary (ses) block. See mutation contract above.
         wp_summaries:
         validate_signatures:
     """
@@ -207,12 +237,18 @@ async def pre_validate_block(
             return return_error(Err.INVALID_PREV_BLOCK_HASH)
         prev_b = curr
 
+    # candidate_vs holds the new ssi / difficulty for this block's synchronous
+    # validation and is also what gets shipped (by copy) to the executor as the
+    # `expected_vs` argument. Its `prev_ses_block` is intentionally left at the
+    # pre-block value — the executor validates that THIS block's header matches
+    # the previous prev_ses_block, not the post-block one.
+    candidate_vs = copy.copy(vs)
     assert isinstance(block, FullBlock)
     if len(block.finished_sub_slots) > 0:
         if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-            vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            candidate_vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
         if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-            vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+            candidate_vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -226,7 +262,7 @@ async def pre_validate_block(
         challenge,
         cc_sp_hash,
         block.height,
-        vs.difficulty,
+        candidate_vs.difficulty,
         pre_sp_tx_block_height(
             constants=constants,
             blocks=blockchain,
@@ -244,8 +280,8 @@ async def pre_validate_block(
             blockchain,
             required_iters,
             block,
-            sub_slot_iters=vs.ssi,
-            prev_ses_block=vs.prev_ses_block,
+            sub_slot_iters=candidate_vs.ssi,
+            prev_ses_block=candidate_vs.prev_ses_block,
         )
     except ValueError:
         log.exception("block_to_block_record()")
@@ -269,6 +305,20 @@ async def pre_validate_block(
     except ValueError:
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
 
+    # All synchronous checks (including proof-of-space) passed — propagate
+    # state so the next block in a batch sees the updated values. Batch
+    # callers do not await the returned future between blocks.
+    #
+    # Ordering is load-bearing: this write happens AFTER
+    # `validate_pospace_and_get_required_iters`, so new_difficulty /
+    # new_sub_slot_iters from `block.finished_sub_slots` can only reach
+    # the caller's `vs` once the block's proof-of-space has been verified
+    # against those values.
+    vs.ssi = candidate_vs.ssi
+    vs.difficulty = candidate_vs.difficulty
+    if block_rec.sub_epoch_summary_included is not None:
+        vs.prev_ses_block = block_rec
+
     future = pool.run_in_loop(
         _pre_validate_block,
         constants,
@@ -276,12 +326,8 @@ async def pre_validate_block(
         block,
         previous_generators,
         conds,
-        copy.copy(vs),
+        copy.copy(candidate_vs),
         nice=nice,
         dedicated=dedicated,
     )
-
-    if block_rec.sub_epoch_summary_included is not None:
-        vs.prev_ses_block = block_rec
-
     return future

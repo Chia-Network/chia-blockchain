@@ -29,7 +29,7 @@ from chia_rs import (
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
@@ -1870,6 +1870,52 @@ co = ConditionOpcode
 rbr = AddBlockResult
 
 
+def _find_epoch_boundary_block(blocks: list[FullBlock]) -> tuple[int, FullBlock]:
+    """Return (index, block) for the first block whose first finished_sub_slot
+    carries `new_difficulty` or `new_sub_slot_iters` (i.e. an epoch boundary).
+
+    Epoch boundaries are where ssi/difficulty actually change, so they are
+    the non-vacuous input to tests that need to observe the eager mutation
+    performed by `pre_validate_block`. Test-constants use EPOCH_BLOCKS=340,
+    so default_1000_blocks contains multiple epoch boundaries."""
+    for i, block in enumerate(blocks[1:], start=1):
+        if len(block.finished_sub_slots) == 0:
+            continue
+        cc = block.finished_sub_slots[0].challenge_chain
+        if cc.new_difficulty is not None or cc.new_sub_slot_iters is not None:
+            return i, block
+    raise AssertionError("no epoch-boundary block found in block list")
+
+
+def _build_validation_state_for(blockchain: Blockchain, block: FullBlock) -> ValidationState:
+    """Construct the ValidationState that the sync pipeline would have at the
+    moment BEFORE `block` is prevalidated: ssi/difficulty are the values that
+    applied AT prev_b (the pre-epoch-boundary values when block is at the
+    boundary), and prev_ses_block is the closest ancestor with a sub-epoch
+    summary. This mirrors full_node.sync_from_fork_point's vs progression:
+    vs is seeded once at sync start and only advances to the new ssi /
+    difficulty via pre_validate_block's eager mutation at epoch boundaries.
+
+    We deliberately pull ssi from `prev_b.sub_slot_iters` rather than calling
+    `blockchain.get_next_sub_slot_iters_and_difficulty` — the latter returns
+    the *post-boundary* values for an epoch-boundary block, which would make
+    the eager-mutation path a no-op and render eager-propagation tests
+    vacuous."""
+    prev_b = blockchain.block_record(block.prev_header_hash)
+    ssi = prev_b.sub_slot_iters
+    # BlockRecord has no difficulty field; derive it as weight(prev_b) - weight(prev_prev).
+    # For height 0 / 1 blocks we fall back to constants.
+    if prev_b.height >= 2:
+        prev_prev = blockchain.block_record(prev_b.prev_hash)
+        difficulty = uint64(prev_b.weight - prev_prev.weight)
+    else:
+        difficulty = blockchain.constants.DIFFICULTY_STARTING
+    prev_ses_block = prev_b
+    while prev_ses_block.height > 0 and prev_ses_block.sub_epoch_summary_included is None:
+        prev_ses_block = blockchain.block_record(prev_ses_block.prev_hash)
+    return ValidationState(ssi, difficulty, prev_ses_block)
+
+
 class TestPreValidation:
     @pytest.mark.anyio
     async def test_pre_validation_fails_bad_blocks(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -1937,6 +1983,305 @@ class TestPreValidation:
         log.info(f"Total time: {end - start} seconds")
         log.info(f"Average validation: {validation_time / len(blocks)}")
         log.info(f"Average database: {(end - db_start) / (len(blocks))}")
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_7],
+        reason="v2 plots (HARD_FORK_3_0+) reject synthetic vs with a challenge mismatch "
+        "before reaching the code path under test; pre-existing test-infra limitation "
+        "shared with sibling test_pre_validation* tests.",
+    )
+    async def test_pre_validation_does_not_mutate_state_on_pospace_failure(
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]
+    ) -> None:
+        """A block with a tampered `new_difficulty` fails
+        `validate_pospace_and_get_required_iters` — the earliest sync check
+        that reads `candidate_vs.difficulty`. This path returns BEFORE the
+        eager-mutation block in pre_validate_block(), so the caller's vs
+        must be entirely untouched. This pins down the original SEC-434
+        property: untrusted block data from `finished_sub_slots` never leaks
+        into the caller's ValidationState when sync checks fail."""
+        target_index: int | None = None
+        for i, block in enumerate(default_1000_blocks[1:], start=1):
+            if len(block.finished_sub_slots) == 0:
+                continue
+            if block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None:
+                target_index = i
+                break
+
+        assert target_index is not None
+        target_block = default_1000_blocks[target_index]
+        for block in default_1000_blocks[:target_index]:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        bad_finished_ss = recursive_replace(
+            target_block.finished_sub_slots[0],
+            "challenge_chain.new_difficulty",
+            uint64(10_000_000),
+        )
+        block_bad = recursive_replace(
+            target_block, "finished_sub_slots", [bad_finished_ss, *target_block.finished_sub_slots[1:]]
+        )
+
+        prev_b = empty_blockchain.block_record(block_bad.prev_header_hash)
+        ssi, difficulty = empty_blockchain.get_next_sub_slot_iters_and_difficulty(
+            block_bad.prev_header_hash, len(block_bad.finished_sub_slots) > 0
+        )
+        prev_ses_block = prev_b
+        while prev_ses_block.height > 0 and prev_ses_block.sub_epoch_summary_included is None:
+            prev_ses_block = empty_blockchain.block_record(prev_ses_block.prev_hash)
+
+        vs = ValidationState(ssi, difficulty, prev_ses_block)
+        original_ssi = vs.ssi
+        original_difficulty = vs.difficulty
+        original_prev_ses = vs.prev_ses_block
+
+        future = await pre_validate_block(
+            empty_blockchain.constants,
+            AugmentedBlockchain(empty_blockchain),
+            block_bad,
+            empty_blockchain.pool,
+            None,
+            vs,
+        )
+        # Calling pre_validate_block() must not poison the caller state before result validation.
+        assert vs.ssi == original_ssi
+        assert vs.difficulty == original_difficulty
+        assert vs.prev_ses_block == original_prev_ses
+
+        result = await future
+        assert result.error == uint16(Err.INVALID_POSPACE.value)
+        assert vs.ssi == original_ssi
+        assert vs.difficulty == original_difficulty
+        assert vs.prev_ses_block == original_prev_ses
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_7],
+        reason="v2 plots (HARD_FORK_3_0+) reject synthetic vs with a challenge mismatch "
+        "before reaching the code path under test; pre-existing test-infra limitation.",
+    )
+    async def test_pre_validation_does_not_mutate_state_on_generator_lookup_failure(
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Pin the ValueError -> FAILED_GETTING_GENERATOR_MULTIPROCESSING path.
+
+        This failure happens after the block has passed proof of space and
+        been added to the batch-local AugmentedBlockchain, but BEFORE the
+        eager `vs` commit point. The caller's ValidationState must therefore
+        remain untouched on this synchronous failure path."""
+
+        async def _raise_generator_lookup(*_args: object, **_kwargs: object) -> BlockGenerator | None:
+            raise ValueError("simulated generator lookup failure")
+
+        target_index, target_block = _find_epoch_boundary_block(default_1000_blocks)
+        for block in default_1000_blocks[:target_index]:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        monkeypatch.setattr(
+            "chia.consensus.multiprocess_validation.get_block_generator",
+            _raise_generator_lookup,
+        )
+
+        vs = _build_validation_state_for(empty_blockchain, target_block)
+        original_ssi = vs.ssi
+        original_difficulty = vs.difficulty
+        original_prev_ses = vs.prev_ses_block
+
+        future = await pre_validate_block(
+            empty_blockchain.constants,
+            AugmentedBlockchain(empty_blockchain),
+            target_block,
+            empty_blockchain.pool,
+            None,
+            vs,
+        )
+        assert vs.ssi == original_ssi
+        assert vs.difficulty == original_difficulty
+        assert vs.prev_ses_block == original_prev_ses
+
+        result = await future
+        assert result.error == uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value)
+        assert vs.ssi == original_ssi
+        assert vs.difficulty == original_difficulty
+        assert vs.prev_ses_block == original_prev_ses
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_7],
+        reason="v2 plots (HARD_FORK_3_0+) reject synthetic vs with a challenge mismatch "
+        "before reaching the code path under test; pre-existing test-infra limitation.",
+    )
+    async def test_pre_validation_commits_state_on_executor_success(
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]
+    ) -> None:
+        """Happy path: when prevalidation succeeds for an epoch-boundary
+        block, vs reflects the new ssi / difficulty / prev_ses_block after
+        the future resolves. Companion to
+        `test_pre_validation_does_not_mutate_state_on_pospace_failure`: that
+        test pins the SEC-434 property (no mutation on pospace failure);
+        this one pins the complementary property that successful
+        prevalidation DOES advance vs."""
+        target_index, target_block = _find_epoch_boundary_block(default_1000_blocks)
+        for block in default_1000_blocks[:target_index]:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        vs = _build_validation_state_for(empty_blockchain, target_block)
+        original_ssi = vs.ssi
+        original_difficulty = vs.difficulty
+        original_prev_ses = vs.prev_ses_block
+        cc = target_block.finished_sub_slots[0].challenge_chain
+        ssi_changes = cc.new_sub_slot_iters is not None and cc.new_sub_slot_iters != original_ssi
+        diff_changes = cc.new_difficulty is not None and cc.new_difficulty != original_difficulty
+
+        future = await pre_validate_block(
+            empty_blockchain.constants,
+            AugmentedBlockchain(empty_blockchain),
+            target_block,
+            empty_blockchain.pool,
+            None,
+            vs,
+        )
+
+        result = await future
+        assert result.error is None, f"expected successful prevalidation, got error {result.error}"
+
+        # After success, vs must reflect the block's contributions — regardless
+        # of whether the individual field value actually changed at this boundary.
+        if cc.new_sub_slot_iters is not None:
+            assert vs.ssi == cc.new_sub_slot_iters
+        if cc.new_difficulty is not None:
+            assert vs.difficulty == cc.new_difficulty
+        # At least one field must have observably changed (non-vacuous).
+        if ssi_changes:
+            assert vs.ssi != original_ssi
+        if diff_changes:
+            assert vs.difficulty != original_difficulty
+        # Epoch-boundary block carries a sub_epoch_summary.
+        assert vs.prev_ses_block is not None
+        assert vs.prev_ses_block != original_prev_ses
+        assert vs.prev_ses_block.height == target_block.height
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_7],
+        reason="v2 plots (HARD_FORK_3_0+) reject synthetic vs with a challenge mismatch "
+        "before reaching the code path under test; pre-existing test-infra limitation.",
+    )
+    async def test_pre_validation_eagerly_propagates_state_for_next_block_in_batch(
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]
+    ) -> None:
+        """The in-place mutation of `vs` AFTER synchronous checks pass is
+        what lets the next block in a sync batch observe the updated ssi /
+        difficulty / prev_ses_block immediately (batch callers do not await
+        the returned future between blocks — see
+        `FullNode.prevalidate_blocks` and the producer loop in
+        `FullNode.sync_from_fork_point`).
+
+        This test pins that propagation: after `await pre_validate_block(...)`
+        returns the awaitable but BEFORE that awaitable is resolved, `vs`
+        already reflects the block's contributions. A regression that moved
+        the mutation inside the returned coroutine/future would break this
+        precondition batch callers rely on."""
+        target_index, target_block = _find_epoch_boundary_block(default_1000_blocks)
+        for block in default_1000_blocks[:target_index]:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        vs = _build_validation_state_for(empty_blockchain, target_block)
+        cc = target_block.finished_sub_slots[0].challenge_chain
+
+        future = await pre_validate_block(
+            empty_blockchain.constants,
+            AugmentedBlockchain(empty_blockchain),
+            target_block,
+            empty_blockchain.pool,
+            None,
+            vs,
+        )
+
+        # Pre-await: vs already reflects block's contributions. This is the
+        # "eager propagation" that batch callers rely on.
+        if cc.new_sub_slot_iters is not None:
+            assert vs.ssi == cc.new_sub_slot_iters
+        if cc.new_difficulty is not None:
+            assert vs.difficulty == cc.new_difficulty
+        assert vs.prev_ses_block is not None
+        assert vs.prev_ses_block.height == target_block.height
+
+        # Clean up the future so the test doesn't leak an unawaited executor job.
+        await future
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_7],
+        reason="v2 plots (HARD_FORK_3_0+) reject synthetic vs with a challenge mismatch "
+        "before reaching the code path under test; pre-existing test-infra limitation.",
+    )
+    async def test_pre_validation_does_not_revert_state_on_executor_failure(
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Contract test for the post-commit no-revert behavior.
+
+        Once synchronous checks (including proof-of-space) pass, `vs` is
+        mutated in-place and that mutation is NOT reverted if the returned
+        awaitable later raises. Production worker exceptions are caught
+        inside `_pre_validate_block`; this test deliberately simulates a
+        later awaitable failure to pin the no-silent-revert property that
+        batch callers rely on when they isolate state."""
+        target_index, target_block = _find_epoch_boundary_block(default_1000_blocks)
+        for block in default_1000_blocks[:target_index]:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        vs = _build_validation_state_for(empty_blockchain, target_block)
+        original_ssi = vs.ssi
+        original_difficulty = vs.difficulty
+        original_prev_ses = vs.prev_ses_block
+        cc = target_block.finished_sub_slots[0].challenge_chain
+
+        async def _boom() -> PreValidationResult:
+            raise RuntimeError("simulated executor failure")
+
+        def _run_in_loop(*_args: object, **_kwargs: object) -> Awaitable[PreValidationResult]:
+            return _boom()
+
+        monkeypatch.setattr(empty_blockchain.pool, "run_in_loop", _run_in_loop)
+
+        future = await pre_validate_block(
+            empty_blockchain.constants,
+            AugmentedBlockchain(empty_blockchain),
+            target_block,
+            empty_blockchain.pool,
+            None,
+            vs,
+        )
+
+        # Pre-await: synchronous checks already passed, so vs is mutated.
+        if cc.new_sub_slot_iters is not None:
+            assert vs.ssi == cc.new_sub_slot_iters
+        if cc.new_difficulty is not None:
+            assert vs.difficulty == cc.new_difficulty
+        assert vs.prev_ses_block is not None
+        assert vs.prev_ses_block.height == target_block.height
+
+        # Non-vacuity: at least one observable change must have happened,
+        # otherwise the rest of the assertions could be trivially satisfied.
+        advanced = (
+            vs.ssi != original_ssi or vs.difficulty != original_difficulty or vs.prev_ses_block != original_prev_ses
+        )
+        assert advanced, "expected epoch-boundary block to advance at least one vs field"
+
+        with pytest.raises(RuntimeError, match="simulated executor failure"):
+            await future
+
+        # After executor failure: vs MUST still reflect the mutation
+        # (i.e. no silent revert). This is the contract batch callers rely
+        # on when they isolate with a per-batch copy or abort-on-first-error.
+        if cc.new_sub_slot_iters is not None:
+            assert vs.ssi == cc.new_sub_slot_iters
+        if cc.new_difficulty is not None:
+            assert vs.difficulty == cc.new_difficulty
+        assert vs.prev_ses_block is not None
+        assert vs.prev_ses_block.height == target_block.height
 
 
 class TestBodyValidation:
