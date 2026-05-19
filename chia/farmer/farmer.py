@@ -41,6 +41,7 @@ from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
+    find_owner_sk,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk_unhardened,
@@ -122,11 +123,16 @@ async def make_pool_protocol_request(
             async with session.request(
                 method,
                 self._url_for_endpoint(pool_config, endpoint_name),
-                json=request.to_json_dict() if request else None,
                 ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
+                **(
+                    # the POST and PUT requests always are not None
+                    {"json": request.to_json_dict()}  # type: ignore[union-attr]
+                    if method in {"POST", "PUT"}
+                    else {"params": request.to_json_dict() if request else None}
+                ),
             ) as resp:
                 if resp.ok:
-                    json_response = await resp.json()
+                    json_response = await resp.json(content_type=None)
                     log_level = logging.INFO
                     if "error_code" in json_response:
                         log_level = logging.WARNING
@@ -434,7 +440,6 @@ class Farmer:
         message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
         authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
         if authentication_sk is None:
-            self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
             return None
         signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
         response, _ = await make_pool_protocol_request(
@@ -443,10 +448,8 @@ class Farmer:
             method="GET",
             endpoint_name="auth",
             request=pool_protocol.GetAuthRequest(
-                payload=pool_protocol.AuthenticationPayloadV2(
-                    launcher_id=pool_config.launcher_id,
-                    timestamp=timestamp,
-                ),
+                launcher_id=pool_config.launcher_id,
+                timestamp=timestamp,
                 signature=signature,
             ),
             response_type=pool_protocol.GetAuthResponse,
@@ -480,7 +483,7 @@ class Farmer:
             return None
 
     async def _pool_get_farmer(
-        self, pool_config: PoolingShareState, authentication_token_timeout: uint8, authentication_sk: PrivateKey
+        self, pool_config: PoolingShareState, authentication_token_timeout: uint8
     ) -> pool_protocol.GetFarmerResponse | pool_protocol.ErrorResponse | None:
         authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
         if not isinstance(authentication_token, str):
@@ -495,6 +498,9 @@ class Farmer:
                     "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, uint64(authentication_token)
                 )
             )
+            authentication_sk = self.get_authentication_sk(pool_config)
+            if authentication_sk is None:
+                return None
             signature = AugSchemeMPL.sign(authentication_sk, message)
         else:
             signature = None
@@ -517,10 +523,12 @@ class Farmer:
         return response
 
     async def _pool_post_farmer(
-        self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
+        self, pool_config: PoolingShareState, authentication_token_timeout: uint8
     ) -> pool_protocol.PostFarmerResponse | pool_protocol.ErrorResponse | None:
         auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
-        assert auth_sk is not None
+        if auth_sk is None:
+            return None
+
         if pool_config.version == 1:
             authentication_token = await self._get_current_authentication_token(
                 pool_config, authentication_token_timeout
@@ -528,6 +536,10 @@ class Farmer:
             if authentication_token is None:
                 self.log.error(f"Attempting to POST farmer details without being logged into {pool_config.pool_url}")
                 return None
+            # impossible for this to fail when get_authentication_sk above succeeds
+            owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
+        else:
+            owner_sk = auth_sk
         post_farmer_payload = pool_protocol.PostFarmerPayload(
             pool_config.launcher_id,
             uint64(authentication_token) if pool_config.version == 1 else uint64(0),  # type: ignore[arg-type]
@@ -549,14 +561,20 @@ class Farmer:
         return response
 
     async def _pool_put_farmer(
-        self, pool_config: PoolingShareState, authentication_token_timeout: uint8, owner_sk: PrivateKey
+        self, pool_config: PoolingShareState, authentication_token_timeout: uint8
     ) -> pool_protocol.PutFarmerResponse | pool_protocol.ErrorResponse | None:
         auth_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
-        assert auth_sk is not None
+        if auth_sk is None:
+            return None
         authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
         if not isinstance(authentication_token, str):
             self.log.error(f"Attempting to PUT farmer details without being logged into {pool_config.pool_url}")
             return authentication_token
+        if pool_config.version == 1:
+            # impossible for this to fail when get_authentication_sk above succeeds
+            owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
+        else:
+            owner_sk = auth_sk
         put_farmer_payload = pool_protocol.PutFarmerPayload(
             pool_config.launcher_id,
             uint64(authentication_token) if pool_config.version == 1 else uint64(0),
@@ -585,7 +603,7 @@ class Farmer:
             auth_sk: PrivateKey | None = find_authentication_sk(self.all_root_sks, pool_config.owner_public_key)
             if auth_sk is not None:
                 self.authentication_keys[pool_config.p2_singleton_puzzle_hash] = auth_sk
-            return auth_sk
+                return auth_sk
         else:
             for sk in self.all_root_sks:
                 auth_sk = calculate_synthetic_secret_key(
@@ -594,7 +612,9 @@ class Farmer:
                 )
                 if auth_sk.get_g1() == pool_config.owner_public_key:
                     return auth_sk
-            return None
+
+        self.log.error(f"Failed to get authentication sk for pool {pool_config.pool_url}")
+        return None
 
     async def update_pool_state(self) -> None:
         config = load_config(self._root_path, "config.yaml")
@@ -611,11 +631,6 @@ class Farmer:
                 continue
 
             try:
-                authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
-                if authentication_sk is None:
-                    self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
-                    continue
-
                 if p2_singleton_puzzle_hash not in self.pool_state:
                     self.pool_state[p2_singleton_puzzle_hash] = {
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
@@ -686,9 +701,7 @@ class Farmer:
                         pool_protocol.GetFarmerResponse | None, pool_protocol.PoolErrorCode | None
                     ]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
-                        response = await self._pool_get_farmer(
-                            pool_config, authentication_token_timeout, authentication_sk
-                        )
+                        response = await self._pool_get_farmer(pool_config, authentication_token_timeout)
                         if response is not None:
                             if not isinstance(response, pool_protocol.ErrorResponse):
                                 pool_state["current_difficulty"] = response.current_difficulty
@@ -706,9 +719,7 @@ class Farmer:
                     if authentication_token_timeout is not None:
                         farmer_info, error_code = await update_pool_farmer_info()
                         if error_code == pool_protocol.PoolErrorCode.FARMER_NOT_KNOWN:
-                            post_response = await self._pool_post_farmer(
-                                pool_config, authentication_token_timeout, authentication_sk
-                            )
+                            post_response = await self._pool_post_farmer(pool_config, authentication_token_timeout)
                             if post_response is not None and not isinstance(post_response, pool_protocol.ErrorResponse):
                                 self.log.info(
                                     f"Welcome message from {pool_config.pool_url}: {post_response.welcome_message}"
@@ -728,7 +739,7 @@ class Farmer:
                             payout_instructions_update_required
                             or error_code == pool_protocol.PoolErrorCode.INVALID_SIGNATURE
                         ):
-                            await self._pool_put_farmer(pool_config, authentication_token_timeout, authentication_sk)
+                            await self._pool_put_farmer(pool_config, authentication_token_timeout)
                     else:
                         self.log.warning(
                             "No pool specific authentication_token_timeout has been set for "
@@ -808,8 +819,7 @@ class Farmer:
 
             authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
             if authentication_sk is None:
-                self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
-                continue
+                return None
             authentication_token_timeout = pool_state["authentication_token_timeout"]
             if authentication_token_timeout is None:
                 self.log.error(

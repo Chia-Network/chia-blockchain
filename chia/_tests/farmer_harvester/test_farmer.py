@@ -47,7 +47,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.util.hash import std_hash
-from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -1016,7 +1016,7 @@ class DummyPoolInfoResponse:
     pool_info: dict[str, Any] | None = None
     history: tuple[DummyClientResponse, ...] = ()
 
-    async def json(self) -> dict[str, Any]:
+    async def json(self, **kwargs: object) -> dict[str, Any]:
         if self.pool_info is None:
             return {}  # pragma: no cover
 
@@ -1324,7 +1324,9 @@ async def test_farmer_to_pool_protocol(
     farmer_service._node.authentication_keys = {p2_singleton_puzzle_hash: auth_sk}
     plotnft_id = bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa")
     PoolingShareState(
-        owner_public_key=auth_sk.get_g1(),
+        owner_public_key=master_sk_to_singleton_owner_sk(farmer_service._node.all_root_sks[0], uint32(0)).get_g1()
+        if pool_protocol_version == 1
+        else auth_sk.get_g1(),
         p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
         payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
         pool_url="http://doesntmatter.com",
@@ -1338,14 +1340,14 @@ async def test_farmer_to_pool_protocol(
     class DummyPostFarmerResponse:
         ok: bool
 
-        async def json(self) -> dict[str, Any]:
+        async def json(self, **kwargs: object) -> dict[str, Any]:
             return PostFarmerResponse(welcome_message="welcome to the pool").to_json_dict()
 
     @dataclass(frozen=True)
     class DummyPutFarmerResponse:
         ok: bool
 
-        async def json(self) -> dict[str, Any]:
+        async def json(self, **kwargs: object) -> dict[str, Any]:
             return PutFarmerResponse(
                 authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
             ).to_json_dict()
@@ -1354,7 +1356,7 @@ async def test_farmer_to_pool_protocol(
     class DummyAuthResponse:
         ok: bool
 
-        async def json(self) -> dict[str, Any]:
+        async def json(self, **kwargs: object) -> dict[str, Any]:
             return GetAuthResponse(
                 authentication_token=create_token(
                     token_sk=bytes32.zeros.hex(),
@@ -1368,7 +1370,7 @@ async def test_farmer_to_pool_protocol(
     class DummyGetFarmerResponse:
         ok: bool
 
-        async def json(self) -> dict[str, Any]:
+        async def json(self, **kwargs: object) -> dict[str, Any]:
             return GetFarmerResponse(
                 authentication_public_key=auth_sk.get_g1(),
                 payout_instructions="",
@@ -1381,7 +1383,7 @@ async def test_farmer_to_pool_protocol(
         ok: bool
         status: int | None = None
 
-        async def json(self) -> dict[str, Any]:
+        async def json(self, **kwargs: object) -> dict[str, Any]:
             return pool_protocol.ErrorResponse(
                 error_code=uint16(pool_protocol.PoolErrorCode.SERVER_EXCEPTION.value), error_message=None
             ).to_json_dict()
@@ -1417,15 +1419,13 @@ async def test_farmer_to_pool_protocol(
     with PoolingShareState.acquire(
         root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
     ) as pool_config:
-        assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10), auth_sk) == PostFarmerResponse(
+        assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10)) == PostFarmerResponse(
             welcome_message="welcome to the pool"
         )
-        assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10), auth_sk) == PutFarmerResponse(
+        assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10)) == PutFarmerResponse(
             authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
         )
-        assert isinstance(
-            await farmer_service._node._pool_get_farmer(pool_config, uint8(10), auth_sk), GetFarmerResponse
-        )
+        assert isinstance(await farmer_service._node._pool_get_farmer(pool_config, uint8(10)), GetFarmerResponse)
 
         # Test some errors and especially with getting authentication
         if pool_protocol_version == 2:

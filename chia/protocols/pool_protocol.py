@@ -42,20 +42,14 @@ class AuthenticationPayloadV1(Streamable):
     authentication_token: uint64
 
 
-@streamable
-@dataclass(frozen=True)
-class AuthenticationPayloadV2(Streamable):
-    launcher_id: bytes32
-    timestamp: uint64
-
-
 # GET /auth (only v2)
 
 
 @streamable
 @dataclass(frozen=True)
 class GetAuthRequest(Streamable):
-    payload: AuthenticationPayloadV2
+    launcher_id: bytes32
+    timestamp: uint64
     signature: G2Element
 
 
