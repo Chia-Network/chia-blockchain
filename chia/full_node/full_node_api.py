@@ -43,7 +43,6 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
-from chia.full_node.full_node_store import SignagePointAddResult
 from chia.full_node.hard_fork_utils import get_flags
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
@@ -76,7 +75,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
-from chia.util.network import is_in_network, is_localhost
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
@@ -793,6 +791,8 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         async with self.full_node.timelord_lock:
+            # Already have signage point
+
             if self.full_node.full_node_store.have_newer_signage_point(
                 request.challenge_chain_vdf.challenge,
                 request.index_from_challenge,
@@ -819,7 +819,7 @@ class FullNodeAPI:
                 next_sub_slot_iters = sub_slot_iters
                 ip_sub_slot = None
 
-            result = self.full_node.full_node_store.new_signage_point(
+            added = self.full_node.full_node_store.new_signage_point(
                 request.index_from_challenge,
                 self.full_node.blockchain,
                 self.full_node.blockchain.get_peak(),
@@ -832,34 +832,16 @@ class FullNodeAPI:
                 ),
             )
 
-            if result == SignagePointAddResult.ADDED:
+            if added:
                 await self.full_node.signage_point_post_processing(request, peer, ip_sub_slot)
-                return None
-            if result != SignagePointAddResult.INVALID_VDF:
+            else:
                 self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge.hex()}, "
                     f"RC challenge: {request.reward_chain_vdf.challenge.hex()}"
                 )
-                return None
 
-        # INVALID_VDF: ban peer after releasing timelord_lock
-        server = self.full_node.server
-        peer_host = peer.peer_info.host
-
-        if is_localhost(peer_host):
-            self.log.debug(f"Not banning localhost peer for invalid signage point VDF proof: {peer_host}")
-        elif server is not None and is_in_network(peer_host, server.exempt_peer_networks):
-            self.log.debug(f"Not banning exempt network peer for invalid signage point VDF proof: {peer_host}")
-        else:
-            self.log.warning(
-                f"Banning {peer.get_peer_logging()} for invalid signage point VDF proof. "
-                f"SP index: {request.index_from_challenge}, "
-                f"CC challenge: {request.challenge_chain_vdf.challenge.hex()}"
-            )
-            await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
-
-        return None
+            return None
 
     @metadata.request(peer_required=True)
     async def respond_end_of_sub_slot(
