@@ -1599,6 +1599,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
     assert offer_only_res.offer is not None
     assert not hasattr(offer_only_res, "trade_record")
+    assert offer_only_res.to_json_dict() == {"offer": offer_only_res.offer.to_bech32()}
 
     driver_dict = {
         cat_asset_id: PuzzleInfo(
