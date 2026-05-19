@@ -19,6 +19,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
+from chia.full_node import weight_proof
 from chia.full_node.weight_proof import (
     WeightProofHandler,
     _map_sub_epoch_summaries,
@@ -28,6 +29,7 @@ from chia.full_node.weight_proof import (
     __validate_pospace as _validate_pospace_impl,
 )
 from chia.simulator.block_tools import BlockTools
+from chia.util.block_cache import BlockCache
 
 
 async def load_blocks_dont_validate(
@@ -115,6 +117,53 @@ async def _test_map_summaries(
 
 
 class TestWeightProof:
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+        reason="needs a fixture containing V2 proofs",
+    )
+    async def test_recent_chain_pospace_validation_passes_v2_filter_inputs(
+        self,
+        default_400_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        target_full_block = next(
+            block for block in default_400_blocks if block.reward_chain_block.proof_of_space.version == 1
+        )
+        target_block = get_block_header(target_full_block)
+        expected_filter_challenge = bytes32(b"f" * 32)
+
+        captured_kwargs: dict[str, object] = {}
+
+        def capture_validate_pospace(*args: object, **kwargs: object) -> uint64:
+            captured_kwargs.update(kwargs)
+            return uint64(1)
+
+        def capture_get_filter_challenge_from_chain(*args: object) -> bytes32:
+            assert args[2] == target_block
+            assert args[3] == target_block.reward_chain_block.pos_ss_cc_challenge_hash
+            assert args[4] == target_block.reward_chain_block.signage_point_index
+            return expected_filter_challenge
+
+        monkeypatch.setattr(weight_proof, "validate_pospace_and_get_required_iters", capture_validate_pospace)
+        monkeypatch.setattr(weight_proof, "get_filter_challenge_from_chain", capture_get_filter_challenge_from_chain)
+        monkeypatch.setattr(weight_proof, "pre_sp_tx_block_height", lambda **_: uint32(0))
+
+        required_iters = weight_proof._validate_pospace_recent_chain(
+            blockchain_constants,
+            BlockCache({}),
+            target_block,
+            target_block.reward_chain_block.pos_ss_cc_challenge_hash,
+            blockchain_constants.DIFFICULTY_STARTING,
+            False,
+            target_block.reward_chain_block.pos_ss_cc_challenge_hash,
+        )
+
+        assert required_iters == uint64(1)
+        assert captured_kwargs["filter_challenge"] == expected_filter_challenge
+        assert captured_kwargs["signage_point_index"] == target_block.reward_chain_block.signage_point_index
+
     # This test requires at least two sub epoch summaries in the block chain,
     # for some test chains, 400 blocks is not enough
     @pytest.mark.anyio

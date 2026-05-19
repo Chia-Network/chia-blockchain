@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 
 import pytest
 from chia_rs.sized_ints import uint8, uint32, uint64
+from packaging.version import Version
 
 from chia._tests.conftest import FarmerOneHarvester
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc
@@ -16,7 +17,7 @@ from chia._tests.util.network_protocol_data import (
     signed_values,
 )
 from chia.farmer.farmer_api import FarmerAPI
-from chia.protocols import farmer_protocol
+from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.hash import std_hash
@@ -61,6 +62,74 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     assert incoming_queue.qsize() == 1
     response = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response).name == "new_signage_point_harvester"
+
+
+@pytest.mark.anyio
+async def test_farmer_does_not_send_v2_signage_point_to_037_harvester(
+    farmer_one_harvester: FarmerOneHarvester, self_hostname: str
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    farmer_api: FarmerAPI = farmer_service._api
+    farmer_server = farmer_service._server
+    incoming_queue, peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    # Consume the handshake
+    response_type = (await incoming_queue.get()).type
+    assert ProtocolMessageTypes(response_type).name == "harvester_handshake"
+
+    farmer_server.all_connections[peer_id].protocol_version = Version("0.0.37")
+    sp = farmer_protocol.NewSignagePoint(
+        std_hash(b"1"),
+        std_hash(b"2"),
+        std_hash(b"3"),
+        uint64(1),
+        uint64(1000000),
+        uint8(2),
+        uint32(1),
+        uint32(0),
+        filter_challenge=std_hash(b"filter"),
+    )
+
+    await farmer_api.new_signage_point(sp)
+    await sleep(1)
+
+    assert incoming_queue.qsize() == 0
+
+
+@pytest.mark.anyio
+async def test_farmer_sends_filter_challenge_to_038_harvester(
+    farmer_one_harvester: FarmerOneHarvester, self_hostname: str
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    farmer_api: FarmerAPI = farmer_service._api
+    farmer_server = farmer_service._server
+    incoming_queue, peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    # Consume the handshake
+    response_type = (await incoming_queue.get()).type
+    assert ProtocolMessageTypes(response_type).name == "harvester_handshake"
+
+    farmer_server.all_connections[peer_id].protocol_version = Version("0.0.38")
+    filter_challenge = std_hash(b"filter")
+    sp = farmer_protocol.NewSignagePoint(
+        std_hash(b"1"),
+        std_hash(b"2"),
+        std_hash(b"3"),
+        uint64(1),
+        uint64(1000000),
+        uint8(2),
+        uint32(1),
+        uint32(0),
+        filter_challenge=filter_challenge,
+    )
+
+    await farmer_api.new_signage_point(sp)
+    await sleep(1)
+
+    response = await incoming_queue.get()
+    assert ProtocolMessageTypes(response.type) == ProtocolMessageTypes.new_signage_point_harvester
+    parsed = harvester_protocol.NewSignagePointHarvester2.from_bytes(response.data)
+    assert parsed.filter_challenge == filter_challenge
+    assert parsed.peak_height == sp.peak_height
+    assert parsed.last_tx_height == sp.last_tx_height
 
 
 @pytest.mark.anyio

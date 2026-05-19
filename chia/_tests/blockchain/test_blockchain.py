@@ -1463,12 +1463,6 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="It seams ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT fails to "
-        "find any proofs with pool keys in a timely manner",
-    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1495,12 +1489,6 @@ class TestBlockHeaderValidation:
             assert attempts < 300
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
-        "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
-    )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
     ) -> None:
