@@ -3313,6 +3313,7 @@ async def test_long_reorg_nodes(
     # TODO: There appears to be an issue where the node with the lighter chain
     # fails to initiate the reorg until there's a new block farmed onto the
     # heavier chain.
+
     await full_node_2.full_node.add_block(reorg_blocks[-1])
 
     start = time.monotonic()

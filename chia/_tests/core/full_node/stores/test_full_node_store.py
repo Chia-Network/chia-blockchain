@@ -1823,5 +1823,6 @@ async def test_new_signage_point_from_same_slot_fork_before_peak_infusion(
         peak_after.sub_slot_iters,
         fork_sp,
     )
+
     assert sp_result == SignagePointAddResult.NOT_ADDED
     assert store.in_future_sp_cache(fork_sp, fork_block.reward_chain_block.signage_point_index)
