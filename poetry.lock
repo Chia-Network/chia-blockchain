@@ -2757,14 +2757,14 @@ files = [
 
 [[package]]
 name = "pip"
-version = "26.0.1"
+version = "26.1.1"
 description = "The PyPA recommended tool for installing Python packages."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pip-26.0.1-py3-none-any.whl", hash = "sha256:bdb1b08f4274833d62c1aa29e20907365a2ceb950410df15fc9521bad440122b"},
-    {file = "pip-26.0.1.tar.gz", hash = "sha256:c4037d8a277c89b320abe636d59f91e6d0922d08a05b60e85e53b296613346d8"},
+    {file = "pip-26.1.1-py3-none-any.whl", hash = "sha256:99cb1c2899893b075ff56e4ed0af55669a955b49ad7fb8d8603ecdaf4ed653fb"},
+    {file = "pip-26.1.1.tar.gz", hash = "sha256:d36762751d156a4ee895de8af39aa0abeeeb577f93a2eca6ab62467bbf0f8a78"},
 ]
 
 [[package]]
@@ -4402,4 +4402,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "b9014e534b20a94e4ed71b91dea8bd2b7dcd92381cfa63f5fe486d57251846f0"
+content-hash = "23fcfc19123300c0f9eef682e390a162823874b19bb3525136df3d9faaff0e01"
