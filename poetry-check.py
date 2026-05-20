@@ -17,6 +17,7 @@ def main() -> int:
         [
             "poetry",
             "lock",
+            "--check",
         ],
         check=True,
     )
