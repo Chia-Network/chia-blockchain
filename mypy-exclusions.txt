@@ -12,7 +12,6 @@ chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
-chia.timelord.timelord_api
 chia.types.blockchain_format.program
 chia.wallet.did_wallet.did_wallet
 chia.wallet.puzzles.load_clvm
