@@ -343,6 +343,92 @@ class TestNewPeak:
                 )
 
     @pytest.mark.anyio
+    # todo_v2_plots remove limit_consensus_modes when this test uses a real unfinished block for HF3.0.
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_7,
+        ],
+        reason="test builds a synthetic unfinished block for HF3.0",
+    )
+    async def test_timelord_new_peak_stale_overflow_does_not_block_peak(
+        self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
+    ) -> None:
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
+                timelord_api, _ = timelord
+                for block in default_1000_blocks:
+                    await _validate_and_add_block(b1, block)
+                    await _validate_and_add_block(b2, block)
+
+                peak = timelord_peak_from_block(b1, default_1000_blocks[-1])
+                assert peak is not None
+                await timelord_api.new_peak_timelord(peak)
+                await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
+                assert timelord_api.timelord.last_state.peak is not None
+
+                overflow_block = bt.get_consecutive_blocks(
+                    1, default_1000_blocks, time_per_block=9, force_overflow=True
+                )[-1]
+                later_peak_block = bt.get_consecutive_blocks(
+                    1,
+                    default_1000_blocks,
+                    seed=b"data",
+                    time_per_block=50,
+                    skip_slots=1,
+                    min_signage_point=overflow_block.reward_chain_block.signage_point_index,
+                )[-1]
+                assert later_peak_block.total_iters >= overflow_block.total_iters
+                assert len(later_peak_block.finished_sub_slots) > 0
+
+                await _validate_and_add_block(b1, overflow_block)
+                await _validate_and_add_block(b2, later_peak_block)
+
+                block_record = b1.block_record(overflow_block.header_hash)
+                sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+                    bt.constants,
+                    len(overflow_block.finished_sub_slots) > 0,
+                    b1.block_record(overflow_block.prev_header_hash),
+                    b1,
+                )
+                stale_overflow = timelord_protocol.NewUnfinishedBlockTimelord(
+                    overflow_block.reward_chain_block.get_unfinished(),
+                    difficulty,
+                    sub_slot_iters,
+                    overflow_block.foliage,
+                    next_sub_epoch_summary(bt.constants, b1, block_record.required_iters, overflow_block, True),
+                    await get_rc_prev(b1, overflow_block),
+                    None,
+                )
+                await timelord_api.new_unfinished_block_timelord(stale_overflow)
+                assert timelord_api.timelord.overflow_blocks[-1].get_hash() == stale_overflow.get_hash()
+
+                later_peak = timelord_peak_from_block(b2, later_peak_block)
+                timelord_api.timelord.last_state.set_state(later_peak)
+                assert timelord_api.timelord._can_infuse_unfinished_block(stale_overflow) is None
+                await timelord_api.timelord._reset_chains()
+
+                next_peak_block = bt.get_consecutive_blocks(
+                    1,
+                    [*default_1000_blocks, later_peak_block],
+                    seed=b"next",
+                    skip_overflow=True,
+                )[-1]
+                await _validate_and_add_block(b2, next_peak_block)
+
+                next_peak = timelord_peak_from_block(b2, next_peak_block)
+                assert stale_overflow.reward_chain_block.total_iters <= next_peak.reward_chain_block.total_iters
+                await timelord_api.new_peak_timelord(next_peak)
+                await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
+
+                assert (
+                    timelord_api.timelord.last_state.peak is not None
+                    and timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
+                    == next_peak.reward_chain_block.get_hash()
+                )
+
+    @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_eos(
         self,
         one_node: tuple[list[FullNodeService], list[FullNodeSimulator], BlockTools],

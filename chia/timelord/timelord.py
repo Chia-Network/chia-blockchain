@@ -368,10 +368,12 @@ class Timelord:
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
 
-        # remove overflow blocks that were moved to unfinished cache
-        for block in new_unfinished_blocks:
-            if block in self.overflow_blocks:
-                self.overflow_blocks.remove(block)
+        self.overflow_blocks = [
+            block
+            for block in self.overflow_blocks
+            if block not in new_unfinished_blocks
+            and block.reward_chain_block.total_iters > self.last_state.get_total_iters()
+        ]
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0

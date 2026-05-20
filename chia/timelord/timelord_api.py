@@ -12,7 +12,7 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
-from chia.timelord.types import Chain, IterationType
+from chia.timelord.types import Chain, IterationType, StateType
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +38,17 @@ class TimelordAPI:
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
+
+    def _schedule_unfinished_block(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord, new_block_iters: uint64
+    ) -> None:
+        self.timelord.unfinished_blocks.append(new_unfinished_block)
+        for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
+            self.timelord.iters_to_submit[chain].append(new_block_iters)
+        if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
+            self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
+        self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
+        self.timelord.total_unfinished += 1
 
     @metadata.request()
     async def new_peak_timelord(self, new_peak: NewPeakTimelord) -> None:
@@ -142,18 +153,20 @@ class TimelordAPI:
                 return None
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
-                self.timelord.overflow_blocks.append(new_unfinished_block)
-                log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                if self.timelord.last_state.state_type == StateType.END_OF_SUB_SLOT:
+                    new_block_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                    if new_block_iters:
+                        self._schedule_unfinished_block(new_unfinished_block, new_block_iters)
+                        log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
+                elif new_unfinished_block.reward_chain_block.total_iters <= self.timelord.last_state.get_total_iters():
+                    log.debug(f"Dropping stale overflow unfinished block, total {self.timelord.total_unfinished}")
+                else:
+                    self.timelord.overflow_blocks.append(new_unfinished_block)
+                    log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
             elif ip_iters > last_ip_iters:
                 new_block_iters: uint64 | None = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
                 if new_block_iters:
-                    self.timelord.unfinished_blocks.append(new_unfinished_block)
-                    for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
-                        self.timelord.iters_to_submit[chain].append(new_block_iters)
-                    if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                        self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
-                    self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
-                    self.timelord.total_unfinished += 1
+                    self._schedule_unfinished_block(new_unfinished_block, new_block_iters)
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @metadata.request()
