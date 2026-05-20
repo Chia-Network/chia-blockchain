@@ -154,9 +154,9 @@ class TimelordAPI:
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
                 if self.timelord.last_state.state_type == StateType.END_OF_SUB_SLOT:
-                    new_block_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
-                    if new_block_iters:
-                        self._schedule_unfinished_block(new_unfinished_block, new_block_iters)
+                    overflow_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                    if overflow_iters:
+                        self._schedule_unfinished_block(new_unfinished_block, overflow_iters)
                         log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
                 elif new_unfinished_block.reward_chain_block.total_iters <= self.timelord.last_state.get_total_iters():
                     log.debug(f"Dropping stale overflow unfinished block, total {self.timelord.total_unfinished}")
