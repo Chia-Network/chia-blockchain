@@ -830,26 +830,20 @@ class Farmer:
                 )
                 return None
 
-            timestamp = self.get_current_time()
-            # TODO: can probably remove the difference here
-            if pool_config.version == 1:
-                auth_token = str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
-                message: bytes = std_hash(
-                    pool_protocol.AuthenticationPayloadV1(
-                        "get_login",
-                        pool_config.launcher_id,
-                        pool_config.target_puzzle_hash,
-                        uint64(auth_token),
-                    )
+            auth_token = str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
+            message: bytes = std_hash(
+                pool_protocol.AuthenticationPayloadV1(
+                    "get_login",
+                    pool_config.launcher_id,
+                    pool_config.target_puzzle_hash,
+                    uint64(auth_token),
                 )
-            else:
-                auth_token = ""
-                message = bytes(timestamp) + bytes(pool_config.launcher_id) + pool_config.target_puzzle_hash
+            )
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
                 self._url_for_endpoint(pool_config, "login") + f"?launcher_id={pool_config.launcher_id.hex()}"
                 f"&authentication_token={auth_token}"
-                f"&signature={bytes(signature).hex()}&timestamp={timestamp}"
+                f"&signature={bytes(signature).hex()}"
             )
 
         return None
