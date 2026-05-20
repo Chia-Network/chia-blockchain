@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import json
 import logging
 import re
@@ -24,7 +23,6 @@ from chia import __version__
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.authentication import create_token, verify_token
 from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
@@ -1358,12 +1356,7 @@ async def test_farmer_to_pool_protocol(
 
         async def json(self, **kwargs: object) -> dict[str, Any]:
             return GetAuthResponse(
-                authentication_token=create_token(
-                    token_sk=bytes32.zeros.hex(),
-                    plotnft_id=plotnft_id,
-                    current_time=datetime.datetime.fromtimestamp(1_000_000_000, tz=datetime.timezone.utc),
-                    expires_minutes=uint8(10),
-                )
+                authentication_token="secret", expiration=uint64(farmer_service._node.get_current_time() + 600)
             ).to_json_dict()
 
     @dataclass(frozen=True)
@@ -1429,18 +1422,6 @@ async def test_farmer_to_pool_protocol(
 
         # Test some errors and especially with getting authentication
         if pool_protocol_version == 2:
-            assert verify_token(
-                token_sk=bytes32.zeros.hex(),
-                token=farmer_service._node.authentication_tokens[plotnft_id],  # type: ignore[arg-type]
-                plotnft_id=plotnft_id,
-                current_time=datetime.datetime.fromtimestamp(1_000_000_000, tz=datetime.timezone.utc),
-            )
-            assert not verify_token(
-                token_sk=bytes32.zeros.hex(),
-                token=farmer_service._node.authentication_tokens[plotnft_id],  # type: ignore[arg-type]
-                plotnft_id=plotnft_id,
-                current_time=datetime.datetime.fromtimestamp(1_000_000_601, tz=datetime.timezone.utc),
-            )
             farmer_service._node.authentication_tokens = {}
             mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
             with caplog.at_level(logging.WARNING):

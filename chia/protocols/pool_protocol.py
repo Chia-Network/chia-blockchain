@@ -57,6 +57,7 @@ class GetAuthRequest(Streamable):
 @dataclass(frozen=True)
 class GetAuthResponse(Streamable):
     authentication_token: str
+    expiration: uint64
 
 
 # GET /pool_info

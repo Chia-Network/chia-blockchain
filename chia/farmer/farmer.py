@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 
 import aiohttp
-import jwt
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
@@ -224,7 +223,7 @@ class Farmer:
 
         # From p2_singleton to auth PrivateKey
         self.authentication_keys: dict[bytes32, PrivateKey] = {}
-        self.authentication_tokens: dict[bytes32, str | None] = {}
+        self.authentication_tokens: dict[bytes32, tuple[str, uint64] | None] = {}
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: float = 0
@@ -418,18 +417,21 @@ class Farmer:
         elif pool_config.version == 2:
             cached_auth_token = self.authentication_tokens.get(pool_config.launcher_id, None)
             if cached_auth_token is None or datetime.fromtimestamp(
-                jwt.decode(cached_auth_token, options={"verify_signature": False})["exp"], tz=timezone.utc
+                cached_auth_token[1], tz=timezone.utc
             ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
                 auth_response = await self._pool_get_auth(pool_config)
                 if isinstance(auth_response, pool_protocol.GetAuthResponse):
-                    self.authentication_tokens[pool_config.launcher_id] = auth_response.authentication_token
+                    self.authentication_tokens[pool_config.launcher_id] = (
+                        auth_response.authentication_token,
+                        auth_response.expiration,
+                    )
                     return auth_response.authentication_token
                 else:
                     return auth_response
             else:
                 # seems sketchy because in theory we should check for non-None here but
                 # the auth token can't be None AND expired so semantics guarantee a non-None, non-expired token here
-                return cached_auth_token
+                return cached_auth_token[0]
         else:
             raise ValueError("Unknown pool protocol version specified in pooling config")
 
@@ -829,6 +831,7 @@ class Farmer:
                 return None
 
             timestamp = self.get_current_time()
+            # TODO: can probably remove the difference here
             if pool_config.version == 1:
                 auth_token = str(pool_protocol.get_current_authentication_token(authentication_token_timeout))
                 message: bytes = std_hash(
