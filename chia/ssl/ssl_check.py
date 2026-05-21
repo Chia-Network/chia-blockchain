@@ -64,8 +64,6 @@ warned_ssl_files: set[Path] = set()
 
 def get_all_ssl_file_paths(root_path: Path) -> tuple[list[Path], list[Path]]:
     """Lookup config values and append to a list of files whose permissions we need to check"""
-    from chia.ssl.create_ssl import get_mozilla_ca_crt
-
     all_certs: list[Path] = []
     all_keys: list[Path] = []
 
@@ -80,9 +78,6 @@ def get_all_ssl_file_paths(root_path: Path) -> tuple[list[Path], list[Path]]:
                     print(
                         f"Failed to lookup config value for {path}: {e}"
                     )  # lgtm [py/clear-text-logging-sensitive-data]
-
-        # Check the Mozilla Root CAs as well
-        all_certs.append(Path(get_mozilla_ca_crt()))
     except (FileNotFoundError, ValueError):
         pass
 
