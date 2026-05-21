@@ -45,6 +45,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk_unhardened,
     match_address_to_sk,
+    singleton_owner_sk_to_authv2_key,
 )
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -443,7 +444,7 @@ class Farmer:
         authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
         if authentication_sk is None:
             return None
-        signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+        signature: G2Element = AugSchemeMPL.sign(singleton_owner_sk_to_authv2_key(authentication_sk), message)
         response, _ = await make_pool_protocol_request(
             self=self,
             pool_config=pool_config,
@@ -541,7 +542,7 @@ class Farmer:
             # impossible for this to fail when get_authentication_sk above succeeds
             owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
         else:
-            owner_sk = auth_sk
+            owner_sk = singleton_owner_sk_to_authv2_key(auth_sk)
         post_farmer_payload = pool_protocol.PostFarmerPayload(
             pool_config.launcher_id,
             uint64(authentication_token) if pool_config.version == 1 else uint64(0),  # type: ignore[arg-type]
@@ -549,7 +550,6 @@ class Farmer:
             pool_config.payout_instructions,
             None,
         )
-        assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = pool_protocol.PostFarmerRequest(post_farmer_payload, signature)
         response, _ = await make_pool_protocol_request(
@@ -572,11 +572,6 @@ class Farmer:
         if not isinstance(authentication_token, str):
             self.log.error(f"Attempting to PUT farmer details without being logged into {pool_config.pool_url}")
             return authentication_token
-        if pool_config.version == 1:
-            # impossible for this to fail when get_authentication_sk above succeeds
-            owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
-        else:
-            owner_sk = auth_sk
         put_farmer_payload = pool_protocol.PutFarmerPayload(
             pool_config.launcher_id,
             uint64(authentication_token) if pool_config.version == 1 else uint64(0),
@@ -585,8 +580,12 @@ class Farmer:
             None,
             authentication_token_v2=authentication_token,
         )
-        assert owner_sk.get_g1() == pool_config.owner_public_key
-        signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
+        if pool_config.version == 1:
+            # impossible for this to fail when get_authentication_sk above succeeds
+            owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
+            signature = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
+        else:
+            signature = None
         put_farmer_request = pool_protocol.PutFarmerRequest(put_farmer_payload, signature)
         response, _ = await make_pool_protocol_request(
             self=self,
@@ -822,6 +821,9 @@ class Farmer:
             authentication_sk: PrivateKey | None = self.get_authentication_sk(pool_config)
             if authentication_sk is None:
                 return None
+            if pool_config.version == 2:
+                authentication_sk = singleton_owner_sk_to_authv2_key(authentication_sk)
+
             authentication_token_timeout = pool_state["authentication_token_timeout"]
             if authentication_token_timeout is None:
                 self.log.error(

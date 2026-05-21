@@ -170,7 +170,7 @@ class PutFarmerPayload(Streamable):
 @dataclass(frozen=True)
 class PutFarmerRequest(Streamable):
     payload: PutFarmerPayload
-    signature: G2Element
+    signature: G2Element | None
 
 
 # Response in success case
