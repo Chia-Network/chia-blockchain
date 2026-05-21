@@ -393,10 +393,12 @@ class FullNodeAPI:
         self.full_node.full_node_store.serialized_wp_message = message
         return message
 
-    @metadata.request()
-    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Message | None:
-        self.log.warning("Received proof of weight too late.")
-        return None
+    @metadata.request(peer_required=True)
+    async def respond_proof_of_weight(
+        self, request: full_node_protocol.RespondProofOfWeight, peer: WSChiaConnection
+    ) -> None:
+        self.log.warning("Unsolicited proof of weight.")
+        await peer.close(RATE_LIMITER_BAN_SECONDS)
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Message | None:
