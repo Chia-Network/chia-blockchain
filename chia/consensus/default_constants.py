@@ -102,13 +102,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
-    # These constants changed names to support v2 plots
-    if "MIN_PLOT_SIZE_V1" not in overrides and "MIN_PLOT_SIZE" in overrides:
-        overrides["MIN_PLOT_SIZE_V1"] = overrides["MIN_PLOT_SIZE"]
-        overrides.pop("MIN_PLOT_SIZE")
-    if "MAX_PLOT_SIZE_V1" not in overrides and "MAX_PLOT_SIZE" in overrides:
-        overrides["MAX_PLOT_SIZE_V1"] = overrides["MAX_PLOT_SIZE"]
-        overrides.pop("MAX_PLOT_SIZE")
     if network_id in {"testnet11", "testneta"}:
         if "PLOT_SIZE_V2" not in overrides:
             overrides["PLOT_SIZE_V2"] = 28
