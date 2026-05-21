@@ -1688,6 +1688,7 @@ class FullNode:
                 self.log.error(
                     f"prevalidation failed for block {header_hash.hex()} height {block.height} "
                     f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                    f" {pre_validation_results[i].error_msg or ''}"
                 )
                 return agg_state_change_summary, Err(pre_validation_results[i].error)
             if pre_validation_results[i].required_iters is None:
@@ -2236,6 +2237,7 @@ class FullNode:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
                             f"{block.height}: {Err(pre_validation_result.error).name}"
+                            f" {pre_validation_result.error_msg or ''}"
                         )
                 else:
                     if fork_info is None:
@@ -2496,7 +2498,7 @@ class FullNode:
             # bump nice for each unfinished block we already have for this
             # reward hash, so a burst of duplicates doesn't starve mempool
             # transaction validation
-            err, conditions = await self.pool.run_in_loop(
+            err, err_msg, conditions = await self.pool.run_in_loop(
                 run_block,
                 bytes(block.transactions_generator),
                 generator_args,
@@ -2509,7 +2511,7 @@ class FullNode:
             )
 
             if err is not None:
-                raise ConsensusError(Err(err))
+                raise ConsensusError(Err(err), error_msg=err_msg)
             assert conditions is not None
             assert conditions.validated_signature
             conds = conditions
@@ -2520,7 +2522,7 @@ class FullNode:
             validation_start = time.monotonic()
             validate_result = await self.blockchain.validate_unfinished_block(block, conds)
             if validate_result.error is not None:
-                raise ConsensusError(Err(validate_result.error))
+                raise ConsensusError(Err(validate_result.error), error_msg=validate_result.error_msg)
             validation_time = time.monotonic() - validation_start
 
         assert validate_result.required_iters is not None
@@ -2903,7 +2905,7 @@ class FullNode:
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
-            self.log.info(f"Rejecting transaction {spend_name}: {e.code}")
+            self.log.info(f"Rejecting transaction {spend_name}: {e}")
             self.mempool_manager.add_and_maybe_pop_seen(spend_name)
             return MempoolInclusionStatus.FAILED, e.code
 

@@ -98,10 +98,14 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
     PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
     PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
+    TESTNET=False,
 )
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
+    if network_id != "mainnet":
+        overrides.setdefault("TESTNET", True)
+
     # These constants changed names to support v2 plots
     if "MIN_PLOT_SIZE_V1" not in overrides and "MIN_PLOT_SIZE" in overrides:
         overrides["MIN_PLOT_SIZE_V1"] = overrides["MIN_PLOT_SIZE"]

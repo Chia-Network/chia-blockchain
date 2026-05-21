@@ -84,7 +84,7 @@ async def ignore_block_validation(
 
     def run_block(
         block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-    ) -> tuple[int | None, SpendBundleConditions | None]:
+    ) -> tuple[int | None, str | None, SpendBundleConditions | None]:
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
@@ -92,7 +92,7 @@ async def ignore_block_validation(
             run_block = run_block_generator2
         else:
             run_block = run_block_generator
-        err, conds = run_block(
+        err, err_msg, conds = run_block(
             bytes(block.transactions_generator),
             prev_generators,
             block.transactions_info.cost,
@@ -104,7 +104,7 @@ async def ignore_block_validation(
         # pretend that the signatures are OK
         if conds is not None:
             conds = conds.replace(validated_signature=True)
-        return err, conds
+        return err, err_msg, conds
 
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))

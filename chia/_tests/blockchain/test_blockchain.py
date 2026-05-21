@@ -2716,7 +2716,9 @@ class TestBodyValidation:
         err = (
             await b.add_block(
                 blocks[-1],
-                PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+                PreValidationResult(
+                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)
+                ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
             )
@@ -2792,7 +2794,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2826,7 +2828,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2865,7 +2867,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
