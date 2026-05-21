@@ -94,7 +94,7 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index
 
 
 def singleton_owner_sk_to_authv2_key(singleton_owner_sk: PrivateKey) -> PrivateKey:
-    return _derive_path(singleton_owner_sk, [12381])
+    return _derive_path_unhardened(singleton_owner_sk, [12381])
 
 
 def find_owner_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> tuple[PrivateKey, uint32] | None:
