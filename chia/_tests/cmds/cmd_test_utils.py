@@ -45,6 +45,8 @@ from chia.wallet.wallet_request_types import (
     GetTransactionResponse,
     GetWallets,
     GetWalletsResponse,
+    LogIn,
+    LogInResponse,
     NFTCalculateRoyalties,
     NFTCalculateRoyaltiesResponse,
     NFTGetInfo,
@@ -96,12 +98,21 @@ class TestRpcClient:
 class TestFarmerRpcClient(TestRpcClient):
     client_type: type[FarmerRpcClient] = field(init=False, default=FarmerRpcClient)
 
+    async def get_pool_login_link(self, launcher_id: bytes32) -> str | None:
+        self.add_to_log("get_pool_login_link", (launcher_id,))
+        return None
+
 
 @dataclass
 class TestWalletRpcClient(TestRpcClient):
     client_type: type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
     wallet_index: int = field(init=False, default=0)
+
+    async def log_in(self, request: LogIn) -> LogInResponse:
+        self.fingerprint = int(request.fingerprint)
+        self.add_to_log("log_in", (request,))
+        return LogInResponse(fingerprint=request.fingerprint)
 
     async def get_sync_status(self) -> GetSyncStatusResponse:
         self.add_to_log("get_sync_status", ())
