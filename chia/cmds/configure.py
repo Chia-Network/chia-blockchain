@@ -36,6 +36,7 @@ def configure(
     seeder_domain_name: str,
     seeder_nameserver: str,
     set_solver_trusted_peers_only: str,
+    set_log_systemd: str,
 ) -> None:
     config_yaml = "config.yaml"
     with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
@@ -97,10 +98,24 @@ def configure(
             levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
             if set_log_level in levels:
                 config["logging"]["log_level"] = set_log_level
+                for service in config:
+                    if isinstance(config[service], dict) and "logging" in config[service]:
+                        config[service]["logging"]["log_level"] = set_log_level
                 print(f"Logging level updated. Check {root_path}/log/debug.log")
                 change_made = True
             else:
                 print(f"Logging level not updated. Use one of: {levels}")
+        if set_log_systemd:
+            bool_val = str2bool(set_log_systemd)
+            config["logging"]["log_systemd"] = bool_val
+            for service in config:
+                if isinstance(config[service], dict) and "logging" in config[service]:
+                    config[service]["logging"]["log_systemd"] = bool_val
+            if bool_val:
+                print("Systemd logging enabled")
+            else:
+                print("Systemd logging disabled")
+            change_made = True
         if enable_upnp:
             config["full_node"]["enable_upnp"] = str2bool(enable_upnp)
             if str2bool(enable_upnp):
@@ -281,6 +296,11 @@ def configure(
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
 )
 @click.option(
+    "--log-systemd",
+    help="Enable or disable systemd logging",
+    type=click.Choice(["true", "t", "false", "f"]),
+)
+@click.option(
     "--enable-upnp",
     "--upnp",
     "-upnp",
@@ -323,6 +343,7 @@ def configure_cmd(
     set_fullnode_port: str,
     set_harvester_port: str,
     set_log_level: str,
+    log_systemd: str,
     enable_upnp: str,
     set_outbound_peer_count: str,
     set_peer_count: str,
@@ -352,4 +373,5 @@ def configure_cmd(
         seeder_domain_name,
         seeder_nameserver,
         set_solver_trusted_peers_only,
+        log_systemd,
     )
