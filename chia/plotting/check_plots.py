@@ -220,6 +220,7 @@ def check_plots(
                                 pr.get_id(),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                DEFAULT_CONSTANTS.TESTNET,
                             )
 
                         proof_spent_time = round(monotonic() * 1000) - proof_start_time
@@ -243,6 +244,7 @@ def check_plots(
                                 challenge,
                                 pr.get_strength(),
                                 full_proof,
+                                DEFAULT_CONSTANTS.TESTNET,
                             )
 
                         if quality_str == ver_quality_str:
