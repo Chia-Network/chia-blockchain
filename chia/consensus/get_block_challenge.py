@@ -138,13 +138,12 @@ def is_infused_before_sp(
     slots_crossed: int,
     overflow: bool,
 ) -> bool:
+    candidate_overflow = is_overflow_block(constants, candidate_sp_index)
     sp_intervals_until_current_sp = (
-        int(sp_index) - int(candidate_sp_index) + slots_crossed * int(constants.NUM_SPS_SUB_SLOT)
+        int(sp_index)
+        - int(candidate_sp_index)
+        + (slots_crossed + int(candidate_overflow) - int(overflow)) * int(constants.NUM_SPS_SUB_SLOT)
     )
-    if overflow:
-        sp_intervals_until_current_sp -= int(constants.NUM_SPS_SUB_SLOT)
-    elif sp_intervals_until_current_sp <= 0:
-        sp_intervals_until_current_sp += int(constants.NUM_SPS_SUB_SLOT)
     return sp_intervals_until_current_sp > constants.NUM_SP_INTERVALS_EXTRA
 
 
@@ -166,3 +165,34 @@ def pre_sp_tx_block_height(
     if latest_tx_block is None:
         return uint32(0)
     return latest_tx_block.height
+
+
+def post_hard_fork2(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    *,
+    prev_b_hash: bytes32,
+    sp_index: uint8,
+    finished_sub_slots: int,
+) -> bool:
+    prev_b = blocks.try_block_record(prev_b_hash)
+    if prev_b is None:
+        assert prev_b_hash == constants.GENESIS_CHALLENGE
+        return uint32(0) == constants.HARD_FORK2_HEIGHT
+
+    candidate_height = prev_b.height + 1
+    if candidate_height < constants.HARD_FORK2_HEIGHT:
+        return False
+    if candidate_height >= constants.HARD_FORK2_HEIGHT + constants.SUB_EPOCH_BLOCKS:
+        return True
+
+    return (
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=prev_b_hash,
+            sp_index=sp_index,
+            finished_sub_slots=finished_sub_slots,
+        )
+        >= constants.HARD_FORK2_HEIGHT
+    )

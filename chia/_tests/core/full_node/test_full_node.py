@@ -59,6 +59,7 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.sync_store import Peak
@@ -571,6 +572,41 @@ async def test_timelord_inbound_connection(
     # Timelord from non-localhost, exempt network should be accepted
     server.exempt_peer_networks = [ip_network("8.8.8.0/24")]
     assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is True
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_send_peak_to_timelords_checks_post_hard_fork_from_peak(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_api, _server, _bt = one_node_one_block
+    full_node = full_node_api.full_node
+    peak_block = await full_node.blockchain.get_full_peak()
+    assert peak_block is not None
+    peak = full_node.blockchain.block_record(peak_block.header_hash)
+    captured_prev_hashes: list[bytes32] = []
+
+    def capture_post_hard_fork2(
+        constants: ConsensusConstants,
+        blocks: Any,
+        *,
+        prev_b_hash: bytes32,
+        sp_index: uint8,
+        finished_sub_slots: int,
+    ) -> bool:
+        captured_prev_hashes.append(prev_b_hash)
+        return False
+
+    async def noop_send_to_all(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(full_node_module, "post_hard_fork2", capture_post_hard_fork2)
+    monkeypatch.setattr(full_node.server, "send_to_all", noop_send_to_all)
+
+    await full_node.send_peak_to_timelords(peak_block)
+
+    assert captured_prev_hashes == [peak.header_hash]
 
 
 @pytest.mark.anyio
