@@ -1230,18 +1230,7 @@ async def test_farmer_pool_info_config_update(
     assert login_link is not None
     escaped_base = re.escape(case.expected_pool_url_in_config)
     launcher_hex = re.escape(pool_config.launcher_id.hex())
-    if pool_protocol_version == 1:
-        expected = (
-            escaped_base
-            + rf"/login\?launcher_id={launcher_hex}"
-            + r"&authentication_token=\d+&signature=[0-9a-f]+&timestamp=\d+"
-        )
-    else:
-        expected = (
-            escaped_base
-            + rf"/v2/login\?launcher_id={launcher_hex}"
-            + r"&authentication_token=&signature=[0-9a-f]+&timestamp=\d+"
-        )
+    expected = escaped_base + rf"/login\?launcher_id={launcher_hex}" + r"&authentication_token=\d+&signature=[0-9a-f]+"
     assert re.fullmatch(expected, login_link) is not None
 
 
