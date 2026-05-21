@@ -1163,6 +1163,7 @@ class BlockTools:
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
+                        finished_sub_slots_at_sp = []
                         finished_sub_slots_at_ip = []
                         # Reset pending_ses when a new block is created
                         pending_ses = False
@@ -1482,6 +1483,7 @@ class BlockTools:
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
+                        finished_sub_slots_at_sp = []
                         finished_sub_slots_at_ip = []
                         # Reset pending_ses when a new block is created
                         pending_ses = False
