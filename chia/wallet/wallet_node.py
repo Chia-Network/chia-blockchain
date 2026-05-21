@@ -1315,15 +1315,28 @@ class WalletNode:
                 # Don't process blocks at the same weight
                 return False
 
-            # For every block, we need to apply the cache from race_cache
-            for potential_height in range(backtrack_fork_height + 1, new_peak_hb.height + 1):
+            # For every block, we need to apply the cache from race_cache. Include the exact fork height
+            # (CHIA-4002) so boundary entries are not dropped; skip states already validated so we do not
+            # apply the same coin state twice (which can re-run config-dependent handlers like notifications).
+            #
+            # Note: clear_after_height() can remove _states_validated markers for heights above a fork while
+            # leaving rows in _race_cache. After a successful apply, remove those coin states from the race
+            # cache so they cannot be replayed once validation markers are gone.
+            for potential_height in range(backtrack_fork_height, new_peak_hb.height + 1):
                 try:
                     race_cache = cache.get_race_cache(potential_height)
                 except KeyError:
                     continue
 
-                self.log.info(f"Apply race cache - height: {potential_height}, coin_states: {race_cache}")
-                await self.add_states_from_peer(list(race_cache), peer)
+                to_apply = [cs for cs in race_cache if not cache.coin_state_validation_recorded(cs.get_hash())]
+                if len(to_apply) == 0:
+                    continue
+
+                self.log.info(f"Apply race cache - height: {potential_height}, coin_states: {to_apply}")
+                applied_ok = await self.add_states_from_peer(to_apply, peer)
+                if applied_ok:
+                    for cs in to_apply:
+                        race_cache.discard(cs)
 
             # Clear old entries that are no longer relevant
             cache.cleanup_race_cache(min_height=backtrack_fork_height)
