@@ -575,12 +575,15 @@ class WeightProofHandler:
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0)
 
-        peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
-        log.info(f"validate weight proof peak height {peak_height}")
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
             log.warning("weight proof failed sub epoch data validation")
             return False, uint32(0)
+        if len(summaries) < 2:
+            log.warning("weight proof has fewer than two sub epoch summaries")
+            return False, uint32(0)
+        peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
+        log.info(f"validate weight proof peak height {peak_height}")
         summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
         seed = summaries[-2].get_hash()
@@ -935,6 +938,15 @@ def _validate_summaries_weight(
     return curr.reward_chain_block.weight == sub_epoch_data_weight
 
 
+def _max_sub_epoch_segments(constants: ConsensusConstants) -> int:
+    # SUB_EPOCH_BLOCKS // MIN_BLOCKS_PER_CHALLENGE_BLOCK challenge slots per
+    # sub-epoch, plus one because the SES requires both the sub-epoch block
+    # threshold AND deficit == 0, which may not coincide.  A challenge slot
+    # can contain more than MIN_BLOCKS_PER_CHALLENGE_BLOCK blocks.
+    max_blocks = constants.SUB_EPOCH_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1
+    return (max_blocks - 1) // constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 1
+
+
 def _validate_sub_epoch_segments(
     constants: ConsensusConstants,
     rng: random.Random,
@@ -953,7 +965,11 @@ def _validate_sub_epoch_segments(
     segments_by_sub_epoch = map_segments_by_sub_epoch(sub_epoch_segments.challenge_segments)
     curr_ssi = constants.SUB_SLOT_ITERS_STARTING
     vdfs_to_validate = []
+    max_segments = _max_sub_epoch_segments(constants)
     for sub_epoch_n, segments in segments_by_sub_epoch.items():
+        if len(segments) > max_segments:
+            log.error(f"sub_epoch {sub_epoch_n} has {len(segments)} segments, maximum allowed is {max_segments}")
+            return None
         prev_ssi = curr_ssi
         curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, sub_epoch_n, summaries)
         log.debug(f"validate sub epoch {sub_epoch_n}")
@@ -961,6 +977,9 @@ def _validate_sub_epoch_segments(
         sampled_seg_index = rng.choice(range(len(segments)))
         if sub_epoch_n > 0:
             rc_sub_slot = __get_rc_sub_slot(constants, segments[0], summaries, curr_ssi)
+            if rc_sub_slot is None:
+                log.error(f"failed to reconstruct rc sub slot for sub_epoch {sub_epoch_n}")
+                return None
             prev_ses = summaries[sub_epoch_n - 1]
             rc_sub_slot_hash = rc_sub_slot.get_hash()
         if not summaries[sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
@@ -1429,7 +1448,7 @@ def __get_rc_sub_slot(
     segment: SubEpochChallengeSegment,
     summaries: list[SubEpochSummary],
     curr_ssi: uint64,
-) -> RewardChainSubSlot:
+) -> RewardChainSubSlot | None:
     ses = summaries[uint32(segment.sub_epoch_n - 1)]
     # find first challenge in sub epoch
     first_idx = None
@@ -1440,14 +1459,14 @@ def __get_rc_sub_slot(
             first = curr
             break
 
-    assert first_idx
+    if first_idx is None or first is None or first.signage_point_index is None:
+        log.error("segment missing challenge block or signage_point_index")
+        return None
     idx = first_idx
     slots = segment.sub_slots
 
     # number of slots to look for
     slots_n = 1
-    assert first
-    assert first.signage_point_index is not None
     if is_overflow_block(constants, first.signage_point_index):
         if idx >= 2 and slots[idx - 2].cc_slot_end is None:
             slots_n = 2
@@ -1469,13 +1488,15 @@ def __get_rc_sub_slot(
             if slots_n == 0:
                 break
         idx -= 1
+        if idx < 0:
+            log.error("malformed segment: no slot-end entry before challenge block")
+            return None
         sub_slot = slots[idx]
 
     icc_sub_slot_hash: bytes32 | None = None
-    assert sub_slot is not None
-    assert sub_slot.cc_slot_end_info is not None
-
-    assert segment.rc_slot_end_info is not None
+    if sub_slot.cc_slot_end_info is None or segment.rc_slot_end_info is None:
+        log.error("segment missing cc_slot_end_info or rc_slot_end_info")
+        return None
     if idx != 0:
         # this is not the first slot, ses details should not be included
         ses_hash = None
@@ -1700,6 +1721,9 @@ async def validate_weight_proof_inner(
 ) -> tuple[bool, list[BlockRecord]]:
     assert len(weight_proof.sub_epochs) > 0
     if len(weight_proof.sub_epochs) == 0:
+        return False, []
+    if len(summaries) < 2:
+        log.warning("weight proof has fewer than two sub epoch summaries")
         return False, []
 
     peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height

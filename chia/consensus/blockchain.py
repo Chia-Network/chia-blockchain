@@ -451,6 +451,9 @@ class Blockchain:
                 self.__height_map.rollback(state_change_summary.fork_height)
                 if self._peak_height is not None and fork_info.fork_height < self._peak_height:
                     self.mmr_manager.rollback_to_height(fork_info.fork_height, self)
+                # pre-allocate memory for height to hash map. We don't want it
+                # to fail once the DB transaction is committed.
+                self.__height_map.ensure_capacity(records[-1].height)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
