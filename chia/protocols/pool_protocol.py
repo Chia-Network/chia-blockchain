@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from chia_rs import G1Element, G2Element, ProofOfSpace
+from chia_rs import G1Element, G2Element, Program, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -35,11 +35,29 @@ class PoolErrorCode(Enum):
 # Used to verify GET /farmer and GET /login
 @streamable
 @dataclass(frozen=True)
-class AuthenticationPayload(Streamable):
+class AuthenticationPayloadV1(Streamable):
     method_name: str
     launcher_id: bytes32
     target_puzzle_hash: bytes32
     authentication_token: uint64
+
+
+# GET /auth (only v2)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAuthRequest(Streamable):
+    launcher_id: bytes32
+    timestamp: uint64
+    signature: G2Element
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAuthResponse(Streamable):
+    authentication_token: str
+    expiration: uint64
 
 
 # GET /pool_info
@@ -55,6 +73,7 @@ class GetPoolInfoResponse(Streamable):
     description: str
     target_puzzle_hash: bytes32
     authentication_token_timeout: uint8
+    pool_memoization: Program = Program.to(None)  # addition from v1
 
 
 # POST /partial
@@ -75,6 +94,7 @@ class PostPartialPayload(Streamable):
 @dataclass(frozen=True)
 class PostPartialRequest(Streamable):
     payload: PostPartialPayload
+    authentication_token_v2: str
     aggregate_signature: G2Element
 
 
@@ -86,6 +106,13 @@ class PostPartialResponse(Streamable):
 
 
 # GET /farmer
+@streamable
+@dataclass(frozen=True, kw_only=True)
+class GetFarmerRequest(Streamable):
+    authentication_token: uint64
+    launcher_id: bytes32
+    signature: G2Element | None = None
+    authentication_token_v2: str
 
 
 # Response in success case
@@ -136,13 +163,14 @@ class PutFarmerPayload(Streamable):
     authentication_public_key: G1Element | None
     payout_instructions: str | None
     suggested_difficulty: uint64 | None
+    authentication_token_v2: str
 
 
 @streamable
 @dataclass(frozen=True)
 class PutFarmerRequest(Streamable):
     payload: PutFarmerPayload
-    signature: G2Element
+    signature: G2Element | None
 
 
 # Response in success case
