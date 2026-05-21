@@ -119,7 +119,6 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
                 continue
             entry = TransactionQueueEntry(
                 transaction=response.transaction,
-                transaction_bytes=bytes(response.transaction),
                 spend_name=response.transaction.name(),
                 peer=random_peer,
                 test=False,
@@ -346,7 +345,7 @@ class FullNodeAPI:
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
             self.full_node.transaction_queue.put(
-                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
+                TransactionQueueEntry(tx.transaction, spend_name, peer, test, peers_with_tx),
                 peer.peer_node_id,
             )
         except TransactionQueueFull:
@@ -1512,7 +1511,7 @@ class FullNodeAPI:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
         high_priority = self.is_trusted(peer)
-        queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
+        queue_entry = TransactionQueueEntry(request.transaction, spend_name, None, test)
         try:
             self.full_node.transaction_queue.put(queue_entry, peer_id=peer.peer_node_id, high_priority=high_priority)
         except TransactionQueueFull:
