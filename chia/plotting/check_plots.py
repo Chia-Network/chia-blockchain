@@ -47,7 +47,9 @@ def check_plots(
     debug_show_memo: bool,
 ) -> None:
     config = load_config(root_path, "config.yaml")
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    selected_network = config["selected_network"]
+    testnet = selected_network != "mainnet"
+    address_prefix = config["network_overrides"]["config"][selected_network]["address_prefix"]
     plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=uint32(0))
     plot_manager: PlotManager = PlotManager(
         root_path,
@@ -220,7 +222,7 @@ def check_plots(
                                 pr.get_id(),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
-                                DEFAULT_CONSTANTS.TESTNET,
+                                testnet,
                             )
 
                         proof_spent_time = round(monotonic() * 1000) - proof_start_time
@@ -244,7 +246,7 @@ def check_plots(
                                 challenge,
                                 pr.get_strength(),
                                 full_proof,
-                                DEFAULT_CONSTANTS.TESTNET,
+                                testnet,
                             )
 
                         if quality_str == ver_quality_str:
