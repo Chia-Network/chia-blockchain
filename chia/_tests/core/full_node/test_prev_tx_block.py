@@ -6,10 +6,103 @@ from chia_rs.sized_ints import uint8, uint32
 
 import chia.consensus.get_block_challenge as get_block_challenge_module
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
-from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import is_infused_before_sp, post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
 from chia.util.block_cache import BlockCache
+
+
+@pytest.mark.parametrize(
+    "candidate_sp_index,sp_index,slots_crossed,overflow,expected",
+    [
+        # Same slot, candidate SP 1 infuses at 4, which is before checked SP 5. Expected: True.
+        pytest.param(1, 5, 0, False, True, id="non-overflow-same-slot-after-extra-intervals"),
+        # Same slot, candidate SP 2 infuses at 5, exactly at checked SP 5. Expected: False.
+        pytest.param(2, 5, 0, False, False, id="non-overflow-same-slot-at-extra-interval-boundary"),
+        # Same slot with index wrap, candidate SP 14 infuses at 1, exactly at checked SP 1. Expected: False.
+        pytest.param(14, 1, 0, False, False, id="non-overflow-wrapped-same-slot-at-boundary"),
+        # Same slot with index wrap, candidate SP 13 infuses at 0, before checked SP 1. Expected: True.
+        pytest.param(13, 1, 0, False, True, id="non-overflow-wrapped-same-slot-before-sp"),
+        # One crossed slot, candidate SP 1 from the previous slot infuses before checked SP 1. Expected: True.
+        pytest.param(1, 1, 1, False, True, id="non-overflow-crossed-slot-same-sp"),
+        # Same slot, candidate SP 15 is an overflow candidate infused after checked SP 1. Expected: False.
+        pytest.param(15, 1, 0, False, False, id="non-overflow-same-slot-overflow-candidate-after-sp"),
+        # One crossed slot, candidate SP 15 is an overflow candidate infused before checked SP 1. Expected: True.
+        pytest.param(15, 1, 1, False, True, id="non-overflow-crossed-slot-overflow-candidate-before-sp"),
+        # One crossed slot, candidate SP 14 is an overflow candidate infused before checked SP 1. Expected: True.
+        pytest.param(14, 1, 1, False, True, id="non-overflow-crossed-slot-overflow-candidate-before-sp"),
+        # One crossed slot, candidate SP 13 infuses before checked SP 1. Expected: True.
+        pytest.param(13, 1, 1, False, True, id="non-overflow-crossed-slot-before-sp"),
+        # Checked SP is overflow; no crossed slot means low-SP candidate is after the checked SP. Expected: False.
+        pytest.param(1, 15, 0, True, False, id="overflow-no-crossed-slot-low-sp-candidate-after-overflow-sp"),
+        # Checked SP is overflow; no crossed slot, candidate SP 11 infuses at boundary/after. Expected: False.
+        pytest.param(11, 15, 0, True, False, id="overflow-no-crossed-slot-before-boundary-still-after-sp"),
+        # Checked SP is overflow; no crossed slot and same SP cannot be before itself. Expected: False.
+        pytest.param(15, 15, 0, True, False, id="overflow-no-crossed-slot-same-sp"),
+        # Checked SP is overflow; one crossed slot puts low-SP candidate before the checked SP. Expected: True.
+        pytest.param(1, 15, 1, True, True, id="overflow-crossed-slot-low-sp-candidate-before-sp"),
+        # Checked SP is overflow; one crossed slot, candidate SP 11 infuses before checked SP 15. Expected: True.
+        pytest.param(11, 15, 1, True, True, id="overflow-crossed-slot-before-sp"),
+        # Checked SP is overflow; one crossed slot, candidate SP 12 infuses exactly at checked SP 15. Expected: False.
+        pytest.param(12, 15, 1, True, False, id="overflow-crossed-slot-at-extra-interval-boundary"),
+        # Checked SP is overflow; one crossed slot and same overflow SP is safely before it. Expected: True.
+        pytest.param(15, 15, 1, True, True, id="overflow-crossed-slot-same-overflow-sp"),
+    ],
+)
+def test_is_infused_before_sp(
+    candidate_sp_index: int,
+    sp_index: int,
+    slots_crossed: int,
+    overflow: bool,
+    expected: bool,
+) -> None:
+    assert (
+        is_infused_before_sp(
+            test_constants,
+            uint8(candidate_sp_index),
+            uint8(sp_index),
+            slots_crossed,
+            overflow,
+        )
+        is expected
+    )
+
+
+def test_is_infused_before_sp_matches_iteration_comparison() -> None:
+    sp_interval_iters = int(test_constants.SUB_SLOT_ITERS_STARTING // test_constants.NUM_SPS_SUB_SLOT)
+    num_sps = int(test_constants.NUM_SPS_SUB_SLOT)
+    extra_intervals = int(test_constants.NUM_SP_INTERVALS_EXTRA)
+
+    for sp_index in range(num_sps):
+        overflow = is_overflow_block(test_constants, uint8(sp_index))
+        checked_sp_total_intervals = sp_index - (num_sps if overflow else 0)
+
+        for candidate_sp_index in range(num_sps):
+            for slots_crossed in range(3):
+                candidate_overflow = is_overflow_block(test_constants, uint8(candidate_sp_index))
+                candidate_sp_total_intervals = candidate_sp_index - (slots_crossed + int(candidate_overflow)) * num_sps
+
+                checked_sp_total_iters = checked_sp_total_intervals * sp_interval_iters
+                candidate_ip_total_iters = (candidate_sp_total_intervals + extra_intervals) * sp_interval_iters + 1
+                expected = candidate_ip_total_iters < checked_sp_total_iters
+
+                assert (
+                    is_infused_before_sp(
+                        test_constants,
+                        uint8(candidate_sp_index),
+                        uint8(sp_index),
+                        slots_crossed,
+                        overflow,
+                    )
+                    is expected
+                ), (
+                    candidate_sp_index,
+                    sp_index,
+                    slots_crossed,
+                    overflow,
+                    candidate_ip_total_iters,
+                    checked_sp_total_iters,
+                )
 
 
 def test_prev_tx_block_none() -> None:
@@ -138,14 +231,14 @@ def test_post_hard_fork2_uses_actual_finished_sub_slot_count(bt: BlockTools) -> 
             blocks=block_cache,
             prev_b_hash=block.header_hash,
             sp_index=sp_index,
-            finished_sub_slots=2,
+            finished_sub_slots=1,
         )
         reduced_height = pre_sp_tx_block_height(
             constants=bt.constants,
             blocks=block_cache,
             prev_b_hash=block.header_hash,
             sp_index=sp_index,
-            finished_sub_slots=1,
+            finished_sub_slots=0,
         )
         if actual_height != reduced_height:
             candidate_block = block
@@ -165,14 +258,14 @@ def test_post_hard_fork2_uses_actual_finished_sub_slot_count(bt: BlockTools) -> 
         blocks=block_cache,
         prev_b_hash=candidate_block.header_hash,
         sp_index=candidate_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=2,
+        finished_sub_slots=1,
     )
     assert not post_hard_fork2(
         constants=constants,
         blocks=block_cache,
         prev_b_hash=candidate_block.header_hash,
         sp_index=candidate_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=1,
+        finished_sub_slots=0,
     )
 
 
@@ -255,13 +348,13 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
     curr = None
     while idx > 0:
         curr = block_list[idx]
-        if not overflow:
-            before_sp = curr.reward_chain_block.signage_point_index < sp_index or slots_crossed > 0
-        else:
-            before_sp = slots_crossed >= 2 or (
-                slots_crossed == 1 and curr.reward_chain_block.signage_point_index < sp_index
-            )
-        if curr.foliage_transaction_block is not None and before_sp:
+        if curr.foliage_transaction_block is not None and is_infused_before_sp(
+            constants,
+            curr.reward_chain_block.signage_point_index,
+            sp_index,
+            slots_crossed,
+            overflow,
+        ):
             break
 
         if len(curr.finished_sub_slots) > 0:
