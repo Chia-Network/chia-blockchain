@@ -30,7 +30,7 @@ from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -690,9 +690,9 @@ class Farmer:
                     if pool_info_result is not None and pool_info_result.new_pool_url is not None:
                         with PoolingShareState.acquire(
                             root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
-                        ) as pool_config:
-                            pool_config.pool_url = pool_info_result.new_pool_url
-                            self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
+                        ) as editable_pool_config:
+                            editable_pool_config.pool_url = pool_info_result.new_pool_url
+                            self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = editable_pool_config
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
@@ -900,17 +900,19 @@ class Farmer:
 
     async def _periodically_update_pool_state_task(self) -> None:
         time_slept = 0
-        config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
         while not self._shut_down:
             # Every time the config file changes, read it to check the pool state
-            stat_info = config_path.stat()
-            if stat_info.st_mtime > self.last_config_access_time:
-                # If we detect the config file changed, refresh private keys first just in case
-                self.all_root_sks = [sk for sk, _ in await self.get_all_private_keys()]
-                self.last_config_access_time = stat_info.st_mtime
-                await self.update_pool_state()
-                time_slept = 0
-            elif time_slept > 60:
+            state_path = PoolingShareState.state_path(self._root_path)
+            if state_path.exists():
+                stat = state_path.stat()
+                if stat.st_mtime > self.last_config_access_time:
+                    # If we detect the config file changed, refresh private keys first just in case
+                    self.all_root_sks = [sk for sk, _ in await self.get_all_private_keys()]
+                    self.last_config_access_time = stat.st_mtime
+                    await self.update_pool_state()
+                    time_slept = 0
+                    continue
+            if time_slept > 60:
                 await self.update_pool_state()
                 time_slept = 0
             time_slept += 1

@@ -51,7 +51,6 @@ CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
 
 
 def forward_to_pool_puzzle_hash_dpuz(pool_puzzle_hash: bytes32, pool_memoization: Program) -> Program:
-    # TODO: optimize and examine
     # (mod (REWARD_HASH REWARD_REST reward_amount)
     #   (list (list 73 reward_amount) (c 51 (c REWARD_HASH (c reward_amount REWARD_REST)))
     # )
@@ -96,7 +95,7 @@ class SingletonStruct:
         )
 
     def struct_hash(self) -> bytes32:
-        return self.to_program().get_tree_hash()  # TODO: optimize
+        return self.to_program().get_tree_hash()
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -205,7 +204,6 @@ class PlotNFTPuzzle:
         }
 
     def fixed_puzzle_member(self) -> FixedPuzzleMember:
-        # TODO: optimize
         return FixedPuzzleMember(fixed_puzzle_hash=self.claim_pool_reward_dpuz().get_tree_hash())
 
     def pool_puzzle_with_restrictions(self) -> PuzzleWithRestrictions:
@@ -217,7 +215,6 @@ class PlotNFTPuzzle:
 
     def pool_proven_spend(self) -> dict[bytes32, ProvenSpend]:
         return {
-            # TODO: optimize
             self.pool_puzzle_with_restrictions().puzzle_hash(_top_level=False): ProvenSpend(
                 puzzle_reveal=self.pool_puzzle_with_restrictions().puzzle_reveal(_top_level=False),
                 solution=self.pool_puzzle_with_restrictions().solve(
@@ -264,7 +261,7 @@ class PlotNFTPuzzle:
         return self.puzzle_with_restrictions().puzzle_reveal()
 
     def inner_puzzle_hash(self) -> bytes32:
-        return self.inner_puzzle().get_tree_hash()  # TODO: optimize
+        return self.inner_puzzle().get_tree_hash()
 
     def puzzle(self, nonce: int) -> Program:
         return puzzle_for_singleton(
@@ -276,7 +273,7 @@ class PlotNFTPuzzle:
         )
 
     def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()  # TODO: optimize
+        return self.puzzle(nonce).get_tree_hash()
 
     def forward_pool_reward_inner_solution(self, reward: PoolReward) -> Program:
         custody_pwr = self.puzzle_with_restrictions()
@@ -537,7 +534,7 @@ class PlotNFT(PlotNFTPuzzle):
             coin=self.coin,
             puzzle_reveal=puzzle_for_singleton(
                 launcher_id=self.singleton_struct.launcher_id,
-                inner_puz=self.inner_puzzle(),  # TODO: optimize
+                inner_puz=self.inner_puzzle(),
                 singleton_mod=self.singleton_struct.singleton_puzzles.singleton_mod,
                 singleton_mod_hash=self.singleton_struct.singleton_puzzles.singleton_mod_hash,
                 launcher_hash=self.singleton_struct.singleton_puzzles.singleton_launcher_hash,
@@ -697,7 +694,7 @@ class RewardPuzzle:
         return self.puzzle_with_restrictions().puzzle_reveal()
 
     def puzzle_hash(self) -> bytes32:
-        return self.puzzle().get_tree_hash()  # TODO: optimize
+        return self.puzzle().get_tree_hash()
 
     def solve(
         self, singleton_inner_puzzle_hash: bytes32, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
