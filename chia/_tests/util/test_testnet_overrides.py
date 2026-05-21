@@ -8,13 +8,19 @@ from chia.consensus.default_constants import update_testnet_overrides
 def test_testnet11() -> None:
     overrides: dict[str, Any] = {}
     update_testnet_overrides("testnet11", overrides)
-    assert overrides == {"PLOT_SIZE_V2": 28, "SOFT_FORK8_HEIGHT": 3755000, "SOFT_FORK9_HEIGHT": 3924000}
+    assert overrides == {
+        "TESTNET": True,
+        "PLOT_SIZE_V2": 28,
+        "SOFT_FORK8_HEIGHT": 3755000,
+        "SOFT_FORK9_HEIGHT": 3924000,
+    }
 
 
 def test_min_plot_size() -> None:
     overrides: dict[str, Any] = {"MIN_PLOT_SIZE": 18}
     update_testnet_overrides("testnet11", overrides)
     assert overrides == {
+        "TESTNET": True,
         "MIN_PLOT_SIZE_V1": 18,
         "PLOT_SIZE_V2": 28,
         "SOFT_FORK8_HEIGHT": 3755000,
@@ -26,6 +32,7 @@ def test_max_plot_size() -> None:
     overrides: dict[str, Any] = {"MAX_PLOT_SIZE": 32}
     update_testnet_overrides("testnet11", overrides)
     assert overrides == {
+        "TESTNET": True,
         "MAX_PLOT_SIZE_V1": 32,
         "PLOT_SIZE_V2": 28,
         "SOFT_FORK8_HEIGHT": 3755000,
