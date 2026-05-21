@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast
 
 from chia_rs import AugSchemeMPL, CoinSpend, CoinState, G1Element, G2Element
@@ -54,6 +53,19 @@ from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
+
+MAX_ROYALTY_BASIS_POINTS = 10000
+
+
+def compute_royalty_amount(offered_amount: int, royalty_split: int, percentage: int) -> uint64:
+    """Compute royalty using integer arithmetic, validating against overflow and excessive percentage."""
+    if percentage > MAX_ROYALTY_BASIS_POINTS:
+        raise ValueError(f"NFT royalty percentage {percentage} exceeds 100% ({MAX_ROYALTY_BASIS_POINTS} basis points)")
+    amount = abs(offered_amount) // royalty_split * percentage // MAX_ROYALTY_BASIS_POINTS
+    royalty = uint64(amount)
+    if royalty >= abs(offered_amount):
+        raise ValueError("Royalty amount meets or exceeds the offered amount")
+    return royalty
 
 
 class NFTWallet:
@@ -336,11 +348,13 @@ class NFTWallet:
             # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
             did_id = self.did_id
         amount = uint64(1)
-        # ensure percentage is uint16
+        # ensure percentage is uint16 and at most 100%
         try:
             percentage = uint16(percentage)
         except ValueError:
-            raise ValueError("Percentage must be lower than 655%")
+            raise ValueError(f"Percentage must be between 0 and {MAX_ROYALTY_BASIS_POINTS} (100%)")
+        if percentage > MAX_ROYALTY_BASIS_POINTS:
+            raise ValueError(f"Royalty percentage {percentage} exceeds 100% ({MAX_ROYALTY_BASIS_POINTS} basis points)")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
         if coins is None:
             return None
@@ -704,7 +718,7 @@ class NFTWallet:
                     {
                         "asset": name,
                         "address": address,
-                        "amount": math.floor(math.floor(abs(amount) / len(royalty_assets_dict)) * (percentage / 10000)),
+                        "amount": abs(amount) // len(royalty_assets_dict) * percentage // MAX_ROYALTY_BASIS_POINTS,
                     }
                 )
 
@@ -753,7 +767,7 @@ class NFTWallet:
                 settlement_ph: bytes32 = (
                     OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], OFFER_MOD).get_tree_hash()
                 )
-                trade_prices.append((uint64(math.floor(amount / offer_side_royalty_split)), settlement_ph))
+                trade_prices.append((uint64(amount // offer_side_royalty_split), settlement_ph))
 
         required_royalty_info: list[tuple[bytes32, bytes32, uint16]] = []  # [(launcher_id, address, percentage)]
         offered_royalty_percentages: dict[bytes32, uint16] = {}
@@ -783,11 +797,7 @@ class NFTWallet:
             if amount < 0 and request_side_royalty_split > 0:
                 payment_list: list[tuple[bytes32, CreateCoin]] = []
                 for launcher_id, address, percentage in required_royalty_info:
-                    extra_royalty_amount = uint64(
-                        math.floor(math.floor(abs(amount) / request_side_royalty_split) * (percentage / 10000))
-                    )
-                    if extra_royalty_amount == abs(amount):
-                        raise ValueError("Amount offered and amount paid in royalties are equal")
+                    extra_royalty_amount = compute_royalty_amount(amount, request_side_royalty_split, percentage)
                     payment_list.append((launcher_id, CreateCoin(address, extra_royalty_amount, [address])))
                 royalty_payments[asset] = payment_list
 
@@ -885,7 +895,7 @@ class NFTWallet:
                             trade_prices_list=[
                                 list(price)
                                 for price in trade_prices
-                                if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0
+                                if price[0] * offered_royalty_percentages[asset] // MAX_ROYALTY_BASIS_POINTS != 0
                             ],
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                         )

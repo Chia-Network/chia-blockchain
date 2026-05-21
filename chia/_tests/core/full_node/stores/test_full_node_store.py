@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import logging
 import random
-import time
 from collections.abc import AsyncIterator
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock, VDFInfo, VDFProof
+from chia_rs import (
+    BlockRecord,
+    ChallengeChainSubSlot,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    RewardChainSubSlot,
+    SubSlotProofs,
+    UnfinishedBlock,
+    VDFInfo,
+    VDFProof,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -22,8 +32,15 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_store import (
+    FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_EOS_CACHE_MAX_KEYS,
+    FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_IP_CACHE_MAX_KEYS,
+    FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_SP_CACHE_MAX_KEYS,
     MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH,
     FullNodeStore,
+    SignagePointAddResult,
     UnfinishedBlockEntry,
     find_best_block,
 )
@@ -552,7 +569,8 @@ async def test_basic_store(
             [],
             peak.sub_slot_iters,
         )
-        assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        assert sp_result == SignagePointAddResult.ADDED
 
     blocks = blocks_reorg
     while True:
@@ -660,7 +678,8 @@ async def test_basic_store(
             [],
             peak.sub_slot_iters,
         )
-        assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        assert sp_result == SignagePointAddResult.ADDED
 
     # Test adding future signage point, a few slots forward (good)
     saved_sp_hash = None
@@ -682,7 +701,8 @@ async def test_basic_store(
             saved_sp_hash = sp.cc_vdf.output.get_hash()
             saved_index = uint8(i)
             saved_challenge = sp.cc_vdf.challenge
-            assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+            sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+            assert sp_result == SignagePointAddResult.ADDED
 
     # Test adding future signage point (bad)
     for i in range(
@@ -700,7 +720,8 @@ async def test_basic_store(
             finished_sub_slots[: len(finished_sub_slots)],
             peak.sub_slot_iters,
         )
-        assert not store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+        assert sp_result == SignagePointAddResult.NOT_ADDED
 
     # Test adding past signage point
     sp = SignagePoint(
@@ -709,12 +730,17 @@ async def test_basic_store(
         blocks[1].reward_chain_block.reward_chain_sp_vdf,
         blocks[1].reward_chain_sp_proof,
     )
-    assert not store.new_signage_point(
-        blocks[1].reward_chain_block.signage_point_index,
-        blockchain,
-        peak,
-        uint64(blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)),
-        sp,
+    assert (
+        store.new_signage_point(
+            blocks[1].reward_chain_block.signage_point_index,
+            blockchain,
+            peak,
+            uint64(
+                blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)
+            ),
+            sp,
+        )
+        == SignagePointAddResult.NOT_ADDED
     )
 
     # Get signage point by index
@@ -755,7 +781,8 @@ async def test_basic_store(
             [],
             peak.sub_slot_iters,
         )
-        assert store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
+        sp_result = store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
+        assert sp_result == SignagePointAddResult.ADDED
 
     blocks_3 = custom_block_tools.get_consecutive_blocks(
         1,
@@ -790,7 +817,8 @@ async def test_basic_store(
                 finished_sub_slots[:slot_offset],
                 peak.sub_slot_iters,
             )
-            assert store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
+            sp_result = store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
+            assert sp_result == SignagePointAddResult.ADDED
 
     # Test adding signage points after genesis
     blocks_4 = custom_block_tools.get_consecutive_blocks(
@@ -841,7 +869,8 @@ async def test_basic_store(
             finished_sub_slots,
             peak.sub_slot_iters,
         )
-        assert store.new_signage_point(uint8(i), empty_blockchain, sb, peak.sub_slot_iters, sp)
+        sp_result = store.new_signage_point(uint8(i), empty_blockchain, sb, peak.sub_slot_iters, sp)
+        assert sp_result == SignagePointAddResult.ADDED
 
     # Test future EOS cache
     store.initialize_genesis_sub_slot()
@@ -1056,7 +1085,8 @@ async def test_basic_store(
                     peak.sub_slot_iters,
                 )
                 all_sps[i] = sp
-                assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+                sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+                assert sp_result == SignagePointAddResult.ADDED
 
             # Adding a new peak clears all SPs after that peak
             await _validate_and_add_block_no_error(blockchain, blocks[-2], fork_info=fork_info)
@@ -1099,7 +1129,8 @@ async def test_basic_store(
                     peak.sub_slot_iters,
                 )
                 all_sps[i] = sp
-                assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+                sp_result = store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+                assert sp_result == SignagePointAddResult.ADDED
 
             assert_sp_none(i2, False)
             assert_sp_none(i2 + 1, False)
@@ -1349,9 +1380,8 @@ async def test_unfinished_block_eviction_mark_requesting(
 
 
 @pytest.mark.anyio
-async def test_add_to_future_ip_sets_ttl(seeded_random: random.Random) -> None:
-    """add_to_future_ip must register a TTL in future_cache_key_times so that
-    clear_old_cache_entries can evict stale IP cache entries."""
+async def test_add_to_future_ip_stores_entry(seeded_random: random.Random) -> None:
+    """add_to_future_ip must store the entry in the bounded cache."""
     store = FullNodeStore(DEFAULT_CONSTANTS)
 
     challenge = bytes32.random(seeded_random)
@@ -1370,35 +1400,250 @@ async def test_add_to_future_ip_sets_ttl(seeded_random: random.Random) -> None:
     store.add_to_future_ip(ip)
 
     assert challenge in store.future_ip_cache
-    assert challenge in store.future_cache_key_times, (
-        "add_to_future_ip must set future_cache_key_times so entries can be evicted"
-    )
+
+
+def make_signage_point(challenge: bytes32, challenge_iters: int = 1000) -> SignagePoint:
+    vdf_info = VDFInfo(challenge, uint64(challenge_iters), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    return SignagePoint(vdf_info, vdf_proof, vdf_info, vdf_proof)
 
 
 @pytest.mark.anyio
-async def test_clear_old_cache_entries_evicts_future_ip(seeded_random: random.Random) -> None:
-    """Entries added via add_to_future_ip must be evicted by clear_old_cache_entries
-    after the 1-hour TTL expires."""
+async def test_add_to_future_sp_limits_keys() -> None:
     store = FullNodeStore(DEFAULT_CONSTANTS)
 
-    challenge = bytes32.random(seeded_random)
-    vdf_info = VDFInfo(challenge, uint64(1000), ClassgroupElement.get_default_element())
+    for i in range(FUTURE_SP_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.add_to_future_sp(make_signage_point(challenge), uint8(1))
+
+    assert len(store.future_sp_cache) == FUTURE_SP_CACHE_MAX_KEYS
+    assert store.future_sp_cache.total_entries == FUTURE_SP_CACHE_MAX_KEYS
+    # The oldest key (0) was evicted to make room for the last insert.
+    assert bytes32(b"\x00" * 32) not in store.future_sp_cache
+
+
+@pytest.mark.anyio
+async def test_add_to_future_sp_limits_entries_per_key() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    challenge = bytes32(b"\x11" * 32)
+
+    for i in range(FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY + 5):
+        store.add_to_future_sp(make_signage_point(challenge, challenge_iters=1000 + i), uint8(i))
+
+    assert len(store.future_sp_cache[challenge]) == FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY
+    assert store.future_sp_cache.total_entries == FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY
+
+
+@pytest.mark.anyio
+async def test_future_eos_cache_bounds() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    assert len(store.future_eos_cache) == 0
+
+    for i in range(FUTURE_EOS_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.future_eos_cache.append(challenge, object())  # type: ignore[arg-type]
+    assert len(store.future_eos_cache) == FUTURE_EOS_CACHE_MAX_KEYS
+
+
+@pytest.mark.anyio
+async def test_future_ip_cache_bounds() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    assert len(store.future_ip_cache) == 0
+
+    for i in range(FUTURE_IP_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.future_ip_cache.append(challenge, object())  # type: ignore[arg-type]
+    assert len(store.future_ip_cache) == FUTURE_IP_CACHE_MAX_KEYS
+
+
+@pytest.mark.anyio
+async def test_add_to_future_ip_limits_entries_per_key() -> None:
+    """add_to_future_ip must respect the per-key entry limit so that a single
+    challenge hash cannot accumulate unbounded infusion-point entries."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    challenge = bytes32(b"\x44" * 32)
+
+    for i in range(FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY + 5):
+        vdf_info = VDFInfo(challenge, uint64(100 + i), ClassgroupElement.get_default_element())
+        vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+        ip = NewInfusionPointVDF(
+            unfinished_reward_hash=bytes32((i + 99_999).to_bytes(32, "big")),
+            challenge_chain_ip_vdf=vdf_info,
+            challenge_chain_ip_proof=vdf_proof,
+            reward_chain_ip_vdf=vdf_info,
+            reward_chain_ip_proof=vdf_proof,
+            infused_challenge_chain_ip_vdf=None,
+            infused_challenge_chain_ip_proof=None,
+        )
+        store.add_to_future_ip(ip)
+
+    assert len(store.future_ip_cache[challenge]) == FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY
+    assert store.future_ip_cache.total_entries == FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY
+
+
+@pytest.mark.anyio
+async def test_new_finished_sub_slot_eos_per_key_drop() -> None:
+    """When the EOS cache has reached per-key capacity for a given challenge,
+    new_finished_sub_slot must silently drop the entry and return None."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    gc = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+    rc_challenge = bytes32(b"\x77" * 32)
+
+    for _ in range(FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY):
+        store.future_eos_cache.append(rc_challenge, object())  # type: ignore[arg-type]
+
+    vdf_info_cc = VDFInfo(gc, uint64(100), ClassgroupElement.get_default_element())
+    vdf_info_rc = VDFInfo(rc_challenge, uint64(100), ClassgroupElement.get_default_element())
     vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
-    ip = NewInfusionPointVDF(
-        unfinished_reward_hash=bytes32.random(seeded_random),
-        challenge_chain_ip_vdf=vdf_info,
-        challenge_chain_ip_proof=vdf_proof,
-        reward_chain_ip_vdf=vdf_info,
-        reward_chain_ip_proof=vdf_proof,
-        infused_challenge_chain_ip_vdf=None,
-        infused_challenge_chain_ip_proof=None,
+
+    cc_sub_slot = ChallengeChainSubSlot(vdf_info_cc, None, None, None, None)
+    rc_sub_slot = RewardChainSubSlot(
+        vdf_info_rc, cc_sub_slot.get_hash(), None, uint8(DEFAULT_CONSTANTS.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
+    )
+    proofs = SubSlotProofs(vdf_proof, None, vdf_proof)
+    eos = EndOfSubSlotBundle(cc_sub_slot, None, rc_sub_slot, proofs)
+
+    peak = BlockRecord(
+        header_hash=bytes32(b"\x01" * 32),
+        prev_hash=bytes32(b"\x00" * 32),
+        height=uint32(1),
+        weight=uint128(1),
+        total_iters=uint128(50),
+        signage_point_index=uint8(0),
+        challenge_vdf_output=ClassgroupElement.get_default_element(),
+        infused_challenge_vdf_output=None,
+        reward_infusion_new_challenge=bytes32(b"\x99" * 32),
+        challenge_block_info_hash=bytes32(b"\x02" * 32),
+        sub_slot_iters=uint64(100),
+        pool_puzzle_hash=bytes32(b"\x03" * 32),
+        farmer_puzzle_hash=bytes32(b"\x04" * 32),
+        required_iters=uint64(10),
+        deficit=uint8(0),
+        overflow=False,
+        prev_transaction_block_height=uint32(0),
+        timestamp=None,
+        prev_transaction_block_hash=None,
+        fees=None,
+        reward_claims_incorporated=None,
+        finished_challenge_slot_hashes=None,
+        finished_infused_challenge_slot_hashes=None,
+        finished_reward_slot_hashes=None,
+        sub_epoch_summary_included=None,
     )
 
-    store.add_to_future_ip(ip)
-    assert challenge in store.future_ip_cache
+    result = store.new_finished_sub_slot(
+        eos,
+        BlockchainMock({}),
+        peak,
+        uint64(100),
+        uint64(1),
+        object(),  # type: ignore[arg-type]
+    )
+    assert result is None
+    assert store.future_eos_cache.total_entries == FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY
 
-    store.future_cache_key_times[challenge] = int(time.time()) - 3601
-    store.clear_old_cache_entries()
 
-    assert challenge not in store.future_ip_cache, "stale IP cache entry was not evicted"
-    assert challenge not in store.future_cache_key_times
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_new_signage_point_invalid_vdf(
+    empty_blockchain: Blockchain,
+    custom_block_tools: BlockTools,
+) -> None:
+    blockchain = empty_blockchain
+    blocks = custom_block_tools.get_consecutive_blocks(2, skip_slots=2)
+
+    store = FullNodeStore(empty_blockchain.constants)
+    store.initialize_genesis_sub_slot()
+
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
+    for block in blocks:
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
+        sb = blockchain.block_record(block.header_hash)
+        result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+        assert result is not None
+        sp_sub_slot, ip_sub_slot = result
+        next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+            blockchain.constants, False, sb, blockchain
+        )
+        store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty)
+
+    peak = blockchain.get_peak()
+    assert peak is not None
+    ss_start_iters = peak.ip_sub_slot_total_iters(custom_block_tools.constants)
+
+    sp = get_signage_point(
+        custom_block_tools.constants,
+        blockchain,
+        peak,
+        ss_start_iters,
+        uint8(1),
+        [],
+        peak.sub_slot_iters,
+    )
+    assert sp.cc_vdf is not None
+    assert sp.cc_proof is not None
+    assert sp.rc_vdf is not None
+    assert sp.rc_proof is not None
+
+    # Valid SP should be accepted
+    assert store.new_signage_point(uint8(1), blockchain, peak, peak.sub_slot_iters, sp) == SignagePointAddResult.ADDED
+
+    # Use index 2 so it isn't a duplicate of the one already added at index 1
+    sp2 = get_signage_point(
+        custom_block_tools.constants,
+        blockchain,
+        peak,
+        ss_start_iters,
+        uint8(2),
+        [],
+        peak.sub_slot_iters,
+    )
+    assert sp2.cc_proof is not None
+    assert sp2.rc_proof is not None
+    corrupted_cc_proof_2 = sp2.cc_proof.replace(witness=b"\xff" * len(sp2.cc_proof.witness))
+    corrupted_sp2 = SignagePoint(sp2.cc_vdf, corrupted_cc_proof_2, sp2.rc_vdf, sp2.rc_proof)
+
+    sp_result = store.new_signage_point(uint8(2), blockchain, peak, peak.sub_slot_iters, corrupted_sp2)
+    assert sp_result == SignagePointAddResult.INVALID_VDF
+
+    # Verify the invalid SP was NOT added to future_sp_cache
+    all_cached = [sp for key in store.future_sp_cache.keys() for _, sp in store.future_sp_cache[key]]
+    assert not any(sp.cc_vdf == corrupted_sp2.cc_vdf for sp in all_cached), "invalid VDF SP should not be cached"
+
+    # Corrupt the RC proof instead, keep CC proof valid
+    corrupted_rc_proof = sp2.rc_proof.replace(witness=b"\xff" * len(sp2.rc_proof.witness))
+    sp_result = store.new_signage_point(
+        uint8(2),
+        blockchain,
+        peak,
+        peak.sub_slot_iters,
+        SignagePoint(sp2.cc_vdf, sp2.cc_proof, sp2.rc_vdf, corrupted_rc_proof),
+    )
+    assert sp_result == SignagePointAddResult.INVALID_VDF
+
+    # Corrupt a normalized-to-identity CC proof to exercise the other INVALID_VDF branch
+    sp3 = get_signage_point(
+        custom_block_tools.constants,
+        blockchain,
+        peak,
+        ss_start_iters,
+        uint8(3),
+        [],
+        peak.sub_slot_iters,
+        normalized_to_identity_cc_sp=True,
+    )
+    assert sp3.cc_proof is not None
+    assert sp3.cc_proof.normalized_to_identity
+    corrupted_nti_proof = sp3.cc_proof.replace(witness=b"\xff" * len(sp3.cc_proof.witness))
+    corrupted_sp4 = SignagePoint(sp3.cc_vdf, corrupted_nti_proof, sp3.rc_vdf, sp3.rc_proof)
+
+    sp_result = store.new_signage_point(uint8(3), blockchain, peak, peak.sub_slot_iters, corrupted_sp4)
+    assert sp_result == SignagePointAddResult.INVALID_VDF
+
+    # Structural mismatch: correct challenge hash but wrong iteration count
+    assert sp2.cc_vdf is not None
+    wrong_iters_vdf = sp2.cc_vdf.replace(number_of_iterations=uint64(sp2.cc_vdf.number_of_iterations + 1))
+    wrong_sp = SignagePoint(wrong_iters_vdf, sp2.cc_proof, sp2.rc_vdf, sp2.rc_proof)
+
+    sp_result = store.new_signage_point(uint8(2), blockchain, peak, peak.sub_slot_iters, wrong_sp)
+    assert sp_result == SignagePointAddResult.NOT_ADDED

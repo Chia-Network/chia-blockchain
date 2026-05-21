@@ -14,7 +14,7 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.nft_wallet import MAX_ROYALTY_BASIS_POINTS, NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer, OfferSpecification
@@ -1645,8 +1645,9 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
         (200, 500, 500),
         (200, 500, 500),
         (0, 0, 0),  # test that we can have 0 royalty
-        (10000, 10001, 10005),  # tests 100% royalty is not allowed
-        (100000, 10001, 10005),  # 1000% shouldn't work
+        (10000, 500, 500),  # 100% maker royalty rejected at offer time
+        (10001, 500, 500),  # >100% rejected at mint time
+        (100000, 10001, 10005),  # >uint16 rejected at mint time
     ],
 )
 @pytest.mark.parametrize(
@@ -1831,6 +1832,20 @@ async def test_complex_nft_offer(
                     target_puzhash_maker,
                     royalty_puzhash_maker,
                     royalty_basis_pts_maker,  # type: ignore
+                    did_id_maker,
+                )
+        return
+    elif royalty_basis_pts_maker > MAX_ROYALTY_BASIS_POINTS:
+        with pytest.raises(ValueError, match="exceeds 100%"):
+            async with nft_wallet_maker.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=False
+            ) as action_scope:
+                await nft_wallet_maker.generate_new_nft(
+                    metadata,
+                    action_scope,
+                    target_puzhash_maker,
+                    royalty_puzhash_maker,
+                    uint16(royalty_basis_pts_maker),
                     did_id_maker,
                 )
         return
