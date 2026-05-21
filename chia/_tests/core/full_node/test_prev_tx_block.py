@@ -80,9 +80,7 @@ def test_is_infused_before_sp_matches_iteration_comparison() -> None:
         for candidate_sp_index in range(num_sps):
             for slots_crossed in range(3):
                 candidate_overflow = is_overflow_block(test_constants, uint8(candidate_sp_index))
-                candidate_sp_total_intervals = candidate_sp_index - (
-                    slots_crossed + int(candidate_overflow)
-                ) * num_sps
+                candidate_sp_total_intervals = candidate_sp_index - (slots_crossed + int(candidate_overflow)) * num_sps
 
                 checked_sp_total_iters = checked_sp_total_intervals * sp_interval_iters
                 candidate_ip_total_iters = (candidate_sp_total_intervals + extra_intervals) * sp_interval_iters + 1
