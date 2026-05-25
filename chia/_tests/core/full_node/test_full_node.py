@@ -58,7 +58,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import is_overflow_block
+from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
@@ -2368,6 +2368,86 @@ async def test_respond_signage_point_skips_cached_future_sp(
 
     cached_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof)
     assert await full_node_1.respond_signage_point(cached_request, peer) is None
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_respond_signage_point_from_same_slot_fork_is_not_banned(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+) -> None:
+    full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    base_blocks = bt.get_consecutive_blocks(1)
+    await full_node_1.full_node.add_block(base_blocks[-1], peer)
+
+    current_block = bt.get_consecutive_blocks(
+        1,
+        block_list_input=base_blocks,
+        seed=b"current",
+        min_signage_point=0,
+    )[-1]
+    fork_block = bt.get_consecutive_blocks(
+        1,
+        block_list_input=base_blocks,
+        seed=b"fork",
+        min_signage_point=int(current_block.reward_chain_block.signage_point_index),
+    )[-1]
+
+    current_index = current_block.reward_chain_block.signage_point_index
+    fork_index = fork_block.reward_chain_block.signage_point_index
+    base_peak = full_node_1.full_node.blockchain.block_record(current_block.prev_header_hash)
+    fork_sp_total_iters = uint128(
+        base_peak.ip_sub_slot_total_iters(bt.constants)
+        + calculate_sp_iters(bt.constants, base_peak.sub_slot_iters, fork_index)
+    )
+
+    assert current_block.prev_header_hash == fork_block.prev_header_hash
+    assert len(current_block.finished_sub_slots) == 0
+    assert len(fork_block.finished_sub_slots) == 0
+    assert current_index < fork_index
+    assert current_block.total_iters < fork_sp_total_iters
+
+    await full_node_1.full_node.add_block(current_block, peer)
+    peak = full_node_1.full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == current_block.header_hash
+
+    fork_sp = SignagePoint(
+        fork_block.reward_chain_block.challenge_chain_sp_vdf,
+        fork_block.challenge_chain_sp_proof,
+        fork_block.reward_chain_block.reward_chain_sp_vdf,
+        fork_block.reward_chain_sp_proof,
+    )
+    assert fork_sp.cc_vdf is not None
+    assert fork_sp.cc_proof is not None
+    assert fork_sp.rc_vdf is not None
+    assert fork_sp.rc_proof is not None
+
+    original_close = peer.close
+    close_calls: list[int] = []
+
+    async def tracking_close(
+        ban_time: int = 0,
+        ws_close_code: WSCloseCode = WSCloseCode.OK,
+        error: Err | None = None,
+    ) -> None:
+        close_calls.append(ban_time)
+        await original_close(ban_time, ws_close_code, error)
+
+    peer.close = tracking_close  # type: ignore[method-assign]
+
+    await full_node_1.respond_signage_point(
+        fnp.RespondSignagePoint(fork_index, fork_sp.cc_vdf, fork_sp.cc_proof, fork_sp.rc_vdf, fork_sp.rc_proof),
+        peer,
+    )
+
+    assert close_calls == []
+    assert full_node_1.full_node.full_node_store.in_future_sp_cache(fork_sp, fork_index)
 
 
 @pytest.mark.anyio
