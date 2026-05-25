@@ -313,13 +313,75 @@ async def test_get_peer_info(bt: BlockTools) -> None:
 
 class FakeConnection:
     connection_type: NodeType = NodeType.FULL_NODE
-    peer_node_id: bytes32 = bytes32(b"\x00" * 32)
 
-    def __init__(self, peer_info: PeerInfo) -> None:
+    def __init__(self, peer_info: PeerInfo, peer_node_id: bytes32 = bytes32(b"\x00" * 32), closed: bool = True) -> None:
         self.peer_info = peer_info
+        self.peer_node_id = peer_node_id
+        self.closed = closed
 
     def cancel_tasks(self) -> None:
         pass
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_garbage_collect_connections_tolerates_stale_closed_connections(
+    bt: BlockTools, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_config = bt.config["full_node"]
+    private_ca_crt, private_ca_key = private_ssl_ca_paths(bt.root_path, bt.config)
+    chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(bt.root_path, bt.config)
+    my_test_server = ChiaServer.create(
+        port=None,
+        node=None,
+        api=FullNodeAPI(None),  # type: ignore[arg-type]
+        local_type=NodeType.FULL_NODE,
+        ping_interval=0,
+        network_id="Fake",
+        root_path=bt.root_path,
+        capabilities=[],
+        outbound_rate_limit_percent=100,
+        inbound_rate_limit_percent=100,
+        config=test_config,
+        private_ca_crt_key=(private_ca_crt, private_ca_key),
+        chia_ca_crt_key=(chia_ca_crt, chia_ca_key),
+        stub_metadata_for_type={},
+        name="Hello",
+    )
+    missing_connection = FakeConnection(PeerInfo("10.1.1.1", 8444), bytes32(b"\x01" * 32))
+    stale_connection = FakeConnection(PeerInfo("10.1.1.2", 8444), bytes32(b"\x02" * 32))
+    replacement_connection = FakeConnection(stale_connection.peer_info, stale_connection.peer_node_id, closed=False)
+    remaining_connection = FakeConnection(PeerInfo("10.1.1.3", 8444), bytes32(b"\x03" * 32))
+    missing_wsc = cast(WSChiaConnection, missing_connection)
+    stale_wsc = cast(WSChiaConnection, stale_connection)
+    replacement_wsc = cast(WSChiaConnection, replacement_connection)
+    remaining_wsc = cast(WSChiaConnection, remaining_connection)
+    my_test_server.all_connections[missing_connection.peer_node_id] = missing_wsc
+    my_test_server.all_connections[stale_connection.peer_node_id] = stale_wsc
+    my_test_server.all_connections[remaining_connection.peer_node_id] = remaining_wsc
+    sleep_count = 0
+
+    async def sleep_one_iteration(_delay: float) -> None:
+        nonlocal sleep_count
+        sleep_count += 1
+        if sleep_count > 1:
+            raise asyncio.CancelledError
+
+    def change_stale_connections(_message: str) -> None:
+        if missing_connection.peer_node_id in my_test_server.all_connections:
+            my_test_server.all_connections.pop(missing_connection.peer_node_id)
+        elif my_test_server.all_connections.get(stale_connection.peer_node_id) is stale_wsc:
+            my_test_server.all_connections[stale_connection.peer_node_id] = replacement_wsc
+
+    monkeypatch.setattr(asyncio, "sleep", sleep_one_iteration)
+    monkeypatch.setattr(my_test_server.log, "debug", change_stale_connections)
+
+    with pytest.raises(asyncio.CancelledError):
+        await my_test_server.garbage_collect_connections_task()
+
+    assert missing_connection.peer_node_id not in my_test_server.all_connections
+    assert my_test_server.all_connections[stale_connection.peer_node_id] is replacement_wsc
+    assert remaining_connection.peer_node_id not in my_test_server.all_connections
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")

@@ -264,7 +264,9 @@ class ChiaServer:
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_info.host} due to inactivity")
                 if connection.closed:
-                    self.all_connections.pop(connection.peer_node_id)
+                    present_connection = self.all_connections.get(connection.peer_node_id)
+                    if present_connection is connection:
+                        self.all_connections.pop(connection.peer_node_id)
                 else:
                     await connection.close()
 

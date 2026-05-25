@@ -60,6 +60,7 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
 from chia.full_node.sync_store import Peak
@@ -573,6 +574,41 @@ async def test_timelord_inbound_connection(
     # Timelord from non-localhost, exempt network should be accepted
     server.exempt_peer_networks = [ip_network("8.8.8.0/24")]
     assert server.should_accept_inbound(NodeType.TIMELORD, "8.8.8.8") is True
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_send_peak_to_timelords_checks_post_hard_fork_from_peak(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_api, _server, _bt = one_node_one_block
+    full_node = full_node_api.full_node
+    peak_block = await full_node.blockchain.get_full_peak()
+    assert peak_block is not None
+    peak = full_node.blockchain.block_record(peak_block.header_hash)
+    captured_prev_hashes: list[bytes32] = []
+
+    def capture_post_hard_fork2(
+        constants: ConsensusConstants,
+        blocks: Any,
+        *,
+        prev_b_hash: bytes32,
+        sp_index: uint8,
+        finished_sub_slots: int,
+    ) -> bool:
+        captured_prev_hashes.append(prev_b_hash)
+        return False
+
+    async def noop_send_to_all(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(full_node_module, "post_hard_fork2", capture_post_hard_fork2)
+    monkeypatch.setattr(full_node.server, "send_to_all", noop_send_to_all)
+
+    await full_node.send_peak_to_timelords(peak_block)
+
+    assert captured_prev_hashes == [peak.header_hash]
 
 
 @pytest.mark.anyio
@@ -4001,6 +4037,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize("mismatch_cost", [True, False])
 @pytest.mark.parametrize("mismatch_fee", [True, False])
 @pytest.mark.parametrize("tx_already_seen", [True, False])
@@ -4082,8 +4119,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     async def send_from_node_3() -> None:
         await ws_con_3.send_message(msg)
 
-    for node in [full_node_1.full_node, full_node_2.full_node, full_node_3.full_node]:
-        await time_out_assert(5, node.synced)
+    for node_api in [full_node_1, full_node_2, full_node_3]:
+        await time_out_assert(5, lambda: node_height_at_least(node_api, blocks[-1].height))
     await asyncio.gather(send_from_node_2(), send_from_node_3())
     if mismatch_on_reannounce and (mismatch_cost or mismatch_fee):
         # Send a second NewTransaction that doesn't match the first
@@ -4102,7 +4139,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
         # hasn't seen the transaction before, it will issue a transaction
         # request. We need to wait until it receives the transaction and add it
         # to its mempool.
-        await time_out_assert(30, lambda: full_node_1.full_node.mempool_manager.seen(mempool_item.name))
+        await time_out_assert(
+            30, lambda: full_node_1.full_node.mempool_manager.get_spendbundle(mempool_item.name) is not None
+        )
     # Make sure the first full node has banned the second as the item it has
     # already seen has a different validation cost and/or fee than the one from
     # the NewTransaction message.

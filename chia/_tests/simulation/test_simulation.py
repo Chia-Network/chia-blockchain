@@ -67,6 +67,7 @@ class FakeDNSResolver:
         return []
 
 
+@pytest.mark.filterwarnings("ignore:unclosed:ResourceWarning")
 class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.anyio

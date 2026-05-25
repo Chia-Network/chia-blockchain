@@ -40,13 +40,14 @@ from packaging.version import Version
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -883,12 +884,22 @@ class FullNode:
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
+            post_hard_fork = post_hard_fork2(
+                self.constants,
+                self.blockchain,
+                prev_b_hash=peak.header_hash,
+                sp_index=peak.signage_point_index,
+                finished_sub_slots=len(peak.finished_challenge_slot_hashes)
+                if peak.finished_challenge_slot_hashes is not None
+                else 0,
+            )
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
                 peak.required_iters,
                 peak_block,
                 True,
+                post_hard_fork,
             )
             recent_rc = self.blockchain.get_recent_reward_challenges()
 
@@ -1118,9 +1129,8 @@ class FullNode:
             tb = traceback.format_exc()
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
-            if self._shut_down:
-                return None
-            await self._finish_sync(fork_point)
+            if not self._shut_down:
+                await self._finish_sync(fork_point)
 
     async def request_validate_wp(
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
@@ -1365,6 +1375,16 @@ class FullNode:
                         return None
                     peer, blocks = res
 
+                    # Keep the augmented chain's MMR snapshot aligned with the
+                    # underlying blockchain before validating each fetched
+                    # batch.
+                    # TODO: Consider per-batch AugmentedBlockchain instances.
+                    # The current sync pipeline shares one augmented overlay
+                    # across fetch/validate/ingest, so we refresh only the MMR
+                    # snapshot to avoid stale roots after ingest advances the
+                    # canonical chain.
+                    blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
+
                     # skip_blocks is only relevant at the start of the sync,
                     # to skip blocks we already have in the database (and have
                     # been validated). Once we start validating blocks, we
@@ -1581,6 +1601,10 @@ class FullNode:
     ) -> tuple[bool, StateChangeSummary | None]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
+
+        # Keep the augmented chain's MMR snapshot aligned with the underlying
+        # blockchain between batches.
+        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
 
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
@@ -2559,12 +2583,20 @@ class FullNode:
         else:
             height = uint32(self.blockchain.block_record(block.prev_header_hash).height + 1)
 
+        post_hard_fork = post_hard_fork2(
+            self.constants,
+            self.blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,
             self.blockchain,
             validate_result.required_iters,
             block,
             True,
+            post_hard_fork,
         )
 
         self.full_node_store.add_unfinished_block(height, block, validate_result)
@@ -2621,6 +2653,13 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
+        # MMR might be diffrent from the peak mmr depending on whether we have a new sub slot or new SP
+        header_mmr_root = self.blockchain.get_mmr_root_for_block(
+            block.prev_header_hash,
+            block.reward_chain_block.signage_point_index,
+            len(block.finished_sub_slots) > 0,
+        )
+
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
@@ -2628,6 +2667,7 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
+            header_mmr_root,
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
@@ -2744,7 +2784,7 @@ class FullNode:
             )
         )
 
-        block: FullBlock = unfinished_block_to_full_block(
+        block: FullBlock = unfinished_block_to_full_block_with_mmr(
             unfinished_block,
             request.challenge_chain_ip_vdf,
             request.challenge_chain_ip_proof,
@@ -2757,6 +2797,7 @@ class FullNode:
             self.blockchain,
             sp_total_iters,
             difficulty,
+            self.constants,
         )
         if not self.has_valid_pool_sig(block):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
