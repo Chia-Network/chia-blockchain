@@ -693,6 +693,7 @@ class Farmer:
                         ) as editable_pool_config:
                             editable_pool_config.pool_url = pool_info_result.new_pool_url
                             self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = editable_pool_config
+                        pool_config = editable_pool_config
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
