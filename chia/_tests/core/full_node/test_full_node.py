@@ -2322,6 +2322,55 @@ async def test_respond_signage_point_bans_invalid_vdf(
 
 
 @pytest.mark.anyio
+async def test_respond_signage_point_skips_cached_future_sp(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    empty_blockchain: Blockchain,
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
+    blocks = await full_node_1.get_all_full_blocks()
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
+    await full_node_1.full_node.add_block(blocks[-3])
+    await full_node_1.full_node.add_block(blocks[-2])
+    await full_node_1.full_node.add_block(blocks[-1])
+
+    second_blockchain = empty_blockchain
+    for block in blocks:
+        await _validate_and_add_block(second_blockchain, block)
+
+    peak_2 = second_blockchain.get_peak()
+    assert peak_2 is not None
+    sp = get_signage_point(
+        bt.constants,
+        second_blockchain,
+        peak_2,
+        peak_2.ip_sub_slot_total_iters(bt.constants),
+        uint8(4),
+        [],
+        peak_2.sub_slot_iters,
+    )
+    assert sp.cc_vdf is not None
+    assert sp.cc_proof is not None
+    assert sp.rc_vdf is not None
+    assert sp.rc_proof is not None
+
+    full_node_1.full_node.full_node_store.add_to_future_sp(sp, uint8(4))
+
+    def fail_new_signage_point(*args: object, **kwargs: object) -> None:
+        raise AssertionError("cached future SP should not be revalidated")
+
+    monkeypatch.setattr(full_node_1.full_node.full_node_store, "new_signage_point", fail_new_signage_point)
+
+    cached_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof)
+    assert await full_node_1.respond_signage_point(cached_request, peer) is None
+
+
+@pytest.mark.anyio
 async def test_slot_catch_up_genesis(
     setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     self_hostname: str,

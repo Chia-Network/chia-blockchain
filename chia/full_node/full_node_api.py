@@ -805,6 +805,14 @@ class FullNodeAPI:
             )
             if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
+            signage_point = SignagePoint(
+                request.challenge_chain_vdf,
+                request.challenge_chain_proof,
+                request.reward_chain_vdf,
+                request.reward_chain_proof,
+            )
+            if self.full_node.full_node_store.in_future_sp_cache(signage_point, request.index_from_challenge):
+                return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
                 next_sub_slot_iters = self.full_node.blockchain.get_next_sub_slot_iters_and_difficulty(
@@ -823,12 +831,7 @@ class FullNodeAPI:
                 self.full_node.blockchain,
                 self.full_node.blockchain.get_peak(),
                 next_sub_slot_iters,
-                SignagePoint(
-                    request.challenge_chain_vdf,
-                    request.challenge_chain_proof,
-                    request.reward_chain_vdf,
-                    request.reward_chain_proof,
-                ),
+                signage_point,
             )
 
             if result == SignagePointAddResult.ADDED:
