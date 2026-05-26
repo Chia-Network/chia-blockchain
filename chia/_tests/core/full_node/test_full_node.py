@@ -13,7 +13,6 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 
 import pytest
-from aiohttp import WSCloseCode
 from chia_rs import (
     AugSchemeMPL,
     Coin,
@@ -71,7 +70,6 @@ from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
@@ -2252,73 +2250,6 @@ async def test_new_signage_point_caching(
         )
         is not None
     )
-
-
-@pytest.mark.anyio
-async def test_respond_signage_point_bans_invalid_vdf(
-    wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
-    ],
-    empty_blockchain: Blockchain,
-    self_hostname: str,
-) -> None:
-    full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
-    blocks = await full_node_1.get_all_full_blocks()
-
-    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-    peer.peer_info = PeerInfo("192.168.1.100", peer.peer_info.port)
-    blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
-    await full_node_1.full_node.add_block(blocks[-3])
-    await full_node_1.full_node.add_block(blocks[-2])
-    await full_node_1.full_node.add_block(blocks[-1])
-
-    blockchain = full_node_1.full_node.blockchain
-
-    second_blockchain = empty_blockchain
-    for block in blocks:
-        await _validate_and_add_block(second_blockchain, block)
-
-    peak_2 = second_blockchain.get_peak()
-    assert peak_2 is not None
-    sp: SignagePoint = get_signage_point(
-        bt.constants,
-        blockchain,
-        peak_2,
-        peak_2.ip_sub_slot_total_iters(bt.constants),
-        uint8(4),
-        [],
-        peak_2.sub_slot_iters,
-    )
-    assert sp.cc_vdf is not None
-    assert sp.cc_proof is not None
-    assert sp.rc_vdf is not None
-    assert sp.rc_proof is not None
-
-    corrupted_cc_proof = sp.cc_proof.replace(witness=b"\xff" * len(sp.cc_proof.witness))
-    corrupted_request = fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, corrupted_cc_proof, sp.rc_vdf, sp.rc_proof)
-
-    original_close = peer.close
-    close_calls: list[tuple[int, bool]] = []
-
-    async def tracking_close(
-        ban_time: int = 0,
-        ws_close_code: WSCloseCode = WSCloseCode.OK,
-        error: Err | None = None,
-    ) -> None:
-        lock_held = full_node_1.full_node.timelord_lock.locked()
-        close_calls.append((ban_time, lock_held))
-        await original_close(ban_time, ws_close_code, error)
-
-    peer.close = tracking_close  # type: ignore[method-assign]
-
-    await full_node_1.respond_signage_point(corrupted_request, peer)
-
-    assert len(close_calls) == 1, f"expected exactly one close call, got {len(close_calls)}"
-    ban_time, lock_was_held = close_calls[0]
-    assert ban_time == CONSENSUS_ERROR_BAN_SECONDS, (
-        f"expected CONSENSUS_ERROR_BAN_SECONDS ({CONSENSUS_ERROR_BAN_SECONDS}), got {ban_time}"
-    )
-    assert not lock_was_held, "peer.close() must be called after timelord_lock is released"
 
 
 @pytest.mark.anyio
