@@ -49,7 +49,7 @@ aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = ">=4.6.2.post1"
 bitstring = ">=4.4.0"  # Binary data management library
-boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
+boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
@@ -67,7 +67,7 @@ dnslib = ">=0.9.25"  # dns lib
 dnspython = ">=2.6.1"  # Query DNS seeds
 filelock = ">=3.29.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = ">=25.5.0"  # Store keys in MacOS Keychain, Windows Credential Locker
-packaging = ">=24.0"
+packaging = ">=26.2"
 pip = ">=26.1.1"
 psutil = ">=6.1.0"
 pyyaml = ">=6.0.2"  # Used for config file format
