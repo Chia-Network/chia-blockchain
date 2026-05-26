@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import click
 import colorama
@@ -21,24 +21,19 @@ DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
 
 def get_passphrase_prompt(keyring_file: str) -> str:
-    # casting since the colors are Any
-    prompt = cast(
-        str,
-        (
-            colorama.Fore.YELLOW
-            + colorama.Style.BRIGHT
-            + "(Unlock Keyring: "
-            + colorama.Fore.MAGENTA
-            + keyring_file
-            + colorama.Style.RESET_ALL
-            + colorama.Fore.YELLOW
-            + colorama.Style.BRIGHT
-            + ")"
-            + colorama.Style.RESET_ALL
-            + " Passphrase: "
-        ),
+    return (
+        colorama.Fore.YELLOW
+        + colorama.Style.BRIGHT
+        + "(Unlock Keyring: "
+        + colorama.Fore.MAGENTA
+        + keyring_file
+        + colorama.Style.RESET_ALL
+        + colorama.Fore.YELLOW
+        + colorama.Style.BRIGHT
+        + ")"
+        + colorama.Style.RESET_ALL
+        + " Passphrase: "
     )
-    return prompt
 
 
 @click.command()
