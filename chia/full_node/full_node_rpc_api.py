@@ -31,7 +31,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
-from chia.types.generator_types import BlockGenerator, NewBlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator, generator_ref_list
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
@@ -522,7 +522,7 @@ class FullNodeRpcApi:
             get_spends_for_trusted_block,
             self.service.constants,
             block_generator.program,
-            block_generator.generator_refs,
+            generator_ref_list(block_generator.generator_refs),
             flags,
             nice=(5,),
             dedicated=True,
@@ -552,7 +552,7 @@ class FullNodeRpcApi:
             get_spends_for_trusted_block_with_conditions,
             self.service.constants,
             block_generator.program,
-            block_generator.generator_refs,
+            generator_ref_list(block_generator.generator_refs),
             flags,
             nice=(5,),
             dedicated=True,
@@ -881,7 +881,7 @@ class FullNodeRpcApi:
             flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=block)
             puzzle, solution = get_puzzle_and_solution_for_coin(
                 block_generator.program,
-                block_generator.generator_refs,
+                generator_ref_list(block_generator.generator_refs),
                 self.service.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
                 flags,
@@ -1004,7 +1004,7 @@ class FullNodeRpcApi:
                 err, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
                     bytes(gen.program),
-                    gen.generator_refs,
+                    generator_ref_list(gen.generator_refs),
                     self.service.constants.MAX_BLOCK_COST_CLVM,
                     MEMPOOL_MODE,
                     gen.signature,

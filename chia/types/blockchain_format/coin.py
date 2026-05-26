@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -23,4 +25,4 @@ def hash_coin_ids(coin_ids: list[bytes32]) -> bytes32:
     for name in coin_ids:
         buffer.extend(name)
 
-    return std_hash(buffer, skip_bytes_conversion=True)
+    return std_hash(cast(bytes, buffer), skip_bytes_conversion=True)

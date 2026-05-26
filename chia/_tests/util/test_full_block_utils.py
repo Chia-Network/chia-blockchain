@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import random
 from collections.abc import Iterator
+from typing import cast
 
 import pytest
 from chia_rs import (
@@ -331,9 +332,9 @@ async def test_parser(shard: int) -> None:
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
         # this doubles the run-time of this test, with questionable utility
         if gen is None:
-            assert FullBlock.from_bytes(block_bytes).transactions_generator is None
+            assert FullBlock.from_bytes(cast(bytes, block_bytes)).transactions_generator is None
         else:
-            assert Program.from_bytes(gen) == FullBlock.from_bytes(block_bytes).transactions_generator
+            assert Program.from_bytes(gen) == FullBlock.from_bytes(cast(bytes, block_bytes)).transactions_generator
 
 
 @pytest.mark.anyio

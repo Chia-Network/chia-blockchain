@@ -68,7 +68,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.fee_rate import FeeRate
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
 from chia.util.casts import int_to_bytes
@@ -3355,7 +3355,7 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
     flags = get_flags_for_height_and_constants(height, test_constants)
     err, conds = run_block_generator2(
         bytes(generator.program),
-        generator.generator_refs,
+        generator_ref_list(generator.generator_refs),
         test_constants.MAX_BLOCK_COST_CLVM,
         flags,
         generator.signature,
@@ -3402,7 +3402,7 @@ def test_create_block_generator(old: bool) -> None:
 
     err, conds = run_block_generator2(
         bytes(generator.program),
-        generator.generator_refs,
+        generator_ref_list(generator.generator_refs),
         test_constants.MAX_BLOCK_COST_CLVM,
         0,
         generator.signature,

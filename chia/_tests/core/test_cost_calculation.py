@@ -20,7 +20,7 @@ from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
@@ -88,7 +88,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
     puzzle, solution = get_puzzle_and_solution_for_coin(
         program.program,
-        program.generator_refs,
+        generator_ref_list(program.generator_refs),
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin_spend.coin,
         get_flags_for_height_and_constants(softfork_height, bt.constants),
@@ -171,7 +171,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     )
     puz, _solution = get_puzzle_and_solution_for_coin(
         generator.program,
-        generator.generator_refs,
+        generator_ref_list(generator.generator_refs),
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin,
         get_flags_for_height_and_constants(0, bt.constants),
@@ -319,7 +319,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
             for c in spent_coins:
                 puz, _solution = get_puzzle_and_solution_for_coin(
                     generator.program,
-                    generator.generator_refs,
+                    generator_ref_list(generator.generator_refs),
                     test_constants.MAX_BLOCK_COST_CLVM,
                     c,
                     get_flags_for_height_and_constants(0, test_constants),

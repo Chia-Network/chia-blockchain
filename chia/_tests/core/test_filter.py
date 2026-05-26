@@ -22,7 +22,7 @@ async def test_basic_filter_test(simulator_and_wallet: OldSimulatorsAndWallets) 
         farmer_reward_puzzle_hash=ph,
     )
     for i in range(1, num_blocks):
-        byte_array_tx: list[bytes] = []
+        byte_array_tx: list[bytearray] = []
         block = blocks[i]
         coins = block.get_included_reward_coins()
         coin_0 = bytearray(coins[0].puzzle_hash)

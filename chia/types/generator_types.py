@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 from chia_rs import Coin, G2Element
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.streamable import Streamable, streamable
+
+GeneratorRefList = list[bytes | bytearray | memoryview]
+
+
+def generator_ref_list(refs: list[bytes]) -> GeneratorRefList:
+    return cast(GeneratorRefList, refs)
 
 
 # This holds what we need to pre validate a block generator

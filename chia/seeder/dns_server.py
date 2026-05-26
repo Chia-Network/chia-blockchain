@@ -12,7 +12,7 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from types import FrameType
-from typing import Any
+from typing import Any, cast
 
 import aiosqlite
 import dns.asyncresolver
@@ -178,7 +178,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 self.buffer = self.buffer[self.expected_length :]  # Remove the message from the buffer
                 self.expected_length = 0  # Reset the expected length
 
-                dns_request: DNSRecord | None = parse_dns_request(message)
+                dns_request: DNSRecord | None = parse_dns_request(cast(bytes, message))
                 if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
                     self.transport.close()
                     return

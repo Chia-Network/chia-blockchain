@@ -15,7 +15,7 @@ from chia_rs import (
 )
 from chia_rs.sized_ints import uint16, uint32
 
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.util.errors import Err
 from chia.util.streamable import Streamable, streamable
 
@@ -52,7 +52,9 @@ def get_name_puzzle_conditions(
 
     try:
         block_args = generator.generator_refs
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, G2Element(), None, constants)
+        err, result = run_block(
+            bytes(generator.program), generator_ref_list(block_args), max_cost, flags, G2Element(), None, constants
+        )
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)

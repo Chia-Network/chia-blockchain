@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import struct
 from pathlib import Path
+from typing import cast
 
 import pytest
 from chia_rs import SubEpochSummary
@@ -170,7 +171,7 @@ class TestBlockHeightMap:
                 idx = i * 32
                 heights[idx : idx + 32] = bytes([i % 256] * 32)
 
-            await write_file_async(tmp_dir / "height-to-hash", heights)
+            await write_file_async(tmp_dir / "height-to-hash", cast(bytes, heights))
 
             ses_cache = []
             for i in range(0, 900, 19):
@@ -447,7 +448,7 @@ class TestBlockHeightMap:
             for i in range(900):
                 idx = i * 32
                 heights[idx : idx + 32] = bytes([i % 256] * 32)
-            await write_file_async(tmp_dir / "height-to-hash", heights)
+            await write_file_async(tmp_dir / "height-to-hash", cast(bytes, heights))
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20)
             await BlockHeightMap.create(tmp_dir, db_wrapper)
