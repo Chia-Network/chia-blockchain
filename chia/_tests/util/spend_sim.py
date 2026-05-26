@@ -35,7 +35,7 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.util.db_wrapper import DBWrapper2
@@ -449,7 +449,7 @@ class SimClient:
         assert coin_record is not None
         puzzle, solution = get_puzzle_and_solution_for_coin(
             generator.program,
-            generator.generator_refs,
+            generator_ref_list(generator.generator_refs),
             self.service.defaults.MAX_BLOCK_COST_CLVM,
             coin_record.coin,
             get_flags_for_height_and_constants(height, self.service.defaults),

@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 from contextlib import AbstractAsyncContextManager
+from typing import cast
 
 import aiosqlite
 import typing_extensions
@@ -267,7 +268,7 @@ class BlockStore:
                 # this is defensive, on the off-chance that
                 # block_info_from_block() fails, fall back to the reliable
                 # definition of parsing a block
-                b = FullBlock.from_bytes(block_bytes)
+                b = FullBlock.from_bytes(cast(bytes, block_bytes))
                 return GeneratorBlockInfo(
                     b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
                 )
@@ -291,7 +292,7 @@ class BlockStore:
                 # this is defensive, on the off-chance that
                 # generator_from_block() fails, fall back to the reliable
                 # definition of parsing a block
-                b = FullBlock.from_bytes(block_bytes)
+                b = FullBlock.from_bytes(cast(bytes, block_bytes))
                 return None if b.transactions_generator is None else bytes(b.transactions_generator)
 
     async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]:
@@ -314,7 +315,7 @@ class BlockStore:
                         # this is defensive, on the off-chance that
                         # generator_from_block() fails, fall back to the reliable
                         # definition of parsing a block
-                        b = FullBlock.from_bytes(block_bytes)
+                        b = FullBlock.from_bytes(cast(bytes, block_bytes))
                         gen = None if b.transactions_generator is None else bytes(b.transactions_generator)
                     if gen is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)

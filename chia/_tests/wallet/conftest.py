@@ -24,6 +24,7 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.types.generator_types import generator_ref_list
 from chia.types.peer_info import PeerInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
@@ -94,7 +95,7 @@ async def ignore_block_validation(
             run_block = run_block_generator
         err, conds = run_block(
             bytes(block.transactions_generator),
-            prev_generators,
+            generator_ref_list(prev_generators),
             block.transactions_info.cost,
             flags,
             block.transactions_info.aggregated_signature,

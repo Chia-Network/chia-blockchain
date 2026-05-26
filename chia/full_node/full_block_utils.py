@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
 from chia_rs.sized_bytes import bytes32
@@ -272,17 +273,17 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
     if buf[0] != 0:
         buf = buf[1:]
         length = serialized_length(buf)
-        generator = SerializedProgram.from_bytes(bytes(buf[:length]))
+        generator = SerializedProgram.from_bytes(cast(bytes, buf[:length]))
         buf = buf[length:]
     else:
         buf = buf[1:]
 
-    refs_length = uint32.from_bytes(buf[:4])
+    refs_length = uint32.from_bytes(cast(bytes, buf[:4]))
     buf = buf[4:]
 
     refs = []
     for i in range(refs_length):
-        refs.append(uint32.from_bytes(buf[:4]))
+        refs.append(uint32.from_bytes(cast(bytes, buf[:4])))
         buf = buf[4:]
 
     return GeneratorBlockInfo(prev_hash, generator, refs)
@@ -349,7 +350,7 @@ def get_height_and_tx_status_from_block(buf: memoryview) -> tuple[uint32, bool]:
     reward_chain_block_buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     # Get the block height from reward_chain_block_buf
     height_buf = skip_uint128(reward_chain_block_buf)  # weight
-    height = uint32.from_bytes(height_buf[:4])
+    height = uint32.from_bytes(cast(bytes, height_buf[:4]))
     # Let's continue down to transactions_info
     buf = skip_reward_chain_block(reward_chain_block_buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof

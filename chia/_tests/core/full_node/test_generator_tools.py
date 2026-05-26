@@ -15,7 +15,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.util.hash import std_hash
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
@@ -110,7 +110,7 @@ TEST_GENERATOR = BlockGenerator(
 
 def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
-        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+        test_constants, TEST_GENERATOR.program, generator_ref_list(TEST_GENERATOR.generator_refs), 100
     )
     assert conditions["block_spends"] == [
         CoinSpend(
@@ -127,7 +127,7 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block_with_conditions(
-        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+        test_constants, TEST_GENERATOR.program, generator_ref_list(TEST_GENERATOR.generator_refs), 100
     )
     assert len(conditions) == 1
     assert conditions[0]["coin_spend"] == CoinSpend(

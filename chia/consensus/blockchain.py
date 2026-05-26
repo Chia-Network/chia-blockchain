@@ -41,7 +41,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
@@ -288,7 +288,7 @@ class Blockchain:
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
                 bytes(block.transactions_generator),
-                block_generator.generator_refs,
+                generator_ref_list(block_generator.generator_refs),
                 flags,
                 self.constants,
             )

@@ -248,7 +248,7 @@ async def process_plotnft_create(
         [
             WalletStateTransition(
                 pre_block_balance_updates=pre_block_balance_updates,
-                post_block_balance_updates=post_block,  # type: ignore[arg-type]
+                post_block_balance_updates=post_block,
             )
         ]
     )

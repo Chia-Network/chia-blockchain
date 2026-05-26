@@ -7,7 +7,7 @@ import logging
 import re
 from operator import attrgetter
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
@@ -664,50 +664,56 @@ async def test_create_signed_transaction(
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "unconfirmed_wallet_balance": -xch_delta,
-                        "<=#spendable_balance": -xch_delta,
-                        "<=#max_send_amount": -xch_delta,
-                        ">=#pending_change": 0,
-                        "pending_coin_removal_count": 1,
-                    }
-                }
-                | (
+                pre_block_balance_updates=cast(
+                    dict[int | str, dict[str, int]],
                     {
-                        "cat": {  # type: ignore[dict-item]
-                            "unconfirmed_wallet_balance": -cat_delta,
-                            "<=#spendable_balance": -cat_delta,
-                            "<=#max_send_amount": -cat_delta,
-                            ">=#pending_change": 1 if is_cat else 0,
-                            "pending_coin_removal_count": 1 if is_cat else 0,
+                        "xch": {
+                            "unconfirmed_wallet_balance": -xch_delta,
+                            "<=#spendable_balance": -xch_delta,
+                            "<=#max_send_amount": -xch_delta,
+                            ">=#pending_change": 0,
+                            "pending_coin_removal_count": 1,
                         }
                     }
-                    if is_cat
-                    else {}
+                    | (
+                        {
+                            "cat": {
+                                "unconfirmed_wallet_balance": -cat_delta,
+                                "<=#spendable_balance": -cat_delta,
+                                "<=#max_send_amount": -cat_delta,
+                                ">=#pending_change": 1 if is_cat else 0,
+                                "pending_coin_removal_count": 1 if is_cat else 0,
+                            }
+                        }
+                        if is_cat
+                        else {}
+                    ),
                 ),
-                post_block_balance_updates={
-                    "xch": {
-                        "confirmed_wallet_balance": -xch_delta,
-                        ">=#spendable_balance": 0,
-                        ">=#max_send_amount": 0,
-                        "<=#pending_change": 0,
-                        "pending_coin_removal_count": -1,
-                        "<=#unspent_coin_count": 0,
-                    }
-                }
-                | (
+                post_block_balance_updates=cast(
+                    dict[int | str, dict[str, int]],
                     {
-                        "cat": {  # type: ignore[dict-item]
-                            "confirmed_wallet_balance": -cat_delta,
-                            ">=#spendable_balance": 1 if is_cat else 0,
-                            ">=#max_send_amount": 1 if is_cat else 0,
-                            "<=#pending_change": -1 if is_cat else 0,
-                            "pending_coin_removal_count": -1 if is_cat else 0,
+                        "xch": {
+                            "confirmed_wallet_balance": -xch_delta,
+                            ">=#spendable_balance": 0,
+                            ">=#max_send_amount": 0,
+                            "<=#pending_change": 0,
+                            "pending_coin_removal_count": -1,
+                            "<=#unspent_coin_count": 0,
                         }
                     }
-                    if is_cat
-                    else {}
+                    | (
+                        {
+                            "cat": {
+                                "confirmed_wallet_balance": -cat_delta,
+                                ">=#spendable_balance": 1 if is_cat else 0,
+                                ">=#max_send_amount": 1 if is_cat else 0,
+                                "<=#pending_change": -1 if is_cat else 0,
+                                "pending_coin_removal_count": -1 if is_cat else 0,
+                            }
+                        }
+                        if is_cat
+                        else {}
+                    ),
                 ),
             ),
             WalletStateTransition(

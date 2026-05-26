@@ -24,7 +24,7 @@ async def test_timelord_has_no_server(timelord_service: TimelordService) -> None
 class _NullTransport(asyncio.Transport):
     _closing = False
 
-    def write(self, data: bytes) -> None:
+    def write(self, data: bytes | bytearray | memoryview) -> None:
         pass
 
     def close(self) -> None:

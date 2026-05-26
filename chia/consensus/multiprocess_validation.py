@@ -32,7 +32,7 @@ from chia.consensus.pot_iterations import (
     validate_pospace_and_get_required_iters,
 )
 from chia.types.blockchain_format.coin import Coin
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, generator_ref_list
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 from chia.util.priority_thread_pool_executor import Executor, _SupportsLessThan
@@ -69,7 +69,7 @@ def _run_block(
         run_block = run_block_generator
     return run_block(
         bytes(block.transactions_generator),
-        prev_generators,
+        generator_ref_list(prev_generators),
         block.transactions_info.cost,
         flags,
         block.transactions_info.aggregated_signature,
