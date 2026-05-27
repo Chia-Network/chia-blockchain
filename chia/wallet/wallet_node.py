@@ -102,6 +102,7 @@ class Balance(Streamable):
     pending_coin_removal_count: uint32 = uint32(0)
 
 
+<<<<<<< HEAD
 async def request_and_validate_header_block(
     peer: WSChiaConnection, height: uint32, log: logging.Logger
 ) -> HeaderBlock | None:
@@ -127,6 +128,8 @@ async def request_and_validate_header_block(
     return header_block
 
 
+=======
+>>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -1533,6 +1536,7 @@ class WalletNode:
         # request header block for created height
         state_block: HeaderBlock | None = peer_request_cache.get_block(confirmed_height)
         if state_block is None or reorg_mode:
+<<<<<<< HEAD
             state_block = await request_and_validate_header_block(peer, confirmed_height, self.log)
             if state_block is None:
                 return False
@@ -1540,6 +1544,17 @@ class WalletNode:
         if state_block.foliage_transaction_block is None:
             return False
         # get proof of inclusion
+=======
+            state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
+            if state_blocks is None:
+                return False
+            state_block = state_blocks[0]
+            assert state_block is not None
+            peer_request_cache.add_to_blocks(state_block)
+
+        # get proof of inclusion
+        assert state_block.foliage_transaction_block is not None
+>>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
         validate_additions_result = await request_and_validate_additions(
             peer,
             peer_request_cache,
@@ -1568,11 +1583,25 @@ class WalletNode:
             if spent_height is None and current.spent_block_height != 0:
                 # Peer is telling us that coin that was previously known to be spent is not spent anymore
                 # Check old state
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, current.spent_block_height, self.log)
                 if spent_state_block is None:
                     return False
                 peer_request_cache.add_to_blocks(spent_state_block)
                 assert spent_state_block.foliage_transaction_block is not None
+=======
+
+                spent_state_blocks: list[HeaderBlock] | None = await request_header_blocks(
+                    peer, current.spent_block_height, current.spent_block_height
+                )
+                if spent_state_blocks is None:
+                    return False
+                spent_state_block = spent_state_blocks[0]
+                assert spent_state_block.height == current.spent_block_height
+                assert spent_state_block.foliage_transaction_block is not None
+                peer_request_cache.add_to_blocks(spent_state_block)
+
+>>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
                 validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
@@ -1594,6 +1623,7 @@ class WalletNode:
             # request header block for created height
             cached_spent_state_block = peer_request_cache.get_block(spent_height)
             if cached_spent_state_block is None:
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, spent_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1602,6 +1632,19 @@ class WalletNode:
                 spent_state_block = cached_spent_state_block
             if spent_state_block.foliage_transaction_block is None:
                 return False
+=======
+                spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
+                if spent_state_blocks is None:
+                    return False
+                spent_state_block = spent_state_blocks[0]
+                assert spent_state_block.height == spent_height
+                assert spent_state_block.foliage_transaction_block is not None
+                peer_request_cache.add_to_blocks(spent_state_block)
+            else:
+                spent_state_block = cached_spent_state_block
+            assert spent_state_block is not None
+            assert spent_state_block.foliage_transaction_block is not None
+>>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,

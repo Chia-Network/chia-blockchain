@@ -178,7 +178,11 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Setup Node per .nvmrc in GUI
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
