@@ -100,6 +100,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: aws-actions/configure-aws-credentials@v6.1.1
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -110,6 +111,9 @@ jobs:
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
+=======
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+>>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2

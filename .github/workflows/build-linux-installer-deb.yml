@@ -97,6 +97,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
 =======
         uses: actions/setup-node@v6.3.0
@@ -107,6 +108,9 @@ jobs:
 =======
         uses: actions/setup-node@v6.3.0
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
