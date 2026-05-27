@@ -8,20 +8,11 @@ from dataclasses import replace
 from typing import Any
 
 import pytest
-from chia_rs import (
-    DONT_VALIDATE_SIGNATURE,
-    ConsensusConstants,
-    FullBlock,
-    SpendBundleConditions,
-    get_flags_for_height_and_constants,
-    run_block_generator,
-    run_block_generator2,
-)
+from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
-from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
@@ -44,94 +35,8 @@ def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def ignore_block_validation(
-    request: pytest.FixtureRequest,
-    monkeypatch: pytest.MonkeyPatch,
-    # https://anyio.readthedocs.io/en/stable/testing.html#asynchronous-fixtures
-    anyio_backend: str,
-) -> None:
-    """
-    This fixture exists to patch the existing BlockTools with WalletBlockTools and to patch existing code to work with
-    simplified blocks. This is done as a step towards the separation of the wallet into its own self contained project.
-
-    Many consensus concepts are irrelevant when testing wallet code which generally only cares about the mempool's
-    acceptance of its spends and notifications of new representations of the coin set.  One day, it would be good to
-    patch away the full node entirely in favor of the bare minimum logic to emulate the two features above.
-
-    In addition, making truly consensus valid blocks is often slow so shortcutting the logic makes wallet tests as of
-    today (3/4/24) about ~30% faster.
-    """
-    if "standard_block_tools" in request.keywords:
-        return None
-
-    async def validate_block_body(*args: Any, **kwargs: Any) -> None:
-        return None
-
-    def create_wrapper(original_create: Any) -> Any:
-        async def new_create(*args: Any, **kwargs: Any) -> Any:
-            # Modify the config argument directly since it's a mutable dictionary
-            if "config" in kwargs:
-                kwargs["config"]["single_threaded"] = True
-            else:  # pragma: no cover
-                # Nowhere covers this line right now but its entirely possible
-                args[0]["single_threaded"] = True
-
-            # Call the original function with modified arguments
-            full_node = await original_create(*args, **kwargs)
-            return full_node
-
-        return new_create
-
-    def run_block(
-        block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-    ) -> tuple[int | None, SpendBundleConditions | None]:
-        assert block.transactions_generator is not None
-        assert block.transactions_info is not None
-        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
-        if block.height >= constants.HARD_FORK_HEIGHT:
-            run_block = run_block_generator2
-        else:
-            run_block = run_block_generator
-        err, conds = run_block(
-            bytes(block.transactions_generator),
-            prev_generators,
-            block.transactions_info.cost,
-            flags,
-            block.transactions_info.aggregated_signature,
-            None,
-            constants,
-        )
-        # pretend that the signatures are OK
-        if conds is not None:
-            conds = conds.replace(validated_signature=True)
-        return err, conds
-
-    monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
-    monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
-    monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
-    monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", run_block)
-    monkeypatch.setattr(
-        "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)
-    )
-    monkeypatch.setattr(
-        "chia.wallet.wallet_blockchain.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
-    )
-    monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
-    )
-    monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters", lambda *_, **__: uint64(0)
-    )
-    monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
-    monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
-    monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_sp_iters", lambda *_: uint64(0))
-    monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.calculate_ip_iters", lambda *_: uint64(0))
-    monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_sub_slot_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.consensus.difficulty_adjustment._get_next_difficulty", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.full_node.full_node_store.calculate_sp_interval_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.consensus.pot_iterations.calculate_sp_interval_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia.consensus.pot_iterations.calculate_ip_iters", lambda *_: uint64(1))
-    monkeypatch.setattr("chia_rs.BlockRecord.sp_sub_slot_total_iters", lambda *_: uint64(1))
+async def _use_wallet_block_tools(ignore_block_validation: None) -> None:
+    """Activate simplified block creation (WalletBlockTools) for all wallet tests."""
 
 
 @pytest.fixture(scope="function", params=[True, False])
