@@ -17,6 +17,12 @@ from chia.timelord.types import Chain, IterationType, StateType
 log = logging.getLogger(__name__)
 
 
+def overflow_sp_total_iters(
+    overflow_ip_total_iters: int, ip_iters: uint64, sp_iters: uint64, sub_slot_iters: uint64
+) -> int:
+    return overflow_ip_total_iters - int(ip_iters) + int(sp_iters) - int(sub_slot_iters)
+
+
 class TimelordAPI:
     if TYPE_CHECKING:
         from chia.apis.timelord_stub import TimelordApiStub
@@ -153,13 +159,26 @@ class TimelordAPI:
                 return None
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
-                if self.timelord.last_state.state_type == StateType.END_OF_SUB_SLOT:
-                    overflow_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
-                    if overflow_iters:
-                        self._schedule_unfinished_block(new_unfinished_block, overflow_iters)
-                        log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
-                elif new_unfinished_block.reward_chain_block.total_iters <= self.timelord.last_state.get_total_iters():
+                current_total_iters = int(self.timelord.last_state.get_total_iters())
+                overflow_ip_total_iters = int(new_unfinished_block.reward_chain_block.total_iters)
+                # If the IP is already behind us, this overflow block can only block future peaks.
+                if overflow_ip_total_iters <= current_total_iters:
                     log.debug(f"Dropping stale overflow unfinished block, total {self.timelord.total_unfinished}")
+                elif self.timelord.last_state.state_type == StateType.END_OF_SUB_SLOT:
+                    # Schedule late overflow only when this EOS is between its SP and IP.
+                    if (
+                        overflow_sp_total_iters(
+                            overflow_ip_total_iters, ip_iters, sp_iters, self.timelord.last_state.get_sub_slot_iters()
+                        )
+                        < current_total_iters
+                    ):
+                        overflow_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                        if overflow_iters:
+                            self._schedule_unfinished_block(new_unfinished_block, overflow_iters)
+                            log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
+                    else:
+                        self.timelord.overflow_blocks.append(new_unfinished_block)
+                        log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
                 else:
                     self.timelord.overflow_blocks.append(new_unfinished_block)
                     log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")

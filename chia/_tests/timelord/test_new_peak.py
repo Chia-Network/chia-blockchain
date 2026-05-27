@@ -18,7 +18,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.wallet_tools import WalletTool
-from chia.timelord.timelord_api import TimelordAPI
+from chia.timelord.timelord_api import TimelordAPI, overflow_sp_total_iters
 
 
 def last_unfinished(tl: TimelordAPI, *, overflow: bool) -> timelord_protocol.NewUnfinishedBlockTimelord:
@@ -26,6 +26,39 @@ def last_unfinished(tl: TimelordAPI, *, overflow: bool) -> timelord_protocol.New
         return tl.timelord.overflow_blocks[-1]
     else:
         return tl.timelord.unfinished_blocks[-1]
+
+
+@pytest.mark.parametrize(
+    "overflow_ip_total_iters, ip_iters, sp_iters, sub_slot_iters, expected_sp_total_iters",
+    [
+        (1050, uint64(50), uint64(900), uint64(1000), 900),
+        (5050, uint64(50), uint64(900), uint64(1000), 4900),
+        (9999, uint64(999), uint64(960), uint64(1000), 8960),
+        (2**80 + 90, uint64(90), uint64(2**20 - 1), uint64(2**20), 2**80 - 1),
+    ],
+)
+def test_overflow_sp_total_iters(
+    overflow_ip_total_iters: int,
+    ip_iters: uint64,
+    sp_iters: uint64,
+    sub_slot_iters: uint64,
+    expected_sp_total_iters: int,
+) -> None:
+    assert (
+        overflow_sp_total_iters(overflow_ip_total_iters, ip_iters, sp_iters, sub_slot_iters) == expected_sp_total_iters
+    )
+
+
+def test_overflow_sp_total_iters_uses_previous_slot() -> None:
+    overflow_ip_total_iters = 5050
+    ip_iters = uint64(50)
+    sp_iters = uint64(900)
+    sub_slot_iters = uint64(1000)
+
+    ip_slot_start_total_iters = overflow_ip_total_iters - int(ip_iters)
+
+    assert ip_slot_start_total_iters == 5000
+    assert overflow_sp_total_iters(overflow_ip_total_iters, ip_iters, sp_iters, sub_slot_iters) == 4900
 
 
 class TestNewPeak:
