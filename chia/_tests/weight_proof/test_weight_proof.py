@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
+import random
+from types import SimpleNamespace
+from typing import Any, cast
+
 import pytest
 from chia_rs import (
     BlockRecord,
@@ -13,6 +18,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
+import chia.full_node.weight_proof as weight_proof_module
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -22,12 +28,74 @@ from chia.consensus.pot_iterations import validate_pospace_and_get_required_iter
 from chia.full_node.weight_proof import (
     WeightProofHandler,
     _map_sub_epoch_summaries,
+    _max_sub_epoch_segments,
     _validate_summaries_weight,
 )
 from chia.full_node.weight_proof import (
     __validate_pospace as _validate_pospace_impl,
 )
 from chia.simulator.block_tools import BlockTools
+
+
+def test_max_sub_epoch_segments_mainnet() -> None:
+    constants = cast(
+        ConsensusConstants,
+        SimpleNamespace(SUB_EPOCH_BLOCKS=384, MIN_BLOCKS_PER_CHALLENGE_BLOCK=16),
+    )
+    assert _max_sub_epoch_segments(constants) == 25
+
+
+def test_validate_sub_epoch_segments_rejects_excess_segments(monkeypatch: pytest.MonkeyPatch) -> None:
+    genesis = bytes32(b"\x00" * 32)
+    max_segs = 3
+    excess_segments = [SimpleNamespace(sub_epoch_n=0) for _ in range(max_segs + 1)]
+
+    class DummySubEpochSegments:
+        def __init__(self, challenge_segments: list[SimpleNamespace]) -> None:
+            self.challenge_segments = challenge_segments
+
+        @classmethod
+        def from_bytes(cls, _blob: bytes) -> DummySubEpochSegments:
+            return cls(excess_segments)
+
+    monkeypatch.setattr(
+        weight_proof_module,
+        "summaries_from_bytes",
+        lambda _summaries_bytes: [SimpleNamespace(reward_chain_hash=genesis)],
+    )
+    monkeypatch.setattr(weight_proof_module, "SubEpochSegments", DummySubEpochSegments)
+    monkeypatch.setattr(
+        weight_proof_module,
+        "map_segments_by_sub_epoch",
+        lambda _segments: {0: excess_segments},
+    )
+    monkeypatch.setattr(weight_proof_module, "_get_curr_diff_ssi", lambda *_args: (1, 1))
+    monkeypatch.setattr(weight_proof_module, "_max_sub_epoch_segments", lambda _constants: max_segs)
+
+    result = weight_proof_module._validate_sub_epoch_segments(
+        constants=cast(
+            ConsensusConstants,
+            SimpleNamespace(
+                GENESIS_CHALLENGE=genesis,
+                SUB_SLOT_ITERS_STARTING=1,
+                SUB_EPOCH_BLOCKS=384,
+                MAX_SUB_SLOT_BLOCKS=128,
+                MIN_BLOCKS_PER_CHALLENGE_BLOCK=16,
+            ),
+        ),
+        rng=cast(random.Random, SimpleNamespace(choice=lambda seq: 0)),
+        weight_proof_bytes=b"weight-proof",
+        summaries_bytes=[b"summaries"],
+        height=uint32(0),
+    )
+
+    assert result is None
+
+
+class FakeWeightProof:
+    def __init__(self) -> None:
+        self.sub_epochs: list[object] = [object()]
+        self.recent_chain_data: list[Any] = []
 
 
 async def load_blocks_dont_validate(
@@ -174,6 +242,36 @@ class TestWeightProof:
         )
         wp = await wpf.get_proof_of_weight(bytes32(b"a" * 32))
         assert wp is None
+
+    @pytest.mark.anyio
+    async def test_weight_proof_rejects_fewer_than_two_summaries_single_proc(
+        self, blockchain_constants: ConsensusConstants, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            weight_proof_module, "_validate_sub_epoch_summaries", lambda _constants, _weight_proof: ([object()], [])
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockchainMock({}, {}, {}, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(cast(Any, FakeWeightProof()))
+        assert not valid
+        assert fork_point == 0
+
+    @pytest.mark.anyio
+    async def test_weight_proof_rejects_fewer_than_two_summaries_multiprocess_inner(
+        self, blockchain_constants: ConsensusConstants
+    ) -> None:
+        valid, records = await weight_proof_module.validate_weight_proof_inner(
+            constants=blockchain_constants,
+            executor=None,  # type: ignore[arg-type]
+            shutdown_file_name="",
+            num_processes=1,
+            weight_proof=cast(Any, FakeWeightProof()),
+            summaries=cast(list[SubEpochSummary], [object()]),
+            sub_epoch_weight_list=[],
+            skip_segment_validation=False,
+            validate_from=0,
+        )
+        assert not valid
+        assert records == []
 
     @pytest.mark.anyio
     @pytest.mark.skip(reason="broken")
@@ -562,3 +660,132 @@ class TestWeightProof:
             uint32(0),
         )
         assert result is None
+
+    @pytest.mark.anyio
+    async def test_weight_proof_validation_challenge_at_segment_start(
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+    ) -> None:
+        """SEC-614: validation must not crash when a segment's challenge block
+        is the first sub-slot entry (first_idx == 0).
+
+        In legitimately-constructed proofs, segment creation always places at
+        least one slot-end entry before the challenge block (first_idx >= 1).
+        A malicious peer could send a crafted proof where first_idx == 0; the
+        old ``assert first_idx`` rejected this with an AssertionError instead
+        of cleanly failing validation.
+        """
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+
+        # Find the first segment of sub_epoch > 0 and strip the leading
+        # slot-end entries so the challenge block lands at index 0.
+        modified_segments = list(wp.sub_epoch_segments)
+        target_found = False
+        for i, seg in enumerate(modified_segments):
+            if seg.sub_epoch_n > 0:
+                challenge_idx = next(
+                    (j for j, ssd in enumerate(seg.sub_slots) if ssd.cc_slot_end is None),
+                    None,
+                )
+                if challenge_idx is not None and challenge_idx > 0:
+                    new_sub_slots = list(seg.sub_slots[challenge_idx:])
+                    assert new_sub_slots[0].cc_slot_end is None
+                    modified_segments[i] = seg.replace(sub_slots=new_sub_slots)
+                    target_found = True
+                    break
+
+        assert target_found, "No segment found with leading slot-end entries to strip"
+
+        modified_wp = dataclasses.replace(wp, sub_epoch_segments=modified_segments)
+
+        # Pre-fix: AssertionError in __get_rc_sub_slot crashes validation.
+        # Post-fix: the malformed segment causes a hash mismatch, returning
+        # (False, 0) cleanly.
+        wpf_verify = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+        )
+        valid, _fork_point = wpf_verify.validate_weight_proof_single_proc(modified_wp)
+        assert not valid
+
+    @pytest.mark.anyio
+    async def test_weight_proof_validation_no_challenge_block_in_segment(
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+    ) -> None:
+        """SEC-614: validation returns False when a segment has no challenge
+        block (every sub-slot has cc_slot_end set)."""
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+
+        # Find the first segment of sub_epoch > 0, then replace the challenge
+        # block entry (cc_slot_end is None) with a copy of the first slot-end
+        # entry so that every sub-slot has cc_slot_end set.
+        modified_segments = list(wp.sub_epoch_segments)
+        target_found = False
+        for i, seg in enumerate(modified_segments):
+            if seg.sub_epoch_n > 0:
+                slot_end_donor = next(ssd for ssd in seg.sub_slots if ssd.cc_slot_end is not None)
+                new_sub_slots = [slot_end_donor if ssd.cc_slot_end is None else ssd for ssd in seg.sub_slots]
+                assert all(ssd.cc_slot_end is not None for ssd in new_sub_slots)
+                modified_segments[i] = seg.replace(sub_slots=new_sub_slots)
+                target_found = True
+                break
+
+        assert target_found, "No segment found with a challenge block to replace"
+
+        modified_wp = dataclasses.replace(wp, sub_epoch_segments=modified_segments)
+
+        wpf_verify = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+        )
+        valid, _fork_point = wpf_verify.validate_weight_proof_single_proc(modified_wp)
+        assert not valid
+
+    @pytest.mark.anyio
+    async def test_weight_proof_validation_missing_rc_slot_end_info(
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+    ) -> None:
+        """SEC-614: validation returns False when a segment is missing
+        rc_slot_end_info."""
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+
+        # Find the first segment of sub_epoch > 0 and null out its
+        # rc_slot_end_info so the post-loop guard fires.
+        modified_segments = list(wp.sub_epoch_segments)
+        target_found = False
+        for i, seg in enumerate(modified_segments):
+            if seg.sub_epoch_n > 0:
+                modified_segments[i] = seg.replace(rc_slot_end_info=None)
+                target_found = True
+                break
+
+        assert target_found, "No segment found with sub_epoch_n > 0"
+
+        modified_wp = dataclasses.replace(wp, sub_epoch_segments=modified_segments)
+
+        wpf_verify = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+        )
+        valid, _fork_point = wpf_verify.validate_weight_proof_single_proc(modified_wp)
+        assert not valid

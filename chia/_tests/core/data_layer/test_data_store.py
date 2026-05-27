@@ -2722,3 +2722,65 @@ async def test_manage_kv_files(
                 raise Exception("Test exception")
 
     assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == 0
+
+
+@pytest.mark.anyio
+async def test_merkle_blob_cache_isolation_across_stores(tmp_path: Path) -> None:
+    """SEC-470: Verify two stores with identical content don't share cached MerkleBlobs."""
+    merkle_blobs_path = tmp_path / "merkle"
+    merkle_blobs_path.mkdir()
+    kv_blobs_path = tmp_path / "kv"
+    kv_blobs_path.mkdir()
+    db_path = tmp_path / "test.db"
+
+    async with DataStore.managed(
+        database=db_path,
+        merkle_blobs_path=merkle_blobs_path,
+        key_value_blobs_path=kv_blobs_path,
+        cache_capacity=1,
+    ) as data_store:
+        store_id_a = bytes32(b"\x01" * 32)
+        store_id_b = bytes32(b"\x02" * 32)
+
+        await data_store.create_tree(store_id_a, status=Status.COMMITTED)
+        await data_store.create_tree(store_id_b, status=Status.COMMITTED)
+
+        key = b"\xaa" * 32
+        value = b"\xbb" * 32
+        await data_store.autoinsert(
+            key=key,
+            value=value,
+            store_id=store_id_a,
+            status=Status.COMMITTED,
+        )
+        await data_store.autoinsert(
+            key=key,
+            value=value,
+            store_id=store_id_b,
+            status=Status.COMMITTED,
+        )
+
+        root_a = await data_store.get_tree_root(store_id=store_id_a)
+        root_b = await data_store.get_tree_root(store_id=store_id_b)
+        assert root_a.node_hash is not None
+        assert root_b.node_hash is not None
+        assert root_a.node_hash == root_b.node_hash, "Stores with identical content should have same root hash"
+
+        blob_a = await data_store.get_merkle_blob(store_id_a, root_a.node_hash)
+        blob_b = await data_store.get_merkle_blob(store_id_b, root_b.node_hash)
+
+        assert blob_a is not blob_b, "MerkleBlobs from different stores must not be the same object"
+
+        key2 = b"\xcc" * 32
+        value2 = b"\xdd" * 32
+        await data_store.autoinsert(
+            key=key2,
+            value=value2,
+            store_id=store_id_a,
+            status=Status.COMMITTED,
+        )
+
+        await data_store.get_merkle_blob(store_id_b, root_b.node_hash)
+
+        root_b_after = await data_store.get_tree_root(store_id=store_id_b)
+        assert root_b_after.node_hash == root_b.node_hash, "Store B root should be unchanged"

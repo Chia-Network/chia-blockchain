@@ -383,11 +383,13 @@ class CoinStore:
         parent_ids: list[bytes32],
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
+        *,
+        max_items: int = 50000,
     ) -> list[CoinRecord]:
         if len(parent_ids) == 0:
             return []
 
-        coins = set()
+        coins: set[CoinRecord] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             for batch in to_batches(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: tuple[Any, ...] = tuple(batch.entries)
@@ -395,13 +397,16 @@ class CoinStore:
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
                     f"FROM coin_record WHERE coin_parent in ({'?,' * (len(batch.entries) - 1)}?) "
                     f"AND confirmed_index>=? AND confirmed_index<? "
-                    f"{'' if include_spent_coins else 'AND spent_index <= 0'}",
-                    (*parent_ids_db, start_height, end_height),
+                    f"{'' if include_spent_coins else 'AND spent_index <= 0'}"
+                    " LIMIT ?",
+                    (*parent_ids_db, start_height, end_height, max_items - len(coins)),
                 ) as cursor:
                     async for row in cursor:
                         coin = self.row_to_coin(row)
                         spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
                         coins.add(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
+                if len(coins) >= max_items:
+                    break
 
         return list(coins)
 

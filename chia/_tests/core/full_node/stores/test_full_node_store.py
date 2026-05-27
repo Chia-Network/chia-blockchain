@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import logging
 import random
-import time
 from collections.abc import AsyncIterator
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock, VDFInfo, VDFProof
+from chia_rs import (
+    BlockRecord,
+    ChallengeChainSubSlot,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    FullBlock,
+    RewardChainSubSlot,
+    SubSlotProofs,
+    UnfinishedBlock,
+    VDFInfo,
+    VDFProof,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -22,6 +32,12 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node_store import (
+    FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_EOS_CACHE_MAX_KEYS,
+    FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_IP_CACHE_MAX_KEYS,
+    FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY,
+    FUTURE_SP_CACHE_MAX_KEYS,
     MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH,
     FullNodeStore,
     UnfinishedBlockEntry,
@@ -100,7 +116,7 @@ async def test_unfinished_block_rank(
     # shuffle them to ensure the order we add them to the store isn't relevant
     seeded_random.shuffle(unfinished)
     for new_unf in unfinished:
-        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, None, uint64(123532), None, uint32(0)))
 
     # now ask for "the" unfinished block given the proof-of-space.
     # the FullNodeStore should return the one with the lowest foliage tx block
@@ -224,7 +240,7 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
+            uint32(height), unf_block, PreValidationResult(None, None, uint64(123532), None, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
@@ -280,7 +296,9 @@ async def test_basic_store(
     assert unf3.foliage.foliage_transaction_block_hash is None
     assert unf4.foliage.foliage_transaction_block_hash is None
     for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
-        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(val), None, uint32(0)))
+        store.add_unfinished_block(
+            uint32(height), unf_block, PreValidationResult(None, None, uint64(val), None, uint32(0))
+        )
 
     # when not specifying a foliage hash, you get the "best" one
     # best is defined as the lowest foliage hash
@@ -1251,7 +1269,7 @@ async def test_unfinished_block_eviction(
     seeded_random.shuffle(unfinished)
 
     for new_unf in unfinished:
-        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, None, uint64(123532), None, uint32(0)))
 
     # the best (lowest) foliage hashes should be kept
     for idx, fh in enumerate(foliage_hashes):
@@ -1282,7 +1300,7 @@ async def test_unfinished_block_eviction_none_added_last(
 
     for i, fh in enumerate(foliage_hashes):
         block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
-        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, None, uint64(i), None, uint32(0)))
 
     _, count, _ = store.get_unfinished_block2(unf.partial_hash, foliage_hashes[0])
     assert count == MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH
@@ -1316,7 +1334,7 @@ async def test_unfinished_block_eviction_none_added_first(
 
     for i, fh in enumerate(foliage_hashes):
         block = recursive_replace(unf, "foliage.foliage_transaction_block_hash", fh)
-        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, uint64(i), None, uint32(0)))
+        store.add_unfinished_block(uint32(2), block, PreValidationResult(None, None, uint64(i), None, uint32(0)))
 
     # the None entry was evicted; all known hashes still present
     for fh in foliage_hashes:
@@ -1349,9 +1367,8 @@ async def test_unfinished_block_eviction_mark_requesting(
 
 
 @pytest.mark.anyio
-async def test_add_to_future_ip_sets_ttl(seeded_random: random.Random) -> None:
-    """add_to_future_ip must register a TTL in future_cache_key_times so that
-    clear_old_cache_entries can evict stale IP cache entries."""
+async def test_add_to_future_ip_stores_entry(seeded_random: random.Random) -> None:
+    """add_to_future_ip must store the entry in the bounded cache."""
     store = FullNodeStore(DEFAULT_CONSTANTS)
 
     challenge = bytes32.random(seeded_random)
@@ -1370,35 +1387,144 @@ async def test_add_to_future_ip_sets_ttl(seeded_random: random.Random) -> None:
     store.add_to_future_ip(ip)
 
     assert challenge in store.future_ip_cache
-    assert challenge in store.future_cache_key_times, (
-        "add_to_future_ip must set future_cache_key_times so entries can be evicted"
-    )
+
+
+def make_signage_point(challenge: bytes32, challenge_iters: int = 1000) -> SignagePoint:
+    vdf_info = VDFInfo(challenge, uint64(challenge_iters), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    return SignagePoint(vdf_info, vdf_proof, vdf_info, vdf_proof)
 
 
 @pytest.mark.anyio
-async def test_clear_old_cache_entries_evicts_future_ip(seeded_random: random.Random) -> None:
-    """Entries added via add_to_future_ip must be evicted by clear_old_cache_entries
-    after the 1-hour TTL expires."""
+async def test_add_to_future_sp_limits_keys() -> None:
     store = FullNodeStore(DEFAULT_CONSTANTS)
 
-    challenge = bytes32.random(seeded_random)
-    vdf_info = VDFInfo(challenge, uint64(1000), ClassgroupElement.get_default_element())
+    for i in range(FUTURE_SP_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.add_to_future_sp(make_signage_point(challenge), uint8(1))
+
+    assert len(store.future_sp_cache) == FUTURE_SP_CACHE_MAX_KEYS
+    assert store.future_sp_cache.total_entries == FUTURE_SP_CACHE_MAX_KEYS
+    # The oldest key (0) was evicted to make room for the last insert.
+    assert bytes32(b"\x00" * 32) not in store.future_sp_cache
+
+
+@pytest.mark.anyio
+async def test_add_to_future_sp_limits_entries_per_key() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    challenge = bytes32(b"\x11" * 32)
+
+    for i in range(FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY + 5):
+        store.add_to_future_sp(make_signage_point(challenge, challenge_iters=1000 + i), uint8(i))
+
+    assert len(store.future_sp_cache[challenge]) == FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY
+    assert store.future_sp_cache.total_entries == FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY
+
+
+@pytest.mark.anyio
+async def test_future_eos_cache_bounds() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    assert len(store.future_eos_cache) == 0
+
+    for i in range(FUTURE_EOS_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.future_eos_cache.append(challenge, object())  # type: ignore[arg-type]
+    assert len(store.future_eos_cache) == FUTURE_EOS_CACHE_MAX_KEYS
+
+
+@pytest.mark.anyio
+async def test_future_ip_cache_bounds() -> None:
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    assert len(store.future_ip_cache) == 0
+
+    for i in range(FUTURE_IP_CACHE_MAX_KEYS + 1):
+        challenge = bytes32(i.to_bytes(32, "big"))
+        store.future_ip_cache.append(challenge, object())  # type: ignore[arg-type]
+    assert len(store.future_ip_cache) == FUTURE_IP_CACHE_MAX_KEYS
+
+
+@pytest.mark.anyio
+async def test_add_to_future_ip_limits_entries_per_key() -> None:
+    """add_to_future_ip must respect the per-key entry limit so that a single
+    challenge hash cannot accumulate unbounded infusion-point entries."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    challenge = bytes32(b"\x44" * 32)
+
+    for i in range(FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY + 5):
+        vdf_info = VDFInfo(challenge, uint64(100 + i), ClassgroupElement.get_default_element())
+        vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+        ip = NewInfusionPointVDF(
+            unfinished_reward_hash=bytes32((i + 99_999).to_bytes(32, "big")),
+            challenge_chain_ip_vdf=vdf_info,
+            challenge_chain_ip_proof=vdf_proof,
+            reward_chain_ip_vdf=vdf_info,
+            reward_chain_ip_proof=vdf_proof,
+            infused_challenge_chain_ip_vdf=None,
+            infused_challenge_chain_ip_proof=None,
+        )
+        store.add_to_future_ip(ip)
+
+    assert len(store.future_ip_cache[challenge]) == FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY
+    assert store.future_ip_cache.total_entries == FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY
+
+
+@pytest.mark.anyio
+async def test_new_finished_sub_slot_eos_per_key_drop() -> None:
+    """When the EOS cache has reached per-key capacity for a given challenge,
+    new_finished_sub_slot must silently drop the entry and return None."""
+    store = FullNodeStore(DEFAULT_CONSTANTS)
+    gc = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+    rc_challenge = bytes32(b"\x77" * 32)
+
+    for _ in range(FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY):
+        store.future_eos_cache.append(rc_challenge, object())  # type: ignore[arg-type]
+
+    vdf_info_cc = VDFInfo(gc, uint64(100), ClassgroupElement.get_default_element())
+    vdf_info_rc = VDFInfo(rc_challenge, uint64(100), ClassgroupElement.get_default_element())
     vdf_proof = VDFProof(uint8(0), b"\x00" * 100, False)
-    ip = NewInfusionPointVDF(
-        unfinished_reward_hash=bytes32.random(seeded_random),
-        challenge_chain_ip_vdf=vdf_info,
-        challenge_chain_ip_proof=vdf_proof,
-        reward_chain_ip_vdf=vdf_info,
-        reward_chain_ip_proof=vdf_proof,
-        infused_challenge_chain_ip_vdf=None,
-        infused_challenge_chain_ip_proof=None,
+
+    cc_sub_slot = ChallengeChainSubSlot(vdf_info_cc, None, None, None, None)
+    rc_sub_slot = RewardChainSubSlot(
+        vdf_info_rc, cc_sub_slot.get_hash(), None, uint8(DEFAULT_CONSTANTS.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
+    )
+    proofs = SubSlotProofs(vdf_proof, None, vdf_proof)
+    eos = EndOfSubSlotBundle(cc_sub_slot, None, rc_sub_slot, proofs)
+
+    peak = BlockRecord(
+        header_hash=bytes32(b"\x01" * 32),
+        prev_hash=bytes32(b"\x00" * 32),
+        height=uint32(1),
+        weight=uint128(1),
+        total_iters=uint128(50),
+        signage_point_index=uint8(0),
+        challenge_vdf_output=ClassgroupElement.get_default_element(),
+        infused_challenge_vdf_output=None,
+        reward_infusion_new_challenge=bytes32(b"\x99" * 32),
+        challenge_block_info_hash=bytes32(b"\x02" * 32),
+        sub_slot_iters=uint64(100),
+        pool_puzzle_hash=bytes32(b"\x03" * 32),
+        farmer_puzzle_hash=bytes32(b"\x04" * 32),
+        required_iters=uint64(10),
+        deficit=uint8(0),
+        overflow=False,
+        prev_transaction_block_height=uint32(0),
+        timestamp=None,
+        prev_transaction_block_hash=None,
+        fees=None,
+        reward_claims_incorporated=None,
+        finished_challenge_slot_hashes=None,
+        finished_infused_challenge_slot_hashes=None,
+        finished_reward_slot_hashes=None,
+        sub_epoch_summary_included=None,
     )
 
-    store.add_to_future_ip(ip)
-    assert challenge in store.future_ip_cache
-
-    store.future_cache_key_times[challenge] = int(time.time()) - 3601
-    store.clear_old_cache_entries()
-
-    assert challenge not in store.future_ip_cache, "stale IP cache entry was not evicted"
-    assert challenge not in store.future_cache_key_times
+    result = store.new_finished_sub_slot(
+        eos,
+        BlockchainMock({}),
+        peak,
+        uint64(100),
+        uint64(1),
+        object(),  # type: ignore[arg-type]
+    )
+    assert result is None
+    assert store.future_eos_cache.total_entries == FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY
