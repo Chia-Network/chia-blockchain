@@ -811,8 +811,8 @@ class FullNodeStore:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
-                    # Non-normalized CC proofs depend on the previous in-slot block. If we don't know the fork
-                    # that produced this SP, a valid proof can fail against our current start element.
+                    # Non-normalized CC proofs are for a VDF segment. The SP's CC challenge/output can match while
+                    # an honest peer proves from a different previous in-slot block than our current start element.
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,

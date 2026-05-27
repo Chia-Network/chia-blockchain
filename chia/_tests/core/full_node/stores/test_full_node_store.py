@@ -1697,22 +1697,16 @@ async def test_new_signage_point_from_same_slot_fork_before_peak_infusion(
     blocks = custom_block_tools.get_consecutive_blocks(1)
     _, _, candidate_records = load_block_list(blocks, constants)
     candidate_peak = candidate_records[blocks[-1].header_hash]
-    current_candidates: list[FullBlock] = []
-    fork_candidates: list[tuple[FullBlock, uint128]] = []
-    for seed_index in range(64):
-        candidate_current = custom_block_tools.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=f"current-{seed_index}".encode(),
-            min_signage_point=0,
-        )[-1]
-        if (
-            len(candidate_current.finished_sub_slots) == 0
-            and candidate_current.reward_chain_block.signage_point_index != 0
-        ):
-            current_candidates.append(candidate_current)
-
-    for min_signage_point in range(1, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
+    current_peak_block = custom_block_tools.get_consecutive_blocks(
+        1,
+        block_list_input=blocks,
+        seed=b"current",
+        min_signage_point=0,
+    )[-1]
+    current_index = current_peak_block.reward_chain_block.signage_point_index
+    fork_block: FullBlock | None = None
+    fork_sp_total_iters: uint128 | None = None
+    for min_signage_point in range(int(current_index), constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
         candidate_fork = custom_block_tools.get_consecutive_blocks(
             1,
             block_list_input=blocks,
@@ -1727,39 +1721,14 @@ async def test_new_signage_point_from_same_slot_fork_before_peak_infusion(
             candidate_peak.ip_sub_slot_total_iters(constants)
             + calculate_sp_iters(constants, candidate_peak.sub_slot_iters, candidate_fork_index)
         )
-        fork_candidates.append((candidate_fork, candidate_fork_sp_total_iters))
+        if candidate_fork_index <= current_index or current_peak_block.total_iters >= candidate_fork_sp_total_iters:
+            continue
+        fork_block = candidate_fork
+        fork_sp_total_iters = candidate_fork_sp_total_iters
+        break
 
-    current_peak_block = None
-    fork_block: FullBlock | None = None
-    fork_sp_total_iters: uint128 | None = None
-    for candidate_current in sorted(current_candidates, key=lambda block: block.total_iters):
-        current_index = candidate_current.reward_chain_block.signage_point_index
-        for candidate_fork, candidate_fork_sp_total_iters in sorted(
-            fork_candidates, key=lambda pair: pair[1], reverse=True
-        ):
-            if candidate_fork.reward_chain_block.signage_point_index <= current_index:
-                continue
-            if candidate_current.total_iters >= candidate_fork_sp_total_iters:
-                continue
-            current_peak_block = candidate_current
-            fork_block = candidate_fork
-            fork_sp_total_iters = candidate_fork_sp_total_iters
-            break
-        if current_peak_block is not None:
-            break
-
-    assert current_peak_block is not None, (
-        len(current_candidates),
-        len(fork_candidates),
-        [(block.reward_chain_block.signage_point_index, block.total_iters) for block in current_candidates[:5]],
-        [
-            (block.reward_chain_block.signage_point_index, sp_total_iters, block.total_iters)
-            for block, sp_total_iters in fork_candidates[:5]
-        ],
-    )
     assert fork_block is not None
     assert fork_sp_total_iters is not None
-    current_index = current_peak_block.reward_chain_block.signage_point_index
     fork_index = fork_block.reward_chain_block.signage_point_index
 
     assert len(current_peak_block.finished_sub_slots) == 0
