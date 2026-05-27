@@ -489,7 +489,7 @@ def test_plotnft_errors() -> None:
                                         bytes32.zeros,
                                         (
                                             PuzzleWithRestrictions.spec_namespace,
-                                            [None, [[None, bytes32.zeros, None]], None, bytes32.zeros, None],
+                                            [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
                                         ),
                                     )
                                 ),
