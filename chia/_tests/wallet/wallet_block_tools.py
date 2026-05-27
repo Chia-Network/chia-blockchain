@@ -26,6 +26,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -153,7 +154,7 @@ def load_block_list(
                 sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
-            BlockCache(blocks),
+            BlockCache(blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE)),
             uint64(1),
             full_block,
             sub_slot_iters,
@@ -206,7 +207,13 @@ def finish_block(
         [],
     )
 
-    block_record = block_to_block_record(constants, BlockCache(blocks), uint64(1), full_block, uint64(1))
+    block_record = block_to_block_record(
+        constants,
+        BlockCache(blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE)),
+        uint64(1),
+        full_block,
+        uint64(1),
+    )
     return full_block, block_record
 
 

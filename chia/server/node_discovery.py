@@ -104,6 +104,9 @@ class FullNodeDiscovery:
         cancel_task_safe(self.connect_peers_task, self.log)
         cancel_task_safe(self.serialize_task, self.log)
         cancel_task_safe(self.cleanup_task, self.log)
+        tasks_to_await = {t for t in (self.connect_peers_task, self.serialize_task, self.cleanup_task) if t is not None}
+        if len(tasks_to_await) > 0:
+            await asyncio.wait(tasks_to_await)
         for t in self.pending_tasks:
             cancel_task_safe(t, self.log)
         if len(self.pending_tasks) > 0:

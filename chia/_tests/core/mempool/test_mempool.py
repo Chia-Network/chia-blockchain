@@ -3268,8 +3268,7 @@ def test_dedup_by_fee(old: bool) -> None:
 def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
         ValueError,
-        match=f"Failed to get puzzle and solution for coin {TEST_COIN}, "
-        "error: \\('InvalidOperatorArg: coin not found', '80'\\)",
+        match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: InvalidOperatorArg: coin not found",
     ):
         try:
             get_puzzle_and_solution_for_coin(
@@ -3353,7 +3352,7 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
     removals = set(generator.removals)
 
     flags = get_flags_for_height_and_constants(height, test_constants)
-    err, conds = run_block_generator2(
+    err, _err_msg, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,
@@ -3400,7 +3399,7 @@ def test_create_block_generator(old: bool) -> None:
     assert len(generator.additions) == len(expected_additions)
     assert generator.signature == expected_signature
 
-    err, conds = run_block_generator2(
+    err, _err_msg, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
         test_constants.MAX_BLOCK_COST_CLVM,

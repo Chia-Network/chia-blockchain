@@ -1214,6 +1214,46 @@ async def test_get_items_not_in_filter(test_coins_mempool_manager: MempoolManage
 
 
 @pytest.mark.anyio
+async def test_get_items_not_in_filter_max_checked(test_coins_mempool_manager: MempoolManager) -> None:
+    mempool_manager = test_coins_mempool_manager
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
+    conditions2 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    sb2, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
+    conditions3 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    _, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
+
+    # A dense filter matching everything — without max_checked this traverses the entire mempool
+    full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
+
+    # max_checked=0 stops immediately, returning nothing even though limit allows more
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=0)
+    assert result == []
+
+    # max_checked=1 checks only the first item (which matches), returns empty
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=1)
+    assert result == []
+
+    # With an empty filter (nothing matches), max_checked caps the returned items
+    empty_filter = PyBIP158([])
+    result = mempool_manager.get_items_not_in_filter(empty_filter, limit=100, max_checked=2)
+    assert len(result) == 2
+
+    # max_checked large enough to scan all items returns all non-matching
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=1000)
+    assert result == []
+
+    # With a partial filter, max_checked caps total iterations including matches
+    sb3_filter = PyBIP158([bytearray(sb3_name)])
+    # sb3 is highest fee, so it's checked first and matches. max_checked=1 means only sb3 is checked.
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=100, max_checked=1)
+    assert result == []
+    # max_checked=2 checks sb3 (match) + sb2 (no match) -> returns [sb2]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=100, max_checked=2)
+    assert [item.to_spend_bundle() for item in result] == [sb2]
+
+
+@pytest.mark.anyio
 async def test_total_mempool_fees() -> None:
     coin_records: dict[bytes32, CoinRecord] = {}
 
@@ -2861,7 +2901,7 @@ async def test_create_block_generator(
             assert expected_removals == set(new_block_gen.removals)
             assert expected_signature == new_block_gen.signature
 
-        err, conds = run_block_generator2(
+        err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -2928,7 +2968,7 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
 
         # now, make sure the generator we got is valid
 
-        err, conds = run_block_generator2(
+        err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -3306,7 +3346,7 @@ async def test_create_block_generator_custom_spend(
 
             removals = set(generator.removals)
 
-            err, conds = run_block_generator2(
+            err, _err_msg, conds = run_block_generator2(
                 bytes(generator.program),
                 generator.generator_refs,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
