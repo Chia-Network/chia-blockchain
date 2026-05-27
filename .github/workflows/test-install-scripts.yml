@@ -94,6 +94,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
 =======
         uses: actions/setup-node@v6.3.0
@@ -110,6 +111,9 @@ jobs:
 =======
         uses: actions/setup-node@v6.3.0
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
