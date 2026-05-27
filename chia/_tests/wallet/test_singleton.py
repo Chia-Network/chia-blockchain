@@ -46,7 +46,7 @@ def test_only_odd_coins() -> None:
 
     with pytest.raises(Exception) as exception_info:
         SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
-    assert exception_info.value.args == ("clvm raise", "80")
+    assert exception_info.value.args == ("clvm raise",)
 
     solution = Program.to(
         [
@@ -75,7 +75,7 @@ def test_only_one_odd_coin_created() -> None:
 
     with pytest.raises(Exception) as exception_info:
         SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
-    assert exception_info.value.args == ("clvm raise", "80")
+    assert exception_info.value.args == ("clvm raise",)
     clsp = "(q (51 0xcafef00d 203) (51 0xfadeddab 204) (51 0xdeadbeef 202))"
     solution = Program.to(
         [
