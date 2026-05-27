@@ -166,6 +166,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
     PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(3),
+    TESTNET=True,
 )
 
 
@@ -712,6 +713,7 @@ class BlockTools:
             size=plot_size,
             strength=strength,
             test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
+            testnet=True,
         )
         self.created_plots2 += 1
 
@@ -1785,7 +1787,9 @@ class BlockTools:
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2)
+                    proof = solve_proof(
+                        quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2, constants.TESTNET
+                    )
                     assert proof != b""
 
                 # Look up local_sk from plot to save locked memory
