@@ -29,7 +29,7 @@ class TimelordAPI:
     timelord: Timelord
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
-    def __init__(self, timelord) -> None:
+    def __init__(self, timelord: Timelord) -> None:
         self.log = logging.getLogger(__name__)
         self.timelord = timelord
 
@@ -102,7 +102,7 @@ class TimelordAPI:
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
+    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord) -> bool:
         new_peak_unf_rh = new_peak.reward_chain_block.get_unfinished().get_hash()
         for unf_block in self.timelord.unfinished_blocks:
             if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
@@ -123,7 +123,9 @@ class TimelordAPI:
         return False
 
     @metadata.request()
-    async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
+    async def new_unfinished_block_timelord(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord
+    ) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
@@ -157,7 +159,7 @@ class TimelordAPI:
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @metadata.request()
-    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
+    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime) -> None:
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:
                 return None

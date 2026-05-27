@@ -60,7 +60,6 @@ class TransactionQueueEntry:
     """
 
     transaction: SpendBundle = field(compare=False)
-    transaction_bytes: bytes | None = field(compare=False)
     spend_name: bytes32
     peer: WSChiaConnection | None = field(compare=False)
     test: bool = field(compare=False)

@@ -1717,7 +1717,14 @@ class TestBlockHeaderValidation:
                 return None
 
     @pytest.mark.anyio
-    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Monkey patch add_block_to_mmr otherwise we will throw an error in the mmr invariant
+        # assetion and not in the block header validation code
+        monkeypatch.setattr(
+            "chia.consensus.blockchain_mmr.BlockchainMMRManager.add_block_to_mmr",
+            lambda *args, **kwargs: None,
+        )
+
         # 27
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -2709,7 +2716,9 @@ class TestBodyValidation:
         err = (
             await b.add_block(
                 blocks[-1],
-                PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+                PreValidationResult(
+                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)
+                ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
             )
@@ -2785,7 +2794,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2819,7 +2828,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2858,7 +2867,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )

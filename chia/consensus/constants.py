@@ -11,10 +11,19 @@ from chia.util.hash import std_hash
 log = logging.getLogger(__name__)
 
 
+LEGACY_RENAMES = {"MIN_PLOT_SIZE": "MIN_PLOT_SIZE_V1", "MAX_PLOT_SIZE": "MAX_PLOT_SIZE_V1"}
+
+
 def replace_str_to_bytes(constants: ConsensusConstants, **changes: Any) -> ConsensusConstants:
     """
     Overrides str (hex) values with bytes.
     """
+
+    for old_name, new_name in LEGACY_RENAMES.items():
+        if old_name in changes and new_name not in changes:
+            changes[new_name] = changes.pop(old_name)
+        elif old_name in changes:
+            del changes[old_name]
 
     filtered_changes = {}
     for k, v in changes.items():

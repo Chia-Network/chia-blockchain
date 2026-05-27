@@ -285,6 +285,7 @@ async def create_v2_plots(
     strength: int = 2,
     num: int = 1,
     test_private_keys: list[PrivateKey] | None = None,
+    testnet: bool = False,
 ) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     if keys.pool_public_key is not None:
@@ -348,7 +349,9 @@ async def create_v2_plots(
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
             plot_memo = bytes(pool_ph_or_pk) + bytes(keys.farmer_public_key) + bytes(sk)
-            create_v2_plot(str(full_path.absolute()), size, strength, plot_id, plot_index, meta_group, plot_memo)
+            create_v2_plot(
+                str(full_path.absolute()), size, strength, plot_id, plot_index, meta_group, plot_memo, testnet
+            )
             created_plots[plot_id] = full_path
         else:
             log.info(f"Plot {filename} already exists")
