@@ -186,6 +186,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
 =======
         uses: actions/setup-node@v6.3.0
@@ -211,6 +212,9 @@ jobs:
 =======
         uses: actions/setup-node@v6.3.0
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 

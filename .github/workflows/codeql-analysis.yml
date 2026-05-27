@@ -49,6 +49,7 @@ jobs:
       - name: Initialize CodeQL
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/init@v4.35.4
 =======
         uses: github/codeql-action/init@v4.35.5
@@ -56,6 +57,9 @@ jobs:
 =======
         uses: github/codeql-action/init@v4.35.4
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+        uses: github/codeql-action/init@v4.35.4
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
         with:
           languages: ${{ matrix.language }}
           # If you wish to specify custom queries, you can do so here or in a config file.
@@ -68,6 +72,7 @@ jobs:
       - name: Autobuild
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/autobuild@v4.35.4
 =======
         uses: github/codeql-action/autobuild@v4.35.5
@@ -75,6 +80,9 @@ jobs:
 =======
         uses: github/codeql-action/autobuild@v4.35.4
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+        uses: github/codeql-action/autobuild@v4.35.4
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
 
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 https://git.io/JvXDl
@@ -90,6 +98,7 @@ jobs:
       - name: Perform CodeQL Analysis
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/analyze@v4.35.4
 =======
         uses: github/codeql-action/analyze@v4.35.5
@@ -97,3 +106,6 @@ jobs:
 =======
         uses: github/codeql-action/analyze@v4.35.4
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+        uses: github/codeql-action/analyze@v4.35.4
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)

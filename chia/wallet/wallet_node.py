@@ -110,6 +110,7 @@ class Balance(Streamable):
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 async def request_and_validate_header_block(
     peer: WSChiaConnection, height: uint32, log: logging.Logger
 ) -> HeaderBlock | None:
@@ -151,6 +152,8 @@ async def request_and_validate_header_block(
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -1565,6 +1568,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             state_block = await request_and_validate_header_block(peer, confirmed_height, self.log)
             if state_block is None:
                 return False
@@ -1587,6 +1591,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
             state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
             if state_blocks is None:
                 return False
@@ -1596,6 +1602,7 @@ class WalletNode:
 
         # get proof of inclusion
         assert state_block.foliage_transaction_block is not None
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1618,6 +1625,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
         validate_additions_result = await request_and_validate_additions(
             peer,
             peer_request_cache,
@@ -1654,6 +1663,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, current.spent_block_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1674,6 +1684,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
 
                 spent_state_blocks: list[HeaderBlock] | None = await request_header_blocks(
                     peer, current.spent_block_height, current.spent_block_height
@@ -1685,6 +1697,7 @@ class WalletNode:
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1707,6 +1720,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
                 validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
@@ -1728,6 +1743,7 @@ class WalletNode:
             # request header block for created height
             cached_spent_state_block = peer_request_cache.get_block(spent_height)
             if cached_spent_state_block is None:
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1759,6 +1775,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
                 spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
                 if spent_state_blocks is None:
                     return False
@@ -1770,6 +1788,7 @@ class WalletNode:
                 spent_state_block = cached_spent_state_block
             assert spent_state_block is not None
             assert spent_state_block.foliage_transaction_block is not None
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1792,6 +1811,8 @@ class WalletNode:
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 =======
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,

@@ -105,6 +105,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: aws-actions/configure-aws-credentials@v6.1.1
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -130,6 +131,9 @@ jobs:
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
 >>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
+=======
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+>>>>>>> d00119c (build(deps): bump aiohttp from 3.13.4 to 3.13.5)
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2
