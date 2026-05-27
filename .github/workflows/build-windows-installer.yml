@@ -103,6 +103,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
 =======
         uses: actions/setup-node@v6.3.0
@@ -122,6 +123,9 @@ jobs:
 =======
         uses: actions/setup-node@v6.3.0
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 

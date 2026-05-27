@@ -108,6 +108,7 @@ class Balance(Streamable):
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 async def request_and_validate_header_block(
     peer: WSChiaConnection, height: uint32, log: logging.Logger
 ) -> HeaderBlock | None:
@@ -145,6 +146,8 @@ async def request_and_validate_header_block(
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -1557,6 +1560,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             state_block = await request_and_validate_header_block(peer, confirmed_height, self.log)
             if state_block is None:
                 return False
@@ -1575,6 +1579,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
             state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
             if state_blocks is None:
                 return False
@@ -1584,6 +1590,7 @@ class WalletNode:
 
         # get proof of inclusion
         assert state_block.foliage_transaction_block is not None
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1600,6 +1607,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
         validate_additions_result = await request_and_validate_additions(
             peer,
             peer_request_cache,
@@ -1634,6 +1643,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, current.spent_block_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1650,6 +1660,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
 
                 spent_state_blocks: list[HeaderBlock] | None = await request_header_blocks(
                     peer, current.spent_block_height, current.spent_block_height
@@ -1666,6 +1678,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 =======
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
@@ -1677,6 +1690,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
                 validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
@@ -1704,6 +1719,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, spent_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1723,6 +1739,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
                 spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
                 if spent_state_blocks is None:
                     return False
@@ -1739,6 +1757,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 =======
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
@@ -1750,6 +1769,8 @@ class WalletNode:
 >>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 =======
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,

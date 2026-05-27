@@ -103,6 +103,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: aws-actions/configure-aws-credentials@v6.1.1
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -122,6 +123,9 @@ jobs:
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
 >>>>>>> 502649f (build(deps): bump types-aiofiles from 25.1.0.20260508 to 25.1.0.20260518)
+=======
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+>>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2
