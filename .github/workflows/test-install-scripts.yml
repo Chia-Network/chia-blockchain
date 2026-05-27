@@ -90,10 +90,14 @@ jobs:
 
       - name: Setup Node per .nvmrc in GUI
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: actions/setup-node@v6.4.0
 =======
         uses: actions/setup-node@v6.3.0
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
+=======
+        uses: actions/setup-node@v6.3.0
+>>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
