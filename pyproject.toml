@@ -51,6 +51,7 @@ anyio = ">=4.6.2.post1"
 bitstring = ">=4.1.4"  # Binary data management library
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 =======
 boto3 = ">=1.43.11"  # AWS S3 for Data Layer S3 plugin
@@ -58,6 +59,9 @@ boto3 = ">=1.43.11"  # AWS S3 for Data Layer S3 plugin
 =======
 boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
@@ -106,6 +110,7 @@ pytest-xdist = { version = ">=3.6.1", optional = true }
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
 =======
 pytest-rerunfailures = { version = ">=16.2,<17.0", optional = true }
@@ -128,11 +133,20 @@ lxml = { version = ">=6.1.0", optional = true }
 =======
 lxml = { version = ">=6.1.1", optional = true }
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
+tach = { version = ">=0.35.0", optional = true }
+types-aiofiles = { version = ">=25.1.0.20260508", optional = true }
+types-pyyaml = { version = ">=6.0.12.20260518", optional = true }
+types-setuptools = { version = ">=82.0.0.20260518", optional = true }
+lxml = { version = ">=6.1.0", optional = true }
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
 # 	{version="<=1.24.4", python = "<3.10", optional = true},
 # 	{version=">=1.26.4", python = ">=3.10", optional = true}]
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -146,6 +160,9 @@ ruff = { version = ">=0.8.1", optional = true }
 =======
 ruff = { version = ">=0.8.1", optional = true }
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+ruff = { version = ">=0.8.1", optional = true }
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 
 [project.optional-dependencies]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "lxml"]

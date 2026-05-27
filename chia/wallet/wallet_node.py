@@ -106,6 +106,7 @@ class Balance(Streamable):
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 async def request_and_validate_header_block(
     peer: WSChiaConnection, height: uint32, log: logging.Logger
 ) -> HeaderBlock | None:
@@ -139,6 +140,8 @@ async def request_and_validate_header_block(
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -1549,6 +1552,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             state_block = await request_and_validate_header_block(peer, confirmed_height, self.log)
             if state_block is None:
                 return False
@@ -1563,6 +1567,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
             state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
             if state_blocks is None:
                 return False
@@ -1575,6 +1581,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 =======
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
@@ -1582,6 +1589,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
         validate_additions_result = await request_and_validate_additions(
             peer,
             peer_request_cache,
@@ -1614,6 +1623,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, current.spent_block_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1626,6 +1636,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
 
                 spent_state_blocks: list[HeaderBlock] | None = await request_header_blocks(
                     peer, current.spent_block_height, current.spent_block_height
@@ -1640,6 +1652,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 =======
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
@@ -1647,6 +1660,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
                 validate_removals_result = await request_and_validate_removals(
                     peer,
                     current.spent_block_height,
@@ -1672,6 +1687,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 spent_state_block = await request_and_validate_header_block(peer, spent_height, self.log)
                 if spent_state_block is None:
                     return False
@@ -1687,6 +1703,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
                 spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
                 if spent_state_blocks is None:
                     return False
@@ -1701,6 +1719,7 @@ class WalletNode:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ee8e424 (build(deps): bump pytest-rerunfailures from 16.1 to 16.2)
 =======
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
@@ -1708,6 +1727,8 @@ class WalletNode:
 >>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 =======
 >>>>>>> 20feb6e (build(deps): bump lxml from 6.1.0 to 6.1.1)
+=======
+>>>>>>> d4e5874 (build(deps): bump types-pyyaml from 6.0.12.20260510 to 6.0.12.20260518)
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,
