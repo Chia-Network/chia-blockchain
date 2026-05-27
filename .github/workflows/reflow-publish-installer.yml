@@ -99,6 +99,7 @@ jobs:
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: aws-actions/configure-aws-credentials@v6.1.1
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
@@ -106,6 +107,9 @@ jobs:
 =======
         uses: aws-actions/configure-aws-credentials@v6.1.0
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
+=======
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+>>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2

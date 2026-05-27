@@ -49,7 +49,11 @@ aiohttp = ">=3.10.4"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = ">=4.6.2.post1"
 bitstring = ">=4.1.4"  # Binary data management library
+<<<<<<< HEAD
 boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
+=======
+boto3 = ">=1.43.11"  # AWS S3 for Data Layer S3 plugin
+>>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
@@ -96,6 +100,7 @@ pytest-monitor = { version = ">=1.6.6", platform = "linux", optional = true }
 pytest-xdist = { version = ">=3.6.1", optional = true }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
 =======
 pytest-rerunfailures = { version = ">=16.2,<17.0", optional = true }
@@ -103,6 +108,9 @@ pytest-rerunfailures = { version = ">=16.2,<17.0", optional = true }
 =======
 pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
+=======
+pytest-rerunfailures = { version = ">=16.1, <17.0", optional = true }
+>>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 tach = { version = ">=0.35.0", optional = true }
 types-aiofiles = { version = ">=25.1.0.20260508", optional = true }
 types-pyyaml = { version = ">=6.0.12.20260510", optional = true }
@@ -114,10 +122,14 @@ miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # 	{version="<=1.24.4", python = "<3.10", optional = true},
 # 	{version=">=1.26.4", python = ">=3.10", optional = true}]
 <<<<<<< HEAD
+<<<<<<< HEAD
 ruff = { version = ">=0.8.1", optional = true }
 =======
 ruff = { version = ">=0.15.13", optional = true }
 >>>>>>> d747b89 (build(deps): bump ruff from 0.15.8 to 0.15.13)
+=======
+ruff = { version = ">=0.8.1", optional = true }
+>>>>>>> 8e73dd3 (build(deps): bump boto3 from 1.43.8 to 1.43.11)
 
 [project.optional-dependencies]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "lxml"]
