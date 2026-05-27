@@ -294,6 +294,7 @@ class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
     seen_bundle_hashes: dict[bytes32, bytes32]
+    in_flight_bundle_hashes: set[bytes32]
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]]
     get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]]
     nonzero_fee_minimum_fpc: int
@@ -326,6 +327,10 @@ class MempoolManager:
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
+        # Keep track of spend bundles currently in pre-validation. This set is
+        # intentionally non-evicting and short-lived to avoid churn in the
+        # long-lived seen cache.
+        self.in_flight_bundle_hashes: set[bytes32] = set()
 
         self.get_coin_records = get_coin_records
         self.get_unspent_lineage_info_for_puzzle_hash = get_unspent_lineage_info_for_puzzle_hash
@@ -463,6 +468,15 @@ class MempoolManager:
     def seen(self, bundle_hash: bytes32) -> bool:
         """Return true if we saw this spendbundle recently"""
         return bundle_hash in self.seen_bundle_hashes
+
+    def add_in_flight(self, bundle_hash: bytes32) -> None:
+        self.in_flight_bundle_hashes.add(bundle_hash)
+
+    def in_flight(self, bundle_hash: bytes32) -> bool:
+        return bundle_hash in self.in_flight_bundle_hashes
+
+    def remove_in_flight(self, bundle_hash: bytes32) -> None:
+        self.in_flight_bundle_hashes.discard(bundle_hash)
 
     def remove_seen(self, bundle_hash: bytes32) -> None:
         if bundle_hash in self.seen_bundle_hashes:
@@ -981,6 +995,7 @@ class MempoolManager:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
+            self.in_flight_bundle_hashes = set()
 
             # in order to make this a bit quicker, we look-up all the spends in
             # a single query, rather than one at a time.
@@ -1048,15 +1063,18 @@ class MempoolManager:
         log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
-    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[MempoolItem]:
+    def get_items_not_in_filter(
+        self, mempool_filter: PyBIP158, limit: int = 100, max_checked: int = 5000
+    ) -> list[MempoolItem]:
         items: list[MempoolItem] = []
 
         assert limit > 0
 
-        # Send 100 with the highest fee per cost
+        checked = 0
         for item in self.mempool.items_by_feerate():
-            if len(items) >= limit:
+            if len(items) >= limit or checked >= max_checked:
                 return items
+            checked += 1
             if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                 continue
             items.append(item)

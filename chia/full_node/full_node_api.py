@@ -74,7 +74,7 @@ from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.limited_semaphore import LimitedSemaphoreFullError
+from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
@@ -119,7 +119,6 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
                 continue
             entry = TransactionQueueEntry(
                 transaction=response.transaction,
-                transaction_bytes=bytes(response.transaction),
                 spend_name=response.transaction.name(),
                 peer=random_peer,
                 test=False,
@@ -157,11 +156,13 @@ class FullNodeAPI:
 
     log: logging.Logger
     full_node: FullNode
+    wallet_sync_api_sem: LimitedSemaphore
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
         self.full_node = full_node
+        self.wallet_sync_api_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
 
     @property
     def server(self) -> ChiaServer:
@@ -346,7 +347,7 @@ class FullNodeAPI:
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
             self.full_node.transaction_queue.put(
-                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
+                TransactionQueueEntry(tx.transaction, spend_name, peer, test, peers_with_tx),
                 peer.peer_node_id,
             )
         except TransactionQueueFull:
@@ -667,48 +668,58 @@ class FullNodeAPI:
 
         if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
             if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
-                collected_eos = []
-                challenge_hash_to_request = new_sp.challenge_hash
-                last_rc = new_sp.last_rc_infusion
-                num_non_empty_sub_slots_seen = 0
-                for _ in range(30):
-                    if num_non_empty_sub_slots_seen >= 3:
-                        self.log.debug("Diverged from peer. Don't have the same blocks")
-                        return None
-                    # If this is an end of sub slot, and we don't have the prev, request the prev instead
-                    # We want to catch up to the latest slot so we can receive signage points
-                    full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                        challenge_hash_to_request, uint8(0), last_rc
-                    )
-                    response = await peer.call_api(
-                        FullNodeAPI.request_signage_point_or_end_of_sub_slot, full_node_request, timeout=10
-                    )
-                    if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
-                        self.full_node.log.debug(f"Invalid response for slot {response}")
-                        return None
-                    collected_eos.append(response)
-                    if (
-                        self.full_node.full_node_store.get_sub_slot(
-                            response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                try:
+                    async with self.full_node.sp_catchup_sem.acquire():
+                        collected_eos = []
+                        challenge_hash_to_request = new_sp.challenge_hash
+                        last_rc = new_sp.last_rc_infusion
+                        num_non_empty_sub_slots_seen = 0
+                        for _ in range(30):
+                            if num_non_empty_sub_slots_seen >= 3:
+                                self.log.debug("Diverged from peer. Don't have the same blocks")
+                                return None
+                            # If this is an end of sub slot, and we don't have the prev, request the prev instead
+                            # We want to catch up to the latest slot so we can receive signage points
+                            full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                                challenge_hash_to_request, uint8(0), last_rc
+                            )
+                            response = await peer.call_api(
+                                FullNodeAPI.request_signage_point_or_end_of_sub_slot,
+                                full_node_request,
+                                timeout=10,
+                            )
+                            if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
+                                self.full_node.log.debug(f"Invalid response for slot {response}")
+                                return None
+                            collected_eos.append(response)
+                            if (
+                                self.full_node.full_node_store.get_sub_slot(
+                                    response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                                )
+                                is not None
+                                or response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                                == self.full_node.constants.GENESIS_CHALLENGE
+                            ):
+                                for eos in reversed(collected_eos):
+                                    await self.respond_end_of_sub_slot(eos, peer)
+                                return None
+                            if (
+                                response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+                                != response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.number_of_iterations
+                            ):
+                                num_non_empty_sub_slots_seen += 1
+                            challenge_hash_to_request = (
+                                response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                            )
+                            last_rc = response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge
+                        self.full_node.log.warning(
+                            "Failed to catch up in sub-slots from peer %s, closing", peer.get_peer_logging()
                         )
-                        is not None
-                        or response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                        == self.full_node.constants.GENESIS_CHALLENGE
-                    ):
-                        for eos in reversed(collected_eos):
-                            await self.respond_end_of_sub_slot(eos, peer)
+                        await peer.close(RATE_LIMITER_BAN_SECONDS)
                         return None
-                    if (
-                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
-                        != response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.number_of_iterations
-                    ):
-                        num_non_empty_sub_slots_seen += 1
-                    challenge_hash_to_request = (
-                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                    )
-                    last_rc = response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge
-                self.full_node.log.warning("Failed to catch up in sub-slots")
-                return None
+                except LimitedSemaphoreFullError:
+                    self.log.debug("Ignoring sub-slot catch-up, semaphore full: %s", peer.get_peer_logging())
+                    return None
 
         if new_sp.index_from_challenge > 0:
             if (
@@ -1376,58 +1387,68 @@ class FullNodeAPI:
             reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
             return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
 
-        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
+        # Empty proof request should not trigger expensive DB + Merkle construction.
+        if request.puzzle_hashes is not None and len(request.puzzle_hashes) == 0:
+            response = wallet_protocol.RespondAdditions(request.height, header_hash, [], [])
+            return make_msg(ProtocolMessageTypes.respond_additions, response)
 
-        # Note: this might return bad data if there is a reorg while waiting for
-        # the DB. So check the height-to-hash again
-        if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
+        try:
+            async with self.wallet_sync_api_sem.acquire():
+                additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
+
+                # Note: this might return bad data if there is a reorg while waiting for
+                # the DB. So check the height-to-hash again
+                if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
+                    reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
+                    return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+
+                puzzlehash_coins_map: dict[bytes32, list[Coin]] = {}
+                for coin_record in additions:
+                    if coin_record.coin.puzzle_hash in puzzlehash_coins_map:
+                        puzzlehash_coins_map[coin_record.coin.puzzle_hash].append(coin_record.coin)
+                    else:
+                        puzzlehash_coins_map[coin_record.coin.puzzle_hash] = [coin_record.coin]
+
+                coins_map: list[tuple[bytes32, list[Coin]]] = []
+                proofs_map: list[tuple[bytes32, bytes, bytes | None]] = []
+
+                if request.puzzle_hashes is None:
+                    if len(puzzlehash_coins_map) > MAX_COINS_MAP_SIZE:
+                        reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
+                        return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+                    for puzzle_hash, coins in puzzlehash_coins_map.items():
+                        coins_map.append((puzzle_hash, coins))
+                    response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
+                else:
+                    # Create addition Merkle set
+                    # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+                    leafs: list[bytes32] = []
+                    for puzzle, coins in puzzlehash_coins_map.items():
+                        leafs.append(puzzle)
+                        leafs.append(hash_coin_ids([c.name() for c in coins]))
+
+                    addition_merkle_set = MerkleSet(leafs)
+
+                    for puzzle_hash in request.puzzle_hashes:
+                        # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
+                        result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
+                        if puzzle_hash in puzzlehash_coins_map:
+                            coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
+                            hash_coin_str = hash_coin_ids([c.name() for c in puzzlehash_coins_map[puzzle_hash]])
+                            # This is a proof of inclusion of all coin ids that have this ph
+                            result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
+                            assert result
+                            assert result_2
+                            proofs_map.append((puzzle_hash, proof, proof_2))
+                        else:
+                            coins_map.append((puzzle_hash, []))
+                            assert not result
+                            proofs_map.append((puzzle_hash, proof, None))
+                    response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
+                return make_msg(ProtocolMessageTypes.respond_additions, response)
+        except LimitedSemaphoreFullError:
             reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
             return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-
-        puzzlehash_coins_map: dict[bytes32, list[Coin]] = {}
-        for coin_record in additions:
-            if coin_record.coin.puzzle_hash in puzzlehash_coins_map:
-                puzzlehash_coins_map[coin_record.coin.puzzle_hash].append(coin_record.coin)
-            else:
-                puzzlehash_coins_map[coin_record.coin.puzzle_hash] = [coin_record.coin]
-
-        coins_map: list[tuple[bytes32, list[Coin]]] = []
-        proofs_map: list[tuple[bytes32, bytes, bytes | None]] = []
-
-        if request.puzzle_hashes is None:
-            if len(puzzlehash_coins_map) > MAX_COINS_MAP_SIZE:
-                reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
-                return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-            for puzzle_hash, coins in puzzlehash_coins_map.items():
-                coins_map.append((puzzle_hash, coins))
-            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
-        else:
-            # Create addition Merkle set
-            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-            leafs: list[bytes32] = []
-            for puzzle, coins in puzzlehash_coins_map.items():
-                leafs.append(puzzle)
-                leafs.append(hash_coin_ids([c.name() for c in coins]))
-
-            addition_merkle_set = MerkleSet(leafs)
-
-            for puzzle_hash in request.puzzle_hashes:
-                # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
-                result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
-                if puzzle_hash in puzzlehash_coins_map:
-                    coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
-                    hash_coin_str = hash_coin_ids([c.name() for c in puzzlehash_coins_map[puzzle_hash]])
-                    # This is a proof of inclusion of all coin ids that have this ph
-                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
-                    assert result
-                    assert result_2
-                    proofs_map.append((puzzle_hash, proof, proof_2))
-                else:
-                    coins_map.append((puzzle_hash, []))
-                    assert not result
-                    proofs_map.append((puzzle_hash, proof, None))
-            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
-        return make_msg(ProtocolMessageTypes.respond_additions, response)
 
     @metadata.request()
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Message | None:
@@ -1435,72 +1456,79 @@ class FullNodeAPI:
             reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
             return make_msg(ProtocolMessageTypes.reject_removals_request, reject)
 
-        block: FullBlock | None = await self.full_node.block_store.get_full_block(request.header_hash)
+        try:
+            async with self.wallet_sync_api_sem.acquire():
+                block: FullBlock | None = await self.full_node.block_store.get_full_block(request.header_hash)
 
-        # We lock so that the coin store does not get modified
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if (
-            block is None
-            or block.is_transaction_block() is False
-            or block.height != request.height
-            or (peak_height is not None and block.height > peak_height)
-            or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
-        ):
-            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
-            msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
-            return msg
+                # We lock so that the coin store does not get modified
+                peak_height = self.full_node.blockchain.get_peak_height()
+                if (
+                    block is None
+                    or block.is_transaction_block() is False
+                    or block.height != request.height
+                    or (peak_height is not None and block.height > peak_height)
+                    or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
+                ):
+                    reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+                    msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+                    return msg
 
-        assert block is not None and block.foliage_transaction_block is not None
+                assert block is not None and block.foliage_transaction_block is not None
 
-        all_removals: list[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+                all_removals: list[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(
+                    block.height
+                )
 
-        # Note: this might return bad data if there is a reorg while waiting for
-        # the DB. So check the height-to-hash again
-        if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
-            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
-            msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
-            return msg
+                # Note: this might return bad data if there is a reorg while waiting for
+                # the DB. So check the height-to-hash again
+                if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
+                    reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+                    msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+                    return msg
 
-        all_removals_dict: dict[bytes32, Coin] = {}
-        for coin_record in all_removals:
-            all_removals_dict[coin_record.coin.name()] = coin_record.coin
+                all_removals_dict: dict[bytes32, Coin] = {}
+                for coin_record in all_removals:
+                    all_removals_dict[coin_record.coin.name()] = coin_record.coin
 
-        coins_map: list[tuple[bytes32, Coin | None]] = []
-        proofs_map: list[tuple[bytes32, bytes]] = []
+                coins_map: list[tuple[bytes32, Coin | None]] = []
+                proofs_map: list[tuple[bytes32, bytes]] = []
 
-        # If there are no transactions, respond with empty lists
-        if block.transactions_generator is None:
-            proofs: list[tuple[bytes32, bytes]] | None
-            if request.coin_names is None:
-                proofs = None
-            else:
-                proofs = []
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
-        elif request.coin_names is None or len(request.coin_names) == 0:
-            for removed_name, removed_coin in all_removals_dict.items():
-                coins_map.append((removed_name, removed_coin))
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
-        else:
-            assert block.transactions_generator
-            leafs: list[bytes32] = []
-            for removed_name, removed_coin in all_removals_dict.items():
-                leafs.append(removed_name)
-            removal_merkle_set = MerkleSet(leafs)
-            assert removal_merkle_set.get_root() == block.foliage_transaction_block.removals_root
-            for coin_name in request.coin_names:
-                result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
-                proofs_map.append((coin_name, proof))
-                if coin_name in all_removals_dict:
-                    removed_coin = all_removals_dict[coin_name]
-                    coins_map.append((coin_name, removed_coin))
-                    assert result
+                # If there are no transactions, respond with empty lists
+                if block.transactions_generator is None:
+                    proofs: list[tuple[bytes32, bytes]] | None
+                    if request.coin_names is None:
+                        proofs = None
+                    else:
+                        proofs = []
+                    response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
+                elif request.coin_names is None or len(request.coin_names) == 0:
+                    for removed_name, removed_coin in all_removals_dict.items():
+                        coins_map.append((removed_name, removed_coin))
+                    response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
                 else:
-                    coins_map.append((coin_name, None))
-                    assert not result
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
+                    assert block.transactions_generator
+                    leafs: list[bytes32] = []
+                    for removed_name, removed_coin in all_removals_dict.items():
+                        leafs.append(removed_name)
+                    removal_merkle_set = MerkleSet(leafs)
+                    assert removal_merkle_set.get_root() == block.foliage_transaction_block.removals_root
+                    for coin_name in request.coin_names:
+                        result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
+                        proofs_map.append((coin_name, proof))
+                        if coin_name in all_removals_dict:
+                            removed_coin = all_removals_dict[coin_name]
+                            coins_map.append((coin_name, removed_coin))
+                            assert result
+                        else:
+                            coins_map.append((coin_name, None))
+                            assert not result
+                    response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
 
-        msg = make_msg(ProtocolMessageTypes.respond_removals, response)
-        return msg
+                msg = make_msg(ProtocolMessageTypes.respond_removals, response)
+                return msg
+        except LimitedSemaphoreFullError:
+            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+            return make_msg(ProtocolMessageTypes.reject_removals_request, reject)
 
     @metadata.request(peer_required=True)
     async def send_transaction(
@@ -1512,7 +1540,7 @@ class FullNodeAPI:
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
         high_priority = self.is_trusted(peer)
-        queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
+        queue_entry = TransactionQueueEntry(request.transaction, spend_name, None, test)
         try:
             self.full_node.transaction_queue.put(queue_entry, peer_id=peer.peer_node_id, high_priority=high_priority)
         except TransactionQueueFull:

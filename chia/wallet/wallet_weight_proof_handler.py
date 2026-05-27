@@ -114,13 +114,8 @@ def get_fork_ses_idx(old_wp: WeightProof | None, new_wp: WeightProof) -> int:
 
     if old_wp is None:
         return uint32(0)
-    ses_index = 0
-    for idx, new_ses in enumerate(new_wp.sub_epochs):
-        if new_ses.reward_chain_hash != old_wp.sub_epochs[idx].reward_chain_hash:
-            ses_index = idx
-            break
-
-        if idx == len(old_wp.sub_epochs) - 1:
-            ses_index = idx
-            break
-    return ses_index
+    idx = 0
+    for idx, (old_ses, new_ses) in enumerate(zip(old_wp.sub_epochs, new_wp.sub_epochs)):
+        if old_ses.reward_chain_hash != new_ses.reward_chain_hash:
+            return idx
+    return idx

@@ -889,6 +889,82 @@ async def test_add_coin_records_to_db() -> None:
             assert resulting_record == record
 
 
+@pytest.mark.anyio
+async def test_get_coin_records_by_parent_ids_max_items() -> None:
+    parent_id = bytes32(std_hash(b"parent"))
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        records = [
+            CoinRecord(
+                coin=Coin(parent_id, std_hash(i.to_bytes(4, byteorder="big")), uint64(i + 1)),
+                confirmed_block_index=uint32(1),
+                spent_block_index=uint32(0),
+                coinbase=False,
+                timestamp=uint64(10000),
+            )
+            for i in range(200)
+        ]
+        await add_coin_records_to_db(coin_store, records)
+
+        all_results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id])
+        assert len(all_results) == 200
+
+        for limit in [0, 1, 50, 200]:
+            results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=limit)
+            assert len(results) == limit
+
+        results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id], max_items=10000)
+        assert len(results) == 200
+
+
+@pytest.mark.anyio
+async def test_get_coin_records_by_parent_ids_max_items_across_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Force multiple batches so we verify the global limit is enforced across batches.
+    monkeypatch.setattr("chia.full_node.coin_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
+    parent_ids = [bytes32(std_hash(i.to_bytes(4, byteorder="big"))) for i in range(8)]
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        records = [
+            CoinRecord(
+                coin=Coin(parent_id, std_hash(b"shared-ph"), uint64(i + 1)),
+                confirmed_block_index=uint32(1),
+                spent_block_index=uint32(0),
+                coinbase=False,
+                timestamp=uint64(10000),
+            )
+            for i, parent_id in enumerate(parent_ids)
+        ]
+        await add_coin_records_to_db(coin_store, records)
+
+        results = await coin_store.get_coin_records_by_parent_ids(True, parent_ids, max_items=7)
+        assert len(results) == 7
+
+
+@pytest.mark.anyio
+async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit() -> None:
+    parent_id = bytes32(std_hash(b"spent-filter-parent"))
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        records = [
+            CoinRecord(
+                coin=Coin(parent_id, std_hash(i.to_bytes(4, byteorder="big")), uint64(i + 1)),
+                confirmed_block_index=uint32(1),
+                spent_block_index=uint32(5) if i % 2 == 0 else uint32(0),
+                coinbase=False,
+                timestamp=uint64(10000),
+            )
+            for i in range(10)
+        ]
+        await add_coin_records_to_db(coin_store, records)
+
+        unspent_only = await coin_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=3)
+        assert len(unspent_only) == 3
+        assert all(record.spent_block_index == 0 for record in unspent_only)
+
+        unspent_only_full = await coin_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=10000)
+        assert len(unspent_only_full) == 5
+
+
 async def get_spent_index(conn: aiosqlite.Connection, coin_name: bytes32) -> int:
     cursor = await conn.execute("SELECT spent_index FROM coin_record WHERE coin_name = ?", (coin_name,))
     row = await cursor.fetchone()
