@@ -829,11 +829,6 @@ class FullNodeStore:
                     ):
                         return SignagePointAddResult.INVALID_VDF
 
-                if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
-                    # This signage point is probably outdated
-                    self.add_to_future_sp(signage_point, index)
-                    return SignagePointAddResult.NOT_ADDED
-
                 if rc_vdf_info_expected != signage_point.rc_vdf:
                     self.add_to_future_sp(signage_point, index)
                     return SignagePointAddResult.NOT_ADDED
