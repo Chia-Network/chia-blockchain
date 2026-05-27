@@ -87,8 +87,8 @@ fpm -s dir -t rpm \
   --rpm-tag '%undefine _missing_build_ids_terminate_build' \
   --before-install=assets/rpm/before-install.sh \
   --rpm-tag 'Requires(pre): findutils' \
-  --rpm-compression xzmt \
-  --rpm-compression-level 6 \
+  --rpm-compression xz \
+  --rpm-compression-level 9 \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui

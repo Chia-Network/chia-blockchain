@@ -1,21 +1,31 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     MEMPOOL_MODE,
     ConsensusConstants,
     G2Element,
+    SpendBundleConditions,
     get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
 from chia_rs.sized_ints import uint16, uint32
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.types.generator_types import BlockGenerator
 from chia.util.errors import Err
+from chia.util.streamable import Streamable, streamable
+
+
+@streamable
+@dataclass(frozen=True)
+class NPCResult(Streamable):
+    error: uint16 | None
+    conds: SpendBundleConditions | None
+
 
 log = logging.getLogger(__name__)
 

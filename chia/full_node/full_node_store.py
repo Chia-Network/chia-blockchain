@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
@@ -20,12 +21,25 @@ from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
-from chia.util.lru_cache import LRUCache, LRUSet
+from chia.util.lru_cache import LRUCache, LRUKeyedListCache, LRUSet
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 MAX_UNFINISHED_BLOCKS_PER_REWARD_HASH = 20
+
+# Future caches store untrusted timelord/full-node gossip and must stay small
+# even when peers send max-size protocol messages with unique challenges.
+FUTURE_CACHE_ENTRY_TTL_SECONDS = 300
+
+FUTURE_SP_CACHE_MAX_KEYS = 128
+FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY = 64
+
+FUTURE_EOS_CACHE_MAX_KEYS = 128
+FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY = 4
+
+FUTURE_IP_CACHE_MAX_KEYS = 128
+FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY = 8
 
 
 @streamable
@@ -131,16 +145,13 @@ class FullNodeStore:
     # might receive before the blocks themselves. The dict keys are the reward chain challenge hashes.
 
     # End of slots which depend on infusions that we don't have
-    future_eos_cache: dict[bytes32, list[EndOfSubSlotBundle]]
+    future_eos_cache: LRUKeyedListCache[bytes32, EndOfSubSlotBundle]
 
     # Signage points which depend on infusions that we don't have
-    future_sp_cache: dict[bytes32, list[tuple[uint8, SignagePoint]]]
+    future_sp_cache: LRUKeyedListCache[bytes32, tuple[uint8, SignagePoint]]
 
     # Infusion point VDFs which depend on infusions that we don't have
-    future_ip_cache: dict[bytes32, list[timelord_protocol.NewInfusionPointVDF]]
-
-    # This stores the time that each key was added to the future cache, so we can clear old keys
-    future_cache_key_times: dict[bytes32, int]
+    future_ip_cache: LRUKeyedListCache[bytes32, timelord_protocol.NewInfusionPointVDF]
 
     # These recent caches are for pooling support
     recent_signage_points: LRUCache[bytes32, tuple[SignagePoint, float]]
@@ -160,12 +171,17 @@ class FullNodeStore:
         self.seen_unfinished_blocks = LRUSet(1000)
         self._unfinished_blocks = {}
         self.finished_sub_slots = []
-        self.future_eos_cache = {}
-        self.future_sp_cache = {}
-        self.future_ip_cache = {}
+        self.future_eos_cache = LRUKeyedListCache(
+            FUTURE_EOS_CACHE_MAX_KEYS, FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
+        self.future_sp_cache = LRUKeyedListCache(
+            FUTURE_SP_CACHE_MAX_KEYS, FUTURE_SP_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
+        self.future_ip_cache = LRUKeyedListCache(
+            FUTURE_IP_CACHE_MAX_KEYS, FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY, ttl_seconds=FUTURE_CACHE_ENTRY_TTL_SECONDS
+        )
         self.recent_signage_points = LRUCache(500)
         self.recent_eos = LRUCache(50)
-        self.future_cache_key_times = {}
         self.constants = constants
         self.clear_slots()
         self.initialize_genesis_sub_slot()
@@ -353,9 +369,7 @@ class FullNodeStore:
 
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
-        if ch not in self.future_ip_cache:
-            self.future_ip_cache[ch] = []
-        self.future_ip_cache[ch].append(infusion_point)
+        self.future_ip_cache.append(ch, infusion_point)
 
     def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
         if signage_point.rc_vdf is None:
@@ -369,7 +383,6 @@ class FullNodeStore:
         return False
 
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8) -> None:
-        # We are missing a block here
         if (
             signage_point.cc_vdf is None
             or signage_point.rc_vdf is None
@@ -377,29 +390,20 @@ class FullNodeStore:
             or signage_point.rc_proof is None
         ):
             return None
-        if signage_point.rc_vdf.challenge not in self.future_sp_cache:
-            self.future_sp_cache[signage_point.rc_vdf.challenge] = []
+        challenge = signage_point.rc_vdf.challenge
         if self.in_future_sp_cache(signage_point, index):
             return None
-
-        self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
-        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
-        log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge.hex()}. caching signage point {index}.")
+        if not self.future_sp_cache.append(challenge, (index, signage_point)):
+            return None
+        log.info(f"Don't have rc hash {challenge.hex()}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> list[timelord_protocol.NewInfusionPointVDF]:
         return self.future_ip_cache.get(rc_challenge_hash, [])
 
     def clear_old_cache_entries(self) -> None:
-        current_time: int = int(time.time())
-        remove_keys: list[bytes32] = []
-        for rc_hash, time_added in self.future_cache_key_times.items():
-            if current_time - time_added > 3600:
-                remove_keys.append(rc_hash)
-        for k in remove_keys:
-            self.future_cache_key_times.pop(k, None)
-            self.future_ip_cache.pop(k, [])
-            self.future_eos_cache.pop(k, [])
-            self.future_sp_cache.pop(k, [])
+        self.future_ip_cache.evict_expired()
+        self.future_eos_cache.evict_expired()
+        self.future_sp_cache.evict_expired()
 
     def clear_slots(self) -> None:
         self.finished_sub_slots.clear()
@@ -479,11 +483,8 @@ class FullNodeStore:
             cc_start_element = peak.challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
-                # We don't have this challenge hash yet
-                if rc_challenge not in self.future_eos_cache:
-                    self.future_eos_cache[rc_challenge] = []
-                self.future_eos_cache[rc_challenge].append(eos)
-                self.future_cache_key_times[rc_challenge] = int(time.time())
+                if not self.future_eos_cache.append(rc_challenge, eos):
+                    return None
                 log.info(f"Don't have challenge hash {rc_challenge}, caching EOS")
                 return None
 
@@ -528,6 +529,17 @@ class FullNodeStore:
             )
             if finish_se:
                 # this is the first slot in a new sub epoch, should include SES
+                post_hard_fork = post_hard_fork2(
+                    constants=self.constants,
+                    blocks=blocks,
+                    prev_b_hash=peak.prev_hash,
+                    sp_index=peak.signage_point_index,
+                    finished_sub_slots=(
+                        len(peak.finished_challenge_slot_hashes)
+                        if peak.finished_challenge_slot_hashes is not None
+                        else 0
+                    ),
+                )
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,
                     blocks,
@@ -535,6 +547,7 @@ class FullNodeStore:
                     blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
+                    make_challenge_root=post_hard_fork,
                 )
 
                 if eos.challenge_chain.subepoch_summary_hash is None:
@@ -1004,9 +1017,9 @@ class FullNodeStore:
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):
             new_ips.append(ip)
 
-        self.future_eos_cache.pop(peak.reward_infusion_new_challenge, [])
-        self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
-        self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
+        self.future_eos_cache.pop(peak.reward_infusion_new_challenge)
+        self.future_sp_cache.pop(peak.reward_infusion_new_challenge)
+        self.future_ip_cache.pop(peak.reward_infusion_new_challenge)
 
         for eos_op, _, _ in self.finished_sub_slots:
             if eos_op is not None:

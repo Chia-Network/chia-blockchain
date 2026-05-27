@@ -48,7 +48,7 @@ bash ./build_license_directory.sh
 # appears sometimes m-series chips (prefer bundled from @loader_path/..)
 bash ./remove_brew_rpaths.sh
 
-cp -r dist/daemon ../chia-blockchain-gui/packages/gui
+cp -a dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 
@@ -75,11 +75,11 @@ else
 fi
 echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="13" \
+  --config.mac.minimumSystemVersion="15" \
   --config ../../../build_scripts/electron-builder.json
 "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="13" \
+  --config.mac.minimumSystemVersion="15" \
   --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar

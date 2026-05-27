@@ -7,6 +7,7 @@ from multiprocessing import freeze_support
 from typing import Any
 
 from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint16
 
 from chia.apis import StubMetadataRegistry
 from chia.consensus.constants import replace_str_to_bytes
@@ -38,6 +39,7 @@ def create_wallet_service(
     consensus_constants: ConsensusConstants,
     keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
+    override_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> WalletService:
     service_config = config[SERVICE_NAME]
 
@@ -73,6 +75,7 @@ def create_wallet_service(
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
         stub_metadata_for_type=StubMetadataRegistry,
+        override_capabilities=override_capabilities,
     )
 
 

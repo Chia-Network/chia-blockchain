@@ -5,7 +5,6 @@ import dataclasses
 import enum
 import logging
 import traceback
-from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -16,6 +15,7 @@ from chia_rs import (
     EndOfSubSlotBundle,
     FullBlock,
     HeaderBlock,
+    SpendBundleConditions,
     SubEpochChallengeSegment,
     SubEpochSummary,
     UnfinishedBlock,
@@ -28,8 +28,9 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -43,11 +44,10 @@ from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.inline_executor import InlineExecutor
 from chia.util.priority_mutex import PriorityMutex
+from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +106,7 @@ class Blockchain:
     coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
+    mmr_manager: MMRManagerProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -126,9 +127,8 @@ class Blockchain:
         block_store: BlockStore,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
-        reserved_cores: int,
+        pool: Executor,
         *,
-        single_threaded: bool = False,
         log_coins: bool = False,
     ) -> Blockchain:
         """
@@ -142,20 +142,13 @@ class Blockchain:
         # be validated first.
         self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
         self.compact_proof_lock = asyncio.Lock()
-        if single_threaded:
-            self.pool = InlineExecutor()
-        else:
-            cpu_count = available_logical_cores()
-            num_workers = max(cpu_count - reserved_cores, 1)
-            self.pool = ThreadPoolExecutor(
-                max_workers=num_workers,
-                thread_name_prefix="block-validation-",
-            )
-            log.info(f"Started {num_workers} processes for block validation")
-
+        self.pool = pool
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
+        self.mmr_manager = BlockchainMMRManager(
+            consensus_constants.GENESIS_CHALLENGE, aggregate_from=consensus_constants.HARD_FORK2_HEIGHT
+        )
         self._shut_down = False
         await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
@@ -163,7 +156,6 @@ class Blockchain:
 
     def shut_down(self) -> None:
         self._shut_down = True
-        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
         """
@@ -173,7 +165,11 @@ class Blockchain:
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
-        for block in block_records.values():
+
+        # Sort blocks by height to build MMR properly
+        sorted_blocks = sorted(block_records.values(), key=lambda b: b.height)
+
+        for block in sorted_blocks:
             self.add_block_record(block)
 
         if len(block_records) == 0:
@@ -185,6 +181,14 @@ class Blockchain:
         self._peak_height = self.block_record(peak).height
         assert self.__height_map.contains_height(self._peak_height)
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
+
+        # Build MMR from canonical chain (height_map), starting from aggregate_from
+        # todo WPv2: persist MMR state to avoid rebuilding on startup
+        for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
+            header_hash = self.__height_map.get_hash(uint32(height))
+            block_record = await self.get_block_record_from_db(header_hash)
+            assert block_record is not None
+            self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
 
     def get_peak(self) -> BlockRecord | None:
         """
@@ -320,7 +324,7 @@ class Blockchain:
             A StateChangeSummary iff NEW_PEAK, with:
                 - A fork point if the result is NEW_PEAK
                 - A list of coin changes as a result of rollback
-                - A list of NPCResult for any new transaction block added to the chain
+                - A list of SpendBundleConditions for any new transaction block added to the chain
         """
 
         if block.height == 0 and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
@@ -445,11 +449,19 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
+                if self._peak_height is not None and fork_info.fork_height < self._peak_height:
+                    self.mmr_manager.rollback_to_height(fork_info.fork_height, self)
+                # pre-allocate memory for height to hash map. We don't want it
+                # to fail once the DB transaction is committed.
+                self.__height_map.ensure_capacity(records[-1].height)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
                     fetched_block_record.header_hash,
                     fetched_block_record.sub_epoch_summary_included,
+                )
+                self.mmr_manager.add_block_to_mmr(
+                    fetched_block_record.header_hash, fetched_block_record.prev_hash, fetched_block_record.height
                 )
 
             if state_change_summary is not None:
@@ -703,6 +715,9 @@ class Blockchain:
     async def validate_unfinished_block_header(
         self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
     ) -> tuple[uint64 | None, Err | None]:
+        if len(block.reward_chain_block.proof_of_space.proof) >= 2000:
+            return None, Err.INVALID_POSPACE
+
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
@@ -719,7 +734,7 @@ class Blockchain:
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.
-        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:
+        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT and block.transactions_generator_ref_list != []:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         if block.transactions_info is not None:
@@ -768,7 +783,7 @@ class Blockchain:
         return required_iters, None
 
     async def validate_unfinished_block(
-        self, block: UnfinishedBlock, npc_result: NPCResult | None, skip_overflow_ss_validation: bool = True
+        self, block: UnfinishedBlock, conds: SpendBundleConditions | None, skip_overflow_ss_validation: bool = True
     ) -> PreValidationResult:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
@@ -783,7 +798,6 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
-        conds = None if npc_result is None else npc_result.conds
         error_code = await validate_block_body(
             self.constants,
             self,
@@ -988,6 +1002,7 @@ class Blockchain:
 
         return (await self.block_store.get_block_record(header_hash)) is not None
 
+    # can only called on the heighest block
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
@@ -1087,3 +1102,17 @@ class Blockchain:
             generators.update(await self.block_store.get_generators_at(remaining_refs))
 
         return generators
+
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+
+    def compute_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.compute_current_mmr_root()
+
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)

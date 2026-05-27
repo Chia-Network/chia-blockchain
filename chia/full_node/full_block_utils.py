@@ -38,6 +38,10 @@ def skip_bytes32(buf: memoryview) -> memoryview:
     return buf[32:]
 
 
+def skip_uint16(buf: memoryview) -> memoryview:
+    return buf[2:]
+
+
 def skip_uint32(buf: memoryview) -> memoryview:
     return buf[4:]
 
@@ -119,9 +123,19 @@ def skip_g2_element(buf: memoryview) -> memoryview:
 def skip_proof_of_space(buf: memoryview) -> memoryview:
     buf = skip_bytes32(buf)  # challenge
     buf = skip_optional(buf, skip_g1_element)  # pool_public_key
-    buf = skip_optional(buf, skip_bytes32)  # pool_contract_puzzle_hash
+    discriminant = buf[0]
+    buf = buf[1:]
+    is_v2 = (discriminant & 0x2) != 0
+    if (discriminant & 0x1) != 0:
+        buf = skip_bytes32(buf)  # pool_contract_puzzle_hash
     buf = skip_g1_element(buf)  # plot_public_key
-    buf = skip_uint8(buf)  # size
+    if not is_v2:
+        buf = skip_uint8(buf)  # size
+    else:
+        buf = skip_uint16(buf)  # plot_index
+        buf = skip_uint8(buf)  # group_id
+        buf = skip_uint8(buf)  # strength
+
     return skip_bytes(buf)  # proof
 
 

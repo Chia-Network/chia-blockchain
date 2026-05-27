@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
+from clvm.SExp import CastableType
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
@@ -220,7 +221,10 @@ def create_ownership_layer_transfer_solution(
         trade_prices_list,
         new_puzhash.hex(),
     )
-    condition_list = [[51, new_puzhash, 1, [new_puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
+    condition_list: list[list[CastableType]] = [
+        [51, new_puzhash, 1, [new_puzhash]],
+        [-10, new_did, trade_prices_list, new_did_inner_hash],
+    ]
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to([[solution_for_conditions(condition_list)]])
     log.debug("Generated transfer solution: %s", solution)

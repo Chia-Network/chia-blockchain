@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from chia.pools.pool_config import PoolWalletConfig
 from chia.util.config import create_default_chia_config, load_config, lock_config, save_config
 
 
-def test_pool_config(tmp_path):
+def test_pool_config(tmp_path: Path) -> None:
     test_root = tmp_path
     test_path = test_root / "config"
     eg_config = test_path / "config.yaml"

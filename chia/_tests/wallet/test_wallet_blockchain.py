@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import FullBlock, HeaderBlock
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs import ConsensusConstants, FullBlock, HeaderBlock
+from chia_rs.sized_ints import uint8, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.blockchain import AddBlockResult
@@ -15,6 +16,7 @@ from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_wallet_blockchain(
@@ -108,3 +110,29 @@ async def test_wallet_blockchain(
         peak_block = await chain.get_peak_block()
         assert peak_block is not None
         assert peak_block.height == 999
+
+
+@pytest.mark.anyio
+async def test_wallet_blockchain_create_uses_persisted_values(blockchain_constants: ConsensusConstants) -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await KeyValStore.create(db_wrapper)
+        sub_slot_iters = uint64(42)
+        difficulty = uint64(1337)
+        await store.set_object("SUB_SLOT_ITERS", sub_slot_iters)
+        await store.set_object("DIFFICULTY", difficulty)
+
+        chain = await WalletBlockchain.create(store, blockchain_constants)
+        assert chain._sub_slot_iters == sub_slot_iters
+        assert chain._difficulty == difficulty
+
+
+@pytest.mark.anyio
+async def test_wallet_blockchain_create_defaults_without_persisted_values(
+    blockchain_constants: ConsensusConstants,
+) -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await KeyValStore.create(db_wrapper)
+        chain = await WalletBlockchain.create(store, blockchain_constants)
+
+        assert chain._sub_slot_iters == blockchain_constants.SUB_SLOT_ITERS_STARTING
+        assert chain._difficulty == blockchain_constants.DIFFICULTY_STARTING

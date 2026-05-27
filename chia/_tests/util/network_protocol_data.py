@@ -81,7 +81,11 @@ proof_of_space = ProofOfSpace(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
     ),
-    uint8(204),
+    uint8(1),  # version 1
+    uint16(3145),  # plot_index
+    uint8(5),  # meta_group
+    uint8(3),  # strength
+    uint8(0),  # size
     bytes.fromhex(
         "a67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
     ),
@@ -160,9 +164,11 @@ partial_proof = harvester_protocol.PartialProofsData(
         PartialProof([uint64(256)] * 16),
         PartialProof([uint64(257)] * 16),
     ],
-    uint8(4),
-    uint8(32),
-    uint8(5),
+    uint8(4),  # signage point
+    uint8(32),  # plot size
+    uint16(3145),  # plot_index
+    uint8(5),  # meta_group
+    uint8(3),  # strength
     bytes32.fromhex("346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a"),
     G1Element.from_bytes(
         bytes.fromhex(
@@ -321,7 +327,7 @@ reward_chain_block = RewardChainBlock(
     g2_element,
     vdf_info,
     vdf_info,
-    None,
+    None,  # header_mmr_root - None for test
     False,
 )
 
@@ -1059,7 +1065,7 @@ sub_epoch_summary = SubEpochSummary(
     uint8(4),
     uint64(14666749803532899046),
     uint64(10901191956946573440),
-    None,
+    None,  # challenge_merkle_root (pre-fork)
 )
 
 new_peak_timelord = timelord_protocol.NewPeakTimelord(
@@ -1085,6 +1091,7 @@ new_unfinished_block_timelord = timelord_protocol.NewUnfinishedBlockTimelord(
     foliage,
     sub_epoch_summary,
     bytes32(bytes.fromhex("0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5")),
+    None,
 )
 
 new_infusion_point_vdf = timelord_protocol.NewInfusionPointVDF(

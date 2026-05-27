@@ -61,7 +61,7 @@ def get_chia_version() -> str:
     return make_semver(version)
 
 
-def update_version(package_json_path: str):
+def update_version(package_json_path: str) -> None:
     if not exists(package_json_path):
         return
 

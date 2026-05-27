@@ -238,6 +238,7 @@ class Offer:
     def _get_offered_coins(self) -> dict[bytes32 | None, list[Coin]]:
         offered_coins: dict[bytes32 | None, list[Coin]] = {}
 
+        cost_left = INFINITE_COST
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: list[Coin] = []
 
@@ -253,7 +254,9 @@ class Offer:
                 assert inner_puzzle is not None and inner_solution is not None
 
                 # We're going to look at the conditions created by the inner puzzle
-                conditions: Program = inner_puzzle.run(inner_solution)
+                puzzle_cost, conditions = inner_puzzle.run_with_cost(cost_left, inner_solution)
+                assert cost_left >= puzzle_cost
+                cost_left -= puzzle_cost
                 expected_num_matches: int = 0
                 offered_amounts: list[int] = []
                 for condition in conditions.as_iter():

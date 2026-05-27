@@ -16,6 +16,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.casts import int_to_bytes
+from chia.util.inline_executor import InlineExecutor
 
 # this is one week worth of blocks
 NUM_ITERS = 32256
@@ -94,7 +95,11 @@ async def run_mempool_benchmark() -> None:
     timestamp = uint64(1631794488)
 
     with MempoolManager(
-        get_coin_record, get_unspent_lineage_info_for_puzzle_hash, DEFAULT_CONSTANTS, single_threaded=True
+        get_coin_record,
+        get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        InlineExecutor(),
+        validation_timeout=2,
     ) as mempool:
         print("\nrunning add_spend_bundle() + new_peak()")
 

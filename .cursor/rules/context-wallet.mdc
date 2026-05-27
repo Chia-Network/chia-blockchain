@@ -1,0 +1,13 @@
+---
+description: Auto-attach wallet context when working in wallet code
+globs:
+  - chia/wallet/**
+---
+
+# Wallet Context Available
+
+Deep context for this subsystem exists at `.cursor/context/wallet.md`.
+Read it before exploring code — it documents coin selection, the wallet sync
+model (trusted vs untrusted), `WalletStateManager` responsibilities,
+sub-wallet types, transaction construction flow, `WalletActionScope`, and
+the RPC surface layout.

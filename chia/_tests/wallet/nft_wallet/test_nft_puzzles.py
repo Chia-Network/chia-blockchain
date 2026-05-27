@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
+from clvm.SExp import CastableType
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
@@ -11,6 +13,7 @@ from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
+    create_ownership_layer_transfer_solution,
     recurry_nft_puzzle,
 )
 from chia.wallet.nft_wallet.nft_puzzles import (
@@ -109,8 +112,11 @@ def make_a_new_solution() -> tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list = [[200, OFFER_MOD_HASH]]
-    condition_list = [[51, puzhash, 1, [puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
+    trade_prices_list: list[list[CastableType]] = [[200, OFFER_MOD_HASH]]
+    condition_list: list[list[CastableType]] = [
+        [51, puzhash, 1, [puzhash]],
+        [-10, new_did, trade_prices_list, new_did_inner_hash],
+    ]
     solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 
@@ -167,3 +173,34 @@ def test_transfer_puzzle_builder() -> None:
     ol_puzzle = recurry_nft_puzzle(unft, solution, sp2_puzzle)
     nft_puzzle = create_nft_layer_puzzle_with_curry_params(Program.to(metadata), NFT_METADATA_UPDATER_HASH, ol_puzzle)
     assert clvm_puzzle_hash == nft_puzzle.get_tree_hash()
+
+
+def test_create_ownership_layer_transfer_solution() -> None:
+    destination = int_to_public_key(2)
+    p2_puzzle = puzzle_for_pk(destination)
+    new_puzhash = p2_puzzle.get_tree_hash()
+    new_did = Program.to("test").get_tree_hash()
+    new_did_inner_hash = Program.to("fake").get_tree_hash()
+    trade_prices_list: list[list[Any]] = [[200, OFFER_MOD_HASH]]
+
+    solution = create_ownership_layer_transfer_solution(new_did, new_did_inner_hash, trade_prices_list, new_puzhash)
+
+    # Extract conditions from the delegated puzzle inside the solution
+    p2_solution = solution.first().first()
+    delegated_puzzle = p2_solution.at("rf")
+    conditions = delegated_puzzle.run(p2_solution.at("rrf"))
+
+    found_create_coin = False
+    found_change_owner = False
+    for cond in conditions.as_iter():
+        code = cond.first().as_int()
+        if code == 51:
+            assert bytes32(cond.at("rf").as_atom()) == new_puzhash
+            assert cond.at("rrf").as_int() == 1
+            found_create_coin = True
+        elif code == -10:
+            assert bytes32(cond.at("rf").as_atom()) == new_did
+            found_change_owner = True
+
+    assert found_create_coin
+    assert found_change_owner

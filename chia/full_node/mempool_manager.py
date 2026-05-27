@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
-from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from types import TracebackType
 from typing import TypeVar
@@ -43,7 +41,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
-from chia.util.inline_executor import InlineExecutor
+from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
 
@@ -296,6 +294,7 @@ class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
     seen_bundle_hashes: dict[bytes32, bytes32]
+    in_flight_bundle_hashes: set[bytes32]
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]]
     get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]]
     nonzero_fee_minimum_fpc: int
@@ -312,20 +311,26 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
+    validation_timeout: float
 
     def __init__(
         self,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
+        pool: Executor,
         *,
-        single_threaded: bool = False,
+        validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
+        # Keep track of spend bundles currently in pre-validation. This set is
+        # intentionally non-evicting and short-lived to avoid churn in the
+        # long-lived seen cache.
+        self.in_flight_bundle_hashes: set[bytes32] = set()
 
         self.get_coin_records = get_coin_records
         self.get_unspent_lineage_info_for_puzzle_hash = get_unspent_lineage_info_for_puzzle_hash
@@ -350,10 +355,8 @@ class MempoolManager:
         self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
         self._worker_queue_size = 0
-        if single_threaded:
-            self.pool = InlineExecutor()
-        else:
-            self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mempool-")
+        self.validation_timeout = validation_timeout
+        self.pool = pool
 
         # The mempool will correspond to a certain peak
         self.peak: BlockRecordProtocol | None = None
@@ -372,15 +375,18 @@ class MempoolManager:
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
         consensus_constants: ConsensusConstants,
-        single_threaded: bool = False,
+        pool: Executor,
+        *,
+        validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
             get_unspent_lineage_info_for_puzzle_hash,
             consensus_constants,
-            single_threaded=single_threaded,
+            pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
+            validation_timeout=validation_timeout,
         )
         try:
             yield self
@@ -388,7 +394,6 @@ class MempoolManager:
             self.shut_down()
 
     def shut_down(self) -> None:
-        self.pool.shutdown(wait=True)
         self.mempool.close()
 
     def __enter__(self) -> Self:
@@ -464,12 +469,26 @@ class MempoolManager:
         """Return true if we saw this spendbundle recently"""
         return bundle_hash in self.seen_bundle_hashes
 
+    def add_in_flight(self, bundle_hash: bytes32) -> None:
+        self.in_flight_bundle_hashes.add(bundle_hash)
+
+    def in_flight(self, bundle_hash: bytes32) -> bool:
+        return bundle_hash in self.in_flight_bundle_hashes
+
+    def remove_in_flight(self, bundle_hash: bytes32) -> None:
+        self.in_flight_bundle_hashes.discard(bundle_hash)
+
     def remove_seen(self, bundle_hash: bytes32) -> None:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self, spend_bundle: SpendBundle, spend_bundle_id: bytes32 | None = None, bls_cache: BLSCache | None = None
+        self,
+        spend_bundle: SpendBundle,
+        spend_bundle_id: bytes32 | None = None,
+        bls_cache: BLSCache | None = None,
+        *,
+        fee_per_cost: float = 0.0,
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
@@ -484,13 +503,14 @@ class MempoolManager:
         self._worker_queue_size += 1
         try:
             flags = get_flags_for_height_and_constants(self.peak.height, self.constants)
-            sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
-                self.pool,
+            sbc: SpendBundleConditions
+            sbc, new_cache_entries, duration = await self.pool.run_in_loop(
                 validate_clvm_and_signature,
                 spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
                 flags | MEMPOOL_MODE,
+                nice=(5, -fee_per_cost),
             )
         # validate_clvm_and_signature raises a ValueError with an error code
         except ValueError as e:
@@ -504,10 +524,17 @@ class MempoolManager:
             self._worker_queue_size -= 1
 
         if sbc.num_atoms > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
-            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many atoms")
+            raise ValueError("too many atoms")
 
         if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
-            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many pairs")
+            raise ValueError("too many pairs")
+
+        if duration > self.validation_timeout:
+            raise ValueError(f"timeout {duration:0.4} s")
+
+        cost = sbc.execution_cost + sbc.condition_cost
+        if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
+            raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
@@ -516,8 +543,8 @@ class MempoolManager:
             spend_bundle_id = spend_bundle.name()
 
         log.log(
-            logging.DEBUG if duration < 2 else logging.WARNING,
-            f"pre_validate_spendbundle took {duration:0.4f} seconds "
+            logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
+            f"pre_validate_spendbundle took {duration:0.4f} seconds {duration * 1e9 / cost:0.4} ns/cost "
             f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
         return sbc
@@ -768,6 +795,7 @@ class MempoolManager:
             conds,
             self.peak.height,
             self.peak.timestamp,
+            nowrap=self.peak.height >= self.constants.HARD_FORK2_HEIGHT,
         )
         tl_error: Err | None = None
         if tl_error_rust is not None:
@@ -808,12 +836,12 @@ class MempoolManager:
         duration = time.monotonic() - start_time
 
         log.log(
-            logging.DEBUG if duration < 2 else logging.WARNING,
+            logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        if duration > 2:
+        if duration > self.validation_timeout:
             log.warning("validating spend took too long, rejecting")
             return Err.INVALID_SPEND_BUNDLE, None, []
 
@@ -967,6 +995,7 @@ class MempoolManager:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
+            self.in_flight_bundle_hashes = set()
 
             # in order to make this a bit quicker, we look-up all the spends in
             # a single query, rather than one at a time.
@@ -1034,15 +1063,18 @@ class MempoolManager:
         log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
-    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[MempoolItem]:
+    def get_items_not_in_filter(
+        self, mempool_filter: PyBIP158, limit: int = 100, max_checked: int = 5000
+    ) -> list[MempoolItem]:
         items: list[MempoolItem] = []
 
         assert limit > 0
 
-        # Send 100 with the highest fee per cost
+        checked = 0
         for item in self.mempool.items_by_feerate():
-            if len(items) >= limit:
+            if len(items) >= limit or checked >= max_checked:
                 return items
+            checked += 1
             if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                 continue
             items.append(item)

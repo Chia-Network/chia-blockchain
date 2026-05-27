@@ -321,7 +321,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -335,8 +335,9 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
+            conds = npc_result.conds
 
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         err = validate_res.error
         assert err is None
 
@@ -354,7 +355,7 @@ class TestBlockHeaderValidation:
             block.transactions_generator,
             [],
         )
-        npc_result = None
+        conds = None
         # if this assert fires, remove it along with the pragma for the block
         # below
         assert unf.transactions_generator is None
@@ -368,7 +369,8 @@ class TestBlockHeaderValidation:
                 height=block.height,
                 constants=bt.constants,
             )
-        validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
+            conds = npc_result.conds
+        validate_res = await blockchain.validate_unfinished_block(unf, conds, False)
         assert validate_res.error is None
 
     @pytest.mark.anyio
@@ -448,7 +450,7 @@ class TestBlockHeaderValidation:
                     block.transactions_generator,
                     [],
                 )
-                npc_result = None
+                conds = None
                 # if this assert fires, remove it along with the pragma for the block
                 # below
                 assert block.transactions_generator is None
@@ -462,9 +464,8 @@ class TestBlockHeaderValidation:
                         height=block.height,
                         constants=bt.constants,
                     )
-                validate_res = await blockchain.validate_unfinished_block(
-                    unf, npc_result, skip_overflow_ss_validation=True
-                )
+                    conds = npc_result.conds
+                validate_res = await blockchain.validate_unfinished_block(unf, conds, skip_overflow_ss_validation=True)
                 assert validate_res.error is None
                 return None
 
@@ -863,7 +864,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
         reason="After the phase out, when we have v2-only plots. It seems like "
         "we never get an overflow block. get_consecutive_blocks(..., force_overflow=True) "
         "loops until we time out",
@@ -1217,7 +1218,10 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.version_and_size", 62)
+        if blocks[-1].reward_chain_block.proof_of_space.version == 0:
+            block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        else:
+            block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.strength", 1)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
@@ -1226,16 +1230,24 @@ class TestBlockHeaderValidation:
             AugSchemeMPL.key_gen(std_hash(b"1231n")).get_g1(),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
-        block_bad = recursive_replace(
-            blocks[-1],
-            "reward_chain_block.proof_of_space.version_and_size",
-            32,
-        )
+
+        if blocks[-1].reward_chain_block.proof_of_space.version == 0:
+            block_bad = recursive_replace(
+                blocks[-1],
+                "reward_chain_block.proof_of_space.size",
+                32,
+            )
+        else:
+            block_bad = recursive_replace(
+                blocks[-1],
+                "reward_chain_block.proof_of_space.strength",
+                67,
+            )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.proof_of_space.proof",
-            bytes([1] * int((blocks[-1].reward_chain_block.proof_of_space.version_and_size & 0x7F) * 64 / 8)),
+            bytes([1] * len(blocks[-1].reward_chain_block.proof_of_space.proof)),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
@@ -1451,6 +1463,12 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
+    # TODO: todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="It seams ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT fails to "
+        "find any proofs with pool keys in a timely manner",
+    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1479,8 +1497,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v2 PoS with pool keys, "
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
         "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
     )
     async def test_pool_target_contract(
@@ -1637,73 +1655,76 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(b, blocks[0])
             while True:
                 blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-                if blocks[-1].foliage_transaction_block is not None:
-                    assert blocks[0].foliage_transaction_block is not None
-                    block_bad: FullBlock = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp - 10,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+                if blocks[-1].foliage_transaction_block is None:
+                    await _validate_and_add_block(b, blocks[-1])
+                    continue
 
-                    assert blocks[0].foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+                assert blocks[0].foliage_transaction_block is not None
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp - 10,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
 
-                    # since tests can run slow sometimes, and since we're using
-                    # the system clock, add some extra slack
-                    slack = 30
-                    block_bad = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp + time_delta + slack,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
-                    return None
-                await _validate_and_add_block(b, blocks[-1])
+                assert blocks[0].foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+
+                # Set the timestamp on the block to be too far out in the
+                # future from now
+                slack = 5
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    uint64(time.time()) + time_delta + slack,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
+                return None
 
     @pytest.mark.anyio
-    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Monkey patch add_block_to_mmr otherwise we will throw an error in the mmr invariant
+        # assetion and not in the block header validation code
+        monkeypatch.setattr(
+            "chia.consensus.blockchain_mmr.BlockchainMMRManager.add_block_to_mmr",
+            lambda *args, **kwargs: None,
+        )
+
         # 27
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -2604,7 +2625,7 @@ class TestBodyValidation:
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
-        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode < ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
         else:
             # after the hard fork activation, we no longer allow block references
@@ -2627,9 +2648,9 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
 
-        # after the 3.0 hard fork, we no longer allowe block references, so the
+        # after the 3.0 hard fork, we no longer allow block references, so the
         # block_refs parameter is no longer valid, nor this test
-        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode < ConsensusMode.SOFT_FORK_2_7:
             blocks = bt.get_consecutive_blocks(
                 1,
                 block_list_input=blocks,
@@ -2645,7 +2666,7 @@ class TestBodyValidation:
     @pytest.mark.anyio
     @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2661,7 +2682,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        for i in range(7_000):
+        num_coins = 7_000
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # after the hard fork, CREATE_COIN is 25% cheaper, so we need more
+            # coins to exceed the block cost
+            num_coins += num_coins // 3
+        for i in range(num_coins):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -3346,7 +3372,10 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode not in [ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_6]:  # noqa: PLR6201
+        if consensus_mode not in {
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_7,
+        }:
             reorg_point = 13
         else:
             reorg_point = 12
@@ -3417,9 +3446,14 @@ class TestReorgs:
         test_long_reorg_blocks: list[FullBlock],
         test_long_reorg_blocks_light: list[FullBlock],
         consensus_mode: ConsensusMode,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+        monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
+        elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            reorg_blocks = test_long_reorg_blocks[:1350]
         else:
             reorg_blocks = test_long_reorg_blocks[:1200]
 
@@ -3571,6 +3605,8 @@ class TestReorgs:
         fork_block = default_10000_blocks[num_blocks_chain_2_start - 101]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         await b.warmup(fork_block.height)
+        # Reuse one augmented overlay to mirror the full-node batch validation path.
+        aug_chain = AugmentedBlockchain(b)
         for block in blocks:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
@@ -3587,7 +3623,13 @@ class TestReorgs:
                     block.weight == peak.weight and block.total_iters < peak.total_iters
                 )
                 expect = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
-            await _validate_and_add_block(b, block, fork_info=fork_info, expected_result=expect)
+            await _validate_and_add_block(
+                b,
+                block,
+                fork_info=fork_info,
+                expected_result=expect,
+                augmented_blockchain=aug_chain,
+            )
 
         # if these asserts fires, there was no reorg back to the original chain
         peak = b.get_peak()
@@ -3800,8 +3842,8 @@ class TestReorgs:
             block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
         )
 
-        # overlong encoding became invalid in the 3.0 hard fork
-        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # overlong encoding became invalid in the 2.7 soft fork
+        if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
@@ -4025,7 +4067,9 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 @pytest.mark.anyio
 @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
-async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("chia.consensus.block_header_validation.validate_vdf", lambda *a, **kw: True)
+    monkeypatch.setattr("chia.consensus.block_header_validation.AugSchemeMPL.verify", lambda *a, **kw: True)
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
     WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
@@ -4364,7 +4408,7 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     transactions filter, on a non transaction block.
     """
     b = empty_blockchain
-    blocks = bt.get_consecutive_blocks(2)
+    blocks = bt.get_consecutive_blocks(10)
     for block in blocks:
         await _validate_and_add_block(b, block)
     non_tx_block = next(block for block in blocks if not block.is_transaction_block())

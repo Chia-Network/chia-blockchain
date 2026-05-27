@@ -209,8 +209,8 @@ class ConsensusMode(ComparableEnum):
     PLAIN = 0
     # the hard fork introduced in Chia 2.0 (but really in 2.1)
     HARD_FORK_2_0 = 1
-    # the soft fork introduced in Chia 2.6
-    SOFT_FORK_2_6 = 2
+    # the soft fork introduced in Chia 2.7
+    SOFT_FORK_2_7 = 2
     # the hard fork introduced in Chia 3.0
     HARD_FORK_3_0 = 3
     # the hard fork introduced in Chia 3.0 but after v1 plots have been
@@ -223,7 +223,7 @@ class ConsensusMode(ComparableEnum):
     params=[
         ConsensusMode.PLAIN,
         ConsensusMode.HARD_FORK_2_0,
-        ConsensusMode.SOFT_FORK_2_6,
+        ConsensusMode.SOFT_FORK_2_7,
         ConsensusMode.HARD_FORK_3_0,
         ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
     ],
@@ -236,20 +236,26 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
 
-    if consensus_mode >= ConsensusMode.SOFT_FORK_2_6:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
-            SOFT_FORK8_HEIGHT=uint32(2),
+            HARD_FORK_HEIGHT=uint32(2),
+        )
+
+    if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+        ret = ret.replace(
+            HARD_FORK_HEIGHT=uint32(0),
+            SOFT_FORK8_HEIGHT=uint32(0),
+            SOFT_FORK9_HEIGHT=uint32(0),
         )
 
     if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
         ret = ret.replace(
-            HARD_FORK_HEIGHT=uint32(0),
             HARD_FORK2_HEIGHT=uint32(0),
             PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(0),
             # we don't have very much v2 space, and no phase-out means the
             # difficulty won't adjust gradually. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(2),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
@@ -257,21 +263,27 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             # activate the hard fork at some height > 0 (e.g. 5)
             # and have a shorter phase-out period (e.g. 2 bits). We would have
             # to regenerate the test chains and tweak some tests for this
-            HARD_FORK_HEIGHT=uint32(0),
             HARD_FORK2_HEIGHT=uint32(0),
             # we don't have very much v2 space. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(7),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
-            HARD_FORK_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
 
     return ret
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _install_plot_cache() -> None:
+    from chia._tests.util.plot_cache import install as install_plot_cache
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    install_plot_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
 
 
 @pytest.fixture(scope="session", name="bt")
@@ -335,6 +347,8 @@ def test_chain_suffix(consensus_mode: ConsensusMode) -> str:
         return "3.0"
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         return "3.0_mixed"
+    elif consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+        return "2.7"
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         return "2.0_hardfork"
     else:
@@ -506,6 +520,47 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(0),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_zero:
+        version = "_fork_height_zero"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(500),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_500:
+        version = "_fork_height_500"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_500, seed=b"fork_500")
 
 
 # If you add another test chain, don't forget to also add a "build_test_chains"
@@ -1322,7 +1377,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             )
         )
 
-        config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
+        config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0, "full_node.block_creation_timeout": 10}
 
         bts = [
             await async_exit_stack.enter_async_context(

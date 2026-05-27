@@ -197,6 +197,9 @@ class Err(Enum):
     # the transactions generator uses overlong encoding of CLVM atoms in its
     # serialization
     INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
+    # block or spendbundle had too many spends
+    TOO_MANY_SPENDS = 149
+    INVALID_HEADER_MMR_ROOT = 150
 
 
 class ValidationError(Exception):

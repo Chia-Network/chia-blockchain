@@ -100,6 +100,8 @@ class CoinStoreProtocol(Protocol):
         parent_ids: list[bytes32],
         start_height: uint32 = ...,
         end_height: uint32 = ...,
+        *,
+        max_items: int = ...,
     ) -> list[CoinRecord]:
         """
         Returns the coin records for a list of parent ids

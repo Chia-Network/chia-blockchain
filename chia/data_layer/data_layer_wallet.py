@@ -243,8 +243,14 @@ class DataLayerWallet:
                 timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
                 await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
-                self.log.info(f"Spend of launcher {launcher_id} has already been processed")
-                return None
+                # Singleton has advanced beyond generation 0 but the launcher entry
+                # is missing (already verified at the top of this function). This
+                # happens after a wallet rollback deletes the launchers row while
+                # the singleton_records survive.  Fall through to restore it.
+                self.log.info(
+                    f"Singleton {launcher_id} already tracked at generation "
+                    f"{singleton_record.generation}, restoring launcher entry"
+                )
         else:
             timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(

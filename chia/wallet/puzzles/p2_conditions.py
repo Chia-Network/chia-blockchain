@@ -13,15 +13,16 @@ the doctor ordered.
 from __future__ import annotations
 
 from chia_puzzles_py.programs import P2_CONDITIONS
+from clvm.SExp import CastableType
 
 from chia.types.blockchain_format.program import Program
 
 MOD = Program.from_bytes(P2_CONDITIONS)
 
 
-def puzzle_for_conditions(conditions) -> Program:
+def puzzle_for_conditions(conditions: CastableType) -> Program:
     return MOD.run([conditions])
 
 
-def solution_for_conditions(conditions) -> Program:
+def solution_for_conditions(conditions: CastableType) -> Program:
     return Program.to([puzzle_for_conditions(conditions), 0])

@@ -20,7 +20,7 @@ from chia_rs import (
     TransactionsInfo,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
@@ -109,7 +109,11 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_g1() if has_pool_pk else None,
                 rand_hash() if not has_pool_pk else None,
                 rand_g1(),  # plot_public_key
-                uint8(32),
+                uint8(0),  # v1
+                uint16(0),  # plot_index
+                uint8(0),  # group_id
+                uint8(0),  # strength
+                uint8(32),  # size
                 random.randbytes(8 * 32),
             )
 

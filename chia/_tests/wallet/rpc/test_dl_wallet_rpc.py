@@ -8,6 +8,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
@@ -43,6 +44,7 @@ log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_make_transaction(
@@ -354,6 +356,7 @@ class TestWalletRpc:
                 ]
             )
 
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_dl_verify_proof(
@@ -391,18 +394,17 @@ class TestWalletRpc:
             wallet_node.config["trusted_peers"] = {}
 
         assert wallet_service.rpc_server is not None
-        client = await WalletRpcClient.create(
+        async with WalletRpcClient.create_as_context(
             self_hostname,
             wallet_service.rpc_server.listen_port,
             wallet_service.root_path,
             wallet_service.config,
-        )
+        ) as client:
+            with pytest.raises(ValueError, match="No peer connected"):
+                await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr.to_json_dict())
 
-        with pytest.raises(ValueError, match="No peer connected"):
-            await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr.to_json_dict())
+            await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+            await validate_get_routes(client, wallet_service.rpc_server.rpc_api)
 
-        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-        await validate_get_routes(client, wallet_service.rpc_server.rpc_api)
-
-        with pytest.raises(ValueError, match=f"Invalid Proof: No DL singleton found at coin id: {fake_coin_id}"):
-            await client.dl_verify_proof(fake_gpr)
+            with pytest.raises(ValueError, match=f"Invalid Proof: No DL singleton found at coin id: {fake_coin_id}"):
+                await client.dl_verify_proof(fake_gpr)

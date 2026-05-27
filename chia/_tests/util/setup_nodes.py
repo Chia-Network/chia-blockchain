@@ -23,6 +23,7 @@ from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -91,7 +92,11 @@ async def setup_two_nodes(
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
 
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with (
             create_block_tools_async(
@@ -132,7 +137,11 @@ async def setup_n_nodes(
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
     with ExitStack() as stack:
         keychains = [stack.enter_context(TempKeyring(populate=True)) for _ in range(n)]
         async with AsyncExitStack() as async_exit_stack:
@@ -260,6 +269,7 @@ async def setup_simulators_and_wallets_inner(
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
         config_overrides["full_node.log_coins"] = True
+        config_overrides["full_node.block_creation_timeout"] = 10
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
             await async_exit_stack.enter_async_context(
@@ -351,6 +361,19 @@ async def setup_farmer_solver_multi_harvester(
             for i in range(harvester_count)
         ]
 
+        # Ensure all harvesters are connected to the farmer
+        # this helps with proper test setup and with proper teardown
+        if start_services:
+            with anyio.fail_after(delay=adjusted_timeout(10)):
+                for backoff in backoff_times():
+                    all_connected = all(
+                        len(harvester_service._node.server.get_connections(NodeType.FARMER)) > 0
+                        for harvester_service in harvester_services
+                    )
+                    if all_connected:
+                        break
+
+                    await asyncio.sleep(backoff)
         yield harvester_services, farmer_service, block_tools
 
 
@@ -380,7 +403,11 @@ async def setup_full_system_inner(
     keychain2: Keychain,
     shared_b_tools: BlockTools,
 ) -> AsyncIterator[FullSystem]:
-    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
+    config_overrides = {
+        "full_node.max_sync_wait": 0,
+        "full_node.log_coins": True,
+        "full_node.block_creation_timeout": 10,
+    }
 
     self_hostname = shared_b_tools.config["self_hostname"]
 
@@ -502,7 +529,7 @@ async def setup_full_system_inner(
             )
         )
 
-        full_system = FullSystem(
+        yield FullSystem(
             node_1=node_1,
             node_2=node_2,
             harvester=harvester,
@@ -513,4 +540,3 @@ async def setup_full_system_inner(
             solver=solver_service,
             daemon=daemon_ws,
         )
-        yield full_system

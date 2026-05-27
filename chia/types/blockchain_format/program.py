@@ -18,7 +18,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.casts import int_from_bytes
 from chia.util.hash import std_hash
 
-INFINITE_COST = 11000000000
+INFINITE_COST = 11_000_000_000
 
 DEFAULT_FLAGS = MEMPOOL_MODE
 

@@ -3,12 +3,13 @@ from __future__ import annotations
 import pytest
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
+from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, disassemble
 
 from chia.types.blockchain_format.program import Program
 
 
-def test_at():
+def test_at() -> None:
     p = Program.to([10, 20, 30, [15, 17], 40, 50])
 
     assert p.first() == p.at("f")
@@ -27,7 +28,7 @@ def test_at():
         p.at("ff")
 
 
-def test_replace():
+def test_replace() -> None:
     p1 = Program.to([100, 200, 300])
     assert p1.replace(f=105) == Program.to([105, 200, 300])
     assert p1.replace(rrf=[301, 302]) == Program.to([100, 200, [301, 302]])
@@ -35,19 +36,19 @@ def test_replace():
     assert p1.replace(f=100, r=200) == Program.to((100, 200))
 
 
-def test_replace_conflicts():
+def test_replace_conflicts() -> None:
     p1 = Program.to([100, 200, 300])
     with pytest.raises(ValueError):
         p1.replace(rr=105, rrf=200)
 
 
-def test_replace_conflicting_paths():
+def test_replace_conflicting_paths() -> None:
     p1 = Program.to([100, 200, 300])
     with pytest.raises(ValueError):
         p1.replace(ff=105)
 
 
-def test_replace_bad_path():
+def test_replace_bad_path() -> None:
     p1 = Program.to([100, 200, 300])
     with pytest.raises(ValueError):
         p1.replace(q=105)
@@ -55,7 +56,7 @@ def test_replace_bad_path():
         p1.replace(rq=105)
 
 
-def check_idempotency(f, *args):
+def check_idempotency(f: SExp, *args: int | SExp) -> str:
     prg = Program.to(f)
     curried = prg.curry(*args)
 
@@ -67,7 +68,7 @@ def check_idempotency(f, *args):
     return r
 
 
-def test_curry_uncurry():
+def test_curry_uncurry() -> None:
     PLUS = KEYWORD_TO_ATOM["+"][0]
     f = assemble("(+ 2 5)")
     actual_disassembly = check_idempotency(f, 200, 30)
@@ -80,31 +81,31 @@ def test_curry_uncurry():
     assert actual_disassembly == f"(a (q {PLUS} 2 5) (c (q {PLUS} (q . 50) (q . 60)) 1))"
 
 
-def test_uncurry_not_curried():
+def test_uncurry_not_curried() -> None:
     # this function has not been curried
     plus = Program.to(assemble("(+ 2 5)"))
     assert plus.uncurry() == (plus, Program.to(0))
 
 
-def test_uncurry():
+def test_uncurry() -> None:
     # this is a positive test
     plus = Program.to(assemble("(2 (q . (+ 2 5)) (c (q . 1) 1))"))
     assert plus.uncurry() == (Program.to(assemble("(+ 2 5)")), Program.to([1]))
 
 
-def test_uncurry_top_level_garbage():
+def test_uncurry_top_level_garbage() -> None:
     # there's garbage at the end of the top-level list
     plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1)) (q . 0x1337))"))
     assert plus.uncurry() == (plus, Program.to(0))
 
 
-def test_uncurry_not_pair():
+def test_uncurry_not_pair() -> None:
     # the second item in the list is expected to be a pair, with a quote
     plus = Program.to(assemble("(2 1 (c (q . 1) (q . 1)))"))
     assert plus.uncurry() == (plus, Program.to(0))
 
 
-def test_uncurry_args_garbage():
+def test_uncurry_args_garbage() -> None:
     # there's garbage at the end of the args list
     plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1) (q . 0x1337)))"))
     assert plus.uncurry() == (plus, Program.to(0))

@@ -135,10 +135,19 @@ class BlockHeightMap(BlockHeightMapProtocol):
 
         return self
 
+    def ensure_capacity(self, height: int) -> None:
+        needed = (height + 1) * 32
+        current = len(self.__height_to_hash)
+        if needed > current:
+            self.__height_to_hash += bytearray(needed - current)
+
     def update_height(self, height: uint32, header_hash: bytes32, ses: SubEpochSummary | None) -> None:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
-        assert height * 32 <= len(self.__height_to_hash)
+        needed = (height + 1) * 32
+        if needed > len(self.__height_to_hash):
+            log.warning(f"height_to_hash too short for height {height}, extending from {len(self.__height_to_hash)}")
+            self.__height_to_hash += bytearray(needed - len(self.__height_to_hash))
         self.__set_hash(height, header_hash)
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)

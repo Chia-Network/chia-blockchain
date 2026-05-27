@@ -28,11 +28,11 @@ from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
+from chia.util.harvester_config import add_plot_directory, remove_plot_directory
 from chia.util.streamable import _T_Streamable
 
 
@@ -516,9 +516,9 @@ async def test_harvester_restart(environment: Environment) -> None:
     env: Environment = environment
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
-    # Stop the harvester and make sure the receiver gets dropped on the farmer and refreshing gets stopped
+    # Stop the harvester and wait for the receiver to be dropped on the farmer (async via on_disconnect)
     await env.split_harvester_managers[0].exit()
-    assert len(env.farmer.plot_sync_receivers) == 1
+    await time_out_assert(5, lambda: len(env.farmer.plot_sync_receivers), 1)
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[0].plot_manager.needs_refresh()
     # Start the harvester, wait for the handshake and make sure the receiver comes back

@@ -82,6 +82,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # TODO: todo_v2_plots finalize fork height
     HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
     SOFT_FORK8_HEIGHT=uint32(8655000),
+    SOFT_FORK9_HEIGHT=uint32(8655000),
     # starting at the hard fork 2 height, v1 plots will gradually be phased out,
     # and stop working entirely after (1 << this) many epochs
     PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
@@ -101,18 +102,13 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
-    # These constants changed names to support v2 plots
-    if "MIN_PLOT_SIZE_V1" not in overrides and "MIN_PLOT_SIZE" in overrides:
-        overrides["MIN_PLOT_SIZE_V1"] = overrides["MIN_PLOT_SIZE"]
-        overrides.pop("MIN_PLOT_SIZE")
-    if "MAX_PLOT_SIZE_V1" not in overrides and "MAX_PLOT_SIZE" in overrides:
-        overrides["MAX_PLOT_SIZE_V1"] = overrides["MAX_PLOT_SIZE"]
-        overrides.pop("MAX_PLOT_SIZE")
     if network_id in {"testnet11", "testneta"}:
         if "PLOT_SIZE_V2" not in overrides:
             overrides["PLOT_SIZE_V2"] = 28
         if "SOFT_FORK8_HEIGHT" not in overrides:
             overrides["SOFT_FORK8_HEIGHT"] = 3755000
+        if "SOFT_FORK9_HEIGHT" not in overrides:
+            overrides["SOFT_FORK9_HEIGHT"] = 3924000
     if network_id == "testneta":
         if "HARD_FORK_HEIGHT" not in overrides:
             overrides["HARD_FORK_HEIGHT"] = 3693395

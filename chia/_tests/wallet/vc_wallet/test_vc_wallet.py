@@ -9,6 +9,7 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -142,6 +143,7 @@ async def mint_cr_cat(
     ],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -701,6 +703,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     ],
     indirect=True,
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Setup
@@ -721,10 +724,15 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node_0)
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
+    # When reuse_puzhash=False, get_puzzle_hash derives a new key and commit() enqueues
+    # puzzle-hash subscriptions on the new_peak_queue.  Wait for the queue to drain so
+    # the wallet reports SYNCED before the RPC call that follows.
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node_0)
     vc_record = (
         await client_0.vc_mint(
             VCMint(
@@ -820,6 +828,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_cat_wallet_conversion(
     self_hostname: str,
@@ -873,3 +882,6 @@ async def test_cat_wallet_conversion(
     await time_out_assert_not_none(
         15, check_length, 0, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CAT
     )
+
+    client_0.close()
+    await client_0.await_closed()

@@ -31,7 +31,12 @@ from chia_rs.datalayer import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import (
+    KeyNotFoundError,
+    MaxDeltaFileSizeExceededError,
+    MerkleBlobNotFoundError,
+    TreeGenerationIncrementingError,
+)
 from chia.data_layer.data_layer_util import (
     DiffData,
     InsertResult,
@@ -80,7 +85,7 @@ class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db_wrapper: DBWrapper2
-    recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
+    recent_merkle_blobs: LRUCache[tuple[bytes32, bytes32], MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
     unconfirmed_keys_values: dict[bytes32, list[bytes32]] = field(default_factory=dict)
@@ -111,7 +116,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
+            recent_merkle_blobs: LRUCache[tuple[bytes32, bytes32], MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
@@ -205,6 +210,7 @@ class DataStore:
         root_hash: bytes32 | None,
         filename: Path,
         delta_reader: DeltaReader | None = None,
+        max_delta_file_size: int = 250,
     ) -> DeltaReader | None:
         async with self.db_wrapper.writer():
             with self.manage_kv_files(store_id):
@@ -220,7 +226,7 @@ class DataStore:
                                 indexes=[TreeIndex(0)],
                             )
 
-                    internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+                    internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id, max_delta_file_size)
                     delta_reader.add_internal_nodes(internal_nodes)
                     delta_reader.add_leaf_nodes(terminal_nodes)
 
@@ -242,7 +248,12 @@ class DataStore:
                     merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
                 # Don't store these blob objects into cache, since their data structures are not calculated yet.
-                await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+                new_root = await self.insert_root_from_merkle_blob(
+                    merkle_blob, store_id, Status.COMMITTED, update_cache=False
+                )
+                # Double-check that the MerkleBlob is correct by loading it into memory.
+                if new_root.node_hash is not None:
+                    await self.get_merkle_blob(store_id=store_id, root_hash=new_root.node_hash, read_only=True)
                 return delta_reader
 
     async def build_merkle_blob_queries_for_missing_hashes(
@@ -346,12 +357,15 @@ class DataStore:
             log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
     async def read_from_file(
-        self, filename: Path, store_id: bytes32
+        self, filename: Path, store_id: bytes32, max_delta_file_size: int
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
 
         with open(filename, "rb") as reader:
+            file_size = filename.stat().st_size
+            if file_size > max_delta_file_size * 1024 * 1024:
+                raise MaxDeltaFileSizeExceededError(f"Maximum delta file size exceeded: {max_delta_file_size} MiB.")
             async with self.db_wrapper.writer() as writer:
                 while True:
                     chunk = b""
@@ -504,7 +518,7 @@ class DataStore:
         if self.recent_merkle_blobs.get_capacity() == 0:
             update_cache = False
 
-        existing_blob = self.recent_merkle_blobs.get(root_hash)
+        existing_blob = self.recent_merkle_blobs.get((store_id, root_hash))
         if existing_blob is not None:
             return existing_blob if read_only else copy.deepcopy(existing_blob)
 
@@ -517,7 +531,7 @@ class DataStore:
             raise MerkleBlobNotFoundError(root_hash=root_hash) from e
 
         if update_cache:
-            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+            self.recent_merkle_blobs.put((store_id, root_hash), copy.deepcopy(merkle_blob))
 
         return merkle_blob
 
@@ -572,7 +586,7 @@ class DataStore:
                 merkle_blob.to_path(blob_path)
 
             if update_cache:
-                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+                self.recent_merkle_blobs.put((store_id, root_hash), copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 

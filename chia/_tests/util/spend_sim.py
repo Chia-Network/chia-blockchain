@@ -41,6 +41,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
+from chia.util.inline_executor import InlineExecutor
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.wallet_spend_bundle import T_SpendBundle
@@ -169,7 +170,11 @@ class SpendSim:
             self.defaults = defaults
 
             async with MempoolManager.managed(
-                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+                self.coin_store.get_coin_records,
+                self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                defaults,
+                InlineExecutor(),
+                validation_timeout=10,
             ) as self.mempool_manager:
                 # Load the next data if there is any
                 async with self.db_wrapper.writer_maybe_transaction() as conn:

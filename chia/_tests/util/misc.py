@@ -632,6 +632,9 @@ class ComparableEnum(Enum):
 
         return cast(bool, self.value.__eq__(cast(Self, other).value))
 
+    def __hash__(self) -> int:
+        return hash(self.value)
+
     def __ne__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return True

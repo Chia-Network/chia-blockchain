@@ -1,0 +1,21 @@
+---
+description: Auto-attach CLVM context when working in puzzle/execution code
+globs:
+  - chia/types/blockchain_format/**
+  - chia/types/condition_opcodes.py
+  - chia/types/generator_types.py
+  - chia/wallet/puzzles/**
+  - chia/wallet/conditions.py
+  - chia/consensus/condition_tools.py
+  - chia/consensus/generator_tools.py
+  - chia/consensus/get_block_generator.py
+  - chia/consensus/cost_calculator.py
+---
+
+# CLVM / Puzzle Execution Context Available
+
+Deep context for this subsystem exists at `.cursor/context/clvm-execution.md`.
+Read it before exploring code — it documents the three CLVM execution paths
+(mempool, block validation, block building), resource limits (cost, atoms, pairs),
+canonical serialization, condition opcodes, AGG_SIG replay protection, and
+`MEMPOOL_MODE` flag behavior.

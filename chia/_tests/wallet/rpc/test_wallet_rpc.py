@@ -6,8 +6,9 @@ import json
 import logging
 import re
 from operator import attrgetter
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
@@ -15,6 +16,7 @@ from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
@@ -132,6 +134,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -154,6 +157,7 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     PushTransactions,
     PushTX,
+    RegisterRemoteCoins,
     RoyaltyAsset,
     SelectCoins,
     SendNotification,
@@ -649,17 +653,18 @@ async def test_create_signed_transaction(
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
-    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+
+    main_tx = next(tx for tx in txs if tx.amount > 0)
+    assert_tx_amounts(main_tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = txs[0].spend_bundle
-    assert spend_bundle is not None
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     xch_delta = amount_total if not is_cat else amount_fee
     cat_delta = amount_total if is_cat else 0
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={  # type: ignore[arg-type]
+                pre_block_balance_updates={
                     "xch": {
                         "unconfirmed_wallet_balance": -xch_delta,
                         "<=#spendable_balance": -xch_delta,
@@ -670,7 +675,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
@@ -681,7 +686,7 @@ async def test_create_signed_transaction(
                     if is_cat
                     else {}
                 ),
-                post_block_balance_updates={  # type: ignore[arg-type]
+                post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": -xch_delta,
                         ">=#spendable_balance": 0,
@@ -693,7 +698,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {
+                        "cat": {  # type: ignore[dict-item]
                             "confirmed_wallet_balance": -cat_delta,
                             ">=#spendable_balance": 1 if is_cat else 0,
                             ">=#max_send_amount": 1 if is_cat else 0,
@@ -1780,15 +1785,15 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(1)))
     ).trade_records
     assert len(all_offers) == 1
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(10)))
     ).trade_records
     assert len(all_offers) == 0
     all_offers = (
-        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint32(0), end=uint32(50)))
     ).trade_records
     assert len(all_offers) == 2
 
@@ -2475,6 +2480,55 @@ async def _check_delete_key(
     assert resp.used_for_pool_rewards is False
 
 
+_GET_HEIGHT_INFO_NO_CACHED_RECORD = object()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "block_record,expected_is_tx,expected_prev",
+    [
+        pytest.param(_GET_HEIGHT_INFO_NO_CACHED_RECORD, None, None, id="is_transaction_block_none_prev_none"),
+        pytest.param(
+            SimpleNamespace(is_transaction_block=True, prev_transaction_block_height=uint32(21)),
+            True,
+            uint32(21),
+            id="is_transaction_block_true_prev_uint32",
+        ),
+        pytest.param(
+            SimpleNamespace(is_transaction_block=False, prev_transaction_block_height=uint32(0)),
+            False,
+            uint32(0),
+            id="is_transaction_block_false_prev_uint32",
+        ),
+    ],
+)
+async def test_get_height_info_response_variants(
+    block_record: object,
+    expected_is_tx: bool | None,
+    expected_prev: uint32 | None,
+) -> None:
+    """Covers GetHeightInfoResponse optional fields for missing cache vs tx vs non-tx block records."""
+    sync_height = uint32(875)
+    mock_blockchain = MagicMock()
+    mock_blockchain.get_finished_sync_up_to = AsyncMock(return_value=sync_height)
+    mock_blockchain.get_latest_timestamp = MagicMock(return_value=uint64(1700000000))
+    if block_record is _GET_HEIGHT_INFO_NO_CACHED_RECORD:
+        mock_blockchain.height_to_block_record = MagicMock(side_effect=KeyError(sync_height))
+    else:
+        mock_blockchain.height_to_block_record = MagicMock(return_value=block_record)
+
+    api_self = SimpleNamespace(
+        service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
+    )
+    raw = await WalletRpcApi.get_height_info(api_self, {})
+    response = GetHeightInfoResponse.from_json_dict(raw)
+    assert isinstance(response, GetHeightInfoResponse)
+    assert response.height == sync_height
+    assert response.is_transaction_block == expected_is_tx
+    assert response.prev_transaction_block_height == expected_prev
+    mock_blockchain.height_to_block_record.assert_called_once_with(sync_height)
+
+
 @pytest.mark.parametrize(
     "wallet_environments",
     [{"num_environments": 1, "blocks_needed": [1]}],
@@ -2495,7 +2549,9 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    assert (await client.get_height_info()).height > 0
+    height_info = await client.get_height_info()
+    assert height_info.height > 0
+    assert (height_info.is_transaction_block is None) == (height_info.prev_transaction_block_height is None)
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
@@ -4185,6 +4241,215 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
     )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_combine_coins_respects_max_coin_amount(wallet_environments: WalletTestFramework) -> None:
+    """
+    Regression test: combine_coins must respect max_coin_amount from tx_config
+    and must never include spent coins in the selection.
+
+    Setup gives 4 coins: 2x 1.75 XCH + 2x 0.25 XCH.
+    With largest_first=True and NO filter, the two 1.75 XCH coins would be
+    selected.  With max_coin_amount=0.25 XCH the 1.75 XCH coins must be
+    excluded and only the 0.25 XCH coins selected -- proving the filter works.
+    """
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1}
+
+    SMALL = uint64(250_000_000_000)  # 0.25 XCH
+
+    base_args = wallet_environments.cmd_tx_endpoint_args(env)
+    base_args["tx_config_loader"] = dataclasses.replace(
+        base_args["tx_config_loader"],
+        max_coin_amount=CliAmount(amount=SMALL, mojos=True),
+    )
+
+    combine_request = CombineCMD(
+        **{
+            **base_args,
+            **dict(
+                id=env.wallet_aliases["xch"],
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(),
+                largest_first=True,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await combine_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -2 * SMALL,
+                        "pending_change": 2 * SMALL,
+                        "max_send_amount": -2 * SMALL,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": 2 * SMALL,
+                        "pending_change": -2 * SMALL,
+                        "max_send_amount": 2 * SMALL,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_combine_coins_rejects_spent_coins(wallet_environments: WalletTestFramework) -> None:
+    """Regression test: combine_coins must reject explicitly-specified spent coin IDs."""
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1}
+
+    SMALL = uint64(250_000_000_000)  # 0.25 XCH
+
+    # Grab a 0.25 XCH coin and remember its ID before spending it
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = next(iter(await env.xch_wallet.select_coins(SMALL, action_scope)))
+        assert target_coin.amount == SMALL
+    spent_coin_id = target_coin.name()
+
+    # Combine two small coins (one of which is target_coin), spending them
+    combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=1,
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(spent_coin_id,),
+                largest_first=False,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await combine_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -2 * SMALL,
+                        "pending_change": 2 * SMALL,
+                        "max_send_amount": -2 * SMALL,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": 2 * SMALL,
+                        "pending_change": -2 * SMALL,
+                        "max_send_amount": 2 * SMALL,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            )
+        ]
+    )
+
+    # target_coin is now confirmed-spent; trying to combine with it should fail
+    with pytest.raises(ResponseFailureError, match="Cannot combine already-spent coins"):
+        rpc_request = CombineCoins(
+            wallet_id=uint32(1),
+            number_of_coins=uint16(2),
+            target_coin_ids=[spent_coin_id],
+            fee=uint64(0),
+            push=False,
+        )
+        await env.rpc_client.combine_coins(rpc_request, wallet_environments.tx_config)
+
+    # Wallet now has 3 unspent coins (2x 1.75 XCH + 1x 0.5 XCH) and 2 spent
+    # 0.25 XCH records still in the DB.  A fill-up combine (no explicit IDs,
+    # smallest-first) must skip the spent records and select only unspent coins.
+    # Without the spent_range fix this would silently pick the spent 0.25 XCH
+    # records because they sort before the 0.5 XCH coin.
+    COMBINED = uint64(2 * SMALL)  # 0.5 XCH from first combine
+    BIG = uint64(1_750_000_000_000)  # 1.75 XCH
+    fillup_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=1,
+                target_amount=None,
+                number_of_coins=uint16(2),
+                input_coins=(),
+                largest_first=False,
+                fee=uint64(0),
+                push=True,
+            ),
+        }
+    )
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await fillup_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": -(COMBINED + BIG),
+                        "pending_change": COMBINED + BIG,
+                        "max_send_amount": -(COMBINED + BIG),
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "spendable_balance": COMBINED + BIG,
+                        "pending_change": -(COMBINED + BIG),
+                        "max_send_amount": COMBINED + BIG,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    }
+                },
+            )
+        ]
+    )
+
+
 def test_send_transaction_multi_post_init() -> None:
     with pytest.raises(
         ValueError,
@@ -4295,6 +4560,63 @@ def test_send_transaction_multi_post_init() -> None:
         SendTransactionMulti(  # type: ignore[type-var]
             wallet_id=uint32(1),
         ).convert_to_proxy(VCSpend)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    with pytest.raises(ValueError, match="Only one RemoteWallet instance is supported"):
+        await env.rpc_client.create_new_wallet(
+            CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #2", push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    assert response.type == WalletType.REMOTE.name
+
+    remote_wallets = [
+        wallet for wallet in env.node.wallet_state_manager.wallets.values() if wallet.type() == WalletType.REMOTE
+    ]
+    assert len(remote_wallets) == 1
+    assert remote_wallets[0].id() == response.wallet_id
+    assert remote_wallets[0].get_name() == "Remote Wallet #1"
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_register_remote_coins_validates_wallet_id(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    # Main wallet id exists but is not a RemoteWallet.
+    with pytest.raises(ValueError, match="type RemoteWallet is required"):
+        await env.rpc_client.register_remote_coins(RegisterRemoteCoins(wallet_id=uint32(1), coin_ids=[bytes32.zeros]))
+
+    # Unknown wallet ids should fail rather than silently using the existing remote wallet.
+    with pytest.raises(ValueError, match="does not exist"):
+        await env.rpc_client.register_remote_coins(
+            RegisterRemoteCoins(wallet_id=uint32(response.wallet_id + 1000), coin_ids=[bytes32.zeros])
+        )
 
 
 def test_create_new_wallet_post_init() -> None:
@@ -4519,3 +4841,93 @@ def test_create_new_wallet_post_init() -> None:
         match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delay_time=uint64(0))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"amount" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, amount=uint64(100))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.EXISTING)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"test" mode is not supported except for new CAT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, test=True)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, asset_id=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_type" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_type=DIDType.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_dids" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_dids=["foo"])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"metadata" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, metadata={"foo": "bar"})
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"wallet_name" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, wallet_name="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_data" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_data="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_id" is only a valid argument for NFT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_id="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"initial_target_state" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.REMOTE_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delayed_ph" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delayed_ph=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delay_time=uint64(0))
+
+    # Creating a Remote wallet via create_new_wallet() should require no extra fields.
+    CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)

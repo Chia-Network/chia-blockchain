@@ -563,7 +563,7 @@ async def test_signage_points(
 
 
 @pytest.mark.anyio
-async def test_get_network_info(
+async def test_get_network_info_and_constants(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
 ) -> None:
     nodes, _, _bt = one_wallet_and_one_simulator_services
@@ -583,6 +583,7 @@ async def test_get_network_info(
             "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "success": True,
         }
+        assert await client.get_constants() == full_node_service_1._node.constants
 
 
 @pytest.mark.anyio
@@ -634,8 +635,15 @@ async def test_get_blockchain_state(
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         for block in blocks:
+            # For overflow blocks, the last sub-slot is not yet finished
+            # from the unfinished block's perspective, so we must exclude it
+            if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+                finished_ss = block.finished_sub_slots[:-1]
+            else:
+                finished_ss = block.finished_sub_slots
+
             unf = UnfinishedBlock(
-                block.finished_sub_slots,
+                finished_ss,
                 block.reward_chain_block.get_unfinished(),
                 block.challenge_chain_sp_proof,
                 block.reward_chain_sp_proof,
@@ -740,8 +748,15 @@ async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices
         blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
 
         for block in blocks:
+            # For overflow blocks, the last sub-slot is not yet finished
+            # from the unfinished block's perspective, so we must exclude it
+            if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+                finished_ss = block.finished_sub_slots[:-1]
+            else:
+                finished_ss = block.finished_sub_slots
+
             unf = UnfinishedBlock(
-                block.finished_sub_slots,
+                finished_ss,
                 block.reward_chain_block.get_unfinished(),
                 block.challenge_chain_sp_proof,
                 block.reward_chain_sp_proof,

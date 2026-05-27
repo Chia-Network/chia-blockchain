@@ -16,7 +16,7 @@ from chia.util.keychain import Keychain
 from chia.util.service_groups import services_for_groups
 
 
-def launch_start_daemon(root_path: Path) -> subprocess.Popen:
+def launch_start_daemon(root_path: Path) -> subprocess.Popen[bytes]:
     os.environ["CHIA_ROOT"] = str(root_path)
     creationflags = 0
     if sys.platform == "win32":

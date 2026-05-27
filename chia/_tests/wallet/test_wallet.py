@@ -9,6 +9,7 @@ from chia_rs import AugSchemeMPL, Coin, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.server.server import ChiaServer
@@ -1432,6 +1433,7 @@ class TestWalletSimulator:
         )
 
     @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
     @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(
         self,
@@ -2053,6 +2055,7 @@ class TestWalletSimulator:
         ],
         indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
     @pytest.mark.anyio
     async def test_address_sliding_window(self, wallet_environments: WalletTestFramework) -> None:
         full_node_api = wallet_environments.full_node
@@ -2355,6 +2358,7 @@ def test_get_wallet_db_path_testnet() -> None:
     assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_wallet_has_no_server(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],

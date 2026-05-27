@@ -103,6 +103,16 @@ jobs:
             exclude_from:
               limited: True
               main: True
+          - name: "3.14"
+            file_name: "3.14"
+            action: "3.14"
+            apt: "3.14"
+            install_sh: "3.14"
+            matrix: "3.14"
+            exclude_from:
+              limited: True
+              main: True
+
         exclude:
           - arch:
               matrix: arm
@@ -130,13 +140,14 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
-      BLOCKS_AND_PLOTS_VERSION: 0.45.3
+      BLOCKS_AND_PLOTS_VERSION: 0.45.16
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Set Env
         uses: Chia-Network/actions/setjobenv@main
@@ -144,6 +155,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
+        if: ${{ !contains(inputs.runs-on, 'blacksmith-4vcpu-windows') }}
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
@@ -267,7 +279,7 @@ jobs:
 
       - name: Publish JUnit results
         if: inputs.collect-junit
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
@@ -282,7 +294,7 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*

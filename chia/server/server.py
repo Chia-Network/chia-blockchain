@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -31,6 +31,7 @@ from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
+from chia.protocols.shared_protocol import Capability
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -41,6 +42,11 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -258,7 +264,9 @@ class ChiaServer:
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_info.host} due to inactivity")
                 if connection.closed:
-                    self.all_connections.pop(connection.peer_node_id)
+                    present_connection = self.all_connections.get(connection.peer_node_id)
+                    if present_connection is connection:
+                        self.all_connections.pop(connection.peer_node_id)
                 else:
                     await connection.close()
 
@@ -332,21 +340,51 @@ class ChiaServer:
                 stub_metadata_for_type=self.stub_metadata_for_type,
                 exempt_peer_networks=self.exempt_peer_networks,
             )
-            await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
+            peer_host = request.remote
+            handshake_timeout = (
+                None
+                if is_localhost(peer_host) or is_in_network(peer_host, self.exempt_peer_networks)
+                else float(self.config.get("peer_connect_timeout", 30))
+            )
+            await asyncio.wait_for(
+                connection.perform_handshake(self._network_id, self.get_port(), self._local_type),
+                timeout=handshake_timeout,
+            )
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
+            # Full nodes should only accept peers, post hard fork 2, that
+            # signal support for it.
+            if self._local_type == NodeType.FULL_NODE:
+                full_node: FullNode = self.node
+                peak_height = full_node.blockchain.get_peak_height()
+                if (
+                    peak_height is not None
+                    and peak_height >= full_node.constants.HARD_FORK2_HEIGHT
+                    and Capability.HARD_FORK_2 not in connection.peer_capabilities
+                ):
+                    self.log.info(
+                        f"Disconnecting peer {connection.peer_node_id} with version "
+                        f"{connection.version} not supporting the 3.0 hard fork."
+                    )
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
             # Limit inbound connections to config's specifications.
-            if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
-                connection.peer_info.host, self.exempt_peer_networks
-            ):
+            if not self.should_accept_inbound(connection.connection_type, connection.peer_info.host):
                 self.log.info(
-                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
+                    f"Not accepting inbound connection: {connection.get_peer_logging()} "
+                    f"of type {connection.connection_type.name}. Inbound limit reached."
                 )
                 await connection.close()
             else:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
+        except asyncio.TimeoutError:
+            if connection is not None:
+                await connection.close(
+                    self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_HANDSHAKE
+                )
+            self.log.warning(f"Handshake timeout from {request.remote}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
@@ -485,7 +523,15 @@ class ChiaServer:
                 session=session,
                 exempt_peer_networks=self.exempt_peer_networks,
             )
-            await connection.perform_handshake(self._network_id, server_port, self._local_type)
+            handshake_timeout: float | None = (
+                None
+                if is_localhost(target_node.host) or is_in_network(target_node.host, self.exempt_peer_networks)
+                else float(self.config.get("outbound_handshake_timeout", 120))
+            )
+            await asyncio.wait_for(
+                connection.perform_handshake(self._network_id, server_port, self._local_type),
+                timeout=handshake_timeout,
+            )
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -504,6 +550,10 @@ class ChiaServer:
                 self.log.debug(f"Feeler connection error. {e}")
             else:
                 self.log.info(f"{e}")
+        except asyncio.TimeoutError:
+            if connection is not None:
+                await connection.close()
+            self.log.debug(f"Handshake timeout connecting to {target_node}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
@@ -712,6 +762,7 @@ class ChiaServer:
         return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
+        """Check if there are available inbound slots for this node type per config.yaml limits."""
         if not self._local_type == NodeType.FULL_NODE:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
@@ -723,9 +774,18 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
         if node_type == NodeType.FARMER:
             return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
-        if node_type == NodeType.TIMELORD:
-            return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
-        return True
+        return False
+
+    def should_accept_inbound(self, connection_type: NodeType, peer_host: str) -> bool:
+        """Check if an inbound connection should be accepted, considering config limits,
+        exempt peer networks, and localhost exceptions for timelords."""
+        if self.accept_inbound_connections(connection_type):
+            return True
+        if is_in_network(peer_host, self.exempt_peer_networks):
+            return True
+        if connection_type == NodeType.TIMELORD and is_localhost(peer_host):
+            return True
+        return False
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:
         return is_trusted_peer(

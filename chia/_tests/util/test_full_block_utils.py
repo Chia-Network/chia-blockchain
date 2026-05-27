@@ -25,7 +25,7 @@ from chia_rs import (
     TransactionsInfo,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.util.benchmarks import rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.consensus.generator_tools import get_block_header
@@ -34,6 +34,7 @@ from chia.full_node.full_block_utils import (
     generator_from_block,
     get_height_and_tx_status_from_block,
     header_block_from_block,
+    skip_reward_chain_block,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -71,17 +72,31 @@ def vdf_proof() -> VDFProof:
 
 
 def get_proof_of_space() -> Iterator[ProofOfSpace]:
-    for pool_pk in [g1(), None]:
-        for plot_hash in [hsh(), None]:
-            for pos_version in [0, 0x80]:
-                yield ProofOfSpace(
-                    hsh(),  # challenge
-                    pool_pk,
-                    plot_hash,
-                    g1(),  # plot_public_key
-                    uint8(pos_version | 32),  # this is version and k-size
-                    random.randbytes(8 * 32),
-                )
+    for pool_pk, plot_hash in [(g1(), None), (None, hsh())]:
+        yield ProofOfSpace(
+            hsh(),  # challenge
+            pool_pk,
+            plot_hash,
+            g1(),  # plot_public_key
+            uint8(0),  # version
+            uint16(0),  # plot_index (not used for v1)
+            uint8(0),  # group_id (not used for v1)
+            uint8(0),  # strength (not used for v1)
+            uint8(32),  # this is k-size
+            random.randbytes(8 * 32),
+        )
+        yield ProofOfSpace(
+            hsh(),  # challenge
+            pool_pk,
+            plot_hash,
+            g1(),  # plot_public_key
+            uint8(1),  # version
+            uint16(123),  # plot_index
+            uint8(21),  # group_id
+            uint8(4),  # strength
+            uint8(0),  # not used for v2
+            random.randbytes(8 * 32),
+        )
 
 
 def get_reward_chain_block(height: uint32) -> Iterator[RewardChainBlock]:
@@ -111,6 +126,16 @@ def get_reward_chain_block(height: uint32) -> Iterator[RewardChainBlock]:
                                 mmr_root,
                                 has_transactions,
                             )
+
+
+@pytest.mark.parametrize(("has_icc", "has_mmr_root"), [(False, False), (False, True), (True, False), (True, True)])
+def test_skip_reward_chain_block_handles_combined_optional_tag(has_icc: bool, has_mmr_root: bool) -> None:
+    reward_chain_block = next(get_reward_chain_block(uint32(100))).replace(
+        infused_challenge_chain_ip_vdf=vdf() if has_icc else None,
+        header_mmr_root=hsh() if has_mmr_root else None,
+    )
+    # The helper should consume exactly one serialized RewardChainBlock.
+    assert len(skip_reward_chain_block(memoryview(bytes(reward_chain_block)))) == 0
 
 
 def get_foliage_block_data() -> Iterator[FoliageBlockData]:

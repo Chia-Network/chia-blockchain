@@ -32,8 +32,8 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
-              arm: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
+              intel: "macos-15-intel"
+              arm: "macos-15"
           - name: Windows
             matrix: windows
             runs-on:
@@ -43,7 +43,7 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         exclude:
           - os:
               matrix: windows

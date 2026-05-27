@@ -70,6 +70,7 @@ from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineage
 from chia.util.casts import int_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
+from chia.util.inline_executor import InlineExecutor
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -265,7 +266,9 @@ async def instantiate_mempool_manager(
         get_coin_records,
         zero_calls_get_unspent_lineage_info_for_puzzle_hash,
         constants,
+        InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -456,6 +459,7 @@ class TestCheckTimeLocks:
             conds,
             self.PREV_BLOCK_HEIGHT,
             self.PREV_BLOCK_TIMESTAMP,
+            nowrap=True,
         )
         e: Err | None = None
         if res is not None:
@@ -709,6 +713,34 @@ async def test_reserve_fee_condition(zero_mempool_manager: MempoolManager) -> No
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
         await zero_mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_validation_timeout() -> None:
+    async with MempoolManager.managed(
+        zero_calls_get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        InlineExecutor(),
+        validation_timeout=0,
+    ) as mempool_manager:
+        await mempool_manager.new_peak(create_test_block_record(), None)
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="timeout"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_too_many_atoms() -> None:
+    # a very large MAX_BLOCK_COST_CLVM makes the per-cost atom/pair threshold
+    # effectively 0, triggering the density check on any spend
+    constants = DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(10**18))
+    async with instantiate_mempool_manager(zero_calls_get_coin_records, constants=constants) as mempool_manager:
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="too many atoms"):
+            await mempool_manager.pre_validate_spendbundle(sb)
 
 
 @pytest.mark.anyio
@@ -1179,6 +1211,46 @@ async def test_get_items_not_in_filter(test_coins_mempool_manager: MempoolManage
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert [item.to_spend_bundle() for item in result] == [sb1]
+
+
+@pytest.mark.anyio
+async def test_get_items_not_in_filter_max_checked(test_coins_mempool_manager: MempoolManager) -> None:
+    mempool_manager = test_coins_mempool_manager
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
+    conditions2 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    sb2, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
+    conditions3 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    _, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
+
+    # A dense filter matching everything — without max_checked this traverses the entire mempool
+    full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
+
+    # max_checked=0 stops immediately, returning nothing even though limit allows more
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=0)
+    assert result == []
+
+    # max_checked=1 checks only the first item (which matches), returns empty
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=1)
+    assert result == []
+
+    # With an empty filter (nothing matches), max_checked caps the returned items
+    empty_filter = PyBIP158([])
+    result = mempool_manager.get_items_not_in_filter(empty_filter, limit=100, max_checked=2)
+    assert len(result) == 2
+
+    # max_checked large enough to scan all items returns all non-matching
+    result = mempool_manager.get_items_not_in_filter(full_filter, limit=100, max_checked=1000)
+    assert result == []
+
+    # With a partial filter, max_checked caps total iterations including matches
+    sb3_filter = PyBIP158([bytearray(sb3_name)])
+    # sb3 is highest fee, so it's checked first and matches. max_checked=1 means only sb3 is checked.
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=100, max_checked=1)
+    assert result == []
+    # max_checked=2 checks sb3 (match) + sb2 (no match) -> returns [sb2]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=100, max_checked=2)
+    assert [item.to_spend_bundle() for item in result] == [sb2]
 
 
 @pytest.mark.anyio
@@ -2288,10 +2360,12 @@ async def test_fill_rate_block_validation(
         # Check for the peak change after farming the block
         assert peak.prev_hash == current_peak.header_hash
         # Check our coin(s)
+        _, peer_id = await add_dummy_connection(full_node_api.server, self_hostname, 12313)
+        peer = full_node_api.server.all_connections[peer_id]
         for i in range(expected_block_items):
             coin_name, puzzle, _ = sbs_info[i]
             rps_res = await full_node_api.request_puzzle_solution(
-                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height)
+                wallet_protocol.RequestPuzzleSolution(coin_name, peak.height), peer
             )
             assert rps_res is not None
             rps_res_parsed = wallet_protocol.RespondPuzzleSolution.from_bytes(rps_res.data)
@@ -2420,6 +2494,8 @@ async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        InlineExecutor(),
+        validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
         await mempool_manager.new_peak(test_block_record, None)
@@ -2673,6 +2749,8 @@ def test_no_peak(old: bool, transactions_1000: list[SpendBundle]) -> None:
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
+        InlineExecutor(),
+        validation_timeout=10,
     ) as mempool_manager:
         create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
 
@@ -2764,7 +2842,7 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 # if we try to fill the mempool with more than 550, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
-@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 730])
+@pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 630])
 @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("old", [True, False])
 async def test_create_block_generator(
@@ -2772,7 +2850,7 @@ async def test_create_block_generator(
 ) -> None:
     # the old way of creating bloks doesn't fit this many transactions, so we
     # expect it to fail
-    expect_failure = mempool_size == 730 and old
+    expect_failure = mempool_size == 630 and old
 
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
@@ -3412,6 +3490,11 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
     """
     Tests that deferred transactions because of time-lock are retried once the
     time-lock allows them to be reconsidered.
+
+    PendingTxCache's drain() uses <=, so when new_peak.height == condition_height the item is
+    promoted immediately (check_time_locks accepts ASSERT_HEIGHT_ABSOLUTE(H)
+    when peak.height >= H, and ASSERT_HEIGHT_RELATIVE(R) when
+    peak.height >= coin_confirmed + R).
     """
     coins = TestCoins([TEST_COIN], {})
     async with setup_mempool(coins) as mempool_manager:
@@ -3423,19 +3506,14 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
         _, status, error = result
         assert status == MempoolInclusionStatus.PENDING
         assert error == expected_error
-        # Advance the mempool beyond the asserted height to retry the test item
+        # Advance the mempool to exactly the asserted height condition and
+        # retry the test item.
         if optimized_path:
             spent_coins: list[bytes32] | None = []
-            new_peak_info = await mempool_manager.new_peak(
-                create_test_block_record(height=uint32(condition_height)), spent_coins
-            )
-            # We're not there yet (needs to be higher, not equal)
-            assert new_peak_info.spend_bundle_ids == []
-            assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
         else:
             spent_coins = None
         new_peak_info = await mempool_manager.new_peak(
-            create_test_block_record(height=uint32(condition_height + 1)), spent_coins
+            create_test_block_record(height=uint32(condition_height)), spent_coins
         )
         # The item gets retried successfully now
         assert new_peak_info.spend_bundle_ids == [sb_name]

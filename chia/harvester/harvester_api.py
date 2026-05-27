@@ -207,6 +207,9 @@ class HarvesterAPI:
                 if len(good_partial_proofs) == 0:
                     return None
 
+                param = plot_info.prover.get_param()
+                assert param.strength_v2 is not None
+
                 return PartialProofsData(
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
@@ -214,7 +217,9 @@ class HarvesterAPI:
                     good_partial_proofs,
                     new_challenge.signage_point_index,
                     self.harvester.constants.PLOT_SIZE_V2,
-                    plot_info.prover.get_strength(),
+                    param.plot_index,
+                    param.meta_group,
+                    param.strength_v2,
                     plot_id,
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,

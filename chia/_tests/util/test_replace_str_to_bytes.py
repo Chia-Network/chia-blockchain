@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -60,6 +62,7 @@ test_constants = ConsensusConstants(
     HARD_FORK_HEIGHT=uint32(5496000),
     HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
     SOFT_FORK8_HEIGHT=uint32(8655000),
+    SOFT_FORK9_HEIGHT=uint32(8655000),
     PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
@@ -136,9 +139,34 @@ def test_replace_str_to_bytes_deprecated_field(caplog: pytest.LogCaptureFixture)
     assert caplog.text == ""
 
 
+def test_replace_str_to_bytes_legacy_min_plot_size(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MIN_PLOT_SIZE=uint8(18))
+    assert test2 == test_constants.replace(MIN_PLOT_SIZE_V1=uint8(18))
+    assert test2.MIN_PLOT_SIZE_V1 == 18
+    assert caplog.text == ""
+
+
+def test_replace_str_to_bytes_legacy_max_plot_size(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MAX_PLOT_SIZE=uint8(40))
+    assert test2 == test_constants.replace(MAX_PLOT_SIZE_V1=uint8(40))
+    assert test2.MAX_PLOT_SIZE_V1 == 40
+    assert caplog.text == ""
+
+
+def test_replace_str_to_bytes_legacy_does_not_override_new(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MIN_PLOT_SIZE=uint8(18), MIN_PLOT_SIZE_V1=uint8(20))
+    assert test2 == test_constants.replace(MIN_PLOT_SIZE_V1=uint8(20))
+    assert test2.MIN_PLOT_SIZE_V1 == 20
+    assert caplog.text == ""
+
+
 def test_replace_str_to_bytes_invalid_value() -> None:
     # invalid value
-    with pytest.raises(ValueError, match="non-hexadecimal number found in"):
+    if sys.version_info >= (3, 14):
+        matchstr = "arg must contain an even number of hexadecimal digits"
+    else:
+        matchstr = "non-hexadecimal number found in"
+    with pytest.raises(ValueError, match=matchstr):
         replace_str_to_bytes(
             test_constants,
             GENESIS_PRE_FARM_FARMER_PUZZLE_HASH="fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",

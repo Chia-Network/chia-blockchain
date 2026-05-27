@@ -35,6 +35,7 @@ from chia.util.streamable import (
     parse_bool,
     parse_bytes,
     parse_list,
+    parse_list_limited,
     parse_optional,
     parse_str,
     parse_tuple,
@@ -780,8 +781,23 @@ def test_ambiguous_deserialization_program() -> None:
 
     TestClassProgram.from_bytes(bytes(program))
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassProgram.from_bytes(bytes(program) + b"9")
+
+
+def test_from_bytes_rejects_trailing_bytes_rust_types() -> None:
+    from chia_rs import G2Element, SpendBundle
+
+    coin = Coin(bytes32(bytes(32)), bytes32(bytes(32)), uint64(0))
+    valid_coin = bytes(coin)
+    Coin.from_bytes(valid_coin)
+    with pytest.raises(ValueError):
+        Coin.from_bytes(valid_coin + b"\x00")
+
+    valid_sb = bytes(4) + bytes(G2Element())
+    SpendBundle.from_bytes(valid_sb)
+    with pytest.raises(ValueError):
+        SpendBundle.from_bytes(valid_sb + b"\x00")
 
 
 def test_streamable_empty() -> None:
@@ -897,6 +913,88 @@ def test_parse_list() -> None:
     # failure to parser internal type
     with pytest.raises(ValueError):
         parse_list(io.BytesIO(b"\x00\x00\x00\x01\x02"), parse_bool)
+
+
+def test_parse_list_limited_fixed_size() -> None:
+    # 5 bools: \x00\x00\x00\x05 followed by \x01\x00\x01\x00\x01
+    data = b"\x00\x00\x00\x05\x01\x00\x01\x00\x01"
+
+    # Limit to 3 items, element_fixed_size=1 -> seeks past remaining 2
+    f = io.BytesIO(data)
+    result = parse_list_limited(f, parse_bool, max_items=3, element_fixed_size=1)
+    assert result == [True, False, True]
+    assert f.read() == b""
+
+    # Limit larger than list size -> returns all items
+    f = io.BytesIO(data)
+    result = parse_list_limited(f, parse_bool, max_items=100, element_fixed_size=1)
+    assert result == [True, False, True, False, True]
+
+    # Limit of 0 -> returns empty, seeks past all
+    f = io.BytesIO(data)
+    result = parse_list_limited(f, parse_bool, max_items=0, element_fixed_size=1)
+    assert result == []
+    assert f.read() == b""
+
+    # Empty list
+    f = io.BytesIO(b"\x00\x00\x00\x00")
+    result = parse_list_limited(f, parse_bool, max_items=10, element_fixed_size=1)
+    assert result == []
+
+
+def test_parse_list_limited_variable_size() -> None:
+    # list of 3 variable-length byte strings: b"ab", b"cd", b"ef"
+    # Each is: uint32 length + bytes
+    data = (
+        b"\x00\x00\x00\x03"  # list size = 3
+        b"\x00\x00\x00\x02ab"  # "ab"
+        b"\x00\x00\x00\x02cd"  # "cd"
+        b"\x00\x00\x00\x02ef"  # "ef"
+    )
+
+    # Limit to 1 item, no fixed size -> parses remaining 2 to skip them
+    f = io.BytesIO(data)
+    result = parse_list_limited(f, parse_bytes, max_items=1, element_fixed_size=None)
+    assert result == [b"ab"]
+    assert f.read() == b""
+
+
+def test_from_bytes_with_list_limits() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class MsgWithList(Streamable):
+        coin_ids: list[bytes32]
+        flag: bool
+
+    ids = [bytes32(i.to_bytes(32, "big")) for i in range(100)]
+    msg = MsgWithList(ids, True)
+    blob = bytes(msg)
+
+    # Without limits -> all 100
+    parsed = MsgWithList.from_bytes(blob)
+    assert len(parsed.coin_ids) == 100
+    assert parsed.flag is True
+
+    # With limit -> 10 items, flag still parsed correctly
+    parsed = MsgWithList.from_bytes(blob, list_limits={"coin_ids": 10})
+    assert len(parsed.coin_ids) == 10
+    assert parsed.coin_ids == ids[:10]
+    assert parsed.flag is True
+
+    # Limit on non-existent field -> ignored
+    parsed = MsgWithList.from_bytes(blob, list_limits={"nonexistent": 5})
+    assert len(parsed.coin_ids) == 100
+
+    # Primitive list type (hits _FIXED_SIZE_PRIMITIVES path)
+    @streamable
+    @dataclass(frozen=True)
+    class MsgWithBools(Streamable):
+        flags: list[bool]
+
+    bools_msg = MsgWithBools([True, False, True, False, True])
+    bools_blob = bytes(bools_msg)
+    parsed_bools = MsgWithBools.from_bytes(bools_blob, list_limits={"flags": 2})
+    assert parsed_bools.flags == [True, False]
 
 
 def test_parse_tuple() -> None:

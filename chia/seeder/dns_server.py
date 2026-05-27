@@ -248,6 +248,8 @@ def parse_dns_request(data: bytes) -> DNSRecord | None:
     dns_request: DNSRecord | None = None
     try:
         dns_request = DNSRecord.parse(data)
+        if dns_request.header.qr != 0:
+            return None
     except DNSError as e:
         log.warning(f"Received invalid DNS request: {e}. Traceback: {traceback.format_exc()}.")
     return dns_request
@@ -462,9 +464,9 @@ class DNSServer:
                 try:
                     validated_peer = ip_address(peer)
                     if validated_peer.version == 4:
-                        self.reliable_peers_v4.append(validated_peer)
+                        self.reliable_peers_v4.append(IPv4Address(validated_peer))
                     elif validated_peer.version == 6:
-                        self.reliable_peers_v6.append(validated_peer)
+                        self.reliable_peers_v6.append(IPv6Address(validated_peer))
                 except ValueError:
                     log.error(f"Invalid peer: {peer}")
                     continue

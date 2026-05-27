@@ -7,6 +7,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import MempoolRemoveReason
@@ -34,6 +35,7 @@ def evict_from_pool(node: FullNodeAPI, sb: WalletSpendBundle) -> None:
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_wallet_tx_retry(
     setup_two_nodes_and_wallet_fast_retry: tuple[list[FullNodeSimulator], list[tuple[Any, Any]], BlockTools],

@@ -21,7 +21,7 @@ from chia_rs import (
     VDFProof,
 )
 from chia_rs.sized_bytes import bytes32, bytes100
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -71,12 +71,34 @@ def rand_vdf_proof() -> VDFProof:
 
 
 def rand_full_block() -> FullBlock:
+    version = uint8(random.randint(0, 1))
+    plot_index = uint16(0)
+    group_id = uint8(0)
+    strength = uint8(0)
+    size = uint8(0)
+    if version == 0:
+        size = uint8(random.randint(18, 32))
+    elif version == 1:
+        plot_index = uint16(random.randint(0, 65535))
+        group_id = uint8(random.randint(0, 255))
+        strength = uint8(random.randint(2, 10))
+    if random.randint(0, 1) == 0:
+        pool_public_key = rand_g1()
+        pool_contract_hash = None
+    else:
+        pool_public_key = None
+        pool_contract_hash = rand_hash()
+
     proof_of_space = ProofOfSpace(
         rand_hash(),
+        pool_public_key,
+        pool_contract_hash,
         rand_g1(),
-        None,
-        rand_g1(),
-        uint8(0),
+        version,
+        plot_index,
+        group_id,
+        strength,
+        size,
         random.randbytes(8 * 32),
     )
 

@@ -8,8 +8,8 @@ from chia.util.lru_cache import LRUCache, LRUSet
 
 
 class TestLRUCache(unittest.TestCase):
-    def test_lru_cache(self):
-        cache = LRUCache(5)
+    def test_lru_cache(self) -> None:
+        cache: LRUCache[bytes, int] = LRUCache(5)
 
         assert cache.get(b"0") is None
 

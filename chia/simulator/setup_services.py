@@ -46,6 +46,7 @@ from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.cpu import available_logical_cores
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
@@ -139,6 +140,7 @@ async def setup_full_node(
     else:
         service_config["introducer_peer"] = None
     service_config["dns_servers"] = []
+    service_config["reserved_cores"] = available_logical_cores() - 1
     service_config["port"] = 0
     service_config["rpc_port"] = 0
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
@@ -147,7 +149,12 @@ async def setup_full_node(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     local_bt.change_config(config)
     override_capabilities = (
-        None if disable_capabilities is None else get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
+        get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
+        if disable_capabilities is not None
+        else list(default_capabilities[NodeType.FULL_NODE])
+    )
+    override_capabilities.extend(
+        [(uint16(Capability.HARD_FORK_2.value), "1"), (uint16(Capability.RATE_LIMITS_V3.value), "1")]
     )
     service: FullNodeService | SimulatorFullNodeService
     if simulator:
@@ -286,12 +293,17 @@ async def setup_wallet_node(
             service_config.pop("full_node_peer", None)
             service_config.pop("full_node_peers", None)
 
+        override_capabilities = list(default_capabilities[NodeType.WALLET])
+        override_capabilities.extend(
+            [(uint16(Capability.HARD_FORK_2.value), "1"), (uint16(Capability.RATE_LIMITS_V3.value), "1")]
+        )
         service = create_wallet_service(
             local_bt.root_path,
             config,
             consensus_constants,
             keychain,
             connect_to_daemon=False,
+            override_capabilities=override_capabilities,
         )
 
         try:

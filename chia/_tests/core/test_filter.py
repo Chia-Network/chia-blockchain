@@ -3,11 +3,12 @@ from __future__ import annotations
 import pytest
 from chiabip158 import PyBIP158
 
+from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 @pytest.mark.anyio
-async def test_basic_filter_test(simulator_and_wallet):
+async def test_basic_filter_test(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _full_nodes, wallets, bt = simulator_and_wallet
     wallet_node, _server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet

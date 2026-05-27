@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from chia._tests.conftest import ConsensusMode
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -16,6 +17,7 @@ from chia.wallet.wallet_node import WalletNode
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_missing_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -36,6 +38,7 @@ async def test_missing_decorator(
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_unknown_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
@@ -56,6 +59,7 @@ async def test_unknown_decorator(
     "trusted",
     [True, False],
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
 async def test_decorator(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],

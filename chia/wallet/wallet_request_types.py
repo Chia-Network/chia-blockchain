@@ -175,8 +175,17 @@ class GetSyncStatusResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetHeightInfo(Streamable):
+    use_peak_height: bool = False
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
+    latest_timestamp: uint64
+    is_transaction_block: bool | None = None
+    prev_transaction_block_height: uint32 | None = None
 
 
 @streamable
@@ -492,7 +501,7 @@ class GetTransactionCount(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetTransactionCountResponse(Streamable):
     wallet_id: uint32
-    count: uint16
+    count: uint32
 
 
 @streamable
@@ -522,6 +531,7 @@ class SelectCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
     amount: uint64
     exclude_coins: list[Coin] | None = None  # for backwards compatibility
+    allow_unsynced: bool = False
 
     def __post_init__(self) -> None:
         if self.excluded_coin_ids is not None and self.exclude_coins is not None:
@@ -544,6 +554,8 @@ class SelectCoins(CoinSelectionConfigLoader):
             max_coin_amount=coin_selection_config.max_coin_amount,
             excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
             excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+            included_coin_ids=coin_selection_config.included_coin_ids,
+            primary_coin=coin_selection_config.primary_coin,
         )
 
 
@@ -557,6 +569,7 @@ class SelectCoinsResponse(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetSpendableCoins(CoinSelectionConfigLoader):
     wallet_id: uint32
+    allow_unsynced: bool = False
 
     @classmethod
     def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
@@ -566,6 +579,8 @@ class GetSpendableCoins(CoinSelectionConfigLoader):
             max_coin_amount=coin_selection_config.max_coin_amount,
             excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
             excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+            included_coin_ids=coin_selection_config.included_coin_ids,
+            primary_coin=coin_selection_config.primary_coin,
         )
 
 
@@ -584,12 +599,26 @@ class GetCoinRecordsByNames(Streamable):
     start_height: uint32 | None = None
     end_height: uint32 | None = None
     include_spent_coins: bool = True
+    allow_unsynced: bool = False
 
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolution(Streamable):
+    coin_name: bytes32
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetPuzzleAndSolutionResponse(Streamable):
+    puzzle_reveal: str
+    solution: str
 
 
 @streamable
@@ -613,9 +642,9 @@ class ExtendDerivationIndexResponse(Streamable):
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetOffersCountResponse(Streamable):
-    total: uint16
-    my_offers_count: uint16
-    taken_offers_count: uint16
+    total: uint32
+    my_offers_count: uint32
+    taken_offers_count: uint32
 
 
 @streamable
@@ -1323,6 +1352,7 @@ class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: bool | None = None
     sign: bool | None = None
+    allow_unsynced: bool = False
 
     def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
         if not _avoid_ban:
@@ -1650,7 +1680,7 @@ class NFTSetDIDBulk(TransactionEndpointRequest):
 @dataclass(kw_only=True, frozen=True)
 class NFTSetDIDBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
-    tx_num: uint16
+    tx_num: uint32
     spend_bundle: WalletSpendBundle
 
 
@@ -1665,7 +1695,7 @@ class NFTTransferBulk(TransactionEndpointRequest):
 @dataclass(kw_only=True, frozen=True)
 class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
-    tx_num: uint16
+    tx_num: uint32
     spend_bundle: WalletSpendBundle
 
 
@@ -1820,8 +1850,8 @@ class NFTMintBulk(TransactionEndpointRequest):
     royalty_address: str | None = None
     royalty_percentage: uint16 | None = None
     target_list: list[str] = field(default_factory=list)
-    mint_number_start: uint16 = uint16(1)
-    mint_total: uint16 | None = None
+    mint_number_start: uint32 = uint32(1)
+    mint_total: uint32 | None = None
     xch_coins: list[Coin] | None = None
     xch_change_target: str | None = None
     new_innerpuzhash: bytes32 | None = None
@@ -1829,6 +1859,13 @@ class NFTMintBulk(TransactionEndpointRequest):
     did_coin: Coin | None = None
     did_lineage_parent: bytes32 | None = None
     mint_from_did: bool = False
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class RegisterRemoteCoins(Streamable):
+    wallet_id: uint32
+    coin_ids: list[bytes32]
 
 
 @streamable
@@ -2198,8 +2235,8 @@ class GetOfferResponse(Streamable):
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetAllOffers(Streamable):
-    start: uint16 = uint16(0)
-    end: uint16 = uint16(10)
+    start: uint32 = uint32(0)
+    end: uint32 = uint32(10)
     exclude_my_offers: bool = False
     exclude_taken_offers: bool = False
     include_completed: bool = False
@@ -2278,6 +2315,7 @@ class CreateNewWalletType(Enum):
     DID_WALLET = "did_wallet"
     NFT_WALLET = "nft_wallet"
     POOL_WALLET = "pool_wallet"
+    REMOTE_WALLET = "remote_wallet"
 
 
 @streamable_enum(str)
@@ -2324,6 +2362,12 @@ class CreateNewWallet(TransactionEndpointRequest):
     p2_singleton_delay_time: uint64 | None = None
 
     def __post_init__(self) -> None:
+        if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            if self.mode is not None:
+                raise ValueError('"mode" is not a valid argument for remote wallets')
+            if self.amount is not None:
+                raise ValueError('"amount" is not a valid argument for remote wallets')
+
         if self.wallet_type == CreateNewWalletType.CAT_WALLET:
             if self.mode is None:
                 raise ValueError('Must specify a "mode" when creating a new CAT wallet')

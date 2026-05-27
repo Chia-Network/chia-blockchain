@@ -5,6 +5,7 @@ import logging
 import math
 import time
 import traceback
+import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
@@ -20,6 +21,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import Message, NodeType, make_msg
+from chia.protocols.protocol_message_type_to_node_type import ProtocolMessageTypeToNodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -28,10 +30,18 @@ from chia.protocols.protocol_timing import (
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
     RATE_LIMITER_BAN_SECONDS,
 )
-from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
+from chia.protocols.shared_protocol import Capability, ConfigureWindowSizes, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.rate_limits import RateLimiter
+from chia.server.rate_limits_v3 import (
+    MAX_CONFIGURE_RATE_LIMITS_ENTRIES,
+    RateLimitsV3,
+    RLSettingsV3,
+    rate_limits_v3,
+    rl_settings_v3_from_configure_message,
+    rl_v3_to_configure_message,
+)
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.log_exceptions import log_exceptions
@@ -54,6 +64,11 @@ WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")
+
+
+def sanitize_version_string(version: str) -> str:
+    """Strip Unicode control characters (Cc) and format characters (Cf) to prevent log injection."""
+    return "".join(c for c in version if unicodedata.category(c) not in {"Cc", "Cf"})
 
 
 def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
@@ -99,7 +114,10 @@ class WSChiaConnection:
     # Messaging
     received_message_callback: ConnectionCallback | None = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+    outgoing_queue: asyncio.PriorityQueue[tuple[int, int, Message]] = field(
+        default_factory=asyncio.PriorityQueue, repr=False
+    )
+    _send_seq: int = field(default=0, repr=False)
     api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
     execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
@@ -119,6 +137,9 @@ class WSChiaConnection:
 
     pending_requests: dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
     request_results: dict[uint16, Message] = field(default_factory=dict, repr=False)
+    # Nonces of `call_api` requests that timed out. Used to distinguish a late
+    # response from an unsolicited one.
+    timed_out_requests: set[uint16] = field(default_factory=set, repr=False)
     closed: bool = False
     connection_type: NodeType | None = None
     request_nonce: uint16 = uint16(0)
@@ -136,10 +157,24 @@ class WSChiaConnection:
     # Used to reject unsolicited RespondCompactVDF messages.
     pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
 
+    # Tracks expected RespondTransaction messages from old peers (< 2.6.0) that
+    # respond to RequestMempoolTransactions with RespondTransaction directly.
+    # Decremented on each such response; if 0, the message is unsolicited.
+    expected_mempool_responses: int = 0
+
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
         repr=False,
     )
+
+    # Peer's rate limits v3 settings, populated when we perform the handshake
+    # and parse the RATE_LIMITS_V3 capability string.
+    peer_rl_settings_v3: dict[ProtocolMessageTypes, RLSettingsV3] = field(default_factory=dict, repr=False)
+    # Peer's in-flight messages windows for supported protocol message
+    # types when both sides support rate limits v3.
+    rate_limit_windows: dict[ProtocolMessageTypes, RateLimitsV3] = field(default_factory=dict, repr=False)
+    # Tracked v3 request IDs that were sent
+    v3_sent_request_ids: set[uint16] = field(default_factory=set, repr=False)
 
     @classmethod
     def create(
@@ -192,6 +227,11 @@ class WSChiaConnection:
             stub_metadata_for_type=stub_metadata_for_type,
             session=session,
             exempt_peer_networks=exempt_peer_networks,
+            rate_limit_windows={
+                msg_type: RateLimitsV3(receive_window=0, in_flight=0)
+                for msg_type, setting in rate_limits_v3.items()
+                if setting.window_size is not None
+            },
         )
 
     def _get_extra_info(self, name: str) -> Any | None:
@@ -267,6 +307,9 @@ class WSChiaConnection:
             self.log.debug("version string too long")
             raise ProtocolError(Err.INVALID_HANDSHAKE)
 
+        # "1" means capability is enabled
+        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+        peer_is_v3 = Capability.RATE_LIMITS_V3 in self.peer_capabilities
         if not self.is_outbound:
             if (
                 remote_node_type in {NodeType.FARMER, NodeType.HARVESTER}
@@ -279,6 +322,16 @@ class WSChiaConnection:
                     f"our={protocol_version[remote_node_type]}"
                 )
 
+            # If the peer advertises v3, let's advertise v3 as well
+            reply_capabilities = list(self.local_capabilities_for_handshake)
+            if peer_is_v3 and Capability.RATE_LIMITS_V3 not in self.local_capabilities:
+                self.log.info(
+                    f"Activating rate limits v3 with peer "
+                    f"{self.peer_node_id} / {self.peer_info.host} "
+                    f"version {inbound_handshake.software_version}"
+                )
+                reply_capabilities.append((uint16(Capability.RATE_LIMITS_V3.value), "1"))
+            self.local_capabilities = known_active_capabilities(reply_capabilities)
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
                 Handshake(
@@ -287,18 +340,42 @@ class WSChiaConnection:
                     __version__,
                     uint16(server_port),
                     uint8(local_type.value),
-                    self.local_capabilities_for_handshake,
+                    reply_capabilities,
                 ),
             )
             await self._send_message(outbound_handshake)
 
-        self.version = inbound_handshake.software_version
+        self.version = sanitize_version_string(inbound_handshake.software_version)
         self.protocol_version = Version(inbound_handshake.protocol_version)
         self.peer_server_port = inbound_handshake.server_port
         self.connection_type = remote_node_type
-        # "1" means capability is enabled
-        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
-
+        # Exchange rate limits v3 configuration if both sides support it
+        if peer_is_v3 and Capability.RATE_LIMITS_V3 in self.local_capabilities:
+            rl_config = make_msg(ProtocolMessageTypes.configure_window_sizes, rl_v3_to_configure_message())
+            await self._send_message(rl_config)
+            try:
+                peer_msg = await self._read_one_message()
+                if (
+                    peer_msg is None
+                    or ProtocolMessageTypes(peer_msg.type) != ProtocolMessageTypes.configure_window_sizes
+                ):
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+                peer_config = ConfigureWindowSizes.from_bytes(peer_msg.data)
+                if len(peer_config.settings) == 0:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+                if len(peer_config.settings) > MAX_CONFIGURE_RATE_LIMITS_ENTRIES:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+                peer_rl_settings_v3 = rl_settings_v3_from_configure_message(peer_config)
+            except ProtocolError:
+                raise
+            except Exception:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
+            self.peer_rl_settings_v3 = peer_rl_settings_v3
+            for msg_type, setting in self.peer_rl_settings_v3.items():
+                if setting.window_size is None:
+                    continue
+                if msg_type not in self.rate_limit_windows:
+                    self.rate_limit_windows[msg_type] = RateLimitsV3(receive_window=0, in_flight=0)
         self.outbound_task = create_referenced_task(self.outbound_handler())
         self.inbound_task = create_referenced_task(self.inbound_handler())
         self.incoming_message_task = create_referenced_task(self.incoming_message_handler())
@@ -376,9 +453,10 @@ class WSChiaConnection:
     async def outbound_handler(self) -> None:
         try:
             while not self.closed:
-                msg = await self.outgoing_queue.get()
-                if msg is not None:
-                    await self._send_message(msg)
+                item = await self.outgoing_queue.get()
+                if item is not None:
+                    priority, _seq, msg = item
+                    await self._send_message(msg, priority=priority)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -400,6 +478,8 @@ class WSChiaConnection:
     async def _api_call(self, full_message: Message, task_id: bytes32) -> None:
         start_time = time.time()
         message_type = ""
+        rl_window = None
+        inbound_window_incremented = False
         try:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
@@ -424,10 +504,48 @@ class WSChiaConnection:
                 self.log.error(f"Peer trying to call non api function {message_type}")
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
+            assert self.connection_type is not None
+            allowed_senders = ProtocolMessageTypeToNodeType.get(bare_message_type)
+            if allowed_senders is None or self.connection_type not in allowed_senders:
+                self.log.error(
+                    f"API call type mismatch: {self.get_peer_logging()} of "
+                    f"type {self.connection_type.name} and version {self.version} "
+                    f"is calling {message_type}"
+                )
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+
             # If api is not ready ignore the request
             if not self.api.ready():
                 self.log.warning(f"API not ready, ignore request: {full_message}")
                 return None
+
+            # Only use rate limits v3 if both peers advertise the capability and
+            # the protocol message type is supported.
+            if (
+                not is_localhost(self.peer_info.host)
+                and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                and Capability.RATE_LIMITS_V3 in self.peer_capabilities
+                and Capability.RATE_LIMITS_V3 in self.local_capabilities
+                and bare_message_type in rate_limits_v3
+                and rate_limits_v3[bare_message_type].window_size is not None
+            ):
+                window_size = rate_limits_v3[bare_message_type].window_size
+                assert window_size is not None
+                rl_window = self.rate_limit_windows[bare_message_type]
+                if rl_window.receive_window >= window_size:
+                    details = ", ".join(
+                        [
+                            f"{self.peer_node_id} / {self.peer_info.host} version {self.version}",
+                            f"message: {bare_message_type.name}",
+                            f"receive window: {rl_window.receive_window}",
+                            f"window size: {window_size}",
+                        ]
+                    )
+                    self.log.info(f"Peer has been rate limited (v3) and will be disconnected: {details}")
+                    await self.close(RATE_LIMITER_BAN_SECONDS)
+                    return None
+                rl_window.receive_window += 1
+                inbound_window_incremented = True
 
             timeout: int | None = 600
             if metadata.execute_task:
@@ -496,6 +614,9 @@ class WSChiaConnection:
             # TODO: actually throw one of the errors from errors.py and pass this to close
             await self.close(ban_time, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
         finally:
+            if inbound_window_incremented:
+                assert rl_window is not None
+                rl_window.receive_window -= 1
             if task_id in self.api_tasks:
                 self.api_tasks.pop(task_id)
             if task_id in self.execute_tasks:
@@ -508,19 +629,31 @@ class WSChiaConnection:
             api_task = create_referenced_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
+    async def _route_incoming_message(self, message: Message) -> None:
+        if message.id in self.pending_requests:
+            self.request_results[message.id] = message
+            self.pending_requests[message.id].set()
+            return
+        if message.id in self.timed_out_requests:
+            # This is a late response for a timed out request. The caller is
+            # expected to move on.
+            self.timed_out_requests.discard(message.id)
+            self.log.info(
+                f"Ignoring late response {ProtocolMessageTypes(message.type).name} "
+                f"from {self.peer_info.host} version {self.version}"
+            )
+            return
+        await self.incoming_queue.put(message)
+
     async def inbound_handler(self) -> None:
         try:
             while not self.closed:
                 message = await self._read_one_message()
-                if message is not None:
-                    if message.id in self.pending_requests:
-                        self.request_results[message.id] = message
-                        event = self.pending_requests[message.id]
-                        event.set()
-                    else:
-                        await self.incoming_queue.put(message)
-                else:
-                    continue
+                if message is None:
+                    # This indicates a connection shutdown so there is no point
+                    # to continue.
+                    break
+                await self._route_incoming_message(message)
         except asyncio.CancelledError:
             self.log.debug("Inbound_handler task cancelled")
         except Exception as e:
@@ -528,11 +661,13 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def send_message(self, message: Message) -> bool:
+    async def send_message(self, message: Message, priority: int = 0) -> bool:
         """Send message sends a message with no tracking / callback."""
         if self.closed:
             return False
-        await self.outgoing_queue.put(message)
+        seq = self._send_seq
+        self._send_seq += 1
+        await self.outgoing_queue.put((priority, seq, message))
         return True
 
     async def call_api(
@@ -540,6 +675,7 @@ class WSChiaConnection:
         request_method: Callable[..., Awaitable[Message | None]],
         message: Streamable,
         timeout: int = 60,
+        priority: int = 0,
     ) -> Any:
         if self.connection_type is None:
             raise ValueError("handshake not done yet")
@@ -555,7 +691,7 @@ class WSChiaConnection:
 
         request = Message(uint8(request_metadata.request_type.value), None, bytes(message))
         request_start_t = time.time()
-        response = await self.send_request(request, timeout)
+        response = await self.send_request(request, timeout, priority=priority)
         self.log.debug(
             f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
             f"{time.time() - request_start_t}, None? {response is None}"
@@ -579,89 +715,180 @@ class WSChiaConnection:
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
-    async def send_request(self, message_no_id: Message, timeout: int) -> Message | None:
+    def _next_request_nonce(self, nonce: uint16) -> uint16:
+        if self.is_outbound:
+            return uint16(nonce + 1) if nonce != uint16(2**15 - 1) else uint16(0)
+        return uint16(nonce + 1) if nonce != uint16(2**16 - 1) else uint16(2**15)
+
+    def _select_request_nonce(self) -> uint16 | None:
+        """
+        Allocate a nonce that is not used by a pending or a timed out request
+        and advance `request_nonce` to the next candidate.
+        """
+        start_nonce = self.request_nonce
+        nonce_candidate = start_nonce
+        while True:
+            if nonce_candidate not in self.pending_requests and nonce_candidate not in self.timed_out_requests:
+                self.request_nonce = self._next_request_nonce(nonce_candidate)
+                return nonce_candidate
+            nonce_candidate = self._next_request_nonce(nonce_candidate)
+            # See if we're back to the start
+            if nonce_candidate == start_nonce:
+                return None
+
+    async def send_request(self, message_no_id: Message, timeout: int, priority: int = 0) -> Message | None:
         """Sends a message and waits for a response."""
         if self.closed:
             return None
-
-        # We will wait for this event, it will be set either by the response, or the timeout
-        event = asyncio.Event()
-
-        # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
-        # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
-        request_id = self.request_nonce
-        if self.is_outbound:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**15 - 1) else uint16(0)
-        else:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
-
-        message = Message(message_no_id.type, request_id, message_no_id.data)
-        assert message.id is not None
-        self.pending_requests[message.id] = event
-        await self.outgoing_queue.put(message)
-
+        message_id: uint16 | None = None
         try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
-        except asyncio.TimeoutError:
-            self.log.debug(f"Request timeout: {message}")
+            # We will wait for this event, it will be set either by the response, or the timeout
+            event = asyncio.Event()
 
-        self.pending_requests.pop(message.id)
-        result: Message | None = None
-        if message.id in self.request_results:
-            result = self.request_results[message.id]
-            assert result is not None
+            # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
+            # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
+            request_id = self._select_request_nonce()
+            if request_id is None:
+                self.log.info(
+                    f"Disconnecting peer {self.peer_info.host} version {self.version} for no available request nonces"
+                )
+                await self.close()
+                return None
+
+            message = Message(message_no_id.type, request_id, message_no_id.data)
+            assert message.id is not None
+            message_id = message.id
+            self.pending_requests[message.id] = event
+            seq = self._send_seq
+            self._send_seq += 1
+            await self.outgoing_queue.put((priority, seq, message))
+
+            try:
+                await asyncio.wait_for(event.wait(), timeout=timeout)
+            except asyncio.TimeoutError:
+                self.log.debug(f"Request timeout: {message}")
+
+            result = self.request_results.pop(message.id, None)
+            if result is None:
+                # This request has timed out
+                self.timed_out_requests.add(message.id)
+                self.pending_requests.pop(message.id, None)
+                return None
             self.log.debug(
                 f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_info.host}:{self.peer_info.port}"
             )
-            self.request_results.pop(message.id)
+            self.pending_requests.pop(message.id, None)
+            return result
+        finally:
+            if message_id in self.v3_sent_request_ids:
+                # The request has been processed, decrement congestion window
+                self.v3_sent_request_ids.discard(message_id)
+                message_type = ProtocolMessageTypes(message_no_id.type)
+                rl_window = self.rate_limit_windows[message_type]
+                assert rl_window.in_flight > 0
+                rl_window.in_flight -= 1
 
-        return result
-
-    async def _wait_and_retry(self, msg: Message) -> None:
+    async def _wait_and_retry(self, msg: Message, priority: int = 0) -> None:
         try:
             await asyncio.sleep(1)
-            await self.outgoing_queue.put(msg)
+            seq = self._send_seq
+            self._send_seq += 1
+            await self.outgoing_queue.put((priority, seq, msg))
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
-    async def _send_message(self, message: Message) -> None:
+    async def _send_message(self, message: Message, priority: int = 0) -> None:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
-            message, self.local_capabilities, self.peer_capabilities
+        message_type = ProtocolMessageTypes(message.type)
+        # If a request timed out while being queued, there is no point in
+        # sending it while tracking it as a timed out request and having the
+        # receiver respond to it only to drop that response.
+        if message.id in self.timed_out_requests:
+            self.log.info(
+                f"Dropping timed out request ID {message.id} "
+                f"with msg type {message_type.name} "
+                f"to peer {self.peer_node_id} / {self.peer_info.host} "
+                f"version {self.version}"
+            )
+            self.timed_out_requests.discard(message.id)
+            return None
+        # Determine whether this message should use the v3 path. This is
+        # independent of whether the peer is subject to rate limits
+        # (localhost/exempt). We still want to bypass the v2 rate limiter
+        # for v3 supported message types.
+        peer_subject_to_rl = not is_localhost(self.peer_info.host) and not is_in_network(
+            self.peer_info.host, self.exempt_peer_networks
         )
-        if limiter_msg is not None:
-            if not is_localhost(self.peer_info.host) and not is_in_network(
-                self.peer_info.host, self.exempt_peer_networks
-            ):
-                message_type = ProtocolMessageTypes(message.type)
-                last_time = self.log_rate_limit_last_time[message_type]
-                now = time.monotonic()
-                if now - last_time >= 30:
-                    self.log_rate_limit_last_time[message_type] = now
+        both_v3 = (
+            Capability.RATE_LIMITS_V3 in self.peer_capabilities and Capability.RATE_LIMITS_V3 in self.local_capabilities
+        )
+        peer_rl_setting = self.peer_rl_settings_v3.get(message_type)
+        window_size = peer_rl_setting.window_size if peer_rl_setting is not None else None
+        tracked_v3_request = peer_rl_setting is not None and message.id in self.pending_requests
+        # Responses sent from `_api_call` reuse the peer's request nonce so they
+        # have a message ID but it's not in `pending_requests`.
+        v3_response_with_nonce = (
+            peer_rl_setting is not None
+            and window_size is None
+            and message.id is not None
+            and message.id not in self.pending_requests
+        )
+        if both_v3 and (tracked_v3_request or v3_response_with_nonce):
+            if tracked_v3_request and window_size is not None:
+                assert message.id is not None
+                rl_window = self.rate_limit_windows[message_type]
+                # Drop and retry this message if sending it exceeds the window
+                if peer_subject_to_rl and window_size is not None and rl_window.in_flight >= window_size:
+                    create_referenced_task(self._wait_and_retry(message, priority=priority), known_unreferenced=True)
                     details = ", ".join(
                         [
                             f"{message_type.name}",
-                            f"sz: {len(message.data) / 1000:0.2f} kB",
-                            f"peer: {self.peer_info.host}",
-                            f"{limiter_msg}",
+                            f"request ID: {message.id}",
+                            f"peer: {self.peer_node_id} / {self.peer_info.host} version {self.version}",
+                            f"in flight: {rl_window.in_flight}",
+                            f"max concurrent: {window_size}",
                         ]
                     )
-                    self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
+                    self.log.info(f"Rate limiting ourselves (v3). Dropping and retrying outbound message: {details}")
+                    return None
+                rl_window.in_flight += 1
+                self.v3_sent_request_ids.add(message.id)
+        else:
+            limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
+                message, self.local_capabilities, self.peer_capabilities
+            )
+            if limiter_msg is not None:
+                if peer_subject_to_rl:
+                    last_time = self.log_rate_limit_last_time[message_type]
+                    now = time.monotonic()
+                    if now - last_time >= 30:
+                        self.log_rate_limit_last_time[message_type] = now
+                        details = ", ".join(
+                            [
+                                f"{message_type.name}",
+                                f"sz: {len(message.data) / 1000:0.2f} kB",
+                                f"peer: {self.peer_info.host}",
+                                f"{limiter_msg}",
+                            ]
+                        )
+                        self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
 
-                # TODO: fix this special case. This function has rate limits which are too low.
-                if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    create_referenced_task(self._wait_and_retry(message), known_unreferenced=True)
+                    # TODO: fix this special case. This function has rate limits which are too low.
+                    if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
+                        create_referenced_task(
+                            self._wait_and_retry(message, priority=priority), known_unreferenced=True
+                        )
 
-                return None
-            else:
-                self.log.debug(
-                    f"Not rate limiting ourselves or exempt peers. "
-                    f"message type: {ProtocolMessageTypes(message.type).name}, "
-                    f"peer: {self.peer_info.host}"
-                )
+                    return None
+                else:
+                    self.log.debug(
+                        f"Not rate limiting ourselves or exempt peers. "
+                        f"message type: {ProtocolMessageTypes(message.type).name}, "
+                        f"peer: {self.peer_info.host}"
+                    )
 
         await self.ws.send_bytes(encoded)
         self.log.debug(
@@ -683,6 +910,7 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -691,39 +919,97 @@ class WSChiaConnection:
                 f"{self.peer_info.port}"
             )
             create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
                 create_referenced_task(self.close(), known_unreferenced=True)
+                # Yield so we let the close task cancel us
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
-            full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            full_message_loaded = None
             try:
-                message_type = ProtocolMessageTypes(full_message_loaded.type).name
+                full_message_loaded = Message.from_bytes(data)
+                message_type = ProtocolMessageTypes(full_message_loaded.type)
             except Exception:
-                message_type = "Unknown"
-            limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
-                full_message_loaded, self.local_capabilities, self.peer_capabilities
+                reason = (
+                    "invalid message format"
+                    if full_message_loaded is None
+                    else f"unknown message type {full_message_loaded.type}"
+                )
+                self.log.error(f"Disconnecting peer for {reason}: {self.peer_info.host}")
+                create_referenced_task(
+                    self.close(
+                        INTERNAL_PROTOCOL_ERROR_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE
+                    ),
+                    known_unreferenced=True,
+                )
+                # Yield so we let the close task cancel us
+                await asyncio.sleep(3)
+                return None
+            # Determine whether this message type is supported by v3 rate
+            # limits and the peer advertises the capability. This is
+            # independent of whether the peer is subject to rate limits
+            # (localhost/exempt). We still want to bypass the v2 rate limiter
+            # for v3 supported types.
+            limiter_msg = None
+            peer_subject_to_rl = not is_localhost(self.peer_info.host) and not is_in_network(
+                self.peer_info.host, self.exempt_peer_networks
             )
+            if (
+                Capability.RATE_LIMITS_V3 in self.peer_capabilities
+                and Capability.RATE_LIMITS_V3 in self.local_capabilities
+                and message_type in rate_limits_v3
+            ):
+                if peer_subject_to_rl:
+                    # Skip unlimited v3 message types (responses) and message types
+                    # that are not tracked by v3.
+                    window_size = rate_limits_v3[message_type].window_size
+                    # Checking the receive window at this point is not reliable
+                    # as it only gets incremented/decremented in `_api_call` so
+                    # that's where the reliable check happens (this one here
+                    # can under count). We do it here as well to catch the
+                    # cases where the message will indeed be rate limited.
+                    if (
+                        window_size is not None
+                        and message_type in self.rate_limit_windows
+                        and self.rate_limit_windows[message_type].receive_window >= window_size
+                    ):
+                        details = ", ".join(
+                            [
+                                f"{self.peer_node_id} / {self.peer_info.host} version {self.version}",
+                                f"message: {message_type.name}",
+                                f"receive window: {self.rate_limit_windows[message_type].receive_window}",
+                                f"window size: {window_size}",
+                            ]
+                        )
+                        self.log.info(f"Peer has been rate limited (v3) and will be disconnected: {details}")
+                        create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
+                        # Yield so we let the close task cancel us
+                        await asyncio.sleep(3)
+                        return None  # pragma: no cover
+            else:
+                limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
+                    full_message_loaded, self.local_capabilities, self.peer_capabilities
+                )
             if limiter_msg is not None:
-                if (
-                    self.local_type == NodeType.FULL_NODE
-                    and not is_localhost(self.peer_info.host)
-                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                if not is_localhost(self.peer_info.host) and not is_in_network(
+                    self.peer_info.host, self.exempt_peer_networks
                 ):
-                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
+                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type.name}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
+                    # Yield so we let the close task cancel us
                     await asyncio.sleep(3)
                     return None
                 else:
                     self.log.debug(
-                        f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type}, "
+                        f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type.name}, "
                         f"port {self.peer_info.port} but not disconnecting"
                     )
                     return full_message_loaded
@@ -734,11 +1020,13 @@ class WSChiaConnection:
                 create_referenced_task(self.close(RATE_LIMITER_BAN_SECONDS), known_unreferenced=True)
             else:
                 create_referenced_task(self.close(), known_unreferenced=True)
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             create_referenced_task(self.close())
+            # Yield so we let the close task cancel us
             await asyncio.sleep(3)
         return None
 

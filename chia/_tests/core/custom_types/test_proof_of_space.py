@@ -43,7 +43,7 @@ def b32(key: str) -> bytes32:
     return bytes32.from_hexstr(key)
 
 
-# TODO: todo_v2_plots more test cases
+# TODO: todo_v2_plots more test cases, cover plot_index and group_id
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -113,7 +113,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="v2 plot strength 0",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(0),
+        plot_size=PlotParam.make_v2(0, 0, 0),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
         expected_error="Plot strength (0) is lower than the minimum (2)",
@@ -121,15 +121,15 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="v2 plot strength 33",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(33),
+        plot_size=PlotParam.make_v2(0, 0, 33),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
         expected_error="Plot strength (33) is too high (max is 32)",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("0cbb408989205e9a94cc012f0d2717e9336795b0853f972965ad0c75c5700ed9"),
-        plot_size=PlotParam.make_v2(32),
+        pos_challenge=b32("5862b9d5210b008c0c30e2673e327b4a6c98c34d93dd05c7a253320eb5db1712"),
+        plot_size=PlotParam.make_v2(0, 0, 32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
             "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
@@ -139,7 +139,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="v2 not activated",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(2),
+        plot_size=PlotParam.make_v2(0, 0, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
         height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
@@ -153,13 +153,13 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        version_and_size=case.plot_size,
+        params=case.plot_size,
         proof=b"1",
     )
     quality_string = verify_and_get_quality_string(
         pos=pos,
         constants=DEFAULT_CONSTANTS,
-        original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
+        original_challenge_hash=b32("73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
         signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
         height=case.height,
         prev_transaction_block_height=case.height,
@@ -171,8 +171,8 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="not passing the plot filter v2",
-        plot_size=PlotParam.make_v2(2),
-        pos_challenge=b32("389f3f2f67d37a63d81a21d0e96898ff4eaa7007e1507630bea6a2608795a418"),
+        plot_size=PlotParam.make_v2(0, 0, 2),
+        pos_challenge=b32("9483df4e178307ae677d86664daaef4fc52689b2b6cd7825351f2a2ad7075adb"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
@@ -187,7 +187,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        version_and_size=case.plot_size,
+        params=case.plot_size,
         proof=b"1",
     )
     plot_param = pos.param()
@@ -197,7 +197,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         quality_string = verify_and_get_quality_string(
             pos=pos,
             constants=DEFAULT_CONSTANTS,
-            original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
+            original_challenge_hash=b32("73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
             signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
             height=case.height,
             prev_transaction_block_height=case.height,
@@ -223,11 +223,11 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v1(49), True),
         (PlotParam.make_v1(50), True),
         (PlotParam.make_v1(51), False),  # too large
-        (PlotParam.make_v2(1), False),  # too small
-        (PlotParam.make_v2(2), True),
-        (PlotParam.make_v2(3), True),
-        (PlotParam.make_v2(32), True),
-        (PlotParam.make_v2(33), False),  # strength too high
+        (PlotParam.make_v2(0, 0, 1), False),  # too small
+        (PlotParam.make_v2(0, 0, 2), True),
+        (PlotParam.make_v2(0, 0, 3), True),
+        (PlotParam.make_v2(0, 0, 32), True),
+        (PlotParam.make_v2(0, 0, 33), False),  # strength too high
     ],
 )
 def test_check_plot_param(plot_param: PlotParam, valid: bool) -> None:
@@ -290,7 +290,7 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     ],
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
-    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(28)) == expected
+    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
 
 
 def test_v1_phase_out() -> None:

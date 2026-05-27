@@ -29,7 +29,7 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
+              intel: "macos-15-intel"
               arm: macos-latest
           - name: Windows
             matrix: windows
@@ -45,6 +45,7 @@ jobs:
           - major_dot_minor: "3.11"
           - major_dot_minor: "3.12"
           - major_dot_minor: "3.13"
+          - major_dot_minor: "3.14"
         exclude:
           - os:
               matrix: windows

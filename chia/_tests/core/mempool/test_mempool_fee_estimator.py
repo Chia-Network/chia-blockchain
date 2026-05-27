@@ -14,6 +14,7 @@ from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
+from chia.util.inline_executor import InlineExecutor
 
 
 @pytest.mark.anyio
@@ -63,7 +64,11 @@ async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         async with MempoolManager.managed(
-            coin_store.get_coin_records, coin_store.get_unspent_lineage_info_for_puzzle_hash, test_constants
+            coin_store.get_coin_records,
+            coin_store.get_unspent_lineage_info_for_puzzle_hash,
+            test_constants,
+            InlineExecutor(),
+            validation_timeout=10,
         ) as mempool_manager:
             assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
             btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
@@ -92,7 +97,7 @@ async def test_fee_increase() -> None:
 
             assert short.median == -1
             assert med.median == -1
-            assert long.median == 0.0
+            assert long.median == pytest.approx(0.0)
 
             assert result.error is None
             short_estimate = result.estimates[0].estimated_fee_rate

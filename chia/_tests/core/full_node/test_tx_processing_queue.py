@@ -187,12 +187,8 @@ def test_tx_queue_entry_order_compare() -> None:
     # Let's create two items with the same transaction ID but different data
     sb = SpendBundle([], G2Element())
     sb_name = sb.name()
-    item1 = TransactionQueueEntry(
-        transaction=sb, transaction_bytes=bytes(sb), spend_name=sb_name, peer=None, test=False, peers_with_tx={}
-    )
-    item2 = TransactionQueueEntry(
-        transaction=sb, transaction_bytes=None, spend_name=sb_name, peer=None, test=True, peers_with_tx={}
-    )
+    item1 = TransactionQueueEntry(transaction=sb, spend_name=sb_name, peer=None, test=False, peers_with_tx={})
+    item2 = TransactionQueueEntry(transaction=sb, spend_name=sb_name, peer=None, test=True, peers_with_tx={})
     # They should be ordered and compared (considered equal) by `spend_name`
     # regardless of other fields.
     assert (item1 < item2) is False
