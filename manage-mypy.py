@@ -12,6 +12,7 @@ import click
 file_path = Path(__file__)
 here = file_path.parent
 exclusion_file = here.joinpath("mypy-exclusions.txt")
+strict_bytes_exclusion_file = here.joinpath("mypy-strict-bytes-exclusions.txt")
 
 
 def write_file(path: Path, content: str) -> None:
@@ -35,6 +36,10 @@ def split_mypy_failure(line: str) -> list[str]:
     return list(Path(line[: line.find(".py")]).parts)
 
 
+def read_module_list(path: Path) -> list[str]:
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if not line.startswith("#") and line.strip()]
+
+
 def build_exclusion_list(mypy_failures: list[str]) -> list[str]:
     # Create content for `mypy-exclusions.txt` from a list of mypy failures which look like:
     #     # chia/cmds/wallet_funcs.py:1251: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment] # noqa
@@ -51,8 +56,10 @@ def main() -> None:
 def build_mypy_ini(check_exclusions: bool = False) -> None:
     if not exclusion_file.exists():
         raise click.ClickException(f"{exclusion_file.name} missing, run `{file_path.name} build-exclusions`")
-    exclusion_file_content = exclusion_file.read_text(encoding="utf-8").splitlines()
-    exclusion_lines = [line for line in exclusion_file_content if not line.startswith("#") and len(line.strip()) > 0]
+    if not strict_bytes_exclusion_file.exists():
+        raise click.ClickException(f"{strict_bytes_exclusion_file.name} missing")
+    exclusion_lines = read_module_list(exclusion_file)
+    strict_bytes_exclusion_lines = read_module_list(strict_bytes_exclusion_file)
     if check_exclusions:
         mypy_failures = get_mypy_failures()
         updated_exclusions = build_exclusion_list(mypy_failures)
@@ -75,12 +82,14 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
                 new_failures_string = "\n".join(new_failures)
                 raise click.ClickException(f"The following new issues have been introduced:\n{new_failures_string}")
 
-    # Create the `mypy.ini` with all entries from `mypy-exclusions.txt`
+    # Create the `mypy.ini` with all entries from `mypy-exclusions.txt` and `mypy-strict-bytes-exclusions.txt`
     exclusion_section = f"[mypy-{','.join(exclusion_lines)}]"
+    strict_bytes_exclusion_section = f"[mypy-{','.join(strict_bytes_exclusion_lines)}]"
     mypy_config_data = (
         here.joinpath("mypy.ini.template")
         .read_text(encoding="utf-8")
         .replace("[mypy-chia-exclusions]", exclusion_section)
+        .replace("[mypy-chia-strict-bytes-exclusions]", strict_bytes_exclusion_section)
     )
     write_file(here.joinpath("mypy.ini"), mypy_config_data)
 
