@@ -48,10 +48,14 @@ jobs:
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/init@v4.35.4
 =======
         uses: github/codeql-action/init@v4.35.5
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
+=======
+        uses: github/codeql-action/init@v4.35.4
+>>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
         with:
           languages: ${{ matrix.language }}
           # If you wish to specify custom queries, you can do so here or in a config file.
@@ -63,10 +67,14 @@ jobs:
       # If this step fails, then you should remove it and run the build manually (see below)
       - name: Autobuild
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/autobuild@v4.35.4
 =======
         uses: github/codeql-action/autobuild@v4.35.5
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
+=======
+        uses: github/codeql-action/autobuild@v4.35.4
+>>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
 
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 https://git.io/JvXDl
@@ -81,7 +89,11 @@ jobs:
 
       - name: Perform CodeQL Analysis
 <<<<<<< HEAD
+<<<<<<< HEAD
         uses: github/codeql-action/analyze@v4.35.4
 =======
         uses: github/codeql-action/analyze@v4.35.5
 >>>>>>> 0ca929d (build(deps): bump github/codeql-action from 4.35.4 to 4.35.5)
+=======
+        uses: github/codeql-action/analyze@v4.35.4
+>>>>>>> 61badad (build(deps): bump chialisp from 0.4.1 to 0.4.5)
