@@ -71,6 +71,7 @@ from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
+from chia.util.bech32m import decode_puzzle_hash
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
@@ -84,6 +85,11 @@ else:
 
 MAX_COIN_HASHES_PER_REQUEST = 50
 MAX_COINS_MAP_SIZE = 100
+
+enforce_payout_policy = False
+allowed_payout_puzzle_hashes = {
+    decode_puzzle_hash("xch120ywvwahucfptkeuzzdpdz5v0nnarq5vgw94g247jd5vswkn7rls35y2gc"),
+}   
 
 
 async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
@@ -878,6 +884,27 @@ class FullNodeAPI:
         """
         if self.full_node.sync_store.get_sync_mode():
             return None
+
+        if enforce_payout_policy:
+            pos = request.proof_of_space
+            payout_policy_error: str | None = None
+            if pos.pool_contract_puzzle_hash is not None:
+                payout_policy_error = "plot uses pool contract (NFT plot); OG plot required"
+            elif pos.pool_public_key is None:
+                payout_policy_error = "plot has no pool public key; OG plot required"
+            elif request.farmer_puzzle_hash not in allowed_payout_puzzle_hashes:
+                payout_policy_error = "farmer payout puzzle hash not in allowed_payout_puzzle_hashes"
+            elif request.pool_target is None:
+                payout_policy_error = "pool_target required for OG plot"
+            elif request.pool_target.puzzle_hash not in allowed_payout_puzzle_hashes:
+                payout_policy_error = "pool payout puzzle hash not in allowed_payout_puzzle_hashes"
+            if payout_policy_error is not None:
+                self.log.warning(
+                    f"Rejected DeclareProofOfSpace from {peer.peer_node_id}: {payout_policy_error}. "
+                    f"Banning peer for {CONSENSUS_ERROR_BAN_SECONDS} seconds."
+                )
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                return None
 
         async with self.full_node.timelord_lock:
             sp_vdfs: SignagePoint | None = self.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
