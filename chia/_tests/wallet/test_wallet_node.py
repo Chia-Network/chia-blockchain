@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import enum
 import logging
 import sys
 import time
@@ -15,18 +16,22 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
+from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.generator_tools import get_block_header
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -34,9 +39,10 @@ from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_header_block
 
 
 @pytest.mark.anyio
@@ -1532,3 +1538,129 @@ async def test_start_with_multiple_keys(
 
     await restart_with_fingerprint(fingerprint_2)
     assert wallet_node.wallet_state_manager.private_key == initial_sk
+
+
+class HeaderBlockCase(enum.Enum):
+    NoneResponse = 0
+    WrongCount = 1
+    WrongHeight = 2
+    NonTx = 3
+    ValidResponse = 4
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize(
+    "header_block_case, expected_success, expected_closed",
+    [
+        (HeaderBlockCase.NoneResponse, False, False),
+        (HeaderBlockCase.WrongCount, False, False),
+        (HeaderBlockCase.WrongHeight, False, True),
+        (HeaderBlockCase.NonTx, False, False),
+        (HeaderBlockCase.ValidResponse, True, False),
+    ],
+)
+@pytest.mark.anyio
+async def test_request_and_validate_header_block(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    header_block_case: HeaderBlockCase,
+    expected_success: bool,
+    expected_closed: bool,
+) -> None:
+    """
+    Covers the header block validation cases (`None` response, wrong count,
+    wrong height, non transaction header block and finally a valid response)
+    for request_and_validate_header_block.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random()))
+    peak = full_node_api.full_node.blockchain.get_peak()
+    assert peak is not None
+    correct_full_block = await full_node_api.full_node.block_store.get_full_block(peak.header_hash)
+    assert correct_full_block is not None
+    assert correct_full_block.foliage_transaction_block is not None
+    correct_block_header = get_block_header(correct_full_block)
+    all_blocks = await full_node_api.get_all_full_blocks()
+    wrong_full_block = next(b for b in all_blocks if b.height != correct_full_block.height)
+    wrong_height_block_header = get_block_header(wrong_full_block)
+    no_tx_block_header = correct_block_header.replace(foliage_transaction_block=None)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    requested_height = correct_block_header.height
+    calls: list[tuple[uint32, uint32]] = []
+
+    async def request_block_headers(self: FullNodeAPI, request: wallet_protocol.RequestBlockHeaders) -> Message | None:
+        calls.append((request.start_height, request.end_height))
+        if header_block_case == HeaderBlockCase.NoneResponse:
+            reject = wallet_protocol.RejectBlockHeaders(request.start_height, request.end_height)
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        headers = []
+        if header_block_case == HeaderBlockCase.WrongCount:
+            headers = [correct_block_header, wrong_height_block_header]
+        elif header_block_case == HeaderBlockCase.WrongHeight:
+            headers = [wrong_height_block_header]
+        elif header_block_case == HeaderBlockCase.NonTx:
+            headers = [no_tx_block_header]
+        elif header_block_case == HeaderBlockCase.ValidResponse:
+            headers = [correct_block_header]
+        else:
+            assert False  # pragma: no cover
+        response = wallet_protocol.RespondBlockHeaders(request.start_height, request.end_height, headers)
+        return make_msg(ProtocolMessageTypes.respond_block_headers, response)
+
+    with patch_request_handler(api=server.api, handler=request_block_headers):
+        result = await request_and_validate_header_block(wsc, requested_height, wallet_node.log)
+
+    assert calls == [(requested_height, requested_height)]
+    if expected_success:
+        assert result == correct_block_header
+    else:
+        assert result is None
+    if expected_closed:
+        assert wsc.closed
+    else:
+        assert not wsc.closed
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize("created_cached_non_tx", [False, True])
+@pytest.mark.parametrize("spent_cached_non_tx", [False, True])
+async def test_validate_received_state_from_peer_cached_non_tx(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    created_cached_non_tx: bool,
+    spent_cached_non_tx: bool,
+) -> None:
+    """
+    Covers the scenarios where `validate_received_state_from_peer` is called
+    with the peer request cache returning non transaction header blocks for the
+    created and/or spent heights, to make sure the validation fails and the
+    peer's connection stays intact.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random()))
+    blocks = await full_node_api.get_all_full_blocks()
+    tx_blocks = [b for b in blocks if b.is_transaction_block()]
+    assert len(tx_blocks) == 2
+    created_tx_header = get_block_header(tx_blocks[-2])
+    spent_tx_header = get_block_header(tx_blocks[-1])
+    # Create non tx variants
+    created_non_tx_block_header = created_tx_header.replace(foliage_transaction_block=None)
+    spent_non_tx_block_header = spent_tx_header.replace(foliage_transaction_block=None)
+    peer_request_cache = PeerRequestCache()
+    coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    coin_state = CoinState(coin, spent_non_tx_block_header.height, created_tx_header.height)
+    if created_cached_non_tx:
+        peer_request_cache._blocks.put(created_non_tx_block_header.height, created_non_tx_block_header)
+        coin_state = CoinState(coin, None, created_non_tx_block_header.height)
+    if spent_cached_non_tx:
+        peer_request_cache.add_to_blocks(created_tx_header)
+        peer_request_cache._blocks.put(spent_non_tx_block_header.height, spent_non_tx_block_header)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    result = await wallet_node.validate_received_state_from_peer(
+        coin_state=coin_state, peer=wsc, peer_request_cache=peer_request_cache, fork_height=None
+    )
+    assert result is False
+    assert not wsc.closed
