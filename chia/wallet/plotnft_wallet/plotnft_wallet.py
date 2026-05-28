@@ -7,12 +7,11 @@ from typing import TYPE_CHECKING, ClassVar, cast, final
 from chia_rs import G2Element
 from chia_rs.chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
 from chia.pools.pool_config import PoolingShareState
-from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
