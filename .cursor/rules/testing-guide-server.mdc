@@ -1,0 +1,125 @@
+---
+description: Server/network test patterns — connection lifecycle, API errors, DoS/ban behavior, rate limiting
+globs:
+  - chia/_tests/core/server/**
+---
+
+# Server Tests
+
+## Scope
+
+Use this for network/server behavior rather than consensus correctness:
+
+- connection lifecycle and duplicate connection handling
+- API readiness/error transport behavior between peers
+- protocol error logging and compatibility behavior
+- DoS protection (bad handshake, oversized messages, spam)
+- rate limiter correctness (counts, bytes, periodic reset, capability versions)
+
+Primary references:
+
+- `chia/_tests/core/server/test_server.py`
+- `chia/_tests/core/server/test_dos.py`
+- `chia/_tests/core/server/test_rate_limits.py`
+
+## Harness Selection
+
+### Server integration behavior
+
+Use node fixtures:
+
+- `two_nodes`, `two_nodes_one_block`
+- `setup_two_nodes_fixture`
+- `one_wallet_and_one_simulator_services`
+
+Use helpers:
+
+- `connect_and_get_peer(...)` for explicit peer wiring
+- `time_out_assert(...)` for async event/log convergence
+
+### Pure rate-limit logic
+
+Prefer isolated unit-style tests:
+
+- instantiate `RateLimiter(...)`
+- build protocol messages with `make_msg(...)`
+- assert allow/deny responses directly
+
+This is faster and more deterministic than full socket setup.
+
+## Common Test Patterns
+
+### 1) Connection semantics
+
+- Assert `start_client(...)` success/failure behavior (including duplicate connection rejection).
+- Inspect both outgoing and incoming connection state where needed.
+
+### 2) API error transport behavior
+
+- Use custom API methods that raise `ApiError`.
+- Assert response payload compatibility by protocol version.
+- Use `caplog` to assert expected warning/debug lines were produced.
+
+### 3) DoS and ban behavior
+
+- Open websocket using real SSL context from fixture services.
+- Send malformed or oversized payload.
+- Assert:
+  - close code (`PROTOCOL_ERROR`, `MESSAGE_TOO_BIG`, etc.)
+  - banned peer insertion (`server.banned_peers`)
+
+### 4) Rate limit behavior
+
+- Build deterministic message workloads.
+- Assert threshold crossing by count and by bytes.
+- For time-window reset checks, use a simulated clock object.
+
+## How To Assert Steps Happened
+
+1. **Immediate transport result**
+   - returned bool/object or websocket close code
+2. **Eventually visible side effect**
+   - ban table update, log line appearance, queue-driven behavior
+3. **Protocol correctness**
+   - exact message/response type and payload compatibility
+
+## Anti-Flake Guidance
+
+- For localhost ban tests, patch localhost checks when needed to exercise ban paths.
+- Use `time_out_assert` for log/banning events; avoid raw sleep-based checks.
+- Keep direct socket tests narrow (single failure mode per test).
+- Use pure `RateLimiter` tests for matrix coverage of limits.
+
+## Quick Checklist
+
+- Pick integration fixture only when socket/peer behavior is required.
+- Assert close codes and ban state explicitly in DoS tests.
+- For versioned API errors, assert behavior on both sides of compatibility threshold.
+- For rate limits, cover both count and size paths, plus reset behavior.
+
+## Starter Template
+
+```python
+from __future__ import annotations
+
+import pytest
+
+from chia._tests.connection_utils import connect_and_get_peer
+from chia._tests.util.time_out_assert import time_out_assert
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.outbound_message import make_msg
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
+from chia.types.peer_info import PeerInfo
+
+
+@pytest.mark.anyio
+async def test_example(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+    # Assert connection state, send messages, check responses...
+```

@@ -45,11 +45,20 @@ async def add_dummy_connection(
     type: NodeType = NodeType.FULL_NODE,
     *,
     additional_capabilities: list[tuple[uint16, str]] | None = None,
+    wait_for_peer_added: bool = True,
 ) -> tuple[asyncio.Queue[Message], bytes32]:
     if additional_capabilities is None:
-        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
+        additional_capabilities = [
+            (uint16(Capability.HARD_FORK_2.value), "1"),
+            (uint16(Capability.RATE_LIMITS_V3.value), "1"),
+        ]
     wsc, peer_id = await add_dummy_connection_wsc(
-        server, self_hostname, dummy_port, type, additional_capabilities=additional_capabilities
+        server=server,
+        self_hostname=self_hostname,
+        dummy_port=dummy_port,
+        type=type,
+        additional_capabilities=additional_capabilities,
+        wait_for_peer_added=wait_for_peer_added,
     )
 
     return wsc.incoming_queue, peer_id
@@ -61,49 +70,60 @@ async def add_dummy_connection_wsc(
     dummy_port: int,
     type: NodeType = NodeType.FULL_NODE,
     additional_capabilities: list[tuple[uint16, str]] | None = None,
+    wait_for_peer_added: bool = True,
 ) -> tuple[WSChiaConnection, bytes32]:
     if additional_capabilities is None:
-        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
+        additional_capabilities = [
+            (uint16(Capability.HARD_FORK_2.value), "1"),
+            (uint16(Capability.RATE_LIMITS_V3.value), "1"),
+        ]
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    config = load_config(server.root_path, "config.yaml")
+    try:
+        config = load_config(server.root_path, "config.yaml")
 
-    ca_crt_path: Path
-    ca_key_path: Path
-    if server._local_type == NodeType.FARMER and type == NodeType.HARVESTER:
-        private_ca_crt_path, private_ca_key_path = private_ssl_ca_paths(server.root_path, config)
-        ca_crt_path = private_ca_crt_path
-        ca_key_path = private_ca_key_path
-    else:
-        chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
-        ca_crt_path = chia_ca_crt_path
-        ca_key_path = chia_ca_key_path
+        ca_crt_path: Path
+        ca_key_path: Path
+        if server._local_type == NodeType.FARMER and type == NodeType.HARVESTER:
+            private_ca_crt_path, private_ca_key_path = private_ssl_ca_paths(server.root_path, config)
+            ca_crt_path = private_ca_crt_path
+            ca_key_path = private_ca_key_path
+        else:
+            chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
+            ca_crt_path = chia_ca_crt_path
+            ca_key_path = chia_ca_key_path
 
-    dummy_crt_path = server.root_path / "dummy.crt"
-    dummy_key_path = server.root_path / "dummy.key"
-    generate_ca_signed_cert(ca_crt_path.read_bytes(), ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path)
-    ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, dummy_crt_path, dummy_key_path)
-    pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
-    der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
-    peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-    url = f"wss://{self_hostname}:{server._port}/ws"
-    ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
-    wsc = WSChiaConnection.create(
-        type,
-        ws,
-        server.api,
-        dummy_port,
-        log,
-        True,
-        server.received_message_callback,
-        None,
-        peer_id,
-        100,
-        30,
-        local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
-        stub_metadata_for_type=StubMetadataRegistry,
-    )
-    await wsc.perform_handshake(server._network_id, dummy_port, type)
+        dummy_crt_path = server.root_path / "dummy.crt"
+        dummy_key_path = server.root_path / "dummy.key"
+        generate_ca_signed_cert(ca_crt_path.read_bytes(), ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path)
+        ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, dummy_crt_path, dummy_key_path)
+        pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
+        der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
+        peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+        url = f"wss://{self_hostname}:{server._port}/ws"
+        ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
+        wsc = WSChiaConnection.create(
+            type,
+            ws,
+            server.api,
+            dummy_port,
+            log,
+            True,
+            server.received_message_callback,
+            None,
+            peer_id,
+            100,
+            30,
+            local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
+            stub_metadata_for_type=StubMetadataRegistry,
+            session=session,
+        )
+        await wsc.perform_handshake(server._network_id, dummy_port, type)
+    except Exception:
+        await session.close()
+        raise
+    if wait_for_peer_added:
+        await time_out_assert(5, lambda: peer_id in server.all_connections)
     if wsc.incoming_message_task is not None:
         wsc.incoming_message_task.cancel()
     return wsc, peer_id

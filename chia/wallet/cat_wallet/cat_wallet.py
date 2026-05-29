@@ -543,12 +543,12 @@ class CATWallet:
         """
         announcement: AssertCoinAnnouncement | None = None
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config.override(primary_coin=None, included_coin_ids=[]), push=False
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope,
+                    inner_action_scope,
                 )
                 origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
@@ -564,7 +564,7 @@ class CATWallet:
             else:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope,
+                    inner_action_scope,
                 )
                 origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
@@ -593,6 +593,7 @@ class CATWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.selected_coins.extend(inner_action_scope.side_effects.selected_coins)
 
         return announcement
 
@@ -620,12 +621,20 @@ class CATWallet:
         payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if coins is None:
-            cat_coins = await self.select_coins(
+            cat_coins_set = await self.select_coins(
                 uint64(starting_amount),
                 action_scope,
             )
         else:
-            cat_coins = coins
+            cat_coins_set = coins
+
+        cat_coins = list(
+            sorted(
+                cat_coins_set,
+                key=lambda c: c.name() == action_scope.config.tx_config.coin_selection_config.primary_coin,
+                reverse=True,
+            )
+        )
 
         selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount

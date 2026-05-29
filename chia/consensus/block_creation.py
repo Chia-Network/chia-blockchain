@@ -30,6 +30,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -286,10 +287,9 @@ def create_foliage(
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
-    sub_slot_iters: uint64,
+    infusion_point_total_iters: uint128,
     signage_point_index: uint8,
     sp_iters: uint64,
-    ip_iters: uint64,
     proof_of_space: ProofOfSpace,
     slot_cc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
@@ -312,7 +312,7 @@ def create_unfinished_block(
     Args:
         constants: consensus constants being used for this chain
         sub_slot_start_total_iters: the starting sub-slot iters at the signage point sub-slot
-        sub_slot_iters: sub-slot-iters at the infusion point epoch
+        infusion_point_total_iters: total iters at the infusion point
         signage_point_index: signage point index of the block to create
         sp_iters: sp_iters of the block to create
         ip_iters: ip_iters of the block to create
@@ -337,7 +337,6 @@ def create_unfinished_block(
         finished_sub_slots: list[EndOfSubSlotBundle] = []
     else:
         finished_sub_slots = finished_sub_slots_input.copy()
-    overflow: bool = sp_iters > ip_iters
     total_iters_sp: uint128 = uint128(sub_slot_start_total_iters + sp_iters)
     is_genesis: bool = prev_block is None
 
@@ -371,10 +370,8 @@ def create_unfinished_block(
     assert rc_sp_signature is not None
     assert chia_rs.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
-    total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
-
     rc_block = RewardChainBlockUnfinished(
-        total_iters,
+        infusion_point_total_iters,
         signage_point_index,
         slot_cc_challenge,
         proof_of_space,
@@ -424,6 +421,7 @@ def unfinished_block_to_full_block(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
+    header_mmr_root: bytes32 | None,
 ) -> FullBlock:
     """
     Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
@@ -481,9 +479,10 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_block.reward_chain_sp_signature,
         rc_ip_vdf,
         icc_ip_vdf,
-        None,
+        header_mmr_root,
         is_transaction_block,
     )
+
     if prev_block is None:
         new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
     else:
@@ -515,3 +514,64 @@ def unfinished_block_to_full_block(
         new_generator_ref_list,
     )
     return ret
+
+
+def calculate_infusion_point_total_iters(
+    sub_slot_start_total_iters: uint128, sp_iters: uint64, ip_iters: uint64, sub_slot_iters: uint64
+) -> uint128:
+    """
+    Calculates the candidate's infusion point total iterations
+    """
+    overflow = sp_iters > ip_iters
+    return uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
+
+
+def unfinished_block_to_full_block_with_mmr(
+    unfinished_block: UnfinishedBlock,
+    cc_ip_vdf: VDFInfo,
+    cc_ip_proof: VDFProof,
+    rc_ip_vdf: VDFInfo,
+    rc_ip_proof: VDFProof,
+    icc_ip_vdf: VDFInfo | None,
+    icc_ip_proof: VDFProof | None,
+    finished_sub_slots: list[EndOfSubSlotBundle],
+    prev_block: BlockRecord | None,
+    blocks: BlockRecordsProtocol,
+    total_iters_sp: uint128,
+    difficulty: uint64,
+    constants: ConsensusConstants,
+) -> FullBlock:
+    """
+    Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
+    This maintains backward compatibility while adding MMR support.
+    """
+    # Before fork, use None for MMR root.
+    header_mmr_root = None
+    if post_hard_fork2(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=unfinished_block.prev_header_hash,
+        sp_index=unfinished_block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(finished_sub_slots),
+    ):
+        header_mmr_root = blocks.get_mmr_root_for_block(
+            unfinished_block.prev_header_hash,
+            unfinished_block.reward_chain_block.signage_point_index,
+            len(finished_sub_slots) > 0,
+        )
+
+    return unfinished_block_to_full_block(
+        unfinished_block,
+        cc_ip_vdf,
+        cc_ip_proof,
+        rc_ip_vdf,
+        rc_ip_proof,
+        icc_ip_vdf,
+        icc_ip_proof,
+        finished_sub_slots,
+        prev_block,
+        blocks,
+        total_iters_sp,
+        difficulty,
+        header_mmr_root,
+    )

@@ -255,7 +255,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             # we don't have very much v2 space, and no phase-out means the
             # difficulty won't adjust gradually. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(2),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
@@ -266,7 +266,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             HARD_FORK2_HEIGHT=uint32(0),
             # we don't have very much v2 space. We need a lower difficulty
             # level to start with
-            DIFFICULTY_STARTING=uint64(7),
+            DIFFICULTY_STARTING=uint64(64),
         )
     elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
@@ -276,6 +276,14 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
         )
 
     return ret
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _install_plot_cache() -> None:
+    from chia._tests.util.plot_cache import install as install_plot_cache
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    install_plot_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
 
 
 @pytest.fixture(scope="session", name="bt")
@@ -512,6 +520,47 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(0),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_zero:
+        version = "_fork_height_zero"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(500),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_500:
+        version = "_fork_height_500"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_500, seed=b"fork_500")
 
 
 # If you add another test chain, don't forget to also add a "build_test_chains"

@@ -443,6 +443,8 @@ def test_tx_config_helper() -> None:
             max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
+            coins_to_include=(bytes32([1] * 32),),
+            primary_coin=bytes32([1] * 32),
         )
     )
 
@@ -456,6 +458,10 @@ def test_tx_config_helper() -> None:
         "0.01",
         "--exclude-coin",
         bytes32([0] * 32).hex(),
+        "--include-coin",
+        bytes32([1] * 32).hex(),
+        "--primary-coin",
+        bytes32([1] * 32).hex(),
     )
 
     # again, convenience for testing sake
@@ -464,6 +470,8 @@ def test_tx_config_helper() -> None:
         max_coin_amount=uint64(1),
         excluded_coin_amounts=[uint64(1)],
         excluded_coin_ids=[bytes32([0] * 32)],
+        included_coin_ids=[bytes32([1] * 32)],
+        primary_coin=bytes32([1] * 32),
     )
 
     @chia_command(group=cmd, name="tx_config_cmd", short_help="blah", help="blah")
@@ -480,6 +488,8 @@ def test_tx_config_helper() -> None:
             max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
+            coins_to_include=(bytes32([1] * 32),),
+            primary_coin=bytes32([1] * 32),
             reuse=False,
         )
     )
@@ -494,6 +504,10 @@ def test_tx_config_helper() -> None:
         "0.01",
         "--exclude-coin",
         bytes32([0] * 32).hex(),
+        "--include-coin",
+        bytes32([1] * 32).hex(),
+        "--primary-coin",
+        bytes32([1] * 32).hex(),
         "--new-address",
     )
 
@@ -503,6 +517,8 @@ def test_tx_config_helper() -> None:
         max_coin_amount=uint64(1),
         excluded_coin_amounts=[uint64(1)],
         excluded_coin_ids=[bytes32([0] * 32)],
+        included_coin_ids=[bytes32([1] * 32)],
+        primary_coin=bytes32([1] * 32),
         reuse_puzhash=False,
     )
 

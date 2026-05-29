@@ -111,7 +111,7 @@ jobs:
 
       - name: Import Apple app signing certificate
         if: steps.check_secrets.outputs.HAS_APPLE_SECRET
-        uses: Apple-Actions/import-codesign-certs@v6
+        uses: Apple-Actions/import-codesign-certs@v7
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
           p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
@@ -178,7 +178,7 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Setup Node per .nvmrc in GUI
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6.4.0
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 

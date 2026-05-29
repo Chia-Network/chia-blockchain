@@ -40,7 +40,9 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
     farmer_server = farmer_service._server
-    incoming_queue, _peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    incoming_queue, _ = await add_dummy_connection(
+        farmer_server, self_hostname, 12312, NodeType.HARVESTER, wait_for_peer_added=False
+    )
     # Consume the handshake
     response = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response).name == "harvester_handshake"
@@ -66,7 +68,9 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
     farmer_server = farmer_service._server
-    dummy_wsc, peer_id = await add_dummy_connection_wsc(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    dummy_wsc, peer_id = await add_dummy_connection_wsc(
+        farmer_server, self_hostname, 12312, NodeType.HARVESTER, wait_for_peer_added=False
+    )
     incoming_queue = dummy_wsc.incoming_queue
     # Consume the handshake
     response = (await incoming_queue.get()).type
@@ -88,10 +92,14 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
     request_signatures_message = await incoming_queue.get()
     assert ProtocolMessageTypes(request_signatures_message.type).name == "request_signatures"
     await dummy_wsc.outgoing_queue.put(
-        Message(
-            uint8(ProtocolMessageTypes.respond_signatures.value),
-            request_signatures_message.id,
-            bytes(respond_signatures),
+        (
+            0,
+            0,
+            Message(
+                uint8(ProtocolMessageTypes.respond_signatures.value),
+                request_signatures_message.id,
+                bytes(respond_signatures),
+            ),
         )
     )
 

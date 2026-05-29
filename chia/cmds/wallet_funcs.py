@@ -348,6 +348,8 @@ async def send(
     min_coin_amount: CliAmount,
     max_coin_amount: CliAmount,
     excluded_coin_ids: Sequence[bytes32],
+    included_coin_ids: Sequence[bytes32],
+    primary_coin: bytes32 | None,
     reuse_puzhash: bool | None,
     clawback_time_lock: int,
     push: bool,
@@ -406,6 +408,8 @@ async def send(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
+                    included_coin_ids=list(included_coin_ids),
+                    primary_coin=primary_coin,
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
                 timelock_info=condition_valid_times,
@@ -425,6 +429,8 @@ async def send(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
+                    included_coin_ids=list(included_coin_ids),
+                    primary_coin=primary_coin,
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
                 timelock_info=condition_valid_times,
@@ -796,8 +802,8 @@ async def get_offers(
                 new_records: list[TradeRecord] = (
                     await wallet_client.get_all_offers(
                         GetAllOffers(
-                            start=uint16(start),
-                            end=uint16(end),
+                            start=uint32(start),
+                            end=uint32(end),
                             sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
                             reverse=reverse,
                             file_contents=file_contents,

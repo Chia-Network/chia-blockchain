@@ -57,7 +57,7 @@ def validate_decimal_xch(
     return d_value
 
 
-class TransactionFeeParamType(click.ParamType):
+class TransactionFeeParamType(click.ParamType[uint64]):
     """
     A Click parameter type for transaction fees, which can be specified in XCH or mojos.
     """
@@ -116,7 +116,7 @@ class CliAmount:
         return uint64_amount
 
 
-class AmountParamType(click.ParamType):
+class AmountParamType(click.ParamType[CliAmount]):
     """
     A Click parameter type for TX / wallet amounts for both XCH and CAT, and of course mojos.
     """
@@ -158,7 +158,7 @@ class CliAddress:
         return self.puzzle_hash
 
 
-class AddressParamType(click.ParamType):
+class AddressParamType(click.ParamType[CliAddress]):
     """
     A Click parameter type for bech32m encoded addresses, it gives a class with the address type and puzzle hash.
     """
@@ -202,7 +202,7 @@ class AddressParamType(click.ParamType):
             self.fail("Address must be a valid bech32m address", param, ctx)
 
 
-class Bytes32ParamType(click.ParamType):
+class Bytes32ParamType(click.ParamType[bytes32]):
     """
     A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
     """
@@ -221,7 +221,7 @@ class Bytes32ParamType(click.ParamType):
             self.fail("Value must be a valid bytes32 hex string like a coin id or puzzle hash", param, ctx)
 
 
-class Uint64ParamType(click.ParamType):
+class Uint64ParamType(click.ParamType[uint64]):
     """
     A Click parameter type for Uint64 integers.
     """

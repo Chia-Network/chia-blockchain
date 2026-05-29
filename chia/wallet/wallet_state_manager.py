@@ -11,6 +11,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
@@ -25,6 +26,7 @@ from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pai
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.pools import pool_config
 from chia.pools.pool_puzzles import (
     get_most_recent_singleton_coin_from_coin_spend,
     solution_to_pool_state,
@@ -155,6 +157,13 @@ if TYPE_CHECKING:
 
 
 PendingTxCallback = Callable[[], None]
+
+
+class SyncStatus(IntEnum):
+    SYNCED = 0
+    SLIGHTLY_BEHIND = 1
+    LONG_SYNC = 2
+    DISCONNECTED = 3
 
 
 class WalletStateManager:
@@ -294,6 +303,8 @@ class WalletStateManager:
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
+
+        pool_config.perform_migration_from_old_config(root_path=self.root_path)
 
         wallet: WalletProtocol[Any] | None = None
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -727,6 +738,23 @@ class WalletStateManager:
         if latest_timestamp > block_is_current_at and not has_pending_queue_items:
             return True
         return False
+
+    async def get_sync_status(self) -> SyncStatus:
+        peak = self.blockchain._peak
+        if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            return SyncStatus.SYNCED
+
+        if peak is None or len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
+            return SyncStatus.DISCONNECTED
+
+        height_gap = peak.height - await self.blockchain.get_finished_sync_up_to()
+        if height_gap > 10:
+            return SyncStatus.LONG_SYNC
+
+        if not await self.synced():
+            return SyncStatus.SLIGHTLY_BEHIND
+
+        return SyncStatus.SYNCED
 
     @property
     def sync_mode(self) -> bool:
@@ -2987,15 +3015,16 @@ class WalletStateManager:
 
         # First get the coin IDs specified
         if target_coin_ids is not None:
-            coins.extend(
-                cr.coin
-                for cr in (
-                    await self.coin_store.get_coin_records(
-                        wallet_id=wallet_id,
-                        coin_id_filter=HashFilter(target_coin_ids, mode=uint8(FilterMode.include.value)),
-                    )
-                ).records
-            )
+            target_records = (
+                await self.coin_store.get_coin_records(
+                    wallet_id=wallet_id,
+                    coin_id_filter=HashFilter(target_coin_ids, mode=uint8(FilterMode.include.value)),
+                )
+            ).records
+            spent_ids = [cr.coin.name() for cr in target_records if cr.spent]
+            if spent_ids:
+                raise ValueError(f"Cannot combine already-spent coins: {', '.join(c.hex() for c in spent_ids)}")
+            coins.extend(cr.coin for cr in target_records)
 
         async with action_scope.use() as interface:
             interface.side_effects.selected_coins.extend(coins)
@@ -3019,6 +3048,7 @@ class WalletStateManager:
 
         # Now let's select enough coins to get to the target number to combine
         if len(coins) < number_of_coins:
+            coin_selection_config = action_scope.config.tx_config.coin_selection_config
             async with action_scope.use() as interface:
                 coins.extend(
                     cr.coin
@@ -3032,6 +3062,11 @@ class WalletStateManager:
                                 mode=uint8(FilterMode.exclude.value),
                             ),
                             reverse=largest_first,
+                            spent_range=UInt32Range(stop=uint32(0)),
+                            amount_range=UInt64Range(
+                                start=coin_selection_config.min_coin_amount,
+                                stop=coin_selection_config.max_coin_amount,
+                            ),
                         )
                     ).records
                 )

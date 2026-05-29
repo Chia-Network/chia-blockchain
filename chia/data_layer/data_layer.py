@@ -151,6 +151,7 @@ class DataLayer:
         default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
     )
     group_files_by_store: bool = False
+    max_delta_file_size: int = 250
 
     @property
     def server(self) -> ChiaServer:
@@ -222,6 +223,7 @@ class DataLayer:
                 total=config.get("client_timeout", 45), sock_connect=config.get("connect_timeout", 5)
             ),
             group_files_by_store=config.get("group_files_by_store", False),
+            max_delta_file_size=config.get("max_delta_file_size", 250),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -665,6 +667,7 @@ class DataLayer:
                     downloader=await self.get_downloader(store_id, url),
                     group_files_by_store=self.group_files_by_store,
                     maximum_full_file_count=self.maximum_full_file_count,
+                    max_delta_file_size=self.max_delta_file_size,
                 )
                 if success:
                     self.log.info(

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+SCRIPT_DIRECTORY=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
+
+exec "${SCRIPT_DIRECTORY}/py" -m pytest "$@"

@@ -47,7 +47,9 @@ def check_plots(
     debug_show_memo: bool,
 ) -> None:
     config = load_config(root_path, "config.yaml")
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    selected_network = config["selected_network"]
+    testnet = selected_network != "mainnet"
+    address_prefix = config["network_overrides"]["config"][selected_network]["address_prefix"]
     plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=uint32(0))
     plot_manager: PlotManager = PlotManager(
         root_path,
@@ -220,6 +222,7 @@ def check_plots(
                                 pr.get_id(),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                testnet,
                             )
 
                         proof_spent_time = round(monotonic() * 1000) - proof_start_time
@@ -243,6 +246,7 @@ def check_plots(
                                 challenge,
                                 pr.get_strength(),
                                 full_proof,
+                                testnet,
                             )
 
                         if quality_str == ver_quality_str:
@@ -252,7 +256,15 @@ def check_plots(
                                 f"\tQuality doesn't match with proof. Filepath: {plot_path} "
                                 "This can occasionally happen with a compressed plot."
                             )
-                    except AssertionError as e:
+                    except RuntimeError as e:
+                        if str(e) == "GRResult_NoProof received":
+                            log.info(f"Proof dropped due to line point compression. Filepath: {plot_path}")
+                            continue
+                        else:
+                            log.error(f"{type(e)}: {e} error in getting full proof for plot {plot_path}")
+                            caught_exception = True
+                            continue
+                    except Exception as e:
                         log.error(
                             f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
                         )

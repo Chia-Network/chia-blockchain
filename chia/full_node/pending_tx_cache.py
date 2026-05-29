@@ -95,7 +95,7 @@ class PendingTxCache:
             return ret
 
         height_line = self._by_height.items()[0]
-        while height_line[0] < up_to_height:
+        while height_line[0] <= up_to_height:
             ret.update(height_line[1])
             for name, item in height_line[1].items():
                 self._cache_cost -= item.cost

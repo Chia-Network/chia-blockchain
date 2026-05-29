@@ -207,6 +207,21 @@ def get_transactions_cmd(
     help="Exclude this coin from being spent.",
 )
 @click.option(
+    "--include-coin",
+    "coins_to_include",
+    multiple=True,
+    type=Bytes32ParamType(),
+    help="Include this coin from being spent.",
+)
+@click.option(
+    "--primary-coin",
+    "primary_coin",
+    type=Bytes32ParamType(),
+    required=False,
+    default=None,
+    help="Use this coin as the primary coin which outputs the conditions.",
+)
+@click.option(
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -234,6 +249,8 @@ def send_cmd(
     min_coin_amount: CliAmount,
     max_coin_amount: CliAmount,
     coins_to_exclude: Sequence[bytes32],
+    coins_to_include: Sequence[bytes32],
+    primary_coin: bytes32 | None,
     reuse: bool,
     clawback_time: int,
     push: bool,
@@ -255,6 +272,8 @@ def send_cmd(
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             excluded_coin_ids=coins_to_exclude,
+            included_coin_ids=coins_to_include,
+            primary_coin=primary_coin,
             reuse_puzhash=True if reuse else None,
             clawback_time_lock=clawback_time,
             push=push,

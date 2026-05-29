@@ -1,0 +1,14 @@
+---
+description: Auto-attach networking context when working in server/protocol code
+globs:
+  - chia/server/**
+  - chia/protocols/**
+---
+
+# Networking Context Available
+
+Deep context for this subsystem exists at `.cursor/context/networking.md`.
+Read it before exploring code — it documents `WSChiaConnection`, rate limiting
+(per-type and aggregate), the protocol state machine, `ApiProtocol`/`@request`
+decorator, connection limits, peer discovery, and the handshake/capability
+negotiation flow.

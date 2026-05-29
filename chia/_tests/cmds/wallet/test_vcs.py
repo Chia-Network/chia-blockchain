@@ -388,6 +388,8 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: tuple[TestRpcC
                     max_coin_amount=uint64(10000),
                     excluded_coin_amounts=[],
                     excluded_coin_ids=[],
+                    included_coin_ids=[],
+                    primary_coin=None,
                     reuse_puzhash=True,
                 ),
                 uint64(500000000000),

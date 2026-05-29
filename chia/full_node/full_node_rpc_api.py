@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -91,8 +89,6 @@ async def get_average_block_time(
 
 
 class FullNodeRpcApi:
-    executor: ThreadPoolExecutor
-
     if TYPE_CHECKING:
         from chia.rpc.rpc_server import RpcApiProtocol
 
@@ -102,7 +98,6 @@ class FullNodeRpcApi:
         self.service = service
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: dict[str, Any] | None = None
-        self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="node-rpc-")
 
     def get_routes(self) -> dict[str, Endpoint]:
         return {
@@ -121,6 +116,7 @@ class FullNodeRpcApi:
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_aggsig_additional_data": self.get_aggsig_additional_data,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
+            "/get_constants": self.get_constants,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
@@ -522,16 +518,17 @@ class FullNodeRpcApi:
 
         flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
 
-        spends = await asyncio.get_running_loop().run_in_executor(
-            self.executor,
+        spends = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block,
             self.service.constants,
             block_generator.program,
             block_generator.generator_refs,
             flags,
+            nice=(5,),
+            dedicated=True,
         )
 
-        return spends
+        return cast(EndpointResult, spends)
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
@@ -551,13 +548,14 @@ class FullNodeRpcApi:
             return {"block_spends_with_conditions": []}
 
         flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
-        spends_with_conditions = await asyncio.get_running_loop().run_in_executor(
-            self.executor,
+        spends_with_conditions = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block_with_conditions,
             self.service.constants,
             block_generator.program,
             block_generator.generator_refs,
             flags,
+            nice=(5,),
+            dedicated=True,
         )
         return {"block_spends_with_conditions": spends_with_conditions}
 
@@ -688,6 +686,9 @@ class FullNodeRpcApi:
             * eligible_plots_filter_multiplier
         )
         return {"space": uint128(network_space_bytes_estimate)}
+
+    async def get_constants(self, request: dict[str, Any]) -> EndpointResult:
+        return {"constants": self.service.constants.to_json_dict()}
 
     async def get_coin_records_by_puzzle_hash(self, request: dict[str, Any]) -> EndpointResult:
         """
@@ -1000,8 +1001,7 @@ class FullNodeRpcApi:
 
             if maybe_gen is not None:
                 # this also validates the signature
-                err, conds = await asyncio.get_running_loop().run_in_executor(
-                    self.executor,
+                err, err_msg, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
@@ -1010,9 +1010,11 @@ class FullNodeRpcApi:
                     gen.signature,
                     None,
                     self.service.constants,
+                    nice=(5,),
+                    dedicated=True,
                 )
                 if err is not None:
-                    self.service.log.error(f"failed to validate block: {err}")
+                    self.service.log.error(f"failed to validate block: {err} {err_msg}")
                 else:
                     assert conds is not None
                     if conds.cost != gen.cost:

@@ -47,11 +47,13 @@ class HintStore:
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
                     f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?) LIMIT ?",
-                    (*hints_db, max_items),
+                    (*hints_db, max_items - len(coin_ids)),
                 )
                 rows = await cursor.fetchall()
                 coin_ids.extend([bytes32(row[0]) for row in rows])
                 await cursor.close()
+                if len(coin_ids) >= max_items:
+                    break
 
         return coin_ids
 

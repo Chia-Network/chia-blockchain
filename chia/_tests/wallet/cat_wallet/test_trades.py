@@ -10,11 +10,10 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import SOFTFORK_HEIGHTS
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.program import INFINITE_COST, Program, run
@@ -2142,7 +2141,11 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
+async def test_trade_bad_spend(
+    wallet_environments: WalletTestFramework, wallet_type: type[CATWallet], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("chia.wallet.transaction_record.minimum_send_attempts", 1)
+    monkeypatch.setattr("chia.wallet.wallet_transaction_store.minimum_send_attempts", 1)
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 

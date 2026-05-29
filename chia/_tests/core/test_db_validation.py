@@ -20,6 +20,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.inline_executor import InlineExecutor
 
 
 def rand_hash() -> bytes32:
@@ -141,13 +142,13 @@ async def make_db(db_file: Path, blocks: list[FullBlock], constants: ConsensusCo
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, height_map, constants, reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, constants, InlineExecutor())
         sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                     sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-            results = PreValidationResult(None, uint64(1), None, uint32(0))
+            results = PreValidationResult(None, None, uint64(1), None, uint32(0))
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
             _, err, _ = await bc.add_block(block, results, sub_slot_iters=sub_slot_iters, fork_info=fork_info)
             assert err is None

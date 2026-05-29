@@ -41,6 +41,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
+from chia.util.inline_executor import InlineExecutor
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.wallet_spend_bundle import T_SpendBundle
@@ -75,7 +76,7 @@ class CostLogger:
     def add_cost(self, descriptor: str, spend_bundle: T_SpendBundle) -> T_SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, DEFAULT_CONSTANTS)
-        _err, conds = run_block_generator2(
+        _err, _err_msg, conds = run_block_generator2(
             bytes(program.program),
             [],
             INFINITE_COST,
@@ -172,6 +173,7 @@ class SpendSim:
                 self.coin_store.get_coin_records,
                 self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 defaults,
+                InlineExecutor(),
                 validation_timeout=10,
             ) as self.mempool_manager:
                 # Load the next data if there is any
