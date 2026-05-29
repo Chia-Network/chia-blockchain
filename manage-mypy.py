@@ -64,7 +64,10 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         mypy_failures = get_mypy_failures()
         updated_exclusions = build_exclusion_list(mypy_failures)
         # Compare the old content with the new content and fail if some file without issues is excluded.
-        updated_set = set(updated_exclusions)
+        # Strict-bytes modules are excluded from this check: template mypy runs without their overrides,
+        # and they are tracked separately in mypy-strict-bytes-exclusions.txt.
+        strict_bytes_set = set(strict_bytes_exclusion_lines)
+        updated_set = set(updated_exclusions) - strict_bytes_set
         old_set = set(exclusion_lines)
         if updated_set != old_set:
             fixed = "\n".join(f"  -> {entry}" for entry in sorted(old_set - updated_set))
