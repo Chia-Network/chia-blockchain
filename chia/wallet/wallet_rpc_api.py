@@ -190,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFullNodePeerCountResponse,
     GetHeightInfo,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -975,6 +976,10 @@ class WalletRpcApi:
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     @marshal
+    async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
+        return GetFullNodePeerCountResponse(peer_count=len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
+
+    @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         """
         Returns height info for the current wallet.
@@ -1712,6 +1717,9 @@ class WalletRpcApi:
             raise ValueError("Wallet is not connected to any synced peers.")
         if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
+
+        if self.service.wallet_state_manager.wallet_node.get_full_node_peers().is_empty():
+            raise ValueError("No full node peers connected. Please connect to a full node.")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),

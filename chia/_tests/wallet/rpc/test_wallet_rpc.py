@@ -50,6 +50,7 @@ from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -134,6 +135,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFullNodePeerCountResponse,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
@@ -2527,6 +2529,28 @@ async def test_get_height_info_response_variants(
     assert response.is_transaction_block == expected_is_tx
     assert response.prev_transaction_block_height == expected_prev
     mock_blockchain.height_to_block_record.assert_called_once_with(sync_height)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_full_node_peer_count(wallet_environments: WalletTestFramework) -> None:
+    """Verifies get_full_node_peer_count reflects live wallet -> full node connections."""
+    env = wallet_environments.environments[0]
+    client = env.rpc_client
+
+    response = await client.get_full_node_peer_count()
+    assert isinstance(response, GetFullNodePeerCountResponse)
+    assert response.peer_count == 1
+
+    await env.node.server.close_all_connections()
+    await time_out_assert(5, lambda: len(env.node.server.get_connections(NodeType.FULL_NODE)), 0)
+
+    assert (await client.get_full_node_peer_count()).peer_count == 0
 
 
 @pytest.mark.parametrize(
