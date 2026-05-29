@@ -977,7 +977,7 @@ class WalletRpcApi:
 
     @marshal
     async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
-        return GetFullNodePeerCountResponse(peer_count=len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
+        return GetFullNodePeerCountResponse(peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order())))
 
     @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
@@ -1718,7 +1718,9 @@ class WalletRpcApi:
         if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
 
-        if self.service.wallet_state_manager.wallet_node.get_full_node_peers().is_empty():
+        # We use the full node when generating coin records from WalletCoinRecords.
+        # If we don't have any full node peers connected we can error out early.
+        if self.get_full_node_peer_count() == 0:
             raise ValueError("No full node peers connected. Please connect to a full node.")
 
         kwargs: dict[str, Any] = {
