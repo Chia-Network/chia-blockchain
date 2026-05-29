@@ -3926,6 +3926,19 @@ files = [
 ]
 
 [[package]]
+name = "types-psutil"
+version = "7.2.2.20260518"
+description = "Typing stubs for psutil"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types_psutil-7.2.2.20260518-py3-none-any.whl", hash = "sha256:6a3d697665754a60d7b5a41d5a2cff12b53f5e0676d77810cd28ba5e14cb4049"},
+    {file = "types_psutil-7.2.2.20260518.tar.gz", hash = "sha256:9f825f631463a5b4d26f19f63aebc9ec25f01140d655026f3ad8a67841f9b331"},
+]
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.20260518"
 description = "Typing stubs for PyYAML"
@@ -4419,11 +4432,11 @@ files = [
 ]
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-psutil", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "9f0600fcde45097619ba2219f41f4f70321c156fdda7bc6c894bb5f01b3c8f0f"
+content-hash = "d89a5d6492be9c4112cd798622457b96127a10ad79de2f12c061a3ea32814c0a"
