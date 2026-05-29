@@ -42,6 +42,7 @@ else:
 
 hiddenimports = [
     *collect_submodules("chia"),
+    *collect_submodules("bitstring"),
     *keyring_imports,
     *hidden_imports_for_windows,
 ]

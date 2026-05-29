@@ -78,7 +78,7 @@ async def _validate_and_add_block(
         else:
             # fake the signature validation. Just say True here.
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
-        results = PreValidationResult(None, uint64(1), conds, uint32(0))
+        results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
     else:
         future = await pre_validate_block(
             blockchain.constants,
