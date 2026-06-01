@@ -12,7 +12,7 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
-from chia.timelord.types import Chain, IterationType, StateType
+from chia.timelord.types import Chain, IterationType
 
 log = logging.getLogger(__name__)
 
@@ -159,29 +159,20 @@ class TimelordAPI:
                 return None
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
-                current_total_iters = int(self.timelord.last_state.get_total_iters())
-                overflow_ip_total_iters = int(new_unfinished_block.reward_chain_block.total_iters)
+                current_total_iters = self.timelord.last_state.get_total_iters()
+                overflow_ip_total_iters = new_unfinished_block.reward_chain_block.total_iters
                 # If the IP is already behind us, this overflow block can only block future peaks.
                 if overflow_ip_total_iters <= current_total_iters:
                     log.debug(f"Dropping stale overflow unfinished block, total {self.timelord.total_unfinished}")
                     return None
-                # Before EOS, keep overflow blocks cached until the slot boundary arrives.
-                if self.timelord.last_state.state_type != StateType.END_OF_SUB_SLOT:
-                    self.timelord.overflow_blocks.append(new_unfinished_block)
-                    log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
-                    return None
-                # Schedule late overflow only when this EOS is between its SP and IP.
-                if (
-                    overflow_sp_total_iters(
-                        overflow_ip_total_iters, ip_iters, sp_iters, self.timelord.last_state.get_sub_slot_iters()
-                    )
-                    >= current_total_iters
-                ):
+                overflow_eos_total_iters = overflow_ip_total_iters - ip_iters
+                # Keep overflow cached until the timelord has passed the slot end it belongs to.
+                if overflow_eos_total_iters > current_total_iters:
                     self.timelord.overflow_blocks.append(new_unfinished_block)
                     log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
                     return None
                 overflow_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
-                # The overflow is in this EOS window and can be infused now.
+                # The overflow is in its post-EOS window and can be infused now.
                 if overflow_iters:
                     self._schedule_unfinished_block(new_unfinished_block, overflow_iters)
                     log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
