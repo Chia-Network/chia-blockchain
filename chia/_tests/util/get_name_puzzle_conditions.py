@@ -52,7 +52,9 @@ def get_name_puzzle_conditions(
 
     try:
         block_args = generator.generator_refs
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, G2Element(), None, constants)
+        err, _err_msg, result = run_block(
+            bytes(generator.program), block_args, max_cost, flags, G2Element(), None, constants
+        )
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)
