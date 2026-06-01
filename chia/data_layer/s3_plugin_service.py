@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 from urllib.parse import urlparse
 
 import boto3
@@ -21,6 +21,9 @@ from botocore.exceptions import ClientError
 from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.download_data import is_filename_valid
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3ServiceResource
 
 log = logging.getLogger(__name__)
 plugin_name = "Chia S3 Datalayer plugin"
@@ -46,7 +49,7 @@ class StoreConfig:
 
 
 class S3Plugin:
-    boto_resource: boto3.resource
+    boto_resource: S3ServiceResource
     port: int
     region: str
     aws_access_key_id: str
@@ -203,16 +206,19 @@ class S3Plugin:
             try:
                 with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-upload-") as pool:
                     if full_tree_path is not None:
+                        assert target_full_tree_path is not None
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(
                                 my_bucket.upload_file,
-                                full_tree_path,
+                                str(full_tree_path),
                                 target_full_tree_path,
                             ),
                         )
+                    assert target_diff_path is not None
                     await asyncio.get_running_loop().run_in_executor(
-                        pool, functools.partial(my_bucket.upload_file, diff_path, target_diff_path)
+                        pool,
+                        functools.partial(my_bucket.upload_file, str(diff_path), target_diff_path),
                     )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {type(e).__name__} {e}")
@@ -283,7 +289,7 @@ class S3Plugin:
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             max_delta_file_size_bytes = max_delta_file_size * 1024 * 1024
-            remote_file_size = my_bucket.ObjectSummary(filename).size
+            remote_file_size = self.boto_resource.ObjectSummary(bucket_str, filename).size
             if remote_file_size > max_delta_file_size_bytes:
                 log.warning(
                     "Skipping %s, size %s bytes exceeds max delta size %s MiB",
@@ -340,10 +346,11 @@ class S3Plugin:
                         log.debug(f"skip {file_name} already in bucket")
                         continue
 
+                    assert target_file_name is not None
                     with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-missing-") as pool:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
-                            functools.partial(my_bucket.upload_file, file_path, target_file_name),
+                            functools.partial(my_bucket.upload_file, str(file_path), target_file_name),
                         )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {e}")
