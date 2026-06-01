@@ -938,6 +938,22 @@ class WalletNode:
 
         self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
+    async def _collect_valid_states(
+        self, inner_states: list[CoinState], peer: WSChiaConnection, cache: PeerRequestCache, fork_height: uint32 | None
+    ) -> list[CoinState]:
+        valid_states: list[CoinState] = []
+        for inner_state in inner_states:
+            try:
+                if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height):
+                    valid_states.append(inner_state)
+            except Exception as e:
+                self.log.log(
+                    logging.DEBUG if peer.closed or self._shut_down else logging.ERROR,
+                    f"Failed to validate coin_state {inner_state} from peer "
+                    f"{peer.peer_info.host} version {peer.version}, error: {e}, traceback: {traceback.format_exc()}",
+                )
+        return valid_states
+
     async def add_states_from_peer(
         self,
         items_input: list[CoinState],
@@ -994,11 +1010,7 @@ class WalletNode:
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
-                    valid_states = [
-                        inner_state
-                        for inner_state in inner_states
-                        if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
-                    ]
+                    valid_states = await self._collect_valid_states(inner_states, peer, cache, fork_height)
                     if len(valid_states) > 0:
                         async with self.wallet_state_manager.db_wrapper.writer():
                             self.log.info(

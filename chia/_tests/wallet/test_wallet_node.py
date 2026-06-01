@@ -1668,3 +1668,42 @@ async def test_validate_received_state_from_peer_cached_non_tx(
     )
     assert result is False
     assert not wsc.closed
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_collect_valid_states(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Covers the scenario where validate_received_state_from_peer raises an
+    exception for a coin state to make sure we collect the valid states and log
+    the error for the invalid ones.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    wsc, _ = await add_dummy_connection_wsc(full_node_api.server, self_hostname, 42, NodeType.WALLET)
+    good_coin_state = CoinState(Coin(bytes32.random(), bytes32.random(), uint64(2)), None, uint32(2))
+    bad_coin_state = CoinState(Coin(bytes32.random(), bytes32.random(), uint64(1)), None, uint32(1))
+
+    async def validate_received_state_from_peer(
+        self: WalletNode,
+        coin_state: CoinState,
+        peer: WSChiaConnection,
+        peer_request_cache: PeerRequestCache,
+        fork_height: uint32 | None,
+    ) -> bool:
+        if coin_state.coin.name() == bad_coin_state.coin.name():
+            raise Exception("testing collect_valid_states")
+        return True
+
+    monkeypatch.setattr(type(wallet_node), "validate_received_state_from_peer", validate_received_state_from_peer)
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        valid_states = await wallet_node._collect_valid_states(
+            inner_states=[bad_coin_state, good_coin_state], peer=wsc, cache=PeerRequestCache(), fork_height=None
+        )
+    assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
+    assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text
