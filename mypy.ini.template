@@ -65,13 +65,7 @@ ignore_missing_imports = True
 [mypy-keyrings.cryptfile.*]
 ignore_missing_imports = True
 
-[mypy-lxml.*]
-ignore_missing_imports = True
-
 [mypy-miniupnpc.*]
-ignore_missing_imports = True
-
-[mypy-psutil.*]
 ignore_missing_imports = True
 
 [mypy-sortedcontainers.*]

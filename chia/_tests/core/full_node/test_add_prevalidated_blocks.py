@@ -67,6 +67,7 @@ async def test_prevalidation_error_returns_err_not_assert() -> None:
     block = _make_fake_block()
     invalid_result = PreValidationResult(
         error=uint16(Err.INVALID_POSPACE.value),
+        error_msg=None,
         required_iters=None,
         conds=None,
         timing=uint32(0),
@@ -97,6 +98,7 @@ async def test_prevalidation_none_required_iters_returns_err() -> None:
     block = _make_fake_block()
     bad_result = PreValidationResult(
         error=None,
+        error_msg=None,
         required_iters=None,
         conds=None,
         timing=uint32(0),

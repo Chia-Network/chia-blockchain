@@ -2901,7 +2901,7 @@ async def test_create_block_generator(
             assert expected_removals == set(new_block_gen.removals)
             assert expected_signature == new_block_gen.signature
 
-        err, conds = run_block_generator2(
+        err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -2968,7 +2968,7 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
 
         # now, make sure the generator we got is valid
 
-        err, conds = run_block_generator2(
+        err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -3346,7 +3346,7 @@ async def test_create_block_generator_custom_spend(
 
             removals = set(generator.removals)
 
-            err, conds = run_block_generator2(
+            err, _err_msg, conds = run_block_generator2(
                 bytes(generator.program),
                 generator.generator_refs,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,

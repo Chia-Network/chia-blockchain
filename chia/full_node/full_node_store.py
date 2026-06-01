@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import enum
 import logging
 import time
 
@@ -40,6 +41,12 @@ FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY = 4
 
 FUTURE_IP_CACHE_MAX_KEYS = 128
 FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY = 8
+
+
+class SignagePointAddResult(enum.Enum):
+    ADDED = "added"
+    NOT_ADDED = "not_added"
+    INVALID_VDF = "invalid_vdf"
 
 
 @streamable
@@ -707,9 +714,14 @@ class FullNodeStore:
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation: bool = False,
-    ) -> bool:
+    ) -> SignagePointAddResult:
         """
-        Returns true if sp successfully added
+        Returns:
+            ADDED: SP was stored successfully.
+            NOT_ADDED: SP was rejected for structural reasons (wrong sub-slot, future SP,
+                info mismatch). May be cached for later retry via add_to_future_sp.
+            INVALID_VDF: Challenge hash and VDF info matched expectations but the
+                cryptographic proof failed verification. Caller should ban the peer.
         """
         assert len(self.finished_sub_slots) >= 1
 
@@ -718,9 +730,8 @@ class FullNodeStore:
         else:
             sub_slot_iters = peak.sub_slot_iters
 
-        # If we don't have this slot, return False
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
-            return False
+            return SignagePointAddResult.NOT_ADDED
         assert (
             signage_point.cc_vdf is not None
             and signage_point.cc_proof is not None
@@ -793,13 +804,15 @@ class FullNodeStore:
                     )
                 if not signage_point.cc_vdf == cc_vdf_info_expected.replace(number_of_iterations=delta_iters):
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
                 if check_from_start_of_ss:
                     start_ele = ClassgroupElement.get_default_element()
                 else:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
+                    # Non-normalized CC proofs are for a VDF segment. The SP's CC challenge/output can match while
+                    # an honest peer proves from a different previous in-slot block than our current start element.
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
@@ -807,20 +820,18 @@ class FullNodeStore:
                         cc_vdf_info_expected,
                     ):
                         self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.NOT_ADDED
                     if signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.cc_vdf,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
-                if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
-                    # This signage point is probably outdated
+                if rc_vdf_info_expected != signage_point.rc_vdf:
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
 
                 if not skip_vdf_validation:
                     if not validate_vdf(
@@ -830,14 +841,13 @@ class FullNodeStore:
                         signage_point.rc_vdf,
                         rc_vdf_info_expected,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
                 sp_arr[index] = signage_point
                 self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
-                return True
+                return SignagePointAddResult.ADDED
         self.add_to_future_sp(signage_point, index)
-        return False
+        return SignagePointAddResult.NOT_ADDED
 
     def get_signage_point(self, cc_signage_point: bytes32) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
@@ -1011,7 +1021,7 @@ class FullNodeStore:
         ).copy()
         for index, sp in future_sps:
             assert sp.cc_vdf is not None
-            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
+            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp) == SignagePointAddResult.ADDED:
                 new_sps.append((index, sp))
 
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):

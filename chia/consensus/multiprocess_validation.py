@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class PreValidationResult(Streamable):
     error: uint16 | None
+    error_msg: str | None
     required_iters: uint64 | None  # Iff error is None
     conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
@@ -59,7 +60,7 @@ class PreValidationResult(Streamable):
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
     block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-) -> tuple[int | None, SpendBundleConditions | None]:
+) -> tuple[int | None, str | None, SpendBundleConditions | None]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
     flags = get_flags_for_height_and_constants(prev_tx_height, constants)
@@ -115,7 +116,7 @@ def _pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 validation_time = time.monotonic() - validation_start
                 return PreValidationResult(
-                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, uint32(validation_time * 1000)
+                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, None, uint32(validation_time * 1000)
                 )
 
             prev_tx_height = pre_sp_tx_block_height(
@@ -125,12 +126,12 @@ def _pre_validate_block(
                 sp_index=block.reward_chain_block.signage_point_index,
                 finished_sub_slots=len(block.finished_sub_slots),
             )
-            err, conds = _run_block(block, prev_generators, prev_tx_height, constants)
+            err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
             assert (err is None) != (conds is None)
             if err is not None:
                 validation_time = time.monotonic() - validation_start
-                return PreValidationResult(uint16(err), None, None, uint32(validation_time * 1000))
+                return PreValidationResult(uint16(err), err_msg, None, None, uint32(validation_time * 1000))
             assert conds is not None
             assert conds.validated_signature is True
             removals_and_additions = tx_removals_and_additions(conds)
@@ -154,6 +155,7 @@ def _pre_validate_block(
         validation_time = time.monotonic() - validation_start
         return PreValidationResult(
             error_int,
+            None,
             required_iters,
             conds,
             uint32(validation_time * 1000),
@@ -162,7 +164,7 @@ def _pre_validate_block(
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, uint32(validation_time * 1000))
+        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, None, uint32(validation_time * 1000))
 
 
 async def pre_validate_block(
@@ -205,7 +207,7 @@ async def pre_validate_block(
     prev_b: BlockRecord | None = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
-        return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
+        return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
     if block.height > 0:
         curr = blockchain.try_block_record(block.prev_header_hash)
