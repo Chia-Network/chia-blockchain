@@ -1720,7 +1720,7 @@ class WalletRpcApi:
 
         # We use the full node when generating coin records from WalletCoinRecords.
         # If we don't have any full node peers connected we can error out early.
-        if self.get_full_node_peer_count() == 0:
+        if not self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order():
             raise ValueError("No full node peers connected. Please connect to a full node.")
 
         kwargs: dict[str, Any] = {
