@@ -978,7 +978,9 @@ class WalletRpcApi:
 
     @marshal
     async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
-        return GetFullNodePeerCountResponse(peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order())))
+        return GetFullNodePeerCountResponse(
+            peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
+        )
 
     @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:

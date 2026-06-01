@@ -178,6 +178,7 @@ class GetSyncStatusResponse(Streamable):
 class GetFullNodePeerCountResponse(Streamable):
     peer_count: uint64
 
+
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetHeightInfo(Streamable):
