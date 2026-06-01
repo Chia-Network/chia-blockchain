@@ -589,6 +589,7 @@ class WalletRpcApi:
             # Wallet node
             "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
+            "/get_full_node_peer_count": self.get_full_node_peer_count,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
