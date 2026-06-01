@@ -4384,6 +4384,23 @@ files = [
 ]
 
 [[package]]
+name = "sortedcontainers-stubs"
+version = "2.4.3"
+description = "Type stubs for sortedcontainers"
+optional = true
+python-versions = "<4.0,>=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "sortedcontainers_stubs-2.4.3-py3-none-any.whl", hash = "sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406"},
+    {file = "sortedcontainers_stubs-2.4.3.tar.gz", hash = "sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd"},
+]
+
+[package.dependencies]
+sortedcontainers = ">=2,<3"
+typing-extensions = ">=4.1.0,<5.0.0"
+
+[[package]]
 name = "soupsieve"
 version = "2.8.4"
 description = "A modern CSS selector implementation for Beautiful Soup."
@@ -5159,11 +5176,11 @@ files = [
 ]
 
 [extras]
-dev = ["aiohttp_cors", "boto3-stubs", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
+dev = ["aiohttp_cors", "boto3-stubs", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "sortedcontainers-stubs", "tach", "types-aiofiles", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "7586c2560ef0ae62ec16ec223921e70c8f9b30011a5b7ddc8b05055a9835d65c"
+content-hash = "1850b9b819cf1f4ee2cff1e6fb0a90628644744914bf81c5952849ba169452bb"
