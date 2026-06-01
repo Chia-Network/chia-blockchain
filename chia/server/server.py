@@ -469,6 +469,10 @@ class ChiaServer:
             ip = f"[{target_node.ip}]" if target_node.ip.is_v6 else f"{target_node.ip}"
             url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
+            if server_hostname == target_node.host:
+                # the server_hostname is actually an IP address so we don't need to set anything in ws_connect
+                server_hostname = None
+
             try:
                 ws = await session.ws_connect(
                     url,
