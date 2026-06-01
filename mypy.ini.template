@@ -73,6 +73,3 @@ ignore_missing_imports = True
 
 [mypy-testconfig.*]
 ignore_missing_imports = True
-
-[mypy-zstd.*]
-ignore_missing_imports = True

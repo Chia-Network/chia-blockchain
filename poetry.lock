@@ -4067,6 +4067,19 @@ files = [
 ]
 
 [[package]]
+name = "types-zstd"
+version = "1.5.7.3.20260408"
+description = "Typing stubs for zstd"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types_zstd-1.5.7.3.20260408-py3-none-any.whl", hash = "sha256:2c7fe246ec70619761b998c36d8faf092429c086cb6a849af3e9a948f51b7cb8"},
+    {file = "types_zstd-1.5.7.3.20260408.tar.gz", hash = "sha256:dc819087d8c7204333b18fcd26b3cb07b02c1a0831c11f0a056dc68a7a27d9f7"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -4534,11 +4547,11 @@ files = [
 ]
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "6354355e153ec7837babc5a0dab26df8b45f7ecfd5400f1c1e15c6b2bdda9b40"
+content-hash = "675fbd81243c1624c74ce7aa42a404a72daf0ab613f5e594c2afd5578bcbbba8"
