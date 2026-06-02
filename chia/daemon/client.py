@@ -30,7 +30,7 @@ class DaemonProxy:
         self.ssl_context = ssl_context
         self.heartbeat = heartbeat
         self.client_session: aiohttp.ClientSession | None = None
-        self.websocket: aiohttp.ClientWebSocketResponse | None = None
+        self.websocket: aiohttp.ClientWebSocketResponse[bool] | None = None
         self.max_message_size = max_message_size
 
     def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
