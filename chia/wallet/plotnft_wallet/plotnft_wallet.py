@@ -549,7 +549,7 @@ class PlotNFT2Wallet:
                 if exiting_info.next_heightlock is None
                 else exiting_info.next_heightlock,
             )
-            if exiting_info is not None
+            if plotnft.exiting
             else None,
             launcher_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
             launcher_id=plotnft.launcher_id,
