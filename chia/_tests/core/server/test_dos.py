@@ -63,6 +63,7 @@ async def send_handshake_and_assert_protocol_error(
             autoping=True,
             ssl=server_2.ssl_client_context,
             max_msg_size=50 * 1024 * 1024,
+            decode_text=True,
         ) as ws:
             msg = Message(uint8(message_type), None, bytes(payload))
             await ws.send_bytes(bytes(msg))
@@ -117,7 +118,12 @@ class TestDos:
         async with (
             ClientSession(timeout=timeout) as session,
             session.ws_connect(
-                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url,
+                autoclose=True,
+                autoping=True,
+                ssl=ssl_context,
+                max_msg_size=100 * 1024 * 1024,
+                decode_text=True,
             ) as ws,
         ):
             large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
@@ -152,7 +158,12 @@ class TestDos:
         async with (
             ClientSession(timeout=timeout) as session,
             session.ws_connect(
-                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url,
+                autoclose=True,
+                autoping=True,
+                ssl=ssl_context,
+                max_msg_size=100 * 1024 * 1024,
+                decode_text=True,
             ) as ws,
         ):
             with monkeypatch.context() as monkey_patch_context:

@@ -1088,6 +1088,7 @@ async def daemon_connection_and_temp_keychain(
                 autoping=True,
                 ssl=get_b_tools.get_daemon_ssl_context(),
                 max_msg_size=52428800,
+                decode_text=True,
             ) as ws:
                 yield ws, keychain
 
