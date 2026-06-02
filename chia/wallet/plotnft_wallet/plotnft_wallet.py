@@ -292,6 +292,8 @@ class PlotNFT2Wallet:
         ):
             raise ValueError("Both new_pool_url or new_pool_config must be provided together")
         plotnft = await self.get_current_plotnft()
+        if not plotnft.pooling or plotnft.exiting:
+            raise ValueError("`leave_pool` called on a non-pooling or exiting PlotNFT")
         next_plotnft = dataclasses.replace(plotnft, exiting=True)
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         exit_create_coin = plotnft.exit_to_waiting_room_condition()
