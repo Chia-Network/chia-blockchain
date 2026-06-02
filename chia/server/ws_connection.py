@@ -60,6 +60,8 @@ LENGTH_BYTES: int = 4
 # Max length of peer version string in bytes (UTF-8)
 MAX_VERSION_STRING_BYTES: int = 128
 
+# TODO: When Python 3.10 support is dropped, check whether aiohttp's 3.11+
+# ws_connect() overloads let this return to the default generic parameters.
 WebSocket = WebSocketResponse[bool] | ClientWebSocketResponse[bool]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
