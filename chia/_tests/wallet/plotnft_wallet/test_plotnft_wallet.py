@@ -18,7 +18,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
-from chia.wallet.wallet_request_types import PushTX, PWJoinPool, PWSelfPool, PWStatus
+from chia.wallet.wallet_request_types import PushTX, PWAbsorbRewards, PWJoinPool, PWSelfPool, PWStatus
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1005,6 +1005,11 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
                 pool_memoization=Program.to(None),
             ),
             tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match=re.escape("`pw_absorb_rewards` called on a non-pooling wallet")):
+        await env.rpc_client.pw_absorb_rewards(
+            request=PWAbsorbRewards(wallet_id=uint32(1)), tx_config=wallet_environments.tx_config
         )
 
     with pytest.raises(ResponseFailureError, match=re.escape("`pw_status` called on a non-pooling wallet")):
