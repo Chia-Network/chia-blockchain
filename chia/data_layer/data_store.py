@@ -612,9 +612,8 @@ class DataStore:
             return KeyOrValueId(row[0])
 
     def get_blob_from_file(self, blob_hash: bytes32, store_id: bytes32) -> bytes:
-        # TODO: seems that zstd needs hinting
         # TODO: consider file-system based locking of either the file or the store directory
-        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())
 
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> bytes | None:
         async with self.db_wrapper.reader() as reader:

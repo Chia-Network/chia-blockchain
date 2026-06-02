@@ -53,9 +53,6 @@ ignore_missing_imports = True
 [mypy-chialisp.*]
 ignore_missing_imports = True
 
-[mypy-colorama.*]
-ignore_missing_imports = True
-
 [mypy-dnslib.*]
 ignore_missing_imports = True
 
@@ -72,7 +69,4 @@ ignore_missing_imports = True
 ignore_missing_imports = True
 
 [mypy-testconfig.*]
-ignore_missing_imports = True
-
-[mypy-zstd.*]
 ignore_missing_imports = True
