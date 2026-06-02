@@ -446,7 +446,6 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                         heartbeat=self.daemon_heartbeat,
                         ssl=self.ssl_client_context,
                         max_msg_size=max_message_size,
-                        decode_text=True,
                     )
                     await self.connection(self.websocket)
                 except ClientConnectorError:

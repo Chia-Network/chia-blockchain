@@ -114,7 +114,6 @@ class KeychainProxy(DaemonProxy):
                     heartbeat=self.heartbeat,
                     ssl=self.ssl_context if self.ssl_context is not None else True,
                     max_msg_size=self.max_message_size,
-                    decode_text=True,
                 )
                 await self.listener()
             except ClientConnectorError:

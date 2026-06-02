@@ -3976,6 +3976,19 @@ files = [
 ]
 
 [[package]]
+name = "types-colorama"
+version = "0.4.15.20260508"
+description = "Typing stubs for colorama"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "types_colorama-0.4.15.20260508-py3-none-any.whl", hash = "sha256:b0c39908a3e5171ef1f8bf3d59fae082e9eaff3a19ca49b6d640b83f78cff61c"},
+    {file = "types_colorama-0.4.15.20260508.tar.gz", hash = "sha256:3a8916039e57452bd21f57e674e1f221ca9e4f319893c5e3bbd37b845c27d8e6"},
+]
+
+[[package]]
 name = "types-html5lib"
 version = "1.1.11.20260518"
 description = "Typing stubs for html5lib"
@@ -4547,11 +4560,11 @@ files = [
 ]
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-colorama", "types-lxml", "types-psutil", "types-pyyaml", "types-setuptools", "types-zstd"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "f4e31bc63c4980368c4a24107f9d40876683ec61bd5b9d4fe49618b65dc6ee49"
+content-hash = "c51120c5985b4b4bee1483b81d40802d67018fe72cb2a504a4c271db3b659323"
