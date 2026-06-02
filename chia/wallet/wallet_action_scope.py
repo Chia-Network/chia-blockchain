@@ -43,11 +43,14 @@ class PlotNFTTargetStateInfo(Streamable):
             None,
             None,
             None,
-        ) and None in (  # noqa: PLR6201
-            self.next_pool_url,
-            self.next_pool_puzzle_hash,
-            self.next_heightlock,
-            self.next_pool_memoization,
+        ) and (
+            None
+            in {
+                self.next_pool_url,
+                self.next_pool_puzzle_hash,
+                self.next_heightlock,
+            }
+            or self.next_pool_memoization is None
         ):
             raise ValueError("Error initializing next PlotNFT target state, not all options for join were specified")
         return super().__post_init__()

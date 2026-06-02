@@ -165,7 +165,7 @@ class PlotNFTStore:
 
     async def get_plotnfts(self, *, coin_ids: list[bytes32]) -> list[PlotNFT]:
         if coin_ids == []:
-            return []
+            raise ValueError("coin_ids must not be empty")
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT * from plotnft2s where coin_id in ({', '.join(['?'] * len(coin_ids))})", coin_ids
@@ -181,21 +181,17 @@ class PlotNFTStore:
         self,
         *,
         plotnft_id: bytes32,
-        coin_ids: list[bytes32] | None = None,
         max: int = DEFAULT_POOL_REWARDS_PER_CLAIM,
         include_spent: bool = False,
     ) -> list[PoolReward]:
-        if coin_ids == []:
-            return []
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 (
                     "SELECT * from pool_reward2s WHERE singleton_id = ?"
-                    + (f" AND coin_id in ({', '.join(['?'] * len(coin_ids))})" if coin_ids is not None else "")
                     + (" AND spent_height IS NULL" if not include_spent else "")
                     + " LIMIT ?"
                 ),
-                (plotnft_id, *coin_ids, max) if coin_ids is not None else (plotnft_id, max),
+                (plotnft_id, max),
             )
             pool_rewards_selected = [
                 PoolReward(
@@ -206,11 +202,7 @@ class PlotNFTStore:
                 )
                 for row in rows
             ]
-            if coin_ids is not None and len(pool_rewards_selected) != len(coin_ids):
-                symmetric_difference = set(bytes32(row[0]) for row in rows) ^ set(coin_ids)
-                raise ValueError(f"coin IDs {symmetric_difference} not found in PlotNFTStore")
-            else:
-                return pool_rewards_selected
+            return pool_rewards_selected
 
     async def add_exiting_info(self, *, exiting_info: PlotNFTTargetStateInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -219,7 +211,7 @@ class PlotNFTStore:
                 (exiting_info.wallet_id, bytes(exiting_info)),
             )
 
-    async def get_exiting_info(self, *, wallet_id: uint32) -> PlotNFTTargetStateInfo | None:
+    async def get_exiting_info(self, *, wallet_id: uint32) -> PlotNFTTargetStateInfo:
         async with self.db_wrapper.reader() as conn:
             rows = list(
                 await conn.execute_fetchall(
@@ -228,7 +220,14 @@ class PlotNFTStore:
                 )
             )
             if len(rows) == 0:
-                return None
+                return PlotNFTTargetStateInfo(
+                    wallet_id=wallet_id,
+                    exiting_fee=uint64(0),
+                    next_pool_url=None,
+                    next_pool_puzzle_hash=None,
+                    next_heightlock=None,
+                    next_pool_memoization=None,
+                )
             else:
                 return PlotNFTTargetStateInfo.from_bytes(rows[0][0])
 
