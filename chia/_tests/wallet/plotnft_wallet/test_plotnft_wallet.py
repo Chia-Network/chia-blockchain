@@ -12,12 +12,13 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, UserConfig
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
-from chia.wallet.wallet_request_types import PushTX
+from chia.wallet.wallet_request_types import PushTX, PWJoinPool, PWSelfPool, PWStatus
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -813,6 +814,17 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
     with pytest.raises(ValueError, match="coin_ids must not be empty"):
         await env.wallet_state_manager.plotnft2_store.get_plotnfts(coin_ids=[])
 
+    # check a different DB error
+    with pytest.raises(ValueError, match="not found in PlotNFTStore"):
+        await env.wallet_state_manager.plotnft2_store.get_plotnft_created_height(coin_id=bytes32.zeros)
+
+    # check an RPC error
+    with pytest.raises(ResponseFailureError, match=re.escape("`pw_self_pool` called on a non-pooling wallet")):
+        await env.rpc_client.pw_self_pool(
+            request=PWSelfPool(wallet_id=uint32(1)),
+            tx_config=wallet_environments.tx_config,
+        )
+
     # some `leave_pool` argument checks
     with pytest.raises(ValueError, match="Both new_pool_url or new_pool_config must be provided together"):
         await plotnft_wallet.leave_pool(
@@ -960,3 +972,30 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             ValueError, match="Error initializing next PlotNFT target state, not all options for join were specified"
         ):
             dataclasses.replace(target_state, **{field_name: None})  # type: ignore[arg-type]
+
+    # check some RPC errors
+    with pytest.raises(ResponseFailureError, match="Pool memoization is required for PlotNFT2Wallet"):
+        await env.rpc_client.pw_join_pool(
+            request=PWJoinPool(
+                wallet_id=plotnft_wallet.id(),
+                pool_url="",
+                target_puzzlehash=bytes32.zeros,
+                relative_lock_height=uint32(0),
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match=re.escape("`pw_join_pool` called on a non-pooling wallet")):
+        await env.rpc_client.pw_join_pool(
+            request=PWJoinPool(
+                wallet_id=uint32(1),
+                pool_url="",
+                target_puzzlehash=bytes32.zeros,
+                relative_lock_height=uint32(0),
+                pool_memoization=Program.to(None),
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match=re.escape("`pw_status` called on a non-pooling wallet")):
+        await env.rpc_client.pw_status(request=PWStatus(wallet_id=uint32(1)))
