@@ -21,6 +21,7 @@ from chia.daemon.keychain_server import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.aiohttp import decoded_client_websocket
 from chia.util.config import load_config
 from chia.util.errors import (
     KeychainIsEmpty,
@@ -107,14 +108,16 @@ class KeychainProxy(DaemonProxy):
         while not self.shut_down:
             try:
                 self.client_session = ClientSession()
-                self.websocket = await self.client_session.ws_connect(
-                    self._uri,
-                    autoclose=True,
-                    autoping=True,
-                    heartbeat=self.heartbeat,
-                    ssl=self.ssl_context if self.ssl_context is not None else True,
-                    max_msg_size=self.max_message_size,
-                    decode_text=True,
+                self.websocket = decoded_client_websocket(
+                    await self.client_session.ws_connect(
+                        self._uri,
+                        autoclose=True,
+                        autoping=True,
+                        heartbeat=self.heartbeat,
+                        ssl=self.ssl_context if self.ssl_context is not None else True,
+                        max_msg_size=self.max_message_size,
+                        decode_text=True,
+                    ),
                 )
                 await self.listener()
             except ClientConnectorError:

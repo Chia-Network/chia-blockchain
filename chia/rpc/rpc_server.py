@@ -34,6 +34,7 @@ from chia.server.server import (
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
+from chia.util.aiohttp import decoded_client_websocket
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chia_logging import default_log_level, set_log_level
 from chia.util.config import str2bool
@@ -439,14 +440,16 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             while not self.shut_down:
                 try:
                     self.client_session = ClientSession()
-                    self.websocket = await self.client_session.ws_connect(
-                        f"wss://{self_hostname}:{daemon_port}",
-                        autoclose=True,
-                        autoping=True,
-                        heartbeat=self.daemon_heartbeat,
-                        ssl=self.ssl_client_context,
-                        max_msg_size=max_message_size,
-                        decode_text=True,
+                    self.websocket = decoded_client_websocket(
+                        await self.client_session.ws_connect(
+                            f"wss://{self_hostname}:{daemon_port}",
+                            autoclose=True,
+                            autoping=True,
+                            heartbeat=self.daemon_heartbeat,
+                            ssl=self.ssl_client_context,
+                            max_msg_size=max_message_size,
+                            decode_text=True,
+                        ),
                     )
                     await self.connection(self.websocket)
                 except ClientConnectorError:

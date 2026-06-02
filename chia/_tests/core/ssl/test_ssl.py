@@ -17,6 +17,7 @@ from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
+from chia.util.aiohttp import decoded_client_websocket
 
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
@@ -24,7 +25,9 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
     dummy_port = 5  # this does not matter
     async with aiohttp.ClientSession(timeout=timeout) as session:
         url = f"wss://{self_hostname}:{server._port}/ws"
-        ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context, decode_text=True)
+        ws = decoded_client_websocket(
+            await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context, decode_text=True)
+        )
         wsc = WSChiaConnection.create(
             NodeType.FULL_NODE,
             ws,

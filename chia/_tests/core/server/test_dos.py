@@ -5,7 +5,14 @@ import logging
 import time
 
 import pytest
-from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
+from aiohttp import (
+    ClientSession,
+    ClientTimeout,
+    WSCloseCode,
+    WSMessage,
+    WSMsgType,
+    WSServerHandshakeError,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint64
 
@@ -27,6 +34,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
+from chia.util.aiohttp import decoded_client_websocket
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.timing import adjusted_timeout
@@ -64,7 +72,8 @@ async def send_handshake_and_assert_protocol_error(
             ssl=server_2.ssl_client_context,
             max_msg_size=50 * 1024 * 1024,
             decode_text=True,
-        ) as ws:
+        ) as ws_any:
+            ws = decoded_client_websocket(ws_any)
             msg = Message(uint8(message_type), None, bytes(payload))
             await ws.send_bytes(bytes(msg))
             response = await ws.receive()
@@ -124,8 +133,9 @@ class TestDos:
                 ssl=ssl_context,
                 max_msg_size=100 * 1024 * 1024,
                 decode_text=True,
-            ) as ws,
+            ) as ws_any,
         ):
+            ws = decoded_client_websocket(ws_any)
             large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
@@ -164,8 +174,9 @@ class TestDos:
                 ssl=ssl_context,
                 max_msg_size=100 * 1024 * 1024,
                 decode_text=True,
-            ) as ws,
+            ) as ws_any,
         ):
+            ws = decoded_client_websocket(ws_any)
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
                 await ws.send_bytes(bytes([1] * 1024))
