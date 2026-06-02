@@ -92,7 +92,9 @@ class PlotNFT2Wallet:
         return self.wallet_info.id
 
     def get_name(self) -> str:
-        return self.wallet_info.name
+        # A WalletProtocol stub that we may as well implement but there's no real use for it
+        # Probably a good case to get it out of the WalletProtocol
+        return self.wallet_info.name  # pragma: no cover
 
     # Actions
     @classmethod
@@ -406,13 +408,13 @@ class PlotNFT2Wallet:
     # Syncing
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):
-            await self.wallet_state_manager.plotnft2_store.add_plotnft(plotnft=coin_data, created_height=height)
-            self.log.info(f"Added PlotNFT {coin_data} at height {height}")
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(coin_data.user_config.synthetic_pubkey)
             )
             if index is None:
                 raise ValueError(f"No index found for synthetic pubkey for launcher_id: {coin_data.launcher_id}")
+            await self.wallet_state_manager.plotnft2_store.add_plotnft(plotnft=coin_data, created_height=height)
+            self.log.info(f"Added PlotNFT {coin_data} at height {height}")
             if self.p2_singleton_puzzle_hash in PoolingShareState.get_all_p2_singleton_puzzle_hashes(
                 root_path=self.wallet_state_manager.root_path
             ):
@@ -473,9 +475,6 @@ class PlotNFT2Wallet:
                 self.log.info(f"Not finishing plotnft from wallet {self.id()} due to unconfirmed transactions")
                 return None
             finish_info = await self.wallet_state_manager.plotnft2_store.get_exiting_info(wallet_id=self.id())
-            if finish_info is None:
-                self.log.warning(f"Not finishing plotnft from wallet {self.id()}, no finish fee set")
-                return None
             async with self.wallet_state_manager.new_action_scope(
                 self.wallet_state_manager.tx_config, push=True, sign=True, merge_spends=True
             ) as action_scope:
@@ -560,11 +559,11 @@ class PlotNFT2Wallet:
         )
 
     # Wallet Protocol Stubs
-    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         # We're choosing not to implement this for now as it shouldn't be necessary
         return False
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise RuntimeError("puzzle_hash_for_pk is not implemented for PlotNFT2Wallet")
 
     def require_derivation_paths(self) -> bool:
@@ -580,7 +579,7 @@ class PlotNFT2Wallet:
         memos: list[list[bytes]] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> None:
+    ) -> None:  # pragma: no cover
         raise RuntimeError(
             "generate_signed_transaction is not implemented for PlotNFT2Wallet. Try join/leave/exit_pool instead."
         )
@@ -589,5 +588,5 @@ class PlotNFT2Wallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> set[Coin]:
+    ) -> set[Coin]:  # pragma: no cover
         raise RuntimeError("PlotNFT2Wallet does not support select_coins()")

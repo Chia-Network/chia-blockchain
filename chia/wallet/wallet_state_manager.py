@@ -1066,12 +1066,13 @@ class WalletStateManager:
                         xch_wallet=self.main_wallet,
                         wallet_info=WalletInfo(
                             id=matched_plotnft_wallet_id,
-                            name="",
+                            name=next_plot_nft.launcher_id.hex(),
                             type=uint8(WalletType.PLOTNFT_2),
                             data=next_plot_nft.launcher_id.hex(),
                         ),
                     )
-                if matched_plotnft_wallet_id is None:
+                if matched_plotnft_wallet_id is None:  # pragma: no cover
+                    # TODO: add support for receiving plotnfts you don't know about
                     raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
                 # the Streamable hint is in error so we need this type ignore
                 return WalletIdentifier(  # type: ignore[return-value]
