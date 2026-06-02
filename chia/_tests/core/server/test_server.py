@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import math
 import logging
 import os
 import socket
@@ -103,9 +104,10 @@ class TestAPI:
 async def test_aiohttp_websocket_heartbeat_survives_slow_large_frame() -> None:
     received_messages: list[aiohttp.WSMessage] = []
     message_received = asyncio.Event()
+    heartbeat = 0.2
 
     async def websocket_handler(request: aiohttp.web.Request) -> aiohttp.web.WebSocketResponse:
-        ws = aiohttp.web.WebSocketResponse(heartbeat=0.2, max_msg_size=1024 * 1024)
+        ws = aiohttp.web.WebSocketResponse(heartbeat=heartbeat, max_msg_size=1024 * 1024)
         await ws.prepare(request)
 
         received_messages.append(await ws.receive())
@@ -129,12 +131,17 @@ async def test_aiohttp_websocket_heartbeat_survives_slow_large_frame() -> None:
 
     try:
         payload = b"slow websocket frame" * 4096
+        chunk_size = 4096
+        chunk_delay = 0.04
+        expected_send_time = math.ceil(len(payload) / chunk_size) * chunk_delay
+        assert expected_send_time > heartbeat + heartbeat / 2
+
         await _send_masked_websocket_binary_frame_slowly(
             "127.0.0.1",
             port,
             payload,
-            chunk_size=4096,
-            chunk_delay=0.04,
+            chunk_size=chunk_size,
+            chunk_delay=chunk_delay,
         )
         await asyncio.wait_for(message_received.wait(), timeout=3)
     finally:
