@@ -629,8 +629,8 @@ async def test_wallet_short_sync_backtrack_cap_exceeded_returns_none(node_height
     peer = make_backtrack_test_peer()
     rollback_calls = patch_rollback(node)
     header = make_header(node_height + 1, _test_hash_for_height(node_height), _test_hash_for_height(node_height + 1))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result is None
     assert rollback_calls == []
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
@@ -642,7 +642,8 @@ async def test_wallet_short_sync_backtrack_stops_at_threshold() -> None:
     node = make_backtrack_test_node(height=500, has_peak=True)
     peer = make_backtrack_test_peer()
     header = make_header(501, _test_hash_for_height(500), _test_hash_for_height(501))
-    await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert peer.call_api.await_count == node.LONG_SYNC_THRESHOLD
     peer.close.assert_not_awaited()
 
@@ -658,8 +659,8 @@ async def test_wallet_short_sync_backtrack_initial_sync_no_cap() -> None:
 
     peer = make_backtrack_test_peer()
     header = make_header(401, _test_hash_for_height(400), _test_hash_for_height(401))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result == 0
     assert rollback_calls == []
     assert peer.call_api.await_count == 401
@@ -676,8 +677,8 @@ async def test_wallet_short_sync_backtrack_short_chain_no_cap() -> None:
 
     peer = make_backtrack_test_peer()
     header = make_header(401, _test_hash_for_height(400), _test_hash_for_height(401))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result == 0
     assert peer.call_api.await_count == 401
     assert peer.call_api.await_count > node.LONG_SYNC_THRESHOLD
@@ -701,8 +702,8 @@ async def test_wallet_short_sync_backtrack_rollback_when_peak_exists_and_reaches
 
     peer = make_backtrack_test_peer()
     header = make_header(101, _test_hash_for_height(100), _test_hash_for_height(101))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result == 0
     assert rollback_calls == [0], "Should roll back to genesis when peak exists but no known blocks found"
 
@@ -714,9 +715,9 @@ async def test_wallet_short_sync_backtrack_shutdown_before_backtrack() -> None:
     node._shut_down = True
     setattr(node, "perform_atomic_rollback", AsyncMock())
     header = make_header(51, _test_hash_for_height(50), _test_hash_for_height(51))
-
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
     with pytest.raises(RuntimeError, match="Shutdown requested during wallet backtrack sync"):
-        await node.wallet_short_sync_backtrack(header, peer)
+        await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert cast(Any, node.perform_atomic_rollback).await_count == 0
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
 
@@ -753,8 +754,8 @@ async def test_wallet_short_sync_backtrack_rejects_discontinuous_chain() -> None
     peer.peer_info = MagicMock()
     peer.peer_info.host = "attacker.example"
     header = make_header(3, bad_prev, bytes32(b"\x13" * 32))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result is None
     assert rollback_calls == []
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
@@ -792,8 +793,8 @@ async def test_wallet_short_sync_backtrack_happy_path_connected_chain() -> None:
     peer.peer_info = MagicMock()
     peer.peer_info.host = "good.example"
     header = make_header(3, h2_hash, bytes32(b"\x23" * 32))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result == 1
     assert rollback_calls == [1]
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 2
@@ -830,8 +831,8 @@ async def test_wallet_short_sync_backtrack_genesis_unanchored_skips_rollback() -
     peer.peer_info = MagicMock()
     peer.peer_info.host = "genesis.example"
     header = make_header(2, h1_hash, bytes32(b"\x34" * 32))
-
-    result = await node.wallet_short_sync_backtrack(header, peer)
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
     assert result == 0
     assert rollback_calls == []
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 3
@@ -856,7 +857,8 @@ async def test_sync_from_untrusted_close_to_peak_returns_false_on_backtrack_cap(
 
     result = await node.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
     assert result is False
-    cast(Any, node.wallet_short_sync_backtrack).assert_awaited_once_with(new_peak_hb, peer)
+    peak_hb = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    cast(Any, node.wallet_short_sync_backtrack).assert_awaited_once_with(peak_hb, new_peak_hb, peer)
 
 
 @pytest.mark.anyio
