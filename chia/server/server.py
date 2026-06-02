@@ -38,7 +38,6 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.ssl.ssl_check import verify_ssl_certs_and_keys
 from chia.types.peer_info import PeerInfo
-from chia.util.aiohttp import decoded_client_websocket
 from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
@@ -470,16 +469,14 @@ class ChiaServer:
             url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
-                ws = decoded_client_websocket(
-                    await session.ws_connect(
-                        url,
-                        autoclose=True,
-                        autoping=True,
-                        heartbeat=60,
-                        ssl=self.ssl_client_context,
-                        max_msg_size=max_message_size,
-                        decode_text=True,
-                    ),
+                ws = await session.ws_connect(
+                    url,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl=self.ssl_client_context,
+                    max_msg_size=max_message_size,
+                    decode_text=True,
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")

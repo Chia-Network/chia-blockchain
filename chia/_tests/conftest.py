@@ -73,7 +73,6 @@ from chia.solver.solver_service import SolverService
 from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
-from chia.util.aiohttp import decoded_client_websocket
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
@@ -1079,7 +1078,7 @@ async def get_b_tools(get_temp_keyring, testrun_uid):
 @pytest.fixture(scope="function")
 async def daemon_connection_and_temp_keychain(
     get_b_tools: BlockTools,
-) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
+) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse[bool], Keychain]]:
     async with setup_daemon(btools=get_b_tools) as daemon:
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:
@@ -1090,8 +1089,7 @@ async def daemon_connection_and_temp_keychain(
                 ssl=get_b_tools.get_daemon_ssl_context(),
                 max_msg_size=52428800,
                 decode_text=True,
-            ) as ws_any:
-                ws = decoded_client_websocket(ws_any)
+            ) as ws:
                 yield ws, keychain
 
 

@@ -11,7 +11,6 @@ from typing import Any
 import aiohttp
 from chia_rs.sized_ints import uint32
 
-from chia.util.aiohttp import decoded_client_websocket
 from chia.util.json_util import dict_to_json_str
 from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -31,7 +30,7 @@ class DaemonProxy:
         self.ssl_context = ssl_context
         self.heartbeat = heartbeat
         self.client_session: aiohttp.ClientSession | None = None
-        self.websocket: aiohttp.ClientWebSocketResponse | None = None
+        self.websocket: aiohttp.ClientWebSocketResponse[bool] | None = None
         self.max_message_size = max_message_size
 
     def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
@@ -44,16 +43,14 @@ class DaemonProxy:
         connect_backoff = 2
         while (self.websocket is None or self.websocket.closed) and connect_backoff <= 60:
             try:
-                self.websocket = decoded_client_websocket(
-                    await self.client_session.ws_connect(
-                        self._uri,
-                        autoclose=True,
-                        autoping=True,
-                        heartbeat=self.heartbeat,
-                        ssl=self.ssl_context if self.ssl_context is not None else True,
-                        max_msg_size=self.max_message_size,
-                        decode_text=True,
-                    ),
+                self.websocket = await self.client_session.ws_connect(
+                    self._uri,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=self.heartbeat,
+                    ssl=self.ssl_context if self.ssl_context is not None else True,
+                    max_msg_size=self.max_message_size,
+                    decode_text=True,
                 )
                 break
             except aiohttp.ClientError:

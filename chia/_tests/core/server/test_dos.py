@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any, Protocol
 
 import pytest
 from aiohttp import (
     ClientSession,
     ClientTimeout,
     WSCloseCode,
-    WSMessage,
     WSMsgType,
     WSServerHandshakeError,
 )
@@ -34,13 +34,23 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
-from chia.util.aiohttp import decoded_client_websocket
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.timing import adjusted_timeout
 from chia.wallet.wallet_node import WalletNode
 
 log = logging.getLogger(__name__)
+
+
+class WsMessageLike(Protocol):
+    @property
+    def type(self) -> WSMsgType: ...
+
+    @property
+    def data(self) -> Any: ...
+
+    @property
+    def extra(self) -> str | None: ...
 
 
 def not_localhost(host: str) -> bool:
@@ -60,7 +70,7 @@ async def send_handshake_and_assert_protocol_error(
     self_hostname: str,
     payload: Handshake | bytes,
     message_type: int = ProtocolMessageTypes.handshake.value,
-) -> WSMessage:
+) -> WsMessageLike:
     server_1.invalid_protocol_ban_seconds = 10
     timeout = ClientTimeout(total=5)
     async with ClientSession(timeout=timeout) as session:
@@ -72,8 +82,7 @@ async def send_handshake_and_assert_protocol_error(
             ssl=server_2.ssl_client_context,
             max_msg_size=50 * 1024 * 1024,
             decode_text=True,
-        ) as ws_any:
-            ws = decoded_client_websocket(ws_any)
+        ) as ws:
             msg = Message(uint8(message_type), None, bytes(payload))
             await ws.send_bytes(bytes(msg))
             response = await ws.receive()
@@ -133,15 +142,14 @@ class TestDos:
                 ssl=ssl_context,
                 max_msg_size=100 * 1024 * 1024,
                 decode_text=True,
-            ) as ws_any,
+            ) as ws,
         ):
-            ws = decoded_client_websocket(ws_any)
             large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
                 await ws.send_bytes(large_msg)
 
-                response: WSMessage = await ws.receive()
+                response = await ws.receive()
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
             print(response)
@@ -174,14 +182,13 @@ class TestDos:
                 ssl=ssl_context,
                 max_msg_size=100 * 1024 * 1024,
                 decode_text=True,
-            ) as ws_any,
+            ) as ws,
         ):
-            ws = decoded_client_websocket(ws_any)
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
                 await ws.send_bytes(bytes([1] * 1024))
 
-                response: WSMessage = await ws.receive()
+                response = await ws.receive()
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
             print(response)

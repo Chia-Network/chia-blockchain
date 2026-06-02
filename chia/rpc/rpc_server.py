@@ -34,7 +34,6 @@ from chia.server.server import (
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.aiohttp import decoded_client_websocket
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chia_logging import default_log_level, set_log_level
 from chia.util.config import str2bool
@@ -160,7 +159,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     daemon_heartbeat: int = 300
     daemon_connection_task: asyncio.Task[None] | None = None
     shut_down: bool = False
-    websocket: ClientWebSocketResponse | None = None
+    websocket: ClientWebSocketResponse[bool] | None = None
     client_session: ClientSession | None = None
     prefer_ipv6: bool = False
 
@@ -387,7 +386,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
         raise ValueError(f"unknown_command {command}")
 
-    async def safe_handle(self, websocket: ClientWebSocketResponse, payload: str) -> None:
+    async def safe_handle(self, websocket: ClientWebSocketResponse[bool], payload: str) -> None:
         message = None
         try:
             message = json.loads(payload)
@@ -410,7 +409,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 res = {"success": False, "error": error_message, "structuredError": structured}
                 await websocket.send_str(format_response(message, res))
 
-    async def connection(self, ws: ClientWebSocketResponse) -> None:
+    async def connection(self, ws: ClientWebSocketResponse[bool]) -> None:
         data = {"service": self.service_name}
         payload = create_payload("register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)
@@ -440,16 +439,14 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             while not self.shut_down:
                 try:
                     self.client_session = ClientSession()
-                    self.websocket = decoded_client_websocket(
-                        await self.client_session.ws_connect(
-                            f"wss://{self_hostname}:{daemon_port}",
-                            autoclose=True,
-                            autoping=True,
-                            heartbeat=self.daemon_heartbeat,
-                            ssl=self.ssl_client_context,
-                            max_msg_size=max_message_size,
-                            decode_text=True,
-                        ),
+                    self.websocket = await self.client_session.ws_connect(
+                        f"wss://{self_hostname}:{daemon_port}",
+                        autoclose=True,
+                        autoping=True,
+                        heartbeat=self.daemon_heartbeat,
+                        ssl=self.ssl_client_context,
+                        max_msg_size=max_message_size,
+                        decode_text=True,
                     )
                     await self.connection(self.websocket)
                 except ClientConnectorError:
