@@ -121,6 +121,11 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
+    # (check an error)
+    with pytest.raises(ValueError, match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT")):
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            await plotnft_wallet.leave_pool(action_scope=action_scope)
+
     # REWARDS GENERATED
     NUM_REWARDS_FARMED = 2
     REWARDS_GAINED = POOL_REWARD_AMOUNT * NUM_REWARDS_FARMED
@@ -424,12 +429,12 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # LEAVE POOL (to another)
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         finish_leaving_fee = uint64(1_000_000_000)
-        await plotnft_wallet.leave_pool(
+        await plotnft_wallet.join_pool(
             action_scope=action_scope,
             fee=uint64(0),
             finish_leaving_fee=finish_leaving_fee,
-            new_pool_url="https://daurl2.com",
-            new_pool_config=PoolConfig(
+            pool_url="https://daurl2.com",
+            pool_config=PoolConfig(
                 pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
             ),
         )
@@ -452,6 +457,11 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             )
         ]
     )
+
+    # (check an error)
+    with pytest.raises(ValueError, match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT")):
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            await plotnft_wallet.leave_pool(action_scope=action_scope)
 
     # Reorg (leave pool to another)
     height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
