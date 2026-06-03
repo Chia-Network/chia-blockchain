@@ -248,6 +248,43 @@ class ClaimPlotNFTCMD:
             )
 
 
+# NOTE: tx_endpoint
+@chia_command(
+    group=plotnft_cmd,
+    name="transfer",
+    short_help="Transfer a plot NFT",
+    help="Transfer a plot NFT between two fingerprints on this machine",
+)
+class TransferPlotNFTCMD:
+    rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
+    id: int | None = option(
+        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+    )
+    target_wallet_fingerprint: int = option(
+        "--target-fingerprint", help="Fingerprint of the target wallet", type=int, required=True
+    )
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="Set the fees per transaction, in XCH. Fee is used TWICE: once to create the singleton, once for init.",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+
+    async def run(self) -> None:
+        from chia.cmds.plotnft_funcs import transfer_cmd
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await transfer_cmd(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                wallet_id=self.id,
+                target_wallet_fingerprint=self.target_wallet_fingerprint,
+            )
+
+
 @chia_command(
     group=plotnft_cmd,
     name="change_payout_instructions",

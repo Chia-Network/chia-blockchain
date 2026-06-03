@@ -41,13 +41,14 @@ from chia.cmds.plotnft import (
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState
 from chia.simulator.setup_services import setup_farmer
+from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import GetWallets, PWStatus
+from chia.wallet.wallet_request_types import GetWallets, LogIn, PlotNFTTransfer, PWStatus
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -799,6 +800,53 @@ async def test_plotnft_cli_claim(wallet_environments: WalletTestFramework, versi
             )
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, self_hostname: str) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "plotnft": 2,
+    }
+    env.wallet_state_manager.config["reuse_public_key_for_change"][
+        str(env.wallet_state_manager.root_pubkey.get_fingerprint())
+    ] = wallet_environments.tx_config.reuse_puzhash
+    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
+    await env.wallet_state_manager.wallet_node.keychain_proxy.add_key(
+        bytes(G1Element()).hex(), label=None, private=False
+    )
+    await env.rpc_client.plotnft_transfer(
+        PlotNFTTransfer(
+            wallet_id=uint32(wallet_id),
+            target_wallet_fingerprint=uint32(G1Element().get_fingerprint()),
+            push=True,
+        ),
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={"plotnft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1}},
+            )
+        ]
+    )
+
+    await env.rpc_client.log_in(LogIn(fingerprint=uint32(G1Element().get_fingerprint())))
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    await wallet_environments.full_node.wait_for_wallets_synced([env.node])
+
+    await env.change_balances({"xch": {"set_remainder": True}, "plotnft": {"unspent_coin_count": 1}})
+    await env.check_balances()
 
 
 @pytest.mark.parametrize(

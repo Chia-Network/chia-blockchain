@@ -1925,6 +1925,19 @@ class PWAbsorbRewardsResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class PlotNFTTransfer(TransactionEndpointRequest):
+    wallet_id: uint32
+    target_wallet_fingerprint: uint32
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class PlotNFTTransferResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str
     target_address: str | None = None

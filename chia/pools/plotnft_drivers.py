@@ -678,6 +678,47 @@ class PlotNFT(PlotNFTPuzzle):
             )
         ]
 
+    def new_user_config(
+        self, user_config: UserConfig, hint: bytes32, extra_conditions: tuple[Condition, ...] = tuple()
+    ) -> list[CoinSpend]:
+        if self.pooling:
+            raise ValueError("Cannot create a new user config for a pooling PlotNFT")
+
+        plotnft_puzzle = PlotNFTPuzzle(
+            launcher_id=self.launcher_id,
+            user_config=user_config,
+            pool_config=None,
+            exiting=False,
+            genesis_challenge=self.genesis_challenge,
+        )
+
+        dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=Program.to(
+                (
+                    1,
+                    [
+                        CreateCoin(
+                            plotnft_puzzle.inner_puzzle_hash(),
+                            amount=self.coin.amount,
+                            memo_blob=Program.to((hint, plotnft_puzzle.memo())),
+                        ).to_program(),
+                        *(cond.to_program() for cond in extra_conditions),
+                    ],
+                )
+            ),
+            solution=Program.to([]),
+        )
+        return [
+            self.singleton_action_spend(
+                inner_solution=self.puzzle_with_restrictions().solve(
+                    member_validator_solutions=[],
+                    dpuz_validator_solutions=[],
+                    member_solution=self.bls_member.solve(),
+                    delegated_puzzle_and_solution=dpuz_and_solution,
+                )
+            )
+        ]
+
 
 @dataclass(kw_only=True, frozen=True)
 class RewardPuzzle:

@@ -121,6 +121,7 @@ from chia.wallet.puzzles.clawback.drivers import (
     match_clawback_puzzle,
 )
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import (
@@ -1059,7 +1060,13 @@ class WalletStateManager:
                     previous_plotnft_puzzle=previous_plotnft,
                 )
                 matched_plotnft_wallet_id = self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id)
-                if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+                if matched_plotnft_wallet_id is None and (
+                    coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id
+                    or await self.puzzle_store.index_for_puzzle_hash(
+                        puzzle_hash_for_synthetic_public_key(next_plot_nft.user_config.synthetic_pubkey)
+                    )
+                    is not None
+                ):
                     matched_plotnft_wallet_id = uint32(max(self.wallets.keys()) + 1)
                     self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                         wallet_state_manager=self,
@@ -1072,12 +1079,13 @@ class WalletStateManager:
                         ),
                     )
                 if matched_plotnft_wallet_id is None:
-                    raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
-                # the Streamable hint is in error so we need this type ignore
-                return WalletIdentifier(  # type: ignore[return-value]
-                    id=matched_plotnft_wallet_id,
-                    type=WalletType.PLOTNFT_2,
-                ), next_plot_nft
+                    self.log.warning(f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet")
+                else:
+                    # the Streamable hint is in error so we need this type ignore
+                    return WalletIdentifier(  # type: ignore[return-value]
+                        id=matched_plotnft_wallet_id,
+                        type=WalletType.PLOTNFT_2,
+                    ), next_plot_nft
             except GetNextPlotNFTError:
                 pass
 

@@ -171,6 +171,8 @@ from chia.wallet.wallet_request_types import (
     NFTTransferBulkResponse,
     NFTTransferNFT,
     NFTTransferNFTResponse,
+    PlotNFTTransfer,
+    PlotNFTTransferResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -550,6 +552,19 @@ class WalletRpcClient(RpcClient):
 
     async def pw_status(self, request: PWStatus) -> PWStatusResponse:
         return PWStatusResponse.from_json_dict(await self.fetch("pw_status", request.to_json_dict()))
+
+    async def plotnft_transfer(
+        self,
+        request: PlotNFTTransfer,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PlotNFTTransferResponse:
+        return PlotNFTTransferResponse.from_json_dict(
+            await self.fetch(
+                "plotnft_transfer", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     # CATS
     async def get_cat_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
