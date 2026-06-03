@@ -171,6 +171,8 @@ from chia.wallet.wallet_request_types import (
     NFTTransferBulkResponse,
     NFTTransferNFT,
     NFTTransferNFTResponse,
+    PlotNFTMelt,
+    PlotNFTMeltResponse,
     PlotNFTTransfer,
     PlotNFTTransferResponse,
     PushTransactions,
@@ -563,6 +565,19 @@ class WalletRpcClient(RpcClient):
         return PlotNFTTransferResponse.from_json_dict(
             await self.fetch(
                 "plotnft_transfer", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
+
+    async def plotnft_melt(
+        self,
+        request: PlotNFTMelt,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PlotNFTMeltResponse:
+        return PlotNFTMeltResponse.from_json_dict(
+            await self.fetch(
+                "plotnft_melt", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 

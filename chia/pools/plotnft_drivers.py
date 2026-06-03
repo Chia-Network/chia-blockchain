@@ -22,6 +22,7 @@ from chia.wallet.conditions import (
     MessageParticipant,
     Remark,
     SendMessage,
+    UnknownCondition,
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof
@@ -702,6 +703,33 @@ class PlotNFT(PlotNFTPuzzle):
                             amount=self.coin.amount,
                             memo_blob=Program.to((hint, plotnft_puzzle.memo())),
                         ).to_program(),
+                        *(cond.to_program() for cond in extra_conditions),
+                    ],
+                )
+            ),
+            solution=Program.to([]),
+        )
+        return [
+            self.singleton_action_spend(
+                inner_solution=self.puzzle_with_restrictions().solve(
+                    member_validator_solutions=[],
+                    dpuz_validator_solutions=[],
+                    member_solution=self.bls_member.solve(),
+                    delegated_puzzle_and_solution=dpuz_and_solution,
+                )
+            )
+        ]
+
+    def melt(self, extra_conditions: tuple[Condition, ...] = tuple()) -> list[CoinSpend]:
+        if self.pooling:
+            raise ValueError("Cannot melt a pooling PlotNFT")
+
+        dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=Program.to(
+                (
+                    1,
+                    [
+                        UnknownCondition(opcode=Program.to(51), args=[Program.to(None), Program.to(-113)]).to_program(),
                         *(cond.to_program() for cond in extra_conditions),
                     ],
                 )

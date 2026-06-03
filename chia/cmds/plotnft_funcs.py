@@ -43,6 +43,7 @@ from chia.wallet.wallet_request_types import (
     GetTransaction,
     GetWalletBalance,
     GetWallets,
+    PlotNFTMelt,
     PlotNFTTransfer,
     PWAbsorbRewards,
     PWJoinPool,
@@ -470,6 +471,21 @@ async def transfer_cmd(
             wallet_id=uint32(selected_wallet_id),
             fee=fee,
             target_wallet_fingerprint=uint32(target_wallet_fingerprint),
+            push=True,
+        ),
+        DEFAULT_TX_CONFIG,
+    )
+    await submit_tx_with_confirmation(msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id)
+
+
+async def melt_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: int | None) -> None:
+    selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+    msg = f"\nWill melt plot NFT for wallet ID: {selected_wallet_id}"
+    func = functools.partial(
+        wallet_info.client.plotnft_melt,
+        PlotNFTMelt(
+            wallet_id=uint32(selected_wallet_id),
+            fee=fee,
             push=True,
         ),
         DEFAULT_TX_CONFIG,

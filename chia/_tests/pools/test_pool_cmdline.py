@@ -48,7 +48,7 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import GetWallets, LogIn, PlotNFTTransfer, PWStatus
+from chia.wallet.wallet_request_types import GetWallets, LogIn, PlotNFTMelt, PlotNFTTransfer, PWStatus
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -847,6 +847,36 @@ async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, se
 
     await env.change_balances({"xch": {"set_remainder": True}, "plotnft": {"unspent_coin_count": 1}})
     await env.check_balances()
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_melt(wallet_environments: WalletTestFramework, self_hostname: str) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "plotnft": 2,
+    }
+    env.wallet_state_manager.config["reuse_public_key_for_change"][
+        str(env.wallet_state_manager.root_pubkey.get_fingerprint())
+    ] = wallet_environments.tx_config.reuse_puzhash
+    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
+    await env.rpc_client.plotnft_melt(
+        PlotNFTMelt(wallet_id=uint32(wallet_id), push=True), wallet_environments.tx_config
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={"plotnft": {"pending_coin_removal_count": 1}},
+                post_block_balance_updates={"plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1}},
+            )
+        ]
+    )
 
 
 @pytest.mark.parametrize(

@@ -261,6 +261,8 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     NFTTransferNFTResponse,
     NFTWalletWithDID,
+    PlotNFTMelt,
+    PlotNFTMeltResponse,
     PlotNFTTransfer,
     PlotNFTTransferResponse,
     PushTransactions,
@@ -684,6 +686,7 @@ class WalletRpcApi:
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
             "/plotnft_transfer": self.plotnft_transfer,
+            "/plotnft_melt": self.plotnft_melt,
             # DL Wallet
             "/create_new_dl": self.create_new_dl,
             "/dl_track_new": self.dl_track_new,
@@ -3348,6 +3351,23 @@ class WalletRpcApi:
         )
 
         return PlotNFTTransferResponse(unsigned_transactions=[], transactions=[])
+
+    @tx_endpoint(push=True)
+    @marshal
+    async def plotnft_melt(
+        self,
+        request: PlotNFTMelt,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> PlotNFTMeltResponse:
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+
+        if not isinstance(wallet, PlotNFT2Wallet):
+            raise ValueError("`plotnft_transfer` called on a non-pooling v2 wallet")
+
+        await wallet.melt_plotnft(action_scope=action_scope, fee=request.fee, extra_conditions=extra_conditions)
+
+        return PlotNFTMeltResponse(unsigned_transactions=[], transactions=[])
 
     ##########################################################################################
     # DataLayer Wallet

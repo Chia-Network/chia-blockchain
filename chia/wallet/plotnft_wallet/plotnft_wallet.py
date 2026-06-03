@@ -459,6 +459,39 @@ class PlotNFT2Wallet:
                 )
             )
 
+    async def melt_plotnft(
+        self,
+        *,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> None:
+        plotnft = await self.get_current_plotnft()
+        fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        coin_spends = plotnft.melt(extra_conditions=(fee_hook, *extra_conditions))
+        if fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
+
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=bytes32.zeros,
+                    amount=uint64(1),
+                    fee=fee,
+                    spend_bundle=spend_bundle,
+                    additions=[],
+                    removals=[plotnft.coin],
+                    name=spend_bundle.name(),
+                    extra_conditions=extra_conditions,
+                )
+            )
+
     # Syncing
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):

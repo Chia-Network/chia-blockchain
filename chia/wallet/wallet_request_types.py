@@ -1938,6 +1938,18 @@ class PlotNFTTransferResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class PlotNFTMelt(TransactionEndpointRequest):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class PlotNFTMeltResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class VCMint(TransactionEndpointRequest):
     did_id: str
     target_address: str | None = None
