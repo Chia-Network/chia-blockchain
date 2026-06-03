@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
+from chia.cmds.cmds_util import (
+    NODE_TYPES,
+    get_any_service_client,
+    node_config_section_names,
+    raise_if_config_section_missing,
+)
 from chia.rpc.rpc_client import RpcClient
 from chia.util.network import parse_host_port
 
@@ -114,11 +119,13 @@ async def peer_async(
     remove_connection: str,
 ) -> None:
     client_type = NODE_TYPES[node_type]
+    config_section = node_config_section_names[client_type]
     async with get_any_service_client(client_type, root_path, rpc_port) as (rpc_client, config):
         # Check or edit node connections
         if show_connections:
-            trusted_peers: dict[str, Any] = config[node_type].get("trusted_peers", {})
-            trusted_cidrs: list[str] = config[node_type].get("trusted_cidrs", [])
+            raise_if_config_section_missing(config, config_section)
+            trusted_peers: dict[str, Any] = config[config_section].get("trusted_peers", {})
+            trusted_cidrs: list[str] = config[config_section].get("trusted_cidrs", [])
             await print_connections(rpc_client, trusted_peers, trusted_cidrs)
             # if called together with state, leave a blank line
         if add_connection:
