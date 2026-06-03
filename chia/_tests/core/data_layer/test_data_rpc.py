@@ -17,7 +17,9 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import MagicMock
 
+import aiohttp
 import anyio
 import chia_rs.datalayer
 import pytest
@@ -41,7 +43,7 @@ from chia.cmds.data_funcs import (
     wallet_log_in_cmd,
 )
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer import TRACK_FAILURE_LOG_INTERVAL, DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
 from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
@@ -52,6 +54,7 @@ from chia.data_layer.data_layer_util import (
     ProofLayer,
     Status,
     StoreProofs,
+    Subscription,
     get_delta_filename_path,
     get_full_tree_filename_path,
     key_hash,
@@ -60,6 +63,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.start_data_layer import create_data_layer_service
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -3930,3 +3934,281 @@ async def test_local_store_exception(
             await asyncio.sleep(manage_data_interval)
 
             assert f"Can't subscribe to local store {fake_store.hex()}:" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_invalid_subscription_does_not_deadlock_management_loop(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Regression test: a single subscription whose `dl_track_new` always raises must not block
+    # tracking of other subscriptions, fetching/validation of healthy stores, or draining of the
+    # unsubscribe queue. Previously, one bad subscription present at startup permanently deadlocked
+    # the entire DataLayer management loop.
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 1
+    bad_store = bytes32([1] * 32)
+    healthy_store = bytes32([2] * 32)
+
+    # Pre-seed the persisted subscriptions DB *before* the service starts, so the very first
+    # management cycle reads them. This reproduces the incident faithfully: a bad subscription
+    # persisted in the DB that survives restart. `DataStore.subscribe` is DB-level and does not
+    # call `dl_track_new`, unlike `DataLayer.subscribe`.
+    async with DataStore.managed(
+        database=tmp_path.joinpath("db.sqlite"),
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store:
+        await data_store.subscribe(Subscription(bad_store, []))
+        await data_store.subscribe(Subscription(healthy_store, []))
+
+    tracked: list[bytes32] = []
+    fetched: set[bytes32] = set()
+
+    async def mock_dl_track_new(self: Any, request: Any) -> None:
+        tracked.append(request.launcher_id)
+        if request.launcher_id == bad_store:
+            # Mirrors the real failure: the wallet can't find the launcher coin on chain and the
+            # data_layer side sees it as a ResponseFailureError.
+            raise ResponseFailureError({"success": False, "error": f"Launcher ID {bad_store} is not a valid coin"})
+
+    async def mock_dl_stop_tracking(self: Any, request: Any) -> None:
+        return None
+
+    async def mock_update_subscriptions_from_wallet(self: Any, store_id: bytes32) -> None:
+        return None
+
+    async def spy_fetch_and_validate(self: Any, store_id: bytes32) -> None:
+        # Invocation alone proves the management loop reached the per-store work pool; the heavy
+        # fetch path is deliberately skipped for these synthetic stores.
+        fetched.add(store_id)
+
+    def healthy_fetched() -> bool:
+        return healthy_store in fetched
+
+    def bad_store_retried() -> bool:
+        return tracked.count(bad_store) >= 2
+
+    with monkeypatch.context() as m, caplog.at_level(logging.INFO):
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_stop_tracking", mock_dl_stop_tracking)
+        m.setattr(
+            "chia.data_layer.data_layer.DataLayer.update_subscriptions_from_wallet",
+            mock_update_subscriptions_from_wallet,
+        )
+        m.setattr("chia.data_layer.data_layer.DataLayer.fetch_and_validate", spy_fetch_and_validate)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=manage_data_interval,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            # (ii) Fetch liveness: the healthy store is fetched/validated even though the bad
+            # subscription's tracking call raises every cycle. Pre-fix this never happens because
+            # the management loop deadlocks before ever reaching the work pool.
+            await time_out_assert(30, healthy_fetched, True)
+
+            # (i) Tracking isolation: the healthy store is still tracked despite the bad one raising
+            # in the same batch.
+            assert healthy_store in tracked
+            assert bad_store in tracked
+
+            # (iii) Unsubscribe liveness: a queued unsubscribe is actually processed while the bad
+            # subscription keeps failing. Pre-fix the unsubscribe queue never drains.
+            await data_layer.unsubscribe(healthy_store, retain_data=False)
+
+            async def healthy_unsubscribed() -> bool:
+                subscriptions = await data_layer.get_subscriptions()
+                return all(subscription.store_id != healthy_store for subscription in subscriptions)
+
+            await time_out_assert(30, healthy_unsubscribed, True)
+
+            # (iv) Recovery: the bad subscription keeps being retried on later cycles rather than
+            # being silently dropped, so it can recover once its launcher becomes valid again.
+            await time_out_assert(30, bad_store_retried, True)
+
+        # (v) Honest logging: the failure is reported as a per-subscription tracking error naming
+        # the store, not the misleading generic "Cannot connect to the wallet" connectivity message.
+        assert f"Exception while requesting wallet track subscription {bad_store.hex()}" in caplog.text
+        assert "Cannot connect to the wallet. Retrying in 3s." not in caplog.text
+        assert "Cannot connect to the wallet to track subscriptions" not in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_track_subscriptions_stops_when_wallet_unreachable(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # When the wallet itself is unreachable, tracking logs a connectivity warning and stops trying
+    # the remaining subscriptions for this cycle (they are retried next cycle) instead of treating
+    # it as a per-subscription failure.
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    store_a = bytes32([3] * 32)
+    store_b = bytes32([4] * 32)
+    tracked: list[bytes32] = []
+
+    async def mock_dl_track_new(self: Any, request: Any) -> None:
+        tracked.append(request.launcher_id)
+        raise aiohttp.client_exceptions.ClientConnectorError(MagicMock(), OSError("wallet unreachable"))
+
+    with monkeypatch.context() as m, caplog.at_level(logging.WARNING):
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=1,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            await data_layer.track_subscriptions([Subscription(store_a, []), Subscription(store_b, [])])
+
+    # Only the first subscription was attempted; tracking bailed out for the rest of the batch.
+    assert store_a in tracked
+    assert store_b not in tracked
+    assert "Cannot connect to the wallet to track subscriptions" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_failing_unsubscribe_does_not_kill_management_loop(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A queued unsubscribe whose processing raises (e.g. the wallet is unreachable when
+    # dl_stop_tracking is called) must not kill the management loop or block management of other
+    # stores; it is retried on later cycles and eventually takes effect once the wallet recovers.
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 1
+    keep_store = bytes32([6] * 32)
+    unsub_store = bytes32([7] * 32)
+
+    async with DataStore.managed(
+        database=tmp_path.joinpath("db.sqlite"),
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store:
+        await data_store.subscribe(Subscription(keep_store, []))
+        await data_store.subscribe(Subscription(unsub_store, []))
+
+    fetch_counts: dict[bytes32, int] = {}
+    stop_tracking_should_fail = True
+
+    async def mock_dl_track_new(self: Any, request: Any) -> None:
+        return None
+
+    async def mock_dl_stop_tracking(self: Any, request: Any) -> None:
+        if stop_tracking_should_fail:
+            raise aiohttp.client_exceptions.ClientConnectorError(MagicMock(), OSError("wallet unreachable"))
+
+    async def mock_update_subscriptions_from_wallet(self: Any, store_id: bytes32) -> None:
+        return None
+
+    async def spy_fetch_and_validate(self: Any, store_id: bytes32) -> None:
+        fetch_counts[store_id] = fetch_counts.get(store_id, 0) + 1
+
+    def keep_store_managed_across_cycles() -> bool:
+        return fetch_counts.get(keep_store, 0) >= 3
+
+    with monkeypatch.context() as m, caplog.at_level(logging.INFO):
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_stop_tracking", mock_dl_stop_tracking)
+        m.setattr(
+            "chia.data_layer.data_layer.DataLayer.update_subscriptions_from_wallet",
+            mock_update_subscriptions_from_wallet,
+        )
+        m.setattr("chia.data_layer.data_layer.DataLayer.fetch_and_validate", spy_fetch_and_validate)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=manage_data_interval,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            await data_layer.unsubscribe(unsub_store, retain_data=False)
+
+            # The loop survives the failing unsubscribe and keeps managing the healthy store across
+            # multiple cycles. Pre-fix the unguarded process_unsubscribe killed the loop task here.
+            await time_out_assert(60, keep_store_managed_across_cycles, True)
+            assert f"Exception while processing queued unsubscribe for {unsub_store.hex()}" in caplog.text
+
+            # The unsubscribe was retried (not dropped); once the wallet recovers it takes effect.
+            stop_tracking_should_fail = False
+
+            async def unsub_store_gone() -> bool:
+                subscriptions = await data_layer.get_subscriptions()
+                return all(subscription.store_id != unsub_store for subscription in subscriptions)
+
+            await time_out_assert(60, unsub_store_gone, True)
+
+            # Processing an unsubscribe for an already-removed store is a no-op, so a request that
+            # was queued more than once can't raise and wedge the drain loop.
+            await data_layer.process_unsubscribe(unsub_store, retain_data=False)
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_track_subscriptions_throttles_repeated_failures(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A persistently-failing subscription logs on the first failure and then only every
+    # TRACK_FAILURE_LOG_INTERVAL-th consecutive failure; a success in between resets the throttle.
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    store = bytes32([8] * 32)
+    should_fail = True
+
+    async def mock_dl_track_new(self: Any, request: Any) -> None:
+        if should_fail:
+            raise RuntimeError("cannot track")
+
+    message = f"Exception while requesting wallet track subscription {store.hex()}"
+
+    with monkeypatch.context() as m, caplog.at_level(logging.WARNING):
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+
+        # A large interval keeps the background management loop from interfering; we drive
+        # track_subscriptions directly so the failure count is deterministic.
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=600,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            for _ in range(TRACK_FAILURE_LOG_INTERVAL):
+                await data_layer.track_subscriptions([Subscription(store, [])])
+            # Logged only on the 1st and TRACK_FAILURE_LOG_INTERVAL-th consecutive failures.
+            assert caplog.text.count(message) == 2
+
+            # A success clears the counter, so the next failure logs immediately again.
+            should_fail = False
+            await data_layer.track_subscriptions([Subscription(store, [])])
+            should_fail = True
+            await data_layer.track_subscriptions([Subscription(store, [])])
+            assert caplog.text.count(message) == 3

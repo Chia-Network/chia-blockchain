@@ -117,6 +117,11 @@ async def get_plugin_info(
         return plugin_remote, {"error": f"{type(e).__name__}: {e}"}
 
 
+# Log a per-subscription wallet-tracking failure on the first occurrence and then only
+# every Nth consecutive failure, so a persistently invalid launcher can't flood the log.
+TRACK_FAILURE_LOG_INTERVAL = 10
+
+
 @final
 @dataclasses.dataclass
 class DataLayer:
@@ -152,6 +157,7 @@ class DataLayer:
     )
     group_files_by_store: bool = False
     max_delta_file_size: int = 250
+    _track_failure_counts: dict[bytes32, int] = dataclasses.field(default_factory=dict)
 
     @property
     def server(self) -> ChiaServer:
@@ -889,7 +895,8 @@ class DataLayer:
         # This function already acquired `subscriptions_lock`.
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
-            raise RuntimeError("No subscription found for the given store_id.")
+            # Already unsubscribed (e.g. the request was queued more than once); nothing to do.
+            return
         paths: list[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
@@ -919,6 +926,7 @@ class DataLayer:
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(DLStopTracking(launcher_id=store_id))
         await self.data_store.unsubscribe(store_id)
+        self._track_failure_counts.pop(store_id, None)
 
         self.log.info(f"Unsubscribed to {store_id}")
         for file_path in paths:
@@ -975,29 +983,13 @@ class DataLayer:
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
-            async with self.subscription_lock:
-                try:
-                    subscriptions = await self.data_store.get_subscriptions()
-                    for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
-                    break
-                except aiohttp.client_exceptions.ClientConnectorError:
-                    pass
-                except Exception as e:
-                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
-
-            self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
-
-            delay_until = time.monotonic() + 3
-            while time.monotonic() < delay_until:
-                if self._shut_down:
-                    break
-                await asyncio.sleep(0.1)
-
-        while not self._shut_down:
             # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
+
+            # Track each subscription individually so one bad subscription can't block the
+            # others or entry into the rest of the management cycle.
+            await self.track_subscriptions(subscriptions)
 
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
@@ -1055,10 +1047,41 @@ class DataLayer:
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
             async with self.subscription_lock:
+                still_pending: list[UnsubscribeData] = []
                 for unsubscribe_data in self.unsubscribe_data_queue:
-                    await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
-                self.unsubscribe_data_queue.clear()
+                    try:
+                        await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
+                    except Exception as e:
+                        # A single failing unsubscribe (e.g. the wallet is unreachable) must not
+                        # kill the loop or block the others; retry it on the next cycle.
+                        self.log.warning(
+                            f"Exception while processing queued unsubscribe for "
+                            f"{unsubscribe_data.store_id}: {type(e)} {e}"
+                        )
+                        still_pending.append(unsubscribe_data)
+                self.unsubscribe_data_queue[:] = still_pending
             await asyncio.sleep(manage_data_interval)
+
+    async def track_subscriptions(self, subscriptions: list[Subscription]) -> None:
+        for subscription in subscriptions:
+            try:
+                await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
+            except aiohttp.client_exceptions.ClientConnectorError as e:
+                # Wallet unreachable: retry the remaining subscriptions on the next cycle.
+                self.log.warning(f"Cannot connect to the wallet to track subscriptions ({e}). Retrying next cycle.")
+                return
+            except Exception as e:
+                # One subscription failing to track must not abort tracking of the others.
+                count = self._track_failure_counts.get(subscription.store_id, 0) + 1
+                self._track_failure_counts[subscription.store_id] = count
+                if count == 1 or count % TRACK_FAILURE_LOG_INTERVAL == 0:
+                    self.log.warning(
+                        f"Exception while requesting wallet track subscription {subscription.store_id} "
+                        f"(consecutive failures: {count}): {type(e)} {e}"
+                    )
+            else:
+                # Clear the failure counter so a later failure logs immediately.
+                self._track_failure_counts.pop(subscription.store_id, None)
 
     async def update_subscription(
         self,
