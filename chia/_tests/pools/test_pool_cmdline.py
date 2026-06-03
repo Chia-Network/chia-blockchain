@@ -858,11 +858,12 @@ async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, se
                         "<=#pending_coin_removal_count": 1,
                         "<=#unspent_coin_count": 0,
                     },
-                    "plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
+                    # plotnft wallet deleted
                 },
             )
         ]
     )
+    assert len(env.wallet_state_manager.wallets) == 1
 
     await env.rpc_client.log_in(LogIn(fingerprint=uint32(G1Element().get_fingerprint())))
     await env.peer_server.start_client(
@@ -870,7 +871,8 @@ async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, se
     )
     await wallet_environments.full_node.wait_for_wallets_synced([env.node])
 
-    await env.change_balances({"xch": {"set_remainder": True}, "plotnft": {"unspent_coin_count": 1}})
+    # change from original wallet pending state
+    await env.change_balances({"xch": {"set_remainder": True}, "plotnft": {"pending_coin_removal_count": -1}})
     await env.check_balances()
 
 
@@ -925,11 +927,13 @@ async def test_plotnft_cli_melt(wallet_environments: WalletTestFramework, self_h
                         "<=#pending_coin_removal_count": 1,
                         "<=#unspent_coin_count": 0,
                     },
-                    "plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
+                    # plotnft wallet deleted
                 },
             )
         ]
     )
+
+    assert len(env.wallet_state_manager.wallets) == 1
 
 
 @pytest.mark.parametrize(

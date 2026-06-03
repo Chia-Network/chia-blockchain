@@ -1060,12 +1060,14 @@ class WalletStateManager:
                     previous_plotnft_puzzle=previous_plotnft,
                 )
                 matched_plotnft_wallet_id = self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id)
-                if matched_plotnft_wallet_id is None and (
-                    coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id
-                    or await self.puzzle_store.index_for_puzzle_hash(
+                user_key_is_owned = (
+                    await self.puzzle_store.index_for_puzzle_hash(
                         puzzle_hash_for_synthetic_public_key(next_plot_nft.user_config.synthetic_pubkey)
                     )
                     is not None
+                )
+                if matched_plotnft_wallet_id is None and (
+                    coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id or user_key_is_owned
                 ):
                     matched_plotnft_wallet_id = uint32(max(self.wallets.keys()) + 1)
                     self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
@@ -1078,8 +1080,11 @@ class WalletStateManager:
                             data=next_plot_nft.launcher_id.hex(),
                         ),
                     )
-                if matched_plotnft_wallet_id is None:
+                if matched_plotnft_wallet_id is None or not user_key_is_owned:
                     self.log.warning(f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet")
+                    if matched_plotnft_wallet_id is not None:
+                        await self.delete_wallet(wallet_id=matched_plotnft_wallet_id)
+                        self.wallets.pop(matched_plotnft_wallet_id)
                 else:
                     # the Streamable hint is in error so we need this type ignore
                     return WalletIdentifier(  # type: ignore[return-value]
@@ -2245,6 +2250,13 @@ class WalletStateManager:
                                 vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
                                 await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
                         elif record.wallet_type == WalletType.PLOTNFT_2:
+                            try:
+                                await self.plotnft2_store.get_plotnfts(coin_ids=[coin_name])
+                                if children == []:
+                                    await self.delete_wallet(wallet_id=wallet_identifier.id)
+                                    self.wallets.pop(wallet_identifier.id)
+                            except ValueError:
+                                pass
                             if isinstance(coin_data, PlotNFT):
                                 await self.coin_added(
                                     coin_state.coin,
