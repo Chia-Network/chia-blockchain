@@ -168,7 +168,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                 ):
                     continue
 
-                if not await self._server.start_client(resolved, None):
+                if not await self._server.start_client(resolved, None, server_hostname=unresolved.host):
                     self._log.info(f"Failed to connect to {resolved}")
                     # Re-resolve to make sure the IP didn't change, this helps for example to keep dyndns hostnames
                     # up to date.
