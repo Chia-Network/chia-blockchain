@@ -205,8 +205,7 @@ class S3Plugin:
 
             try:
                 with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-upload-") as pool:
-                    if full_tree_path is not None:
-                        assert target_full_tree_path is not None
+                    if full_tree_path is not None and target_full_tree_path is not None:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(
@@ -215,7 +214,6 @@ class S3Plugin:
                                 target_full_tree_path,
                             ),
                         )
-                    assert target_diff_path is not None
                     await asyncio.get_running_loop().run_in_executor(
                         pool,
                         functools.partial(my_bucket.upload_file, str(diff_path), target_diff_path),
