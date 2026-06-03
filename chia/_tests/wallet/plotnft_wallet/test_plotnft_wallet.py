@@ -18,7 +18,15 @@ from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
-from chia.wallet.wallet_request_types import PushTX, PWAbsorbRewards, PWJoinPool, PWSelfPool, PWStatus
+from chia.wallet.wallet_request_types import (
+    PlotNFTMelt,
+    PlotNFTTransfer,
+    PushTX,
+    PWAbsorbRewards,
+    PWJoinPool,
+    PWSelfPool,
+    PWStatus,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1014,3 +1022,14 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
 
     with pytest.raises(ResponseFailureError, match=re.escape("`pw_status` called on a non-pooling wallet")):
         await env.rpc_client.pw_status(request=PWStatus(wallet_id=uint32(1)))
+
+    with pytest.raises(ResponseFailureError, match=re.escape("`plotnft_transfer` called on a non-pooling v2 wallet")):
+        await env.rpc_client.plotnft_transfer(
+            request=PlotNFTTransfer(wallet_id=uint32(1), target_wallet_fingerprint=uint32(0)),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match=re.escape("`plotnft_melt` called on a non-pooling v2 wallet")):
+        await env.rpc_client.plotnft_melt(
+            request=PlotNFTMelt(wallet_id=uint32(1)), tx_config=wallet_environments.tx_config
+        )
