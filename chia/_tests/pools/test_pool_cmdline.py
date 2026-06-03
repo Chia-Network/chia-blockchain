@@ -36,7 +36,9 @@ from chia.cmds.plotnft import (
     InspectPlotNFTCMD,
     JoinPlotNFTCMD,
     LeavePlotNFTCMD,
+    MeltPlotNFTCMD,
     ShowPlotNFTCMD,
+    TransferPlotNFTCMD,
 )
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState
@@ -48,7 +50,7 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import GetWallets, LogIn, PlotNFTMelt, PlotNFTTransfer, PWStatus
+from chia.wallet.wallet_request_types import GetWallets, LogIn, PWStatus
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -817,24 +819,47 @@ async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, se
     env.wallet_state_manager.config["reuse_public_key_for_change"][
         str(env.wallet_state_manager.root_pubkey.get_fingerprint())
     ] = wallet_environments.tx_config.reuse_puzhash
+    client_info = WalletClientInfo(
+        env.rpc_client,
+        env.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env.wallet_state_manager.config,
+    )
     wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
     await env.wallet_state_manager.wallet_node.keychain_proxy.add_key(
         bytes(G1Element()).hex(), label=None, private=False
     )
-    await env.rpc_client.plotnft_transfer(
-        PlotNFTTransfer(
-            wallet_id=uint32(wallet_id),
-            target_wallet_fingerprint=uint32(G1Element().get_fingerprint()),
-            push=True,
-        ),
-        wallet_environments.tx_config,
-    )
+    FEE_AMOUNT = 1_800_000_000_000
+    await TransferPlotNFTCMD(
+        id=uint32(wallet_id),
+        target_wallet_fingerprint=uint32(G1Element().get_fingerprint()),
+        fee=uint64(FEE_AMOUNT),
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+    ).run()
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={"plotnft": {"pending_coin_removal_count": 1}},
-                post_block_balance_updates={"plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1}},
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE_AMOUNT,
+                        "<=#spendable_balance": -FEE_AMOUNT,
+                        "<=#max_send_amount": -FEE_AMOUNT,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                    },
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE_AMOUNT,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": 1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
+                },
             )
         ]
     )
@@ -864,16 +889,44 @@ async def test_plotnft_cli_melt(wallet_environments: WalletTestFramework, self_h
     env.wallet_state_manager.config["reuse_public_key_for_change"][
         str(env.wallet_state_manager.root_pubkey.get_fingerprint())
     ] = wallet_environments.tx_config.reuse_puzhash
-    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
-    await env.rpc_client.plotnft_melt(
-        PlotNFTMelt(wallet_id=uint32(wallet_id), push=True), wallet_environments.tx_config
+
+    client_info = WalletClientInfo(
+        env.rpc_client,
+        env.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env.wallet_state_manager.config,
     )
+    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
+    FEE_AMOUNT = 1_800_000_000_000
+    await MeltPlotNFTCMD(
+        id=uint32(wallet_id),
+        fee=uint64(FEE_AMOUNT),
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+    ).run()
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={"plotnft": {"pending_coin_removal_count": 1}},
-                post_block_balance_updates={"plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1}},
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE_AMOUNT,
+                        "<=#spendable_balance": -FEE_AMOUNT,
+                        "<=#max_send_amount": -FEE_AMOUNT,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                    },
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE_AMOUNT,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": 1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"unspent_coin_count": -1, "pending_coin_removal_count": -1},
+                },
             )
         ]
     )
