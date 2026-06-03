@@ -32,12 +32,6 @@ strict_equality = False
 
 # TODO: stop ignoring these and get hints for as many as possible
 
-[mypy-boto3.*]
-ignore_missing_imports = True
-
-[mypy-botocore.*]
-ignore_missing_imports = True
-
 [mypy-chia_puzzles_py.*]
 ignore_missing_imports = True
 
@@ -63,9 +57,6 @@ ignore_missing_imports = True
 ignore_missing_imports = True
 
 [mypy-miniupnpc.*]
-ignore_missing_imports = True
-
-[mypy-sortedcontainers.*]
 ignore_missing_imports = True
 
 [mypy-testconfig.*]
