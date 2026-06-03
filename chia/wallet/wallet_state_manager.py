@@ -1073,7 +1073,7 @@ class WalletStateManager:
                         xch_wallet=self.main_wallet,
                         wallet_info=WalletInfo(
                             id=matched_plotnft_wallet_id,
-                            name="",
+                            name=next_plot_nft.launcher_id.hex(),
                             type=uint8(WalletType.PLOTNFT_2),
                             data=next_plot_nft.launcher_id.hex(),
                         ),
