@@ -39,6 +39,7 @@ from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.ssl.ssl_check import verify_ssl_certs_and_keys
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
+from chia.util.ip_address import IPAddress
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
@@ -469,10 +470,13 @@ class ChiaServer:
             ip = f"[{target_node.ip}]" if target_node.ip.is_v6 else f"{target_node.ip}"
             url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
-            if server_hostname == target_node.host:
-                # the server_hostname is actually an IP address so we don't need to set anything in ws_connect
-                server_hostname = None
-
+            if server_hostname is not None:
+                try:
+                    IPAddress.create(server_hostname)
+                    # the server_hostname is actually an IP address so we don't need to set anything in ws_connect
+                    server_hostname = None
+                except ValueError:
+                    pass
             try:
                 ws = await session.ws_connect(
                     url,
