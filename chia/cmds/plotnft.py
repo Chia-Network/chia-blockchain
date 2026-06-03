@@ -288,7 +288,7 @@ class TransferPlotNFTCMD:
 # NOTE: tx_endpoint
 @chia_command(
     group=plotnft_cmd,
-    name="transfer",
+    name="melt",
     short_help="Melt a plot NFT (v2 only)",
     help="Melt a plot NFT (v2 only)",
 )
