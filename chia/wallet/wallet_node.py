@@ -1329,7 +1329,7 @@ class WalletNode:
         async with self.wallet_state_manager.lock:
             peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
             if peak_hb is None or new_peak_hb.weight > peak_hb.weight:
-                backtrack_fork_height: int | None = await self.wallet_short_sync_backtrack(new_peak_hb, peer)
+                backtrack_fork_height: int | None = await self.wallet_short_sync_backtrack(peak_hb, new_peak_hb, peer)
                 if backtrack_fork_height is None:
                     return False
             else:
@@ -1379,9 +1379,9 @@ class WalletNode:
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
             return True
 
-    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int | None:
-        peak: HeaderBlock | None = await self.wallet_state_manager.blockchain.get_peak_block()
-
+    async def wallet_short_sync_backtrack(
+        self, peak_hb: HeaderBlock | None, header_block: HeaderBlock, peer: WSChiaConnection
+    ) -> int | None:
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
@@ -1395,7 +1395,7 @@ class WalletNode:
             if self._shut_down:
                 raise RuntimeError("Shutdown requested during wallet backtrack sync")
             if (
-                peak is not None
+                peak_hb is not None
                 and len(blocks) > self.LONG_SYNC_THRESHOLD
                 and header_block.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
             ):
@@ -1426,7 +1426,7 @@ class WalletNode:
 
         if top.height == 0:
             fork_height = 0
-            should_skip_rollback = peak is None
+            should_skip_rollback = peak_hb is None
 
         # Roll back coins and transactions
         peak_height = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
@@ -1436,8 +1436,6 @@ class WalletNode:
             await self.perform_atomic_rollback(fork_height)
             await self.update_ui()
 
-        if peak is not None:
-            assert header_block.weight >= peak.weight
         for block in blocks:
             # Set blockchain to the latest peak
             res, err = await self.wallet_state_manager.blockchain.add_block(block)
