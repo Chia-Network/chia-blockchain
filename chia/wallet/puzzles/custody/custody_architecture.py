@@ -231,7 +231,7 @@ class PuzzleWithRestrictions:
     restrictions: list[Restriction[MemberOrDPuz]]
     puzzle: MIPSComponent
     additional_memos: Program | None = None
-    spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
+    spec_namespace: ClassVar[str] = "CHIP-0043"
 
     def memo(self) -> Program:
         restriction_hints: list[RestrictionHint] = [
