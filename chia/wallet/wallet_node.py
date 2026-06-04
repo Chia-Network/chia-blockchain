@@ -1267,6 +1267,14 @@ class WalletNode:
                 elif request_height < height:
                     # The peer might be slightly behind but still synced, so we should allow fetching one more block
                     break
+                elif expected_hash is not None:
+                    # Anchored lookups require a block at each height to carry the hash to the
+                    # next one. With no block here there is nothing to anchor to, so treat the
+                    # peer as not synced rather than continue against a stale hash.
+                    self.log.warning(
+                        f"missing header block response for height {request_height} from Peer {peer.get_peer_info()}."
+                    )
+                    return None
             else:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
