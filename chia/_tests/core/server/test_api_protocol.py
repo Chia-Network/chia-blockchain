@@ -63,6 +63,8 @@ async def test_list_limits_without_peer() -> None:
 
 @pytest.mark.anyio
 async def test_list_limits_on_rust_type() -> None:
+    """Rust types don't accept list_limits in from_bytes. Verify the decorator
+    falls back to from_bytes() without list_limits, then applies truncation."""
     captured: list[RespondToPhUpdates] = []
 
     metadata = ApiMetadata()
