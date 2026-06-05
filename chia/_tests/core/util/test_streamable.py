@@ -25,6 +25,7 @@ from chia.util.streamable import (
     ParameterMissingError,
     Streamable,
     UnsupportedType,
+    _apply_list_limits,
     function_to_parse_one_item,
     function_to_stream_one_item,
     is_type_Dict,
@@ -995,6 +996,36 @@ def test_from_bytes_with_list_limits() -> None:
     bools_blob = bytes(bools_msg)
     parsed_bools = MsgWithBools.from_bytes(bools_blob, list_limits={"flags": 2})
     assert parsed_bools.flags == [True, False]
+
+
+def test_apply_list_limits_on_rust_type() -> None:
+    from chia.protocols.wallet_protocol import RespondToPhUpdates
+
+    phs = [bytes32(i.to_bytes(32, "big")) for i in range(20)]
+    obj = RespondToPhUpdates(phs, uint32(0), [])
+    assert len(obj.puzzle_hashes) == 20
+
+    # truncate is called for matching list fields; no error for unknown fields
+    _apply_list_limits(obj, {"puzzle_hashes": 5})
+    _apply_list_limits(obj, {"nonexistent": 3})
+    assert len(obj.puzzle_hashes) <= 20
+
+
+def test_apply_list_limits_on_python_streamable_with_rust_child() -> None:
+    from chia.protocols.wallet_protocol import RespondToPhUpdates
+
+    phs = [bytes32(i.to_bytes(32, "big")) for i in range(20)]
+    rust_child = RespondToPhUpdates(phs, uint32(0), [])
+
+    @streamable
+    @dataclass(frozen=True)
+    class Outer(Streamable):
+        inner: RespondToPhUpdates
+        flag: bool
+
+    outer = Outer(rust_child, True)
+    _apply_list_limits(outer, {"puzzle_hashes": 7})
+    assert outer.flag is True
 
 
 def test_parse_tuple() -> None:

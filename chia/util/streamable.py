@@ -8,6 +8,7 @@ import io
 import os
 import pprint
 import traceback
+import types
 from collections.abc import Callable, Collection
 from enum import Enum, EnumMeta
 from types import UnionType
@@ -650,6 +651,29 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
     return cls
 
 
+def _apply_list_limits(obj: Any, list_limits: dict[str, int]) -> None:
+    """Truncate list fields on rust-typed objects and recurse into sub-objects."""
+    if not list_limits:
+        return
+
+    if hasattr(obj, "truncate"):
+        for field_name, max_size in list_limits.items():
+            try:
+                obj.truncate(field_name, max_size)
+            except KeyError:
+                pass
+        for name, desc in vars(type(obj)).items():
+            if isinstance(desc, types.GetSetDescriptorType):
+                child = getattr(obj, name)
+                if hasattr(child, "truncate") or dataclasses.is_dataclass(child):
+                    _apply_list_limits(child, list_limits)
+    elif dataclasses.is_dataclass(obj):
+        for field in dataclasses.fields(obj):
+            child = getattr(obj, field.name)
+            if hasattr(child, "truncate") or dataclasses.is_dataclass(child):
+                _apply_list_limits(child, list_limits)
+
+
 class Streamable:
     """
     This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
@@ -726,6 +750,8 @@ class Streamable:
             else:
                 value = field.parse_function(f)
             object.__setattr__(obj, field.name, value)
+        if list_limits:
+            _apply_list_limits(obj, list_limits)
         return obj
 
     def stream(self, f: BinaryIO) -> None:
