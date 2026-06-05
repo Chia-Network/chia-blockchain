@@ -90,7 +90,7 @@ class ApiMetadata:
                         arg = message_class.from_bytes(original, list_limits=resolved_limits)
                     else:
                         arg = message_class.from_bytes(original)
-                        if resolved_limits:
+                        if resolved_limits is not None and len(resolved_limits) > 0:
                             _apply_list_limits(arg, resolved_limits)
                 else:
                     arg = original

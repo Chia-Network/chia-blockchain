@@ -653,7 +653,7 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 
 def _apply_list_limits(obj: Any, list_limits: dict[str, int]) -> None:
     """Truncate list fields on rust-typed objects and recurse into sub-objects."""
-    if not list_limits:
+    if len(list_limits) == 0:
         return
 
     if hasattr(obj, "truncate"):
@@ -740,7 +740,7 @@ class Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Self = object.__new__(cls)
         for field in cls.streamable_fields():
-            if list_limits and field.name in list_limits and field.list_inner_parse_function is not None:
+            if list_limits is not None and field.name in list_limits and field.list_inner_parse_function is not None:
                 value = parse_list_limited(
                     f,
                     field.list_inner_parse_function,
@@ -750,7 +750,7 @@ class Streamable:
             else:
                 value = field.parse_function(f)
             object.__setattr__(obj, field.name, value)
-        if list_limits:
+        if list_limits is not None and len(list_limits) > 0:
             _apply_list_limits(obj, list_limits)
         return obj
 

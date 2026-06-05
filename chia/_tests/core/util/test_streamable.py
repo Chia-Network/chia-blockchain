@@ -999,6 +999,7 @@ def test_from_bytes_with_list_limits() -> None:
 
 
 def test_apply_list_limits_on_rust_type() -> None:
+    """Truncate list fields directly on a rust-typed object via truncate()."""
     from chia.protocols.wallet_protocol import RespondToPhUpdates
 
     phs = [bytes32(i.to_bytes(32, "big")) for i in range(20)]
@@ -1007,11 +1008,16 @@ def test_apply_list_limits_on_rust_type() -> None:
 
     # truncate is called for matching list fields; no error for unknown fields
     _apply_list_limits(obj, {"puzzle_hashes": 5})
+    assert len(obj.puzzle_hashes) == 5
+    assert obj.puzzle_hashes == phs[:5]
+
+    # non-existent field is silently ignored
     _apply_list_limits(obj, {"nonexistent": 3})
-    assert len(obj.puzzle_hashes) <= 20
+    assert len(obj.puzzle_hashes) == 5
 
 
 def test_apply_list_limits_on_python_streamable_with_rust_child() -> None:
+    """Recurse into a Python Streamable's fields to truncate a nested rust object."""
     from chia.protocols.wallet_protocol import RespondToPhUpdates
 
     phs = [bytes32(i.to_bytes(32, "big")) for i in range(20)]
@@ -1025,6 +1031,8 @@ def test_apply_list_limits_on_python_streamable_with_rust_child() -> None:
 
     outer = Outer(rust_child, True)
     _apply_list_limits(outer, {"puzzle_hashes": 7})
+    assert len(outer.inner.puzzle_hashes) == 7
+    assert outer.inner.puzzle_hashes == phs[:7]
     assert outer.flag is True
 
 

@@ -83,4 +83,5 @@ async def test_list_limits_on_rust_type() -> None:
     assert len(captured) == 1
     # Rust from_bytes is called without list_limits (would TypeError otherwise),
     # followed by _apply_list_limits which calls truncate.
-    assert len(captured[0].puzzle_hashes) <= 10
+    assert len(captured[0].puzzle_hashes) == 3
+    assert captured[0].puzzle_hashes == phs[:3]
