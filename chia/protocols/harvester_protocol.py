@@ -230,6 +230,38 @@ class PlotSyncPlotList(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PlotV2(Streamable):
+    filename: str
+    # 1 for v1 plots, 2 for v2 plots
+    version: uint8
+    # v1 k-size when version == 1
+    size: uint8
+    # v2 strength when version == 2
+    strength: uint8
+    plot_index: uint16
+    meta_group: uint8
+    plot_id: bytes32
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
+    plot_public_key: G1Element
+    file_size: uint64
+    time_modified: uint64
+    compression_level: uint8 | None
+
+
+@streamable
+@dataclass(frozen=True)
+class PlotSyncPlotListV2(Streamable):
+    identifier: PlotSyncIdentifier
+    data: list[PlotV2]
+    final: bool
+
+    def __str__(self) -> str:
+        return f"PlotSyncPlotListV2: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+
+
+@streamable
+@dataclass(frozen=True)
 class PlotSyncDone(Streamable):
     identifier: PlotSyncIdentifier
     duration: uint64

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from chia_rs.sized_ints import int16, uint8, uint32, uint64
+from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -22,11 +22,14 @@ from chia.protocols.harvester_protocol import (
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
+    PlotV2,
 )
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
 from chia.util.task_referencer import create_referenced_task
@@ -58,6 +61,56 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
                 compression_level=plot_info.prover.get_compression_level(),
             )
         )
+    return converted
+
+
+def _uses_plot_v2_metadata(connection: WSChiaConnection | None) -> bool:
+    if connection is None:
+        return False
+    return connection.has_capability(Capability.PLOT_V2_METADATA)
+
+
+def _convert_sync_plot_list(plot_infos: list[PlotInfo]) -> list[PlotV2]:
+    converted: list[PlotV2] = []
+    for plot_info in plot_infos:
+        param = plot_info.prover.get_param()
+        if param.size_v1 is not None:
+            converted.append(
+                PlotV2(
+                    filename=plot_info.prover.get_filename(),
+                    version=uint8(1),
+                    size=param.size_v1,
+                    strength=uint8(0),
+                    plot_index=uint16(0),
+                    meta_group=uint8(0),
+                    plot_id=plot_info.prover.get_id(),
+                    pool_public_key=plot_info.pool_public_key,
+                    pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                    plot_public_key=plot_info.plot_public_key,
+                    file_size=uint64(plot_info.file_size),
+                    time_modified=uint64(plot_info.time_modified),
+                    compression_level=plot_info.prover.get_compression_level(),
+                )
+            )
+        else:
+            assert param.strength_v2 is not None
+            converted.append(
+                PlotV2(
+                    filename=plot_info.prover.get_filename(),
+                    version=uint8(2),
+                    size=uint8(0),
+                    strength=param.strength_v2,
+                    plot_index=param.plot_index,
+                    meta_group=param.meta_group,
+                    plot_id=plot_info.prover.get_id(),
+                    pool_public_key=plot_info.pool_public_key,
+                    pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                    plot_public_key=plot_info.plot_public_key,
+                    file_size=uint64(plot_info.file_size),
+                    time_modified=uint64(plot_info.time_modified),
+                    compression_level=plot_info.prover.get_compression_level(),
+                )
+            )
     return converted
 
 
@@ -292,8 +345,17 @@ class Sender:
     def process_batch(self, loaded: list[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            converted = _convert_plot_info_list(loaded)
-            self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
+            if _uses_plot_v2_metadata(self._connection):
+                converted_v2 = _convert_sync_plot_list(loaded)
+                self._add_message(
+                    ProtocolMessageTypes.plot_sync_loaded_v2,
+                    PlotSyncPlotListV2,
+                    converted_v2,
+                    remaining == 0,
+                )
+            else:
+                converted = _convert_plot_info_list(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
 
     def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")

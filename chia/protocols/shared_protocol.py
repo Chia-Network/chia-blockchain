@@ -56,6 +56,14 @@ class Capability(IntEnum):
     # Settings must be non empty and window_size == 0 means unlimited.
     RATE_LIMITS_V3 = 7
 
+    # Plot sync can use PlotSyncPlotListV2 with full v2 plot metadata when both
+    # farmer and harvester support it. Legacy PlotSyncPlotList is used otherwise.
+    PLOT_V2_METADATA = 8
+
+
+_plot_v2_metadata = [
+    (uint16(Capability.PLOT_V2_METADATA.value), "1"),
+]
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.
@@ -70,8 +78,8 @@ _mempool_updates = [
 
 default_capabilities = {
     NodeType.FULL_NODE: _capabilities + _mempool_updates,
-    NodeType.HARVESTER: _capabilities,
-    NodeType.FARMER: _capabilities,
+    NodeType.HARVESTER: _capabilities + _plot_v2_metadata,
+    NodeType.FARMER: _capabilities + _plot_v2_metadata,
     NodeType.TIMELORD: _capabilities,
     NodeType.INTRODUCER: _capabilities,
     NodeType.WALLET: _capabilities,
