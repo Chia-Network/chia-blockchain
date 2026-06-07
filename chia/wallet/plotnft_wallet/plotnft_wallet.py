@@ -424,7 +424,7 @@ class PlotNFT2Wallet:
             fingerprint=target_wallet_fingerprint, private=False
         )
         if root_pubkey is None:
-            raise ValueError(f"Did not find key for fingerprint {target_wallet_fingerprint}")
+            raise RuntimeError(f"Error retrieving key for fingerprint {target_wallet_fingerprint}")
         wallet_pubkey = master_pk_to_wallet_pk_unhardened(root_pubkey, index=uint32(0))
         synthetic_pubkey = self.xch_wallet.convert_public_key_to_synthetic(wallet_pubkey)
         hint = self.xch_wallet.puzzle_hash_for_pk(wallet_pubkey)

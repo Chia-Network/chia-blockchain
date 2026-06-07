@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import unittest
 from unittest.mock import Mock
 
 import pytest
@@ -956,6 +957,11 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             pool_url="https://daurl.com",
             finish_leaving_fee=uint64(1),
         )
+
+    # check a `transfer_plotnft` safety guard
+    with pytest.raises(RuntimeError, match="Error retrieving key for fingerprint 0"):
+        with unittest.mock.patch("chia.daemon.keychain_proxy.KeychainProxy.get_key_for_fingerprint", return_value=None):
+            await plotnft_wallet.transfer_plotnft(action_scope=action_scope, target_wallet_fingerprint=0)
 
     # check a `coin_added` type guard
     plotnft = await plotnft_wallet.get_current_plotnft()
