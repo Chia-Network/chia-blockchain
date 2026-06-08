@@ -678,7 +678,9 @@ class FullNode:
                     prev_b = None
                     if response.blocks[0].height > 0:
                         prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
-                        assert prev_b is not None
+                        if prev_b is None:
+                            # First block of the batch is not connected to our chain; fall back to long sync.
+                            return False
                     new_slot = len(response.blocks[0].finished_sub_slots) > 0
                     ssi, diff = get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
