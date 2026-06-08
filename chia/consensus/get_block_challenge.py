@@ -149,8 +149,11 @@ def is_infused_before_sp(
     if overflow:
         actual_slots_crossed_at_ip -= 1
 
-    sp_interval_delta = sp_index - candidate_sp_index
-    sp_intervals_until_current_sp = sp_interval_delta + actual_slots_crossed_at_ip * constants.NUM_SPS_SUB_SLOT
+    # Distance in SP intervals. If slots were crossed, a smaller checked SP index can still be after a larger
+    # candidate SP index, so add a full slot width for each crossed slot.
+    sp_intervals_until_current_sp = (
+        sp_index - candidate_sp_index + actual_slots_crossed_at_ip * constants.NUM_SPS_SUB_SLOT
+    )
     return sp_intervals_until_current_sp > constants.NUM_SP_INTERVALS_EXTRA
 
 
