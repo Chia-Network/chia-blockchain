@@ -37,6 +37,8 @@ from chia.util.block_cache import BlockCache
         pytest.param(1, 15, 0, True, False, id="overflow-no-crossed-slot-low-sp-candidate-after-overflow-sp"),
         # Checked SP is overflow; no crossed slot, candidate SP 11 infuses at boundary/after. Expected: False.
         pytest.param(11, 15, 0, True, False, id="overflow-no-crossed-slot-before-boundary-still-after-sp"),
+        # Checked SP is overflow; no crossed slot, overflow candidate SP 14 is in the same IP slot. Expected: False.
+        pytest.param(14, 15, 0, True, False, id="overflow-no-crossed-slot-overflow-candidate-same-ip-slot"),
         # Checked SP is overflow; no crossed slot and same SP cannot be before itself. Expected: False.
         pytest.param(15, 15, 0, True, False, id="overflow-no-crossed-slot-same-sp"),
         # Checked SP is overflow; one crossed slot puts low-SP candidate before the checked SP. Expected: True.
@@ -45,6 +47,8 @@ from chia.util.block_cache import BlockCache
         pytest.param(11, 15, 1, True, True, id="overflow-crossed-slot-before-sp"),
         # Checked SP is overflow; one crossed slot, candidate SP 12 infuses exactly at checked SP 15. Expected: False.
         pytest.param(12, 15, 1, True, False, id="overflow-crossed-slot-at-extra-interval-boundary"),
+        # Checked SP is overflow; one crossed slot, overflow candidate SP 14 is now in a previous IP slot. Expected: True.
+        pytest.param(14, 15, 1, True, True, id="overflow-crossed-slot-overflow-candidate-previous-ip-slot"),
         # Checked SP is overflow; one crossed slot and same overflow SP is safely before it. Expected: True.
         pytest.param(15, 15, 1, True, True, id="overflow-crossed-slot-same-overflow-sp"),
     ],

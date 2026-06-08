@@ -135,15 +135,20 @@ def is_infused_before_sp(
     constants: ConsensusConstants,
     candidate_sp_index: uint8,
     sp_index: uint8,
-    slots_crossed: int,
+    slots_crossed_at_ip: int,
     overflow: bool,
 ) -> bool:
     candidate_overflow = is_overflow_block(constants, candidate_sp_index)
-    sp_intervals_until_current_sp = (
-        int(sp_index)
-        - int(candidate_sp_index)
-        + (slots_crossed + int(candidate_overflow) - int(overflow)) * int(constants.NUM_SPS_SUB_SLOT)
-    )
+    # The walker counts whole slots between infusion points. This comparison is against the checked SP, so
+    # overflow blocks need one-slot adjustments because their SP is in the slot before their IP.
+    actual_slots_crossed_at_ip = slots_crossed_at_ip
+    if candidate_overflow:
+        actual_slots_crossed_at_ip += 1
+    if overflow:
+        actual_slots_crossed_at_ip -= 1
+
+    sp_interval_delta = sp_index - candidate_sp_index
+    sp_intervals_until_current_sp = sp_interval_delta + actual_slots_crossed_at_ip * constants.NUM_SPS_SUB_SLOT
     return sp_intervals_until_current_sp > constants.NUM_SP_INTERVALS_EXTRA
 
 
