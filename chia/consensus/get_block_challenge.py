@@ -103,6 +103,8 @@ def get_block_challenge(
 
 
 # Returns the latest transaction block infused before the provided signage point index.
+# we use this for block validation since when the block is farmed we do not know the latest transaction block
+# since a new one might be infused by the time the block is infused
 def pre_sp_tx_block(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
