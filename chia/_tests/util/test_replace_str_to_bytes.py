@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -70,6 +72,7 @@ test_constants = ConsensusConstants(
     PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFA),
     PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
     PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
+    TESTNET=True,
 )
 
 
@@ -137,9 +140,34 @@ def test_replace_str_to_bytes_deprecated_field(caplog: pytest.LogCaptureFixture)
     assert caplog.text == ""
 
 
+def test_replace_str_to_bytes_legacy_min_plot_size(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MIN_PLOT_SIZE=uint8(18))
+    assert test2 == test_constants.replace(MIN_PLOT_SIZE_V1=uint8(18))
+    assert test2.MIN_PLOT_SIZE_V1 == 18
+    assert caplog.text == ""
+
+
+def test_replace_str_to_bytes_legacy_max_plot_size(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MAX_PLOT_SIZE=uint8(40))
+    assert test2 == test_constants.replace(MAX_PLOT_SIZE_V1=uint8(40))
+    assert test2.MAX_PLOT_SIZE_V1 == 40
+    assert caplog.text == ""
+
+
+def test_replace_str_to_bytes_legacy_does_not_override_new(caplog: pytest.LogCaptureFixture) -> None:
+    test2 = replace_str_to_bytes(test_constants, MIN_PLOT_SIZE=uint8(18), MIN_PLOT_SIZE_V1=uint8(20))
+    assert test2 == test_constants.replace(MIN_PLOT_SIZE_V1=uint8(20))
+    assert test2.MIN_PLOT_SIZE_V1 == 20
+    assert caplog.text == ""
+
+
 def test_replace_str_to_bytes_invalid_value() -> None:
     # invalid value
-    with pytest.raises(ValueError, match="non-hexadecimal number found in"):
+    if sys.version_info >= (3, 14):
+        matchstr = "arg must contain an even number of hexadecimal digits"
+    else:
+        matchstr = "non-hexadecimal number found in"
+    with pytest.raises(ValueError, match=matchstr):
         replace_str_to_bytes(
             test_constants,
             GENESIS_PRE_FARM_FARMER_PUZZLE_HASH="fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",

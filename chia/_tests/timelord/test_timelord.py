@@ -58,11 +58,16 @@ def test_iters_from_block_validates_v2_pospace_height_agnostically(
 
 
 class _NullTransport(asyncio.Transport):
+    _closing = False
+
     def write(self, data: bytes) -> None:
         pass
 
+    def close(self) -> None:
+        self._closing = True
+
     def is_closing(self) -> bool:
-        return False
+        return self._closing
 
 
 def _make_null_writer() -> asyncio.StreamWriter:
@@ -108,6 +113,7 @@ async def test_invalid_vdf_proof_is_ignored_in_process_communication(
 
     writer = _make_null_writer()
     await timelord._do_process_communication(chain, challenge, initial_form, "127.0.0.1", reader, writer, proof_label=1)
+    writer.close()
 
     assert timelord.proofs_finished == []
     assert state_changed_calls == []

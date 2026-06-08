@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
@@ -348,12 +349,13 @@ class TestRpcClients:
             raise ValueError(f"Invalid client type requested: {client_type.__name__}")
 
 
-def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients, default_root: Path) -> None:
+def create_service_and_wallet_client_generators(
+    test_rpc_clients: TestRpcClients, default_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """
-    Create and monkey patch custom generators designed for testing.
-    These are monkey patched into the chia.cmds.cmds_util module.
-    Each generator below replaces the original function with a new one that returns a custom client, given by the class.
-    The clients given can be changed by changing the variables in the class above, after running this function.
+    Monkey-patch custom RPC client generators for testing into the chia.cmds
+    modules.  All patches are applied via *monkeypatch* so they are undone
+    automatically when the caller's ``MonkeyPatch`` context exits.
     """
 
     @asynccontextmanager
@@ -369,9 +371,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
         node_type = node_config_section_names.get(client_type)
         if node_type is None:
-            # Click already checks this, so this should never happen
             raise ValueError(f"Invalid client type requested: {client_type.__name__}")
-        # load variables from config file
         config = load_config(
             root_path,
             "config.yaml",
@@ -399,14 +399,11 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
         return None
 
-    # Monkey patches the functions into the module, the classes returned by these functions can be changed in the class.
-    # For more information, read the docstring of this function.
-    chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
-    chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
-    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[assignment,attr-defined]
-    # Monkey patches the confirm function to not ask for confirmation
-    chia.cmds.cmds_util.cli_confirm = cli_confirm
-    chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]
+    monkeypatch.setattr(chia.cmds.cmds_util, "get_any_service_client", test_get_any_service_client)
+    monkeypatch.setattr(chia.cmds.cmds_util, "get_wallet_client", test_get_wallet_client)
+    monkeypatch.setattr(chia.cmds.wallet_funcs, "get_wallet_client", test_get_wallet_client)
+    monkeypatch.setattr(chia.cmds.cmds_util, "cli_confirm", cli_confirm)
+    monkeypatch.setattr(chia.cmds.wallet_funcs, "cli_confirm", cli_confirm)
 
 
 def run_cli_command(capsys: object, chia_root: Path, command_list: list[str]) -> str:

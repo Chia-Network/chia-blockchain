@@ -186,10 +186,10 @@ class WebSocketServer:
     ):
         self.root_path = root_path
         self.log = log
-        self.services: dict[str, list[subprocess.Popen]] = dict()
-        self.plots_queue: list[dict] = []
+        self.services: dict[str, list[subprocess.Popen[Any]]] = dict()
+        self.plots_queue: list[dict[str, Any]] = []
         self.connections: dict[str, set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
-        self.ping_job: asyncio.Task | None = None
+        self.ping_job: asyncio.Task[None] | None = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
@@ -201,7 +201,7 @@ class WebSocketServer:
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = asyncio.Event()
         self.state_changed_msg_queue: asyncio.Queue[StatusMessage] = asyncio.Queue()
-        self.state_changed_task: asyncio.Task | None = None
+        self.state_changed_task: asyncio.Task[None] | None = None
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -721,7 +721,7 @@ class WebSocketServer:
         }
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> dict[str, Any]:
+    def plot_queue_to_payload(self, plot_queue_item: dict[str, Any], send_full_log: bool) -> dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -741,14 +741,14 @@ class WebSocketServer:
             item["log"] = plot_queue_item.get("log")
         return item
 
-    def prepare_plot_state_message(self, state: PlotEvent, id):
+    def prepare_plot_state_message(self, state: PlotEvent, id: str | None) -> dict[str, Any]:
         message = {
             "state": state,
             "queue": self.extract_plot_queue(id),
         }
         return message
 
-    def extract_plot_queue(self, id=None) -> list[dict]:
+    def extract_plot_queue(self, id: str | None = None) -> list[dict[str, Any]]:
         send_full_log = id is None
         data = []
         for item in self.plots_queue:
@@ -807,7 +807,7 @@ class WebSocketServer:
             )
         )
 
-    async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
+    async def _watch_file_changes(self, config: dict[str, Any], fp: TextIO, loop: asyncio.AbstractEventLoop) -> None:
         id: str = config["id"]
         plotter: str = config["plotter"]
         final_words: list[str] = []
@@ -847,7 +847,7 @@ class WebSocketServer:
             else:
                 await asyncio.sleep(0.5)
 
-    async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
+    async def _track_plotting_progress(self, config: dict[str, Any], loop: asyncio.AbstractEventLoop) -> None:
         file_path = config["out_file"]
         with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
@@ -1057,11 +1057,11 @@ class WebSocketServer:
                 response = True
         return response
 
-    def _get_plots_queue_item(self, id: str):
+    def _get_plots_queue_item(self, id: str) -> dict[str, Any]:
         config = next(item for item in self.plots_queue if item["id"] == id)
         return config
 
-    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default"):
+    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default") -> None:
         next_plot_id = None
 
         if self._is_serial_plotting_running(queue) is True:
@@ -1075,7 +1075,7 @@ class WebSocketServer:
         if next_plot_id is not None:
             create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
-    def _post_process_plotting_job(self, job: dict[str, Any]):
+    def _post_process_plotting_job(self, job: dict[str, Any]) -> None:
         id: str = job["id"]
         final_dir: str = job["final_dir"]
         exclude_final_dir: bool = job["exclude_final_dir"]
@@ -1086,7 +1086,7 @@ class WebSocketServer:
             except ValueError as e:
                 log.warning(f"_post_process_plotting_job: {e}")
 
-    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
+    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default") -> None:
         current_process = None
         try:
             log.info(f"Starting plotting with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
@@ -1266,7 +1266,7 @@ class WebSocketServer:
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
             return {"success": False}
 
-    async def start_service(self, websocket: WebSocketResponse, request: dict[str, Any]):
+    async def start_service(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         service_command = request["service"]
 
         error = None
@@ -1317,7 +1317,7 @@ class WebSocketServer:
         return response
 
     def is_service_running(self, service_name: str) -> bool:
-        processes: list[subprocess.Popen]
+        processes: list[subprocess.Popen[Any]]
         if service_name == service_plotter:
             processes = self.services.get(service_name, [])
             is_running = len(processes) > 0
@@ -1403,13 +1403,13 @@ def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
     return root_path / "run" / f"{pid_name}{id}.pid"
 
 
-def plotter_log_path(root_path: Path, id: str):
+def plotter_log_path(root_path: Path, id: str) -> Path:
     return root_path / "plotter" / f"plotter_log_{id}.txt"
 
 
 def launch_plotter(
     root_path: Path, service_name: str, service_array: list[str], id: str
-) -> tuple[subprocess.Popen, Path]:
+) -> tuple[subprocess.Popen[Any], Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -1431,16 +1431,17 @@ def launch_plotter(
             plotter_path.unlink()
     else:
         plotter_path.parent.mkdir(parents=True, exist_ok=True)
-    outfile = open(plotter_path.resolve(), "w")
-    log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
-    process = subprocess.Popen(
-        service_array,
-        shell=False,
-        stderr=outfile,
-        stdout=outfile,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
-    )
+
+    with open(plotter_path.resolve(), "w") as outfile:
+        log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
+        process = subprocess.Popen(
+            service_array,
+            shell=False,
+            stderr=outfile,
+            stdout=outfile,
+            startupinfo=startupinfo,
+            creationflags=creationflags,
+        )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -1452,7 +1453,7 @@ def launch_plotter(
     return process, pid_path
 
 
-def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, Path]:
+def launch_service(root_path: Path, service_command: str) -> tuple[subprocess.Popen[Any], Path]:
     """
     Launch a child process.
     """
@@ -1496,7 +1497,7 @@ def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, 
 
 
 async def kill_processes(
-    processes: list[subprocess.Popen],
+    processes: list[subprocess.Popen[Any]],
     root_path: Path,
     service_name: str,
     id: str,
@@ -1540,7 +1541,7 @@ async def kill_processes(
 
 
 async def kill_service(
-    root_path: Path, services: dict[str, list[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
+    root_path: Path, services: dict[str, list[subprocess.Popen[Any]]], service_name: str, delay_before_kill: int = 15
 ) -> bool:
     processes = services.get(service_name)
     if processes is None:
@@ -1550,7 +1551,7 @@ async def kill_service(
     return result
 
 
-def is_running(services: dict[str, subprocess.Popen], service_name: str) -> bool:
+def is_running(services: dict[str, subprocess.Popen[Any]], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
 

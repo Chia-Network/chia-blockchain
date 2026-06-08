@@ -19,5 +19,6 @@ def get_test_cli_clients() -> Iterator[tuple[TestRpcClients, Path]]:
         create_default_chia_config(root_path)
         # ^ this is basically the generate config fixture.
         global_test_rpc_clients = TestRpcClients()
-        create_service_and_wallet_client_generators(global_test_rpc_clients, root_path)
-        yield global_test_rpc_clients, root_path
+        with pytest.MonkeyPatch.context() as mp:
+            create_service_and_wallet_client_generators(global_test_rpc_clients, root_path, mp)
+            yield global_test_rpc_clients, root_path

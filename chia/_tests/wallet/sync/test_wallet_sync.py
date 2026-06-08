@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import enum
 import functools
 import logging
 from collections.abc import Awaitable, Callable
@@ -77,7 +78,11 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.util.wallet_sync_utils import PeerRequestException, request_header_blocks
+from chia.wallet.util.wallet_sync_utils import (
+    PeerRequestException,
+    fetch_coin_spend,
+    request_header_blocks,
+)
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -1983,3 +1988,72 @@ async def test_validate_received_state_from_peer_no_removals(
         f"header hash {peak.header_hash} coin name {coin.name()}" in caplog.text
     )
     assert not wsc.closed
+
+
+class FetchCoinSpendCase(enum.Enum):
+    ValidResponse = 0
+    RejectResponse = 1
+    WrongPuzzleHash = 2
+    WrongCoinName = 3
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.anyio
+async def test_fetch_coin_spend(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    _, server, _ = one_node_one_block
+    wcs, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    puzzle = SerializedProgram.to(1)
+    solution = SerializedProgram.to(2)
+    coin = Coin(bytes32.random(), puzzle.get_tree_hash(), uint64(1))
+    coin_id = coin.name()
+    height = uint32(1337)
+
+    def make_puzzle_solution_response(coin_name: bytes32, puzzle_reveal: SerializedProgram) -> Message:
+        response = wallet_protocol.RespondPuzzleSolution(
+            wallet_protocol.PuzzleSolutionResponse(coin_name, height, puzzle_reveal, solution)
+        )
+        return make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
+
+    def request_puzzle_solution(
+        case: FetchCoinSpendCase,
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message]]:
+        async def request_puzzle_solution_handler(
+            self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution, peer_arg: WSChiaConnection
+        ) -> Message:
+            if case == FetchCoinSpendCase.ValidResponse:
+                return make_puzzle_solution_response(coin_id, puzzle)
+            if case == FetchCoinSpendCase.RejectResponse:
+                return make_msg(
+                    ProtocolMessageTypes.reject_puzzle_solution,
+                    wallet_protocol.RejectPuzzleSolution(request.coin_name, request.height),
+                )
+            if case == FetchCoinSpendCase.WrongPuzzleHash:
+                return make_puzzle_solution_response(coin_id, SerializedProgram.to(3))
+            if case == FetchCoinSpendCase.WrongCoinName:
+                return make_puzzle_solution_response(bytes32.random(), puzzle)
+            assert False  # pragma: no cover
+
+        return request_puzzle_solution_handler
+
+    test_cases = [
+        (FetchCoinSpendCase.ValidResponse, None),
+        (FetchCoinSpendCase.RejectResponse, "Was not able to obtain solution"),
+        (FetchCoinSpendCase.WrongPuzzleHash, "wrong puzzle hash"),
+        (FetchCoinSpendCase.WrongCoinName, "wrong coin name"),
+    ]
+    for case, expected_error in test_cases:
+        with patch_request_handler(
+            api=server.api,
+            handler=request_puzzle_solution(case),
+            request_type=ProtocolMessageTypes.request_puzzle_solution,
+        ):
+            if expected_error is None:
+                coin_spend = await fetch_coin_spend(height, coin, wcs)
+                assert coin_spend.coin == coin
+                assert coin_spend.puzzle_reveal == puzzle
+                assert coin_spend.solution == solution
+            else:
+                with pytest.raises(PeerRequestException, match=expected_error):
+                    await fetch_coin_spend(height, coin, wcs)

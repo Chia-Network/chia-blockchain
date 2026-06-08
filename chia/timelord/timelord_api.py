@@ -12,9 +12,15 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
-from chia.timelord.types import Chain, IterationType
+from chia.timelord.types import Chain, IterationType, StateType
 
 log = logging.getLogger(__name__)
+
+
+def overflow_sp_total_iters(
+    overflow_ip_total_iters: int, ip_iters: uint64, sp_iters: uint64, sub_slot_iters: uint64
+) -> int:
+    return overflow_ip_total_iters - int(ip_iters) + int(sp_iters) - int(sub_slot_iters)
 
 
 class TimelordAPI:
@@ -29,7 +35,7 @@ class TimelordAPI:
     timelord: Timelord
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
-    def __init__(self, timelord) -> None:
+    def __init__(self, timelord: Timelord) -> None:
         self.log = logging.getLogger(__name__)
         self.timelord = timelord
 
@@ -38,6 +44,17 @@ class TimelordAPI:
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
+
+    def _schedule_unfinished_block(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord, new_block_iters: uint64
+    ) -> None:
+        self.timelord.unfinished_blocks.append(new_unfinished_block)
+        for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
+            self.timelord.iters_to_submit[chain].append(new_block_iters)
+        if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
+            self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
+        self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
+        self.timelord.total_unfinished += 1
 
     @metadata.request()
     async def new_peak_timelord(self, new_peak: NewPeakTimelord) -> None:
@@ -102,7 +119,7 @@ class TimelordAPI:
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
 
-    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord):
+    def check_orphaned_unfinished_block(self, new_peak: NewPeakTimelord) -> bool:
         new_peak_unf_rh = new_peak.reward_chain_block.get_unfinished().get_hash()
         for unf_block in self.timelord.unfinished_blocks:
             if unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters:
@@ -123,7 +140,9 @@ class TimelordAPI:
         return False
 
     @metadata.request()
-    async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
+    async def new_unfinished_block_timelord(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord
+    ) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
@@ -142,22 +161,46 @@ class TimelordAPI:
                 return None
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
+                current_total_iters = int(self.timelord.last_state.get_total_iters())
+                overflow_ip_total_iters = int(new_unfinished_block.reward_chain_block.total_iters)
+                # If the IP is already behind us, this overflow block can only block future peaks.
+                if overflow_ip_total_iters <= current_total_iters:
+                    log.debug(f"Dropping stale overflow unfinished block, total {self.timelord.total_unfinished}")
+                    return None
+                # Before EOS, keep overflow blocks cached until the slot boundary arrives.
+                if self.timelord.last_state.state_type != StateType.END_OF_SUB_SLOT:
+                    self.timelord.overflow_blocks.append(new_unfinished_block)
+                    log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                    return None
+                # Schedule late overflow only when this EOS is between its SP and IP.
+                if (
+                    overflow_sp_total_iters(
+                        overflow_ip_total_iters, ip_iters, sp_iters, self.timelord.last_state.get_sub_slot_iters()
+                    )
+                    >= current_total_iters
+                ):
+                    self.timelord.overflow_blocks.append(new_unfinished_block)
+                    log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                    return None
+                overflow_iters = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                # The overflow is in this EOS window and can be infused now.
+                if overflow_iters:
+                    self._schedule_unfinished_block(new_unfinished_block, overflow_iters)
+                    log.debug(f"Late overflow unfinished block, total {self.timelord.total_unfinished}")
+                    return None
+                # Keep still-future overflow blocks if local state cannot infuse them yet.
                 self.timelord.overflow_blocks.append(new_unfinished_block)
                 log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                return None
             elif ip_iters > last_ip_iters:
                 new_block_iters: uint64 | None = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                # Non-overflow blocks can be scheduled immediately when the IP is still ahead.
                 if new_block_iters:
-                    self.timelord.unfinished_blocks.append(new_unfinished_block)
-                    for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
-                        self.timelord.iters_to_submit[chain].append(new_block_iters)
-                    if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                        self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
-                    self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
-                    self.timelord.total_unfinished += 1
+                    self._schedule_unfinished_block(new_unfinished_block, new_block_iters)
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @metadata.request()
-    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
+    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime) -> None:
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:
                 return None

@@ -190,10 +190,21 @@ class Timelord:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
-            for _, _, writer in self.free_clients:
-                with contextlib.suppress(Exception):
-                    writer.close()
-            self.free_clients.clear()
+            await self._shutdown_vdf_clients()
+            if self.vdf_server is not None:
+                self.vdf_server.close()
+
+    async def _shutdown_vdf_clients(self) -> None:
+        """Send stop signal and close all VDF client writers, suppressing errors."""
+        for _, _, writer in [*self.free_clients, *self.chain_type_to_stream.values()]:
+            with contextlib.suppress(Exception):
+                writer.write(b"010")
+                await writer.drain()
+            with contextlib.suppress(Exception):
+                writer.close()
+                await writer.wait_closed()
+        self.free_clients.clear()
+        self.chain_type_to_stream.clear()
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -357,10 +368,16 @@ class Timelord:
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
 
-        # remove overflow blocks that were moved to unfinished cache
-        for block in new_unfinished_blocks:
-            if block in self.overflow_blocks:
-                self.overflow_blocks.remove(block)
+        new_overflow_blocks = []
+        for block in self.overflow_blocks:
+            # Skip overflow blocks that were moved to the unfinished cache.
+            if block in new_unfinished_blocks:
+                continue
+            # Skip stale overflow blocks that have already passed.
+            if block.reward_chain_block.total_iters <= self.last_state.get_total_iters():
+                continue
+            new_overflow_blocks.append(block)
+        self.overflow_blocks = new_overflow_blocks
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
@@ -687,7 +704,7 @@ class Timelord:
                         block.reward_chain_block.reward_chain_sp_signature,
                         rc_info,
                         icc_info,
-                        None,  # header_mmr_root
+                        block.header_mmr_root,  # MMR root from full node
                         is_transaction_block,
                     )
                     if self.last_state.state_type == StateType.FIRST_SUB_SLOT:

@@ -228,6 +228,7 @@ def verify_and_get_quality_string(
             pos.challenge,
             plot_param.strength_v2,
             pos.proof,
+            constants.TESTNET,
         )
 
 

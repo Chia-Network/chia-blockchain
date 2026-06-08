@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
 from typing import Any
 
-from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
+from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
 from chia_rs.sized_bytes import bytes32
@@ -60,7 +60,9 @@ LENGTH_BYTES: int = 4
 # Max length of peer version string in bytes (UTF-8)
 MAX_VERSION_STRING_BYTES: int = 128
 
-WebSocket = WebSocketResponse | ClientWebSocketResponse
+# TODO: When Python 3.10 support is dropped, check whether aiohttp's 3.11+
+# ws_connect() overloads let this return to the default generic parameters.
+WebSocket = WebSocketResponse[bool] | ClientWebSocketResponse[bool]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")
@@ -897,7 +899,7 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Message | None:
-        message: WSMessage = await self.ws.receive()
+        message = await self.ws.receive()
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import enum
 import logging
 import sys
 import time
 import types
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
@@ -13,17 +16,22 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
+from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.generator_tools import get_block_header
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -31,9 +39,10 @@ from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_header_block
 
 
 @pytest.mark.anyio
@@ -477,20 +486,58 @@ async def test_get_timestamp_for_height_from_peer(
     cache.clear_after_height(0)
     with caplog.at_level(logging.DEBUG):
         await get_timestamp(1)
-    for i in [0, 1]:
-        block = cache.get_block(uint32(i))
-        assert block is not None
-        if i == 0:
-            assert block.is_transaction_block
-        else:
-            assert not block.is_transaction_block
-        assert f"get_timestamp_for_height_from_peer cache miss for height {i}" in caplog.text
-        assert f"get_timestamp_for_height_from_peer add to cache for height {i}" in caplog.text
+    block_1 = cache.get_block(uint32(1))
+    assert block_1 is not None
+    assert f"get_timestamp_for_height_from_peer cache miss for height {1}" in caplog.text
+    assert f"get_timestamp_for_height_from_peer add to cache for height {1}" in caplog.text
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
         await get_timestamp(1)
     assert f"get_timestamp_for_height_from_peer use cached block for height {0}" not in caplog.text
     assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_backtracks_to_tx_block_deterministic(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import chia.wallet.wallet_node as wallet_node_module
+
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\xab" * 32)
+    requested_ranges: list[tuple[int, int]] = []
+
+    def make_header_block(height: int, *, is_transaction_block: bool, timestamp: int | None = None) -> Any:
+        block = MagicMock()
+        block.height = uint32(height)
+        block.is_transaction_block = is_transaction_block
+        if is_transaction_block:
+            foliage_tx = MagicMock()
+            foliage_tx.timestamp = uint64(timestamp if timestamp is not None else 0)
+            block.foliage_transaction_block = foliage_tx
+        else:
+            block.foliage_transaction_block = None
+        return block
+
+    block_at_height_1 = make_header_block(1, is_transaction_block=False)
+    block_at_height_0 = make_header_block(0, is_transaction_block=True, timestamp=123456789)
+
+    async def fake_request_header_blocks(_peer: Any, start_height: uint32, end_height: uint32) -> list[Any]:
+        requested_ranges.append((int(start_height), int(end_height)))
+        if int(start_height) == 1:
+            return [block_at_height_1]
+        return [block_at_height_0]
+
+    monkeypatch.setattr(wallet_node_module, "request_header_blocks", fake_request_header_blocks)
+
+    timestamp = await wallet_node.get_timestamp_for_height_from_peer(uint32(1), peer)
+    assert timestamp == uint64(123456789)
+    assert requested_ranges == [(1, 1), (0, 0)]
+    cache = wallet_node.get_cache_for_peer(peer)
+    assert cache.get_block(uint32(1)) is block_at_height_1
+    assert cache.get_height_timestamp(uint32(0)) == uint64(123456789)
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -500,6 +547,462 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
     assert len(puzzle_hashes) > 1
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
+
+
+def make_backtrack_test_node(height: int, *, has_peak: bool = False) -> WalletNode:
+    node = WalletNode(
+        config={"trusted_peers": {}},
+        root_path=Path(".chia_wallet_node_tests_root"),
+        constants=test_constants,
+    )
+    mock_chain = MagicMock()
+    mock_chain.contains_block = MagicMock(return_value=False)
+    if has_peak:
+        peak_block = MagicMock()
+        peak_block.height = uint32(height)
+        peak_block.weight = uint128(height * 1000)
+        mock_chain.get_peak_block = AsyncMock(return_value=peak_block)
+    else:
+        mock_chain.get_peak_block = AsyncMock(return_value=None)
+    mock_chain.get_finished_sync_up_to = AsyncMock(return_value=uint32(height))
+    mock_chain.add_block = AsyncMock(return_value=(AddBlockResult.INVALID_BLOCK, "invalid test block"))
+    mock_wsm = MagicMock()
+    mock_wsm.blockchain = mock_chain
+    mock_wsm.lock = asyncio.Lock()
+    node._wallet_state_manager = mock_wsm
+    setattr(node, "update_ui", AsyncMock())
+    return node
+
+
+def _test_hash_for_height(h: int) -> bytes32:
+    return bytes32(h.to_bytes(32, "big"))
+
+
+def make_backtrack_test_peer() -> Any:
+    async def mock_call_api(_api_func: object, request: Any, **_kwargs: object) -> object:
+        h = int(request.height)
+        response = MagicMock(spec=wallet_protocol.RespondBlockHeader)
+        hb = MagicMock()
+        hb.height = uint32(h)
+        hb.header_hash = _test_hash_for_height(h)
+        hb.prev_header_hash = _test_hash_for_height(h - 1) if h > 0 else bytes32(b"\xff" * 32)
+        hb.weight = uint128(h * 1000)
+        hb.foliage_transaction_block = None
+        response.header_block = hb
+        return response
+
+    peer = MagicMock()
+    peer.call_api = AsyncMock(side_effect=mock_call_api)
+    peer.close = AsyncMock()
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "attacker.example"
+    return peer
+
+
+def make_header(height: int, prev_hash: bytes32, header_hash: bytes32) -> Any:
+    hb = MagicMock()
+    hb.height = uint32(height)
+    hb.prev_header_hash = prev_hash
+    hb.header_hash = header_hash
+    hb.weight = uint128(height * 1000)
+    return hb
+
+
+def patch_rollback(node: WalletNode) -> list[int]:
+    calls: list[int] = []
+
+    async def _capture(fork_height: int, cache: Any | None = None) -> None:
+        calls.append(int(fork_height))
+
+    setattr(node, "perform_atomic_rollback", _capture)
+    return calls
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "node_height",
+    [500, 750, 1500],
+    ids=["just_over_threshold", "above_threshold", "well_above_threshold"],
+)
+async def test_wallet_short_sync_backtrack_cap_exceeded_returns_none(node_height: int) -> None:
+    node = make_backtrack_test_node(height=node_height, has_peak=True)
+    peer = make_backtrack_test_peer()
+    rollback_calls = patch_rollback(node)
+    header = make_header(node_height + 1, _test_hash_for_height(node_height), _test_hash_for_height(node_height + 1))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result is None
+    assert rollback_calls == []
+    assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
+    peer.close.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_stops_at_threshold() -> None:
+    node = make_backtrack_test_node(height=500, has_peak=True)
+    peer = make_backtrack_test_peer()
+    header = make_header(501, _test_hash_for_height(500), _test_hash_for_height(501))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert peer.call_api.await_count == node.LONG_SYNC_THRESHOLD
+    peer.close.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_initial_sync_no_cap() -> None:
+    """Initial sync (peak is None) should backtrack to genesis without hitting the cap,
+    since the chain is bounded by WEIGHT_PROOF_RECENT_BLOCKS and there is no existing
+    state to protect."""
+    node = make_backtrack_test_node(height=400, has_peak=False)
+    rollback_calls = patch_rollback(node)
+    setattr(node.wallet_state_manager.blockchain, "add_block", AsyncMock(return_value=(AddBlockResult.NEW_PEAK, None)))
+
+    peer = make_backtrack_test_peer()
+    header = make_header(401, _test_hash_for_height(400), _test_hash_for_height(401))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result == 0
+    assert rollback_calls == []
+    assert peer.call_api.await_count == 401
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_short_chain_no_cap() -> None:
+    """On a short chain (height < WEIGHT_PROOF_RECENT_BLOCKS) with existing state,
+    backtrack beyond LONG_SYNC_THRESHOLD succeeds without hitting the cap.
+    Chain height is the natural bound."""
+    node = make_backtrack_test_node(height=400, has_peak=True)
+    rollback_calls = patch_rollback(node)
+    setattr(node.wallet_state_manager.blockchain, "add_block", AsyncMock(return_value=(AddBlockResult.NEW_PEAK, None)))
+
+    peer = make_backtrack_test_peer()
+    header = make_header(401, _test_hash_for_height(400), _test_hash_for_height(401))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result == 0
+    assert peer.call_api.await_count == 401
+    assert peer.call_api.await_count > node.LONG_SYNC_THRESHOLD
+    peer.close.assert_not_awaited()
+    assert rollback_calls == [0]
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_rollback_when_peak_exists_and_reaches_genesis() -> None:
+    """When the wallet has existing state (peak is not None) and backtrack reaches genesis
+    without finding a known block, the wallet MUST roll back to genesis (fork_height=0).
+    Regression test for bugbot finding: should_skip_rollback was unconditionally True
+    at genesis, skipping rollback even when stale state existed."""
+    node = make_backtrack_test_node(height=100, has_peak=True)
+    rollback_calls = patch_rollback(node)
+    setattr(
+        node.wallet_state_manager.blockchain,
+        "add_block",
+        AsyncMock(return_value=(AddBlockResult.NEW_PEAK, None)),
+    )
+
+    peer = make_backtrack_test_peer()
+    header = make_header(101, _test_hash_for_height(100), _test_hash_for_height(101))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result == 0
+    assert rollback_calls == [0], "Should roll back to genesis when peak exists but no known blocks found"
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_shutdown_before_backtrack() -> None:
+    node = make_backtrack_test_node(height=50)
+    peer = make_backtrack_test_peer()
+    node._shut_down = True
+    setattr(node, "perform_atomic_rollback", AsyncMock())
+    header = make_header(51, _test_hash_for_height(50), _test_hash_for_height(51))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    with pytest.raises(RuntimeError, match="Shutdown requested during wallet backtrack sync"):
+        await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert cast(Any, node.perform_atomic_rollback).await_count == 0
+    assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_rejects_discontinuous_chain() -> None:
+    node = make_backtrack_test_node(height=10)
+    rollback_calls = patch_rollback(node)
+
+    requested_heights: list[int] = []
+    known_prev = bytes32(b"\x10" * 32)
+    bad_prev = bytes32(b"\x11" * 32)
+
+    def contains_block(header_hash: bytes32) -> bool:
+        return header_hash == known_prev
+
+    setattr(node.wallet_state_manager.blockchain, "contains_block", MagicMock(side_effect=contains_block))
+
+    async def mock_call_api(_api_func: object, request: Any, **_kwargs: object) -> object:
+        requested_heights.append(int(request.height))
+        response = MagicMock(spec=wallet_protocol.RespondBlockHeader)
+        hb = MagicMock()
+        hb.height = uint32(request.height)
+        hb.header_hash = bytes32(b"\x12" * 32)
+        hb.prev_header_hash = known_prev
+        hb.weight = uint128(request.height * 1000)
+        hb.foliage_transaction_block = None
+        response.header_block = hb
+        return response
+
+    peer = MagicMock()
+    peer.call_api = AsyncMock(side_effect=mock_call_api)
+    peer.close = AsyncMock()
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "attacker.example"
+    header = make_header(3, bad_prev, bytes32(b"\x13" * 32))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result is None
+    assert rollback_calls == []
+    assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 0
+    assert requested_heights == [2]
+    peer.close.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_happy_path_connected_chain() -> None:
+    node = make_backtrack_test_node(height=10)
+    rollback_calls = patch_rollback(node)
+    setattr(node.wallet_state_manager.blockchain, "add_block", AsyncMock(return_value=(AddBlockResult.NEW_PEAK, None)))
+
+    h2_hash = bytes32(b"\x21" * 32)
+    known_prev = bytes32(b"\x22" * 32)
+
+    def contains_block(header_hash: bytes32) -> bool:
+        return header_hash == known_prev
+
+    setattr(node.wallet_state_manager.blockchain, "contains_block", MagicMock(side_effect=contains_block))
+
+    async def mock_call_api(_api_func: object, request: Any, **_kwargs: object) -> object:
+        response = MagicMock(spec=wallet_protocol.RespondBlockHeader)
+        hb = MagicMock()
+        hb.height = uint32(request.height)
+        hb.header_hash = h2_hash
+        hb.prev_header_hash = known_prev
+        hb.weight = uint128(request.height * 1000)
+        hb.foliage_transaction_block = None
+        response.header_block = hb
+        return response
+
+    peer = MagicMock()
+    peer.call_api = AsyncMock(side_effect=mock_call_api)
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "good.example"
+    header = make_header(3, h2_hash, bytes32(b"\x23" * 32))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result == 1
+    assert rollback_calls == [1]
+    assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 2
+
+
+@pytest.mark.anyio
+async def test_wallet_short_sync_backtrack_genesis_unanchored_skips_rollback() -> None:
+    node = make_backtrack_test_node(height=20)
+    rollback_calls = patch_rollback(node)
+    setattr(node.wallet_state_manager.blockchain, "add_block", AsyncMock(return_value=(AddBlockResult.NEW_PEAK, None)))
+    setattr(node.wallet_state_manager.blockchain, "contains_block", MagicMock(return_value=False))
+
+    h1_hash = bytes32(b"\x31" * 32)
+    h0_hash = bytes32(b"\x32" * 32)
+    unknown_prev = bytes32(b"\x33" * 32)
+
+    async def mock_call_api(_api_func: object, request: Any, **_kwargs: object) -> object:
+        response = MagicMock(spec=wallet_protocol.RespondBlockHeader)
+        hb = MagicMock()
+        hb.height = uint32(request.height)
+        hb.weight = uint128(request.height * 1000)
+        hb.foliage_transaction_block = None
+        if int(request.height) == 1:
+            hb.header_hash = h1_hash
+            hb.prev_header_hash = h0_hash
+        else:
+            hb.header_hash = h0_hash
+            hb.prev_header_hash = unknown_prev
+        response.header_block = hb
+        return response
+
+    peer = MagicMock()
+    peer.call_api = AsyncMock(side_effect=mock_call_api)
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "genesis.example"
+    header = make_header(2, h1_hash, bytes32(b"\x34" * 32))
+    peak_hb = await node.wallet_state_manager.blockchain.get_peak_block()
+    result = await node.wallet_short_sync_backtrack(peak_hb, header, peer)
+    assert result == 0
+    assert rollback_calls == []
+    assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 3
+
+
+@pytest.mark.anyio
+async def test_sync_from_untrusted_close_to_peak_returns_false_on_backtrack_cap() -> None:
+    """sync_from_untrusted_close_to_peak must return False when
+    wallet_short_sync_backtrack returns None (cap exceeded), without
+    proceeding to subscriptions or block processing."""
+    node = make_backtrack_test_node(height=500, has_peak=True)
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\x66" * 32)
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "cap-test.example"
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(505)
+    new_peak_hb.weight = uint128(999_999)
+
+    setattr(node, "wallet_short_sync_backtrack", AsyncMock(return_value=None))
+
+    result = await node.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
+    assert result is False
+    peak_hb = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    cast(Any, node.wallet_short_sync_backtrack).assert_awaited_once_with(peak_hb, new_peak_hb, peer)
+
+
+@pytest.mark.anyio
+async def test_new_peak_from_untrusted_synced_stale_weight_does_not_fallback() -> None:
+    """When already synced and not far behind, if sync_from_untrusted_close_to_peak
+    returns False due to stale/equal weight, we must NOT fall through to
+    long_sync_from_untrusted.  Regression test for bugbot finding #4."""
+    node = make_backtrack_test_node(height=1050, has_peak=True)
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\x77" * 32)
+    peer.get_peer_info.return_value = "peer-info"
+    peer.closed = False
+    node.synced_peers.add(peer.peer_node_id)
+
+    setattr(node, "sync_from_untrusted_close_to_peak", AsyncMock(return_value=False))
+    setattr(node, "long_sync_from_untrusted", AsyncMock())
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(1055)
+    new_peak_hb.weight = uint128(5_000)
+
+    result = await node.new_peak_from_untrusted(new_peak_hb, peer)
+    assert result is False
+    cast(Any, node.sync_from_untrusted_close_to_peak).assert_awaited_once_with(new_peak_hb, peer)
+    cast(Any, node.long_sync_from_untrusted).assert_not_awaited()
+    assert peer.peer_node_id in node.synced_peers
+
+
+@pytest.mark.anyio
+async def test_new_peak_from_untrusted_closed_peer_does_not_fallback() -> None:
+    """When sync_from_untrusted_close_to_peak returns False because
+    wallet_short_sync_backtrack closed the peer, new_peak_from_untrusted must
+    return False immediately and NOT fall through to long_sync_from_untrusted
+    with a dead connection."""
+    node = make_backtrack_test_node(height=1050, has_peak=True)
+    peak_block = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    peak_block.weight = uint128(1_000)
+
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\x99" * 32)
+    peer.get_peer_info.return_value = "peer-info"
+    peer.closed = True
+    node.synced_peers.add(peer.peer_node_id)
+
+    setattr(node, "sync_from_untrusted_close_to_peak", AsyncMock(return_value=False))
+    setattr(node, "long_sync_from_untrusted", AsyncMock())
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(1055)
+    new_peak_hb.weight = uint128(50_000)
+
+    result = await node.new_peak_from_untrusted(new_peak_hb, peer)
+    assert result is False
+    cast(Any, node.long_sync_from_untrusted).assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_new_peak_from_untrusted_synced_fallback_removes_from_synced_peers() -> None:
+    """When a synced peer's short sync fails (backtrack cap hit) but has higher
+    weight, the peer must be removed from synced_peers before falling through
+    to long_sync to prevent premature set_finished_sync_up_to."""
+    node = make_backtrack_test_node(height=1050, has_peak=True)
+    peak_block = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    peak_block.weight = uint128(1_000)
+
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\x88" * 32)
+    peer.get_peer_info.return_value = "peer-info"
+    peer.close = AsyncMock()
+    peer.closed = False
+    node.synced_peers.add(peer.peer_node_id)
+
+    setattr(node, "sync_from_untrusted_close_to_peak", AsyncMock(return_value=False))
+    setattr(node, "long_sync_from_untrusted", AsyncMock())
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(1055)
+    new_peak_hb.weight = uint128(50_000)
+
+    result = await node.new_peak_from_untrusted(new_peak_hb, peer)
+    assert result is True
+    assert peer.peer_node_id not in node.synced_peers
+    cast(Any, node.long_sync_from_untrusted).assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_cap_hit_single_peer_triggers_primary_sync() -> None:
+    """Single peer in synced_peers. Cap hit -> peer discarded -> synced_peers empty ->
+    long_sync_from_untrusted called with syncing=True (primary sync mode)."""
+    node = make_backtrack_test_node(height=1050, has_peak=True)
+    peak_block = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    peak_block.weight = uint128(1_000)
+
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\xaa" * 32)
+    peer.get_peer_info.return_value = "peer-info"
+    peer.close = AsyncMock()
+    peer.closed = False
+    node.synced_peers.add(peer.peer_node_id)
+
+    setattr(node, "sync_from_untrusted_close_to_peak", AsyncMock(return_value=False))
+    setattr(node, "long_sync_from_untrusted", AsyncMock())
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(1055)
+    new_peak_hb.weight = uint128(50_000)
+
+    result = await node.new_peak_from_untrusted(new_peak_hb, peer)
+    assert result is True
+    assert peer.peer_node_id not in node.synced_peers
+    assert len(node.synced_peers) == 0
+    cast(Any, node.long_sync_from_untrusted).assert_awaited_once_with(True, new_peak_hb, peer)
+
+
+@pytest.mark.anyio
+async def test_cap_hit_multi_peer_triggers_secondary_sync() -> None:
+    """Two peers in synced_peers. Cap hit on one -> that peer discarded -> other peer
+    remains -> long_sync_from_untrusted called with syncing=False (secondary sync mode)."""
+    node = make_backtrack_test_node(height=1050, has_peak=True)
+    peak_block = cast(Any, node.wallet_state_manager.blockchain.get_peak_block).return_value
+    peak_block.weight = uint128(1_000)
+
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\xbb" * 32)
+    peer.get_peer_info.return_value = "peer-info"
+    peer.close = AsyncMock()
+    peer.closed = False
+    node.synced_peers.add(peer.peer_node_id)
+
+    other_peer_id = bytes32(b"\xcc" * 32)
+    node.synced_peers.add(other_peer_id)
+
+    setattr(node, "sync_from_untrusted_close_to_peak", AsyncMock(return_value=False))
+    setattr(node, "long_sync_from_untrusted", AsyncMock())
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(1055)
+    new_peak_hb.weight = uint128(50_000)
+
+    result = await node.new_peak_from_untrusted(new_peak_hb, peer)
+    assert result is True
+    assert peer.peer_node_id not in node.synced_peers
+    assert other_peer_id in node.synced_peers
+    cast(Any, node.long_sync_from_untrusted).assert_awaited_once_with(False, new_peak_hb, peer)
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -681,6 +1184,15 @@ async def test_transaction_send_cache(self_hostname: str, simulator_and_wallet: 
             return wallet_node._tx_messages_in_progress == {}
 
         await time_out_assert(5, check_wallet_cache_empty, True)
+
+        # Wait for the rejection to be persisted to sent_to before testing resend behavior
+        async def check_sent_to_has_failed() -> bool:
+            record = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx.name)
+            return record is not None and any(
+                status == MempoolInclusionStatus.FAILED.value for _, status, _ in record.sent_to
+            )
+
+        await time_out_assert(10, check_sent_to_has_failed, True)
 
         # Re-process the queue — the peer already rejected it, so it should NOT be resent
         await wallet_node._resend_queue()
@@ -866,64 +1378,68 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
     wallet_environments: WalletTestFramework, caplog: pytest.LogCaptureFixture
 ) -> None:
     env = wallet_environments.environments[0]
-    full_node_api = wallet_environments.full_node
     wallet_node = env.node
     wallet = env.xch_wallet
 
-    logged_spends = []
+    # Disable the pending-tx callback so add_pending_transactions doesn't
+    # schedule a background _resend_queue task that could repopulate
+    # _tx_messages_in_progress between the duplicate acks below. This test
+    # is about the dedup gate in transaction_ack, not the resend path.
+    wallet_node.wallet_state_manager.pending_tx_callback = None
 
-    async def send_transaction(
-        self: Self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
-    ) -> Message | None:
-        logged_spends.append(request.transaction.name())
-        return None
+    async with wallet.wallet_state_manager.new_action_scope(
+        wallet.wallet_state_manager.tx_config, push=True
+    ) as action_scope:
+        await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
+    [tx] = action_scope.side_effects.transactions
 
-    assert full_node_api.full_node._server is not None
-    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
-        async with wallet.wallet_state_manager.new_action_scope(
-            wallet.wallet_state_manager.tx_config, push=True
-        ) as action_scope:
-            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
-        [tx] = action_scope.side_effects.transactions
+    # Mark the SendTransaction as in-flight directly, the way
+    # _send_transaction_message would. Bypassing _resend_queue removes a
+    # source of asynchronous interleaving and makes the dedup behavior the
+    # only thing under test.
+    conn = env.peer_server.get_connections()[0]
+    sb = tx.spend_bundle
+    assert sb is not None
+    send_msg = make_msg(ProtocolMessageTypes.send_transaction, wallet_protocol.SendTransaction(sb))
+    msg_name = std_hash(send_msg.data)
+    wallet_node._tx_messages_in_progress.setdefault(conn.peer_node_id, []).append(msg_name)
 
-        await wallet_node._resend_queue()
-        await time_out_assert(5, lambda: len(logged_spends), 1)
+    msg = make_msg(
+        ProtocolMessageTypes.transaction_ack,
+        wallet_protocol.TransactionAck(tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
+    )
 
-        msg = make_msg(
-            ProtocolMessageTypes.transaction_ack,
-            wallet_protocol.TransactionAck(
-                tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name
-            ),
-        )
-        conn = env.peer_server.get_connections()[0]
-        await conn.incoming_queue.put(msg)
+    def check_wallet_cache_empty() -> bool:
+        return wallet_node._tx_messages_in_progress == {}
 
-        def check_wallet_cache_empty() -> bool:
-            return wallet_node._tx_messages_in_progress == {}
+    def incoming_queue_empty() -> bool:
+        return conn.incoming_queue.qsize() == 0
 
-        def incoming_queue_empty() -> bool:
-            return conn.incoming_queue.qsize() == 0
+    # First ack matches the seeded entry: the handler should clear it and
+    # update the transaction record.
+    await conn.incoming_queue.put(msg)
+    await time_out_assert(5, check_wallet_cache_empty, True)
 
-        await time_out_assert(5, check_wallet_cache_empty, True)
-        first_tx_record = await wallet_node.wallet_state_manager.get_transaction(tx.name)
-        assert first_tx_record is not None
-        first_sent = first_tx_record.sent
-        first_sent_to = first_tx_record.sent_to.copy()
-        first_confirmed = first_tx_record.confirmed
+    first_tx_record = await wallet_node.wallet_state_manager.get_transaction(tx.name)
+    assert first_tx_record is not None
+    first_sent = first_tx_record.sent
+    first_sent_to = first_tx_record.sent_to.copy()
+    first_confirmed = first_tx_record.confirmed
 
-        # Duplicate acks without another send should all be ignored.
-        with caplog.at_level(logging.DEBUG, logger="chia.wallet.wallet_node"):
-            for _ in range(10):
-                await conn.incoming_queue.put(msg)
-                await time_out_assert(5, incoming_queue_empty, True)
-                await time_out_assert(5, check_wallet_cache_empty, True)
+    # Duplicate acks without another send should all be ignored.
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG, logger="chia.wallet.wallet_node"):
+        for _ in range(10):
+            await conn.incoming_queue.put(msg)
+            await time_out_assert(5, incoming_queue_empty, True)
+            await time_out_assert(5, check_wallet_cache_empty, True)
 
-        second_tx_record = await wallet_node.wallet_state_manager.get_transaction(tx.name)
-        assert second_tx_record is not None
-        assert second_tx_record.sent == first_sent
-        assert second_tx_record.sent_to == first_sent_to
-        assert second_tx_record.confirmed == first_confirmed
-        assert sum("Ignoring unsolicited transaction ack" in record.getMessage() for record in caplog.records) >= 10
+    second_tx_record = await wallet_node.wallet_state_manager.get_transaction(tx.name)
+    assert second_tx_record is not None
+    assert second_tx_record.sent == first_sent
+    assert second_tx_record.sent_to == first_sent_to
+    assert second_tx_record.confirmed == first_confirmed
+    assert caplog.text.count("Ignoring unsolicited transaction ack") == 10
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
@@ -1028,3 +1544,168 @@ async def test_start_with_multiple_keys(
 
     await restart_with_fingerprint(fingerprint_2)
     assert wallet_node.wallet_state_manager.private_key == initial_sk
+
+
+class HeaderBlockCase(enum.Enum):
+    NoneResponse = 0
+    WrongCount = 1
+    WrongHeight = 2
+    NonTx = 3
+    ValidResponse = 4
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize(
+    "header_block_case, expected_success, expected_closed",
+    [
+        (HeaderBlockCase.NoneResponse, False, False),
+        (HeaderBlockCase.WrongCount, False, False),
+        (HeaderBlockCase.WrongHeight, False, True),
+        (HeaderBlockCase.NonTx, False, False),
+        (HeaderBlockCase.ValidResponse, True, False),
+    ],
+)
+@pytest.mark.anyio
+async def test_request_and_validate_header_block(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    header_block_case: HeaderBlockCase,
+    expected_success: bool,
+    expected_closed: bool,
+) -> None:
+    """
+    Covers the header block validation cases (`None` response, wrong count,
+    wrong height, non transaction header block and finally a valid response)
+    for request_and_validate_header_block.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random()))
+    peak = full_node_api.full_node.blockchain.get_peak()
+    assert peak is not None
+    correct_full_block = await full_node_api.full_node.block_store.get_full_block(peak.header_hash)
+    assert correct_full_block is not None
+    assert correct_full_block.foliage_transaction_block is not None
+    correct_block_header = get_block_header(correct_full_block)
+    all_blocks = await full_node_api.get_all_full_blocks()
+    wrong_full_block = next(b for b in all_blocks if b.height != correct_full_block.height)
+    wrong_height_block_header = get_block_header(wrong_full_block)
+    no_tx_block_header = correct_block_header.replace(foliage_transaction_block=None)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    requested_height = correct_block_header.height
+    calls: list[tuple[uint32, uint32]] = []
+
+    async def request_block_headers(self: FullNodeAPI, request: wallet_protocol.RequestBlockHeaders) -> Message | None:
+        calls.append((request.start_height, request.end_height))
+        if header_block_case == HeaderBlockCase.NoneResponse:
+            reject = wallet_protocol.RejectBlockHeaders(request.start_height, request.end_height)
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        headers = []
+        if header_block_case == HeaderBlockCase.WrongCount:
+            headers = [correct_block_header, wrong_height_block_header]
+        elif header_block_case == HeaderBlockCase.WrongHeight:
+            headers = [wrong_height_block_header]
+        elif header_block_case == HeaderBlockCase.NonTx:
+            headers = [no_tx_block_header]
+        elif header_block_case == HeaderBlockCase.ValidResponse:
+            headers = [correct_block_header]
+        else:
+            assert False  # pragma: no cover
+        response = wallet_protocol.RespondBlockHeaders(request.start_height, request.end_height, headers)
+        return make_msg(ProtocolMessageTypes.respond_block_headers, response)
+
+    with patch_request_handler(api=server.api, handler=request_block_headers):
+        result = await request_and_validate_header_block(wsc, requested_height, wallet_node.log)
+
+    assert calls == [(requested_height, requested_height)]
+    if expected_success:
+        assert result == correct_block_header
+    else:
+        assert result is None
+    if expected_closed:
+        assert wsc.closed
+    else:
+        assert not wsc.closed
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize("created_cached_non_tx", [False, True])
+@pytest.mark.parametrize("spent_cached_non_tx", [False, True])
+async def test_validate_received_state_from_peer_cached_non_tx(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    created_cached_non_tx: bool,
+    spent_cached_non_tx: bool,
+) -> None:
+    """
+    Covers the scenarios where `validate_received_state_from_peer` is called
+    with the peer request cache returning non transaction header blocks for the
+    created and/or spent heights, to make sure the validation fails and the
+    peer's connection stays intact.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random()))
+    blocks = await full_node_api.get_all_full_blocks()
+    tx_blocks = [b for b in blocks if b.is_transaction_block()]
+    assert len(tx_blocks) == 2
+    created_tx_header = get_block_header(tx_blocks[-2])
+    spent_tx_header = get_block_header(tx_blocks[-1])
+    # Create non tx variants
+    created_non_tx_block_header = created_tx_header.replace(foliage_transaction_block=None)
+    spent_non_tx_block_header = spent_tx_header.replace(foliage_transaction_block=None)
+    peer_request_cache = PeerRequestCache()
+    coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    coin_state = CoinState(coin, spent_non_tx_block_header.height, created_tx_header.height)
+    if created_cached_non_tx:
+        peer_request_cache._blocks.put(created_non_tx_block_header.height, created_non_tx_block_header)
+        coin_state = CoinState(coin, None, created_non_tx_block_header.height)
+    if spent_cached_non_tx:
+        peer_request_cache.add_to_blocks(created_tx_header)
+        peer_request_cache._blocks.put(spent_non_tx_block_header.height, spent_non_tx_block_header)
+    wsc, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    result = await wallet_node.validate_received_state_from_peer(
+        coin_state=coin_state, peer=wsc, peer_request_cache=peer_request_cache, fork_height=None
+    )
+    assert result is False
+    assert not wsc.closed
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_collect_valid_states(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Covers the scenario where validate_received_state_from_peer raises an
+    exception for a coin state to make sure we collect the valid states and log
+    the error for the invalid ones.
+    """
+    [full_node_api], [(wallet_node, _)], _ = simulator_and_wallet
+    wsc, _ = await add_dummy_connection_wsc(full_node_api.server, self_hostname, 42, NodeType.WALLET)
+    good_coin_state = CoinState(Coin(bytes32.random(), bytes32.random(), uint64(2)), None, uint32(2))
+    bad_coin_state = CoinState(Coin(bytes32.random(), bytes32.random(), uint64(1)), None, uint32(1))
+
+    async def validate_received_state_from_peer(
+        self: WalletNode,
+        coin_state: CoinState,
+        peer: WSChiaConnection,
+        peer_request_cache: PeerRequestCache,
+        fork_height: uint32 | None,
+    ) -> bool:
+        if coin_state.coin.name() == bad_coin_state.coin.name():
+            raise Exception("testing collect_valid_states")
+        return True
+
+    monkeypatch.setattr(type(wallet_node), "validate_received_state_from_peer", validate_received_state_from_peer)
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        valid_states = await wallet_node._collect_valid_states(
+            inner_states=[bad_coin_state, good_coin_state], peer=wsc, cache=PeerRequestCache(), fork_height=None
+        )
+    assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
+    assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text

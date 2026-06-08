@@ -286,6 +286,26 @@ def _install_plot_cache() -> None:
     install_plot_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _block_production_keyring_access(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    from unittest.mock import patch
+
+    fake_keys_root = tmp_path_factory.mktemp("fake_keys_root")
+
+    with (
+        patch("chia.util.keyring_wrapper.DEFAULT_KEYS_ROOT_PATH", fake_keys_root),
+        patch("chia.util.file_keyring.DEFAULT_KEYS_ROOT_PATH", fake_keys_root),
+        patch(
+            "chia.util.keyring_wrapper.prompt_for_passphrase",
+            side_effect=RuntimeError(
+                "Tests must not prompt for a keyring passphrase. "
+                "Use the TempKeyring fixture to avoid accessing the production keyring."
+            ),
+        ),
+    ):
+        yield
+
+
 @pytest.fixture(scope="session", name="bt")
 async def block_tools_fixture(
     get_keychain, blockchain_constants, anyio_backend, testrun_uid: str
@@ -520,6 +540,47 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(0),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_zero:
+        version = "_fork_height_zero"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
+
+
+@pytest.fixture(scope="session")
+async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+    """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
+    from chia._tests.util.blockchain import persistent_blocks
+    from chia.simulator.block_tools import create_block_tools_async
+
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(500),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_500:
+        version = "_fork_height_500"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_500, seed=b"fork_500")
 
 
 # If you add another test chain, don't forget to also add a "build_test_chains"
@@ -1017,7 +1078,7 @@ async def get_b_tools(get_temp_keyring, testrun_uid):
 @pytest.fixture(scope="function")
 async def daemon_connection_and_temp_keychain(
     get_b_tools: BlockTools,
-) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
+) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse[bool], Keychain]]:
     async with setup_daemon(btools=get_b_tools) as daemon:
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:

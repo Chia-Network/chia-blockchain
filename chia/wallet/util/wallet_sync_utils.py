@@ -362,8 +362,11 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     )
     if solution_response is None or not isinstance(solution_response, RespondPuzzleSolution):
         raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
-    assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-    assert solution_response.response.coin_name == coin.name()
+    coin_id = coin.name()
+    if solution_response.response.puzzle.get_tree_hash() != coin.puzzle_hash:
+        raise PeerRequestException(f"Peer returned wrong puzzle hash for coin {coin_id}")
+    if solution_response.response.coin_name != coin_id:
+        raise PeerRequestException(f"Peer returned wrong coin name in puzzle solution for coin {coin_id}")
 
     return make_spend(
         coin,
