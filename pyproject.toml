@@ -82,7 +82,7 @@ hsms = ">=0.3.2"
 aiohttp_cors = { version = ">=0.7.0", optional = true }
 build = { version = ">=1.5.0", optional = true }
 coverage = { version = ">=7.14.0", optional = true }
-diff-cover = { version = ">=9.2.0", optional = true }
+diff-cover = { version = ">=10.3.0", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
 "keyrings.cryptfile" = { version = ">=1.3.9", optional = true }
 mypy = { version = ">=1.11.1", optional = true }
