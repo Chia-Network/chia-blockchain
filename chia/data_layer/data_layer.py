@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 import aiohttp
+import anyio
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -260,13 +261,15 @@ class DataLayer:
                 if self._wallet_rpc is not None:
                     self.wallet_rpc.close()
 
-                if self.periodically_manage_data_task is not None:
+                with anyio.CancelScope(shield=True):
                     try:
-                        self.periodically_manage_data_task.cancel()
-                    except asyncio.CancelledError:
-                        pass
-                if self._wallet_rpc is not None:
-                    await self.wallet_rpc.await_closed()
+                        if self.periodically_manage_data_task is not None:
+                            self.periodically_manage_data_task.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await self.periodically_manage_data_task
+                    finally:
+                        if self._wallet_rpc is not None:
+                            await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
