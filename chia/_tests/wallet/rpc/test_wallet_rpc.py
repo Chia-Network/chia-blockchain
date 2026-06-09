@@ -1597,13 +1597,14 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert offer_only_res.offer is not None
-    assert offer_only_res.trade_record is None
     assert offer_only_res.to_json_dict() == {
         "offer": offer_only_res.offer.to_bech32(),
         "transactions": [],
         "unsigned_transactions": [],
         "trade_record": None,
     }
+    with pytest.raises(ValueError, match=re.escape("Attempting to access trade_record on `offer_only` request")):
+        offer_only_res.trade_record
 
     driver_dict = {
         cat_asset_id: PuzzleInfo(
@@ -1666,7 +1667,6 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
             wallet_environments.tx_config,
         )
     ).trade_record
-    assert trade_record is not None
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
     await env_1.rpc_client.cancel_offer(
@@ -1694,7 +1694,6 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
         tx_config=wallet_environments.tx_config,
     )
-    assert create_res.trade_record is not None
     all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 2
     offer_count = await env_1.rpc_client.get_offers_count()
@@ -1785,7 +1784,6 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         return [t.trade_id for t in trades]
 
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=offer.name()))).trade_record
-    assert trade_record is not None
     all_offers = (  # confirmed at index descending
         await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True))
     ).trade_records

@@ -2082,8 +2082,7 @@ class WalletRpcApi:
             unsigned_transactions=[],
             transactions=[],
             offer=Offer.from_bytes(result[1].offer),
-            trade_record=result[1],
-            _offer_only=request.offer_only,
+            _trade_record=result[1],
         )
 
     @marshal
@@ -2179,7 +2178,7 @@ class WalletRpcApi:
             unsigned_transactions=[],
             transactions=[],
             offer=Offer.from_bytes(trade_record.offer),
-            trade_record=trade_record,
+            _trade_record=trade_record,
         )
 
     @marshal

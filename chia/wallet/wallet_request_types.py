@@ -2129,8 +2129,13 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 @dataclass(kw_only=True, frozen=True)
 class _OfferEndpointResponse(TransactionEndpointResponse):
     offer: Offer  # gotta figure out how to ignore this in streamable
-    trade_record: TradeRecord | None
-    _offer_only: bool = False
+    _trade_record: TradeRecord | None
+
+    @property
+    def trade_record(self) -> TradeRecord:
+        if self._trade_record is None:
+            raise ValueError("Attempting to access trade_record on `offer_only` request")
+        return self._trade_record
 
     def to_json_dict(self) -> dict[str, Any]:
         old_offer_override = getattr(self.offer, "json_serialization_override", None)
@@ -2138,9 +2143,9 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         try:
             response = {
                 **super().to_json_dict(),
-                "trade_record": self.trade_record.to_json_dict_convenience() if self.trade_record is not None else None,
+                "trade_record": self.trade_record.to_json_dict_convenience() if self._trade_record else None,
             }
-            response.pop("_offer_only")
+            response.pop("_trade_record")
         except Exception:
             object.__setattr__(self.offer, "json_serialization_override", old_offer_override)
             raise
@@ -2156,10 +2161,9 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         return cls(
             **tx_endpoint.__dict__,
             offer=offer,
-            trade_record=TradeRecord.from_json_dict_convenience(json_dict["trade_record"], bytes(offer).hex())
+            _trade_record=TradeRecord.from_json_dict_convenience(json_dict["trade_record"], bytes(offer).hex())
             if json_dict["trade_record"] is not None
             else None,
-            _offer_only=json_dict["trade_record"] is None,
         )
 
 

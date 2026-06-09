@@ -1213,7 +1213,6 @@ class DataLayer:
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            assert res.trade_record is not None
 
             offer = Offer(
                 trade_id=res.trade_record.trade_id,
@@ -1302,7 +1301,6 @@ class DataLayer:
                 tx_config=DEFAULT_TX_CONFIG,
             )
         ).trade_record
-        assert trade_record is not None
 
         return trade_record
 
