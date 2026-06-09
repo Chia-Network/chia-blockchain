@@ -755,7 +755,7 @@ class DataLayer:
             return
         if singleton_record.generation == uint32(0):
             # No data committed on chain yet, so there is no local tree to publish.
-            self.log.info(f"Upload files: no data on chain for {store_id}.")
+            self.log.info(f"No committed data for store {store_id}; skipping DataLayer file publishing.")
             return
         await self._update_confirmation_status(store_id=store_id)
 

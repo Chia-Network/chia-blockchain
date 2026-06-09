@@ -3981,5 +3981,5 @@ async def test_management_skips_store_without_committed_data(
             await data_layer.upload_files(store_id)
             await data_layer.clean_old_full_tree_files(store_id)
 
-    assert f"Upload files: no data on chain for {store_id.hex()}" in caplog.text
+    assert f"No committed data for store {store_id.hex()}; skipping DataLayer file publishing." in caplog.text
     assert "No generations found" not in caplog.text
