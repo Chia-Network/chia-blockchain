@@ -1268,9 +1268,10 @@ class WalletNode:
                     # The peer might be slightly behind but still synced, so we should allow fetching one more block
                     break
                 elif expected_hash is not None:
-                    # Anchored lookups require a block at each height to carry the hash to the
-                    # next one. With no block here there is nothing to anchor to, so treat the
-                    # peer as not synced rather than continue against a stale hash.
+                    # Only reached on the starting height. In anchored mode, this block establishes
+                    # the hash chain used to validate any backtracked headers. Without it, continuing
+                    # would only compare lower headers against the original peak hash and fail later.
+                    # Treat the peer as not synced instead.
                     self.log.warning(
                         f"missing header block response for height {request_height} from Peer {peer.get_peer_info()}."
                     )
