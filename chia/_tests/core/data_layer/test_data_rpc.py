@@ -43,7 +43,7 @@ from chia.cmds.data_funcs import (
     wallet_log_in_cmd,
 )
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer import TRACK_FAILURE_LOG_INTERVAL, DataLayer
+from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
 from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
@@ -4164,51 +4164,3 @@ async def test_failing_unsubscribe_does_not_kill_management_loop(
             # Processing an unsubscribe for an already-removed store is a no-op, so a request that
             # was queued more than once can't raise and wedge the drain loop.
             await data_layer.process_unsubscribe(unsub_store, retain_data=False)
-
-
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.anyio
-async def test_track_subscriptions_throttles_repeated_failures(
-    self_hostname: str,
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
-    tmp_path: Path,
-    monkeypatch: Any,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    # A persistently-failing subscription logs on the first failure and then only every
-    # TRACK_FAILURE_LOG_INTERVAL-th consecutive failure; a success in between resets the throttle.
-    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
-    )
-    store = bytes32([8] * 32)
-    should_fail = True
-
-    async def mock_dl_track_new(self: Any, request: Any) -> None:
-        if should_fail:
-            raise RuntimeError("cannot track")
-
-    message = f"Exception while requesting wallet track subscription {store.hex()}"
-
-    with monkeypatch.context() as m, caplog.at_level(logging.WARNING):
-        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
-
-        # A large interval keeps the background management loop from interfering; we drive
-        # track_subscriptions directly so the failure count is deterministic.
-        async with init_data_layer(
-            wallet_rpc_port=wallet_rpc_port,
-            bt=bt,
-            db_path=tmp_path,
-            manage_data_interval=600,
-            maximum_full_file_count=100,
-        ) as data_layer:
-            for _ in range(TRACK_FAILURE_LOG_INTERVAL):
-                await data_layer.track_subscriptions([Subscription(store, [])])
-            # Logged only on the 1st and TRACK_FAILURE_LOG_INTERVAL-th consecutive failures.
-            assert caplog.text.count(message) == 2
-
-            # A success clears the counter, so the next failure logs immediately again.
-            should_fail = False
-            await data_layer.track_subscriptions([Subscription(store, [])])
-            should_fail = True
-            await data_layer.track_subscriptions([Subscription(store, [])])
-            assert caplog.text.count(message) == 3

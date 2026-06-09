@@ -117,11 +117,6 @@ async def get_plugin_info(
         return plugin_remote, {"error": f"{type(e).__name__}: {e}"}
 
 
-# Log a per-subscription wallet-tracking failure on the first occurrence and then only
-# every Nth consecutive failure, so a persistently invalid launcher can't flood the log.
-TRACK_FAILURE_LOG_INTERVAL = 10
-
-
 @final
 @dataclasses.dataclass
 class DataLayer:
@@ -157,7 +152,6 @@ class DataLayer:
     )
     group_files_by_store: bool = False
     max_delta_file_size: int = 250
-    _track_failure_counts: dict[bytes32, int] = dataclasses.field(default_factory=dict)
 
     @property
     def server(self) -> ChiaServer:
@@ -926,7 +920,6 @@ class DataLayer:
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(DLStopTracking(launcher_id=store_id))
         await self.data_store.unsubscribe(store_id)
-        self._track_failure_counts.pop(store_id, None)
 
         self.log.info(f"Unsubscribed to {store_id}")
         for file_path in paths:
@@ -1072,16 +1065,9 @@ class DataLayer:
                 return
             except Exception as e:
                 # One subscription failing to track must not abort tracking of the others.
-                count = self._track_failure_counts.get(subscription.store_id, 0) + 1
-                self._track_failure_counts[subscription.store_id] = count
-                if count == 1 or count % TRACK_FAILURE_LOG_INTERVAL == 0:
-                    self.log.warning(
-                        f"Exception while requesting wallet track subscription {subscription.store_id} "
-                        f"(consecutive failures: {count}): {type(e)} {e}"
-                    )
-            else:
-                # Clear the failure counter so a later failure logs immediately.
-                self._track_failure_counts.pop(subscription.store_id, None)
+                self.log.warning(
+                    f"Exception while requesting wallet track subscription {subscription.store_id}: {type(e)} {e}"
+                )
 
     async def update_subscription(
         self,
