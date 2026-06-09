@@ -22,7 +22,7 @@ ln -s /opt/chia/chia-blockchain /usr/bin/chia-blockchain || true
 # profile (the app runs fine there without it).
 APPARMOR_PROFILE_SOURCE='/opt/chia/resources/apparmor-profile'
 APPARMOR_PROFILE_TARGET='/etc/apparmor.d/chia-blockchain'
-if [ -f "$APPARMOR_PROFILE_SOURCE" ] && apparmor_status --enabled >/dev/null 2>&1; then
+if [ -f "$APPARMOR_PROFILE_SOURCE" ] && command -v apparmor_parser >/dev/null 2>&1 && apparmor_status --enabled >/dev/null 2>&1; then
   if apparmor_parser --skip-kernel-load --debug "$APPARMOR_PROFILE_SOURCE" >/dev/null 2>&1; then
     cp -f "$APPARMOR_PROFILE_SOURCE" "$APPARMOR_PROFILE_TARGET" || true
     # Loading a profile is meaningless inside a chroot (e.g. image builders).
