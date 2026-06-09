@@ -111,7 +111,7 @@ miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # numpy = [
 # 	{version="<=1.24.4", python = "<3.10", optional = true},
 # 	{version=">=1.26.4", python = ">=3.10", optional = true}]
-ruff = { version = ">=0.8.1", optional = true }
+ruff = { version = ">=0.15.15", optional = true }
 
 [project.optional-dependencies]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "types-colorama", "types-zstd", "types-lxml", "types-psutil", "boto3-stubs[essential]", "lxml", "sortedcontainers-stubs"]
