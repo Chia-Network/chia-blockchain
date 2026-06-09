@@ -57,7 +57,6 @@ from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
     CreateOfferForIDs,
-    CreateOfferForIDsResponse,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDFindLostDID,
@@ -687,7 +686,7 @@ async def make_offer(
                         ).to_tx_config(units["chia"], config, fingerprint),
                         timelock_info=condition_valid_times,
                     )
-                    assert isinstance(res, CreateOfferForIDsResponse)
+                    assert res.trade_record is not None
                     if res.offer is not None:
                         file.write(res.offer.to_bech32())
                         print(f"Created offer with ID {res.trade_record.trade_id}")
@@ -936,6 +935,7 @@ async def take_offer(
                 timelock_info=condition_valid_times,
                 tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             )
+            assert res.trade_record is not None
             if push:
                 print(f"Accepted offer with ID {res.trade_record.trade_id}")
                 print(
