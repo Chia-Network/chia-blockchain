@@ -1,3 +1,7 @@
+; This puzzle is intended to be a fixed spend path inside a Plot NFT while it is pooling
+;
+; The idea to send a fixed specific message to a p2_singleton (must be a farming reward)
+; and then recreate the singleton exactly as it is
 (mod (
     GENESIS_PREFIX
     SINGLETON_MOD_HASH
@@ -13,7 +17,7 @@
   (include curry.clib)
 
   (defun-inline calculate_pool_parent_id (GENESIS_PREFIX reward_height)
-    (logior (ash GENESIS_PREFIX (q . 128)) (logand (- (lsh (q . 1) (q . 128)) (q . 1)) reward_height))
+    (logior (ash GENESIS_PREFIX 128) (logand (- (lsh 1 128) 1) reward_height))
   )
 
 
