@@ -49,15 +49,13 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
 )
+FORWARD_TO_POOL_PUZZLE_HASH_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
+    "forward_to_pool_puzzle_hash_dpuz.clsp", package_or_requirement="chia.pools"
+)
 
 
 def forward_to_pool_puzzle_hash_dpuz(pool_puzzle_hash: bytes32, pool_memoization: Program) -> Program:
-    # (mod (REWARD_HASH REWARD_REST reward_amount)
-    #   (list (list 73 reward_amount) (c 51 (c REWARD_HASH (c reward_amount REWARD_REST)))
-    # )
-    return Program.fromhex(
-        "ff04ffff04ffff0149ffff04ff0bff808080ffff04ffff04ffff0133ffff04ff02ffff04ff0bff05808080ff808080"
-    ).curry(pool_puzzle_hash, pool_memoization)
+    return FORWARD_TO_POOL_PUZZLE_HASH_DELEGATED_PUZZLE.curry(pool_puzzle_hash, pool_memoization)
 
 
 @dataclass(kw_only=True, frozen=True)

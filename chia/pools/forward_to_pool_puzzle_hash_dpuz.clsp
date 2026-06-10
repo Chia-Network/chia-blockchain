@@ -1,0 +1,6 @@
+; Intended to be run by a pooling reward when being claimed by a pool
+;
+; This puzzle checks the existing amount and then forwards the whole amount to a dedicated puzzle hash with dedicated memos
+(mod (REWARD_HASH REWARD_REST reward_amount)
+  (list (list 73 reward_amount) (c 51 (c REWARD_HASH (c reward_amount REWARD_REST))))
+)
