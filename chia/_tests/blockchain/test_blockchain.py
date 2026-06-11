@@ -1043,7 +1043,15 @@ class TestBlockHeaderValidation:
                     recursive_replace(
                         block.finished_sub_slots[-1].reward_chain,
                         "end_of_slot_vdf.output",
-                        ClassgroupElement.get_default_element(),
+                        # Don't use the default element here. With BlockTools'
+                        # tiny 16-bit test because of the small discriminant in
+                        # tests, byte-distinct ClassgroupElement encodings can
+                        # reduce to the same classgroup element in the native
+                        # VDF verifier. Some RC EOS outputs therefore still
+                        # verify after replacement with the default element
+                        # and the block is rejected later because the
+                        # serialized reward sub-slot hash changed.
+                        bad_element,
                     ),
                 )
                 block_bad_2 = recursive_replace(
