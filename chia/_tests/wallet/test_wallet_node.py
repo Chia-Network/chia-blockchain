@@ -854,7 +854,6 @@ async def test_sync_from_untrusted_close_to_peak_cleans_stale_fork_race_cache() 
     fork_height = 10
     new_peak_height = 12
     node = make_backtrack_test_node(height=fork_height, has_peak=True)
-    node.wallet_state_manager.state_changed = MagicMock()
 
     peer = MagicMock()
     peer.peer_node_id = bytes32(b"\xab" * 32)
