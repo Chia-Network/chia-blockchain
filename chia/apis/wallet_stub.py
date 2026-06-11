@@ -44,13 +44,13 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
         """Check if the wallet is ready."""
         ...
 
-    @metadata.request(peer_required=True)
-    async def respond_removals(self, response: RespondRemovals, peer: WSChiaConnection) -> None:
+    @metadata.request()
+    async def respond_removals(self, response: RespondRemovals) -> None:
         """Handle removals response from full node."""
         ...
 
-    @metadata.request(peer_required=True)
-    async def reject_removals_request(self, response: RejectRemovalsRequest, peer: WSChiaConnection) -> None:
+    @metadata.request()
+    async def reject_removals_request(self, response: RejectRemovalsRequest) -> None:
         """Handle reject removals request from full node."""
         ...
 
@@ -74,8 +74,8 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
         """Handle block header response from full node."""
         ...
 
-    @metadata.request(peer_required=True)
-    async def respond_additions(self, response: RespondAdditions, peer: WSChiaConnection) -> None:
+    @metadata.request()
+    async def respond_additions(self, response: RespondAdditions) -> None:
         """Handle additions response from full node."""
         ...
 
