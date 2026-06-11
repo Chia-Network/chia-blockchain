@@ -355,6 +355,12 @@ class Farmer:
                     if resp.ok:
                         response: dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
+                        if "error_code" in response:
+                            self.handle_failed_pool_response(
+                                pool_config.p2_singleton_puzzle_hash,
+                                f"Error in GET /pool_info {pool_config.pool_url}, {response}",
+                            )
+                            return None
                         try:
                             pool_info = GetPoolInfoResponse.from_json_dict(response)
                         except Exception as e:

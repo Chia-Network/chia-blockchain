@@ -431,6 +431,12 @@ class FarmerAPI:
                                 partial_response = PostPartialResponse.from_json_dict(pool_response)
                             except Exception as e:
                                 self.farmer.log.error(f"Invalid pool partial response: {e}")
+                                increment_pool_stats(
+                                    self.farmer.pool_state,
+                                    p2_singleton_puzzle_hash,
+                                    "invalid_partials",
+                                    time.time(),
+                                )
                                 return
 
                             increment_pool_stats(

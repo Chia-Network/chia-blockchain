@@ -885,6 +885,8 @@ class PoolStateCase:
                 "points_found_since_start": 1,
                 "points_found_24h": [1],
                 "current_difficulty": uint64(1),
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
             }
         ),
     ),
