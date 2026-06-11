@@ -40,6 +40,19 @@ def test_max_plot_size() -> None:
     }
 
 
+def test_testneta() -> None:
+    overrides: dict[str, Any] = {}
+    update_testnet_overrides("testneta", overrides)
+    assert overrides == {
+        "TESTNET": True,
+        "MIN_PLOT_SIZE_V1": 18,
+        "PLOT_SIZE_V2": 28,
+        "SOFT_FORK8_HEIGHT": 3755000,
+        "SOFT_FORK9_HEIGHT": 3924000,
+        "HARD_FORK_HEIGHT": 3693395,
+    }
+
+
 def test_mainnet() -> None:
     overrides: dict[str, Any] = {}
     update_testnet_overrides("mainnet", overrides)

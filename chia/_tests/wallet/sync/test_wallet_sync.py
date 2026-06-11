@@ -18,6 +18,7 @@ from chia_rs import (
     ConsensusConstants,
     FullBlock,
     G2Element,
+    MerkleSet,
     SpendBundle,
     confirm_not_included_already_hashed,
 )
@@ -66,6 +67,7 @@ from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import hash_coin_ids
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
@@ -82,6 +84,7 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend,
     request_header_blocks,
+    validate_additions,
 )
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -2057,3 +2060,40 @@ async def test_fetch_coin_spend(
             else:
                 with pytest.raises(PeerRequestException, match=expected_error):
                     await fetch_coin_spend(height, coin, wcs)
+
+
+def test_validate_additions_failure_cases() -> None:
+    """
+    Covers the failure cases of `validate_additions`
+    """
+    ph = bytes32.random()
+    ph2 = bytes32.random()
+    coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    coin_list = [coin]
+    coin_ids_hash = hash_coin_ids([c.name() for c in coin_list])
+    # Length mismatch
+    assert validate_additions([(ph, [])], [], bytes32.random()) is False
+    # Puzzle hash mismatch
+    assert validate_additions([(ph, [])], [(ph2, b"\x00", None)], bytes32.random()) is False
+    # Verify exclusion proof for puzzle hash
+    # coin_list empty + proof that actually proves inclusion => exclusion check fails.
+    exclusion_set = MerkleSet([ph])
+    _, included_proof_for_ph_a = exclusion_set.is_included_already_hashed(ph)
+    assert validate_additions([(ph, [])], [(ph, included_proof_for_ph_a, None)], exclusion_set.get_root()) is False
+    # `coin_list_proof` is None
+    ph_proof = b""
+    coin_list_proof = None
+    assert validate_additions([(ph, coin_list)], [(ph, ph_proof, coin_list_proof)], bytes32.random()) is False
+    # Verify inclusion proof for coin list
+    wrong_coin_hash = bytes32.random()
+    wrong_set = MerkleSet([wrong_coin_hash])
+    _, wrong_coin_list_proof = wrong_set.is_included_already_hashed(wrong_coin_hash)
+    wrong_set_root = wrong_set.get_root()
+    assert validate_additions([(ph, coin_list)], [(ph, ph_proof, wrong_coin_list_proof)], wrong_set_root) is False
+    # Verify inclusion proof for puzzle hash
+    proof_set = MerkleSet([coin_ids_hash, ph2])
+    _, coin_list_proof = proof_set.is_included_already_hashed(coin_ids_hash)
+    _, wrong_ph_proof = proof_set.is_included_already_hashed(ph2)
+    assert ph != ph2
+    proof_set_root = proof_set.get_root()
+    assert validate_additions([(ph, coin_list)], [(ph, wrong_ph_proof, coin_list_proof)], proof_set_root) is False

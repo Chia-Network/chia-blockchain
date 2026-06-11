@@ -530,6 +530,12 @@ def tx_endpoint(
                         dataclasses.replace(tx, trade_id=new_trade.trade_id)
                     )
 
+            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
+                response.pop("trade_record", None)
+                response.pop("transactions", None)
+                response.pop("unsigned_transactions", None)
+                return response
+
             return response
 
         return rpc_endpoint
