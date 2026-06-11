@@ -30,6 +30,9 @@ warn_return_any = False
 no_implicit_reexport = False
 strict_equality = False
 
+[mypy-chia-strict-bytes-exclusions]
+disable_error_code = arg-type,call-overload,override,no-any-return
+
 # TODO: stop ignoring these and get hints for as many as possible
 
 [mypy-chia_puzzles_py.*]
