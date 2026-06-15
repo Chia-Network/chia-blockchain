@@ -6,8 +6,9 @@ import random
 import pytest
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
@@ -17,7 +18,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 @pytest.mark.anyio
-async def test_wallet_coinbase(simulator_and_wallet, self_hostname):
+async def test_wallet_coinbase(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     num_blocks = 5
     full_nodes, wallets, _ = simulator_and_wallet
     full_node_api = full_nodes[0]
@@ -28,7 +29,7 @@ async def test_wallet_coinbase(simulator_and_wallet, self_hostname):
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    for i in range(num_blocks):
+    for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
@@ -41,7 +42,9 @@ async def test_wallet_coinbase(simulator_and_wallet, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
+async def test_tx_propagation(
+    three_nodes_two_wallets: OldSimulatorsAndWallets, self_hostname: str, seeded_random: random.Random
+) -> None:
     num_blocks = 5
     full_nodes, wallets, _ = three_nodes_two_wallets
 
@@ -67,7 +70,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
     await wallet_server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
 
-    for i in range(num_blocks):
+    for _ in range(num_blocks):
         await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
@@ -75,7 +78,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     )
     await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-    async def peak_height(fna: FullNodeAPI):
+    async def peak_height(fna: FullNodeAPI) -> int:
         peak: BlockRecord | None = fna.full_node.blockchain.get_peak()
         if peak is None:
             return -1
@@ -86,7 +89,9 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     await time_out_assert(20, peak_height, num_blocks, full_node_api_2)
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction([10], [ph1], action_scope, 0)
+        await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [uint64(10)], [ph1], action_scope, uint64(0)
+        )
     [tx] = action_scope.side_effects.transactions
 
     await time_out_assert(
@@ -109,7 +114,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     )
 
     # Farm another block
-    for i in range(1, 8):
+    for _ in range(1, 8):
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random(seeded_random)))
     funds = sum(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
@@ -124,7 +129,9 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
 
 
 @pytest.mark.anyio
-async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
+async def test_mempool_tx_sync(
+    three_nodes_two_wallets: OldSimulatorsAndWallets, self_hostname: str, seeded_random: random.Random
+) -> None:
     num_blocks = 5
     full_nodes, wallets, _ = three_nodes_two_wallets
 
@@ -144,7 +151,7 @@ async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_ra
     await wallet_server_0.start_client(PeerInfo(self_hostname, server_0.get_port()), None)
     await server_0.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
-    for i in range(num_blocks):
+    for _ in range(num_blocks):
         await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     all_blocks = await full_node_api_0.get_all_full_blocks()
@@ -159,7 +166,7 @@ async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_ra
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            [10], [bytes32.random(seeded_random)], action_scope, 0
+            [uint64(10)], [bytes32.random(seeded_random)], action_scope, uint64(0)
         )
     [tx] = action_scope.side_effects.transactions
 

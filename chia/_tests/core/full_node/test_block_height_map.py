@@ -553,3 +553,34 @@ async def test_peak_only_chain(tmp_dir: Path, db_version: int) -> None:
 
         with pytest.raises(AssertionError) as _:
             height_map.get_hash(uint32(0))
+
+
+@pytest.mark.anyio
+async def test_ensure_capacity(tmp_dir: Path, db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+        await setup_chain(db_wrapper, 5)
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        assert height_map.contains_height(uint32(5))
+        assert not height_map.contains_height(uint32(6))
+
+        height_map.ensure_capacity(8)
+        assert height_map.contains_height(uint32(8))
+
+        height_map.update_height(uint32(6), gen_block_hash(6), None)
+        assert height_map.get_hash(uint32(6)) == gen_block_hash(6)
+
+
+@pytest.mark.anyio
+async def test_update_height_auto_extends(tmp_dir: Path, db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+        await setup_chain(db_wrapper, 5)
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        assert not height_map.contains_height(uint32(10))
+
+        height_map.update_height(uint32(10), gen_block_hash(10), None)
+        assert height_map.contains_height(uint32(10))
+        assert height_map.get_hash(uint32(10)) == gen_block_hash(10)

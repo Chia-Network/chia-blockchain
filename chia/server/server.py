@@ -39,6 +39,7 @@ from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.ssl.ssl_check import verify_ssl_certs_and_keys
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
+from chia.util.ip_address import IPAddress
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
@@ -340,7 +341,16 @@ class ChiaServer:
                 stub_metadata_for_type=self.stub_metadata_for_type,
                 exempt_peer_networks=self.exempt_peer_networks,
             )
-            await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
+            peer_host = request.remote
+            handshake_timeout = (
+                None
+                if is_localhost(peer_host) or is_in_network(peer_host, self.exempt_peer_networks)
+                else float(self.config.get("peer_connect_timeout", 30))
+            )
+            await asyncio.wait_for(
+                connection.perform_handshake(self._network_id, self.get_port(), self._local_type),
+                timeout=handshake_timeout,
+            )
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Full nodes should only accept peers, post hard fork 2, that
@@ -370,6 +380,12 @@ class ChiaServer:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
+        except asyncio.TimeoutError:
+            if connection is not None:
+                await connection.close(
+                    self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_HANDSHAKE
+                )
+            self.log.warning(f"Handshake timeout from {request.remote}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
@@ -430,6 +446,7 @@ class ChiaServer:
         target_node: PeerInfo,
         on_connect: ConnectionCallback | None = None,
         is_feeler: bool = False,
+        server_hostname: str | None = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -453,6 +470,13 @@ class ChiaServer:
             ip = f"[{target_node.ip}]" if target_node.ip.is_v6 else f"{target_node.ip}"
             url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
+            if server_hostname is not None:
+                try:
+                    IPAddress.create(server_hostname)
+                    # the server_hostname is actually an IP address so we don't need to set anything in ws_connect
+                    server_hostname = None
+                except ValueError:
+                    pass
             try:
                 ws = await session.ws_connect(
                     url,
@@ -461,6 +485,8 @@ class ChiaServer:
                     heartbeat=60,
                     ssl=self.ssl_client_context,
                     max_msg_size=max_message_size,
+                    server_hostname=server_hostname,
+                    headers={"Host": f"{server_hostname}:{target_node.port}"} if server_hostname else None,
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")

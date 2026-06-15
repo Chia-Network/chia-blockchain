@@ -85,7 +85,7 @@ class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db_wrapper: DBWrapper2
-    recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
+    recent_merkle_blobs: LRUCache[tuple[bytes32, bytes32], MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
     unconfirmed_keys_values: dict[bytes32, list[bytes32]] = field(default_factory=dict)
@@ -116,7 +116,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
+            recent_merkle_blobs: LRUCache[tuple[bytes32, bytes32], MerkleBlob] = LRUCache(capacity=cache_capacity)
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
@@ -518,7 +518,7 @@ class DataStore:
         if self.recent_merkle_blobs.get_capacity() == 0:
             update_cache = False
 
-        existing_blob = self.recent_merkle_blobs.get(root_hash)
+        existing_blob = self.recent_merkle_blobs.get((store_id, root_hash))
         if existing_blob is not None:
             return existing_blob if read_only else copy.deepcopy(existing_blob)
 
@@ -531,7 +531,7 @@ class DataStore:
             raise MerkleBlobNotFoundError(root_hash=root_hash) from e
 
         if update_cache:
-            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+            self.recent_merkle_blobs.put((store_id, root_hash), copy.deepcopy(merkle_blob))
 
         return merkle_blob
 
@@ -586,7 +586,7 @@ class DataStore:
                 merkle_blob.to_path(blob_path)
 
             if update_cache:
-                self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
+                self.recent_merkle_blobs.put((store_id, root_hash), copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 
@@ -612,9 +612,8 @@ class DataStore:
             return KeyOrValueId(row[0])
 
     def get_blob_from_file(self, blob_hash: bytes32, store_id: bytes32) -> bytes:
-        # TODO: seems that zstd needs hinting
         # TODO: consider file-system based locking of either the file or the store directory
-        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())
 
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> bytes | None:
         async with self.db_wrapper.reader() as reader:

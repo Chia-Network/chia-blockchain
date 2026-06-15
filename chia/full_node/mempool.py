@@ -548,7 +548,7 @@ class Mempool:
 
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
 
-        err, conds = run_block_generator2(
+        err, err_msg, conds = run_block_generator2(
             block_program,
             [],
             constants.MAX_BLOCK_COST_CLVM,
@@ -561,7 +561,7 @@ class Mempool:
         # this should not happen. This is essentially an assertion failure
         if err is not None:  # pragma: no cover
             log.error(
-                f"Failed to compute block cost during farming: {err} "
+                f"Failed to compute block cost during farming: {err} {err_msg} "
                 f"prev-tx-height: {prev_tx_height} "
                 f"generator: {bytes(block_program).hex()}"
             )

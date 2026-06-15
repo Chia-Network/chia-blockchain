@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 import aiohttp
+import anyio
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -70,6 +71,7 @@ from chia.wallet.wallet_request_types import (
     CancelOffer,
     CreateNewDL,
     CreateOfferForIDs,
+    CreateOfferForIDsResponse,
     DLDeleteMirror,
     DLGetMirrors,
     DLHistory,
@@ -260,13 +262,15 @@ class DataLayer:
                 if self._wallet_rpc is not None:
                     self.wallet_rpc.close()
 
-                if self.periodically_manage_data_task is not None:
+                with anyio.CancelScope(shield=True):
                     try:
-                        self.periodically_manage_data_task.cancel()
-                    except asyncio.CancelledError:
-                        pass
-                if self._wallet_rpc is not None:
-                    await self.wallet_rpc.await_closed()
+                        if self.periodically_manage_data_task is not None:
+                            self.periodically_manage_data_task.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await self.periodically_manage_data_task
+                    finally:
+                        if self._wallet_rpc is not None:
+                            await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -889,7 +893,8 @@ class DataLayer:
         # This function already acquired `subscriptions_lock`.
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
-            raise RuntimeError("No subscription found for the given store_id.")
+            # Already unsubscribed (e.g. the request was queued more than once); nothing to do.
+            return
         paths: list[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
@@ -975,29 +980,13 @@ class DataLayer:
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
-            async with self.subscription_lock:
-                try:
-                    subscriptions = await self.data_store.get_subscriptions()
-                    for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
-                    break
-                except aiohttp.client_exceptions.ClientConnectorError:
-                    pass
-                except Exception as e:
-                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
-
-            self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
-
-            delay_until = time.monotonic() + 3
-            while time.monotonic() < delay_until:
-                if self._shut_down:
-                    break
-                await asyncio.sleep(0.1)
-
-        while not self._shut_down:
             # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
+
+            # Track each subscription individually so one bad subscription can't block the
+            # others or entry into the rest of the management cycle.
+            await self.track_subscriptions(subscriptions)
 
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
@@ -1055,10 +1044,34 @@ class DataLayer:
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
             async with self.subscription_lock:
+                still_pending: list[UnsubscribeData] = []
                 for unsubscribe_data in self.unsubscribe_data_queue:
-                    await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
-                self.unsubscribe_data_queue.clear()
+                    try:
+                        await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
+                    except Exception as e:
+                        # A single failing unsubscribe (e.g. the wallet is unreachable) must not
+                        # kill the loop or block the others; retry it on the next cycle.
+                        self.log.warning(
+                            f"Exception while processing queued unsubscribe for "
+                            f"{unsubscribe_data.store_id}: {type(e)} {e}"
+                        )
+                        still_pending.append(unsubscribe_data)
+                self.unsubscribe_data_queue[:] = still_pending
             await asyncio.sleep(manage_data_interval)
+
+    async def track_subscriptions(self, subscriptions: list[Subscription]) -> None:
+        for subscription in subscriptions:
+            try:
+                await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
+            except aiohttp.client_exceptions.ClientConnectorError as e:
+                # Wallet unreachable: retry the remaining subscriptions on the next cycle.
+                self.log.warning(f"Cannot connect to the wallet to track subscriptions ({e}). Retrying next cycle.")
+                return
+            except Exception as e:
+                # One subscription failing to track must not abort tracking of the others.
+                self.log.warning(
+                    f"Exception while requesting wallet track subscription {subscription.store_id}: {type(e)} {e}"
+                )
 
     async def update_subscription(
         self,
@@ -1213,6 +1226,7 @@ class DataLayer:
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
             )
+            assert isinstance(res, CreateOfferForIDsResponse)
 
             offer = Offer(
                 trade_id=res.trade_record.trade_id,

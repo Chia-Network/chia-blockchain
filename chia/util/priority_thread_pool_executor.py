@@ -207,7 +207,7 @@ class PriorityThreadPoolExecutor:
         max_wait = 0.0
         with q.mutex:
             for item in q.queue:
-                if item._sentinel or item.enqueue_time == 0.0:
+                if item._sentinel or item.enqueue_time == 0.0:  # noqa: RUF069
                     continue
                 assert item.future is not None
                 if not item.future.running() and not item.future.done():

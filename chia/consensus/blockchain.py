@@ -451,6 +451,9 @@ class Blockchain:
                 self.__height_map.rollback(state_change_summary.fork_height)
                 if self._peak_height is not None and fork_info.fork_height < self._peak_height:
                     self.mmr_manager.rollback_to_height(fork_info.fork_height, self)
+                # pre-allocate memory for height to hash map. We don't want it
+                # to fail once the DB transaction is committed.
+                self.__height_map.ensure_capacity(records[-1].height)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
@@ -785,7 +788,7 @@ class Blockchain:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.value), None, None, uint32(0))
+            return PreValidationResult(uint16(error.value), None, None, None, uint32(0))
 
         prev_height = (
             -1
@@ -807,9 +810,9 @@ class Blockchain:
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
+            return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
-        return PreValidationResult(None, required_iters, conds, uint32(0))
+        return PreValidationResult(None, None, required_iters, conds, uint32(0))
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         block_hash_from_hh = self.height_to_hash(height)

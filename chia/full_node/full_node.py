@@ -160,6 +160,7 @@ class FullNode:
     _tx_task_list: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
     _compact_vdf_sem: LimitedSemaphore | None = None
     _new_peak_sem: LimitedSemaphore | None = None
+    _sp_catchup_sem: LimitedSemaphore | None = None
     _add_transaction_semaphore: asyncio.Semaphore | None = None
     _db_wrapper: DBWrapper2 | None = None
     _hint_store: HintStore | None = None
@@ -217,6 +218,10 @@ class FullNode:
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
         self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
+
+        # Limit concurrent sub-slot catch-up loops (up to 30 iterations x 10s each) to prevent
+        # resource exhaustion from multiple peers triggering catch-up simultaneously.
+        self._sp_catchup_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=6)
 
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
@@ -479,6 +484,11 @@ class FullNode:
         assert self._compact_vdf_sem is not None
         return self._compact_vdf_sem
 
+    @property
+    def sp_catchup_sem(self) -> LimitedSemaphore:
+        assert self._sp_catchup_sem is not None
+        return self._sp_catchup_sem
+
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         connections = self.server.get_connections(request_node_type)
         con_info: list[dict[str, Any]] = []
@@ -633,7 +643,7 @@ class FullNode:
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
                 return False
-            hash = self.blockchain.height_to_hash(first.block.height - 1)
+            hash = self.blockchain.height_to_hash(uint32(first.block.height - 1))
             assert hash is not None
             if hash != first.block.prev_header_hash:
                 self.log.info("Batch syncing stopped, this is a deep chain")
@@ -668,7 +678,9 @@ class FullNode:
                     prev_b = None
                     if response.blocks[0].height > 0:
                         prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
-                        assert prev_b is not None
+                        if prev_b is None:
+                            # First block of the batch is not connected to our chain; fall back to long sync.
+                            return False
                     new_slot = len(response.blocks[0].finished_sub_slots) > 0
                     ssi, diff = get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
@@ -744,7 +756,7 @@ class FullNode:
                 if curr_height == 0:
                     found_fork_point = True
                     break
-                hash_at_height = self.blockchain.height_to_hash(curr.block.height - 1)
+                hash_at_height = self.blockchain.height_to_hash(uint32(curr.block.height - 1))
                 if hash_at_height is not None and hash_at_height == curr.block.prev_header_hash:
                     found_fork_point = True
                     break
@@ -1081,7 +1093,16 @@ class FullNode:
                         timeout=10,
                     )
                 )
-            for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
+            for i, target_peak_response in enumerate(await asyncio.gather(*coroutines, return_exceptions=True)):
+                if isinstance(target_peak_response, BaseException):
+                    self.log.warning(
+                        "Failed to get target peak block from peer %s: %r",
+                        peers[i].get_peer_logging(),
+                        target_peak_response,
+                    )
+                    if not isinstance(target_peak_response, (TimeoutError, asyncio.CancelledError)):
+                        await peers[i].close(CONSENSUS_ERROR_BAN_SECONDS)
+                    continue
                 if (
                     target_peak_response is not None
                     and isinstance(target_peak_response, RespondBlock)
@@ -1329,8 +1350,9 @@ class FullNode:
                         random.shuffle(new_peers_with_peak)
                         self.sync_store.peers_changed.clear()
                         self.log.info(f"peers with peak: {len(new_peers_with_peak)}")
-            except Exception as e:
-                self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
+            except Exception:
+                self.log.exception(f"Exception fetching {start_height} to {end_height} from peer")
+                raise
             finally:
                 # finished signal with None
                 await output_queue.put(None)
@@ -1395,6 +1417,7 @@ class FullNode:
                         self.log.info(f"sync pipeline back-pressure. stalled {end - start:0.2f} seconds on add_block()")
             except Exception:
                 self.log.exception("Exception validating")
+                raise
             finally:
                 # finished signal with None
                 await output_queue.put(None)
@@ -1496,12 +1519,39 @@ class FullNode:
         return [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
 
     async def _wallets_sync_task_handler(self) -> None:
+        max_attempts = 3
+        retry_attempts: dict[tuple[uint32, bytes32], int] = {}
         while not self._shut_down:
+            wallet_update: WalletUpdate | None = None
             try:
                 wallet_update = await self.wallet_sync_queue.get()
                 await self.update_wallets(wallet_update)
+                retry_attempts.pop((wallet_update.fork_height, wallet_update.peak.header_hash), None)
             except Exception:
-                self.log.exception("Wallet sync task failure")
+                if wallet_update is None:
+                    self.log.exception("Wallet sync task failure before receiving update")
+                    continue
+
+                update_key = (wallet_update.fork_height, wallet_update.peak.header_hash)
+                current_attempt = retry_attempts.get(update_key, 0) + 1
+                if current_attempt < max_attempts:
+                    retry_attempts[update_key] = current_attempt
+                    self.log.exception(
+                        "Wallet sync task failure, retrying update %s/%s for peak %s",
+                        current_attempt,
+                        max_attempts - 1,
+                        wallet_update.peak.header_hash.hex(),
+                    )
+                    # Bounded backoff reduces retry churn on transient failures.
+                    await asyncio.sleep(0.1 * (2 ** (current_attempt - 1)))
+                    await self.wallet_sync_queue.put(wallet_update)
+                else:
+                    retry_attempts.pop(update_key, None)
+                    self.log.exception(
+                        "Wallet sync task failure, dropping update after %s attempts for peak %s",
+                        max_attempts,
+                        wallet_update.peak.header_hash.hex(),
+                    )
                 continue
 
     async def update_wallets(self, wallet_update: WalletUpdate) -> None:
@@ -1688,6 +1738,7 @@ class FullNode:
                 self.log.error(
                     f"prevalidation failed for block {header_hash.hex()} height {block.height} "
                     f"from peer {peer_info}: {Err(pre_validation_results[i].error).name}"
+                    f" {pre_validation_results[i].error_msg or ''}"
                 )
                 return agg_state_change_summary, Err(pre_validation_results[i].error)
             if pre_validation_results[i].required_iters is None:
@@ -2050,9 +2101,9 @@ class FullNode:
 
         # TODO: maybe add and broadcast new IPs as well
 
-        if record.height % 1000 == 0:
-            # Occasionally clear data in full node store to keep memory usage small
-            self.full_node_store.clear_old_cache_entries()
+        # Flush any expired future-cache entries that weren't already cleaned
+        # up during append (safety net for quiescent periods).
+        self.full_node_store.clear_old_cache_entries()
 
         if self.sync_store.get_sync_mode() is False:
             await self.send_peak_to_timelords(block)
@@ -2236,6 +2287,7 @@ class FullNode:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
                             f"{block.height}: {Err(pre_validation_result.error).name}"
+                            f" {pre_validation_result.error_msg or ''}"
                         )
                 else:
                     if fork_info is None:
@@ -2496,7 +2548,7 @@ class FullNode:
             # bump nice for each unfinished block we already have for this
             # reward hash, so a burst of duplicates doesn't starve mempool
             # transaction validation
-            err, conditions = await self.pool.run_in_loop(
+            err, err_msg, conditions = await self.pool.run_in_loop(
                 run_block,
                 bytes(block.transactions_generator),
                 generator_args,
@@ -2509,7 +2561,7 @@ class FullNode:
             )
 
             if err is not None:
-                raise ConsensusError(Err(err))
+                raise ConsensusError(Err(err), error_msg=err_msg)
             assert conditions is not None
             assert conditions.validated_signature
             conds = conditions
@@ -2520,7 +2572,7 @@ class FullNode:
             validation_start = time.monotonic()
             validate_result = await self.blockchain.validate_unfinished_block(block, conds)
             if validate_result.error is not None:
-                raise ConsensusError(Err(validate_result.error))
+                raise ConsensusError(Err(validate_result.error), error_msg=validate_result.error_msg)
             validation_time = time.monotonic() - validation_start
 
         assert validate_result.required_iters is not None
@@ -2880,7 +2932,7 @@ class FullNode:
         if self.mempool_manager.get_spendbundle(spend_name) is not None:
             self.mempool_manager.remove_seen(spend_name)
             return MempoolInclusionStatus.SUCCESS, None
-        if self.mempool_manager.seen(spend_name):
+        if self.mempool_manager.seen(spend_name) or self.mempool_manager.in_flight(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing or if we have not yet received a block
@@ -2893,19 +2945,26 @@ class FullNode:
             if peer_info.advertised_cost > 0:
                 fee_per_cost = max(fee_per_cost, peer_info.advertised_fee / peer_info.advertised_cost)
 
+        # Mark as in-flight before the expensive pre_validate call so
+        # concurrent workers processing the same tx from different peers are
+        # deduplicated without churning the bounded seen cache.
+        self.mempool_manager.add_in_flight(spend_name)
         try:
             cost_result = await self.mempool_manager.pre_validate_spendbundle(
                 transaction, spend_name, self._bls_cache, fee_per_cost=fee_per_cost
             )
         except ValueError as e:
             # ValueError is used to indicate a soft failure. We don't want to
-            # ban the peer
+            # ban the peer.
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
-            self.log.info(f"Rejecting transaction {spend_name}: {e.code}")
+            # Keep known-invalid bundles in seen-cache to prevent re-validation.
             self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+            self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, e.code
+        finally:
+            self.mempool_manager.remove_in_flight(spend_name)
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 

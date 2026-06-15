@@ -30,13 +30,10 @@ warn_return_any = False
 no_implicit_reexport = False
 strict_equality = False
 
+[mypy-chia-strict-bytes-exclusions]
+disable_error_code = arg-type,call-overload,override,no-any-return
+
 # TODO: stop ignoring these and get hints for as many as possible
-
-[mypy-boto3.*]
-ignore_missing_imports = True
-
-[mypy-botocore.*]
-ignore_missing_imports = True
 
 [mypy-chia_puzzles_py.*]
 ignore_missing_imports = True
@@ -53,9 +50,6 @@ ignore_missing_imports = True
 [mypy-chialisp.*]
 ignore_missing_imports = True
 
-[mypy-colorama.*]
-ignore_missing_imports = True
-
 [mypy-dnslib.*]
 ignore_missing_imports = True
 
@@ -65,20 +59,8 @@ ignore_missing_imports = True
 [mypy-keyrings.cryptfile.*]
 ignore_missing_imports = True
 
-[mypy-lxml.*]
-ignore_missing_imports = True
-
 [mypy-miniupnpc.*]
 ignore_missing_imports = True
 
-[mypy-psutil.*]
-ignore_missing_imports = True
-
-[mypy-sortedcontainers.*]
-ignore_missing_imports = True
-
 [mypy-testconfig.*]
-ignore_missing_imports = True
-
-[mypy-zstd.*]
 ignore_missing_imports = True
