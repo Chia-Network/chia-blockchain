@@ -178,6 +178,7 @@ from chia.wallet.wallet_request_types import (
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import SyncStatus
 
 log = logging.getLogger(__name__)
 
@@ -2039,6 +2040,16 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
     # 8. Test the failure case
     with pytest.raises(ValueError, match="not found"):
         await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
+
+    # 9. Sync-status guard: when not fully synced, requests are rejected unless
+    # allow_unsynced=True. The simulator's get_sync_status short-circuits to
+    # SYNCED so we patch the state manager directly to drive the unsynced path.
+    wsm = wallet_node.wallet_state_manager
+    with patch.object(wsm, "get_sync_status", AsyncMock(return_value=SyncStatus.SLIGHTLY_BEHIND)):
+        with pytest.raises(ValueError, match="fully synced"):
+            await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids))
+        rpc_result = await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, allow_unsynced=True))
+        assert {record.coin for record in rpc_result.coin_records} == coins
 
 
 @pytest.mark.parametrize(
