@@ -733,6 +733,9 @@ class DataLayer:
         ).singleton
         if singleton_record is None:
             return
+        if singleton_record.generation == uint32(0):
+            # No data committed on chain yet, so there is no local tree to clean up.
+            return
         await self._update_confirmation_status(store_id=store_id)
 
         root = await self.data_store.get_tree_root(store_id=store_id)
@@ -753,6 +756,10 @@ class DataLayer:
         ).singleton
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {store_id}.")
+            return
+        if singleton_record.generation == uint32(0):
+            # No data committed on chain yet, so there is no local tree to publish.
+            self.log.info(f"No committed data for store {store_id}; skipping DataLayer file publishing.")
             return
         await self._update_confirmation_status(store_id=store_id)
 

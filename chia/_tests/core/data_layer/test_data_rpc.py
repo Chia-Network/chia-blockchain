@@ -62,6 +62,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.data_layer.start_data_layer import create_data_layer_service
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import BlockTools
@@ -75,6 +76,7 @@ from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -82,6 +84,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
     CheckOfferValidity,
     DLLatestSingleton,
+    DLLatestSingletonResponse,
     DLOwnedSingletonsResponse,
     DLStopTracking,
     DLTrackNew,
@@ -3940,6 +3943,57 @@ async def test_local_store_exception(
             await asyncio.sleep(manage_data_interval)
 
             assert f"Can't subscribe to local store {fake_store.hex()}:" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_management_skips_store_without_committed_data(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A store whose on-chain singleton is still at generation 0 (created but no data committed yet)
+    # has no local tree. Both upload_files and clean_old_full_tree_files (run back-to-back in the
+    # management cycle) must return early instead of raising "No generations found" from
+    # get_tree_root.
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    store_id = bytes32([1] * 32)
+    singleton = SingletonRecord(
+        coin_id=bytes32([2] * 32),
+        launcher_id=store_id,
+        root=bytes32.zeros,
+        inner_puzzle_hash=bytes32([3] * 32),
+        confirmed=True,
+        confirmed_at_height=uint32(1),
+        lineage_proof=LineageProof(),
+        generation=uint32(0),
+        timestamp=uint64(0),
+    )
+
+    async def mock_dl_latest_singleton(self: Any, request: Any) -> DLLatestSingletonResponse:
+        return DLLatestSingletonResponse(singleton=singleton)
+
+    with monkeypatch.context() as m, caplog.at_level(logging.INFO):
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_latest_singleton", mock_dl_latest_singleton)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=600,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            # No local tree exists for store_id; pre-fix both of these raised "No generations found"
+            # from get_tree_root (upload_files raising masked clean_old_full_tree_files).
+            await data_layer.upload_files(store_id)
+            await data_layer.clean_old_full_tree_files(store_id)
+
+    assert f"No committed data for store {store_id.hex()}; skipping DataLayer file publishing." in caplog.text
+    assert "No generations found" not in caplog.text
 
 
 class TestDataLayerWalletRpcClient:
