@@ -71,7 +71,6 @@ from chia.wallet.wallet_request_types import (
     CancelOffer,
     CreateNewDL,
     CreateOfferForIDs,
-    CreateOfferForIDsResponse,
     DLDeleteMirror,
     DLGetMirrors,
     DLHistory,
@@ -1233,7 +1232,6 @@ class DataLayer:
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            assert isinstance(res, CreateOfferForIDsResponse)
 
             offer = Offer(
                 trade_id=res.trade_record.trade_id,

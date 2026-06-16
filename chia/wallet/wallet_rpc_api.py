@@ -512,7 +512,12 @@ def tx_endpoint(
                     offer=bytes(new_offer),
                     trade_id=new_offer.name(),
                 )
-                response["trade_record"] = new_trade.to_json_dict_convenience()
+                if request.get("offer_only", False):
+                    response["trade_record"] = None
+                    response["transactions"] = []
+                    response["unsigned_transactions"] = []
+                else:
+                    response["trade_record"] = new_trade.to_json_dict_convenience()
                 if (
                     await self.service.wallet_state_manager.trade_manager.trade_store.get_trade_record(
                         old_trade_record.trade_id
@@ -529,12 +534,6 @@ def tx_endpoint(
                     await self.service.wallet_state_manager.tx_store.add_transaction_record(
                         dataclasses.replace(tx, trade_id=new_trade.trade_id)
                     )
-
-            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
-                response.pop("trade_record", None)
-                response.pop("transactions", None)
-                response.pop("unsigned_transactions", None)
-                return response
 
             return response
 
@@ -2083,7 +2082,7 @@ class WalletRpcApi:
             unsigned_transactions=[],
             transactions=[],
             offer=Offer.from_bytes(result[1].offer),
-            trade_record=result[1],
+            _trade_record=result[1],
         )
 
     @marshal
@@ -2179,7 +2178,7 @@ class WalletRpcApi:
             unsigned_transactions=[],
             transactions=[],
             offer=Offer.from_bytes(trade_record.offer),
-            trade_record=trade_record,
+            _trade_record=trade_record,
         )
 
     @marshal

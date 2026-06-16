@@ -42,7 +42,6 @@ from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletResponse,
     CreateOfferForIDs,
-    CreateOfferForIDsOfferOnlyResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransaction,
     CreateSignedTransactionsResponse,
@@ -588,12 +587,10 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> CreateOfferForIDsResponse | CreateOfferForIDsOfferOnlyResponse:
+    ) -> CreateOfferForIDsResponse:
         response = await self.fetch(
             "create_offer_for_ids", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
         )
-        if request.offer_only:
-            return CreateOfferForIDsOfferOnlyResponse.from_json_dict(response)
         return CreateOfferForIDsResponse.from_json_dict(response)
 
     async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
