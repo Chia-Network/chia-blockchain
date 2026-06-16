@@ -64,7 +64,7 @@ def test_base_event_loop_has_methods() -> None:
         )
 
         assert inspect.isfunction(_chia_create_server)
-        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any', port: 'Any', *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'bool | None' = None, reuse_port: 'bool | None' = None, ssl_handshake_timeout: 'float | None' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # noqa: E501
+        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any' = None, port: 'Any' = None, *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'bool | None' = None, reuse_port: 'bool | None' = None, ssl_handshake_timeout: 'float | None' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # noqa: E501
         assert str(inspect.signature(_chia_create_server)) == expected_signature
 
         class EchoProtocol(asyncio.Protocol):
