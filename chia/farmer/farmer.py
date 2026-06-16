@@ -504,16 +504,20 @@ class Farmer:
             authentication_sk = self.get_authentication_sk(pool_config)
             if authentication_sk is None:
                 return None
-            signature = AugSchemeMPL.sign(authentication_sk, message)
+            get_farmer_params: pool_protocol.GetFarmerRequestV1 | pool_protocol.GetFarmerRequestV2 = (
+                pool_protocol.GetFarmerRequestV1(
+                    authentication_token=uint64(authentication_token),
+                    launcher_id=pool_config.launcher_id,
+                    signature=AugSchemeMPL.sign(authentication_sk, message),
+                    authentication_token_v2="",
+                )
+            )
         else:
-            signature = None
-
-        get_farmer_params = pool_protocol.GetFarmerRequest(
-            authentication_token=uint64(authentication_token) if pool_config.version == 1 else uint64(0),
-            launcher_id=pool_config.launcher_id,
-            signature=signature,
-            authentication_token_v2=authentication_token,
-        )
+            get_farmer_params = pool_protocol.GetFarmerRequestV2(
+                authentication_token=uint64(0),
+                launcher_id=pool_config.launcher_id,
+                authentication_token_v2=authentication_token,
+            )
 
         response, _ = await make_pool_protocol_request(
             self=self,

@@ -108,11 +108,16 @@ class PostPartialResponse(Streamable):
 # GET /farmer
 @streamable
 @dataclass(frozen=True, kw_only=True)
-class GetFarmerRequest(Streamable):
+class GetFarmerRequestV2(Streamable):
     authentication_token: uint64
     launcher_id: bytes32
-    signature: G2Element | None = None
     authentication_token_v2: str
+
+
+@streamable
+@dataclass(frozen=True, kw_only=True)
+class GetFarmerRequestV1(GetFarmerRequestV2):
+    signature: G2Element | None = None
 
 
 # Response in success case
