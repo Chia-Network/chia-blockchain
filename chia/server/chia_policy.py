@@ -204,8 +204,8 @@ class PausableServer(BaseEventsServer):
 async def _chia_create_server(
     cls: Any,
     protocol_factory: _ProtocolFactory,
-    host: Any,
-    port: Any,
+    host: Any = None,
+    port: Any = None,
     *,
     family: socket.AddressFamily = socket.AF_UNSPEC,
     flags: socket.AddressInfo = socket.AI_PASSIVE,
