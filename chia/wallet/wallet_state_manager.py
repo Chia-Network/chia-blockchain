@@ -1083,8 +1083,18 @@ class WalletStateManager:
                 if matched_plotnft_wallet_id is None or not user_key_is_owned:
                     self.log.warning(f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet")
                     if matched_plotnft_wallet_id is not None:
-                        await self.delete_wallet(wallet_id=matched_plotnft_wallet_id)
-                        self.wallets.pop(matched_plotnft_wallet_id)
+                        plotnft_wallet = self.wallets[matched_plotnft_wallet_id]
+                        assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                        current_plotnft = await plotnft_wallet.get_current_plotnft()
+                        current_plotnft_created_height = await self.plotnft2_store.get_plotnft_created_height(
+                            coin_id=current_plotnft.coin.name()
+                        )
+                        if (
+                            coin_state.created_height is not None
+                            and current_plotnft_created_height < coin_state.created_height
+                        ):
+                            await self.delete_wallet(wallet_id=matched_plotnft_wallet_id)
+                            self.wallets.pop(matched_plotnft_wallet_id)
                 else:
                     # the Streamable hint is in error so we need this type ignore
                     return WalletIdentifier(  # type: ignore[return-value]
