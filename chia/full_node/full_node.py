@@ -1349,6 +1349,162 @@ class FullNode:
                     self.sync_store.peers_changed.clear()
                     self.log.info(f"peers with peak: {len(new_peers_with_peak)}")
 
+        async def fetch_blocks_v3() -> AsyncIterator[tuple[WSChiaConnection, list[FullBlock]]]:
+            """
+            Window-based fetcher for peers supporting RATE_LIMITS_V3. Issues
+            multiple outstanding requests per peer (up to each peer's advertised
+            window_size) and yields results in height order.
+            """
+            v3_peers = [p for p in peers_with_peak if Capability.RATE_LIMITS_V3 in p.peer_capabilities and not p.closed]
+            if not v3_peers:
+                self.log.error("fetch_blocks_v3: no v3-capable peers available")
+                return
+
+            self.log.info(f"fetch_blocks_v3: using {len(v3_peers)} v3-capable peers")
+
+            MAX_WINDOW_CAP = 10
+
+            def get_window_size(peer: WSChiaConnection) -> int:
+                setting = peer.peer_rl_settings_v3.get(ProtocolMessageTypes.request_blocks)
+                if setting is None or setting.window_size is None:
+                    return MAX_WINDOW_CAP
+                return min(setting.window_size, MAX_WINDOW_CAP)
+
+            peer_in_flight: dict[bytes32, int] = {p.peer_node_id: 0 for p in v3_peers}
+            peer_by_id: dict[bytes32, WSChiaConnection] = {p.peer_node_id: p for p in v3_peers}
+
+            # Each slot represents one batch to fetch, maintained in height order
+            all_batches: list[tuple[int, int]] = []
+            for s in range(fork_point_height, target_peak_sb_height + 1, batch_size):
+                e = min(target_peak_sb_height, s + batch_size - 1)
+                all_batches.append((s, e))
+
+            # Slots tracking state for each batch
+            # None = not dispatched or needs retry, Task = in flight, tuple = completed
+            slot_tasks: list[asyncio.Task[tuple[WSChiaConnection, Any]] | None] = [None] * len(all_batches)
+            slot_results: list[tuple[WSChiaConnection, list[FullBlock]] | None] = [None] * len(all_batches)
+            slot_peer: list[bytes32 | None] = [None] * len(all_batches)
+            slot_attempts: list[int] = [0] * len(all_batches)
+
+            yield_idx = 0
+            timeout = int(30 + 30 / len(v3_peers))
+
+            def find_available_peer() -> WSChiaConnection | None:
+                """Find a peer with capacity (in_flight < window_size)."""
+                candidates = [
+                    (peer_in_flight.get(p.peer_node_id, 0), p)
+                    for p in peer_by_id.values()
+                    if not p.closed and peer_in_flight.get(p.peer_node_id, 0) < get_window_size(p)
+                ]
+                if not candidates:
+                    return None
+                # prefer the peer with fewest in-flight requests
+                candidates.sort(key=lambda x: x[0])
+                return candidates[0][1]
+
+            async def do_fetch(
+                peer: WSChiaConnection, start_height: int, end_height: int
+            ) -> tuple[WSChiaConnection, Any]:
+                request = RequestBlocks(uint32(start_height), uint32(end_height), True)
+                response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=timeout)
+                return (peer, response)
+
+            active_tasks: dict[asyncio.Task[tuple[WSChiaConnection, Any]], int] = {}
+
+            try:
+                while yield_idx < len(all_batches):
+                    # Dispatch: fill up as many slots as we have peer capacity
+                    for i in range(len(all_batches)):
+                        if slot_results[i] is not None:
+                            continue
+                        if slot_tasks[i] is not None:
+                            continue
+                        peer = find_available_peer()
+                        if peer is None:
+                            break
+                        start_h, end_h = all_batches[i]
+                        task = asyncio.ensure_future(do_fetch(peer, start_h, end_h))
+                        slot_tasks[i] = task
+                        slot_peer[i] = peer.peer_node_id
+                        active_tasks[task] = i
+                        peer_in_flight[peer.peer_node_id] = peer_in_flight.get(peer.peer_node_id, 0) + 1
+
+                    if not active_tasks:
+                        self.log.error("fetch_blocks_v3: no active tasks and not all batches done")
+                        return
+
+                    # Wait for any task to complete
+                    done, _ = await asyncio.wait(active_tasks.keys(), return_when=asyncio.FIRST_COMPLETED)
+
+                    for task in done:
+                        slot_idx = active_tasks.pop(task)
+                        peer_id = slot_peer[slot_idx]
+                        assert peer_id is not None
+                        if peer_id in peer_in_flight:
+                            peer_in_flight[peer_id] = max(0, peer_in_flight[peer_id] - 1)
+
+                        try:
+                            peer, response = task.result()
+                        except Exception:
+                            # Network error — mark for retry
+                            slot_tasks[slot_idx] = None
+                            slot_peer[slot_idx] = None
+                            slot_attempts[slot_idx] += 1
+                            if slot_attempts[slot_idx] > len(peer_by_id) * 2:
+                                start_h, end_h = all_batches[slot_idx]
+                                self.log.error(f"failed fetching {start_h} to {end_h} after retries")
+                                return
+                            continue
+
+                        start_h, end_h = all_batches[slot_idx]
+                        if response is None:
+                            # Timeout
+                            self.log.info(f"peer timed out fetching {start_h}-{end_h}")
+                            await peer.close()
+                            peer_in_flight.pop(peer.peer_node_id, None)
+                            peer_by_id.pop(peer.peer_node_id, None)
+                            slot_tasks[slot_idx] = None
+                            slot_peer[slot_idx] = None
+                            slot_attempts[slot_idx] += 1
+                            if not peer_by_id:
+                                self.log.error("fetch_blocks_v3: no peers remaining")
+                                return
+                        elif isinstance(response, RespondBlocks):
+                            slot_results[slot_idx] = (peer, response.blocks)
+                            slot_tasks[slot_idx] = None
+                        else:
+                            # Unexpected response (reject), retry
+                            slot_tasks[slot_idx] = None
+                            slot_peer[slot_idx] = None
+                            slot_attempts[slot_idx] += 1
+
+                    # Yield completed slots from the front in order
+                    while yield_idx < len(all_batches) and slot_results[yield_idx] is not None:
+                        result = slot_results[yield_idx]
+                        assert result is not None
+                        yield result
+                        slot_results[yield_idx] = None
+                        yield_idx += 1
+
+                    # Refresh peer list if peers changed
+                    if self.sync_store.peers_changed.is_set():
+                        new_peers = self.get_peers_with_peak(peak_hash)
+                        new_v3 = [
+                            p for p in new_peers if Capability.RATE_LIMITS_V3 in p.peer_capabilities and not p.closed
+                        ]
+                        for p in new_v3:
+                            if p.peer_node_id not in peer_by_id:
+                                peer_by_id[p.peer_node_id] = p
+                                peer_in_flight[p.peer_node_id] = 0
+                        self.sync_store.peers_changed.clear()
+                        self.log.info(f"fetch_blocks_v3: peers updated, now {len(peer_by_id)} v3 peers")
+            finally:
+                # Cancel any remaining in-flight tasks
+                for task in active_tasks:
+                    task.cancel()
+                if active_tasks:
+                    await asyncio.gather(*active_tasks, return_exceptions=True)
+
         first_batch = True
         vs = ValidationState(ssi, diff, prev_ses_block)
 
@@ -1442,7 +1598,18 @@ class FullNode:
             # height, in that case.
             self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
-        pipeline = TaskPipeline(source=fetch_blocks(), stages=[validate_batch, ingest_batch], queue_size=10)
+        v3_peers = [p for p in peers_with_peak if Capability.RATE_LIMITS_V3 in p.peer_capabilities]
+        use_v3 = self.config.get("rate_limits", 2) >= 3 and len(v3_peers) > 0
+        source: AsyncIterator[tuple[WSChiaConnection, list[FullBlock]]]
+        if use_v3:
+            self.log.info(
+                f"sync_from_fork_point: using v3 window-based fetcher "
+                f"({len(v3_peers)}/{len(peers_with_peak)} peers support v3)"
+            )
+            source = fetch_blocks_v3()
+        else:
+            source = fetch_blocks()
+        pipeline = TaskPipeline(source=source, stages=[validate_batch, ingest_batch], queue_size=10)
         try:
             await pipeline.run()
         except Exception:

@@ -15,7 +15,8 @@ from chia._tests.core.node_height import node_height_between, node_height_exactl
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
-from chia.protocols.shared_protocol import Capability
+from chia.protocols.outbound_message import NodeType
+from chia.protocols.shared_protocol import Capability, _rate_limits_v3, default_capabilities
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
@@ -515,3 +516,47 @@ async def test_bad_peak_cache_invalidation(
     block = blocks[-1]
     full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
     assert len(full_node_1.full_node.bad_peak_cache) == 1
+
+
+@pytest.mark.anyio
+async def test_batch_sync_v3_rate_limits(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
+) -> None:
+    """
+    Same as test_batch_sync but with RATE_LIMITS_V3 enabled on both nodes,
+    so the sync uses the window-based fetch_blocks_v3() path.
+    """
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        pytest.skip("v3 handshake exchange has known issues in HARD_FORK_3_0 test modes")
+
+    num_blocks = 20
+    num_blocks_2 = 9
+    full_node_1, full_node_2, server_1, server_2, bt = two_nodes
+
+    # Enable RATE_LIMITS_V3 on both servers before connecting
+    v3_capabilities = list(default_capabilities[NodeType.FULL_NODE]) + list(_rate_limits_v3)
+    server_1.set_capabilities(v3_capabilities)
+    server_2.set_capabilities(v3_capabilities)
+
+    blocks = bt.get_consecutive_blocks(num_blocks)
+    blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
+
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+
+    for block in blocks_2:
+        await full_node_2.full_node.add_block(block)
+
+    await server_2.start_client(
+        PeerInfo(self_hostname, server_1.get_port()),
+        on_connect=full_node_2.full_node.on_connect,
+    )
+
+    # Both peers should negotiate v3 during handshake
+    await time_out_assert(10, lambda: len(server_2.all_connections) > 0)
+    for conn in server_2.all_connections.values():
+        assert Capability.RATE_LIMITS_V3 in conn.peer_capabilities
+
+    await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
