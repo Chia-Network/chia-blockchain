@@ -1,0 +1,9 @@
+# Modules where strict-bytes is disabled (mypy 2.1 treats bytearray/memoryview as bytes subtypes).
+chia.full_node.full_block_utils
+chia.full_node.block_store
+chia.types.blockchain_format.coin
+chia.seeder.dns_server
+chia._tests.util.test_full_block_utils
+chia._tests.core.full_node.test_block_height_map
+chia._tests.timelord.test_timelord
+chia._tests.core.test_filter

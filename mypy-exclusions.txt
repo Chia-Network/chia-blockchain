@@ -1,5 +1,4 @@
 # File created by: python manage-mypy.py build-exclusions
-chia.daemon.server
 chia.introducer.introducer
 chia.plotters.bladebit
 chia.plotters.madmax
@@ -23,7 +22,6 @@ chia.wallet.wallet_interested_store
 chia.wallet.wallet_node_api
 chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
-chia.wallet.wallet_user_store
 chia._tests.clvm.test_puzzles
 chia._tests.clvm.test_singletons
 chia._tests.clvm.test_spend_sim

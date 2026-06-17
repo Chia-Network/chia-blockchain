@@ -36,7 +36,6 @@ from chia.wallet.wallet_request_types import LogIn
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 NODE_TYPES: dict[str, type[RpcClient]] = {
-    "base": RpcClient,
     "farmer": FarmerRpcClient,
     "wallet": WalletRpcClient,
     "full_node": FullNodeRpcClient,
@@ -47,7 +46,6 @@ NODE_TYPES: dict[str, type[RpcClient]] = {
 }
 
 node_config_section_names: dict[type[RpcClient], str] = {
-    RpcClient: "base",
     FarmerRpcClient: "farmer",
     WalletRpcClient: "wallet",
     FullNodeRpcClient: "full_node",
@@ -58,6 +56,14 @@ node_config_section_names: dict[type[RpcClient], str] = {
 }
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
+
+
+def raise_if_config_section_missing(config: dict[str, Any], config_section: str) -> None:
+    if config_section not in config:
+        configured = sorted({section for section in node_config_section_names.values() if section in config})
+        raise click.UsageError(
+            f"Service '{config_section}' is not configured in config.yaml. Valid options: {', '.join(configured)}"
+        )
 
 
 def transaction_submitted_msg(tx: TransactionRecord) -> str:
@@ -109,14 +115,16 @@ async def get_any_service_client(
     """
 
     node_type = node_config_section_names.get(client_type)
-    if node_type is None:
-        # Click already checks this, so this should never happen
-        raise ValueError(f"Invalid client type requested: {client_type.__name__}")
     # load variables from config file
     config = load_config(root_path, "config.yaml", fill_missing_services=issubclass(client_type, DataLayerRpcClient))
     self_hostname = config["self_hostname"]
     if rpc_port is None:
+        if node_type is None:
+            raise ValueError(f"Invalid client type requested: {client_type.__name__}")
+        raise_if_config_section_missing(config, node_type)
         rpc_port = config[node_type]["rpc_port"]
+
+    connection_type_name = node_type if node_type is not None else client_type.__name__
 
     async with contextlib.AsyncExitStack() as exit_stack:
         # select node client type based on string
@@ -131,7 +139,7 @@ async def get_any_service_client(
 
         try:
             # check if we can connect to node
-            await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
+            await validate_client_connection(node_client, connection_type_name, rpc_port, consume_errors)
             yield node_client, config
         except ResponseFailureError as e:
             if not consume_errors:
@@ -151,7 +159,7 @@ async def get_any_service_client(
         except Exception as e:  # this is only here to make the errors more user-friendly.
             if not consume_errors:
                 raise
-            print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
+            print(f"Exception from '{connection_type_name}' {e}:\n{traceback.format_exc()}")
 
 
 async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: int | None) -> int:

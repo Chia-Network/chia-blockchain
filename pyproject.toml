@@ -45,7 +45,7 @@ changelog = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG
 
 [tool.poetry.dependencies]
 aiofiles = ">=24.1.0"  # Async IO for files
-aiohttp = ">=3.10.4"  # HTTP server for full node rpc
+aiohttp = ">=3.14.0"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = ">=4.6.2.post1"
 bitstring = ">=4.1.4"  # Binary data management library
@@ -53,7 +53,7 @@ boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
-chia_rs = ">=0.44.0, <0.45"
+chia_rs = ">=0.45.0, <0.46"
 chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.1.7"  # For the CLI
 clvm = ">=0.9.14"
@@ -99,6 +99,12 @@ tach = { version = ">=0.35.0", optional = true }
 types-aiofiles = { version = ">=25.1.0.20260508", optional = true }
 types-pyyaml = { version = ">=6.0.12.20260510", optional = true }
 types-setuptools = { version = ">=82.0.0.20260518", optional = true }
+types-psutil = { version = ">=7.2.2.20260518", optional = true }
+types-lxml = { version = ">=2026.2.16", optional = true }
+types-zstd = { version = ">=1.5.7.3.20260408", optional = true }
+boto3-stubs = { version = ">=1.43.18", optional = true }
+sortedcontainers-stubs = {version = ">= 2.4.3", optional = true }
+types-colorama = { version = ">=0.4.15.20260508", optional = true }
 lxml = { version = ">=6.1.0", optional = true }
 miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # big-o = {version = "0.11.0", optional = true}
@@ -108,7 +114,7 @@ miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 ruff = { version = ">=0.8.1", optional = true }
 
 [project.optional-dependencies]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "lxml"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pytest-rerunfailures", "ruff", "tach", "types-aiofiles", "types-pyyaml", "types-setuptools", "types-colorama", "types-zstd", "types-lxml", "types-psutil", "boto3-stubs[essential]", "lxml", "sortedcontainers-stubs"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 

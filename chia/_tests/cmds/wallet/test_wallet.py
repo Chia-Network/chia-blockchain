@@ -891,7 +891,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             )
 
             return CreateOfferForIDsResponse(
-                unsigned_transactions=[STD_UTX], transactions=[STD_TX], offer=created_offer, trade_record=trade_offer
+                unsigned_transactions=[STD_UTX], transactions=[STD_TX], offer=created_offer, _trade_record=trade_offer
             )
 
     inst_rpc_client = MakeOfferRpcClient()
@@ -1130,7 +1130,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 unsigned_transactions=[STD_UTX],
                 transactions=[STD_TX],
                 offer=request.parsed_offer,
-                trade_record=TradeRecord(
+                _trade_record=TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=uint64(123456789),
                     created_at_time=uint64(12345678),
