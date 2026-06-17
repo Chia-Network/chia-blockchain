@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import enum
 import functools
 import logging
 from collections.abc import Awaitable, Callable
@@ -17,6 +18,7 @@ from chia_rs import (
     ConsensusConstants,
     FullBlock,
     G2Element,
+    MerkleSet,
     SpendBundle,
     confirm_not_included_already_hashed,
 )
@@ -65,6 +67,7 @@ from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import hash_coin_ids
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
@@ -77,7 +80,12 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.util.wallet_sync_utils import PeerRequestException, request_header_blocks
+from chia.wallet.util.wallet_sync_utils import (
+    PeerRequestException,
+    fetch_coin_spend,
+    request_header_blocks,
+    validate_additions,
+)
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -1983,3 +1991,109 @@ async def test_validate_received_state_from_peer_no_removals(
         f"header hash {peak.header_hash} coin name {coin.name()}" in caplog.text
     )
     assert not wsc.closed
+
+
+class FetchCoinSpendCase(enum.Enum):
+    ValidResponse = 0
+    RejectResponse = 1
+    WrongPuzzleHash = 2
+    WrongCoinName = 3
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.anyio
+async def test_fetch_coin_spend(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    _, server, _ = one_node_one_block
+    wcs, _ = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.WALLET, wait_for_peer_added=False)
+    puzzle = SerializedProgram.to(1)
+    solution = SerializedProgram.to(2)
+    coin = Coin(bytes32.random(), puzzle.get_tree_hash(), uint64(1))
+    coin_id = coin.name()
+    height = uint32(1337)
+
+    def make_puzzle_solution_response(coin_name: bytes32, puzzle_reveal: SerializedProgram) -> Message:
+        response = wallet_protocol.RespondPuzzleSolution(
+            wallet_protocol.PuzzleSolutionResponse(coin_name, height, puzzle_reveal, solution)
+        )
+        return make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
+
+    def request_puzzle_solution(
+        case: FetchCoinSpendCase,
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution, WSChiaConnection], Awaitable[Message]]:
+        async def request_puzzle_solution_handler(
+            self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution, peer_arg: WSChiaConnection
+        ) -> Message:
+            if case == FetchCoinSpendCase.ValidResponse:
+                return make_puzzle_solution_response(coin_id, puzzle)
+            if case == FetchCoinSpendCase.RejectResponse:
+                return make_msg(
+                    ProtocolMessageTypes.reject_puzzle_solution,
+                    wallet_protocol.RejectPuzzleSolution(request.coin_name, request.height),
+                )
+            if case == FetchCoinSpendCase.WrongPuzzleHash:
+                return make_puzzle_solution_response(coin_id, SerializedProgram.to(3))
+            if case == FetchCoinSpendCase.WrongCoinName:
+                return make_puzzle_solution_response(bytes32.random(), puzzle)
+            assert False  # pragma: no cover
+
+        return request_puzzle_solution_handler
+
+    test_cases = [
+        (FetchCoinSpendCase.ValidResponse, None),
+        (FetchCoinSpendCase.RejectResponse, "Was not able to obtain solution"),
+        (FetchCoinSpendCase.WrongPuzzleHash, "wrong puzzle hash"),
+        (FetchCoinSpendCase.WrongCoinName, "wrong coin name"),
+    ]
+    for case, expected_error in test_cases:
+        with patch_request_handler(
+            api=server.api,
+            handler=request_puzzle_solution(case),
+            request_type=ProtocolMessageTypes.request_puzzle_solution,
+        ):
+            if expected_error is None:
+                coin_spend = await fetch_coin_spend(height, coin, wcs)
+                assert coin_spend.coin == coin
+                assert coin_spend.puzzle_reveal == puzzle
+                assert coin_spend.solution == solution
+            else:
+                with pytest.raises(PeerRequestException, match=expected_error):
+                    await fetch_coin_spend(height, coin, wcs)
+
+
+def test_validate_additions_failure_cases() -> None:
+    """
+    Covers the failure cases of `validate_additions`
+    """
+    ph = bytes32.random()
+    ph2 = bytes32.random()
+    coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    coin_list = [coin]
+    coin_ids_hash = hash_coin_ids([c.name() for c in coin_list])
+    # Length mismatch
+    assert validate_additions([(ph, [])], [], bytes32.random()) is False
+    # Puzzle hash mismatch
+    assert validate_additions([(ph, [])], [(ph2, b"\x00", None)], bytes32.random()) is False
+    # Verify exclusion proof for puzzle hash
+    # coin_list empty + proof that actually proves inclusion => exclusion check fails.
+    exclusion_set = MerkleSet([ph])
+    _, included_proof_for_ph_a = exclusion_set.is_included_already_hashed(ph)
+    assert validate_additions([(ph, [])], [(ph, included_proof_for_ph_a, None)], exclusion_set.get_root()) is False
+    # `coin_list_proof` is None
+    ph_proof = b""
+    coin_list_proof = None
+    assert validate_additions([(ph, coin_list)], [(ph, ph_proof, coin_list_proof)], bytes32.random()) is False
+    # Verify inclusion proof for coin list
+    wrong_coin_hash = bytes32.random()
+    wrong_set = MerkleSet([wrong_coin_hash])
+    _, wrong_coin_list_proof = wrong_set.is_included_already_hashed(wrong_coin_hash)
+    wrong_set_root = wrong_set.get_root()
+    assert validate_additions([(ph, coin_list)], [(ph, ph_proof, wrong_coin_list_proof)], wrong_set_root) is False
+    # Verify inclusion proof for puzzle hash
+    proof_set = MerkleSet([coin_ids_hash, ph2])
+    _, coin_list_proof = proof_set.is_included_already_hashed(coin_ids_hash)
+    _, wrong_ph_proof = proof_set.is_included_already_hashed(ph2)
+    assert ph != ph2
+    proof_set_root = proof_set.get_root()
+    assert validate_additions([(ph, coin_list)], [(ph, wrong_ph_proof, coin_list_proof)], proof_set_root) is False

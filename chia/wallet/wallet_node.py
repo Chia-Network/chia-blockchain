@@ -45,7 +45,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
-from chia.util.db_wrapper import manage_connection
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, manage_connection
 from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -938,6 +938,22 @@ class WalletNode:
 
         self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
+    async def _collect_valid_states(
+        self, inner_states: list[CoinState], peer: WSChiaConnection, cache: PeerRequestCache, fork_height: uint32 | None
+    ) -> list[CoinState]:
+        valid_states: list[CoinState] = []
+        for inner_state in inner_states:
+            try:
+                if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height):
+                    valid_states.append(inner_state)
+            except Exception as e:
+                self.log.log(
+                    logging.DEBUG if peer.closed or self._shut_down else logging.ERROR,
+                    f"Failed to validate coin_state {inner_state} from peer "
+                    f"{peer.peer_info.host} version {peer.version}, error: {e}, traceback: {traceback.format_exc()}",
+                )
+        return valid_states
+
     async def add_states_from_peer(
         self,
         items_input: list[CoinState],
@@ -994,11 +1010,7 @@ class WalletNode:
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
-                    valid_states = [
-                        inner_state
-                        for inner_state in inner_states
-                        if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
-                    ]
+                    valid_states = await self._collect_valid_states(inner_states, peer, cache, fork_height)
                     if len(valid_states) > 0:
                         async with self.wallet_state_manager.db_wrapper.writer():
                             self.log.info(
@@ -1013,7 +1025,7 @@ class WalletNode:
 
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
-        chunk_size: int = 900 if trusted else 10
+        chunk_size: int = SQLITE_MAX_VARIABLE_NUMBER if trusted else 10
 
         reorged_coin_states = []
         updated_coin_states = []
@@ -1317,7 +1329,7 @@ class WalletNode:
         async with self.wallet_state_manager.lock:
             peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
             if peak_hb is None or new_peak_hb.weight > peak_hb.weight:
-                backtrack_fork_height: int | None = await self.wallet_short_sync_backtrack(new_peak_hb, peer)
+                backtrack_fork_height: int | None = await self.wallet_short_sync_backtrack(peak_hb, new_peak_hb, peer)
                 if backtrack_fork_height is None:
                     return False
             else:
@@ -1361,15 +1373,15 @@ class WalletNode:
                 await self.add_states_from_peer(list(race_cache), peer)
 
             # Clear old entries that are no longer relevant
-            cache.cleanup_race_cache(min_height=backtrack_fork_height)
+            cache.cleanup_race_cache(min_height=backtrack_fork_height + 1)
 
             self.wallet_state_manager.state_changed("new_block")
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
             return True
 
-    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int | None:
-        peak: HeaderBlock | None = await self.wallet_state_manager.blockchain.get_peak_block()
-
+    async def wallet_short_sync_backtrack(
+        self, peak_hb: HeaderBlock | None, header_block: HeaderBlock, peer: WSChiaConnection
+    ) -> int | None:
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
@@ -1383,7 +1395,7 @@ class WalletNode:
             if self._shut_down:
                 raise RuntimeError("Shutdown requested during wallet backtrack sync")
             if (
-                peak is not None
+                peak_hb is not None
                 and len(blocks) > self.LONG_SYNC_THRESHOLD
                 and header_block.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS
             ):
@@ -1414,7 +1426,7 @@ class WalletNode:
 
         if top.height == 0:
             fork_height = 0
-            should_skip_rollback = peak is None
+            should_skip_rollback = peak_hb is None
 
         # Roll back coins and transactions
         peak_height = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
@@ -1424,8 +1436,6 @@ class WalletNode:
             await self.perform_atomic_rollback(fork_height)
             await self.update_ui()
 
-        if peak is not None:
-            assert header_block.weight >= peak.weight
         for block in blocks:
             # Set blockchain to the latest peak
             res, err = await self.wallet_state_manager.blockchain.add_block(block)

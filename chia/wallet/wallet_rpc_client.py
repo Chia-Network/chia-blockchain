@@ -588,11 +588,10 @@ class WalletRpcClient(RpcClient):
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CreateOfferForIDsResponse:
-        return CreateOfferForIDsResponse.from_json_dict(
-            await self.fetch(
-                "create_offer_for_ids", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+        response = await self.fetch(
+            "create_offer_for_ids", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
         )
+        return CreateOfferForIDsResponse.from_json_dict(response)
 
     async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
         return GetOfferSummaryResponse.from_json_dict(await self.fetch("get_offer_summary", request.to_json_dict()))
