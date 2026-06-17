@@ -281,7 +281,7 @@ class WalletRpcClient(RpcClient):
 
     async def get_fee_estimate(self) -> GetFeeEstimateResponse:
         return GetFeeEstimateResponse.from_json_dict(await self.fetch("get_fee_estimate", {}))
-      
+
     async def get_full_node_peer_count(self) -> GetFullNodePeerCountResponse:
         return GetFullNodePeerCountResponse.from_json_dict(await self.fetch("get_full_node_peer_count", {}))
 
