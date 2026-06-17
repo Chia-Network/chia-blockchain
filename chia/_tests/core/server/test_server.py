@@ -28,7 +28,7 @@ from chia.full_node.start_full_node import create_full_node_service
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Error, protocol_version
+from chia.protocols.shared_protocol import Capability, Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer, ssl_context_for_client
@@ -392,10 +392,13 @@ async def test_call_api_of_specific_for_missing_peer(
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_get_peer_info(bt: BlockTools) -> None:
-    wallet_service = create_wallet_service(
-        bt.root_path, bt.config, bt.constants, keychain=None, connect_to_daemon=False
-    )
+@pytest.mark.parametrize("rate_limits_config", [None, 2, 3], ids=["default", "v2", "v3"])
+async def test_get_peer_info(bt: BlockTools, rate_limits_config: int | None) -> None:
+    config = bt.config.copy()
+    if rate_limits_config is not None:
+        config["rate_limits"] = rate_limits_config
+
+    wallet_service = create_wallet_service(bt.root_path, config, bt.constants, keychain=None, connect_to_daemon=False)
 
     # Wallet server should not have a port or peer info
     with pytest.raises(ValueError, match="Port not set"):
@@ -406,9 +409,19 @@ async def test_get_peer_info(bt: BlockTools) -> None:
     # Full node server should have a local port
     # testing get_peer_info() directly is flakey because it depends on IP lookup
     # from either chia or aws
-    node_service = await create_full_node_service(bt.root_path, bt.config, bt.constants, connect_to_daemon=False)
+    node_service = await create_full_node_service(bt.root_path, config, bt.constants, connect_to_daemon=False)
     local_port = node_service._server.get_port()
     assert local_port is not None
+
+    from chia.server.capabilities import known_active_capabilities
+
+    expect_v3 = rate_limits_config is not None and rate_limits_config >= 3
+    for server in [wallet_service._server, node_service._server]:
+        advertised = known_active_capabilities(server._local_capabilities_for_handshake)
+        if expect_v3:
+            assert Capability.RATE_LIMITS_V3 in advertised
+        else:
+            assert Capability.RATE_LIMITS_V3 not in advertised
 
 
 class FakeConnection:
