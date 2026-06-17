@@ -14,7 +14,7 @@ from chia_rs.sized_ints import uint16
 
 from chia.daemon.server import service_launch_lock_path
 from chia.protocols.outbound_message import NodeType
-from chia.protocols.shared_protocol import default_capabilities
+from chia.protocols.shared_protocol import _rate_limits_v3, default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.chia_policy import set_chia_policy
@@ -105,6 +105,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
         capabilities_to_use: list[tuple[uint16, str]] = default_capabilities[node_type]
+        if self.config.get("rate_limits", 2) >= 3:
+            capabilities_to_use += _rate_limits_v3
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 
