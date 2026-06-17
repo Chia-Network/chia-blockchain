@@ -190,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFullNodePeerCountResponse,
     GetHeightInfo,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -593,6 +594,7 @@ class WalletRpcApi:
             # Wallet node
             "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
+            "/get_full_node_peer_count": self.get_full_node_peer_count,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
@@ -978,6 +980,12 @@ class WalletRpcApi:
         syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
+
+    @marshal
+    async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
+        return GetFullNodePeerCountResponse(
+            peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
+        )
 
     @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
@@ -1717,6 +1725,11 @@ class WalletRpcApi:
             raise ValueError("Wallet is not connected to any synced peers.")
         if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
+
+        # We use the full node when generating coin records from WalletCoinRecords.
+        # If we don't have any full node peers connected we can error out early.
+        if not self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order():
+            raise ValueError("No full node peers connected. Please connect to a full node.")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),

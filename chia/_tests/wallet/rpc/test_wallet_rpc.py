@@ -50,6 +50,7 @@ from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -134,6 +135,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFullNodePeerCountResponse,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
@@ -176,6 +178,7 @@ from chia.wallet.wallet_request_types import (
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import SyncStatus
 
 log = logging.getLogger(__name__)
 
@@ -2056,6 +2059,16 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
     with pytest.raises(ValueError, match="not found"):
         await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
 
+    # 9. Sync-status guard: when not fully synced, requests are rejected unless
+    # allow_unsynced=True. The simulator's get_sync_status short-circuits to
+    # SYNCED so we patch the state manager directly to drive the unsynced path.
+    wsm = wallet_node.wallet_state_manager
+    with patch.object(wsm, "get_sync_status", AsyncMock(return_value=SyncStatus.SLIGHTLY_BEHIND)):
+        with pytest.raises(ValueError, match="fully synced"):
+            await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids))
+        rpc_result = await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, allow_unsynced=True))
+        assert {record.coin for record in rpc_result.coin_records} == coins
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
@@ -2545,6 +2558,28 @@ async def test_get_height_info_response_variants(
     assert response.is_transaction_block == expected_is_tx
     assert response.prev_transaction_block_height == expected_prev
     mock_blockchain.height_to_block_record.assert_called_once_with(sync_height)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_full_node_peer_count(wallet_environments: WalletTestFramework) -> None:
+    """Verifies get_full_node_peer_count reflects live wallet -> full node connections."""
+    env = wallet_environments.environments[0]
+    client = env.rpc_client
+
+    response = await client.get_full_node_peer_count()
+    assert isinstance(response, GetFullNodePeerCountResponse)
+    assert response.peer_count == 1
+
+    await env.node.server.close_all_connections()
+    await time_out_assert(5, lambda: len(env.node.server.get_connections(NodeType.FULL_NODE)), 0)
+
+    assert (await client.get_full_node_peer_count()).peer_count == 0
 
 
 @pytest.mark.parametrize(

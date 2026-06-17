@@ -694,17 +694,26 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
             wallet_environments.tx_config,
         )
 
-    # select_coins DISCONNECTED check (line 1646)
+    # select_coins DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
 
-    # get_spendable_coins DISCONNECTED check (line 1660)
+    # get_spendable_coins DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
 
-    # get_coin_records_by_names DISCONNECTED check (line 1708)
+    # get_coin_records_by_names DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
+
+    # Check the no-peers early exit.
+    original_network = wsm.config["selected_network"]
+    wsm.config["selected_network"] = "simulator0"
+    try:
+        with pytest.raises(ValueError, match="No full node peers connected"):
+            await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
+    finally:
+        wsm.config["selected_network"] = original_network
 
 
 @pytest.mark.parametrize(
