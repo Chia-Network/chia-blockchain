@@ -543,6 +543,7 @@ async def test_get_timestamp_for_height_from_peer_backtracks_to_tx_block_determi
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.standard_block_tools
+@pytest.mark.anyio
 async def test_request_fee_estimates(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
