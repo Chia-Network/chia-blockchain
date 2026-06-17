@@ -205,9 +205,9 @@ def show_keys(
         key["non_observer"] = non_observer_derivation
 
         if show_mnemonic and sk is not None:
-            key["master_sk"] = bytes(sk).hex()
-            key["farmer_sk"] = bytes(master_sk_to_farmer_sk(sk)).hex()
-            key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
+            key["master_sk"] = sk.as_hex_string()
+            key["farmer_sk"] = master_sk_to_farmer_sk(sk).as_hex_string()
+            key["wallet_sk"] = master_sk_to_wallet_sk(sk, uint32(0)).as_hex_string()
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
         else:
             key["master_sk"] = None
@@ -429,8 +429,7 @@ def _search_derived(
             found_item: Any = None
             found_item_type: DerivedSearchResultType | None = None
 
-            if search_private_key and term in str(child_sk):
-                assert child_sk is not None  # semantics above guarantee this
+            if search_private_key and child_sk is not None and term in child_sk.as_hex_string():
                 found_item = private_key_string_repr(child_sk)
                 found_item_type = DerivedSearchResultType.PRIVATE_KEY
             elif search_public_key and child_pk is not None and term in str(child_pk):
@@ -695,8 +694,7 @@ def derive_wallet_address(
 def private_key_string_repr(private_key: PrivateKey) -> str:
     """Print a PrivateKey in a human-readable formats"""
 
-    s = str(private_key)
-    return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
+    return private_key.as_hex_string()
 
 
 def derive_child_key(

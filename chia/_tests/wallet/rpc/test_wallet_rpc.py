@@ -664,7 +664,7 @@ async def test_create_signed_transaction(
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
+                pre_block_balance_updates={  # type: ignore[arg-type]
                     "xch": {
                         "unconfirmed_wallet_balance": -xch_delta,
                         "<=#spendable_balance": -xch_delta,
@@ -675,7 +675,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {  # type: ignore[dict-item]
+                        "cat": {
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
@@ -686,7 +686,7 @@ async def test_create_signed_transaction(
                     if is_cat
                     else {}
                 ),
-                post_block_balance_updates={
+                post_block_balance_updates={  # type: ignore[arg-type]
                     "xch": {
                         "confirmed_wallet_balance": -xch_delta,
                         ">=#spendable_balance": 0,
@@ -698,7 +698,7 @@ async def test_create_signed_transaction(
                 }
                 | (
                     {
-                        "cat": {  # type: ignore[dict-item]
+                        "cat": {
                             "confirmed_wallet_balance": -cat_delta,
                             ">=#spendable_balance": 1 if is_cat else 0,
                             ">=#max_send_amount": 1 if is_cat else 0,
@@ -1587,6 +1587,24 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
     all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 0
+
+    offer_only_res = await env_1.rpc_client.create_offer_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): "-5", cat_asset_id.hex(): "1"},
+            validate_only=True,
+            offer_only=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert offer_only_res.offer is not None
+    assert offer_only_res.to_json_dict() == {
+        "offer": offer_only_res.offer.to_bech32(),
+        "transactions": [],
+        "unsigned_transactions": [],
+        "trade_record": None,
+    }
+    with pytest.raises(ValueError, match=re.escape("Attempting to access trade_record on `offer_only` request")):
+        offer_only_res.trade_record
 
     driver_dict = {
         cat_asset_id: PuzzleInfo(

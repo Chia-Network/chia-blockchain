@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any, cast
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
@@ -15,6 +17,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
@@ -216,6 +219,36 @@ async def test_batch_sync(
         on_connect=full_node_2.full_node.on_connect,
     )
     await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
+
+
+@pytest.mark.anyio
+async def test_short_sync_batch_returns_false_on_disconnected_first_block(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+) -> None:
+    # When the first block of a downloaded batch has a parent we do not have in our
+    # database, short_sync_batch falls back to long sync by returning False (as its
+    # docstring promises) rather than raising.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+    blocks = bt.get_consecutive_blocks(2)
+    disconnected_block = blocks[-1]  # height > 0 and its parent is not in node's database
+
+    class _FakePeer:
+        peer_node_id = bytes32(b"\x01" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(
+            self, api_function: Any, request: full_node_protocol.RequestBlocks
+        ) -> full_node_protocol.RespondBlocks:
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [disconnected_block])
+
+    peer = cast(WSChiaConnection, _FakePeer())
+    # start_height == 0 skips the fork-point probe, exercising the batch loop's parent check directly.
+    result = await node.short_sync_batch(peer, uint32(0), uint32(1))
+    assert result is False
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
 
 
 @pytest.mark.anyio
