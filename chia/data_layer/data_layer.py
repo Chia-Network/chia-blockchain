@@ -616,8 +616,40 @@ class DataLayer:
 
         await self._update_confirmation_status(store_id=store_id)
 
-        if not await self.data_store.store_id_exists(store_id=store_id):
-            await self.data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
+        root = None
+        if await self.data_store.store_id_exists(store_id=store_id):
+            root = await self.data_store.get_tree_root(store_id=store_id)
+
+        if root is None:
+            # store_id_exists is COMMITTED-only, so a leftover PENDING gen-0 row would make a
+            # bare create_tree default to gen 0 and blind-INSERT, colliding on
+            # PRIMARY KEY(tree_id, generation). reset_store_to_empty_root clears pending roots
+            # first, so it is collision-safe.
+            await self.data_store.reset_store_to_empty_root(store_id)
+        elif (
+            root.node_hash is not None
+            # Guard A: leave a local-ahead store untouched; it heals once the chain catches up.
+            and root.generation <= singleton_record.generation
+            # Sync call on purpose (see merkle_blob_available); a missing blob file at any
+            # generation, including a whole per-store directory absence, triggers the heal.
+            and not self.data_store.merkle_blob_available(store_id, root.node_hash)
+        ):
+            # Guard B is the GLOBAL blobs root (parent of every per-store dir). If it is missing
+            # the whole volume is unavailable, so skip the reset to avoid a mass re-sync of every
+            # store and surface the environment fault instead of silently healing.
+            if self.data_store.merkle_blobs_path.is_dir():
+                # Runs outside subscription_lock; the reset only fires when the committed root's
+                # blob is already missing on disk, so it cannot discard a healthy store's work.
+                self.log.warning(
+                    f"Detected committed root with missing blob for {store_id} at generation "
+                    f"{root.generation}; resetting and resyncing."
+                )
+                await self.data_store.reset_store_to_empty_root(store_id)
+            else:
+                self.log.warning(
+                    f"Merkle blobs path {self.data_store.merkle_blobs_path} is missing; skipping "
+                    f"self-heal for {store_id} — check the storage volume."
+                )
 
         timestamp = int(time.time())
         servers_info = await self.data_store.get_available_servers_for_store(store_id, timestamp)

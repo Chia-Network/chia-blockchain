@@ -535,6 +535,14 @@ class DataStore:
 
         return merkle_blob
 
+    def merkle_blob_available(self, store_id: bytes32, root_hash: bytes32 | None) -> bool:
+        # Cheap on-disk presence check that bypasses recent_merkle_blobs: a cached blob
+        # would otherwise mask an on-disk deletion. Sync on purpose (no parse, O(1) stat);
+        # an async def here would make the heal gate's `not <coroutine>` always False.
+        if root_hash is None:
+            return False
+        return self.get_merkle_path(store_id=store_id, root_hash=root_hash).is_file()
+
     def get_bytes_path(self, bytes_: bytes) -> Path:
         raw = bytes_.hex()
         segment_sizes = [2, 2, 2]
@@ -921,6 +929,28 @@ class DataStore:
         await self._insert_root(store_id=store_id, node_hash=None, status=status)
 
         return True
+
+    async def clear_store_roots(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            # No status filter: removes COMMITTED, PENDING, and PENDING_BATCH roots in one
+            # statement, so unsubscribe/heal leave zero per-store state in `root`/`nodes`.
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+
+    async def reset_store_to_empty_root(self, store_id: bytes32) -> None:
+        # Single atomic wipe + reseed: clear_store_roots and create_tree both join this
+        # task's writer transaction, so a crash mid-reset leaves either the old state or a
+        # clean committed gen-0 root, never a partial state. Clearing pending roots first
+        # avoids a PRIMARY KEY(tree_id, generation) collision with a leftover PENDING gen-0.
+        async with self.db_wrapper.writer():
+            await self.clear_store_roots(store_id=store_id)
+            await self.create_tree(store_id=store_id, status=Status.COMMITTED)
 
     async def table_is_empty(self, store_id: bytes32) -> bool:
         tree_root = await self.get_tree_root(store_id=store_id)
@@ -1735,16 +1765,21 @@ class DataStore:
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
-            await writer.execute(
-                "DELETE FROM nodes WHERE store_id == :store_id",
-                {"store_id": store_id},
-            )
+            # Clear all root/nodes rows so re-subscribe restarts from generation 0; a leftover
+            # committed root would otherwise advertise sync while the blobs below are gone.
+            await self.clear_store_roots(store_id=store_id)
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+        self.unconfirmed_keys_values.pop(store_id, None)
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
+        # rmtree runs after the SQL commit on purpose: deleting blobs before commit would,
+        # on a commit failure, restore the root rows while the blobs are already gone,
+        # recreating the synced-but-blobless state. Post-commit failure leaves only orphaned
+        # dirs with a clean DB, which a fresh gen-0 subscribe ignores.
+        with contextlib.suppress(FileNotFoundError):
+            shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+
+        with contextlib.suppress(FileNotFoundError):
+            shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:

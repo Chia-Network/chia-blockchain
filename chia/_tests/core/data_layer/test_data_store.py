@@ -1126,7 +1126,7 @@ async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: byt
         )
     await data_store.add_node_hashes(store_id)
 
-    tables = ["ids", "nodes"]
+    tables = ["root", "ids", "nodes"]
     for table in tables:
         async with data_store.db_wrapper.reader() as reader:
             async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
@@ -1142,6 +1142,122 @@ async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: byt
                 row_count = await cursor.fetchone()
                 assert row_count is not None
                 assert row_count[0] == 0
+
+    # With root rows gone the store no longer advertises any committed generation,
+    # so a later re-subscribe restarts cleanly from generation 0.
+    assert await data_store.store_id_exists(store_id) is False
+    with pytest.raises(Exception, match="No generations found for store ID"):
+        await data_store.get_tree_root(store_id)
+
+
+@pytest.mark.anyio
+async def test_unsubscribe_then_resubscribe_starts_clean(data_store: DataStore, store_id: bytes32) -> None:
+    await data_store.subscribe(Subscription(store_id, []))
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+    assert await data_store.store_id_exists(store_id) is True
+
+    await data_store.unsubscribe(store_id)
+
+    for table in ["root", "ids", "nodes"]:
+        async with data_store.db_wrapper.reader() as reader:
+            async with reader.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE {'tree_id' if table == 'root' else 'store_id'} == ?",
+                (store_id,),
+            ) as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+    assert await data_store.store_id_exists(store_id) is False
+
+    # Pure data-store re-subscribe (no manage-data loop): subscribe only inserts a
+    # subscription row, so the store stays at zero committed roots until a real sync.
+    await data_store.subscribe(Subscription(store_id, []))
+    assert await data_store.store_id_exists(store_id) is False
+
+
+@pytest.mark.anyio
+async def test_unsubscribe_clears_unconfirmed_keys_values(data_store: DataStore, store_id: bytes32) -> None:
+    await data_store.subscribe(Subscription(store_id, []))
+    data_store.unconfirmed_keys_values[store_id] = [bytes32.zeros]
+    assert store_id in data_store.unconfirmed_keys_values
+
+    await data_store.unsubscribe(store_id)
+
+    assert store_id not in data_store.unconfirmed_keys_values
+
+
+@pytest.mark.anyio
+async def test_clear_store_roots_wipes_all_roots(data_store: DataStore, store_id: bytes32) -> None:
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+    await data_store.create_tree(store_id=store_id, status=Status.PENDING)
+    assert await data_store.get_pending_root(store_id=store_id) is not None
+    assert await data_store.store_id_exists(store_id) is True
+
+    await data_store.clear_store_roots(store_id=store_id)
+
+    assert await data_store.store_id_exists(store_id) is False
+    assert await data_store.get_pending_root(store_id=store_id) is None
+    for table in ["root", "nodes"]:
+        async with data_store.db_wrapper.reader() as reader:
+            async with reader.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE {'tree_id' if table == 'root' else 'store_id'} == ?",
+                (store_id,),
+            ) as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+
+
+@pytest.mark.anyio
+async def test_reset_store_to_empty_root_reseeds_gen0(data_store: DataStore, store_id: bytes32) -> None:
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+    assert (await data_store.get_tree_root(store_id)).generation > 0
+
+    await data_store.reset_store_to_empty_root(store_id)
+
+    root = await data_store.get_tree_root(store_id)
+    assert root.generation == 0
+    assert root.node_hash is None
+    assert await data_store.get_tree_generation(store_id) == 0
+    assert await data_store.store_id_exists(store_id) is True
+
+
+@pytest.mark.anyio
+async def test_reset_store_to_empty_root_with_pending_gen0_root(raw_data_store: DataStore, store_id: bytes32) -> None:
+    # store_id has no COMMITTED root, only a leftover PENDING gen-0 row. A bare create_tree
+    # here would blind-INSERT gen 0 and collide on PRIMARY KEY(tree_id, generation); the
+    # reset must clear pending roots first.
+    await raw_data_store.create_tree(store_id=store_id, status=Status.PENDING)
+    assert await raw_data_store.get_pending_root(store_id=store_id) is not None
+    assert await raw_data_store.store_id_exists(store_id) is False
+
+    await raw_data_store.reset_store_to_empty_root(store_id)
+
+    root = await raw_data_store.get_tree_root(store_id)
+    assert root.generation == 0
+    assert root.node_hash is None
+    assert await raw_data_store.get_pending_root(store_id=store_id) is None
+
+
+@pytest.mark.anyio
+async def test_merkle_blob_available_ignores_cache(data_store: DataStore, store_id: bytes32) -> None:
+    data_store.recent_merkle_blobs = LRUCache(capacity=128)
+    await add_0123_example(data_store, store_id)
+    root = await data_store.get_tree_root(store_id)
+    assert root.node_hash is not None
+
+    # Warm the cache, then delete the on-disk blob: merkle_blob_available must report the
+    # blob absent by checking the disk, not by consulting the still-warm cache.
+    await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
+    assert data_store.recent_merkle_blobs.get((store_id, root.node_hash)) is not None
+    data_store.get_merkle_path(store_id=store_id, root_hash=root.node_hash).unlink()
+
+    assert data_store.merkle_blob_available(store_id, root.node_hash) is False
+    # None means "empty tree", which has no on-disk blob, so the helper reports unavailable.
+    assert data_store.merkle_blob_available(store_id, None) is False
 
 
 @pytest.mark.anyio
