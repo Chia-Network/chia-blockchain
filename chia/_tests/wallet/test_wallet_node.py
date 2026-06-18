@@ -570,6 +570,14 @@ async def test_request_fee_estimates(simulator_and_wallet: OldSimulatorsAndWalle
         with pytest.raises(PeerRequestException, match="Failed to get fee estimates from full node"):
             await wallet_node.request_fee_estimates(full_node_peer, time_targets)
 
+    # test respond_fee_estimates
+    unsolicited = make_msg(
+        ProtocolMessageTypes.respond_fee_estimates,
+        wallet_protocol.RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=[])),
+    )
+    await full_node_peer.incoming_queue.put(unsolicited)
+    await time_out_assert(5, lambda: full_node_peer.incoming_queue.qsize() == 0)
+
 
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
