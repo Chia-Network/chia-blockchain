@@ -3346,9 +3346,7 @@ class FullNode:
         new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
         if new_block is None:
             return False
-        if not self.compact_vdf_cache.add(
-            CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)
-        ):
+        if not self.compact_vdf_cache.add(CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)):
             return False
         self.block_store.block_cache.put(header_hash, new_block)
         return True
