@@ -43,9 +43,7 @@ class CompactVDFCache:
     def contains(self, header_hash: bytes32, field_vdf: CompressibleVDFField, vdf_info: VDFInfo) -> bool:
         return self._key(header_hash, field_vdf, vdf_info) in self._entries
 
-    def get_proof(
-        self, header_hash: bytes32, field_vdf: CompressibleVDFField, vdf_info: VDFInfo
-    ) -> VDFProof | None:
+    def get_proof(self, header_hash: bytes32, field_vdf: CompressibleVDFField, vdf_info: VDFInfo) -> VDFProof | None:
         entry = self._entries.get(self._key(header_hash, field_vdf, vdf_info))
         return entry.vdf_proof if entry is not None else None
 
