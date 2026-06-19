@@ -47,12 +47,14 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
+from chia.full_node.compact_vdf_cache import CachedCompactVDF, CompactVDFCache
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -148,6 +150,7 @@ class FullNode:
     sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
     uncompact_task: asyncio.Task[None] | None = None
     compact_vdf_requests: set[bytes32] = dataclasses.field(default_factory=set)
+    compact_vdf_cache: CompactVDFCache = dataclasses.field(default_factory=lambda: CompactVDFCache(0))
     # TODO: Logging isn't setup yet so the log entries related to parsing the
     #       config would end up on stdout if handled here.
     multiprocessing_context: BaseContext | None = None
@@ -271,6 +274,7 @@ class FullNode:
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
+            self.compact_vdf_cache = CompactVDFCache(self.config.get("compact_vdf_cache_size", 460800))
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -423,6 +427,7 @@ class FullNode:
                                 self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
                                 await one_sync_task
                     await asyncio.gather(*self._segment_task_list, return_exceptions=True)
+                    await self.flush_compact_vdf_cache()
 
     @property
     def block_store(self) -> BlockStore:
@@ -3211,6 +3216,9 @@ class FullNode:
         - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
         - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
         """
+        if self.compact_vdf_cache.enabled and self.compact_vdf_cache.is_full():
+            self.log.debug("Compact VDF cache full, not accepting compact proofs")
+            return False
         is_fully_compactified = await self.block_store.is_fully_compactified(header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
@@ -3225,7 +3233,7 @@ class FullNode:
         if not validate_vdf(vdf_proof, self.constants, ClassgroupElement.get_default_element(), vdf_info):
             self.log.error(f"Received compact vdf proof is not valid: {vdf_proof}.")
             return False
-        header_block = await self.blockchain.get_header_block_by_height(height, header_hash, tx_filter=False)
+        header_block = await self._get_header_block_with_cached_proofs(height, header_hash, tx_filter=False)
         if header_block is None:
             self.log.error(f"Can't find block for given compact vdf. Height: {height} Header hash: {header_hash}")
             return False
@@ -3234,18 +3242,38 @@ class FullNode:
             self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
         return is_new_proof
 
-    # returns True if we ended up replacing the proof, and False otherwise
-    async def _replace_proof(
-        self,
-        vdf_info: VDFInfo,
-        vdf_proof: VDFProof,
-        header_hash: bytes32,
-        field_vdf: CompressibleVDFField,
-    ) -> bool:
+    def _apply_cached_proofs_to_block(self, block: FullBlock) -> FullBlock:
+        if not self.compact_vdf_cache.enabled:
+            return block
+        for entry in self.compact_vdf_cache.get_entries_for_block(block.header_hash):
+            updated = self._apply_proof_to_block(block, entry.vdf_info, entry.vdf_proof, entry.field_vdf)
+            if updated is not None:
+                block = updated
+        return block
+
+    async def _get_block_with_cached_proofs(self, header_hash: bytes32) -> FullBlock | None:
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
-            return False
+            return None
+        return self._apply_cached_proofs_to_block(block)
 
+    async def _get_header_block_with_cached_proofs(
+        self, height: int, header_hash: bytes32, tx_filter: bool = False
+    ) -> HeaderBlock | None:
+        if tx_filter:
+            return await self.blockchain.get_header_block_by_height(height, header_hash, tx_filter)
+        block = await self._get_block_with_cached_proofs(header_hash)
+        if block is None or block.height != height or block.header_hash != header_hash:
+            return None
+        return get_block_header(block)
+
+    def _apply_proof_to_block(
+        self,
+        block: FullBlock,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        field_vdf: CompressibleVDFField,
+    ) -> FullBlock | None:
         new_block = None
 
         if field_vdf == CompressibleVDFField.CC_EOS_VDF:
@@ -3276,6 +3304,21 @@ class FullNode:
         if field_vdf == CompressibleVDFField.CC_IP_VDF:
             if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                 new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
+        return new_block
+
+    # returns True if we ended up replacing the proof, and False otherwise
+    async def _replace_proof(
+        self,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        header_hash: bytes32,
+        field_vdf: CompressibleVDFField,
+    ) -> bool:
+        block = await self.block_store.get_full_block(header_hash)
+        if block is None:
+            return False
+
+        new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():
@@ -3289,6 +3332,63 @@ class FullNode:
                 )
                 raise
 
+    async def _cache_compact_proof(
+        self,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        header_hash: bytes32,
+        field_vdf: CompressibleVDFField,
+    ) -> bool:
+        block = await self._get_block_with_cached_proofs(header_hash)
+        if block is None:
+            return False
+
+        new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
+        if new_block is None:
+            return False
+        if not self.compact_vdf_cache.add(
+            CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)
+        ):
+            return False
+        self.block_store.block_cache.put(header_hash, new_block)
+        return True
+
+    async def _store_compact_proof(
+        self,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        header_hash: bytes32,
+        field_vdf: CompressibleVDFField,
+    ) -> bool:
+        if self.compact_vdf_cache.enabled:
+            return await self._cache_compact_proof(vdf_info, vdf_proof, header_hash, field_vdf)
+        return await self._replace_proof(vdf_info, vdf_proof, header_hash, field_vdf)
+
+    async def flush_compact_vdf_cache(self) -> None:
+        if not self.compact_vdf_cache.enabled or len(self.compact_vdf_cache) == 0:
+            return
+        if self._block_store is None or self._blockchain is None or self._db_wrapper is None:
+            return
+        self.log.info(f"Flushing {len(self.compact_vdf_cache)} cached compact VDF proofs to database")
+        async with self.blockchain.compact_proof_lock:
+            for header_hash in self.compact_vdf_cache.modified_header_hashes():
+                block = self.block_store.get_block_from_cache(header_hash)
+                if block is None:
+                    block = await self._get_block_with_cached_proofs(header_hash)
+                if block is None:
+                    self.log.error(f"Could not flush cached compact VDF for block {header_hash}")
+                    continue
+                async with self.db_wrapper.writer():
+                    try:
+                        await self.block_store.replace_proof(header_hash, block)
+                    except BaseException as e:
+                        self.log.error(
+                            f"flush_compact_vdf_cache error while adding block {header_hash} height {block.height},"
+                            f" rolling back: {e} {traceback.format_exc()}"
+                        )
+                        raise
+            self.compact_vdf_cache.clear()
+
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         peak = self.blockchain.get_peak()
         if peak is None or peak.height - request.height < 5:
@@ -3301,9 +3401,14 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
+            replaced = await self._store_compact_proof(
+                request.vdf_info, request.vdf_proof, request.header_hash, field_vdf
+            )
         if not replaced:
-            self.log.error(f"Could not replace compact proof: {request.height}")
+            if self.compact_vdf_cache.enabled and self.compact_vdf_cache.is_full():
+                self.log.warning("Compact VDF cache full, rejecting compact proof of time")
+            else:
+                self.log.error(f"Could not replace compact proof: {request.height}")
             return None
         self.log.info(f"Replaced compact proof at height {request.height}")
         msg = make_msg(
@@ -3314,6 +3419,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
+        if self.compact_vdf_cache.enabled and self.compact_vdf_cache.is_full():
+            self.log.debug("Compact VDF cache full, ignoring new_compact_vdf")
+            return None
         peak = self.blockchain.get_peak()
         if peak is None or peak.height - request.height < 5:
             self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")
@@ -3321,7 +3429,7 @@ class FullNode:
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return None
-        header_block = await self.blockchain.get_header_block_by_height(
+        header_block = await self._get_header_block_with_cached_proofs(
             request.height, request.header_hash, tx_filter=False
         )
         if header_block is None:
@@ -3344,7 +3452,7 @@ class FullNode:
     async def request_compact_vdf(
         self, request: full_node_protocol.RequestCompactVDF, peer_id: bytes32
     ) -> VDFProof | None:
-        header_block = await self.blockchain.get_header_block_by_height(
+        header_block = await self._get_header_block_with_cached_proofs(
             request.height, request.header_hash, tx_filter=False
         )
         if header_block is None:
@@ -3388,9 +3496,14 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.header_hash, field_vdf)
+            replaced = await self._store_compact_proof(
+                request.vdf_info, request.vdf_proof, request.header_hash, field_vdf
+            )
         if not replaced:
-            self.log.error(f"Could not replace compact proof: {request.height}")
+            if self.compact_vdf_cache.enabled and self.compact_vdf_cache.is_full():
+                self.log.warning("Compact VDF cache full, rejecting compact vdf")
+            else:
+                self.log.error(f"Could not replace compact proof: {request.height}")
             return None
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
