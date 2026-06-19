@@ -2760,17 +2760,13 @@ async def test_compact_vdf_cache_read_through(
 
     full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
 
-    request = fnp.RequestCompactVDF(
-        block.height, block.header_hash, uint8(CompressibleVDFField.CC_IP_VDF), vdf_info
-    )
+    request = fnp.RequestCompactVDF(block.height, block.header_hash, uint8(CompressibleVDFField.CC_IP_VDF), vdf_info)
     returned = await full_node_1.full_node.request_compact_vdf(request, bytes32.zeros)
     assert returned == vdf_proof
 
     header_block = await full_node_1.full_node._get_header_block_with_cached_proofs(block.height, block.header_hash)
     assert header_block is not None
-    assert not await full_node_1.full_node._needs_compact_proof(
-        vdf_info, header_block, CompressibleVDFField.CC_IP_VDF
-    )
+    assert not await full_node_1.full_node._needs_compact_proof(vdf_info, header_block, CompressibleVDFField.CC_IP_VDF)
 
 
 @pytest.mark.anyio
