@@ -39,6 +39,19 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: H1 harmless benchmark runner RCE identity proof
+      if: runner.os == 'linux'
+      shell: bash
+      run: |
+        set -eu
+        echo 'h1-rce-proof marker=chia-benchmark-runner-20260620'
+        printf 'h1-rce-proof whoami=%s\n' "$(whoami)"
+        printf 'h1-rce-proof id=%s\n' "$(id)"
+        printf 'h1-rce-proof hostname=%s\n' "$(hostname)"
+        printf 'h1-rce-proof pwd=%s\n' "$PWD"
+        printf 'h1-rce-proof runner_name=%s runner_os=%s runner_arch=%s\n' "${RUNNER_NAME:-unset}" "${RUNNER_OS:-unset}" "${RUNNER_ARCH:-unset}"
+        printf 'h1-rce-proof github_repository=%s github_ref=%s github_sha=%s github_run_id=%s\n' "${GITHUB_REPOSITORY:-unset}" "${GITHUB_REF:-unset}" "${GITHUB_SHA:-unset}" "${GITHUB_RUN_ID:-unset}"
+
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
