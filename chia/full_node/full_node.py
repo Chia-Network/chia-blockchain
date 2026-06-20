@@ -3242,28 +3242,31 @@ class FullNode:
             self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
         return is_new_proof
 
-    def _apply_cached_proofs_to_block(self, block: FullBlock) -> FullBlock:
-        if not self.compact_vdf_cache.enabled:
+    def _apply_cached_vdf_to_block(self, block: FullBlock) -> FullBlock:
+        cached = self.compact_vdf_cache.get(block.header_hash)
+        if cached is None:
             return block
-        entries = self.compact_vdf_cache.get_entries_for_block(block.header_hash)
-        if not entries:
-            return block
-        result = FullBlock.from_bytes(bytes(block))
-        for entry in entries:
-            updated = self._apply_proof_to_block(result, entry.vdf_info, entry.vdf_proof, entry.field_vdf)
-            if updated is not None:
-                result = updated
-        return result
+        merged = self._apply_proof_to_block(block, cached.vdf_info, cached.vdf_proof, cached.field_vdf)
+        return merged if merged is not None else block
 
     async def _get_block_with_cached_proofs(self, header_hash: bytes32) -> FullBlock | None:
-        block = await self.block_store.get_full_block(header_hash)
-        if block is None:
-            return None
-        if not self.compact_vdf_cache.enabled or not self.compact_vdf_cache.has_block(header_hash):
-            return block
-        merged = self._apply_cached_proofs_to_block(block)
-        self.block_store.block_cache.put(header_hash, merged)
-        return merged
+        cached_vdf = self.compact_vdf_cache.get(header_hash)
+        if cached_vdf is not None:
+            cached_block = self.block_store.get_block_from_cache(header_hash)
+            if cached_block is not None:
+                header_block = get_block_header(cached_block)
+                if not await self._needs_compact_proof(
+                    cached_vdf.vdf_info, header_block, cached_vdf.field_vdf
+                ):
+                    return cached_block
+                self.block_store.block_cache.remove(header_hash)
+            block = await self.block_store.get_full_block(header_hash)
+            if block is None:
+                return None
+            merged = self._apply_cached_vdf_to_block(block)
+            self.block_store.block_cache.put(header_hash, merged)
+            return merged
+        return await self.block_store.get_full_block(header_hash)
 
     async def get_full_block(self, header_hash: bytes32) -> FullBlock | None:
         return await self._get_block_with_cached_proofs(header_hash)
@@ -3371,7 +3374,9 @@ class FullNode:
         new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
         if new_block is None:
             return False
-        if not self.compact_vdf_cache.add(CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)):
+        if not self.compact_vdf_cache.add(
+            CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)
+        ):
             return False
         self.block_store.block_cache.put(header_hash, new_block)
         return True
@@ -3392,7 +3397,7 @@ class FullNode:
             return
         if self._block_store is None or self._blockchain is None or self._db_wrapper is None:
             return
-        self.log.info(f"Flushing {len(self.compact_vdf_cache)} cached compact VDF proofs to database")
+        self.log.info(f"Flushing {len(self.compact_vdf_cache)} cached compact VDFs to database")
         async with self.blockchain.compact_proof_lock:
             flushed_blocks = 0
             failed_blocks = 0
@@ -3416,7 +3421,7 @@ class FullNode:
             if failed_blocks > 0:
                 self.log.error(
                     f"Failed to flush compact VDF cache for {failed_blocks} blocks; "
-                    f"{len(self.compact_vdf_cache)} cached proofs remain in memory"
+                    f"{len(self.compact_vdf_cache)} cached compact VDFs remain in memory"
                 )
             elif flushed_blocks > 0:
                 self.log.info(f"Flushed compact VDF proofs for {flushed_blocks} blocks")

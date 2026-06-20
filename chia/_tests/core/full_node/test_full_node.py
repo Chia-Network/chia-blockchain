@@ -2795,9 +2795,8 @@ async def test_compact_vdf_cache_read_through(
         full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
         cached_block = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
         assert cached_block is not None
-        cached_proof = cached_block.finished_sub_slots[0].proofs.challenge_chain_slot_proof
-        full_node_1.full_node._apply_cached_proofs_to_block(cached_block)
-        assert cached_block.finished_sub_slots[0].proofs.challenge_chain_slot_proof == cached_proof
+        assert not cached_block.challenge_chain_ip_proof.normalized_to_identity
+        assert full_node_1.full_node.compact_vdf_cache.get(block.header_hash) is not None
 
 
 @pytest.mark.anyio
