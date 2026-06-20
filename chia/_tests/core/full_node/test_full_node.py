@@ -2846,6 +2846,54 @@ async def test_compact_vdf_cache_flush_applies_pending_proofs(
 
 
 @pytest.mark.anyio
+async def test_request_block_serves_cached_compact_proofs(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1 = nodes[0]
+    blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
+    block = blocks[0]
+    for b in blocks:
+        await full_node_1.full_node.add_block(b)
+
+    full_node_1.full_node.compact_vdf_cache = CompactVDFCache(100)
+
+    vdf_info, vdf_proof = get_vdf_info_and_proof(
+        bt.constants,
+        ClassgroupElement.get_default_element(),
+        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        True,
+    )
+    compact_proof = timelord_protocol.RespondCompactProofOfTime(
+        vdf_info,
+        vdf_proof,
+        block.header_hash,
+        block.height,
+        uint8(CompressibleVDFField.CC_IP_VDF),
+    )
+    await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+    stale_cached = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert stale_cached is not None
+    assert not stale_cached.challenge_chain_ip_proof.normalized_to_identity
+
+    response = await full_node_1.request_block(fnp.RequestBlock(block.height, True))
+    assert response is not None
+    served = fnp.RespondBlock.from_bytes(response.data)
+    assert served.block.challenge_chain_ip_proof.normalized_to_identity
+
+    response = await full_node_1.request_blocks(
+        fnp.RequestBlocks(block.height, block.height, include_transaction_block=True)
+    )
+    assert response is not None
+    served_blocks = fnp.RespondBlocks.from_bytes(response.data)
+    assert len(served_blocks.blocks) == 1
+    assert served_blocks.blocks[0].challenge_chain_ip_proof.normalized_to_identity
+
+
+@pytest.mark.anyio
 async def test_compact_protocol_invalid_messages(
     setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     self_hostname: str,

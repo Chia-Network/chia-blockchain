@@ -3265,6 +3265,15 @@ class FullNode:
         self.block_store.block_cache.put(header_hash, merged)
         return merged
 
+    async def get_full_block(self, header_hash: bytes32) -> FullBlock | None:
+        return await self._get_block_with_cached_proofs(header_hash)
+
+    async def get_full_block_bytes(self, header_hash: bytes32) -> bytes | None:
+        block = await self._get_block_with_cached_proofs(header_hash)
+        if block is None:
+            return None
+        return bytes(block)
+
     async def _get_header_block_with_cached_proofs(
         self, height: int, header_hash: bytes32, tx_filter: bool = False
     ) -> HeaderBlock | None:
