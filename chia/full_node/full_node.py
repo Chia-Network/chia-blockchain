@@ -3245,17 +3245,25 @@ class FullNode:
     def _apply_cached_proofs_to_block(self, block: FullBlock) -> FullBlock:
         if not self.compact_vdf_cache.enabled:
             return block
-        for entry in self.compact_vdf_cache.get_entries_for_block(block.header_hash):
-            updated = self._apply_proof_to_block(block, entry.vdf_info, entry.vdf_proof, entry.field_vdf)
+        entries = self.compact_vdf_cache.get_entries_for_block(block.header_hash)
+        if not entries:
+            return block
+        result = FullBlock.from_bytes(bytes(block))
+        for entry in entries:
+            updated = self._apply_proof_to_block(result, entry.vdf_info, entry.vdf_proof, entry.field_vdf)
             if updated is not None:
-                block = updated
-        return block
+                result = updated
+        return result
 
     async def _get_block_with_cached_proofs(self, header_hash: bytes32) -> FullBlock | None:
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
             return None
-        return self._apply_cached_proofs_to_block(block)
+        if not self.compact_vdf_cache.enabled or len(self.compact_vdf_cache.get_entries_for_block(header_hash)) == 0:
+            return block
+        merged = self._apply_cached_proofs_to_block(block)
+        self.block_store.block_cache.put(header_hash, merged)
+        return merged
 
     async def _get_header_block_with_cached_proofs(
         self, height: int, header_hash: bytes32, tx_filter: bool = False
@@ -3281,9 +3289,13 @@ class FullNode:
                 if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
                     new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
                     new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
+                    new_block = block.replace(
+                        finished_sub_slots=[
+                            *block.finished_sub_slots[:index],
+                            new_subslot,
+                            *block.finished_sub_slots[index + 1 :],
+                        ]
+                    )
                     break
         if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
             for index, sub_slot in enumerate(block.finished_sub_slots):
@@ -3293,9 +3305,13 @@ class FullNode:
                 ):
                     new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
                     new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
+                    new_block = block.replace(
+                        finished_sub_slots=[
+                            *block.finished_sub_slots[:index],
+                            new_subslot,
+                            *block.finished_sub_slots[index + 1 :],
+                        ]
+                    )
                     break
         if field_vdf == CompressibleVDFField.CC_SP_VDF:
             if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
@@ -3369,11 +3385,12 @@ class FullNode:
             return
         self.log.info(f"Flushing {len(self.compact_vdf_cache)} cached compact VDF proofs to database")
         async with self.blockchain.compact_proof_lock:
+            flushed_blocks = 0
+            failed_blocks = 0
             for header_hash in self.compact_vdf_cache.modified_header_hashes():
-                block = self.block_store.get_block_from_cache(header_hash)
+                block = await self._get_block_with_cached_proofs(header_hash)
                 if block is None:
-                    block = await self._get_block_with_cached_proofs(header_hash)
-                if block is None:
+                    failed_blocks += 1
                     self.log.error(f"Could not flush cached compact VDF for block {header_hash}")
                     continue
                 async with self.db_wrapper.writer():
@@ -3385,7 +3402,15 @@ class FullNode:
                             f" rolling back: {e} {traceback.format_exc()}"
                         )
                         raise
-            self.compact_vdf_cache.clear()
+                self.compact_vdf_cache.remove_block(header_hash)
+                flushed_blocks += 1
+            if failed_blocks > 0:
+                self.log.error(
+                    f"Failed to flush compact VDF cache for {failed_blocks} blocks; "
+                    f"{len(self.compact_vdf_cache)} cached proofs remain in memory"
+                )
+            elif flushed_blocks > 0:
+                self.log.info(f"Flushed compact VDF proofs for {flushed_blocks} blocks")
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         peak = self.blockchain.get_peak()

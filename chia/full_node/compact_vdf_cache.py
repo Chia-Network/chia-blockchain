@@ -65,6 +65,11 @@ class CompactVDFCache:
     def modified_header_hashes(self) -> set[bytes32]:
         return set(self._modified_blocks)
 
+    def remove_block(self, header_hash: bytes32) -> None:
+        for entry in self.get_entries_for_block(header_hash):
+            self._entries.pop(self._key(entry.header_hash, entry.field_vdf, entry.vdf_info), None)
+        self._modified_blocks.discard(header_hash)
+
     def clear(self) -> None:
         self._entries.clear()
         self._modified_blocks.clear()
