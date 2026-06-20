@@ -54,7 +54,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
-from chia.full_node.compact_vdf_cache import CachedCompactVDF, CompactVDFCache
+from chia.full_node.compact_vdf_cache import CompactVDFCache
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -3242,23 +3242,98 @@ class FullNode:
             self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
         return is_new_proof
 
+    @staticmethod
+    def _proof_is_compact(proof: VDFProof) -> bool:
+        return proof.witness_type == 0 and proof.normalized_to_identity
+
+    def _apply_proof_to_block(
+        self,
+        block: FullBlock,
+        vdf_proof: VDFProof,
+        field_vdf: CompressibleVDFField | None = None,
+    ) -> FullBlock | None:
+        start = ClassgroupElement.get_default_element()
+        if field_vdf is not None:
+            field_types = [field_vdf]
+        else:
+            # Prefer reward-chain fields before sub-slot fields when scanning.
+            field_types = [
+                CompressibleVDFField.CC_IP_VDF,
+                CompressibleVDFField.CC_SP_VDF,
+                CompressibleVDFField.CC_EOS_VDF,
+                CompressibleVDFField.ICC_EOS_VDF,
+            ]
+
+        for field in field_types:
+            if field == CompressibleVDFField.CC_EOS_VDF:
+                for index, sub_slot in enumerate(block.finished_sub_slots):
+                    if self._proof_is_compact(sub_slot.proofs.challenge_chain_slot_proof):
+                        continue
+                    vdf_info = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
+                    if not validate_vdf(vdf_proof, self.constants, start, vdf_info):
+                        continue
+                    new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = sub_slot.replace(proofs=new_proofs)
+                    return block.replace(
+                        finished_sub_slots=[
+                            *block.finished_sub_slots[:index],
+                            new_subslot,
+                            *block.finished_sub_slots[index + 1 :],
+                        ]
+                    )
+            elif field == CompressibleVDFField.ICC_EOS_VDF:
+                for index, sub_slot in enumerate(block.finished_sub_slots):
+                    if sub_slot.infused_challenge_chain is None:
+                        continue
+                    assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                    if self._proof_is_compact(sub_slot.proofs.infused_challenge_chain_slot_proof):
+                        continue
+                    vdf_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+                    if not validate_vdf(vdf_proof, self.constants, start, vdf_info):
+                        continue
+                    new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = sub_slot.replace(proofs=new_proofs)
+                    return block.replace(
+                        finished_sub_slots=[
+                            *block.finished_sub_slots[:index],
+                            new_subslot,
+                            *block.finished_sub_slots[index + 1 :],
+                        ]
+                    )
+            elif field == CompressibleVDFField.CC_SP_VDF:
+                if block.challenge_chain_sp_proof is None or self._proof_is_compact(block.challenge_chain_sp_proof):
+                    continue
+                if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                    continue
+                if field_vdf is None:
+                    sp_vdf = block.reward_chain_block.challenge_chain_sp_vdf
+                    if not validate_vdf(vdf_proof, self.constants, start, sp_vdf):
+                        continue
+                return block.replace(challenge_chain_sp_proof=vdf_proof)
+            elif field == CompressibleVDFField.CC_IP_VDF:
+                if self._proof_is_compact(block.challenge_chain_ip_proof):
+                    continue
+                if field_vdf is None:
+                    ip_vdf = block.reward_chain_block.challenge_chain_ip_vdf
+                    if not validate_vdf(vdf_proof, self.constants, start, ip_vdf):
+                        continue
+                return block.replace(challenge_chain_ip_proof=vdf_proof)
+        return None
+
     def _apply_cached_vdf_to_block(self, block: FullBlock) -> FullBlock:
-        cached = self.compact_vdf_cache.get(block.header_hash)
-        if cached is None:
+        vdf_proof = self.compact_vdf_cache.get(block.header_hash)
+        if vdf_proof is None:
             return block
-        merged = self._apply_proof_to_block(block, cached.vdf_info, cached.vdf_proof, cached.field_vdf)
+        merged = self._apply_proof_to_block(block, vdf_proof)
         return merged if merged is not None else block
 
     async def _get_block_with_cached_proofs(self, header_hash: bytes32) -> FullBlock | None:
-        cached_vdf = self.compact_vdf_cache.get(header_hash)
-        if cached_vdf is not None:
+        cached_vdf_proof = self.compact_vdf_cache.get(header_hash)
+        if cached_vdf_proof is not None:
             cached_block = self.block_store.get_block_from_cache(header_hash)
+            if cached_block is not None and self._apply_proof_to_block(cached_block, cached_vdf_proof) is None:
+                return cached_block
             if cached_block is not None:
-                header_block = get_block_header(cached_block)
-                if not await self._needs_compact_proof(
-                    cached_vdf.vdf_info, header_block, cached_vdf.field_vdf
-                ):
-                    return cached_block
                 self.block_store.block_cache.remove(header_hash)
             block = await self.block_store.get_full_block(header_hash)
             if block is None:
@@ -3287,53 +3362,6 @@ class FullNode:
             return None
         return get_block_header(block)
 
-    def _apply_proof_to_block(
-        self,
-        block: FullBlock,
-        vdf_info: VDFInfo,
-        vdf_proof: VDFProof,
-        field_vdf: CompressibleVDFField,
-    ) -> FullBlock | None:
-        new_block = None
-
-        if field_vdf == CompressibleVDFField.CC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                    new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_block = block.replace(
-                        finished_sub_slots=[
-                            *block.finished_sub_slots[:index],
-                            new_subslot,
-                            *block.finished_sub_slots[index + 1 :],
-                        ]
-                    )
-                    break
-        if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if (
-                    sub_slot.infused_challenge_chain is not None
-                    and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
-                ):
-                    new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_block = block.replace(
-                        finished_sub_slots=[
-                            *block.finished_sub_slots[:index],
-                            new_subslot,
-                            *block.finished_sub_slots[index + 1 :],
-                        ]
-                    )
-                    break
-        if field_vdf == CompressibleVDFField.CC_SP_VDF:
-            if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = block.replace(challenge_chain_sp_proof=vdf_proof)
-        if field_vdf == CompressibleVDFField.CC_IP_VDF:
-            if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
-        return new_block
-
     # returns True if we ended up replacing the proof, and False otherwise
     async def _replace_proof(
         self,
@@ -3346,7 +3374,7 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
+        new_block = self._apply_proof_to_block(block, vdf_proof, field_vdf)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():
@@ -3371,12 +3399,10 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = self._apply_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
+        new_block = self._apply_proof_to_block(block, vdf_proof, field_vdf)
         if new_block is None:
             return False
-        if not self.compact_vdf_cache.add(
-            CachedCompactVDF(vdf_info, vdf_proof, header_hash, field_vdf)
-        ):
+        if not self.compact_vdf_cache.add(header_hash, vdf_proof):
             return False
         self.block_store.block_cache.put(header_hash, new_block)
         return True
