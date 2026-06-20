@@ -65,6 +65,14 @@ def test_compact_vdf_cache_get_entries_for_block() -> None:
     assert entry2 in block1_entries
 
 
+def test_compact_vdf_cache_has_block() -> None:
+    cache = CompactVDFCache(10)
+    assert cache.has_block(bytes32(b"\x01" * 32)) is False
+    assert cache.add(_entry(b"\x01" * 32)) is True
+    assert cache.has_block(bytes32(b"\x01" * 32)) is True
+    assert cache.has_block(bytes32(b"\x02" * 32)) is False
+
+
 def test_compact_vdf_cache_remove_block() -> None:
     cache = CompactVDFCache(10)
     block1 = bytes32(b"\x01" * 32)
@@ -74,5 +82,5 @@ def test_compact_vdf_cache_remove_block() -> None:
     assert cache.add(_entry(block2, CompressibleVDFField.CC_IP_VDF)) is True
     cache.remove_block(block1)
     assert len(cache) == 1
-    assert block1 not in cache.modified_header_hashes()
-    assert block2 in cache.modified_header_hashes()
+    assert not cache.has_block(block1)
+    assert cache.has_block(block2)

@@ -3259,7 +3259,7 @@ class FullNode:
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
             return None
-        if not self.compact_vdf_cache.enabled or len(self.compact_vdf_cache.get_entries_for_block(header_hash)) == 0:
+        if not self.compact_vdf_cache.enabled or not self.compact_vdf_cache.has_block(header_hash):
             return block
         merged = self._apply_cached_proofs_to_block(block)
         self.block_store.block_cache.put(header_hash, merged)
