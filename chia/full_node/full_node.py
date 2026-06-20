@@ -3246,23 +3246,14 @@ class FullNode:
     def _proof_is_compact(proof: VDFProof) -> bool:
         return proof.witness_type == 0 and proof.normalized_to_identity
 
-    def _apply_proof_to_block(
-        self,
-        block: FullBlock,
-        vdf_proof: VDFProof,
-        field_vdf: CompressibleVDFField | None = None,
-    ) -> FullBlock | None:
+    def _apply_proof_to_block(self, block: FullBlock, vdf_proof: VDFProof) -> FullBlock | None:
         start = ClassgroupElement.get_default_element()
-        if field_vdf is not None:
-            field_types = [field_vdf]
-        else:
-            # Prefer reward-chain fields before sub-slot fields when scanning.
-            field_types = [
-                CompressibleVDFField.CC_IP_VDF,
-                CompressibleVDFField.CC_SP_VDF,
-                CompressibleVDFField.CC_EOS_VDF,
-                CompressibleVDFField.ICC_EOS_VDF,
-            ]
+        field_types = [
+            CompressibleVDFField.CC_IP_VDF,
+            CompressibleVDFField.CC_SP_VDF,
+            CompressibleVDFField.CC_EOS_VDF,
+            CompressibleVDFField.ICC_EOS_VDF,
+        ]
 
         for field in field_types:
             if field == CompressibleVDFField.CC_EOS_VDF:
@@ -3303,20 +3294,18 @@ class FullNode:
             elif field == CompressibleVDFField.CC_SP_VDF:
                 if block.challenge_chain_sp_proof is None or self._proof_is_compact(block.challenge_chain_sp_proof):
                     continue
-                if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                sp_vdf = block.reward_chain_block.challenge_chain_sp_vdf
+                if sp_vdf is None:
                     continue
-                if field_vdf is None:
-                    sp_vdf = block.reward_chain_block.challenge_chain_sp_vdf
-                    if not validate_vdf(vdf_proof, self.constants, start, sp_vdf):
-                        continue
+                if not validate_vdf(vdf_proof, self.constants, start, sp_vdf):
+                    continue
                 return block.replace(challenge_chain_sp_proof=vdf_proof)
             elif field == CompressibleVDFField.CC_IP_VDF:
                 if self._proof_is_compact(block.challenge_chain_ip_proof):
                     continue
-                if field_vdf is None:
-                    ip_vdf = block.reward_chain_block.challenge_chain_ip_vdf
-                    if not validate_vdf(vdf_proof, self.constants, start, ip_vdf):
-                        continue
+                ip_vdf = block.reward_chain_block.challenge_chain_ip_vdf
+                if not validate_vdf(vdf_proof, self.constants, start, ip_vdf):
+                    continue
                 return block.replace(challenge_chain_ip_proof=vdf_proof)
         return None
 
@@ -3374,7 +3363,7 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = self._apply_proof_to_block(block, vdf_proof, field_vdf)
+        new_block = self._apply_proof_to_block(block, vdf_proof)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():
@@ -3399,7 +3388,7 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = self._apply_proof_to_block(block, vdf_proof, field_vdf)
+        new_block = self._apply_proof_to_block(block, vdf_proof)
         if new_block is None:
             return False
         if not self.compact_vdf_cache.add(header_hash, vdf_proof):
