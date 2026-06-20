@@ -1,3 +1,59 @@
+"""Bounded in-memory cache of compact VDF proofs pending database flush.
+
+When enabled, accepted compact proofs are stored here instead of being written
+to the database immediately. On node shutdown, ``FullNode.flush_compact_vdf_cache``
+persists all cached proofs. While the cache is full, new compact proofs are
+rejected.
+
+Cache structure
+---------------
+::
+
+    dict[header_hash → dict[(field_vdf, sub_slot_index) → VDFProof]]
+
+- **Capacity** counts total pending proofs across all blocks, not blocks.
+- **Lookup** by ``header_hash`` is O(1); applying cached proofs to a block is
+  O(k) where k is the number of proofs cached for that block (typically a
+  small constant).
+
+Slot key
+--------
+Each cached proof is keyed by:
+
+- ``field_vdf`` (``CompressibleVDFField``, 1 byte on the wire): which
+  compressible field (CC_EOS, ICC_EOS, CC_SP, CC_IP).
+- ``sub_slot_index`` (``uint8``): index into ``finished_sub_slots`` for EOS
+  fields; ``0`` for reward-chain fields (CC_SP, CC_IP).
+
+Multiple proofs per block are supported before flush (for example several EOS
+sub-slots plus SP and IP on the same block).
+
+What is stored vs. what is already on the block
+------------------------------------------------
++----------------------------+----------------------------------+
+| Cached                     | Already on the block             |
++============================+==================================+
+| ``field_vdf``              | VDF info (challenge, iterations, |
+| ``sub_slot_index``         | output) at each slot             |
+| compact ``VDFProof``       | full proof being replaced        |
++----------------------------+----------------------------------+
+
+VDF info is not duplicated in the cache. On accept, ``FullNode`` resolves
+``sub_slot_index`` from the block's existing VDF info, then patches only the
+proof field when serving or flushing.
+
+Replacement and eviction
+------------------------
+- ``add()`` overwrites an existing ``(header_hash, field_vdf, sub_slot_index)``
+  entry without increasing the capacity count. This should not happen in normal
+  operation: ``FullNode._can_accept_compact_proof`` rejects duplicate compact
+  proofs for a slot before ``add()`` is called. The overwrite exists only so
+  ``add()`` is idempotent if the same slot is inserted twice.
+- ``remove_block`` drops every cached proof for a block after a successful flush.
+- ``CompactVDFCache(0)`` disables caching; proofs are written to the database
+  immediately.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,11 +77,7 @@ class CachedCompactVDF:
 
 
 class CompactVDFCache:
-    """Bounded in-memory cache of compact VDF proofs pending database flush.
-
-    Multiple compact VDF proofs may be cached per block, keyed by field and
-    sub-slot index (0 for reward-chain fields).
-    """
+    """See module docstring for design and invariants."""
 
     def __init__(self, capacity: int) -> None:
         self._capacity = capacity
