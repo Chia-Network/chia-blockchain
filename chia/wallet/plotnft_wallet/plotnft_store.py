@@ -287,4 +287,4 @@ class PlotNFTStore:
             )
             for row in rows:
                 yield (bytes32(row[0]), row[1])
-            await conn.execute("DELETE FROM deleted_wallets WHERE height = ?", (height,))
+            await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))
