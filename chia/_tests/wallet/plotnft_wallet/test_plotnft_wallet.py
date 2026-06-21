@@ -753,10 +753,80 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
     )
     env.node.config["selected_network"] = "simulator"
+    env.node.config["network_overrides"]["config"]["simulator"] = {"address_prefix": "txch"}
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
     rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
     assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
     assert await rediscovered_plotnft_wallet.get_current_plotnft() == rediscovered_plotnft
+
+    # TRANSFER
+    await env.wallet_state_manager.wallet_node.keychain_proxy.add_key(
+        bytes(G1Element()).hex(), label=None, private=False
+    )
+
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await rediscovered_plotnft_wallet.transfer_plotnft(
+            action_scope=action_scope, target_wallet_fingerprint=G1Element().get_fingerprint()
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    # plotnft wallet deleted
+                },
+            )
+        ]
+    )
+    await env.node.wallet_state_manager.tx_store.delete_transaction_record(  # preventing re-submission for convenience
+        tx_id=action_scope.side_effects.transactions[0].name
+    )
+
+    # Reorg (transfer)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    assert len(env.node.wallet_state_manager.wallets) == 2
+    await env.change_balances({"plotnft": {"pending_coin_removal_count": -1}})
+    await env.check_balances()
+
+    # MELT
+    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
+    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await rediscovered_plotnft_wallet.melt_plotnft(action_scope=action_scope)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    # plotnft wallet deleted
+                },
+            )
+        ]
+    )
+
+    # Reorg (melt)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    assert len(env.node.wallet_state_manager.wallets) == 2
 
 
 @pytest.mark.parametrize(

@@ -571,6 +571,30 @@ class PlotNFT2Wallet:
             ) as action_scope:
                 await self._finish_leaving_pool(action_scope=action_scope, exiting_info=finish_info)
 
+    async def delete_self(self, deleted_at_height: uint32) -> None:
+        await self.wallet_state_manager.plotnft2_store.add_deleted_wallet(
+            launcher_id=self.plotnft_id, name=self.wallet_info.name, height=deleted_at_height
+        )
+        await self.wallet_state_manager.delete_wallet(self.id())
+        self.wallet_state_manager.wallets.pop(self.id())
+
+    @classmethod
+    async def potentially_reinitialize_deleted_wallets(
+        cls, *, wallet_state_manager: WalletStateManager, height: int
+    ) -> None:
+        async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
+            wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
+            wallet_state_manager.wallets[wallet_id] = await cls.create(
+                wallet_state_manager=wallet_state_manager,
+                xch_wallet=wallet_state_manager.main_wallet,
+                wallet_info=WalletInfo(
+                    id=wallet_id,
+                    name=name,
+                    type=uint8(WalletType.PLOTNFT_2),
+                    data=launcher_id.hex(),
+                ),
+            )
+
     # State
     async def get_current_plotnft(self) -> PlotNFT:
         return await self.wallet_state_manager.plotnft2_store.get_latest_plotnft(self.plotnft_id)

@@ -1093,8 +1093,7 @@ class WalletStateManager:
                             coin_state.created_height is not None
                             and current_plotnft_created_height < coin_state.created_height
                         ):
-                            await self.delete_wallet(wallet_id=matched_plotnft_wallet_id)
-                            self.wallets.pop(matched_plotnft_wallet_id)
+                            await plotnft_wallet.delete_self(deleted_at_height=coin_state.created_height)
                 else:
                     # the Streamable hint is in error so we need this type ignore
                     return WalletIdentifier(  # type: ignore[return-value]
@@ -2263,8 +2262,9 @@ class WalletStateManager:
                             try:
                                 await self.plotnft2_store.get_plotnfts(coin_ids=[coin_name])
                                 if children == []:
-                                    await self.delete_wallet(wallet_id=wallet_identifier.id)
-                                    self.wallets.pop(wallet_identifier.id)
+                                    plotnft_wallet = self.wallets[wallet_identifier.id]
+                                    assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                                    await plotnft_wallet.delete_self(coin_state.spent_height)
                             except ValueError:
                                 pass
                             if isinstance(coin_data, PlotNFT):
@@ -2754,6 +2754,9 @@ class WalletStateManager:
         for wallet_id in remove_ids:
             await self.delete_wallet(wallet_id)
             self.state_changed("wallet_removed", wallet_id)
+
+        # Reinitialize deleted wallets
+        await PlotNFT2Wallet.potentially_reinitialize_deleted_wallets(wallet_state_manager=self, height=height)
 
         return remove_ids
 

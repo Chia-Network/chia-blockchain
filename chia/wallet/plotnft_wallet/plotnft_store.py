@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from sqlite3 import Row
 
 from chia_rs import Coin, G1Element
@@ -80,6 +81,9 @@ class PlotNFTStore:
             )
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS finish_exiting_height (wallet_id int PRIMARY KEY, height int)"
+            )
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS deleted_wallets (launcher_id blob PRIMARY KEY, height int, name string)"
             )
 
         return self
@@ -268,3 +272,19 @@ class PlotNFTStore:
             await conn.execute("DELETE FROM plotnft2s WHERE created_height > ?", (height,))
             await conn.execute("DELETE FROM pool_reward2s WHERE height > ?", (height,))
             await conn.execute("UPDATE pool_reward2s SET spent_height = NULL WHERE spent_height > ?", (height,))
+
+    async def add_deleted_wallet(self, *, launcher_id: bytes32, name: str, height: int) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO deleted_wallets (launcher_id, name, height) VALUES (?, ?, ?)",
+                (launcher_id, name, height),
+            )
+
+    async def pop_deleted_wallets(self, *, height: int) -> AsyncGenerator[tuple[bytes32, str]]:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                ("SELECT launcher_id, name FROM deleted_wallets WHERE height > ?"), (height,)
+            )
+            for row in rows:
+                yield (bytes32(row[0]), row[1])
+            await conn.execute("DELETE FROM deleted_wallets WHERE height = ?", (height,))
