@@ -36,18 +36,21 @@ from chia.cmds.plotnft import (
     InspectPlotNFTCMD,
     JoinPlotNFTCMD,
     LeavePlotNFTCMD,
+    MeltPlotNFTCMD,
     ShowPlotNFTCMD,
+    TransferPlotNFTCMD,
 )
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState
 from chia.simulator.setup_services import setup_farmer
+from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import GetWallets, PWStatus
+from chia.wallet.wallet_request_types import GetWallets, LogIn, PWStatus
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -799,6 +802,138 @@ async def test_plotnft_cli_claim(wallet_environments: WalletTestFramework, versi
             )
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_transfer(wallet_environments: WalletTestFramework, self_hostname: str) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "plotnft": 2,
+    }
+    env.wallet_state_manager.config["reuse_public_key_for_change"][
+        str(env.wallet_state_manager.root_pubkey.get_fingerprint())
+    ] = wallet_environments.tx_config.reuse_puzhash
+    client_info = WalletClientInfo(
+        env.rpc_client,
+        env.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env.wallet_state_manager.config,
+    )
+    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
+    await env.wallet_state_manager.wallet_node.keychain_proxy.add_key(
+        bytes(G1Element()).hex(), label=None, private=False
+    )
+    FEE_AMOUNT = 1_800_000_000_000
+    await TransferPlotNFTCMD(
+        id=uint32(wallet_id),
+        target_wallet_fingerprint=uint32(G1Element().get_fingerprint()),
+        fee=uint64(FEE_AMOUNT),
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+    ).run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE_AMOUNT,
+                        "<=#spendable_balance": -FEE_AMOUNT,
+                        "<=#max_send_amount": -FEE_AMOUNT,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                    },
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE_AMOUNT,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": 1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    # plotnft wallet deleted
+                },
+            )
+        ]
+    )
+    assert len(env.wallet_state_manager.wallets) == 1
+
+    await env.rpc_client.log_in(LogIn(fingerprint=uint32(G1Element().get_fingerprint())))
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    await wallet_environments.full_node.wait_for_wallets_synced([env.node])
+
+    # change from original wallet pending state
+    await env.change_balances({"xch": {"set_remainder": True}, "plotnft": {"pending_coin_removal_count": -1}})
+    await env.check_balances()
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_melt(wallet_environments: WalletTestFramework, self_hostname: str) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "plotnft": 2,
+    }
+    env.wallet_state_manager.config["reuse_public_key_for_change"][
+        str(env.wallet_state_manager.root_pubkey.get_fingerprint())
+    ] = wallet_environments.tx_config.reuse_puzhash
+
+    client_info = WalletClientInfo(
+        env.rpc_client,
+        env.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env.wallet_state_manager.config,
+    )
+    wallet_id = await create_new_plotnft(wallet_environments, version=2, self_pool=True)
+    FEE_AMOUNT = 1_800_000_000_000
+    await MeltPlotNFTCMD(
+        id=uint32(wallet_id),
+        fee=uint64(FEE_AMOUNT),
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+    ).run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -FEE_AMOUNT,
+                        "<=#spendable_balance": -FEE_AMOUNT,
+                        "<=#max_send_amount": -FEE_AMOUNT,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                    },
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -FEE_AMOUNT,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": 1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    # plotnft wallet deleted
+                },
+            )
+        ]
+    )
+
+    assert len(env.wallet_state_manager.wallets) == 1
 
 
 @pytest.mark.parametrize(
