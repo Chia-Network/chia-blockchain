@@ -189,7 +189,7 @@ class PlotNFTStore:
                 (
                     "SELECT * from pool_reward2s WHERE singleton_id = ?"
                     + (" AND spent_height IS NULL" if not include_spent else "")
-                    + " LIMIT ?"
+                    + " LIMIT ? ORDER BY spent_height ASC"
                 ),
                 (plotnft_id, max),
             )
