@@ -577,6 +577,8 @@ class PlotNFT2Wallet:
         )
         await self.wallet_state_manager.delete_wallet(self.id())
         self.wallet_state_manager.wallets.pop(self.id())
+        self.log.info("Removed PlotNFT2 wallet with ID: %s", self.plotnft_id.hex())
+        self.wallet_state_manager.state_changed("wallet_removed", wallet_id=self.id())
 
     @classmethod
     async def potentially_reinitialize_deleted_wallets(
