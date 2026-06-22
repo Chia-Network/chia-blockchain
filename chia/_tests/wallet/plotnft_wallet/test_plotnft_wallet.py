@@ -728,44 +728,13 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
-    # Resync start
-    env.node._close()
-    await env.node._await_closed()
-    env.node.config["database_path"] = "wallet/db/blockchain_wallet_v2_test1_CHALLENGE_KEY.sqlite"
-
-    # use second node to start the same wallet, reusing config
-    await env.node._start()
-    await env.peer_server.start_client(
-        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
-    )
-    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
-    await wallet_environments.process_pending_states([WalletStateTransition(), WalletStateTransition()])
-
-    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
-    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
-    rediscovered_plotnft = await rediscovered_plotnft_wallet.get_current_plotnft()
-
-    # and test just a normal restart
-    env.node._close()
-    await env.node._await_closed()
-    await env.node._start()
-    await env.peer_server.start_client(
-        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
-    )
-    env.node.config["selected_network"] = "simulator"
-    env.node.config["network_overrides"]["config"]["simulator"] = {"address_prefix": "txch"}
-    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
-    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
-    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
-    assert await rediscovered_plotnft_wallet.get_current_plotnft() == rediscovered_plotnft
-
     # TRANSFER
     await env.wallet_state_manager.wallet_node.keychain_proxy.add_key(
         bytes(G1Element()).hex(), label=None, private=False
     )
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
-        await rediscovered_plotnft_wallet.transfer_plotnft(
+        await plotnft_wallet.transfer_plotnft(
             action_scope=action_scope, target_wallet_fingerprint=G1Element().get_fingerprint()
         )
 
@@ -818,6 +787,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             )
         ]
     )
+    await env.node.wallet_state_manager.tx_store.delete_transaction_record(  # preventing re-submission for convenience
+        tx_id=action_scope.side_effects.transactions[0].name
+    )
 
     # Reorg (melt)
     height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
@@ -827,6 +799,38 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
     assert len(env.node.wallet_state_manager.wallets) == 2
+    await env.change_balances({"plotnft": {"pending_coin_removal_count": -1}})
+    await env.check_balances()
+
+    # Resync start
+    env.node._close()
+    await env.node._await_closed()
+    env.node.config["database_path"] = "wallet/db/blockchain_wallet_v2_test1_CHALLENGE_KEY.sqlite"
+
+    # use second node to start the same wallet, reusing config
+    await env.node._start()
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    await wallet_environments.process_pending_states([WalletStateTransition(), WalletStateTransition()])
+
+    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
+    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
+    rediscovered_plotnft = await rediscovered_plotnft_wallet.get_current_plotnft()
+
+    # and test just a normal restart
+    env.node._close()
+    await env.node._await_closed()
+    await env.node._start()
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    env.node.config["selected_network"] = "simulator"
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
+    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
+    assert await rediscovered_plotnft_wallet.get_current_plotnft() == rediscovered_plotnft
 
 
 @pytest.mark.parametrize(
