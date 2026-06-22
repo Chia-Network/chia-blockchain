@@ -16,37 +16,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import aiosqlite
-from chia_rs import (
-    AugSchemeMPL,
-    CoinRecord,
-    CoinSpend,
-    CoinState,
-    ConsensusConstants,
-    G1Element,
-    G2Element,
-    PrivateKey,
-)
+from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
-from chia.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
-from chia.consensus.condition_tools import (
-    conditions_dict_for_solution,
-    pkm_pairs_for_conditions_dict,
-)
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools import pool_config
 from chia.pools.plotnft_drivers import GetNextPlotNFTError, PlotNFT
-from chia.pools.pool_puzzles import (
-    get_most_recent_singleton_coin_from_coin_spend,
-    solution_to_pool_state,
-)
+from chia.pools.pool_puzzles import get_most_recent_singleton_coin_from_coin_spend, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -65,12 +47,7 @@ from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
-from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
-    CAT_MOD_HASH,
-    construct_cat_puzzle,
-    match_cat_puzzle,
-)
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
@@ -105,10 +82,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_puzzle_utils import (
-    get_metadata_and_phs,
-    get_new_owner_did,
-)
+from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
@@ -116,10 +90,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_store import PlotNFTStore
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.clawback.drivers import (
-    generate_clawback_spend_bundle,
-    match_clawback_puzzle,
-)
+from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
@@ -135,13 +106,8 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH,
-)
-from chia.wallet.singleton import (
-    create_singleton_puzzle,
-    get_inner_puzzle_from_singleton,
-)
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH as SINGLETON_LAUNCHER_HASH
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -154,10 +120,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import FilterMode, HashFilter
-from chia.wallet.util.transaction_type import (
-    CLAWBACK_INCOMING_TRANSACTION_TYPES,
-    TransactionType,
-)
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
@@ -165,11 +128,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import (
-    CRCAT,
-    ProofsChecker,
-    construct_pending_approval_state,
-)
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential, match_revocation_layer
 from chia.wallet.vc_wallet.vc_store import VCStore
@@ -189,10 +148,7 @@ from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.wallet.wsm_apis import (
-    CreateMorePuzzleHashesResult,
-    GetUnusedDerivationRecordResult,
-)
+from chia.wallet.wsm_apis import CreateMorePuzzleHashesResult, GetUnusedDerivationRecordResult
 
 TWalletType = TypeVar("TWalletType", bound=WalletProtocol[Any])
 
@@ -996,7 +952,7 @@ class WalletStateManager:
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if did_curried_args is not None and coin_state.coin.amount % 2 == 1:
-            (p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata) = did_curried_args
+            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
                 bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
@@ -1565,7 +1521,7 @@ class WalletStateManager:
             uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
-                (_p2_puzzle, _recovery_list_hash, _num_verification, singleton_struct, _metadata) = did_curried_args
+                _p2_puzzle, _recovery_list_hash, _num_verification, singleton_struct, _metadata = did_curried_args
                 minter_did = bytes32(bytes(singleton_struct.rest().first())[1:])
         return minter_did
 
@@ -1585,11 +1541,13 @@ class WalletStateManager:
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
         old_p2_puzhash = uncurried_nft.p2_puzzle.get_tree_hash()
-        _metadata, new_p2_puzhash = get_metadata_and_phs(uncurried_nft, nft_data.parent_coin_spend.solution)
+        _metadata, new_p2_puzhash = get_metadata_and_phs(
+            uncurried_nft,
+            nft_data.parent_coin_spend.solution,
+        )
         if uncurried_nft.supports_did:
             parsed_did_id = get_new_owner_did(
-                uncurried_nft,
-                Program.from_serialized(nft_data.parent_coin_spend.solution),
+                uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution)
             )
             old_did_id = uncurried_nft.owner_did
             if parsed_did_id is None:
@@ -2215,7 +2173,7 @@ class WalletStateManager:
                                 assert pool_state is not None
                             except (AssertionError, ValueError) as e:
                                 self.log.debug(f"Not a pool wallet launcher {e}, child: {child}")
-                                (matched, inner_puzhash) = await DataLayerWallet.match_dl_launcher(launcher_spend)
+                                matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
                                 if (
                                     matched
                                     and inner_puzhash is not None
