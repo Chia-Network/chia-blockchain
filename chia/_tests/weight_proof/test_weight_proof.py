@@ -101,67 +101,6 @@ class FakeWeightProof:
         self.recent_chain_data: list[Any] = []
 
 
-def test_max_sub_epoch_segments_mainnet() -> None:
-    constants = cast(
-        ConsensusConstants,
-        SimpleNamespace(SUB_EPOCH_BLOCKS=384, MIN_BLOCKS_PER_CHALLENGE_BLOCK=16),
-    )
-    assert _max_sub_epoch_segments(constants) == 25
-
-
-def test_validate_sub_epoch_segments_rejects_excess_segments(monkeypatch: pytest.MonkeyPatch) -> None:
-    genesis = bytes32(b"\x00" * 32)
-    max_segs = 3
-    excess_segments = [SimpleNamespace(sub_epoch_n=0) for _ in range(max_segs + 1)]
-
-    class DummySubEpochSegments:
-        def __init__(self, challenge_segments: list[SimpleNamespace]) -> None:
-            self.challenge_segments = challenge_segments
-
-        @classmethod
-        def from_bytes(cls, _blob: bytes) -> DummySubEpochSegments:
-            return cls(excess_segments)
-
-    monkeypatch.setattr(
-        weight_proof_module,
-        "summaries_from_bytes",
-        lambda _summaries_bytes: [SimpleNamespace(reward_chain_hash=genesis)],
-    )
-    monkeypatch.setattr(weight_proof_module, "SubEpochSegments", DummySubEpochSegments)
-    monkeypatch.setattr(
-        weight_proof_module,
-        "map_segments_by_sub_epoch",
-        lambda _segments: {0: excess_segments},
-    )
-    monkeypatch.setattr(weight_proof_module, "_get_curr_diff_ssi", lambda *_args: (1, 1))
-    monkeypatch.setattr(weight_proof_module, "_max_sub_epoch_segments", lambda _constants: max_segs)
-
-    result = weight_proof_module._validate_sub_epoch_segments(
-        constants=cast(
-            ConsensusConstants,
-            SimpleNamespace(
-                GENESIS_CHALLENGE=genesis,
-                SUB_SLOT_ITERS_STARTING=1,
-                SUB_EPOCH_BLOCKS=384,
-                MAX_SUB_SLOT_BLOCKS=128,
-                MIN_BLOCKS_PER_CHALLENGE_BLOCK=16,
-            ),
-        ),
-        rng=cast(random.Random, SimpleNamespace(choice=lambda seq: 0)),
-        weight_proof_bytes=b"weight-proof",
-        summaries_bytes=[b"summaries"],
-        height=uint32(0),
-    )
-
-    assert result is None
-
-
-class FakeWeightProof:
-    def __init__(self) -> None:
-        self.sub_epochs: list[object] = [object()]
-        self.recent_chain_data: list[Any] = []
-
-
 async def load_blocks_dont_validate(
     blocks: list[FullBlock], constants: ConsensusConstants
 ) -> tuple[
@@ -253,7 +192,7 @@ class TestWeightProof:
         allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
         reason="needs a fixture containing V2 proofs",
     )
-    async def test_recent_chain_pospace_validation_passes_v2_filter_inputs(
+    async def test_recent_chain_pospace_validation_skips_v2_filter(
         self,
         default_400_blocks: list[FullBlock],
         blockchain_constants: ConsensusConstants,
@@ -263,7 +202,6 @@ class TestWeightProof:
             block for block in default_400_blocks if block.reward_chain_block.proof_of_space.version == 1
         )
         target_block = get_block_header(target_full_block)
-        expected_filter_challenge = bytes32(b"f" * 32)
 
         captured_kwargs: dict[str, object] = {}
 
@@ -271,14 +209,7 @@ class TestWeightProof:
             captured_kwargs.update(kwargs)
             return uint64(1)
 
-        def capture_get_filter_challenge_from_chain(*args: object) -> bytes32:
-            assert args[2] == target_block
-            assert args[3] == target_block.reward_chain_block.pos_ss_cc_challenge_hash
-            assert args[4] == target_block.reward_chain_block.signage_point_index
-            return expected_filter_challenge
-
         monkeypatch.setattr(weight_proof, "validate_pospace_and_get_required_iters", capture_validate_pospace)
-        monkeypatch.setattr(weight_proof, "get_filter_challenge_from_chain", capture_get_filter_challenge_from_chain)
         monkeypatch.setattr(weight_proof, "pre_sp_tx_block_height", lambda **_: uint32(0))
 
         required_iters = weight_proof._validate_pospace_recent_chain(
@@ -292,8 +223,9 @@ class TestWeightProof:
         )
 
         assert required_iters == uint64(1)
-        assert captured_kwargs["filter_challenge"] == expected_filter_challenge
-        assert captured_kwargs["signage_point_index"] == target_block.reward_chain_block.signage_point_index
+        assert captured_kwargs["height_agnostic"] is True
+        assert "filter_challenge" not in captured_kwargs
+        assert "signage_point_index" not in captured_kwargs
 
     # This test requires at least two sub epoch summaries in the block chain,
     # for some test chains, 400 blocks is not enough

@@ -16,6 +16,7 @@ from chia._tests.util.network_protocol_data import (
     respond_signatures,
     signed_values,
 )
+from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import Message, NodeType
@@ -71,7 +72,10 @@ async def test_farmer_does_not_send_v2_signage_point_to_037_harvester(
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
     farmer_server = farmer_service._server
-    incoming_queue, peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    incoming_queue, peer_id = await add_dummy_connection(
+        farmer_server, self_hostname, 12312, NodeType.HARVESTER, wait_for_peer_added=False
+    )
+    await time_out_assert(5, lambda: peer_id in farmer_server.all_connections)
     # Consume the handshake
     response_type = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response_type).name == "harvester_handshake"
@@ -102,7 +106,10 @@ async def test_farmer_sends_filter_challenge_to_038_harvester(
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
     farmer_server = farmer_service._server
-    incoming_queue, peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    incoming_queue, peer_id = await add_dummy_connection(
+        farmer_server, self_hostname, 12312, NodeType.HARVESTER, wait_for_peer_added=False
+    )
+    await time_out_assert(5, lambda: peer_id in farmer_server.all_connections)
     # Consume the handshake
     response_type = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response_type).name == "harvester_handshake"
