@@ -60,13 +60,11 @@ class PoolingShareState:
                 loaded_list = []
             else:
                 loaded_list = loaded_content["pooling_information"]
-            try:
-                yield loaded_list
-            finally:
-                if not read_only:
-                    f.seek(0)
-                    f.truncate()
-                    yaml.dump({"pooling_information": loaded_list}, f)
+            yield loaded_list  # noqa: RUF075  # write YAML only on successful exit
+            if not read_only:
+                f.seek(0)
+                f.truncate()
+                yaml.dump({"pooling_information": loaded_list}, f)
 
     @staticmethod
     def _p2_singleton_puzzle_hashes_from_list(loaded_list: list[_PoolConfig]) -> list[bytes32]:
@@ -105,13 +103,11 @@ class PoolingShareState:
                 owner_public_key=G1Element.from_bytes(hexstr_to_bytes(config["owner_public_key"])),
                 key_derivation_index=config["key_derivation_index"],
             )
-            try:
-                yield self
-            finally:
-                for i, conf in enumerate(loaded_list):
-                    if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
-                        loaded_list[i] = self.to_json_dict()
-                        break
+            yield self  # noqa: RUF075  # update in-memory entry only on successful exit
+            for i, conf in enumerate(loaded_list):
+                if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
+                    loaded_list[i] = self.to_json_dict()
+                    break
 
     def to_json_dict(self) -> _PoolConfig:
         return {
