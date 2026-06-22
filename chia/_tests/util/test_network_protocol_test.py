@@ -200,7 +200,8 @@ def test_missing_messages() -> None:
     pool_msgs = {
         "AuthenticationPayloadV1",
         "GetAuthRequest",
-        "GetFarmerRequest",
+        "GetFarmerRequestV1",
+        "GetFarmerRequestV2",
         "GetAuthResponse",
         "ErrorResponse",
         "GetFarmerResponse",
