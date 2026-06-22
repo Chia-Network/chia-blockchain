@@ -31,7 +31,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.get_block_challenge import get_filter_challenge_from_chain, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
@@ -1368,33 +1368,28 @@ def _validate_pospace_recent_chain(
     assert cc_sp_hash is not None
 
     challenge = challenge if not overflow else prev_challenge
-    filter_challenge = None
-    if block.reward_chain_block.proof_of_space.version == 1:
-        filter_challenge = get_filter_challenge_from_chain(
-            constants,
-            blocks,
-            block,
-            challenge,
-            block.reward_chain_block.signage_point_index,
-            block.height == 0,
-        )
-
-    required_iters = validate_pospace_and_get_required_iters(
-        constants,
-        block.reward_chain_block.proof_of_space,
-        challenge,
-        cc_sp_hash,
-        block.height,
-        diff,
-        pre_sp_tx_block_height(
+    proof_of_space = block.reward_chain_block.proof_of_space
+    height_agnostic = proof_of_space.param().strength_v2 is not None
+    prev_tx_block_height = (
+        uint32(0)
+        if height_agnostic
+        else pre_sp_tx_block_height(
             constants=constants,
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
-        ),
-        filter_challenge=filter_challenge,
-        signage_point_index=block.reward_chain_block.signage_point_index,
+        )
+    )
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        proof_of_space,
+        challenge,
+        cc_sp_hash,
+        block.height,
+        diff,
+        prev_tx_block_height,
+        height_agnostic=height_agnostic,
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")

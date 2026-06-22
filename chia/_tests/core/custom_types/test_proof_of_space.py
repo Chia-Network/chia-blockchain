@@ -298,13 +298,22 @@ def test_calculate_prefix_bits_rejects_v2() -> None:
     ],
 )
 def test_calculate_max_plot_strength(height: uint32, expected: int) -> None:
-    assert calculate_max_plot_strength(height, hard_fork2_height=9_562_000) == expected
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(9_562_000))
+    assert calculate_max_plot_strength(height, constants) == expected
 
 
 def test_base_filter_relative_to_fork_height() -> None:
-    assert calculate_base_plot_filter_bits(uint32(1_000_000), hard_fork2_height=1_000_000) == 9
-    assert calculate_base_plot_filter_bits(uint32(11_101_000), hard_fork2_height=1_000_000) == 8
-    assert calculate_base_plot_filter_bits(uint32(0), hard_fork2_height=1_000_000) == 9  # before fork
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    assert calculate_base_plot_filter_bits(uint32(1_000_000), constants) == 9
+    assert calculate_base_plot_filter_bits(uint32(11_101_000), constants) == 8
+    assert calculate_base_plot_filter_bits(uint32(0), constants) == 9  # before fork
+
+
+def test_base_filter_can_be_lowered_for_test_constants() -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000), NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(0))
+    assert calculate_base_plot_filter_bits(uint32(1_000_000), constants) == 0
+    assert calculate_base_plot_filter_bits(uint32(11_101_000), constants) == 0
+    assert calculate_base_plot_filter_bits(uint32(21_197_000), constants) == 0
 
 
 def test_v1_phase_out() -> None:

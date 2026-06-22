@@ -165,7 +165,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
-    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(1),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(0),
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -1054,7 +1054,7 @@ class BlockTools:
                     filter_challenge = get_filter_challenge(
                         constants,
                         blocks,
-                        finished_sub_slots_at_sp,
+                        finished_sub_slots_at_ip,
                         latest_block.header_hash,
                         slot_cc_challenge,
                         signage_point_index,
@@ -1400,7 +1400,7 @@ class BlockTools:
                     filter_challenge = get_filter_challenge(
                         constants,
                         blocks,
-                        finished_sub_slots_eos,
+                        finished_sub_slots_at_ip,
                         latest_block.header_hash,
                         slot_cc_challenge,
                         signage_point_index,
@@ -1789,7 +1789,7 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-                max_strength = calculate_max_plot_strength(height, constants.HARD_FORK2_HEIGHT)
+                max_strength = calculate_max_plot_strength(height, constants)
                 if plot_info.prover.get_strength() > max_strength:
                     self.log.warn(
                         f"Plot strength ({plot_info.prover.get_strength()}) exceeds max ({max_strength}) "
@@ -1809,9 +1809,7 @@ class BlockTools:
                 plot_group_id = compute_plot_group_id(
                     plot_info.prover.get_strength(), plot_info.plot_public_key, pool_info
                 )
-                group_strength = (
-                    calculate_base_plot_filter_bits(height, constants.HARD_FORK2_HEIGHT) + plot_param.strength_v2
-                )
+                group_strength = calculate_base_plot_filter_bits(height, constants) + plot_param.strength_v2
                 if not passes_plot_filter_v2(
                     plot_group_id,
                     plot_param.meta_group,

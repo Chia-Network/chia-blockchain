@@ -169,7 +169,7 @@ def verify_and_get_quality_string(
         return None
 
     if plot_param.strength_v2 is not None and not height_agnostic:
-        max_strength = calculate_max_plot_strength(height, constants.HARD_FORK2_HEIGHT)
+        max_strength = calculate_max_plot_strength(height, constants)
         if plot_param.strength_v2 > max_strength:
             log.error(f"Plot strength ({plot_param.strength_v2}) exceeds max ({max_strength}) at height {height}")
             return None
@@ -187,9 +187,7 @@ def verify_and_get_quality_string(
         # VDF chain integrity + PoSpace validity is sufficient there.
         if filter_challenge is not None and signage_point_index is not None:
             plot_group_id = compute_plot_group_id_from_pos(pos)
-            group_strength = (
-                calculate_base_plot_filter_bits(height, constants.HARD_FORK2_HEIGHT) + plot_param.strength_v2
-            )
+            group_strength = calculate_base_plot_filter_bits(height, constants) + plot_param.strength_v2
             if not passes_plot_filter_v2(
                 plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
             ):
@@ -289,19 +287,18 @@ _BASE_FILTER_OFFSETS: list[tuple[int, int]] = [
 ]
 
 
-def calculate_max_plot_strength(height: uint32, hard_fork2_height: int) -> int:
-    return 17 - calculate_base_plot_filter_bits(height, hard_fork2_height)
+def calculate_max_plot_strength(height: uint32, constants: ConsensusConstants) -> int:
+    return 17 - calculate_base_plot_filter_bits(height, constants)
 
 
-def calculate_base_plot_filter_bits(height: uint32, hard_fork2_height: int) -> int:
-    assert hard_fork2_height >= 0
-    relative_height = int(height) - hard_fork2_height
+def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
+    relative_height = int(height) - constants.HARD_FORK2_HEIGHT
     if relative_height < 0:
-        return 9
+        return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
     for offset, bits in _BASE_FILTER_OFFSETS:
         if relative_height >= offset:
-            return bits
-    return 9
+            return min(bits, constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
+    return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
 
 
 def passes_plot_filter_v2(
