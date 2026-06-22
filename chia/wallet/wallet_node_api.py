@@ -33,12 +33,12 @@ class WalletNodeAPI:
     def ready(self) -> bool:
         return self.wallet_node.logged_in
 
-    @metadata.request(peer_required=True)
-    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
+    @metadata.request()
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals):
         pass
 
-    @metadata.request(peer_required=True)
-    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
+    @metadata.request()
+    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest):
         """
         The full node has rejected our request for removals.
         """
@@ -89,8 +89,8 @@ class WalletNodeAPI:
     async def respond_block_header(self, response: wallet_protocol.RespondBlockHeader):
         pass
 
-    @metadata.request(peer_required=True)
-    async def respond_additions(self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection):
+    @metadata.request()
+    async def respond_additions(self, response: wallet_protocol.RespondAdditions):
         pass
 
     @metadata.request()
