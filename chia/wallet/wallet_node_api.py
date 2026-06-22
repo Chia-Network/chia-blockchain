@@ -215,5 +215,9 @@ class WalletNodeAPI:
         pass
 
     @metadata.request()
+    async def respond_fee_estimates(self, request: wallet_protocol.RespondFeeEstimates) -> None:
+        pass
+
+    @metadata.request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         pass
