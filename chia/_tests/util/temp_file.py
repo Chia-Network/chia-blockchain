@@ -11,6 +11,8 @@ def TempFile() -> Iterator[Path]:
     t = tempfile.NamedTemporaryFile(delete=False)
     path = Path(t.name)
     t.close()
-    yield path
-    if path.exists():
-        path.unlink()
+    try:
+        yield path
+    finally:
+        if path.exists():
+            path.unlink()

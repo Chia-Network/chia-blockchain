@@ -30,7 +30,7 @@ class TestStartSimulator:
     async def get_chia_simulator(
         self, tmp_path: Path, empty_keyring: Keychain
     ) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
-        async for simulator_args in get_full_chia_simulator(chia_root=tmp_path, keychain=empty_keyring):
+        async with get_full_chia_simulator(chia_root=tmp_path, keychain=empty_keyring) as simulator_args:
             yield simulator_args
 
     @pytest.mark.anyio

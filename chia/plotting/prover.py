@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
 
 if TYPE_CHECKING:
-    from chiapos import DiskProver
+    pass
 
 
 class PlotVersion(IntEnum):
