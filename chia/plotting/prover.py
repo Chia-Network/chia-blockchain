@@ -9,9 +9,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
 
-if TYPE_CHECKING:
-    pass
-
 
 class PlotVersion(IntEnum):
     """Enum for plot format versions"""
