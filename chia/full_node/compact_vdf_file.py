@@ -1,6 +1,26 @@
 """
 Deferred persistence for compact VDF proofs.
 
+Database writes
+---------------
+Compact VDF handling does write to the DB, but only on startup — not when
+proofs are received.
+
+While the node is running (add_compact_vdf / add_compact_proof_of_time):
+- Updates the block cache only (put_block_in_cache).
+- Appends a line to compactvdf.
+- Does not call replace_proof or touch SQLite.
+
+On the next startup (process_compact_vdf_file):
+- Reads compactvdf, validates and applies each proof.
+- Flushes each block to the DB via block_store.replace_proof() (updates
+  full_blocks.block and is_fully_compactified).
+- Deletes compactvdf when done.
+
+During a single run, callers that read blocks via the block cache (e.g.
+get_all_full_blocks) see compactified proofs immediately. The DB still holds
+the old proofs until restart processes the file.
+
 Runtime (receiving compact VDFs)
 --------------------------------
 When a compact VDF is validated (via add_compact_vdf or add_compact_proof_of_time):
@@ -21,10 +41,6 @@ Right after BlockHeightMap.create() in full_node.manage():
 4. After all entries for a block are processed, flush that block to the DB
    once via replace_proof.
 5. Delete the compactvdf file when done.
-
-Within a single node run, callers that read blocks via the block cache (e.g.
-get_all_full_blocks) see compactified proofs immediately. DB persistence
-happens on the next node restart when the flat file is processed.
 """
 from __future__ import annotations
 
