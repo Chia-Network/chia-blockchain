@@ -66,6 +66,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from dataclasses import dataclass
 from itertools import groupby
 from pathlib import Path
@@ -272,6 +273,7 @@ async def process_compact_vdf_file(
             path.unlink()
         return
 
+    start_time = time.monotonic()
     log.info(f"Processing {len(entries)} pending compact VDF entries from {path}")
     entries.sort(key=lambda entry: entry.header_hash)
     blocks_total = len({entry.header_hash for entry in entries})
@@ -314,7 +316,8 @@ async def process_compact_vdf_file(
             await block_store.replace_proof(header_hash, block)
 
     path.unlink()
+    elapsed = time.monotonic() - start_time
     log.info(
         f"Finished processing compact VDF file: {entries_applied} proofs applied "
-        f"across {blocks_processed} blocks, removed {path}"
+        f"across {blocks_processed} blocks, time taken: {elapsed:.2f}s, removed {path}"
     )
