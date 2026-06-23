@@ -30,7 +30,25 @@ When a compact VDF is validated (via add_compact_vdf or add_compact_proof_of_tim
    testnets, matching the height-to-hash file naming).
 
 Each line is a JSON object with: header_hash, field_vdf, witness (compact proofs
-always use witness_type 0 and normalized_to_identity true).
+always use witness_type 0 and normalized_to_identity true). vdf_info is not
+stored; it is recovered from the block at import time.
+
+Multiple VDFs per block
+-----------------------
+A block can have several CC_EOS_VDF or ICC_EOS_VDF entries (one per finished
+sub-slot, and ICC only where infused_challenge_chain is present). CC_SP_VDF and
+CC_IP_VDF are at most one per block.
+
+The file does not use a sub-slot index or other explicit slot ID. Entries with
+the same header_hash and field_vdf are distinguished by witness: each sub-slot
+has a different proof, so each line has different witness bytes.
+
+On import, find_vdf_info_for_proof loads all vdf_info candidates for that
+field_vdf from the block, reconstructs VDFProof(uint8(0), witness, True), and
+validates the witness against each candidate until one matches. That matched
+vdf_info selects which sub-slot (or reward-chain field) apply_compact_proof_to_block
+updates. Slot selection is implicit: the witness is cryptographically bound to
+one sub-slot's vdf_info (challenge, iterations, output).
 
 Startup (near height-to-hash processing)
 ----------------------------------------
