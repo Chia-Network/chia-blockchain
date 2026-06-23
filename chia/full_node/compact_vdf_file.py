@@ -9,8 +9,7 @@ When a compact VDF is validated (via add_compact_vdf or add_compact_proof_of_tim
 2. A record is appended to {db_folder}/compactvdf (with a network suffix on
    testnets, matching the height-to-hash file naming).
 
-Each file record is length-prefixed and contains: header_hash, field_vdf,
-vdf_proof.
+Each line is a JSON object with: header_hash, field_vdf, vdf_proof.
 
 Startup (near height-to-hash processing)
 ----------------------------------------
@@ -30,6 +29,7 @@ happens on the next node restart when the flat file is processed.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from itertools import groupby
@@ -43,14 +43,14 @@ from chia_rs.sized_ints import uint8
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, validate_vdf
-from chia.util.streamable import streamable
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
 @streamable
 @dataclass(frozen=True)
-class CompactVdfEntry:
+class CompactVdfEntry(Streamable):
     header_hash: bytes32
     field_vdf: uint8
     vdf_proof: VDFProof
@@ -175,39 +175,36 @@ def apply_compact_proof_to_block(
     return new_block
 
 
-def _parse_entries(data: bytes) -> list[CompactVdfEntry]:
+def _parse_entries(text: str) -> list[CompactVdfEntry]:
     entries: list[CompactVdfEntry] = []
-    offset = 0
-    while offset < len(data):
-        if offset + 4 > len(data):
-            raise ValueError("truncated compactvdf file")
-        size = int.from_bytes(data[offset : offset + 4], byteorder="big")
-        offset += 4
-        if offset + size > len(data):
-            raise ValueError("truncated compactvdf entry in compactvdf file")
-        entries.append(CompactVdfEntry.from_bytes(data[offset : offset + size]))
-        offset += size
+    for line_no, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        if len(stripped) == 0:
+            continue
+        try:
+            entries.append(CompactVdfEntry.from_json_dict(json.loads(stripped)))
+        except Exception as e:
+            log.warning(f"Skipping invalid compactvdf line {line_no}: {e}")
     return entries
 
 
 async def read_all_entries(path: Path) -> list[CompactVdfEntry]:
     try:
-        async with aiofiles.open(path, "rb") as f:
-            data = await f.read()
+        async with aiofiles.open(path, encoding="utf-8") as f:
+            text = await f.read()
     except FileNotFoundError:
         return []
-    if len(data) == 0:
+    if len(text) == 0:
         return []
-    return _parse_entries(data)
+    return _parse_entries(text)
 
 
 async def append_entry(path: Path, entry: CompactVdfEntry, lock: asyncio.Lock) -> None:
-    entry_bytes = bytes(entry)
-    record = len(entry_bytes).to_bytes(4, byteorder="big") + entry_bytes
+    line = json.dumps(entry.to_json_dict(), sort_keys=True) + "\n"
     async with lock:
         path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(path, "ab") as f:
-            await f.write(record)
+        async with aiofiles.open(path, "a", encoding="utf-8") as f:
+            await f.write(line)
 
 
 async def process_compact_vdf_file(
@@ -223,14 +220,19 @@ async def process_compact_vdf_file(
 
     log.info(f"Processing {len(entries)} pending compact VDF entries from {path}")
     entries.sort(key=lambda entry: entry.header_hash)
+    blocks_total = len({entry.header_hash for entry in entries})
+    blocks_processed = 0
+    entries_applied = 0
 
     for header_hash, group_iter in groupby(entries, key=lambda entry: entry.header_hash):
+        block_entries = list(group_iter)
         block = await block_store.get_full_block(header_hash)
         if block is None:
             log.error(f"Can't find block for pending compact VDF. Header hash: {header_hash}")
             continue
 
-        for entry in group_iter:
+        applied_for_block = 0
+        for entry in block_entries:
             field_vdf = CompressibleVDFField(int(entry.field_vdf))
             if not entry.vdf_proof.normalized_to_identity or entry.vdf_proof.witness_type > 0:
                 log.error(f"Pending compact VDF proof is not compact: {entry.vdf_proof}")
@@ -247,9 +249,20 @@ async def process_compact_vdf_file(
                 log.error(f"Could not apply pending compact proof for block {header_hash}")
                 continue
             block = new_block
+            applied_for_block += 1
+            entries_applied += 1
 
+        blocks_processed += 1
+        log.info(
+            f"Compact VDF progress: block {blocks_processed}/{blocks_total} "
+            f"height {block.height} header_hash {header_hash} "
+            f"applied {applied_for_block}/{len(block_entries)} proofs, flushing to DB"
+        )
         async with block_store.db_wrapper.writer():
             await block_store.replace_proof(header_hash, block)
 
     path.unlink()
-    log.info(f"Finished processing pending compact VDF entries, removed {path}")
+    log.info(
+        f"Finished processing compact VDF file: {entries_applied} proofs applied "
+        f"across {blocks_processed} blocks, removed {path}"
+    )
