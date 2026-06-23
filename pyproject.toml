@@ -47,7 +47,7 @@ changelog = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG
 aiofiles = ">=24.1.0"  # Async IO for files
 aiohttp = ">=3.14.0"  # HTTP server for full node rpc
 aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
-anyio = ">=4.6.2.post1"
+anyio = ">=4.14.0"
 bitstring = ">=4.1.4"  # Binary data management library
 boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
