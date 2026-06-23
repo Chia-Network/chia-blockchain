@@ -29,7 +29,8 @@ When a compact VDF is validated (via add_compact_vdf or add_compact_proof_of_tim
 2. A record is appended to {db_folder}/compactvdf (with a network suffix on
    testnets, matching the height-to-hash file naming).
 
-Each line is a JSON object with: header_hash, field_vdf, vdf_proof.
+Each line is a JSON object with: header_hash, field_vdf, witness (compact proofs
+always use witness_type 0 and normalized_to_identity true).
 
 Startup (near height-to-hash processing)
 ----------------------------------------
@@ -69,7 +70,11 @@ log = logging.getLogger(__name__)
 class CompactVdfEntry(Streamable):
     header_hash: bytes32
     field_vdf: uint8
-    vdf_proof: VDFProof
+    witness: bytes
+
+
+def compact_vdf_proof(witness: bytes) -> VDFProof:
+    return VDFProof(uint8(0), witness, True)
 
 
 def compact_vdf_filename(blockchain_dir: Path, selected_network: str | None = None) -> Path:
@@ -191,6 +196,21 @@ def apply_compact_proof_to_block(
     return new_block
 
 
+def _entry_from_json_dict(data: dict[str, object]) -> CompactVdfEntry:
+    if "witness" in data:
+        return CompactVdfEntry.from_json_dict(data)
+    vdf_proof = data.get("vdf_proof")
+    if isinstance(vdf_proof, dict) and "witness" in vdf_proof:
+        return CompactVdfEntry.from_json_dict(
+            {
+                "header_hash": data["header_hash"],
+                "field_vdf": data["field_vdf"],
+                "witness": vdf_proof["witness"],
+            }
+        )
+    raise ValueError("missing witness")
+
+
 def _parse_entries(text: str) -> list[CompactVdfEntry]:
     entries: list[CompactVdfEntry] = []
     for line_no, line in enumerate(text.splitlines(), 1):
@@ -198,7 +218,7 @@ def _parse_entries(text: str) -> list[CompactVdfEntry]:
         if len(stripped) == 0:
             continue
         try:
-            entries.append(CompactVdfEntry.from_json_dict(json.loads(stripped)))
+            entries.append(_entry_from_json_dict(json.loads(stripped)))
         except Exception as e:
             log.warning(f"Skipping invalid compactvdf line {line_no}: {e}")
     return entries
@@ -250,17 +270,15 @@ async def process_compact_vdf_file(
         applied_for_block = 0
         for entry in block_entries:
             field_vdf = CompressibleVDFField(int(entry.field_vdf))
-            if not entry.vdf_proof.normalized_to_identity or entry.vdf_proof.witness_type > 0:
-                log.error(f"Pending compact VDF proof is not compact: {entry.vdf_proof}")
-                continue
-            vdf_info = find_vdf_info_for_proof(block, field_vdf, entry.vdf_proof, constants)
+            vdf_proof = compact_vdf_proof(entry.witness)
+            vdf_info = find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)
             if vdf_info is None:
                 log.error(f"Pending compact VDF proof is not valid for block {header_hash}")
                 continue
             if not needs_compact_proof(vdf_info, block, field_vdf):
                 log.info(f"Duplicate pending compact proof for block {header_hash}")
                 continue
-            new_block = apply_compact_proof_to_block(block, vdf_info, entry.vdf_proof, field_vdf)
+            new_block = apply_compact_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
             if new_block is None:
                 log.error(f"Could not apply pending compact proof for block {header_hash}")
                 continue
@@ -269,7 +287,7 @@ async def process_compact_vdf_file(
             entries_applied += 1
 
         blocks_processed += 1
-        log.info(
+        log.debug(
             f"Compact VDF progress: block {blocks_processed}/{blocks_total} "
             f"height {block.height} header_hash {header_hash} "
             f"applied {applied_for_block}/{len(block_entries)} proofs, flushing to DB"

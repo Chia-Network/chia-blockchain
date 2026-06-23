@@ -3228,7 +3228,7 @@ class FullNode:
         assert self._compact_vdf_file_lock is not None
         await append_entry(
             compact_vdf_filename(self.db_path.parent, self.config.get("selected_network")),
-            CompactVdfEntry(header_hash, uint8(field_vdf), vdf_proof),
+            CompactVdfEntry(header_hash, uint8(field_vdf), vdf_proof.witness),
             self._compact_vdf_file_lock,
         )
         return True
