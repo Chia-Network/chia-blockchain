@@ -324,8 +324,8 @@ class DIDWallet:
 
         return uint64(addition_amount)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
-        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+    async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     async def select_coins(
         self,
@@ -352,12 +352,12 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: DIDCoinData | None):
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: DIDCoinData | None):
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
-        if parent_coin_data is not None:
-            assert isinstance(parent_coin_data, DIDCoinData)
-            did_data: DIDCoinData = parent_coin_data
+        if coin_data is not None:
+            assert isinstance(coin_data, DIDCoinData)
+            did_data: DIDCoinData = coin_data
         else:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state(
@@ -1034,12 +1034,12 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None):
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         max_send_amount = sum(cr.coin.amount for cr in spendable)
-        return max_send_amount
+        return uint128(max_send_amount)
 
     async def add_parent(self, name: bytes32, parent: LineageProof | None):
         self.log.info(f"Adding parent {name}: {parent}")

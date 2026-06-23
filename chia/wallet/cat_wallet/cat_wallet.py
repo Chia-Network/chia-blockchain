@@ -357,7 +357,7 @@ class CATWallet:
         return self.cat_info.limitations_program_hash
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: CATCoinData | None
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: CATCoinData | None
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
@@ -370,7 +370,7 @@ class CATWallet:
 
         if lineage is None:
             try:
-                if parent_coin_data is None:
+                if coin_data is None:
                     # The method is not triggered after the determine_coin_type, no pre-fetched data
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
                         [coin.parent_coin_info], peer=peer
@@ -380,14 +380,14 @@ class CATWallet:
                     cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
-                        parent_coin_data = CATCoinData(
+                        coin_data = CATCoinData(
                             bytes32(cat_mod_hash.as_atom()),
                             bytes32(tail_program_hash.as_atom()),
                             cat_inner_puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
                         )
-                await self.puzzle_solution_received(coin, parent_coin_data)
+                await self.puzzle_solution_received(coin, coin_data)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
@@ -438,8 +438,8 @@ class CATWallet:
 
             return derivation_record.puzzle_hash
 
-    async def get_spendable_balance(self, records: set[WalletCoinRecord] | None = None) -> uint128:
-        coins = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+        coins = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), unspent_records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
