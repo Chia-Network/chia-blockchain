@@ -61,7 +61,7 @@ class WalletIdentifier:
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol[T_contra]) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
 
 

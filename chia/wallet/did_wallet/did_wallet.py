@@ -56,7 +56,7 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 class DIDWallet:
     if TYPE_CHECKING:
         if TYPE_CHECKING:
-            _protocol_check: ClassVar[WalletProtocol[DIDCoinData]] = cast("DIDWallet", None)
+            _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -352,7 +352,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: DIDCoinData | None):
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None):
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if coin_data is not None:
