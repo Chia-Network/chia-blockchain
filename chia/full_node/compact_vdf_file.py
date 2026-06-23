@@ -273,10 +273,13 @@ async def process_compact_vdf_file(
             path.unlink()
         return
 
-    start_time = time.monotonic()
-    log.info(f"Processing {len(entries)} pending compact VDF entries from {path}")
     entries.sort(key=lambda entry: entry.header_hash)
     blocks_total = len({entry.header_hash for entry in entries})
+    start_time = time.monotonic()
+    log.info(
+        f"Starting compact VDF file processing: {len(entries)} entries "
+        f"across {blocks_total} blocks from {path}"
+    )
     blocks_processed = 0
     entries_applied = 0
 
