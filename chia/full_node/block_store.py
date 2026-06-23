@@ -197,6 +197,16 @@ class BlockStore:
     def get_block_from_cache(self, header_hash: bytes32) -> FullBlock | None:
         return self.block_cache.get(header_hash)
 
+    def put_block_in_cache(self, header_hash: bytes32, block: FullBlock) -> None:
+        assert header_hash == block.header_hash
+        self.block_cache.put(header_hash, block)
+
+    async def is_fully_compactified_effective(self, header_hash: bytes32) -> bool | None:
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached.is_fully_compactified()
+        return await self.is_fully_compactified(header_hash)
+
     def rollback_cache_block(self, header_hash: bytes32) -> None:
         try:
             self.block_cache.remove(header_hash)
