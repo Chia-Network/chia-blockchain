@@ -142,7 +142,12 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import (
+    IsCoinSpendableWallet,
+    MatchPuzzleInfoWallet,
+    MaxSendQuantityWallet,
+    WalletProtocol,
+)
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -2562,9 +2567,8 @@ class WalletStateManager:
 
     async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> WalletProtocol | None:
         for wallet in self.wallets.values():
-            match_function = getattr(wallet, "match_puzzle_info", None)
-            if match_function is not None and callable(match_function):
-                if await match_function(puzzle_driver):
+            if isinstance(wallet, MatchPuzzleInfoWallet):
+                if await wallet.match_puzzle_info(puzzle_driver):
                     return wallet
         return None
 
@@ -2632,11 +2636,11 @@ class WalletStateManager:
         for record in records:
             if record.coin.name() in {*offer_locked_coins.keys(), *pending_removals}:
                 continue
-            if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
+            if isinstance(wallet, IsCoinSpendableWallet) and not await wallet.is_coin_spendable(record):
                 continue
             filtered.add(record)
 
-        if hasattr(wallet, "max_send_quantity") and in_one_block:
+        if isinstance(wallet, MaxSendQuantityWallet) and in_one_block:
             filtered_as_list = list(filtered)
             filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
             return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])
