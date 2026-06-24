@@ -56,10 +56,12 @@ Right after BlockHeightMap.create() in full_node.manage():
 
 1. Read all entries from compactvdf.
 2. Sort by block hash and group consecutive entries per block.
-3. For each entry: validate the VDF and apply it to the in-memory block.
+3. For each entry: validate the VDF in parallel (thread pool), then apply proofs
+   to each block sequentially.
 4. After all entries for a block are processed, flush that block to the DB
    once via replace_proof.
-5. Delete the compactvdf file when done.
+5. Checkpoint the WAL into the main database (PRAGMA wal_checkpoint(TRUNCATE)).
+6. Delete the compactvdf file when done.
 """
 from __future__ import annotations
 
@@ -79,6 +81,8 @@ from chia_rs.sized_ints import uint8
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, validate_vdf
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.priority_thread_pool_executor import Executor
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -262,10 +266,19 @@ async def append_entry(path: Path, entry: CompactVdfEntry, lock: asyncio.Lock) -
             await f.write(line)
 
 
+async def _wal_checkpoint_truncate(db_wrapper: DBWrapper2) -> float:
+    start = time.monotonic()
+    async with db_wrapper.writer() as conn:
+        async with conn.execute("PRAGMA wal_checkpoint(TRUNCATE)") as cursor:
+            await cursor.fetchone()
+    return time.monotonic() - start
+
+
 async def process_compact_vdf_file(
     path: Path,
     block_store: BlockStore,
     constants: ConsensusConstants,
+    pool: Executor,
 ) -> None:
     entries = await read_all_entries(path)
     if len(entries) == 0:
@@ -282,19 +295,56 @@ async def process_compact_vdf_file(
     )
     blocks_processed = 0
     entries_applied = 0
+    vdf_seconds = 0.0
+    db_read_seconds = 0.0
+    db_flush_seconds = 0.0
 
-    for header_hash, group_iter in groupby(entries, key=lambda entry: entry.header_hash):
-        block_entries = list(group_iter)
+    unique_header_hashes = list({entry.header_hash for entry in entries})
+    blocks: dict[bytes32, FullBlock] = {}
+    for header_hash in unique_header_hashes:
+        db_read_start = time.monotonic()
         block = await block_store.get_full_block(header_hash)
+        db_read_seconds += time.monotonic() - db_read_start
         if block is None:
             log.error(f"Can't find block for pending compact VDF. Header hash: {header_hash}")
+            continue
+        blocks[header_hash] = block
+
+    validation_futures: list[asyncio.Future[VDFInfo | None]] = []
+    validation_entries: list[CompactVdfEntry] = []
+    for entry in entries:
+        block = blocks.get(entry.header_hash)
+        if block is None:
+            continue
+        field_vdf = CompressibleVDFField(int(entry.field_vdf))
+        vdf_proof = compact_vdf_proof(entry.witness)
+        validation_futures.append(
+            pool.run_in_loop(find_vdf_info_for_proof, block, field_vdf, vdf_proof, constants)
+        )
+        validation_entries.append(entry)
+
+    vdf_start = time.monotonic()
+    validation_results: list[VDFInfo | None] = []
+    if len(validation_futures) > 0:
+        validation_results = list(await asyncio.gather(*validation_futures))
+    vdf_seconds = time.monotonic() - vdf_start
+
+    entry_vdf_info: dict[tuple[bytes32, bytes, uint8], VDFInfo | None] = {}
+    for entry, vdf_info in zip(validation_entries, validation_results, strict=True):
+        entry_vdf_info[(entry.header_hash, entry.witness, entry.field_vdf)] = vdf_info
+
+    last_progress_log_time = time.monotonic()
+    for header_hash, group_iter in groupby(entries, key=lambda entry: entry.header_hash):
+        block_entries = list(group_iter)
+        block = blocks.get(header_hash)
+        if block is None:
             continue
 
         applied_for_block = 0
         for entry in block_entries:
             field_vdf = CompressibleVDFField(int(entry.field_vdf))
             vdf_proof = compact_vdf_proof(entry.witness)
-            vdf_info = find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)
+            vdf_info = entry_vdf_info.get((entry.header_hash, entry.witness, entry.field_vdf))
             if vdf_info is None:
                 log.error(f"Pending compact VDF proof is not valid for block {header_hash}")
                 continue
@@ -310,17 +360,35 @@ async def process_compact_vdf_file(
             entries_applied += 1
 
         blocks_processed += 1
-        log.debug(
+        progress_msg = (
             f"Compact VDF progress: block {blocks_processed}/{blocks_total} "
             f"height {block.height} header_hash {header_hash} "
             f"applied {applied_for_block}/{len(block_entries)} proofs, flushing to DB"
         )
+        now = time.monotonic()
+        if now - last_progress_log_time >= 10.0:
+            log.info(progress_msg)
+        else:
+            log.debug(progress_msg)
+        last_progress_log_time = now
+        db_flush_start = time.monotonic()
         async with block_store.db_wrapper.writer():
             await block_store.replace_proof(header_hash, block)
+        db_flush_seconds += time.monotonic() - db_flush_start
+
+    wal_checkpoint_seconds = 0.0
+    if blocks_processed > 0:
+        wal_checkpoint_seconds = await _wal_checkpoint_truncate(block_store.db_wrapper)
 
     path.unlink()
     elapsed = time.monotonic() - start_time
+    other_seconds = max(
+        0.0, elapsed - vdf_seconds - db_read_seconds - db_flush_seconds - wal_checkpoint_seconds
+    )
     log.info(
         f"Finished processing compact VDF file: {entries_applied} proofs applied "
-        f"across {blocks_processed} blocks, time taken: {elapsed:.2f}s, removed {path}"
+        f"across {blocks_processed} blocks, time taken: {elapsed:.2f}s "
+        f"(vdf {vdf_seconds:.2f}s, db read {db_read_seconds:.2f}s, "
+        f"db flush {db_flush_seconds:.2f}s, wal checkpoint {wal_checkpoint_seconds:.2f}s, "
+        f"other {other_seconds:.2f}s), removed {path}"
     )

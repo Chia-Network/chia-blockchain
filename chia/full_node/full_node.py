@@ -307,6 +307,7 @@ class FullNode:
                 compact_vdf_filename(self.db_path.parent, selected_network),
                 self.block_store,
                 self.constants,
+                self.pool,
             )
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
