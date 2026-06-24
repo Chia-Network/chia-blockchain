@@ -310,7 +310,18 @@ async def _process_compact_vdf_batch(
 
     validation_futures: list[asyncio.Future[VDFInfo | None]] = []
     validation_entries: list[CompactVdfEntry] = []
+    deduped_batch_entries: list[CompactVdfEntry] = []
+    seen_entry_keys: set[tuple[bytes32, bytes, uint8]] = set()
     for entry in batch_entries:
+        entry_key = (entry.header_hash, entry.witness, entry.field_vdf)
+        if entry_key in seen_entry_keys:
+            log.debug(
+                f"Skipping duplicate compact VDF entry for block {entry.header_hash} "
+                f"field_vdf {entry.field_vdf}"
+            )
+            continue
+        seen_entry_keys.add(entry_key)
+        deduped_batch_entries.append(entry)
         block = blocks.get(entry.header_hash)
         if block is None:
             continue
@@ -333,7 +344,7 @@ async def _process_compact_vdf_batch(
 
     entries_applied = 0
     db_flush_seconds = 0.0
-    for header_hash, group_iter in groupby(batch_entries, key=lambda entry: entry.header_hash):
+    for header_hash, group_iter in groupby(deduped_batch_entries, key=lambda entry: entry.header_hash):
         block_entries = list(group_iter)
         block = blocks.get(header_hash)
         if block is None:
