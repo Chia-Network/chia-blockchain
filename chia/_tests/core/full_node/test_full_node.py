@@ -2658,36 +2658,38 @@ async def test_compact_protocol(
                     uint8(CompressibleVDFField.ICC_EOS_VDF),
                 )
             )
-    assert block.reward_chain_block.challenge_chain_sp_vdf is not None
+    sp_block = next(b for b in blocks_2[-10:] if b.reward_chain_block.challenge_chain_sp_vdf is not None)
+    cc_sp_vdf = sp_block.reward_chain_block.challenge_chain_sp_vdf
+    assert cc_sp_vdf is not None
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_sp_vdf.challenge,
-        block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+        cc_sp_vdf.challenge,
+        cc_sp_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_SP_VDF),
         )
     )
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_IP_VDF),
         )
     )

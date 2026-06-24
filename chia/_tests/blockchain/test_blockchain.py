@@ -1280,7 +1280,14 @@ class TestBlockHeaderValidation:
             if blocks[-1].reward_chain_block.signage_point_index == 0:
                 case_1 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
-                await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
+                if blocks[-1].reward_chain_block.proof_of_space.param().strength_v2 is not None:
+                    # V2 plot filtering depends on the signage point index, so this mutation may fail
+                    # PoSpace validation before reaching the SP-index consistency check.
+                    await _validate_and_add_block_multi_error(
+                        empty_blockchain, block_bad, [Err.INVALID_SP_INDEX, Err.INVALID_POSPACE]
+                    )
+                else:
+                    await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
             elif not is_overflow_block(bt.constants, blocks[-1].reward_chain_block.signage_point_index):
                 case_2 = True
@@ -1489,6 +1496,17 @@ class TestBlockHeaderValidation:
             assert attempts < 300
 
     @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_7,
+        ],
+        reason=(
+            "This test asserts INVALID_POOL_TARGET; HF3 V2 plots can fail filter/PoSpace validation before reaching "
+            "that pool-target check."
+        ),
+    )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
     ) -> None:
@@ -3362,7 +3380,9 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode not in {
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+            reorg_point = 14
+        elif consensus_mode not in {
             ConsensusMode.HARD_FORK_2_0,
             ConsensusMode.SOFT_FORK_2_7,
         }:
