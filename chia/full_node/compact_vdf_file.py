@@ -57,10 +57,11 @@ Right after BlockHeightMap.create() in full_node.manage():
 1. Read all entries from compactvdf.
 2. Sort by block hash and group consecutive entries per block.
 3. For each entry: validate the VDF in parallel (thread pool), then apply proofs
-   to each block sequentially.
+   to each block sequentially, processing blocks in batches of 1000 to limit memory.
 4. After all entries for a block are processed, flush that block to the DB
    once via replace_proof.
-5. Checkpoint the WAL into the main database (PRAGMA wal_checkpoint(TRUNCATE)).
+5. After all batches complete, checkpoint the WAL into the main database
+   (PRAGMA wal_checkpoint(TRUNCATE)).
 6. Delete the compactvdf file when done.
 """
 from __future__ import annotations
@@ -86,6 +87,8 @@ from chia.util.priority_thread_pool_executor import Executor
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+COMPACT_VDF_BATCH_SIZE = 1000
 
 
 @streamable
@@ -274,34 +277,29 @@ async def _wal_checkpoint_truncate(db_wrapper: DBWrapper2) -> float:
     return time.monotonic() - start
 
 
-async def process_compact_vdf_file(
-    path: Path,
+def _ordered_unique_header_hashes(entries: list[CompactVdfEntry]) -> list[bytes32]:
+    unique: list[bytes32] = []
+    seen: set[bytes32] = set()
+    for entry in entries:
+        if entry.header_hash not in seen:
+            seen.add(entry.header_hash)
+            unique.append(entry.header_hash)
+    return unique
+
+
+async def _process_compact_vdf_batch(
+    batch_entries: list[CompactVdfEntry],
     block_store: BlockStore,
     constants: ConsensusConstants,
     pool: Executor,
-) -> None:
-    entries = await read_all_entries(path)
-    if len(entries) == 0:
-        if path.exists():
-            path.unlink()
-        return
-
-    entries.sort(key=lambda entry: entry.header_hash)
-    blocks_total = len({entry.header_hash for entry in entries})
-    start_time = time.monotonic()
-    log.info(
-        f"Starting compact VDF file processing: {len(entries)} entries "
-        f"across {blocks_total} blocks from {path}"
-    )
-    blocks_processed = 0
-    entries_applied = 0
-    vdf_seconds = 0.0
-    db_read_seconds = 0.0
-    db_flush_seconds = 0.0
-
-    unique_header_hashes = list({entry.header_hash for entry in entries})
+    blocks_total: int,
+    blocks_processed: int,
+    last_progress_log_time: float,
+) -> tuple[int, int, float, float, float, float]:
+    batch_hashes = {entry.header_hash for entry in batch_entries}
     blocks: dict[bytes32, FullBlock] = {}
-    for header_hash in unique_header_hashes:
+    db_read_seconds = 0.0
+    for header_hash in batch_hashes:
         db_read_start = time.monotonic()
         block = await block_store.get_full_block(header_hash)
         db_read_seconds += time.monotonic() - db_read_start
@@ -312,7 +310,7 @@ async def process_compact_vdf_file(
 
     validation_futures: list[asyncio.Future[VDFInfo | None]] = []
     validation_entries: list[CompactVdfEntry] = []
-    for entry in entries:
+    for entry in batch_entries:
         block = blocks.get(entry.header_hash)
         if block is None:
             continue
@@ -333,8 +331,9 @@ async def process_compact_vdf_file(
     for entry, vdf_info in zip(validation_entries, validation_results, strict=True):
         entry_vdf_info[(entry.header_hash, entry.witness, entry.field_vdf)] = vdf_info
 
-    last_progress_log_time = time.monotonic()
-    for header_hash, group_iter in groupby(entries, key=lambda entry: entry.header_hash):
+    entries_applied = 0
+    db_flush_seconds = 0.0
+    for header_hash, group_iter in groupby(batch_entries, key=lambda entry: entry.header_hash):
         block_entries = list(group_iter)
         block = blocks.get(header_hash)
         if block is None:
@@ -368,13 +367,73 @@ async def process_compact_vdf_file(
         now = time.monotonic()
         if now - last_progress_log_time >= 10.0:
             log.info(progress_msg)
+            last_progress_log_time = now
         else:
             log.debug(progress_msg)
-        last_progress_log_time = now
         db_flush_start = time.monotonic()
         async with block_store.db_wrapper.writer():
             await block_store.replace_proof(header_hash, block)
         db_flush_seconds += time.monotonic() - db_flush_start
+
+    return blocks_processed, entries_applied, vdf_seconds, db_read_seconds, db_flush_seconds, last_progress_log_time
+
+
+async def process_compact_vdf_file(
+    path: Path,
+    block_store: BlockStore,
+    constants: ConsensusConstants,
+    pool: Executor,
+) -> None:
+    entries = await read_all_entries(path)
+    if len(entries) == 0:
+        if path.exists():
+            path.unlink()
+        return
+
+    entries.sort(key=lambda entry: entry.header_hash)
+    unique_header_hashes = _ordered_unique_header_hashes(entries)
+    blocks_total = len(unique_header_hashes)
+    start_time = time.monotonic()
+    log.info(
+        f"Starting compact VDF file processing: {len(entries)} entries "
+        f"across {blocks_total} blocks from {path}"
+    )
+    blocks_processed = 0
+    entries_applied = 0
+    vdf_seconds = 0.0
+    db_read_seconds = 0.0
+    db_flush_seconds = 0.0
+    last_progress_log_time = time.monotonic()
+
+    num_batches = (blocks_total + COMPACT_VDF_BATCH_SIZE - 1) // COMPACT_VDF_BATCH_SIZE
+    for batch_index in range(num_batches):
+        batch_start = batch_index * COMPACT_VDF_BATCH_SIZE
+        batch_hash_set = set(unique_header_hashes[batch_start : batch_start + COMPACT_VDF_BATCH_SIZE])
+        batch_entries = [entry for entry in entries if entry.header_hash in batch_hash_set]
+        log.info(
+            f"Compact VDF batch {batch_index + 1}/{num_batches}: "
+            f"{len(batch_hash_set)} blocks, {len(batch_entries)} entries"
+        )
+        (
+            blocks_processed,
+            batch_entries_applied,
+            batch_vdf_seconds,
+            batch_db_read_seconds,
+            batch_db_flush_seconds,
+            last_progress_log_time,
+        ) = await _process_compact_vdf_batch(
+            batch_entries,
+            block_store,
+            constants,
+            pool,
+            blocks_total,
+            blocks_processed,
+            last_progress_log_time,
+        )
+        entries_applied += batch_entries_applied
+        vdf_seconds += batch_vdf_seconds
+        db_read_seconds += batch_db_read_seconds
+        db_flush_seconds += batch_db_flush_seconds
 
     wal_checkpoint_seconds = 0.0
     if blocks_processed > 0:
