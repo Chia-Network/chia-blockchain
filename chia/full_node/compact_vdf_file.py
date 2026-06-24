@@ -365,7 +365,7 @@ async def _process_compact_vdf_batch(
             f"applied {applied_for_block}/{len(block_entries)} proofs, flushing to DB"
         )
         now = time.monotonic()
-        if now - last_progress_log_time >= 10.0:
+        if now - last_progress_log_time >= 2.0:
             log.info(progress_msg)
             last_progress_log_time = now
         else:
