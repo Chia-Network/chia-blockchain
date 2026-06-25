@@ -38,7 +38,7 @@ def chunk_height_range(height: uint32) -> tuple[int, int]:
 
 def remote_compact_vdf_url(base_url: str, height: uint32) -> str:
     start, end = chunk_height_range(height)
-    return f"{base_url.rstrip('/')}-{start}to{end}"
+    return f"{base_url.rstrip('/')}/compactvdf-{start}to{end}"
 
 
 async def _get_chunk_lock(key: tuple[int, int]) -> asyncio.Lock:
@@ -149,7 +149,7 @@ async def apply_compact_vdf_entries(
             continue
         block = new_block
 
-    if is_fully_compactified_header_block(block):
+    if False: # is_fully_compactified_header_block(block):
         log.info(
             "Block %s height %s is fully compactified after applying remote compact VDF proofs",
             header_hash,
