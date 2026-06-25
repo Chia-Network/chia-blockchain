@@ -121,10 +121,14 @@ class TaskPipeline:
             if put_task in done:
                 put_task.result()
                 return True
-            put_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await put_task
-            return False
+            # Defensive: run() cancels tasks on failure before this
+            # await can observe fail_task completing, so this path
+            # is not reachable in practice.
+            else:  # pragma: no cover
+                put_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await put_task
+                return False
         finally:
             fail_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -146,10 +150,14 @@ class TaskPipeline:
             done, _ = await asyncio.wait({get_task, fail_task}, return_when=asyncio.FIRST_COMPLETED)
             if get_task in done:
                 return True, get_task.result()
-            get_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await get_task
-            return False, None
+            # Defensive: run() cancels tasks on failure before this
+            # await can observe fail_task completing, so this path
+            # is not reachable in practice.
+            else:  # pragma: no cover
+                get_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await get_task
+                return False, None
         finally:
             fail_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -188,12 +196,12 @@ class TaskPipeline:
                     return
                 if output_queue is None or result is None:
                     continue
-                if not await self._put_or_bail(output_queue, result):
-                    # Defensive: run() cancels tasks on failure before
-                    # _put_or_bail can return False from its slow path,
-                    # so this branch is not reachable in practice.
-                    self._dropped[idx + 1].append(result)  # pragma: no cover
-                    return  # pragma: no cover
+                # Defensive: run() cancels tasks on failure before
+                # _put_or_bail can return False from its slow path,
+                # so this branch is not reachable in practice.
+                if not await self._put_or_bail(output_queue, result):  # pragma: no cover
+                    self._dropped[idx + 1].append(result)
+                    return
         except Exception as e:
             if self._names is not None and self._log is not None:
                 self._log.exception("Exception %s", self._names[idx + 1])

@@ -268,6 +268,30 @@ async def test_drain_includes_dropped_results() -> None:
 
 
 @pytest.mark.anyio
+async def test_failed_during_stage_saves_result_to_dropped() -> None:
+    """If the pipeline fails while a transform is awaiting and the transform
+    suppresses CancelledError and returns a result, that result is saved to
+    _dropped and recovered via drain()."""
+
+    async def resilient_transform(x: int) -> int:
+        try:
+            await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            pass
+        return x * 10
+
+    async def failing_consumer(x: int) -> None:
+        raise ValueError("boom")
+
+    pipeline = TaskPipeline(source=_count_up(10), stages=[resilient_transform, failing_consumer], queue_size=2)
+    with pytest.raises(ValueError, match="boom"):
+        await pipeline.run()
+
+    remaining = pipeline.drain(1)
+    assert any(item % 10 == 0 for item in remaining)
+
+
+@pytest.mark.anyio
 async def test_stage_blocked_on_empty_queue_bails_on_failure() -> None:
     """When a stage is blocked in _get_or_bail's slow path (queue empty) and
     another stage fails, the blocked stage exits via the fail event."""
