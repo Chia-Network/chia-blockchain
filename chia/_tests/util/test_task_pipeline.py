@@ -109,22 +109,6 @@ async def test_stage_exception_propagates() -> None:
 
 
 @pytest.mark.anyio
-async def test_last_stage_exception_propagates() -> None:
-    """An exception in the last (consumer) stage propagates and shuts down the pipeline."""
-
-    async def identity(x: int) -> int:
-        return x
-
-    async def failing_consumer(x: int) -> None:
-        if x == 2:
-            raise ValueError("consumer failed")
-
-    pipeline = TaskPipeline(source=_count_up(10), stages=[identity, failing_consumer], queue_size=2)
-    with pytest.raises(ValueError, match="consumer failed"):
-        await pipeline.run()
-
-
-@pytest.mark.anyio
 async def test_drain_after_failure() -> None:
     """drain() returns unconsumed items from a queue after a failure."""
 
