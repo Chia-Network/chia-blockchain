@@ -31,6 +31,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
     validate_pospace_and_get_required_iters,
 )
+from chia.full_node.remote_compact_vdf import apply_remote_compact_vdfs
 from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
@@ -179,6 +180,7 @@ async def pre_validate_block(
     skip_commitment_validation: bool = False,
     nice: _SupportsLessThan = (0,),
     dedicated: bool = True,
+    remote_compact_vdf_base_url: str | None = None,
 ) -> Awaitable[PreValidationResult]:
     """
     This method must be called under the blockchain lock
@@ -276,6 +278,8 @@ async def pre_validate_block(
             previous_generators = block_generator.generator_refs
     except ValueError:
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
+
+    block = await apply_remote_compact_vdfs(constants, block, remote_compact_vdf_base_url, pool)
 
     readonly_blockchain = blockchain.read_only_snapshot()
 
