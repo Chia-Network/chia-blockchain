@@ -6,6 +6,7 @@ from collections.abc import Callable
 from types import MappingProxyType
 from typing import Any, Generic, TypeGuard, TypeVar, get_type_hints
 
+from clvm_rs import Program as CLVMRSProgram  # type: ignore[import-untyped]
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 
 from chia.types.blockchain_format.program import Program
@@ -73,16 +74,14 @@ def program_deserialize_clvm_streamable(
     program: Program, clvm_streamable_type: type[_T_Streamable], translation_layer: TranslationLayer | None = None
 ) -> _T_Streamable:
     type_to_deserialize_from: type[Streamable] = clvm_streamable_type
+    as_instance = from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))
     if translation_layer is not None:
         mapping = translation_layer.get_mapping(clvm_streamable_type)
         if mapping is not None:
             type_to_deserialize_from = mapping.to_type
-    as_instance = from_program_for_type(type_to_deserialize_from)(program)
-    if translation_layer is not None and mapping is not None:
-        return translation_layer.deserialize_from_translation(as_instance, mapping)
-    else:
-        # Underlying hinting problem with clvm_serde
-        return as_instance  # type: ignore[no-any-return]
+            return translation_layer.deserialize_from_translation(as_instance, mapping)
+    # Underlying hinting problem with clvm_serde
+    return as_instance  # type: ignore[no-any-return]
 
 
 def byte_deserialize_clvm_streamable(

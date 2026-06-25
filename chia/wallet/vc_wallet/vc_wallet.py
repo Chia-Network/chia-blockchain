@@ -436,7 +436,7 @@ class VCWallet:
         announcements_to_make: dict[bytes32, list[CreatePuzzleAnnouncement]] = {}
         announcements_to_assert: dict[bytes32, list[AssertCoinAnnouncement]] = {}
         vcs: dict[bytes32, VerifiedCredential] = {}
-        coin_args: dict[str, list[str]] = {}
+        coin_args: dict[str, tuple[Program, bytes32, bytes32, bytes32]] = {}
         for crcat_spend in crcat_spends:
             # Check first whether we can approve...
             available_vcs: list[VCRecord] = [
@@ -496,17 +496,16 @@ class VCWallet:
                 )
 
                 coin_name: str = crcat_spend.crcat.coin.name().hex()
-                coin_args[coin_name] = [
+                coin_args[coin_name] = (
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
                         vc.proof_hash,  # type: ignore
                         ProofsChecker.from_program(uncurry_puzzle(crcat_spend.crcat.proofs_checker)).flags,
                     ),
-                    "()",  # not general
-                    "0x" + vc.proof_provider.hex(),
-                    "0x" + vc.launcher_id.hex(),
-                    "0x" + vc.wrap_inner_with_backdoor().get_tree_hash().hex(),
-                ]
+                    vc.proof_provider,
+                    vc.launcher_id,
+                    vc.wrap_inner_with_backdoor().get_tree_hash(),
+                )
                 if crcat_spend.crcat.coin.name() in spends_to_fix:
                     spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
                     other_spends.append(
@@ -515,9 +514,9 @@ class VCWallet:
                             .replace(
                                 ff=coin_args[coin_name][0],
                                 frf=Program.NIL,  # not general
-                                frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
-                                frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
-                                frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
+                                frrf=coin_args[coin_name][1],
+                                frrrf=coin_args[coin_name][2],
+                                frrrrf=coin_args[coin_name][3],
                             )
                             .to_serialized(),
                         )

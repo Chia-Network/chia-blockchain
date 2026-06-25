@@ -221,7 +221,7 @@ class TradeStore:
             )
 
     async def set_status(
-        self, trade_id: bytes32, status: TradeStatus, offer_name: bytes32 = None, index: uint32 = uint32(0)
+        self, trade_id: bytes32, status: TradeStatus, offer_name: bytes32 | None = None, index: uint32 = uint32(0)
     ) -> None:
         """
         Updates the status of the trade

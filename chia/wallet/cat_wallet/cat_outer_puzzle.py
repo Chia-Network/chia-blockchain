@@ -81,7 +81,7 @@ class CATOuterPuzzle:
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
         spendable_cats: list[SpendableCAT] = []
-        target_coin: Coin
+        target_coin: Coin | None = None
         ring = [
             *zip(
                 solver["siblings"].as_iter(),
