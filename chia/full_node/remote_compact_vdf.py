@@ -114,7 +114,6 @@ async def apply_compact_vdf_entries(
     if len(block_entries) == 0:
         return block
 
-    applied = 0
     for entry in block_entries:
         field_vdf = CompressibleVDFField(int(entry.field_vdf))
         vdf_proof = compact_vdf_proof(entry.witness)
@@ -142,15 +141,7 @@ async def apply_compact_vdf_entries(
             )
             continue
         block = new_block
-        applied += 1
 
-    if applied > 0:
-        log.info(
-            "Applied %s remote compact VDF proof(s) to block %s height %s before validation",
-            applied,
-            header_hash,
-            block.height,
-        )
     return block
 
 

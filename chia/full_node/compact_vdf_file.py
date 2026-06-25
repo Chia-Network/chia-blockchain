@@ -220,6 +220,13 @@ def apply_compact_proof_to_block(
     if field_vdf == CompressibleVDFField.CC_IP_VDF:
         if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
             new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
+    if new_block is not None:
+        log.info(
+            "Replaced uncompacted VDF with compact proof for block %s height %s field_vdf %s",
+            block.header_hash,
+            block.height,
+            field_vdf.name,
+        )
     return new_block
 
 

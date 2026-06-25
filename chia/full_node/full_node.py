@@ -53,7 +53,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
-from chia.full_node.compact_vdf_file import CompactVdfEntry
+from chia.full_node.compact_vdf_file import CompactVdfEntry, apply_compact_proof_to_block
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -3267,36 +3267,7 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = None
-
-        if field_vdf == CompressibleVDFField.CC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                    new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
-                    break
-        if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if (
-                    sub_slot.infused_challenge_chain is not None
-                    and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
-                ):
-                    new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
-                    break
-        if field_vdf == CompressibleVDFField.CC_SP_VDF:
-            if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = block.replace(challenge_chain_sp_proof=vdf_proof)
-        if field_vdf == CompressibleVDFField.CC_IP_VDF:
-            if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
+        new_block = apply_compact_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():
