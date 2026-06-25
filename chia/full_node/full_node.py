@@ -61,6 +61,7 @@ from chia.full_node.compact_vdf_file import (
     needs_compact_proof,
     process_compact_vdf_file,
 )
+from chia.full_node.remote_compact_vdf import DEFAULT_REMOTE_COMPACT_VDF_BASE_URL
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -185,6 +186,12 @@ class FullNode:
     bad_peak_cache: dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: asyncio.Task[None] | None = None
     _bls_cache: BLSCache = dataclasses.field(default_factory=lambda: BLSCache(50000))
+
+    def remote_compact_vdf_base_url(self) -> str | None:
+        url = self.config.get("remote_compact_vdf_base_url", DEFAULT_REMOTE_COMPACT_VDF_BASE_URL)
+        if url is None or url == "":
+            return None
+        return str(url)
 
     @property
     def server(self) -> ChiaServer:
@@ -1732,6 +1739,7 @@ class FullNode:
                     vs,
                     wp_summaries=wp_summaries,
                     nice=(20,),
+                    remote_compact_vdf_base_url=self.remote_compact_vdf_base_url(),
                 )
             )
         return ret
@@ -2287,6 +2295,7 @@ class FullNode:
                 self.pool,
                 conds,
                 ValidationState(ssi, diff, prev_ses_block),
+                remote_compact_vdf_base_url=self.remote_compact_vdf_base_url(),
             )
             pre_validation_result = await future
             added: AddBlockResult | None = None

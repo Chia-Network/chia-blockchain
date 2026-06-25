@@ -89,6 +89,7 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 COMPACT_VDF_BATCH_SIZE = 1000
+COMPACT_VDF_HEIGHT_CHUNK_SIZE = 10000
 
 
 @streamable
@@ -250,6 +251,10 @@ def _parse_entries(text: str) -> list[CompactVdfEntry]:
     return entries
 
 
+def parse_compact_vdf_entries(text: str) -> list[CompactVdfEntry]:
+    return _parse_entries(text)
+
+
 async def read_all_entries(path: Path) -> list[CompactVdfEntry]:
     try:
         async with aiofiles.open(path, encoding="utf-8") as f:
@@ -294,8 +299,7 @@ async def _process_compact_vdf_batch(
     pool: Executor,
     blocks_total: int,
     blocks_processed: int,
-    last_progress_log_time: float,
-) -> tuple[int, int, float, float, float, float]:
+) -> tuple[int, int, float, float, float]:
     batch_hashes = {entry.header_hash for entry in batch_entries}
     blocks: dict[bytes32, FullBlock] = {}
     db_read_seconds = 0.0
@@ -306,6 +310,7 @@ async def _process_compact_vdf_batch(
         if block is None:
             log.error(f"Can't find block for pending compact VDF. Header hash: {header_hash}")
             continue
+        log.info(f"Read block height {block.height} header_hash {header_hash}")
         blocks[header_hash] = block
 
     validation_futures: list[asyncio.Future[VDFInfo | None]] = []
@@ -371,22 +376,17 @@ async def _process_compact_vdf_batch(
 
         blocks_processed += 1
         progress_msg = (
-            f"Compact VDF progress: block {blocks_processed}/{blocks_total} "
+            f"Processed block {blocks_processed}/{blocks_total} "
             f"height {block.height} header_hash {header_hash} "
             f"applied {applied_for_block}/{len(block_entries)} proofs, flushing to DB"
         )
-        now = time.monotonic()
-        if now - last_progress_log_time >= 2.0:
-            log.info(progress_msg)
-            last_progress_log_time = now
-        else:
-            log.debug(progress_msg)
+        log.info(progress_msg)
         db_flush_start = time.monotonic()
         async with block_store.db_wrapper.writer():
             await block_store.replace_proof(header_hash, block)
         db_flush_seconds += time.monotonic() - db_flush_start
 
-    return blocks_processed, entries_applied, vdf_seconds, db_read_seconds, db_flush_seconds, last_progress_log_time
+    return blocks_processed, entries_applied, vdf_seconds, db_read_seconds, db_flush_seconds
 
 
 async def process_compact_vdf_file(
@@ -414,7 +414,6 @@ async def process_compact_vdf_file(
     vdf_seconds = 0.0
     db_read_seconds = 0.0
     db_flush_seconds = 0.0
-    last_progress_log_time = time.monotonic()
 
     num_batches = (blocks_total + COMPACT_VDF_BATCH_SIZE - 1) // COMPACT_VDF_BATCH_SIZE
     for batch_index in range(num_batches):
@@ -431,7 +430,6 @@ async def process_compact_vdf_file(
             batch_vdf_seconds,
             batch_db_read_seconds,
             batch_db_flush_seconds,
-            last_progress_log_time,
         ) = await _process_compact_vdf_batch(
             batch_entries,
             block_store,
@@ -439,7 +437,6 @@ async def process_compact_vdf_file(
             pool,
             blocks_total,
             blocks_processed,
-            last_progress_log_time,
         )
         entries_applied += batch_entries_applied
         vdf_seconds += batch_vdf_seconds
