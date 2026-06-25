@@ -1422,12 +1422,19 @@ class FullNode:
 
                     first_batch = False
 
-                    futures = await self.prevalidate_blocks(
-                        blockchain,
-                        blocks_to_validate,
-                        vs,
-                        summaries,
-                    )
+                    for i in range(len(blocks_to_validate)):
+                        blocks_to_validate[i] = await self.block_with_remote_compact_vdfs(blocks_to_validate[i])
+
+                    futures: list[Awaitable[PreValidationResult]] = []
+                    for block in blocks_to_validate:
+                        futures.extend(
+                            await self.prevalidate_blocks(
+                                blockchain,
+                                [block],
+                                vs,
+                                summaries,
+                            )
+                        )
                     start = time.monotonic()
                     await output_queue.put((peer, next_validation_state, list(futures), blocks_to_validate))
                     end = time.monotonic()
@@ -1723,13 +1730,12 @@ class FullNode:
         # call below. pre_validate_block() will update the
         # object we pass in.
         ret: list[Awaitable[PreValidationResult]] = []
-        for i, block in enumerate(blocks_to_validate):
-            blocks_to_validate[i] = await self.block_with_remote_compact_vdfs(block)
+        for block in blocks_to_validate:
             ret.append(
                 await pre_validate_block(
                     self.constants,
                     blockchain,
-                    blocks_to_validate[i],
+                    block,
                     self.pool,
                     None,
                     vs,
