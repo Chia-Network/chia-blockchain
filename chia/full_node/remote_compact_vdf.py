@@ -87,9 +87,9 @@ async def fetch_remote_compact_vdf_entries(base_url: str, height: uint32) -> lis
             timeout = aiohttp.ClientTimeout(total=30)
             async with aiohttp.ClientSession(timeout=timeout) as session, session.get(url) as response:
                 if response.status == 404:
-                    log.debug("Remote compactvdf file not found: %s", url)
+                    log.info("Failed to download remote compactvdf file %s: not found (HTTP 404)", url)
                 elif response.status != 200:
-                    log.warning("Failed to fetch remote compactvdf file %s: HTTP %s", url, response.status)
+                    log.info("Failed to download remote compactvdf file %s: HTTP %s", url, response.status)
                 else:
                     text = await response.text()
                     entries = parse_compact_vdf_entries(text)
@@ -100,8 +100,8 @@ async def fetch_remote_compact_vdf_entries(base_url: str, height: uint32) -> lis
                         start,
                         end,
                     )
-        except Exception:
-            log.warning("Failed to fetch remote compactvdf file %s", url, exc_info=True)
+        except Exception as e:
+            log.info("Failed to download remote compactvdf file %s: %s", url, e, exc_info=True)
 
         _chunk_cache[key] = entries
         return entries
