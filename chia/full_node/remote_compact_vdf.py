@@ -93,7 +93,13 @@ async def fetch_remote_compact_vdf_entries(base_url: str, height: uint32) -> lis
                 else:
                     text = await response.text()
                     entries = parse_compact_vdf_entries(text)
-                    log.debug("Loaded %s remote compactvdf entries from %s", len(entries), url)
+                    log.info(
+                        "Downloaded remote compactvdf file %s with %s entries (heights %s to %s)",
+                        url,
+                        len(entries),
+                        start,
+                        end,
+                    )
         except Exception:
             log.warning("Failed to fetch remote compactvdf file %s", url, exc_info=True)
 
