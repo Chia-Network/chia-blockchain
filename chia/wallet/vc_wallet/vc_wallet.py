@@ -566,7 +566,7 @@ class VCWallet:
         ), Solver(
             {
                 "vc_authorizations": {
-                    name: [proofs, provider.hex(), id.hex(), inner_hash.hex()]
+                    name: [proofs, "()", "0x" + provider.hex(), "0x" + id.hex(), "0x" + inner_hash.hex()]
                     for name, (proofs, provider, id, inner_hash) in coin_args.items()
                 }
             }

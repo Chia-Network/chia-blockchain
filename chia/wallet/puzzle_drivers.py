@@ -129,10 +129,10 @@ def decode_info_value(cls: Any, value: dict[str, Any] | list[Any] | Program | st
         return [decode_info_value(cls, v) for v in value]
     elif isinstance(value, Program) and value.atom is None:
         return value
-    elif value in {"()", ""}:  # special case
-        return Program.to([])
     else:
         if isinstance(value, str):
+            if value in {"()", ""}:  # special case
+                return Program.to([])
             if value.startswith("0x"):
                 return hexstr_to_bytes(value)
             expression: SExp = assemble(value)
