@@ -53,6 +53,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
+from chia.full_node.compact_vdf_file import CompactVdfEntry
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -61,7 +62,10 @@ from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager
-from chia.full_node.remote_compact_vdf import DEFAULT_REMOTE_COMPACT_VDF_BASE_URL
+from chia.full_node.remote_compact_vdf import (
+    DEFAULT_REMOTE_COMPACT_VDF_BASE_URL,
+    fetch_remote_compact_vdf_entries,
+)
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -183,6 +187,12 @@ class FullNode:
         if url is None or url == "":
             return None
         return str(url)
+
+    async def prefetch_remote_compact_vdf_entries(self, height: uint32) -> list[CompactVdfEntry] | None:
+        url = self.remote_compact_vdf_base_url()
+        if url is None:
+            return None
+        return await fetch_remote_compact_vdf_entries(url, height)
 
     @property
     def server(self) -> ChiaServer:
@@ -1713,6 +1723,7 @@ class FullNode:
         # object we pass in.
         ret: list[Awaitable[PreValidationResult]] = []
         for block in blocks_to_validate:
+            remote_compact_vdf_entries = await self.prefetch_remote_compact_vdf_entries(block.height)
             ret.append(
                 await pre_validate_block(
                     self.constants,
@@ -1723,7 +1734,7 @@ class FullNode:
                     vs,
                     wp_summaries=wp_summaries,
                     nice=(20,),
-                    remote_compact_vdf_base_url=self.remote_compact_vdf_base_url(),
+                    remote_compact_vdf_entries=remote_compact_vdf_entries,
                 )
             )
         return ret
@@ -2243,6 +2254,7 @@ class FullNode:
                 return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
+        remote_compact_vdf_entries = await self.prefetch_remote_compact_vdf_entries(block.height)
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
             enable_profiler(self.profile_block_validation) as pr,
@@ -2279,7 +2291,7 @@ class FullNode:
                 self.pool,
                 conds,
                 ValidationState(ssi, diff, prev_ses_block),
-                remote_compact_vdf_base_url=self.remote_compact_vdf_base_url(),
+                remote_compact_vdf_entries=remote_compact_vdf_entries,
             )
             pre_validation_result = await future
             added: AddBlockResult | None = None

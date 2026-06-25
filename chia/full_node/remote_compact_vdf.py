@@ -100,17 +100,16 @@ async def fetch_remote_compact_vdf_entries(base_url: str, height: uint32) -> lis
         return entries
 
 
-async def apply_remote_compact_vdfs(
+async def apply_compact_vdf_entries(
     constants: ConsensusConstants,
     block: FullBlock,
-    base_url: str | None,
+    entries: list[CompactVdfEntry] | None,
     pool: Executor | None = None,
 ) -> FullBlock:
-    if base_url is None or base_url == "":
+    if entries is None or len(entries) == 0:
         return block
 
     header_hash = block.header_hash
-    entries = await fetch_remote_compact_vdf_entries(base_url, block.height)
     block_entries = [entry for entry in entries if entry.header_hash == header_hash]
     if len(block_entries) == 0:
         return block
@@ -153,3 +152,16 @@ async def apply_remote_compact_vdfs(
             block.height,
         )
     return block
+
+
+async def apply_remote_compact_vdfs(
+    constants: ConsensusConstants,
+    block: FullBlock,
+    base_url: str | None,
+    pool: Executor | None = None,
+) -> FullBlock:
+    if base_url is None or base_url == "":
+        return block
+
+    entries = await fetch_remote_compact_vdf_entries(base_url, block.height)
+    return await apply_compact_vdf_entries(constants, block, entries, pool)
