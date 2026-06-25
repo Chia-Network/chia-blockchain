@@ -37,7 +37,7 @@ cmake --build build/process_compact_vdf -j
 The tool:
 
 1. Verifies the database has `database_version = 2`.
-2. Reads JSON lines from the compactvdf file (`header_hash`, `field_vdf`, `witness`).
+2. Reads JSON lines from the compactvdf file (`header_hash`, `field_vdf`, `witness`, optional `sub_slot_index`).
 3. Loads affected blocks from `full_blocks` (binary `header_hash`, zstd-compressed `block` blob).
 4. Validates witnesses with chiavdf and applies compact proofs to the in-memory blocks.
 5. Writes zstd-compressed blocks back and updates `full_blocks.is_fully_compactified`.
@@ -61,7 +61,8 @@ already use `witness_type` 0:
 
 This writes files like `compactvdf-0to9999`, `compactvdf-10000to19999`, etc.
 into the output directory (current directory by default). Each line matches the
-runtime compactvdf format: `header_hash`, `field_vdf`, `witness`.
+runtime compactvdf format: `header_hash`, `field_vdf`, `witness`, and `sub_slot_index`
+(for CC_EOS / ICC_EOS entries; omitted for CC_SP / CC_IP).
 
 ## v2 database schema
 

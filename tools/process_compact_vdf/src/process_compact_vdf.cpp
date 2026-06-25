@@ -11,6 +11,7 @@
 #include <fstream>
 #include <future>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -19,12 +20,6 @@
 #include <vector>
 
 namespace {
-
-struct CompactVdfEntry {
-    chia::Bytes32 header_hash{};
-    uint8_t field_vdf{};
-    std::vector<uint8_t> witness;
-};
 
 struct EntryKey {
     chia::Bytes32 header_hash{};
@@ -53,8 +48,8 @@ double seconds_since(const std::chrono::steady_clock::time_point& start) {
     return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
 }
 
-CompactVdfEntry parse_entry_json(const mini_json::Object& data) {
-    CompactVdfEntry entry;
+chia::CompactVdfEntry parse_entry_json(const mini_json::Object& data) {
+    chia::CompactVdfEntry entry;
     const auto header_hash = data.get_string("header_hash");
     if (!header_hash.has_value()) {
         throw std::runtime_error("missing header_hash");
@@ -82,15 +77,22 @@ CompactVdfEntry parse_entry_json(const mini_json::Object& data) {
     } else {
         throw std::runtime_error("missing witness");
     }
+
+    if (const auto sub_slot_index = data.get_uint64("sub_slot_index")) {
+        if (*sub_slot_index > std::numeric_limits<uint8_t>::max()) {
+            throw std::runtime_error("sub_slot_index out of range");
+        }
+        entry.sub_slot_index = static_cast<uint8_t>(*sub_slot_index);
+    }
     return entry;
 }
 
-std::vector<CompactVdfEntry> read_entries(const std::string& path) {
+std::vector<chia::CompactVdfEntry> read_entries(const std::string& path) {
     std::ifstream in(path);
     if (!in.is_open()) {
         return {};
     }
-    std::vector<CompactVdfEntry> entries;
+    std::vector<chia::CompactVdfEntry> entries;
     std::string line;
     int line_no = 0;
     while (std::getline(in, line)) {
@@ -108,7 +110,7 @@ std::vector<CompactVdfEntry> read_entries(const std::string& path) {
     return entries;
 }
 
-std::vector<chia::Bytes32> ordered_unique_header_hashes(const std::vector<CompactVdfEntry>& entries) {
+std::vector<chia::Bytes32> ordered_unique_header_hashes(const std::vector<chia::CompactVdfEntry>& entries) {
     std::vector<chia::Bytes32> unique;
     std::unordered_set<chia::Bytes32, chia::Bytes32Hash> seen;
     for (const auto& entry : entries) {
@@ -134,7 +136,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
         return result;
     }
 
-    std::sort(entries.begin(), entries.end(), [](const CompactVdfEntry& a, const CompactVdfEntry& b) {
+    std::sort(entries.begin(), entries.end(), [](const chia::CompactVdfEntry& a, const chia::CompactVdfEntry& b) {
         return a.header_hash < b.header_hash;
     });
 
@@ -165,7 +167,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
             unique_hashes.begin() + static_cast<std::ptrdiff_t>(batch_start),
             unique_hashes.begin() + static_cast<std::ptrdiff_t>(batch_end));
 
-        std::vector<CompactVdfEntry> batch_entries;
+        std::vector<chia::CompactVdfEntry> batch_entries;
         batch_entries.reserve(entries.size());
         for (const auto& entry : entries) {
             if (batch_hash_set.count(entry.header_hash) > 0) {
@@ -208,7 +210,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
         result.db_read_seconds += seconds_since(db_read_start);
         std::cout << "Loaded " << blocks.size() << "/" << batch_hashes.size() << " blocks from DB\n" << std::flush;
 
-        std::vector<CompactVdfEntry> deduped_entries;
+        std::vector<chia::CompactVdfEntry> deduped_entries;
         deduped_entries.reserve(batch_entries.size());
         std::unordered_set<EntryKey, EntryKeyHash> seen_keys;
         for (const auto& entry : batch_entries) {
@@ -220,7 +222,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
         }
 
         struct ValidationItem {
-            CompactVdfEntry entry;
+            chia::CompactVdfEntry entry;
             std::optional<chia::VDFInfo> vdf_info;
         };
 
@@ -261,7 +263,11 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
                                   << static_cast<unsigned>(item.entry.field_vdf) << "...\n"
                                   << std::flush;
                     }
-                    item.vdf_info = vdf::find_vdf_info_for_proof(block, field, proof);
+                    item.vdf_info = vdf::find_vdf_info_for_entry(block, field, proof, item.entry.sub_slot_index);
+                    if (item.vdf_info.has_value() && item.entry.sub_slot_index.has_value() &&
+                        !vdf::validate_vdf(proof, *item.vdf_info)) {
+                        item.vdf_info = std::nullopt;
+                    }
 
                     const auto done = validated_count.fetch_add(1) + 1;
                     const std::lock_guard<std::mutex> lock(log_mutex);
@@ -284,7 +290,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
         }
 
         std::optional<chia::Bytes32> current_hash;
-        std::vector<CompactVdfEntry> current_block_entries;
+        std::vector<chia::CompactVdfEntry> current_block_entries;
         auto flush_current_block = [&]() {
             if (!current_hash.has_value()) {
                 return;

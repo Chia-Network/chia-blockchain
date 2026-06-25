@@ -5,8 +5,8 @@ Used when applying compact VDF proofs from remote compactvdf files during block
 validation, and when replacing proofs on stored blocks (e.g. from the timelord).
 
 Each compact proof record contains: header_hash, field_vdf, witness (witness_type 0
-and normalized_to_identity true). vdf_info is recovered from the block at apply time
-via find_vdf_info_for_proof().
+and normalized_to_identity true), and optionally sub_slot_index for CC_EOS / ICC_EOS
+entries. vdf_info is recovered from the block at apply time via find_vdf_info_for_entry().
 """
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ class CompactVdfEntry(Streamable):
     header_hash: bytes32
     field_vdf: uint8
     witness: bytes
+    sub_slot_index: uint8 | None = None
 
 
 def compact_vdf_proof(witness: bytes) -> VDFProof:
@@ -73,6 +74,36 @@ def _vdf_info_candidates(block: FullBlock | HeaderBlock, field_vdf: Compressible
     if field_vdf == CompressibleVDFField.CC_IP_VDF:
         return [block.reward_chain_block.challenge_chain_ip_vdf]
     return []
+
+
+def vdf_info_for_sub_slot(
+    block: FullBlock | HeaderBlock,
+    field_vdf: CompressibleVDFField,
+    sub_slot_index: uint8,
+) -> VDFInfo | None:
+    index = int(sub_slot_index)
+    if index >= len(block.finished_sub_slots):
+        return None
+    sub_slot = block.finished_sub_slots[index]
+    if field_vdf == CompressibleVDFField.CC_EOS_VDF:
+        return sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
+    if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
+        if sub_slot.infused_challenge_chain is None:
+            return None
+        return sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+    return None
+
+
+def find_vdf_info_for_entry(
+    block: FullBlock | HeaderBlock,
+    field_vdf: CompressibleVDFField,
+    vdf_proof: VDFProof,
+    constants: ConsensusConstants,
+    sub_slot_index: uint8 | None = None,
+) -> VDFInfo | None:
+    if sub_slot_index is not None:
+        return vdf_info_for_sub_slot(block, field_vdf, sub_slot_index)
+    return find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)
 
 
 def find_vdf_info_for_proof(
@@ -188,6 +219,7 @@ def _entry_from_json_dict(data: dict[str, object]) -> CompactVdfEntry:
                 "header_hash": data["header_hash"],
                 "field_vdf": data["field_vdf"],
                 "witness": vdf_proof["witness"],
+                "sub_slot_index": data.get("sub_slot_index"),
             }
         )
     raise ValueError("missing witness")

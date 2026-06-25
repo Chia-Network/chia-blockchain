@@ -91,4 +91,14 @@ std::optional<chia::VDFInfo> find_vdf_info_for_proof(const chia::FullBlock& bloc
     return std::nullopt;
 }
 
+std::optional<chia::VDFInfo> find_vdf_info_for_entry(const chia::FullBlock& block, chia::CompressibleVDFField field,
+                                                     const chia::VDFProof& proof,
+                                                     const std::optional<uint8_t>& sub_slot_index) {
+    (void)proof;
+    if (sub_slot_index.has_value()) {
+        return chia::vdf_info_for_sub_slot(block, field, *sub_slot_index);
+    }
+    return find_vdf_info_for_proof(block, field, proof);
+}
+
 }  // namespace vdf

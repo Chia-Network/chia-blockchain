@@ -607,11 +607,16 @@ uint32_t FullBlock::height() const { return reward_chain_block.height; }
 namespace {
 
 void maybe_add_witness_type_zero_entry(const chia::Bytes32& header_hash, uint8_t field_vdf, const VDFProof& proof,
-                                       std::vector<CompactVdfEntry>& out) {
+                                       std::optional<uint8_t> sub_slot_index, std::vector<CompactVdfEntry>& out) {
     if (proof.witness_type != 0 || proof.witness.empty()) {
         return;
     }
-    out.push_back(CompactVdfEntry{header_hash, field_vdf, proof.witness});
+    CompactVdfEntry entry;
+    entry.header_hash = header_hash;
+    entry.field_vdf = field_vdf;
+    entry.witness = proof.witness;
+    entry.sub_slot_index = sub_slot_index;
+    out.push_back(std::move(entry));
 }
 
 }  // namespace
@@ -619,20 +624,22 @@ void maybe_add_witness_type_zero_entry(const chia::Bytes32& header_hash, uint8_t
 std::vector<CompactVdfEntry> extract_witness_type_zero_entries(const chia::Bytes32& header_hash,
                                                                const FullBlock& block) {
     std::vector<CompactVdfEntry> entries;
-    for (const auto& sub_slot : block.finished_sub_slots) {
+    for (std::size_t sub_slot_index = 0; sub_slot_index < block.finished_sub_slots.size(); ++sub_slot_index) {
+        const auto& sub_slot = block.finished_sub_slots[sub_slot_index];
+        const auto index = static_cast<uint8_t>(sub_slot_index);
         maybe_add_witness_type_zero_entry(header_hash, static_cast<uint8_t>(CompressibleVDFField::CC_EOS_VDF),
-                                          sub_slot.proofs.challenge_chain_slot_proof, entries);
+                                          sub_slot.proofs.challenge_chain_slot_proof, index, entries);
         if (sub_slot.proofs.infused_challenge_chain_slot_proof.has_value()) {
             maybe_add_witness_type_zero_entry(header_hash, static_cast<uint8_t>(CompressibleVDFField::ICC_EOS_VDF),
-                                              *sub_slot.proofs.infused_challenge_chain_slot_proof, entries);
+                                              *sub_slot.proofs.infused_challenge_chain_slot_proof, index, entries);
         }
     }
     if (block.challenge_chain_sp_proof.has_value()) {
         maybe_add_witness_type_zero_entry(header_hash, static_cast<uint8_t>(CompressibleVDFField::CC_SP_VDF),
-                                          *block.challenge_chain_sp_proof, entries);
+                                          *block.challenge_chain_sp_proof, std::nullopt, entries);
     }
     maybe_add_witness_type_zero_entry(header_hash, static_cast<uint8_t>(CompressibleVDFField::CC_IP_VDF),
-                                      block.challenge_chain_ip_proof, entries);
+                                      block.challenge_chain_ip_proof, std::nullopt, entries);
     return entries;
 }
 
@@ -661,6 +668,27 @@ std::vector<VDFInfo> vdf_info_candidates(const FullBlock& block, CompressibleVDF
             break;
     }
     return out;
+}
+
+std::optional<VDFInfo> vdf_info_for_sub_slot(const FullBlock& block, CompressibleVDFField field,
+                                             uint8_t sub_slot_index) {
+    if (sub_slot_index >= block.finished_sub_slots.size()) {
+        return std::nullopt;
+    }
+    const auto& sub_slot = block.finished_sub_slots[sub_slot_index];
+    switch (field) {
+        case CompressibleVDFField::CC_EOS_VDF:
+            return sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf;
+        case CompressibleVDFField::ICC_EOS_VDF:
+            if (!sub_slot.infused_challenge_chain.has_value()) {
+                return std::nullopt;
+            }
+            return sub_slot.infused_challenge_chain->infused_challenge_chain_end_of_slot_vdf;
+        case CompressibleVDFField::CC_SP_VDF:
+        case CompressibleVDFField::CC_IP_VDF:
+            return std::nullopt;
+    }
+    return std::nullopt;
 }
 
 bool needs_compact_proof(const VDFInfo& info, const FullBlock& block, CompressibleVDFField field) {

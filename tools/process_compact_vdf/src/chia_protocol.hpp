@@ -248,12 +248,15 @@ struct CompactVdfEntry {
     Bytes32 header_hash{};
     uint8_t field_vdf{};
     std::vector<uint8_t> witness;
+    // Index into finished_sub_slots for CC_EOS / ICC_EOS entries; unset for CC_SP / CC_IP.
+    std::optional<uint8_t> sub_slot_index;
 };
 
 std::vector<CompactVdfEntry> extract_witness_type_zero_entries(const chia::Bytes32& header_hash,
                                                                const FullBlock& block);
 
 std::vector<VDFInfo> vdf_info_candidates(const FullBlock& block, CompressibleVDFField field);
+std::optional<VDFInfo> vdf_info_for_sub_slot(const FullBlock& block, CompressibleVDFField field, uint8_t sub_slot_index);
 bool needs_compact_proof(const VDFInfo& info, const FullBlock& block, CompressibleVDFField field);
 bool apply_compact_proof(FullBlock& block, const VDFInfo& info, const VDFProof& proof, CompressibleVDFField field);
 

@@ -20,7 +20,11 @@ std::string compact_vdf_entry_to_json(const chia::CompactVdfEntry& entry) {
     std::ostringstream out;
     out << "{\"field_vdf\":" << static_cast<unsigned>(entry.field_vdf) << ",\"header_hash\":\"0x"
         << chia::bytes32_to_db_hex(entry.header_hash) << "\",\"witness\":\"0x"
-        << chia::bytes_to_hex(entry.witness.data(), entry.witness.size()) << "\"}\n";
+        << chia::bytes_to_hex(entry.witness.data(), entry.witness.size()) << "\"";
+    if (entry.sub_slot_index.has_value()) {
+        out << ",\"sub_slot_index\":" << static_cast<unsigned>(*entry.sub_slot_index);
+    }
+    out << "}\n";
     return out.str();
 }
 

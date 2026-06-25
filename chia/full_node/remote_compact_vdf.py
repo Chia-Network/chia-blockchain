@@ -13,7 +13,7 @@ from chia.full_node.compact_vdf_file import (
     CompactVdfEntry,
     apply_compact_proof_to_block,
     compact_vdf_proof,
-    find_vdf_info_for_proof,
+    find_vdf_info_for_entry,
     is_fully_compactified_header_block,
     needs_compact_proof,
     parse_compact_vdf_entries,
@@ -125,9 +125,11 @@ async def apply_compact_vdf_entries(
         field_vdf = CompressibleVDFField(int(entry.field_vdf))
         vdf_proof = compact_vdf_proof(entry.witness)
         if pool is not None:
-            vdf_info = await pool.run_in_loop(find_vdf_info_for_proof, block, field_vdf, vdf_proof, constants)
+            vdf_info = await pool.run_in_loop(
+                find_vdf_info_for_entry, block, field_vdf, vdf_proof, constants, entry.sub_slot_index
+            )
         else:
-            vdf_info = find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)
+            vdf_info = find_vdf_info_for_entry(block, field_vdf, vdf_proof, constants, entry.sub_slot_index)
         if vdf_info is None:
             log.debug(
                 "Remote compact VDF proof did not validate for block %s height %s field_vdf %s",
