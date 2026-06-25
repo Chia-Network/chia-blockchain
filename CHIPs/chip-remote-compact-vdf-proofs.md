@@ -197,7 +197,9 @@ Timelord messages (`request_compact_proof_of_time`, `respond_compact_proof_of_ti
 
 ## Reference Implementation
 
-Implemented in `chia-blockchain` (branch vs. `main`, excluding offline tooling):
+Pull request: [Chia-Network/chia-blockchain#21046](https://github.com/Chia-Network/chia-blockchain/pull/21046)
+
+Implemented in `chia-blockchain` (excluding offline tooling):
 
 | Module | Role |
 |--------|------|
