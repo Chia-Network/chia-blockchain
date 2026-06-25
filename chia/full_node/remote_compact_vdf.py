@@ -23,7 +23,7 @@ from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
 
-DEFAULT_REMOTE_COMPACT_VDF_BASE_URL: Final = "https://www.xchos.com/compactvdf"
+DEFAULT_REMOTE_COMPACT_VDF_BASE_URL: Final = "https://www.xchos.com/vdfs"
 
 _chunk_cache: dict[tuple[int, int], list[CompactVdfEntry]] = {}
 _chunk_locks: dict[tuple[int, int], asyncio.Lock] = {}
@@ -38,7 +38,7 @@ def chunk_height_range(height: uint32) -> tuple[int, int]:
 
 def remote_compact_vdf_url(base_url: str, height: uint32) -> str:
     start, end = chunk_height_range(height)
-    return f"{base_url}-{start}to{end}"
+    return f"{base_url.rstrip('/')}-{start}to{end}"
 
 
 async def _get_chunk_lock(key: tuple[int, int]) -> asyncio.Lock:
