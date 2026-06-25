@@ -64,6 +64,7 @@ from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.remote_compact_vdf import (
     DEFAULT_REMOTE_COMPACT_VDF_BASE_URL,
+    apply_compact_vdf_entries,
     fetch_remote_compact_vdf_entries,
 )
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
@@ -193,6 +194,10 @@ class FullNode:
         if url is None:
             return None
         return await fetch_remote_compact_vdf_entries(url, height)
+
+    async def block_with_remote_compact_vdfs(self, block: FullBlock) -> FullBlock:
+        entries = await self.prefetch_remote_compact_vdf_entries(block.height)
+        return await apply_compact_vdf_entries(self.constants, block, entries, self.pool)
 
     @property
     def server(self) -> ChiaServer:
@@ -1417,16 +1422,12 @@ class FullNode:
 
                     first_batch = False
 
-                    futures: list[Awaitable[PreValidationResult]] = []
-                    for block in blocks_to_validate:
-                        futures.extend(
-                            await self.prevalidate_blocks(
-                                blockchain,
-                                [block],
-                                vs,
-                                summaries,
-                            )
-                        )
+                    futures = await self.prevalidate_blocks(
+                        blockchain,
+                        blocks_to_validate,
+                        vs,
+                        summaries,
+                    )
                     start = time.monotonic()
                     await output_queue.put((peer, next_validation_state, list(futures), blocks_to_validate))
                     end = time.monotonic()
@@ -1722,19 +1723,18 @@ class FullNode:
         # call below. pre_validate_block() will update the
         # object we pass in.
         ret: list[Awaitable[PreValidationResult]] = []
-        for block in blocks_to_validate:
-            remote_compact_vdf_entries = await self.prefetch_remote_compact_vdf_entries(block.height)
+        for i, block in enumerate(blocks_to_validate):
+            blocks_to_validate[i] = await self.block_with_remote_compact_vdfs(block)
             ret.append(
                 await pre_validate_block(
                     self.constants,
                     blockchain,
-                    block,
+                    blocks_to_validate[i],
                     self.pool,
                     None,
                     vs,
                     wp_summaries=wp_summaries,
                     nice=(20,),
-                    remote_compact_vdf_entries=remote_compact_vdf_entries,
                 )
             )
         return ret
@@ -2254,7 +2254,7 @@ class FullNode:
                 return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
-        remote_compact_vdf_entries = await self.prefetch_remote_compact_vdf_entries(block.height)
+        block = await self.block_with_remote_compact_vdfs(block)
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
             enable_profiler(self.profile_block_validation) as pr,
@@ -2291,7 +2291,6 @@ class FullNode:
                 self.pool,
                 conds,
                 ValidationState(ssi, diff, prev_ses_block),
-                remote_compact_vdf_entries=remote_compact_vdf_entries,
             )
             pre_validation_result = await future
             added: AddBlockResult | None = None
