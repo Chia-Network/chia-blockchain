@@ -4,7 +4,7 @@ import re
 from typing import Literal
 
 import pytest
-from chia_rs import Coin, CoinSpend, G2Element, PrivateKey
+from chia_rs import Coin, CoinSpend, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -490,6 +490,40 @@ def test_plotnft_errors() -> None:
                                         (
                                             PuzzleWithRestrictions.spec_namespace,
                                             [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
+                                        ),
+                                    )
+                                ),
+                            ).to_program()
+                        ],
+                    )
+                )
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(
+                                puzzle_hash=bytes32.zeros,
+                                amount=uint64(1),
+                                memo_blob=Program.to(
+                                    (
+                                        bytes32.zeros,
+                                        (
+                                            PuzzleWithRestrictions.spec_namespace,
+                                            [
+                                                None,
+                                                [[None, bytes32.zeros, None]],
+                                                None,
+                                                [bytes32.zeros, None],
+                                                [G1Element()],
+                                            ],
                                         ),
                                     )
                                 ),

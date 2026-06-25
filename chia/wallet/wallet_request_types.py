@@ -175,6 +175,12 @@ class GetSyncStatusResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetFullNodePeerCountResponse(Streamable):
+    peer_count: uint64
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfo(Streamable):
     use_peak_height: bool = False
 
@@ -186,6 +192,12 @@ class GetHeightInfoResponse(Streamable):
     latest_timestamp: uint64
     is_transaction_block: bool | None = None
     prev_transaction_block_height: uint32 | None = None
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetFeeEstimateResponse(Streamable):
+    fee_per_cost: uint64
 
 
 @streamable

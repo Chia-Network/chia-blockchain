@@ -19,7 +19,6 @@ chia.wallet.util.debug_spend_bundle
 chia.wallet.util.new_peak_queue
 chia.wallet.wallet_coin_store
 chia.wallet.wallet_interested_store
-chia.wallet.wallet_node_api
 chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
 chia._tests.clvm.test_puzzles

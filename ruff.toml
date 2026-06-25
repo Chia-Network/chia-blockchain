@@ -22,6 +22,7 @@ ignore = [
     "PLR0917", # too-many-positional-arguments
     "PLR0916", # too-many-boolean-expressions
     "PLR0911", # too-many-return-statements
+    "PLW0717", # too-many-statements-in-try-clause
     # Should probably fix these
     "PLR6301", # no-self-use
     "PLR2004", # magic-value-comparison

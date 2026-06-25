@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import Callable
+from datetime import datetime, timezone
 from itertools import count
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -192,6 +193,8 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
+    GetFullNodePeerCountResponse,
     GetHeightInfo,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -595,10 +598,12 @@ class WalletRpcApi:
             # Wallet node
             "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
+            "/get_full_node_peer_count": self.get_full_node_peer_count,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/get_timestamp_for_height": self.get_timestamp_for_height,
+            "/get_fee_estimate": self.get_fee_estimate,
             "/set_auto_claim": self.set_auto_claim,
             "/get_auto_claim": self.get_auto_claim,
             # Wallet management
@@ -982,6 +987,12 @@ class WalletRpcApi:
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     @marshal
+    async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
+        return GetFullNodePeerCountResponse(
+            peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
+        )
+
+    @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         """
         Returns height info for the current wallet.
@@ -1059,6 +1070,34 @@ class WalletRpcApi:
     @marshal
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse(timestamp=await self.service.get_timestamp_for_height(request.height))
+
+    @marshal
+    async def get_fee_estimate(self, request: Empty) -> GetFeeEstimateResponse:
+        """
+        Fetch fee estimates from a connected full node peer via the wallet <-> full node protocol.
+        """
+        # Use an existing full node peer connection (do not initiate a new one).
+        try:
+            peer = self.service.get_full_node_peer()
+        except ValueError as e:
+            raise ValueError("Wallet is not currently connected to any full node peers") from e
+
+        now_utc: int = int(datetime.now(timezone.utc).timestamp())
+        time_targets = [uint64(now_utc)]
+        fee_estimate_group = await self.service.request_fee_estimates(peer, time_targets)
+
+        if fee_estimate_group.error is not None:
+            raise ValueError(fee_estimate_group.error)
+        if len(fee_estimate_group.estimates) == 0:
+            raise ValueError("No fee estimates returned from full node")
+
+        estimate = fee_estimate_group.estimates[0]
+        if estimate.error is not None:
+            raise ValueError(estimate.error)
+
+        # Fee rates are in mojos per 1 clvm_cost.
+        fee_per_cost = estimate.estimated_fee_rate.mojos_per_clvm_cost
+        return GetFeeEstimateResponse(fee_per_cost=fee_per_cost)
 
     @marshal
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
@@ -1754,6 +1793,11 @@ class WalletRpcApi:
             raise ValueError("Wallet is not connected to any synced peers.")
         if sync_status != SyncStatus.SYNCED and not request.allow_unsynced:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
+
+        # We use the full node when generating coin records from WalletCoinRecords.
+        # If we don't have any full node peers connected we can error out early.
+        if not self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order():
+            raise ValueError("No full node peers connected. Please connect to a full node.")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),
