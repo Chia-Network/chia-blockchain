@@ -39,6 +39,24 @@ def compact_vdf_proof(witness: bytes) -> VDFProof:
     return VDFProof(uint8(0), witness, True)
 
 
+def is_compact_vdf_proof(proof: VDFProof) -> bool:
+    return proof.witness_type == 0 and proof.normalized_to_identity
+
+
+def is_fully_compactified_header_block(header_block: HeaderBlock) -> bool:
+    for sub_slot in header_block.finished_sub_slots:
+        if not is_compact_vdf_proof(sub_slot.proofs.challenge_chain_slot_proof):
+            return False
+        icc_proof = sub_slot.proofs.infused_challenge_chain_slot_proof
+        if icc_proof is not None and not is_compact_vdf_proof(icc_proof):
+            return False
+    if header_block.challenge_chain_sp_proof is not None and not is_compact_vdf_proof(
+        header_block.challenge_chain_sp_proof
+    ):
+        return False
+    return is_compact_vdf_proof(header_block.challenge_chain_ip_proof)
+
+
 def _vdf_info_candidates(block: FullBlock | HeaderBlock, field_vdf: CompressibleVDFField) -> list[VDFInfo]:
     if field_vdf == CompressibleVDFField.CC_EOS_VDF:
         return [sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf for sub_slot in block.finished_sub_slots]

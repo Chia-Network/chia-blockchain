@@ -14,6 +14,7 @@ from chia.full_node.compact_vdf_file import (
     apply_compact_proof_to_block,
     compact_vdf_proof,
     find_vdf_info_for_proof,
+    is_fully_compactified_header_block,
     needs_compact_proof,
     parse_compact_vdf_entries,
 )
@@ -142,6 +143,12 @@ async def apply_compact_vdf_entries(
             continue
         block = new_block
 
+    if is_fully_compactified_header_block(block):
+        log.info(
+            "Block %s height %s is fully compactified after applying remote compact VDF proofs",
+            header_hash,
+            block.height,
+        )
     return block
 
 
