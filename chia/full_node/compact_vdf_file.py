@@ -176,7 +176,7 @@ def apply_compact_proof_to_block(
             if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
                 new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
                 new_subslot = sub_slot.replace(proofs=new_proofs)
-                new_finished_subslots = block.finished_sub_slots
+                new_finished_subslots = list(block.finished_sub_slots)
                 new_finished_subslots[index] = new_subslot
                 new_block = block.replace(finished_sub_slots=new_finished_subslots)
                 break
@@ -188,7 +188,7 @@ def apply_compact_proof_to_block(
             ):
                 new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
                 new_subslot = sub_slot.replace(proofs=new_proofs)
-                new_finished_subslots = block.finished_sub_slots
+                new_finished_subslots = list(block.finished_sub_slots)
                 new_finished_subslots[index] = new_subslot
                 new_block = block.replace(finished_sub_slots=new_finished_subslots)
                 break
