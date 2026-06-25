@@ -1,6 +1,7 @@
 #include "process_compact_vdf.hpp"
 
 #include "db_v2.hpp"
+#include "http_fetch.hpp"
 #include "mini_json.hpp"
 #include "vdf_validate.hpp"
 
@@ -9,10 +10,10 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <future>
 #include <iostream>
 #include <limits>
 #include <mutex>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
@@ -46,6 +47,18 @@ struct EntryKeyHash {
 
 double seconds_since(const std::chrono::steady_clock::time_point& start) {
     return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+}
+
+std::string trim_trailing_slash(std::string url) {
+    while (!url.empty() && url.back() == '/') {
+        url.pop_back();
+    }
+    return url;
+}
+
+std::string remote_compact_vdf_url(const std::string& base_url, uint32_t start_height, uint32_t end_height) {
+    return trim_trailing_slash(base_url) + "/compactvdf-" + std::to_string(start_height) + "to" +
+           std::to_string(end_height);
 }
 
 chia::CompactVdfEntry parse_entry_json(const mini_json::Object& data) {
@@ -87,15 +100,12 @@ chia::CompactVdfEntry parse_entry_json(const mini_json::Object& data) {
     return entry;
 }
 
-std::vector<chia::CompactVdfEntry> read_entries(const std::string& path) {
-    std::ifstream in(path);
-    if (!in.is_open()) {
-        return {};
-    }
+std::vector<chia::CompactVdfEntry> parse_compact_vdf_entries_from_text(const std::string& text) {
     std::vector<chia::CompactVdfEntry> entries;
+    std::istringstream stream(text);
     std::string line;
     int line_no = 0;
-    while (std::getline(in, line)) {
+    while (std::getline(stream, line)) {
         ++line_no;
         const auto start = line.find_first_not_of(" \t\r\n");
         if (start == std::string::npos) {
@@ -110,6 +120,16 @@ std::vector<chia::CompactVdfEntry> read_entries(const std::string& path) {
     return entries;
 }
 
+std::vector<chia::CompactVdfEntry> read_entries(const std::string& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        return {};
+    }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    return parse_compact_vdf_entries_from_text(buffer.str());
+}
+
 std::vector<chia::Bytes32> ordered_unique_header_hashes(const std::vector<chia::CompactVdfEntry>& entries) {
     std::vector<chia::Bytes32> unique;
     std::unordered_set<chia::Bytes32, chia::Bytes32Hash> seen;
@@ -121,18 +141,22 @@ std::vector<chia::Bytes32> ordered_unique_header_hashes(const std::vector<chia::
     return unique;
 }
 
-}  // namespace
+void merge_result(ProcessCompactVdfResult& aggregate, const ProcessCompactVdfResult& chunk) {
+    aggregate.entries_total += chunk.entries_total;
+    aggregate.entries_applied += chunk.entries_applied;
+    aggregate.blocks_processed += chunk.blocks_processed;
+    aggregate.vdf_seconds += chunk.vdf_seconds;
+    aggregate.db_read_seconds += chunk.db_read_seconds;
+    aggregate.db_flush_seconds += chunk.db_flush_seconds;
+    aggregate.download_seconds += chunk.download_seconds;
+}
 
-ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions& options) {
+ProcessCompactVdfResult process_compact_vdf_entries(db_v2::Database& db, const ProcessCompactVdfOptions& options,
+                                                    std::vector<chia::CompactVdfEntry> entries,
+                                                    const std::string& source_label) {
     ProcessCompactVdfResult result;
-    const auto total_start = std::chrono::steady_clock::now();
 
-    auto entries = read_entries(options.compact_vdf_path);
     if (entries.empty()) {
-        if (!options.dry_run && std::filesystem::exists(options.compact_vdf_path)) {
-            std::filesystem::remove(options.compact_vdf_path);
-        }
-        result.elapsed_seconds = seconds_since(total_start);
         return result;
     }
 
@@ -144,15 +168,12 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
     result.entries_total = entries.size();
     const std::size_t blocks_total = unique_hashes.size();
 
-    std::cout << "Starting compact VDF file processing: " << entries.size() << " entries across " << blocks_total
-              << " blocks from " << options.compact_vdf_path;
+    std::cout << "Processing compact VDF entries: " << entries.size() << " entries across " << blocks_total
+              << " blocks from " << source_label;
     if (options.dry_run) {
         std::cout << " (dry run: no writes)";
     }
     std::cout << '\n';
-
-    db_v2::Database db(options.db_path, options.dry_run);
-    db.ensure_v2();
 
     const unsigned thread_count =
         options.thread_count == 0 ? std::max(1u, std::thread::hardware_concurrency()) : options.thread_count;
@@ -221,17 +242,33 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
             deduped_entries.push_back(entry);
         }
 
+        std::vector<chia::CompactVdfEntry> entries_needing_compaction;
+        entries_needing_compaction.reserve(deduped_entries.size());
+        std::size_t skipped_already_compact = 0;
+        for (const auto& entry : deduped_entries) {
+            const auto block_it = blocks.find(entry.header_hash);
+            if (block_it == blocks.end()) {
+                continue;
+            }
+            const auto field = static_cast<chia::CompressibleVDFField>(entry.field_vdf);
+            if (!chia::block_field_needs_compact_proof(block_it->second, field, entry.sub_slot_index)) {
+                ++skipped_already_compact;
+                continue;
+            }
+            entries_needing_compaction.push_back(entry);
+        }
+        if (skipped_already_compact > 0) {
+            std::cout << "Skipped " << skipped_already_compact << " entries with already-compact proofs on block\n";
+        }
+
         struct ValidationItem {
             chia::CompactVdfEntry entry;
             std::optional<chia::VDFInfo> vdf_info;
         };
 
         std::vector<ValidationItem> validation_items;
-        validation_items.reserve(deduped_entries.size());
-        for (const auto& entry : deduped_entries) {
-            if (blocks.find(entry.header_hash) == blocks.end()) {
-                continue;
-            }
+        validation_items.reserve(entries_needing_compaction.size());
+        for (const auto& entry : entries_needing_compaction) {
             validation_items.push_back({entry, std::nullopt});
         }
 
@@ -348,7 +385,7 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
             current_block_entries.clear();
         };
 
-        for (const auto& entry : deduped_entries) {
+        for (const auto& entry : entries_needing_compaction) {
             if (!current_hash.has_value()) {
                 current_hash = entry.header_hash;
             } else if (entry.header_hash != *current_hash) {
@@ -360,33 +397,127 @@ ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions&
         flush_current_block();
     }
 
-    if (blocks_processed > 0 && !options.dry_run) {
-        const auto wal_start = std::chrono::steady_clock::now();
-        db.wal_checkpoint_truncate();
-        result.wal_checkpoint_seconds = seconds_since(wal_start);
-    }
-
-    if (!options.dry_run) {
-        std::filesystem::remove(options.compact_vdf_path);
-    }
-
     result.blocks_processed = blocks_processed;
-    result.elapsed_seconds = seconds_since(total_start);
+    return result;
+}
+
+void print_process_summary(const ProcessCompactVdfResult& result, const ProcessCompactVdfOptions& options,
+                           const std::string& source_label, bool removed_source_file) {
     const double other_seconds =
         std::max(0.0, result.elapsed_seconds - result.vdf_seconds - result.db_read_seconds - result.db_flush_seconds -
-                              result.wal_checkpoint_seconds);
+                              result.wal_checkpoint_seconds - result.download_seconds);
 
-    std::cout << "Finished processing compact VDF file: " << result.entries_applied << " proofs applied across "
-              << result.blocks_processed << " blocks, time taken: " << result.elapsed_seconds << "s (vdf "
+    std::cout << "Finished processing compact VDF";
+    if (result.chunks_processed > 0) {
+        std::cout << " from " << result.chunks_processed << " remote chunk(s)";
+    }
+    std::cout << ": " << result.entries_applied << " proofs applied across " << result.blocks_processed << " blocks";
+    if (result.entries_total > 0) {
+        std::cout << " (" << result.entries_total << " entries read)";
+    }
+    std::cout << ", time taken: " << result.elapsed_seconds << "s (download " << result.download_seconds << "s, vdf "
               << result.vdf_seconds << "s, db read " << result.db_read_seconds << "s, db flush "
               << result.db_flush_seconds << "s, wal checkpoint " << result.wal_checkpoint_seconds << "s, other "
               << other_seconds << "s)";
     if (options.dry_run) {
         std::cout << ", dry run (no writes)";
-    } else {
-        std::cout << ", removed " << options.compact_vdf_path;
+    } else if (removed_source_file) {
+        std::cout << ", removed " << source_label;
+    }
+    std::cout << '\n';
+}
+
+}  // namespace
+
+ProcessCompactVdfResult process_compact_vdf_file(const ProcessCompactVdfOptions& options) {
+    ProcessCompactVdfResult result;
+    const auto total_start = std::chrono::steady_clock::now();
+
+    auto entries = read_entries(options.compact_vdf_path);
+    if (entries.empty()) {
+        if (!options.dry_run && std::filesystem::exists(options.compact_vdf_path)) {
+            std::filesystem::remove(options.compact_vdf_path);
+        }
+        result.elapsed_seconds = seconds_since(total_start);
+        return result;
+    }
+
+    db_v2::Database db(options.db_path, options.dry_run);
+    db.ensure_v2();
+
+    result = process_compact_vdf_entries(db, options, std::move(entries), options.compact_vdf_path);
+
+    if (result.blocks_processed > 0 && !options.dry_run) {
+        const auto wal_start = std::chrono::steady_clock::now();
+        db.wal_checkpoint_truncate();
+        result.wal_checkpoint_seconds = seconds_since(wal_start);
+    }
+
+    const bool removed_file = !options.dry_run;
+    if (removed_file) {
+        std::filesystem::remove(options.compact_vdf_path);
+    }
+
+    result.elapsed_seconds = seconds_since(total_start);
+    print_process_summary(result, options, options.compact_vdf_path, removed_file);
+    return result;
+}
+
+ProcessCompactVdfResult process_compact_vdf_remote(const ProcessCompactVdfOptions& options) {
+    ProcessCompactVdfResult result;
+    const auto total_start = std::chrono::steady_clock::now();
+
+    const std::string base_url = trim_trailing_slash(options.remote_compact_vdf_base_url);
+    if (base_url.empty()) {
+        throw std::invalid_argument("remote compactvdf base URL is empty");
+    }
+
+    std::cout << "Starting remote compact VDF processing from " << base_url;
+    if (options.dry_run) {
+        std::cout << " (dry run: no writes)";
     }
     std::cout << '\n';
 
+    db_v2::Database db(options.db_path, options.dry_run);
+    db.ensure_v2();
+
+    for (uint32_t start_height = 0;; start_height += kCompactVdfHeightChunkSize) {
+        const uint32_t end_height = start_height + kCompactVdfHeightChunkSize - 1;
+        const std::string url = remote_compact_vdf_url(base_url, start_height, end_height);
+
+        const auto download_start = std::chrono::steady_clock::now();
+        const HttpFetchResult response = http_get(url, 30);
+        result.download_seconds += seconds_since(download_start);
+
+        if (!response.transport_ok()) {
+            throw std::runtime_error("Failed to download " + url + ": " + response.error);
+        }
+        if (response.status_code == 404) {
+            std::cout << "No more compactvdf files at " << url << " (HTTP 404)\n";
+            break;
+        }
+        if (response.status_code != 200) {
+            throw std::runtime_error("Failed to download " + url + ": HTTP " + std::to_string(response.status_code));
+        }
+
+        auto entries = parse_compact_vdf_entries_from_text(response.body);
+        std::cout << "Downloaded " << url << ": " << entries.size() << " entries (heights " << start_height << " to "
+                  << end_height << ")\n";
+
+        if (!entries.empty()) {
+            const auto chunk_result = process_compact_vdf_entries(db, options, std::move(entries), url);
+            merge_result(result, chunk_result);
+        }
+        ++result.chunks_processed;
+    }
+
+    if (result.blocks_processed > 0 && !options.dry_run) {
+        const auto wal_start = std::chrono::steady_clock::now();
+        db.wal_checkpoint_truncate();
+        result.wal_checkpoint_seconds = seconds_since(wal_start);
+    }
+
+    result.elapsed_seconds = seconds_since(total_start);
+    print_process_summary(result, options, base_url, false);
     return result;
 }

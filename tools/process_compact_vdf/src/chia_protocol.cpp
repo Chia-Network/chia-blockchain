@@ -691,6 +691,45 @@ std::optional<VDFInfo> vdf_info_for_sub_slot(const FullBlock& block, Compressibl
     return std::nullopt;
 }
 
+bool block_field_needs_compact_proof(const FullBlock& block, CompressibleVDFField field,
+                                       const std::optional<uint8_t>& sub_slot_index) {
+    switch (field) {
+        case CompressibleVDFField::CC_EOS_VDF:
+            if (sub_slot_index.has_value()) {
+                if (*sub_slot_index >= block.finished_sub_slots.size()) {
+                    return false;
+                }
+                return !block.finished_sub_slots[*sub_slot_index].proofs.challenge_chain_slot_proof.is_compact();
+            }
+            for (const auto& sub_slot : block.finished_sub_slots) {
+                if (!sub_slot.proofs.challenge_chain_slot_proof.is_compact()) {
+                    return true;
+                }
+            }
+            return false;
+        case CompressibleVDFField::ICC_EOS_VDF:
+            if (sub_slot_index.has_value()) {
+                if (*sub_slot_index >= block.finished_sub_slots.size()) {
+                    return false;
+                }
+                const auto& icc_proof = block.finished_sub_slots[*sub_slot_index].proofs.infused_challenge_chain_slot_proof;
+                return icc_proof.has_value() && !icc_proof->is_compact();
+            }
+            for (const auto& sub_slot : block.finished_sub_slots) {
+                const auto& icc_proof = sub_slot.proofs.infused_challenge_chain_slot_proof;
+                if (icc_proof.has_value() && !icc_proof->is_compact()) {
+                    return true;
+                }
+            }
+            return false;
+        case CompressibleVDFField::CC_SP_VDF:
+            return block.challenge_chain_sp_proof.has_value() && !block.challenge_chain_sp_proof->is_compact();
+        case CompressibleVDFField::CC_IP_VDF:
+            return !block.challenge_chain_ip_proof.is_compact();
+    }
+    return false;
+}
+
 bool needs_compact_proof(const VDFInfo& info, const FullBlock& block, CompressibleVDFField field) {
     switch (field) {
         case CompressibleVDFField::CC_EOS_VDF:

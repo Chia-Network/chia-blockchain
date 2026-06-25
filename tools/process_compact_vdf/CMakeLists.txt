@@ -13,6 +13,7 @@ if(NOT EXISTS "${CHIAVDF_SRC}/verifier.h")
 endif()
 
 find_package(SQLite3 REQUIRED)
+find_package(CURL REQUIRED)
 find_package(Threads REQUIRED)
 
 if(APPLE)
@@ -43,6 +44,7 @@ add_executable(process_compact_vdf
   src/mini_json.cpp
   src/process_compact_vdf.cpp
   src/export_compact_vdf.cpp
+  src/http_fetch.cpp
   "${CHIAVDF_SRC}/refcode/lzcnt.c"
 )
 
@@ -58,6 +60,7 @@ target_compile_definitions(process_compact_vdf PRIVATE
 
 target_link_libraries(process_compact_vdf PRIVATE
   SQLite::SQLite3
+  CURL::libcurl
   Threads::Threads
   ${GMP_LIBRARIES}
 )

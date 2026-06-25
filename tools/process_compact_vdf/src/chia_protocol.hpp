@@ -257,6 +257,8 @@ std::vector<CompactVdfEntry> extract_witness_type_zero_entries(const chia::Bytes
 
 std::vector<VDFInfo> vdf_info_candidates(const FullBlock& block, CompressibleVDFField field);
 std::optional<VDFInfo> vdf_info_for_sub_slot(const FullBlock& block, CompressibleVDFField field, uint8_t sub_slot_index);
+bool block_field_needs_compact_proof(const FullBlock& block, CompressibleVDFField field,
+                                       const std::optional<uint8_t>& sub_slot_index);
 bool needs_compact_proof(const VDFInfo& info, const FullBlock& block, CompressibleVDFField field);
 bool apply_compact_proof(FullBlock& block, const VDFInfo& info, const VDFProof& proof, CompressibleVDFField field);
 

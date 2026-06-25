@@ -1,11 +1,13 @@
 # process_compact_vdf
 
 Standalone C++ utility for working with compact challenge-chain VDF witnesses on a **v2**
-chia blockchain SQLite database. It supports two modes:
+chia blockchain SQLite database. It supports three modes:
 
-1. **Process** — read a `compactvdf` JSON-lines file, validate witnesses with **chiavdf**,
+1. **Process (local file)** — read a `compactvdf` JSON-lines file, validate witnesses with **chiavdf**,
    apply compact proofs to blocks in `full_blocks`, and update `is_fully_compactified`.
-2. **Export** — scan the main chain and write `compactvdf-*` JSON-lines files for blocks
+2. **Process (remote URL)** — download 10,000-block `compactvdf-*` files from a base URL starting at
+   height 0, validate and apply each chunk until HTTP 404.
+3. **Export** — scan the main chain and write `compactvdf-*` JSON-lines files for blocks
    that already store `witness_type` 0 proofs.
 
 The tool does not run a full node. It parses streamable `FullBlock` blobs from the database,
@@ -18,6 +20,7 @@ mutates VDF proof fields in memory, and writes compressed blocks back.
 - SQLite3 development headers
 - GMP / GMPXX
 - libzstd
+- libcurl
 - chiavdf sources (sibling checkout at `../../../chiavdf` by default)
 
 ## Build
@@ -28,7 +31,7 @@ cmake -S tools/process_compact_vdf -B build/process_compact_vdf \
 cmake --build build/process_compact_vdf -j
 ```
 
-## Process mode
+## Process mode (local file)
 
 Apply a pending compactvdf file to the database:
 
@@ -54,6 +57,33 @@ Steps:
 
 With `--dryrun`, steps 6–7 are skipped. The database is opened with `PRAGMA query_only=ON`
 so no rows are written; the compactvdf file is not deleted.
+
+## Process mode (remote URL)
+
+Download and apply compactvdf archives from a static HTTP server:
+
+```bash
+./build/process_compact_vdf/process_compact_vdf \
+  --db /path/to/blockchain_v2.sqlite \
+  --remote-compactvdf-url https://www.xchos.com/vdfs \
+  [--batch-size 1000] \
+  [--threads 8] \
+  [--dryrun]
+```
+
+The tool fetches files in order:
+
+```
+{base-url}/compactvdf-0to9999
+{base-url}/compactvdf-10000to19999
+...
+```
+
+Processing stops when a chunk returns HTTP 404. Each successful download is parsed, validated,
+and applied before the next chunk is fetched. A single WAL checkpoint runs after all chunks
+(unless `--dryrun`).
+
+With `--dryrun`, proofs are validated and applied in memory only; no database writes occur.
 
 ### Lookup and validation
 
