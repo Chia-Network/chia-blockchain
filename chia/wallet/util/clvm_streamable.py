@@ -74,14 +74,13 @@ def program_deserialize_clvm_streamable(
     program: Program, clvm_streamable_type: type[_T_Streamable], translation_layer: TranslationLayer | None = None
 ) -> _T_Streamable:
     type_to_deserialize_from: type[Streamable] = clvm_streamable_type
-    as_instance = from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))
     if translation_layer is not None:
         mapping = translation_layer.get_mapping(clvm_streamable_type)
         if mapping is not None:
-            type_to_deserialize_from = mapping.to_type
+            as_instance = from_program_for_type(mapping.to_type)(CLVMRSProgram.to(program))
             return translation_layer.deserialize_from_translation(as_instance, mapping)
     # Underlying hinting problem with clvm_serde
-    return as_instance  # type: ignore[no-any-return]
+    return from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))  # type: ignore[no-any-return]
 
 
 def byte_deserialize_clvm_streamable(

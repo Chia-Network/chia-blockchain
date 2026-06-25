@@ -563,7 +563,14 @@ class VCWallet:
                     ],
                 ]
             )
-        ), Solver({"vc_authorizations": coin_args})
+        ), Solver(
+            {
+                "vc_authorizations": {
+                    name: [proofs, provider.hex(), id.hex(), inner_hash.hex()]
+                    for name, (proofs, provider, id, inner_hash) in coin_args.items()
+                }
+            }
+        )
 
     async def get_vc_with_provider_in_and_proofs(
         self, authorized_providers: list[bytes32], proofs: list[str]
