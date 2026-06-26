@@ -70,8 +70,6 @@ Header validation remains the ultimate check. A malicious archive can at worst c
 - `sub_slot_index` — index into `finished_sub_slots` for `CC_EOS` / `ICC_EOS` (omitted for `CC_SP` / `CC_IP`)
 - `witness` — bytes for `VDFProof(witness_type=0, witness, normalized_to_identity=true)`
 
-When `sub_slot_index` is present, lookup is O(1) and does not run `validate_vdf` at apply time; cryptographic verification happens once in header validation.
-
 ### Why disable P2P compact VDF handlers
 
 When remote compact VDF is enabled, serving and requesting compact proofs from peers is redundant and adds load during sync. The reference implementation turns `new_compact_vdf`, `request_compact_vdf`, and `respond_compact_vdf` into no-ops. Timelord `RequestCompactProofOfTime` bluebox for live blocks is unchanged.
