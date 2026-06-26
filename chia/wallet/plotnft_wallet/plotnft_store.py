@@ -19,11 +19,7 @@ DEFAULT_POOL_REWARDS_PER_CLAIM = 20
 
 def _row_to_plotnft(row: Row, genesis_challenge: bytes32) -> PlotNFT:
     return PlotNFT(
-        coin=Coin(
-            parent_coin_info=bytes32(row[1]),
-            puzzle_hash=bytes32(row[2]),
-            amount=uint64.from_bytes(row[3]),
-        ),
+        coin=Coin(parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])),
         singleton_lineage_proof=LineageProof.from_bytes(row[4]),
         launcher_id=bytes32(row[5]),
         user_config=UserConfig(synthetic_pubkey=G1Element.from_bytes(row[6])),
@@ -180,8 +176,7 @@ class PlotNFTStore:
             raise ValueError("coin_ids must not be empty")
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from plotnft2s where coin_id in ({', '.join(['?'] * len(coin_ids))})",
-                coin_ids,
+                f"SELECT * from plotnft2s where coin_id in ({', '.join(['?'] * len(coin_ids))})", coin_ids
             )
             plot_nfts_selected = [_row_to_plotnft(row, self.genesis_challenge) for row in rows]
             if len(plot_nfts_selected) != len(coin_ids):
@@ -209,9 +204,7 @@ class PlotNFTStore:
             pool_rewards_selected = [
                 PoolReward(
                     coin=Coin(
-                        parent_coin_info=bytes32(row[1]),
-                        puzzle_hash=bytes32(row[2]),
-                        amount=uint64.from_bytes(row[3]),
+                        parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])
                     ),
                     singleton_id=bytes32(row[4]),
                 )
@@ -257,8 +250,7 @@ class PlotNFTStore:
         async with self.db_wrapper.reader() as conn:
             rows = list(
                 await conn.execute_fetchall(
-                    ("SELECT height FROM finish_exiting_height WHERE wallet_id = ?"),
-                    (wallet_id,),
+                    ("SELECT height FROM finish_exiting_height WHERE wallet_id = ?"), (wallet_id,)
                 )
             )
             if len(rows) == 0:
@@ -275,7 +267,4 @@ class PlotNFTStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM plotnft2s WHERE created_height > ?", (height,))
             await conn.execute("DELETE FROM pool_reward2s WHERE height > ?", (height,))
-            await conn.execute(
-                "UPDATE pool_reward2s SET spent_height = NULL WHERE spent_height > ?",
-                (height,),
-            )
+            await conn.execute("UPDATE pool_reward2s SET spent_height = NULL WHERE spent_height > ?", (height,))

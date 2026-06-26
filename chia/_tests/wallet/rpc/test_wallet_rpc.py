@@ -4930,20 +4930,14 @@ def test_create_new_wallet_post_init() -> None:
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.POOL_WALLET)
 
-    with pytest.raises(
-        ValueError,
-        match=re.escape('Invalid "plotnft_version" specified'),
-    ):
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
         CreateNewWallet(
             wallet_type=CreateNewWalletType.POOL_WALLET,
             initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
             plotnft_version=uint8(0),
         )
 
-    with pytest.raises(
-        ValueError,
-        match=re.escape('Invalid "plotnft_version" specified'),
-    ):
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
         CreateNewWallet(
             wallet_type=CreateNewWalletType.POOL_WALLET,
             initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
