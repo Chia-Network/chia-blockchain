@@ -546,6 +546,12 @@ class DataStore:
 
         return Path(*segments, raw)
 
+    def merkle_blob_available(self, store_id: bytes32, root_hash: bytes32 | None) -> bool:
+        # Bypass recent_merkle_blobs so a warm cache can't hide an on-disk deletion.
+        if root_hash is None:
+            return False
+        return self.get_merkle_path(store_id=store_id, root_hash=root_hash).is_file()
+
     def get_merkle_path(self, store_id: bytes32, root_hash: bytes32 | None) -> Path:
         store_root = self.merkle_blobs_path.joinpath(store_id.hex())
         if root_hash is None:
@@ -922,6 +928,21 @@ class DataStore:
 
         return True
 
+    async def clear_store_roots(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+
+    async def reset_store_to_empty_root(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer():
+            await self.clear_store_roots(store_id=store_id)
+            await self.create_tree(store_id=store_id, status=Status.COMMITTED)
     async def table_is_empty(self, store_id: bytes32) -> bool:
         tree_root = await self.get_tree_root(store_id=store_id)
 

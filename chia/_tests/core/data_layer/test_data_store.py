@@ -1202,6 +1202,73 @@ async def test_unsubscribe_suppresses_blob_cleanup_oserror(
 
 
 @pytest.mark.anyio
+async def test_clear_store_roots_wipes_all_roots(data_store: DataStore, store_id: bytes32) -> None:
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+    await data_store.create_tree(store_id=store_id, status=Status.PENDING)
+    assert await data_store.get_pending_root(store_id=store_id) is not None
+    assert await data_store.store_id_exists(store_id) is True
+
+    await data_store.clear_store_roots(store_id=store_id)
+
+    assert await data_store.store_id_exists(store_id) is False
+    assert await data_store.get_pending_root(store_id=store_id) is None
+    for table in ["root", "nodes"]:
+        async with data_store.db_wrapper.reader() as reader:
+            async with reader.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE {'tree_id' if table == 'root' else 'store_id'} == ?",
+                (store_id,),
+            ) as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
+
+
+@pytest.mark.anyio
+async def test_reset_store_to_empty_root_reseeds_gen0(data_store: DataStore, store_id: bytes32) -> None:
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+    assert (await data_store.get_tree_root(store_id)).generation > 0
+
+    await data_store.reset_store_to_empty_root(store_id)
+
+    root = await data_store.get_tree_root(store_id)
+    assert root.generation == 0
+    assert root.node_hash is None
+    assert await data_store.get_tree_generation(store_id) == 0
+    assert await data_store.store_id_exists(store_id) is True
+
+
+@pytest.mark.anyio
+async def test_reset_store_to_empty_root_with_pending_gen0_root(raw_data_store: DataStore, store_id: bytes32) -> None:
+    await raw_data_store.create_tree(store_id=store_id, status=Status.PENDING)
+    assert await raw_data_store.get_pending_root(store_id=store_id) is not None
+    assert await raw_data_store.store_id_exists(store_id) is False
+
+    await raw_data_store.reset_store_to_empty_root(store_id)
+
+    root = await raw_data_store.get_tree_root(store_id)
+    assert root.generation == 0
+    assert root.node_hash is None
+    assert await raw_data_store.get_pending_root(store_id=store_id) is None
+
+
+@pytest.mark.anyio
+async def test_merkle_blob_available_ignores_cache(data_store: DataStore, store_id: bytes32) -> None:
+    data_store.recent_merkle_blobs = LRUCache(capacity=128)
+    await add_0123_example(data_store, store_id)
+    root = await data_store.get_tree_root(store_id)
+    assert root.node_hash is not None
+
+    await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
+    assert data_store.recent_merkle_blobs.get((store_id, root.node_hash)) is not None
+    data_store.get_merkle_path(store_id=store_id, root_hash=root.node_hash).unlink()
+
+    assert data_store.merkle_blob_available(store_id, root.node_hash) is False
+    assert data_store.merkle_blob_available(store_id, None) is False
+
+
+@pytest.mark.anyio
 async def test_server_selection(data_store: DataStore, store_id: bytes32) -> None:
     start_timestamp = 1000
     await data_store.subscribe(
