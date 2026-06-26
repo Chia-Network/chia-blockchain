@@ -949,9 +949,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         await plotnft_wallet.join_pool(
             action_scope=action_scope,
             pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros,
-                heightlock=uint32(5),
-                pool_memoization=Program.to(None),
+                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
             ),
             pool_url="https://daurl.com",
             finish_leaving_fee=uint64(1),
