@@ -11,6 +11,7 @@ import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from dnslib.dns import os
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
@@ -53,6 +54,11 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 
 # limit to plain consensus mode for all tests
 pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
+
+
+@pytest.fixture(autouse=True)
+def enable_env_var() -> None:
+    os.environ["CHIA_PLOTNFT_V2_ENABLED"] = "TRUE"
 
 
 @dataclass
