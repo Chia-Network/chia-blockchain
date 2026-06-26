@@ -25,7 +25,7 @@ from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
-from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -1251,6 +1251,24 @@ async def test_reset_store_to_empty_root_with_pending_gen0_root(raw_data_store: 
     assert root.generation == 0
     assert root.node_hash is None
     assert await raw_data_store.get_pending_root(store_id=store_id) is None
+
+
+@pytest.mark.anyio
+async def test_reset_store_to_empty_root_clears_recent_merkle_cache(data_store: DataStore, store_id: bytes32) -> None:
+    data_store.recent_merkle_blobs = LRUCache(capacity=128)
+    await add_0123_example(data_store, store_id)
+    root = await data_store.get_tree_root(store_id)
+    assert root.node_hash is not None
+
+    await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
+    assert data_store.recent_merkle_blobs.get((store_id, root.node_hash)) is not None
+    data_store.get_merkle_path(store_id=store_id, root_hash=root.node_hash).unlink()
+
+    await data_store.reset_store_to_empty_root(store_id)
+
+    assert data_store.recent_merkle_blobs.get((store_id, root.node_hash)) is None
+    with pytest.raises(MerkleBlobNotFoundError):
+        await data_store.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
 
 
 @pytest.mark.anyio
