@@ -1752,10 +1752,10 @@ class DataStore:
 
         self.unconfirmed_keys_values.pop(store_id, None)
 
-        with contextlib.suppress(FileNotFoundError):
+        with contextlib.suppress(OSError):
             shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
 
-        with contextlib.suppress(FileNotFoundError):
+        with contextlib.suppress(OSError):
             shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:

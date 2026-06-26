@@ -1184,6 +1184,24 @@ async def test_unsubscribe_clears_unconfirmed_keys_values(data_store: DataStore,
 
 
 @pytest.mark.anyio
+async def test_unsubscribe_suppresses_blob_cleanup_oserror(
+    data_store: DataStore, store_id: bytes32, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await data_store.subscribe(Subscription(store_id, []))
+    await add_0123_example(data_store, store_id)
+    await data_store.add_node_hashes(store_id)
+
+    def raise_oserror(_path: Path) -> None:
+        raise OSError("cleanup failed")
+
+    monkeypatch.setattr(shutil, "rmtree", raise_oserror)
+
+    await data_store.unsubscribe(store_id)
+
+    assert await data_store.store_id_exists(store_id) is False
+
+
+@pytest.mark.anyio
 async def test_clear_store_roots_wipes_all_roots(data_store: DataStore, store_id: bytes32) -> None:
     await add_0123_example(data_store, store_id)
     await data_store.add_node_hashes(store_id)
