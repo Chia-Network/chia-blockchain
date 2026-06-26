@@ -1050,6 +1050,8 @@ class PoolInfoCase(DataCase):
     initial_pool_url_in_config: str
     pool_response: DummyPoolInfoResponse
     expected_pool_url_in_config: str
+    initial_current_difficulty: uint64 | None = None
+    expected_current_difficulty: uint64 | None = None
     marks: Marks = ()
 
     @property
@@ -1195,6 +1197,32 @@ class PoolInfoCase(DataCase):
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
+    PoolInfoCase(
+        "malformed_minimum_difficulty",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            pool_info={**make_pool_info(), "minimum_difficulty": -1},
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        initial_current_difficulty=uint64(42),
+        expected_current_difficulty=uint64(42),
+    ),
+    PoolInfoCase(
+        "error_code_in_response",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            pool_info={**make_pool_info(), "error_code": 1, "error_message": "pool unavailable"},
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        initial_current_difficulty=uint64(42),
+        expected_current_difficulty=uint64(42),
+    ),
 )
 @pytest.mark.anyio
 async def test_farmer_pool_info_config_update(
@@ -1209,11 +1237,14 @@ async def test_farmer_pool_info_config_update(
             bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
         ),
     }
+    pool_state_overrides: dict[str, Any] = {
+        "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
+    }
+    if case.initial_current_difficulty is not None:
+        pool_state_overrides["current_difficulty"] = case.initial_current_difficulty
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
         p2_singleton_puzzle_hash,
-        overrides={
-            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
-        },
+        overrides=pool_state_overrides,
     )
     PoolingShareState(
         owner_public_key=G1Element.from_bytes(
@@ -1237,107 +1268,11 @@ async def test_farmer_pool_info_config_update(
         root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
     ) as pool_config:
         assert pool_config.pool_url == case.expected_pool_url_in_config
-
-
-@pytest.mark.anyio
-async def test_update_pool_state_ignores_malformed_pool_info_difficulty(
-    mocker: MockerFixture,
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
-) -> None:
-    _, farmer_service, _ = farmer_one_harvester
-    p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
-    farmer_service._node.authentication_keys = {
-        p2_singleton_puzzle_hash: PrivateKey.from_bytes(
-            bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-        ),
-    }
-    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
-        p2_singleton_puzzle_hash,
-        overrides={
-            "current_difficulty": uint64(42),
-            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
-        },
-    )
-    PoolingShareState(
-        owner_public_key=G1Element.from_bytes(
-            bytes.fromhex(
-                "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
-            )
-        ),
-        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
-        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-        pool_url="https://endpoint-1.pool-domain.tld/some-path",
-        launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
-        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
-        key_derivation_index=-1,
-    ).add(root_path=farmer_service.root_path)
-    bad_pool_info = make_pool_info()
-    bad_pool_info["minimum_difficulty"] = -1
-    mock_http_get = mocker.patch(
-        "aiohttp.ClientSession.get",
-        return_value=DummyPoolInfoResponse(
-            ok=True,
-            status=200,
-            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
-            pool_info=bad_pool_info,
-        ),
-    )
-
-    await farmer_service._node.update_pool_state()
-
-    mock_http_get.assert_called_once()
-    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == uint64(42)
-
-
-@pytest.mark.anyio
-async def test_update_pool_state_ignores_pool_info_error_code(
-    mocker: MockerFixture,
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
-) -> None:
-    _, farmer_service, _ = farmer_one_harvester
-    p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
-    farmer_service._node.authentication_keys = {
-        p2_singleton_puzzle_hash: PrivateKey.from_bytes(
-            bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
-        ),
-    }
-    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
-        p2_singleton_puzzle_hash,
-        overrides={
-            "current_difficulty": uint64(42),
-            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
-        },
-    )
-    PoolingShareState(
-        owner_public_key=G1Element.from_bytes(
-            bytes.fromhex(
-                "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
-            )
-        ),
-        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
-        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-        pool_url="https://endpoint-1.pool-domain.tld/some-path",
-        launcher_id=bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
-        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
-        key_derivation_index=-1,
-    ).add(root_path=farmer_service.root_path)
-    error_pool_info = make_pool_info()
-    error_pool_info["error_code"] = 1
-    error_pool_info["error_message"] = "pool unavailable"
-    mock_http_get = mocker.patch(
-        "aiohttp.ClientSession.get",
-        return_value=DummyPoolInfoResponse(
-            ok=True,
-            status=200,
-            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
-            pool_info=error_pool_info,
-        ),
-    )
-
-    await farmer_service._node.update_pool_state()
-
-    mock_http_get.assert_called_once()
-    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == uint64(42)
+    if case.expected_current_difficulty is not None:
+        assert (
+            farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"]
+            == case.expected_current_difficulty
+        )
 
 
 @pytest.mark.anyio
