@@ -46,8 +46,6 @@ This does not replace timelord bluebox for live chain extension; it complements 
 
 **Configuration:** Disabled by default when `remote_compact_vdf_base_url` is empty. Nodes without the config key behave as today.
 
-**File format:** Entries without `sub_slot_index` remain supported via legacy lookup (candidate enumeration with `validate_vdf`).
-
 ## Rationale
 
 ### Why HTTP files instead of P2P compact VDF messages
@@ -121,8 +119,6 @@ JSON Lines (one JSON object per line, UTF-8). Empty lines are ignored. Invalid l
 | `witness` | bytes hex string (`0x…`) | yes | Compact witness bytes |
 | `sub_slot_index` | `uint8` | no | Index into `finished_sub_slots` for EOS fields |
 
-Legacy entries may nest witness under `vdf_proof.witness`; parsers SHOULD accept both forms.
-
 #### `field_vdf` values
 
 Matches existing `CompressibleVDFField` in `chia/types/blockchain_format/vdf.py`:
@@ -157,7 +153,7 @@ For each entry matching `block.header_hash`:
 
 1. `vdf_proof = compact_vdf_proof(entry.witness)`
 2. If `sub_slot_index` is set: `vdf_info = vdf_info_for_sub_slot(block, field_vdf, sub_slot_index)`
-3. Else: `vdf_info = find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)` (legacy; uses `validate_vdf` over candidates)
+3. Else: `vdf_info = find_vdf_info_for_proof(block, field_vdf, vdf_proof, constants)`
 4. If `vdf_info` is `None`, skip entry
 5. If `needs_compact_proof(vdf_info, block, field_vdf)` is false, skip (already compact)
 6. `block = apply_compact_proof_to_block(block, vdf_info, vdf_proof, field_vdf)` — MUST copy `finished_sub_slots` before mutating sub-slots
@@ -242,7 +238,7 @@ async def block_with_remote_compact_vdfs(block):
 
 ## Test Plan
 
-- Parse compactvdf JSON lines (with and without `sub_slot_index`, legacy `vdf_proof` nesting)
+- Parse compactvdf JSON lines
 - Apply entries to a block with uncompacted CC/ICC/SP/IP proofs; verify `header_hash` unchanged
 - Verify compactified block passes `pre_validate_block`
 - Verify invalid witness from file fails validation, block not added
