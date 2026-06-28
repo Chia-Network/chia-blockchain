@@ -26,7 +26,7 @@ from chia.pools.pool_wallet_info import (
     initial_pool_state_from_dict,
 )
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServiceProtocol, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -576,9 +576,10 @@ class WalletRpcApi:
     max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
     max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
 
-    def __init__(self, wallet_node: WalletNode):
-        assert wallet_node is not None
-        self.service = wallet_node
+    def __init__(self, node: RpcServiceProtocol):
+        if not isinstance(node, WalletNode):
+            raise ValueError("Must start WalletRpcApi with a WalletNode")
+        self.service = node
         self.service_name = "chia_wallet"
 
     def get_routes(self) -> dict[str, Endpoint]:
