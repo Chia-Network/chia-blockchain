@@ -1566,7 +1566,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         "cat",
     )
     cat_wallet_id = cat_wallet.id()
-    cat_asset_id = cat_wallet.cat_info.limitations_program_hash
+    cat_asset_id = cat_wallet.tail_hash
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_new_wallet(

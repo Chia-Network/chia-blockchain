@@ -69,7 +69,6 @@ class CRCATWallet(CATWallet):
     info: CRCATInfo
     standard_wallet: Wallet
     wallet_type: ClassVar[WalletType] = WalletType.CRCAT
-    wallet_info_type: ClassVar[type[CRCATInfo]] = CRCATInfo
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
@@ -119,11 +118,12 @@ class CRCATWallet(CATWallet):
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.info = cls.wallet_info_type(limitations_program_hash, None, authorized_providers, proofs_checker)
+        self.info = CRCATInfo(limitations_program_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
 
         await self.wallet_state_manager.add_new_wallet(self)
+        self.tail_hash = self.info.limitations_program_hash
         return self
 
     @classmethod
@@ -151,19 +151,21 @@ class CRCATWallet(CATWallet):
             ProofsChecker.from_program(uncurry_puzzle(cr_layer["proofs_checker"])),
         )
 
-    @staticmethod
+    @classmethod
     async def create(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
     ) -> CRCATWallet:
-        self = CRCATWallet()
+        self = cls()
 
         self.log = logging.getLogger(__name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.info = self.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.info = CRCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.tail_hash = self.info.limitations_program_hash
         return self
 
     @classmethod
@@ -178,7 +180,7 @@ class CRCATWallet(CATWallet):
         replace_self.log = logging.getLogger(cat_wallet.get_name())
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to CR-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
-        replace_self.info = cls.wallet_info_type(
+        replace_self.info = CRCATInfo(
             cat_wallet.cat_info.limitations_program_hash, None, authorized_providers, proofs_checker
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
@@ -189,6 +191,7 @@ class CRCATWallet(CATWallet):
         updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
         assert updated_wallet_info is not None
         replace_self.wallet_info = updated_wallet_info
+        replace_self.tail_hash = replace_self.info.limitations_program_hash
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
 
