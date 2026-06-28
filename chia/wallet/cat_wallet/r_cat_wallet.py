@@ -167,8 +167,8 @@ class RCATWallet(CATWallet):
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.cat_info = RCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-        self.tail_hash = self.cat_info.limitations_program_hash
+        self.info = RCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.tail_hash = self.info.limitations_program_hash
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         return self
 
