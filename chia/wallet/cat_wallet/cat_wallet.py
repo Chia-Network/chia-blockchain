@@ -146,6 +146,7 @@ class CATWallet:
             await wallet_state_manager.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
+        self.tail_hash = self.cat_info.limitations_program_hash
         await self.wallet_state_manager.add_new_wallet(self)
 
         # If the new CAT name wasn't originally provided, we used a temporary name before issuance
@@ -193,7 +194,6 @@ class CATWallet:
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(cat_record)
-        self.tail_hash = self.cat_info.limitations_program_hash
         return self
 
     @classmethod
