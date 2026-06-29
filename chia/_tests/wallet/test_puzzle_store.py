@@ -74,7 +74,7 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert len(await db.get_all_puzzle_hashes()) == 0
         assert await db.get_last_derivation_path() is None
         assert await db.get_unused_derivation_path() is None
-        assert await db.get_derivation_record(0, 2, False) is None
+        assert await db.get_derivation_record(uint32(0), uint32(2), False) is None
 
         await db.add_derivation_paths(derivation_recs)
 
@@ -89,10 +89,10 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert len(await db.get_all_puzzle_hashes()) == 2000
         assert await db.get_last_derivation_path() == 999
         assert await db.get_unused_derivation_path() == 0
-        assert await db.get_derivation_record(0, 2, False) == derivation_recs[1]
+        assert await db.get_derivation_record(uint32(0), uint32(2), False) == derivation_recs[1]
 
         # Indeces up to 250
-        await db.set_used_up_to(249)
+        await db.set_used_up_to(uint32(249))
 
         assert await db.get_unused_derivation_path() == 250
 
@@ -122,7 +122,7 @@ async def test_delete_wallet(seeded_random: random.Random) -> None:
                 )
                 assert await db.get_last_derivation_path_for_wallet(wallet_id) is not None
             # Remove the wallet_id and make sure its removed fully
-            await db.delete_wallet(wallet_id)
+            await db.delete_wallet(uint32(wallet_id))
             for record in records:
                 assert await db.get_derivation_record(record.index, record.wallet_id, record.hardened) is None
                 assert await db.get_wallet_identifier_for_puzzle_hash(record.puzzle_hash) is None

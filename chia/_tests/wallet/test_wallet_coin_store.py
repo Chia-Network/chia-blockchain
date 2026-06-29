@@ -117,12 +117,12 @@ def get_dummy_record(wallet_id: int, seeded_random: random.Random) -> WalletCoin
 @dataclass
 class DummyWalletCoinRecords:
     seeded_random: random.Random
-    records_per_wallet: dict[int, list[WalletCoinRecord]] = field(default_factory=dict)
+    records_per_wallet: dict[uint32, list[WalletCoinRecord]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
-        records = self.records_per_wallet.setdefault(wallet_id, [])
+        records = self.records_per_wallet.setdefault(uint32(wallet_id), [])
         for _ in range(count):
-            records.append(get_dummy_record(wallet_id, seeded_random=self.seeded_random))
+            records.append(get_dummy_record(uint32(wallet_id), seeded_random=self.seeded_random))
 
 
 @pytest.mark.parametrize(
@@ -201,10 +201,14 @@ async def test_set_spent() -> None:
         store = await WalletCoinStore.create(db_wrapper)
         await store.add_coin_record(record_1)
 
-        assert not (await store.get_coin_record(coin_1.name())).spent
+        cr = await store.get_coin_record(coin_1.name())
+        assert cr is not None
+        assert not cr.spent
         await store.set_spent(coin_1.name(), uint32(12))
-        assert (await store.get_coin_record(coin_1.name())).spent
-        assert (await store.get_coin_record(coin_1.name())).spent_block_height == 12
+        cr = await store.get_coin_record(coin_1.name())
+        assert cr is not None
+        assert cr.spent
+        assert cr.spent_block_height == 12
 
 
 @pytest.mark.anyio
@@ -776,7 +780,7 @@ async def test_get_coin_records_total_count_cache() -> None:
         assert (
             await store.get_coin_records(spent_range=UInt32Range(start=uint32(10)), include_total_count=True)
         ).total_count == 2
-        await store.set_spent(record_1.name(), 10)
+        await store.set_spent(record_1.name(), uint32(10))
         assert (
             await store.get_coin_records(spent_range=UInt32Range(start=uint32(10)), include_total_count=True)
         ).total_count == 3
@@ -827,7 +831,7 @@ async def test_get_coin_records_total_count_cache_reset() -> None:
         # All the actions in here should reset the cache and lead to the same results again in `test_cache`.
         for trigger in [
             store.add_coin_record(record_4),
-            store.set_spent(coin_4.name(), 10),
+            store.set_spent(coin_4.name(), uint32(10)),
             store.delete_coin_record(record_4.name()),
             store.rollback_to_block(1000),
             store.delete_wallet(uint32(record_1.wallet_id)),
@@ -907,6 +911,7 @@ async def test_rollback_to_block() -> None:
         await store.rollback_to_block(6)
 
         new_r5 = await store.get_coin_record(coin_5.name())
+        assert new_r5 is not None
         assert not new_r5.spent
         assert new_r5.spent_block_height == 0
         assert new_r5 != r5
@@ -917,6 +922,7 @@ async def test_rollback_to_block() -> None:
 
         assert await store.get_coin_record(coin_5.name()) is None
         new_r4 = await store.get_coin_record(coin_4.name())
+        assert new_r4 is not None
         assert not new_r4.spent
         assert new_r4.spent_block_height == 0
         assert new_r4 != r4

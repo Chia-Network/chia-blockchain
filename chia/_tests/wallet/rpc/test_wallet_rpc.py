@@ -2779,7 +2779,7 @@ async def test_select_coins_rpc(wallet_environments: WalletTestFramework) -> Non
             wallet_environments.tx_config, push=True
         ) as action_scope:
             addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
-    coin_300: list[Coin]
+    coin_300 = []
     tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
         funds -= tx_amount

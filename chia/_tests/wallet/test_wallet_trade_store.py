@@ -176,6 +176,7 @@ async def test_large_trade_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await TradeStore.create(db_wrapper)
         trade_records_to_insert = []
+        offer_name = None
         for _ in range(db_wrapper.host_parameter_limit + 1):
             offer_name = bytes32.random()
             trade_record_old = TradeRecordOld(

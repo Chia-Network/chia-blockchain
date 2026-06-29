@@ -1543,7 +1543,7 @@ async def test_unacknowledged_cat_table() -> None:
                 return CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(i)), None, None)
 
             await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
+            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), uint32(100))
             assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
             await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
             assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]

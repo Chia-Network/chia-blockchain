@@ -860,9 +860,9 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
 
     new_coins: list[tuple[Coin, bytes32]] = []
 
+    puzzle = Program.to(2)
+    ph = puzzle.get_tree_hash()
     for i in range(10):
-        puzzle = Program.to(2)
-        ph = puzzle.get_tree_hash()
         coin = Coin(std_hash(b"unrelated coin id" + i.to_bytes(4, "big")), ph, uint64(1))
         hint = std_hash(b"unrelated hint" + i.to_bytes(4, "big"))
         new_coins.append((coin, hint))

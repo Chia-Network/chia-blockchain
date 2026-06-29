@@ -453,12 +453,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         )[2].coin
 
         # Gotta make some DIDs first
-        launcher_id: bytes32
-        lineage_proof: LineageProof
-        did: Coin
-        other_launcher_id: bytes32
-        other_lineage_proof: LineageProof
-        other_did: Coin
+        launcher_id = None
+        lineage_proof = None
+        did = None
+        other_launcher_id = None
+        other_lineage_proof = None
+        other_did = None
         for fund_coin in (did_fund_coin, other_did_fund_coin):
             conditions, launcher_spend = launch_conditions_and_coinsol(
                 fund_coin,
@@ -497,6 +497,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     await client.get_coin_records_by_parent_ids([other_launcher_id], include_spent_coins=False)
                 )[0].coin
 
+        assert launcher_id is not None
+        assert lineage_proof is not None
+        assert did is not None
+        assert other_launcher_id is not None
+        assert other_lineage_proof is not None
+        assert other_did is not None
         # Now let's launch the VC
         vc: VerifiedCredential
         dpuzs, coin_spends, vc = VerifiedCredential.launch(
@@ -603,8 +609,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         )[3].coin
 
         # Launch the CR-CATs
-        malicious_cr_1: CRCAT
-        malicious_cr_2: CRCAT
+        malicious_cr_1 = None
+        malicious_cr_2 = None
         for cr_coin_1, cr_coin_2 in ((cr_fund_coin_1, cr_fund_coin_2), (cr_fund_coin_3, cr_fund_coin_4)):
             if cr_coin_1 == cr_fund_coin_1:
                 proofs = ["malicious"]
@@ -657,6 +663,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             if cr_coin_1 == cr_fund_coin_1:
                 malicious_cr_1 = cr_1
                 malicious_cr_2 = cr_2
+
+        assert malicious_cr_1 is not None
+        assert malicious_cr_2 is not None
 
         for error in (
             "forget_vc",

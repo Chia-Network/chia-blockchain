@@ -222,7 +222,7 @@ def test_announcement_inversions(
     create_driver, assert_driver = drivers
     # mypy is not smart enough to understand that this `if` narrows down the potential types it could be
     # This leads to the large number of type ignores below
-    if create_driver == CreateAnnouncement and assert_driver == AssertAnnouncement:
+    if create_driver is CreateAnnouncement and assert_driver is AssertAnnouncement:
         with pytest.raises(ValueError, match="Must specify either"):
             assert_driver(True)
         with pytest.raises(ValueError, match="Cannot create"):
