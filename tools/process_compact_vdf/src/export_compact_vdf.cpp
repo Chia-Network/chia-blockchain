@@ -61,7 +61,7 @@ ExportCompactVdfResult export_compact_vdf_files(const ExportCompactVdfOptions& o
     }
 
     result.max_height = *max_height;
-    std::cout << "Exporting witness_type 0 compact VDF proofs from main chain heights 0 to " << result.max_height
+    std::cout << "Exporting compact VDF proofs from main chain heights 0 to " << result.max_height
               << " in chunks of " << options.chunk_size << " to " << output_dir.string() << '\n';
 
     for (uint32_t start_height = 0; start_height <= result.max_height; start_height += static_cast<uint32_t>(options.chunk_size)) {

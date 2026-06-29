@@ -608,7 +608,7 @@ namespace {
 
 void maybe_add_witness_type_zero_entry(const chia::Bytes32& header_hash, uint8_t field_vdf, const VDFProof& proof,
                                        std::optional<uint8_t> sub_slot_index, std::vector<CompactVdfEntry>& out) {
-    if (proof.witness_type != 0 || proof.witness.empty()) {
+    if (!proof_is_compact(proof) || proof.witness.empty()) {
         return;
     }
     CompactVdfEntry entry;

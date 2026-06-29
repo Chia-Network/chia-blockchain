@@ -118,7 +118,7 @@ through the current peak.
 
 Export includes one line per compressible proof on the block where:
 
-- `witness_type == 0`, and
+- `witness_type == 0` and `normalized_to_identity == true` (compact form), and
 - `witness` is non-empty.
 
 Only these fields are exported (matching `CompressibleVDFField`):
