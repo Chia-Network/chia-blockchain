@@ -70,6 +70,9 @@ class CRCATWallet(CATWallet):
     standard_wallet: Wallet
     wallet_type: ClassVar[WalletType] = WalletType.CRCAT
 
+    # Legacy method - not available on CR-CAT wallets
+    puzzle_for_pk = None
+
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
         return f"CAT {limitations_program_hash.hex()[:16]}..."
@@ -306,9 +309,6 @@ class CRCATWallet(CATWallet):
 
     def require_derivation_paths(self) -> bool:
         return False
-
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
-        raise NotImplementedError("puzzle_for_pk is a legacy method and is not available on CR-CAT wallets")
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise NotImplementedError("puzzle_hash_for_pk is a legacy method and is not available on CR-CAT wallets")

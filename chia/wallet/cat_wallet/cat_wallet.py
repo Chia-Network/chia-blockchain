@@ -94,6 +94,9 @@ class CATWallet:
     tail_hash: bytes32
     wallet_type: ClassVar[WalletType] = WalletType.CAT
 
+    # We only need the puzzle hash method so we'll leave this unimplemented for now
+    puzzle_for_pk = None
+
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
         return f"CAT {limitations_program_hash.hex()[:16]}..."
@@ -419,11 +422,6 @@ class CATWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
-
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.tail_hash, inner_puzzle)
-        return cat_puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)

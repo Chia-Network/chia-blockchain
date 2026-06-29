@@ -17,7 +17,6 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
     CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
     QUOTED_CAT_MOD_HASH,
@@ -67,8 +66,9 @@ class RCATWallet(CATWallet):
     lineage_store: CATLineageStore
     wallet_type: ClassVar[WalletType] = WalletType.RCAT
 
-    # this is a legacy method and is not available on R-CAT wallets
+    # these are legacy methods and are not available on R-CAT wallets
     create_new_cat_wallet = None  # type: ignore[assignment]
+    puzzle_for_pk = None
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
@@ -207,13 +207,6 @@ class RCATWallet(CATWallet):
         result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes()
         await result.commit(cat_wallet.wallet_state_manager)
         return True
-
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        inner_puzzle = create_revocation_layer(
-            self.info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
-        )
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.info.limitations_program_hash, inner_puzzle)
-        return cat_puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = create_revocation_layer(
