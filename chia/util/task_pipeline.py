@@ -54,7 +54,11 @@ class TaskPipeline:
     def drain(self, queue_index: int) -> list[Any]:
         """Drain all non-sentinel items remaining in the queue at the given
         index, plus any results that a stage produced but could not enqueue
-        because the pipeline was shutting down."""
+        because the pipeline was shutting down.
+
+        Only indices 1 .. len(stages)-1 are useful: _dropped[0] is never
+        written to (the feeder doesn't use it), and there is no queue after
+        the last stage."""
         items: list[Any] = []
         q = self._queues[queue_index]
         while not q.empty():
