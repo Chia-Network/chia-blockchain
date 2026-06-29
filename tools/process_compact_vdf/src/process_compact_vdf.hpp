@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 constexpr uint32_t kCompactVdfHeightChunkSize = 10000;
