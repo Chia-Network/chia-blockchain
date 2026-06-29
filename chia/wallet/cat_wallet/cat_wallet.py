@@ -672,7 +672,7 @@ class CATWallet:
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
         first = True
-        announcement: CreateCoinAnnouncement
+        announcement: CreateCoinAnnouncement | None = None
 
         for coin in cat_coins:
             if cat_discrepancy is not None:
@@ -725,6 +725,7 @@ class CATWallet:
                         conditions=(*extra_conditions, announcement),
                     )
             else:
+                assert announcement is not None
                 innersol = await self.make_inner_solution(
                     coin=coin, primaries=[], conditions=(announcement.corresponding_assertion(),)
                 )

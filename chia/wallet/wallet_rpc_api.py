@@ -26,7 +26,7 @@ from chia.pools.pool_wallet_info import (
     initial_pool_state_from_dict,
 )
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServiceProtocol, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -576,9 +576,10 @@ class WalletRpcApi:
     max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
     max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
 
-    def __init__(self, wallet_node: WalletNode):
-        assert wallet_node is not None
-        self.service = wallet_node
+    def __init__(self, node: RpcServiceProtocol):
+        if not isinstance(node, WalletNode):
+            raise ValueError("Must start WalletRpcApi with a WalletNode")
+        self.service = node
         self.service_name = "chia_wallet"
 
     def get_routes(self) -> dict[str, Endpoint]:
@@ -1158,9 +1159,7 @@ class WalletRpcApi:
 
     @tx_endpoint(push=True)
     @marshal
-    # Semantics guarantee returning on all paths, or else an error.
-    # It's probably not great to add a bunch of unreachable code for the sake of mypy.
-    async def create_new_wallet(  # type: ignore[return]
+    async def create_new_wallet(
         self,
         request: CreateNewWallet,
         action_scope: WalletActionScope,
@@ -1340,6 +1339,9 @@ class WalletRpcApi:
                 type=remote_wallet.type().name,
                 wallet_id=remote_wallet.id(),
             )
+
+        # Our @marshal decorator prevents us from reaching this but this pleases mypy
+        raise RuntimeError("Invalid wallet type")  # pragma: no cover
 
     ##########################################################################################
     # Wallet
@@ -2688,7 +2690,6 @@ class WalletRpcApi:
         coin_ids = []
         nft_ids = []
 
-        nft_wallet: NFTWallet
         for nft_coin in request.nft_coin_list:
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=nft_coin.wallet_id, required_type=NFTWallet)
             if nft_coin.nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
@@ -2720,7 +2721,7 @@ class WalletRpcApi:
             first = False
 
         for id in coin_ids:
-            await nft_wallet.update_coin_status(id, True)
+            await self.service.wallet_state_manager.nft_store.update_pending_transaction(id, True)
         for wallet_id in nft_dict.keys():
             self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
 
@@ -2786,7 +2787,7 @@ class WalletRpcApi:
             first = False
 
         for id in coin_ids:
-            await nft_wallet.update_coin_status(id, True)
+            await self.service.wallet_state_manager.nft_store.update_pending_transaction(id, True)
         for wallet_id in nft_dict.keys():
             self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
         async with action_scope.use() as interface:

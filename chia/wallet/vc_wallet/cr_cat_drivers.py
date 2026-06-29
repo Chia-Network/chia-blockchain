@@ -141,9 +141,9 @@ def match_cr_layer(
 def solve_cr_layer(
     proof_of_inclusions: Program,
     proof_checker_solution: Program,
-    provider_id: bytes32,
-    vc_launcher_id: bytes32,
-    vc_inner_puzhash: bytes32,
+    provider_id: bytes32 | None,
+    vc_launcher_id: bytes32 | None,
+    vc_inner_puzhash: bytes32 | None,
     my_coin_id: bytes32,
     inner_solution: Program,
 ) -> Program:
@@ -473,7 +473,7 @@ class CRCAT:
                             proof_checker_solution,
                             provider_id,
                             vc_launcher_id,
-                            vc_inner_puzhash,  # type: ignore
+                            vc_inner_puzhash,
                             self.coin.name(),
                             inner_solution,
                         ),
