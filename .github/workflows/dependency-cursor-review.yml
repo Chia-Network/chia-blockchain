@@ -72,7 +72,7 @@ jobs:
             core.setOutput('head_sha', pr.head?.sha || '');
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.target_pr.outputs.head_sha }}
           persist-credentials: false
@@ -242,7 +242,7 @@ jobs:
         run: mkdir -p ".upstream-dependency"
 
       - name: Checkout upstream repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.dependabot_context.outputs.upstream_repo }}
           path: .upstream-dependency

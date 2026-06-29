@@ -11,6 +11,7 @@ daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
 daemon_allow_tls_1_2: False # if True, allow TLS 1.2 for daemon connections
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
+# rate_limits: 3  # set to 3 to enable rate limits v3 (default: 2)
 
 network_overrides: &network_overrides
   constants:
