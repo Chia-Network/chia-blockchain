@@ -680,7 +680,6 @@ async def test_did_auto_transfer_limit(
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         assert did_wallet_1.did_info.origin_coin is not None
-        origin_coin = did_wallet_1.did_info.origin_coin
         async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             new_puzhash = await action_scope.get_puzzle_hash(wallet2.wallet_state_manager)
         async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -706,7 +705,6 @@ async def test_did_auto_transfer_limit(
     did_wallet_10 = wallet_node_2.wallet_state_manager.get_wallet(id=uint32(did_wallets[9].id), required_type=DIDWallet)
     # Delete the coin and change inner puzzle
     coin = await did_wallet_10.get_coin()
-    # origin_coin = did_wallet_10.did_info.origin_coin
     backup_data = did_wallet_10.create_backup()
     await wallet_node_2.wallet_state_manager.coin_store.delete_coin_record(coin.name())
     await time_out_assert(15, did_wallet_10.get_confirmed_balance, 0)
@@ -742,7 +740,7 @@ async def test_did_auto_transfer_limit(
     assert len(did_wallets) == 9
 
     # Try and find lost coin
-    await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+    await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
     did_wallets = list(
         filter(
             lambda w: w.type == WalletType.DECENTRALIZED_ID,

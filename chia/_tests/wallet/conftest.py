@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import contextlib
-import unittest
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import replace
 from typing import Any
+from unittest import mock
 
 import pytest
 from chia_rs import (
@@ -147,7 +147,7 @@ def tx_config(request: Any) -> TXConfig:
 
 def new_action_scope_wrapper(func: Any) -> Any:
     @contextlib.asynccontextmanager
-    async def wrapped_new_action_scope(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+    async def wrapped_new_action_scope(self: WalletStateManager, *args: Any, **kwargs: Any) -> AsyncIterator[Any]:
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         ph_indexes: dict[uint32, int] = {}
         for wallet_id in self.wallets:
@@ -198,7 +198,7 @@ async def wallet_environments(
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
         new_action_scope_wrapped = new_action_scope_wrapper(WalletStateManager.new_action_scope)
-        with unittest.mock.patch(
+        with mock.patch(
             "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope", new=new_action_scope_wrapped
         ):
             wallet_rpc_clients: list[WalletRpcClient] = []

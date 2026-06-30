@@ -200,13 +200,13 @@ def test_translation_layer() -> None:
         Program.to(("puzzle", "solution")),
     )
 
-    byte_serialize_clvm_streamable(foo_spend) == byte_serialize_clvm_streamable(
+    assert byte_serialize_clvm_streamable(foo_spend) == byte_serialize_clvm_streamable(
         spend, translation_layer=FOO_TRANSLATION
     )
-    program_serialize_clvm_streamable(foo_spend) == program_serialize_clvm_streamable(
+    assert program_serialize_clvm_streamable(foo_spend) == program_serialize_clvm_streamable(
         spend, translation_layer=FOO_TRANSLATION
     )
-    json_serialize_with_clvm_streamable(foo_spend) == json_serialize_with_clvm_streamable(
+    assert json_serialize_with_clvm_streamable(foo_spend) == json_serialize_with_clvm_streamable(
         spend, translation_layer=FOO_TRANSLATION
     )
     assert spend == byte_deserialize_clvm_streamable(
