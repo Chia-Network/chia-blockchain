@@ -92,6 +92,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import (
@@ -976,7 +977,7 @@ class WalletStateManager:
             return await self.handle_vc(vc), vc
 
         # Check if the coin is a PlotNFT
-        if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
+        if uncurried.mod == SingletonCorePuzzles().singleton_mod:
             try:
                 try:
                     previous_plotnft = (await self.plotnft2_store.get_plotnfts(coin_ids=[coin_spend.coin.name()]))[0]
@@ -994,26 +995,32 @@ class WalletStateManager:
                     previous_plotnft_puzzle=previous_plotnft,
                 )
                 for id, wallet in self.wallets.items():
-                    if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == next_plot_nft.launcher_id:
+                    if (
+                        isinstance(wallet, PlotNFT2Wallet)
+                        and wallet.plotnft_id == next_plot_nft.singleton_struct.launcher_id
+                    ):
                         matched_plotnft_wallet_id = id
                         break
                 else:
                     matched_plotnft_wallet_id = None
-                if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+                if (
+                    matched_plotnft_wallet_id is None
+                    and coin_spend.coin.parent_coin_info == next_plot_nft.singleton_struct.launcher_id
+                ):
                     matched_plotnft_wallet_id = uint32(len(self.wallets) + 1)
                     self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                         wallet_state_manager=self,
                         xch_wallet=self.main_wallet,
                         wallet_info=WalletInfo(
                             id=matched_plotnft_wallet_id,
-                            name=next_plot_nft.launcher_id.hex(),
+                            name=next_plot_nft.singleton_struct.launcher_id.hex(),
                             type=uint8(WalletType.PLOTNFT_2),
-                            data=next_plot_nft.launcher_id.hex(),
+                            data=next_plot_nft.singleton_struct.launcher_id.hex(),
                         ),
                     )
                 if matched_plotnft_wallet_id is None:  # pragma: no cover
                     # TODO: add support for receiving plotnfts you don't know about
-                    raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
+                    raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.singleton_struct.launcher_id}")
                 # the Streamable hint is in error so we need this type ignore
                 return WalletIdentifier(  # type: ignore[return-value]
                     id=matched_plotnft_wallet_id,

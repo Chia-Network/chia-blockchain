@@ -11,11 +11,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, UserConfig
+from chia.pools.plotnft_drivers import PlotNFT, PlotNFTInnerPuzzle, PoolConfig, UserConfig
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 from chia.wallet.wallet_request_types import PushTX
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -492,7 +493,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # FINISH LEAVING (to new pool)
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.inner_puzzle.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
     )
 
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -641,7 +642,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # FINISH LEAVING
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.inner_puzzle.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
     )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
 
@@ -883,7 +884,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
     # farm to where completion should happen
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.inner_puzzle.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
     )
 
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -945,12 +946,15 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             height=uint32(0),
             peer=Mock(),
             coin_data=PlotNFT(
-                launcher_id=bytes32.zeros,
-                genesis_challenge=bytes32.zeros,
-                user_config=UserConfig(synthetic_pubkey=G1Element()),  # the important bit
-                exiting=False,
+                singleton_struct=SingletonStruct(launcher_id=bytes32.zeros),
+                inner_puzzle=PlotNFTInnerPuzzle(
+                    singleton_struct=SingletonStruct(launcher_id=bytes32.zeros),
+                    genesis_challenge=bytes32.zeros,
+                    user_config=UserConfig(synthetic_pubkey=G1Element()),  # the important bit
+                    exiting=False,
+                ),
                 coin=Mock(),
-                singleton_lineage_proof=Mock(),
+                lineage_proof=Mock(),
             ),
         )
     plotnft_after_raise = await plotnft_wallet.get_current_plotnft()
