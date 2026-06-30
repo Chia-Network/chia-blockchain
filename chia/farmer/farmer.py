@@ -28,6 +28,7 @@ from chia.protocols.pool_protocol import (
     AuthenticationPayload,
     ErrorResponse,
     GetFarmerResponse,
+    GetPoolInfoResponse,
     PoolErrorCode,
     PostFarmerPayload,
     PostFarmerRequest,
@@ -68,7 +69,7 @@ UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 @dataclass(frozen=True)
 class GetPoolInfoResult:
-    pool_info: dict[str, Any]
+    pool_info: GetPoolInfoResponse
     new_pool_url: str | None
 
 
@@ -354,6 +355,20 @@ class Farmer:
                     if resp.ok:
                         response: dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
+                        if "error_code" in response:
+                            self.handle_failed_pool_response(
+                                pool_config.p2_singleton_puzzle_hash,
+                                f"Error in GET /pool_info {pool_config.pool_url}, {response}",
+                            )
+                            return None
+                        try:
+                            pool_info = GetPoolInfoResponse.from_json_dict(response)
+                        except Exception as e:
+                            self.handle_failed_pool_response(
+                                pool_config.p2_singleton_puzzle_hash,
+                                f"Invalid GET /pool_info response {pool_config.pool_url}, {e}",
+                            )
+                            return None
                         new_pool_url: str | None = None
                         response_url_str = f"{resp.url}"
                         if (
@@ -363,7 +378,7 @@ class Farmer:
                         ):
                             new_pool_url = response_url_str.replace("/pool_info", "")
 
-                        return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
+                        return GetPoolInfoResult(pool_info=pool_info, new_pool_url=new_pool_url)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -592,12 +607,12 @@ class Farmer:
                     pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
                     pool_info_result = await self._pool_get_pool_info(pool_config)
-                    if pool_info_result is not None and "error_code" not in pool_info_result.pool_info:
+                    if pool_info_result is not None:
                         pool_info = pool_info_result.pool_info
-                        pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
+                        pool_state["authentication_token_timeout"] = pool_info.authentication_token_timeout
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
-                            pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+                            pool_state["current_difficulty"] = pool_info.minimum_difficulty
                     else:
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
