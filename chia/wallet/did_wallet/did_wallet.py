@@ -320,8 +320,8 @@ class DIDWallet:
 
         return uint64(addition_amount)
 
-    async def get_unconfirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
-        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     async def select_coins(
         self,
@@ -349,13 +349,13 @@ class DIDWallet:
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
     async def coin_added(
-        self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: DIDCoinData | None
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: DIDCoinData | None
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
-        if parent_coin_data is not None:
-            assert isinstance(parent_coin_data, DIDCoinData)
-            did_data: DIDCoinData = parent_coin_data
+        if coin_data is not None:
+            assert isinstance(coin_data, DIDCoinData)
+            did_data: DIDCoinData = coin_data
         else:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state(

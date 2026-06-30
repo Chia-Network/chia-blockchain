@@ -147,7 +147,7 @@ class NFTWallet:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
 
@@ -169,15 +169,15 @@ class NFTWallet:
         return nft_coin
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: NFTCoinData | None
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: NFTCoinData | None
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
-        assert isinstance(parent_coin_data, NFTCoinData), f"Invalid NFT coin data: {parent_coin_data}"
-        await self.puzzle_solution_received(coin, parent_coin_data, peer)
+        assert isinstance(coin_data, NFTCoinData), f"Invalid NFT coin data: {coin_data}"
+        await self.puzzle_solution_received(coin, coin_data, peer)
 
     async def puzzle_solution_received(self, coin: Coin, data: NFTCoinData, peer: WSChiaConnection) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
