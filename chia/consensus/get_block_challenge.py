@@ -102,7 +102,7 @@ def get_block_challenge(
     return challenge
 
 
-# Returns the previous transaction block up to the blocks signage point
+# Returns the latest transaction block infused before the provided signage point index.
 # we use this for block validation since when the block is farmed we do not know the latest transaction block
 # since a new one might be infused by the time the block is infused
 def pre_sp_tx_block(
@@ -116,21 +116,45 @@ def pre_sp_tx_block(
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return None
     curr = blocks.block_record(prev_b_hash)
-    # For overflow blocks, the SP is in the previous sub-slot, so we need to cross
-    # one extra slot boundary before we're past the SP's slot
     overflow = is_overflow_block(constants, sp_index)
     slots_crossed = finished_sub_slots
     while curr.height > 0:
-        if not overflow:
-            before_sp = curr.signage_point_index < sp_index or slots_crossed > 0
-        else:
-            before_sp = slots_crossed >= 2 or (slots_crossed == 1 and curr.signage_point_index < sp_index)
-        if curr.is_transaction_block and before_sp:
+        if curr.is_transaction_block and is_infused_before_sp(
+            constants,
+            curr.signage_point_index,
+            sp_index,
+            slots_crossed,
+            overflow,
+        ):
             break
         if curr.first_in_sub_slot:
             slots_crossed += 1
         curr = blocks.block_record(curr.prev_hash)
     return curr
+
+
+def is_infused_before_sp(
+    constants: ConsensusConstants,
+    candidate_sp_index: uint8,
+    sp_index: uint8,
+    slots_crossed_at_ip: int,
+    overflow: bool,
+) -> bool:
+    candidate_overflow = is_overflow_block(constants, candidate_sp_index)
+    # The walker counts whole slots between infusion points. This comparison is against the checked SP, so
+    # overflow blocks need one-slot adjustments because their SP is in the slot before their IP.
+    actual_slots_crossed_at_ip = slots_crossed_at_ip
+    if candidate_overflow:
+        actual_slots_crossed_at_ip += 1
+    if overflow:
+        actual_slots_crossed_at_ip -= 1
+
+    # Distance in SP intervals. If slots were crossed, a smaller checked SP index can still be after a larger
+    # candidate SP index, so add a full slot width for each crossed slot.
+    sp_intervals_until_current_sp = (
+        sp_index - candidate_sp_index + actual_slots_crossed_at_ip * constants.NUM_SPS_SUB_SLOT
+    )
+    return sp_intervals_until_current_sp > constants.NUM_SP_INTERVALS_EXTRA
 
 
 def pre_sp_tx_block_height(

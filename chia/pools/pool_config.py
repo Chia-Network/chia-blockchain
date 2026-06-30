@@ -10,7 +10,7 @@ import yaml
 from chia_rs import G1Element
 from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import Self
+from typing_extensions import NotRequired, Self
 
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.lock import Lockfile
@@ -24,6 +24,7 @@ class _PoolConfig(TypedDict):
     p2_singleton_puzzle_hash: str
     owner_public_key: str
     key_derivation_index: int
+    version: NotRequired[int]
 
 
 @dataclass(kw_only=True)
@@ -35,6 +36,7 @@ class PoolingShareState:
     p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
     key_derivation_index: int
+    version: int = 1
 
     @staticmethod
     def state_path(root_path: Path) -> Path:
@@ -102,6 +104,7 @@ class PoolingShareState:
                 p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
                 owner_public_key=G1Element.from_bytes(hexstr_to_bytes(config["owner_public_key"])),
                 key_derivation_index=config["key_derivation_index"],
+                version=config.get("version", 1),
             )
             yield self  # noqa: RUF075  # update in-memory entry only on successful exit
             for i, conf in enumerate(loaded_list):
@@ -118,6 +121,7 @@ class PoolingShareState:
             "owner_public_key": bytes(self.owner_public_key).hex(),
             "p2_singleton_puzzle_hash": self.p2_singleton_puzzle_hash.hex(),
             "key_derivation_index": self.key_derivation_index,
+            "version": self.version,
         }
 
 
