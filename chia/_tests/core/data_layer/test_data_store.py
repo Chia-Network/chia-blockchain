@@ -1202,29 +1202,6 @@ async def test_unsubscribe_suppresses_blob_cleanup_oserror(
 
 
 @pytest.mark.anyio
-async def test_clear_store_roots_wipes_all_roots(data_store: DataStore, store_id: bytes32) -> None:
-    await add_0123_example(data_store, store_id)
-    await data_store.add_node_hashes(store_id)
-    await data_store.create_tree(store_id=store_id, status=Status.PENDING)
-    assert await data_store.get_pending_root(store_id=store_id) is not None
-    assert await data_store.store_id_exists(store_id) is True
-
-    await data_store.clear_store_roots(store_id=store_id)
-
-    assert await data_store.store_id_exists(store_id) is False
-    assert await data_store.get_pending_root(store_id=store_id) is None
-    for table in ["root", "nodes"]:
-        async with data_store.db_wrapper.reader() as reader:
-            async with reader.execute(
-                f"SELECT COUNT(*) FROM {table} WHERE {'tree_id' if table == 'root' else 'store_id'} == ?",
-                (store_id,),
-            ) as cursor:
-                row_count = await cursor.fetchone()
-                assert row_count is not None
-                assert row_count[0] == 0
-
-
-@pytest.mark.anyio
 async def test_server_selection(data_store: DataStore, store_id: bytes32) -> None:
     start_timestamp = 1000
     await data_store.subscribe(

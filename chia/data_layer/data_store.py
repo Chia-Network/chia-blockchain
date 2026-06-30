@@ -922,17 +922,6 @@ class DataStore:
 
         return True
 
-    async def clear_store_roots(self, store_id: bytes32) -> None:
-        async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id",
-                {"tree_id": store_id},
-            )
-            await writer.execute(
-                "DELETE FROM nodes WHERE store_id == :store_id",
-                {"store_id": store_id},
-            )
-
     async def table_is_empty(self, store_id: bytes32) -> bool:
         tree_root = await self.get_tree_root(store_id=store_id)
 
@@ -1748,7 +1737,14 @@ class DataStore:
             )
             # Clear roots too, otherwise re-subscribe can see a stale committed root
             # while the on-disk blobs below are gone.
-            await self.clear_store_roots(store_id=store_id)
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
 
         self.unconfirmed_keys_values.pop(store_id, None)
 
