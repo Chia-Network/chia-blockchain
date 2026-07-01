@@ -411,7 +411,7 @@ class FullNodeAPI:
         if header_hash is None:
             return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
-        block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
+        block: FullBlock | None = await self.full_node.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
                 block = block.replace(transactions_generator=None)
@@ -444,7 +444,7 @@ class FullNodeAPI:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
 
-                block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash_i)
+                block: FullBlock | None = await self.full_node.get_full_block(header_hash_i)
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
@@ -461,7 +461,7 @@ class FullNodeAPI:
                 if header_hash_i is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block_bytes: bytes | None = await self.full_node.block_store.get_full_block_bytes(header_hash_i)
+                block_bytes: bytes | None = await self.full_node.get_full_block_bytes(header_hash_i)
                 if block_bytes is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
@@ -1345,7 +1345,7 @@ class FullNodeAPI:
         if header_hash is None:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
             return msg
-        block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
+        block: FullBlock | None = await self.full_node.get_full_block(header_hash)
         if block is None:
             return None
 
@@ -1478,7 +1478,7 @@ class FullNodeAPI:
 
         try:
             async with self.wallet_sync_api_sem.acquire():
-                block: FullBlock | None = await self.full_node.block_store.get_full_block(request.header_hash)
+                block: FullBlock | None = await self.full_node.get_full_block(request.header_hash)
 
                 # We lock so that the coin store does not get modified
                 peak_height = self.full_node.blockchain.get_peak_height()
