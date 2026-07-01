@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from unittest.mock import AsyncMock
 
 import pytest
 from chia_rs import CoinState, G2Element
@@ -13,17 +14,22 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
@@ -124,6 +130,155 @@ async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets
     peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
     assert (None, None) == await wallet_state_manager.determine_coin_type(
         peer, CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)), None
+    )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_data_layer_identifier_for_coin_returns_none_without_dl_wallet(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+) -> None:
+    """No DL wallet → helper returns None and ``determine_coin_type`` must fetch the parent."""
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+    mirror_coin = Coin(bytes32(b"m" * 32), MIRROR_PUZZLE_HASH, uint64(1))
+    assert await wsm._data_layer_identifier_for_coin(mirror_coin) is None
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_data_layer_identifier_for_coin_mirror_puzzle_hash(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+) -> None:
+    """Mirror coins are classified by their fixed puzzle hash without any DB read on dl_store."""
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+    dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm)
+    mirror_coin = Coin(bytes32(b"m" * 32), MIRROR_PUZZLE_HASH, uint64(1))
+    identifier = await wsm._data_layer_identifier_for_coin(mirror_coin)
+    assert identifier is not None
+    assert identifier.id == dl_wallet.id()
+    assert identifier.type == dl_wallet.type()
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_data_layer_identifier_for_coin_tracked_singleton(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+) -> None:
+    """Singletons whose coin_id is in dl_store classify as DL without inspecting puzzle_hash."""
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+    dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm)
+
+    # Use a non-mirror, non-derivation outer puzzle_hash so this test
+    # exclusively exercises the dl_store coin_id branch.
+    singleton_coin = Coin(bytes32(b"s" * 32), bytes32(b"o" * 32), uint64(1))
+    singleton_record = SingletonRecord(
+        coin_id=singleton_coin.name(),
+        launcher_id=bytes32(b"L" * 32),
+        root=bytes32(b"r" * 32),
+        inner_puzzle_hash=bytes32(b"x" * 32),
+        confirmed=True,
+        confirmed_at_height=uint32(0),
+        lineage_proof=LineageProof(
+            parent_name=bytes32(b"p" * 32),
+            inner_puzzle_hash=bytes32(b"x" * 32),
+            amount=uint64(1),
+        ),
+        generation=uint32(0),
+        timestamp=uint64(0),
+    )
+    await wsm.dl_store.add_singleton_record(singleton_record)
+
+    identifier = await wsm._data_layer_identifier_for_coin(singleton_coin)
+    assert identifier is not None
+    assert identifier.id == dl_wallet.id()
+    assert identifier.type == dl_wallet.type()
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_data_layer_identifier_for_coin_no_match_with_dl_wallet(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+) -> None:
+    """A DL wallet exists but the coin is neither a mirror nor in dl_store → None."""
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+    await DataLayerWallet.create_new_dl_wallet(wsm)
+    unrelated_coin = Coin(bytes32(b"u" * 32), bytes32(b"v" * 32), uint64(1))
+    assert await wsm._data_layer_identifier_for_coin(unrelated_coin) is None
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_add_coin_states_skips_parent_fetch_for_tracked_dl_singleton(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Through the production call chain, a tracked DL singleton is classified without a parent fetch.
+
+    Pins the actual optimization the diff delivers: ``_add_coin_states``
+    reaches ``determine_coin_type`` only when neither ``puzzle_store`` nor
+    ``interested_store`` matched the puzzle_hash (the short-circuit at
+    ``wallet_state_manager.py:1773-1804``). A DL singleton's outer
+    puzzle_hash rotates per spend and is in neither store, so before this
+    PR ``determine_coin_type`` paid a parent ``get_coin_state`` plus a
+    ``request_puzzle_solution`` per coin. With ``dl_store`` populated by
+    a prior generation, ``_data_layer_identifier_for_coin`` now classifies
+    the coin without that round-trip.
+
+    A non-mirror puzzle_hash is intentional: ``DataLayerWallet.coin_added``
+    only does its own parent fetch on the mirror branch, so a tracked
+    singleton makes the parent-fetch-elimination assertion strict.
+    """
+    full_nodes, wallets, _ = simulator_and_wallet
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.full_node.server
+    wallet_node, wallet_server = wallets[0]
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    wsm: WalletStateManager = wallet_node.wallet_state_manager
+    peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
+    dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm)
+
+    singleton_coin = Coin(bytes32(b"P" * 32), bytes32(b"o" * 32), uint64(1))
+    await wsm.dl_store.add_singleton_record(
+        SingletonRecord(
+            coin_id=singleton_coin.name(),
+            launcher_id=bytes32(b"L" * 32),
+            root=bytes32(b"r" * 32),
+            inner_puzzle_hash=bytes32(b"x" * 32),
+            confirmed=True,
+            confirmed_at_height=uint32(0),
+            lineage_proof=LineageProof(
+                parent_name=bytes32(b"q" * 32),
+                inner_puzzle_hash=bytes32(b"x" * 32),
+                amount=uint64(1),
+            ),
+            generation=uint32(0),
+            timestamp=uint64(0),
+        )
+    )
+
+    get_coin_state_mock = AsyncMock(return_value=[])
+    get_timestamp_mock = AsyncMock(return_value=uint64(0))
+
+    monkeypatch.setattr(WalletNode, "get_coin_state", get_coin_state_mock)
+    monkeypatch.setattr(WalletNode, "get_timestamp_for_height", get_timestamp_mock)
+    assert await wallet_node.get_timestamp_for_height(uint32(0)) == uint64(0)
+
+    coin_state = CoinState(singleton_coin, None, uint32(10))
+    # Drive through ``add_coin_states``, the same entry point
+    # ``add_states_from_peer`` uses in trusted mode at ``wallet_node.py:999``.
+    assert await wsm.add_coin_states([coin_state], peer, None)
+
+    coin_record = await wsm.coin_store.get_coin_record(singleton_coin.name())
+    assert coin_record is not None, (
+        f"tracked DL singleton was not added; parent fetches: {get_coin_state_mock.await_args_list}"
+    )
+    assert coin_record.wallet_id == dl_wallet.id()
+    assert get_coin_state_mock.await_count == 0, (
+        "determine_coin_type performed a parent get_coin_state for a locally classified DL "
+        "singleton instead of short-circuiting through _data_layer_identifier_for_coin"
     )
 
 
