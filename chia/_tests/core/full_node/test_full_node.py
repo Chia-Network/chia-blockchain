@@ -9,8 +9,9 @@ import platform
 import random
 import sqlite3
 import time
+import types
 from collections.abc import Awaitable, Callable, Coroutine
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from aiohttp import WSCloseCode
@@ -63,7 +64,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
-from chia.full_node.sync_store import Peak
+from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
@@ -1290,6 +1291,132 @@ async def test_respond_transaction_fail(
 
     await asyncio.sleep(1)
     assert incoming_queue.qsize() == 0
+
+
+def make_short_sync_batch_test_node(prev_hash: bytes32 | None = None) -> FullNode:
+    node = FullNode.__new__(FullNode)
+    node.sync_store = SyncStore()
+    node.log = logging.getLogger(__name__)
+    node.constants = cast(ConsensusConstants, types.SimpleNamespace(MAX_BLOCK_COUNT_PER_REQUESTS=32))
+    node._segment_task_list = []
+
+    class _MMRManager:
+        def copy(self) -> _MMRManager:
+            return self
+
+    class _Blockchain:
+        mmr_manager = _MMRManager()
+
+        def height_to_hash(self, height: uint32) -> bytes32 | None:
+            return prev_hash if height == 0 else None
+
+    node._blockchain = cast(Any, _Blockchain())
+    return node
+
+
+def make_short_sync_respond_block(height: uint32, prev_header_hash: bytes32) -> fnp.RespondBlock:
+    response = fnp.RespondBlock.__new__(fnp.RespondBlock)
+    object.__setattr__(
+        response,
+        "block",
+        cast(FullBlock, types.SimpleNamespace(height=height, prev_header_hash=prev_header_hash)),
+    )
+    return response
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bad_first_block", ["height_zero", "height_above_peak", "hash_mismatch", "none"])
+async def test_short_sync_batch_cleans_up_batch_syncing_on_unconnected_first_block(
+    bad_first_block: str,
+) -> None:
+    parent_hash = bytes32(b"\x01" * 32)
+    fn = make_short_sync_batch_test_node(prev_hash=parent_hash)
+
+    response: fnp.RespondBlock | None
+    if bad_first_block == "height_zero":
+        response = make_short_sync_respond_block(uint32(0), parent_hash)
+    elif bad_first_block == "height_above_peak":
+        response = make_short_sync_respond_block(uint32(2), parent_hash)
+    elif bad_first_block == "hash_mismatch":
+        response = make_short_sync_respond_block(uint32(1), bytes32(b"\x02" * 32))
+    else:
+        response = None
+
+    node_id = bytes32(b"\x07" * 32)
+
+    class _StubPeer:
+        peer_node_id = node_id
+
+        async def call_api(self, request_method: Any, message: Any, **kwargs: Any) -> fnp.RespondBlock | None:
+            return response
+
+    peer = cast(WSChiaConnection, _StubPeer())
+    assert node_id not in fn.sync_store.batch_syncing
+
+    result = await fn.short_sync_batch(peer, uint32(1), uint32(2))
+
+    assert result is False
+    assert node_id not in fn.sync_store.batch_syncing
+
+
+@pytest.mark.anyio
+async def test_short_sync_batch_cleans_up_batch_syncing_when_prelude_raises() -> None:
+    fn = make_short_sync_batch_test_node()
+
+    node_id = bytes32(b"\x09" * 32)
+
+    class _RaisingPeer:
+        peer_node_id = node_id
+
+        async def call_api(self, request_method: Any, message: Any, **kwargs: Any) -> fnp.RespondBlock:
+            raise ValueError("simulated request failure")
+
+    peer = cast(WSChiaConnection, _RaisingPeer())
+    assert node_id not in fn.sync_store.batch_syncing
+
+    with pytest.raises(ValueError, match="simulated request failure"):
+        await fn.short_sync_batch(peer, uint32(1), uint32(2))
+
+    assert node_id not in fn.sync_store.batch_syncing
+
+
+@pytest.mark.anyio
+async def test_short_sync_batch_cleans_up_batch_syncing_on_success() -> None:
+    parent_hash = bytes32(b"\x01" * 32)
+    fn = make_short_sync_batch_test_node(prev_hash=parent_hash)
+    connecting_block = make_short_sync_respond_block(uint32(1), parent_hash)
+
+    async def _noop() -> None:
+        return None
+
+    done_task = create_referenced_task(_noop())
+    await asyncio.sleep(0)
+    assert done_task.done()
+    running_task = create_referenced_task(asyncio.sleep(60))
+    fn._segment_task_list.extend([done_task, running_task])
+
+    node_id = bytes32(b"\x08" * 32)
+
+    class _StubPeer:
+        peer_node_id = node_id
+
+        async def call_api(self, request_method: Any, message: Any, **kwargs: Any) -> fnp.RespondBlock:
+            return connecting_block
+
+        def get_peer_logging(self) -> None:
+            return None
+
+    peer = cast(WSChiaConnection, _StubPeer())
+    assert node_id not in fn.sync_store.batch_syncing
+
+    result = await fn.short_sync_batch(peer, uint32(1), uint32(1))
+
+    assert result is True
+    assert node_id not in fn.sync_store.batch_syncing
+    assert done_task not in fn._segment_task_list
+    with contextlib.suppress(asyncio.CancelledError):
+        await running_task
+    assert running_task.cancelled()
 
 
 @pytest.mark.anyio
