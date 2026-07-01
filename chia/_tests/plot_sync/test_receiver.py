@@ -16,6 +16,7 @@ from chia._tests.plot_sync.util import get_dummy_connection
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta
+from chia.plot_sync.plot_record import PlotRecord
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.util import HarvestingMode
@@ -185,9 +186,8 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     ]
 
     # Manually add the plots we want to remove in tests
-    receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
+    receiver._plots = {plot_info.filename: PlotRecord.from_plot(plot_info) for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
-    # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
         sum(
             UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
@@ -238,7 +238,7 @@ async def test_reset(seeded_random: random.Random) -> None:
     receiver._current_sync.next_message_id = uint64(1)
     receiver._current_sync.plots_processed = uint32(1)
     receiver._current_sync.plots_total = uint32(1)
-    receiver._current_sync.delta.valid.additions = receiver.plots().copy()
+    receiver._current_sync.delta.valid.additions = receiver.plot_records().copy()
     receiver._current_sync.delta.valid.removals = ["1"]
     receiver._current_sync.delta.invalid.additions = ["1"]
     receiver._current_sync.delta.invalid.removals = ["1"]

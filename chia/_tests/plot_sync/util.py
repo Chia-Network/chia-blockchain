@@ -16,6 +16,7 @@ from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.shared_protocol import Capability
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 
 
@@ -25,6 +26,7 @@ class WSChiaConnectionDummy:
     peer_node_id: bytes32
     peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
     last_sent_message: Message | None = None
+    peer_capabilities: list[Capability] | None = None
 
     async def send_message(self, message: Message) -> None:
         self.last_sent_message = message
@@ -32,9 +34,16 @@ class WSChiaConnectionDummy:
     def get_peer_logging(self) -> PeerInfo:
         return self.peer_info
 
+    def has_capability(self, capability: Capability) -> bool:
+        if self.peer_capabilities is None:
+            return False
+        return capability in self.peer_capabilities
 
-def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnectionDummy:
-    return WSChiaConnectionDummy(node_type, peer_id)
+
+def get_dummy_connection(
+    node_type: NodeType, peer_id: bytes32, peer_capabilities: list[Capability] | None = None
+) -> WSChiaConnectionDummy:
+    return WSChiaConnectionDummy(node_type, peer_id, peer_capabilities=peer_capabilities)
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:

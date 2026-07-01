@@ -22,6 +22,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncStart,
     PoolDifficulty,
     SignatureRequestSourceData,
@@ -797,6 +798,10 @@ class FarmerAPI:
     @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @metadata.request(peer_required=True)
+    async def plot_sync_loaded_v2(self, message: PlotSyncPlotListV2, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded_v2(message)
 
     @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:

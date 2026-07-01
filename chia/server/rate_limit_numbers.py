@@ -142,6 +142,7 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, RLSettings | Unlimited]] = {
         ProtocolMessageTypes.respond_plots: RLSettings(True, 10, 100 * 1024 * 1024),
         ProtocolMessageTypes.plot_sync_start: RLSettings(True, 1000, 100 * 1024 * 1024),
         ProtocolMessageTypes.plot_sync_loaded: RLSettings(True, 1000, 100 * 1024 * 1024),
+        ProtocolMessageTypes.plot_sync_loaded_v2: RLSettings(True, 1000, 100 * 1024 * 1024),
         ProtocolMessageTypes.plot_sync_removed: RLSettings(True, 1000, 100 * 1024 * 1024),
         ProtocolMessageTypes.plot_sync_invalid: RLSettings(True, 1000, 100 * 1024 * 1024),
         ProtocolMessageTypes.plot_sync_keys_missing: RLSettings(True, 1000, 100 * 1024 * 1024),
