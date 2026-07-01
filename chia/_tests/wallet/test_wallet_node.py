@@ -876,6 +876,60 @@ async def test_wallet_short_sync_backtrack_genesis_unanchored_skips_rollback() -
     assert cast(Any, node.wallet_state_manager.blockchain.add_block).await_count == 3
 
 
+def _coin_state_at_height(height: int) -> CoinState:
+    return CoinState(
+        Coin(bytes32(height.to_bytes(32, "big")), bytes32(b"\x00" * 32), uint64(1)),
+        uint32(height),
+        uint32(height),
+    )
+
+
+@pytest.mark.anyio
+async def test_sync_from_untrusted_close_to_peak_cleans_stale_fork_race_cache() -> None:
+    """After close-to-peak sync, race cache entries at the fork height must be
+    removed. They are never applied (apply loop starts at fork+1), so keeping
+    them causes stale state on the next peak. Regression test for PR 20993."""
+    fork_height = 10
+    new_peak_height = 12
+    node = make_backtrack_test_node(height=fork_height, has_peak=True)
+
+    peer = MagicMock()
+    peer.peer_node_id = bytes32(b"\xab" * 32)
+    peer.peer_info = MagicMock()
+    peer.peer_info.host = "race-cache.example"
+    node.synced_peers.add(peer.peer_node_id)
+
+    cache = node.get_cache_for_peer(peer)
+    fork_coin_state = _coin_state_at_height(fork_height)
+    apply_coin_states = [_coin_state_at_height(h) for h in range(fork_height + 1, new_peak_height + 1)]
+    cache.add_states_to_race_cache([fork_coin_state, *apply_coin_states])
+
+    new_peak_hb = MagicMock()
+    new_peak_hb.height = uint32(new_peak_height)
+    new_peak_hb.weight = uint128(50_000)
+
+    setattr(node, "wallet_short_sync_backtrack", AsyncMock(return_value=fork_height))
+    setattr(node, "add_states_from_peer", AsyncMock(return_value=True))
+
+    result = await node.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
+    assert result is True
+
+    applied_heights = [
+        max(
+            coin_state.created_height or 0,
+            coin_state.spent_height or 0,
+        )
+        for call in cast(Any, node.add_states_from_peer).await_args_list
+        for coin_state in call.args[0]
+    ]
+    assert applied_heights == [fork_height + 1, new_peak_height]
+
+    with pytest.raises(KeyError):
+        cache.get_race_cache(fork_height)
+    for height in range(fork_height + 1, new_peak_height + 1):
+        assert cache.get_race_cache(height) == {_coin_state_at_height(height)}
+
+
 @pytest.mark.anyio
 async def test_sync_from_untrusted_close_to_peak_returns_false_on_backtrack_cap() -> None:
     """sync_from_untrusted_close_to_peak must return False when
