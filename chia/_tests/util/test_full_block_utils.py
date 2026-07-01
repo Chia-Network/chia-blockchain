@@ -34,6 +34,8 @@ from chia.full_node.full_block_utils import (
     generator_from_block,
     get_height_and_tx_status_from_block,
     header_block_from_block,
+    skip_bytes,
+    skip_list,
     skip_reward_chain_block,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -136,6 +138,26 @@ def test_skip_reward_chain_block_handles_combined_optional_tag(has_icc: bool, ha
     )
     # The helper should consume exactly one serialized RewardChainBlock.
     assert len(skip_reward_chain_block(memoryview(bytes(reward_chain_block)))) == 0
+
+
+def test_skip_list_rejects_count_exceeding_remaining_buffer() -> None:
+    with pytest.raises(ValueError, match="list count 2 exceeds remaining buffer 1"):
+        skip_list(memoryview((2).to_bytes(4, "big") + b"\x00"), skip_bytes)
+
+
+def test_skip_list_rejects_short_count_prefix() -> None:
+    with pytest.raises(ValueError, match="list count prefix requires 4 bytes, remaining buffer 1"):
+        skip_list(memoryview(b"\x00"), skip_bytes)
+
+
+def test_skip_bytes_rejects_length_exceeding_remaining_buffer() -> None:
+    with pytest.raises(ValueError, match="byte length 4 exceeds remaining buffer 3"):
+        skip_bytes(memoryview((4).to_bytes(4, "big") + b"abc"))
+
+
+def test_skip_bytes_rejects_short_length_prefix() -> None:
+    with pytest.raises(ValueError, match="byte length prefix requires 4 bytes, remaining buffer 1"):
+        skip_bytes(memoryview(b"\x00"))
 
 
 def get_foliage_block_data() -> Iterator[FoliageBlockData]:
@@ -301,6 +323,41 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
                                                 gen,  # transactions_generator
                                                 refs_list,  # transactions_generator_ref_list
                                             )
+
+
+def test_block_info_from_block_rejects_refs_count_exceeding_remaining_buffer() -> None:
+    block_bytes = bytearray(bytes(next(get_full_blocks(0))))
+    block_bytes[-4:] = (1).to_bytes(4, "big")
+
+    with pytest.raises(ValueError, match="refs count 1 exceeds remaining buffer 0"):
+        block_info_from_block(memoryview(block_bytes))
+
+
+def test_block_info_from_block_rejects_short_refs_count_prefix() -> None:
+    block_bytes = bytearray(bytes(next(get_full_blocks(0))))
+    del block_bytes[-3:]
+
+    with pytest.raises(ValueError, match="refs count prefix requires 4 bytes, remaining buffer 1"):
+        block_info_from_block(memoryview(block_bytes))
+
+
+def test_cheap_parser_matches_round_tripped_block() -> None:
+    block = next(get_full_blocks(0))
+    block_bytes = memoryview(bytes(block))
+    round_tripped = FullBlock.from_bytes(block_bytes)
+
+    height, is_tx_block = get_height_and_tx_status_from_block(block_bytes)
+    assert height == round_tripped.height
+    assert is_tx_block == round_tripped.is_transaction_block()
+    assert generator_from_block(block_bytes) is None
+
+    block_info = block_info_from_block(block_bytes)
+    assert block_info.prev_header_hash == round_tripped.prev_header_hash
+    assert block_info.transactions_generator == round_tripped.transactions_generator
+    assert block_info.transactions_generator_ref_list == round_tripped.transactions_generator_ref_list
+
+    header_block = HeaderBlock.from_bytes(header_block_from_block(block_bytes))
+    assert header_block == get_block_header(round_tripped, None)
 
 
 @pytest.mark.anyio
