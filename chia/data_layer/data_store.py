@@ -944,6 +944,7 @@ class DataStore:
             await self.clear_store_roots(store_id=store_id)
             await self.create_tree(store_id=store_id, status=Status.COMMITTED)
         self.recent_merkle_blobs.clear()
+
     async def table_is_empty(self, store_id: bytes32) -> bool:
         tree_root = await self.get_tree_root(store_id=store_id)
 
