@@ -7,11 +7,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Self
 
-from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConfig
+from chia.pools.plotnft_drivers import PlotNFT, PlotNFTInnerPuzzle, PoolConfig, PoolReward, UserConfig
 from chia.types.blockchain_format.program import Program
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.conditions import Remark
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 
 DEFAULT_POOL_REWARDS_PER_CLAIM = 20
@@ -20,18 +21,21 @@ DEFAULT_POOL_REWARDS_PER_CLAIM = 20
 def _row_to_plotnft(row: Row, genesis_challenge: bytes32) -> PlotNFT:
     return PlotNFT(
         coin=Coin(parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])),
-        singleton_lineage_proof=LineageProof.from_bytes(row[4]),
-        launcher_id=bytes32(row[5]),
-        user_config=UserConfig(synthetic_pubkey=G1Element.from_bytes(row[6])),
-        pool_config=PoolConfig(
-            pool_puzzle_hash=bytes32(row[7]),
-            heightlock=uint32.from_bytes(row[8]),
-            pool_memoization=Program.from_bytes(row[9]),
-        )
-        if row[7:10] != (b"", b"", b"")
-        else None,
-        genesis_challenge=genesis_challenge,
-        exiting=False if row[10] == 0 else True,
+        lineage_proof=LineageProof.from_bytes(row[4]),
+        singleton_struct=SingletonStruct(launcher_id=bytes32(row[5])),
+        inner_puzzle=PlotNFTInnerPuzzle(
+            singleton_struct=SingletonStruct(launcher_id=bytes32(row[5])),
+            user_config=UserConfig(synthetic_pubkey=G1Element.from_bytes(row[6])),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=bytes32(row[7]),
+                heightlock=uint32.from_bytes(row[8]),
+                pool_memoization=Program.from_bytes(row[9]),
+            )
+            if row[7:10] != (b"", b"", b"")
+            else None,
+            genesis_challenge=genesis_challenge,
+            exiting=False if row[10] == 0 else True,
+        ),
         remarks=[Remark(Program.to(row[11]))] if row[11] is not None else [],
     )
 
@@ -96,12 +100,18 @@ class PlotNFTStore:
                     plotnft.coin.parent_coin_info,
                     plotnft.coin.puzzle_hash,
                     bytes(plotnft.coin.amount),
-                    bytes(plotnft.singleton_lineage_proof),
-                    plotnft.launcher_id,
-                    bytes(plotnft.user_config.synthetic_pubkey),
-                    plotnft.pool_config.pool_puzzle_hash if plotnft.pool_config is not None else b"",
-                    bytes(plotnft.pool_config.heightlock) if plotnft.pool_config is not None else b"",
-                    bytes(plotnft.pool_config.pool_memoization) if plotnft.pool_config is not None else b"",
+                    bytes(plotnft.lineage_proof),
+                    plotnft.singleton_struct.launcher_id,
+                    bytes(plotnft.inner_puzzle.user_config.synthetic_pubkey),
+                    plotnft.inner_puzzle.pool_config.pool_puzzle_hash
+                    if plotnft.inner_puzzle.pool_config is not None
+                    else b"",
+                    bytes(plotnft.inner_puzzle.pool_config.heightlock)
+                    if plotnft.inner_puzzle.pool_config is not None
+                    else b"",
+                    bytes(plotnft.inner_puzzle.pool_config.pool_memoization)
+                    if plotnft.inner_puzzle.pool_config is not None
+                    else b"",
                     plotnft.exiting,
                     str(plotnft.remarks[0].rest.atom, "utf8")
                     if len(plotnft.remarks) > 0 and plotnft.remarks[0].rest.atom is not None

@@ -13,12 +13,10 @@ from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_
 from chia.pools.plotnft_drivers import (
     GetNextPlotNFTError,
     PlotNFT,
-    PlotNFTPuzzle,
+    PlotNFTInnerPuzzle,
     PoolConfig,
     PoolReward,
     RewardPuzzle,
-    SingletonPuzzles,
-    SingletonStruct,
     UserConfig,
 )
 from chia.types.blockchain_format.program import Program, run
@@ -39,6 +37,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonStruct
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -138,7 +137,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         url_remark = Remark(rest=Program.to("url"))
         coin_spends = plotnft.join_pool(
-            user_config=plotnft.user_config,
+            user_config=plotnft.inner_puzzle.user_config,
             pool_config=PoolConfig(
                 pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
             ),
@@ -175,7 +174,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(quick_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
@@ -192,7 +191,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             puzzle=ACS,
             solution=Program.to(
                 [
-                    plotnft.exit_to_waiting_room_condition().to_program(),
+                    plotnft.inner_puzzle.exit_to_waiting_room_condition().to_program(),
                     SendMessage(
                         bytes32.zeros,
                         sender=MessageParticipant(parent_id_committed=bytes32.zeros),
@@ -201,7 +200,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 ]
             ),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(message_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
@@ -216,9 +215,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         # Leave honestly
         honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
-            solution=Program.to([plotnft.exit_to_waiting_room_condition().to_program()]),
+            solution=Program.to([plotnft.inner_puzzle.exit_to_waiting_room_condition().to_program()]),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             cost_logger.add_cost(
@@ -247,9 +246,11 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         # Return to self-pooling
         exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
-            solution=Program.to([cond.to_program() for cond in plotnft.exit_from_waiting_room_conditions()]),
+            solution=Program.to(
+                [cond.to_program() for cond in plotnft.inner_puzzle.exit_from_waiting_room_conditions()]
+            ),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
         timelocked_spend = WalletSpendBundle(
             coin_spends,
@@ -259,7 +260,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
-        for _ in range(plotnft.guaranteed_pool_config.heightlock):
+        for _ in range(plotnft.inner_puzzle.guaranteed_pool_config.heightlock):
             await sim.farm_block()
         result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -272,8 +273,8 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
 async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes32) -> PoolReward:
     reward_puzzle = RewardPuzzle(singleton_id=singleton_id)
-    await sim.farm_block(reward_puzzle.puzzle_hash())
-    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash())
+    await sim.farm_block(reward_puzzle.puzzle_hash)
+    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash)
     return PoolReward(
         coin=coin_1.coin if coin_1.coin.amount > coin_2.coin.amount else coin_2.coin,
         singleton_id=singleton_id,
@@ -359,7 +360,12 @@ async def test_plotnft_pooling_claim(
 
         # Make sure the pooling reward did what it was supposed to
         assert (
-            len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.guaranteed_pool_config.pool_puzzle_hash)) == 1
+            len(
+                await sim_client.get_coin_records_by_puzzle_hash(
+                    plotnft.inner_puzzle.guaranteed_pool_config.pool_puzzle_hash
+                )
+            )
+            == 1
         )
 
         # Make sure we can find the plotnft
@@ -368,18 +374,18 @@ async def test_plotnft_pooling_claim(
 
 def test_plotnft_errors() -> None:
     with pytest.raises(
-        ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
+        ValueError, match=re.escape("Cannot initialize a PlotNFTInnerPuzzle with an empty pool config and exiting=True")
     ):
-        PlotNFTPuzzle(
-            launcher_id=bytes32.zeros,
+        PlotNFTInnerPuzzle(
+            singleton_struct=SingletonStruct(launcher_id=bytes32.zeros),
             genesis_challenge=bytes32.zeros,
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=True,
         )
 
     with pytest.raises(ValueError, match=re.escape("Plot NFT is not pooling, cannot retrieve pool config")):
-        PlotNFTPuzzle(
-            launcher_id=bytes32.zeros,
+        PlotNFTInnerPuzzle(
+            singleton_struct=SingletonStruct(launcher_id=bytes32.zeros),
             genesis_challenge=bytes32.zeros,
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=False,
@@ -401,10 +407,10 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.singleton_puzzles.singleton_mod).curry(
+                Program.to(SingletonCorePuzzles().singleton_mod).curry(
                     SingletonStruct(
                         launcher_id=bytes32.zeros,
-                        singleton_puzzles=SingletonPuzzles(
+                        singleton_puzzles=SingletonCorePuzzles(
                             singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
                         ),
                     ).to_program()
@@ -416,7 +422,7 @@ def test_plotnft_errors() -> None:
 
     def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
         return UncurriedPuzzle(
-            mod=PlotNFT.singleton_puzzles.singleton_mod,
+            mod=SingletonCorePuzzles().singleton_mod,
             args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
         )
 
@@ -538,10 +544,10 @@ def test_plotnft_errors() -> None:
 
 def test_singleton_constructs() -> None:
     assert (
-        SingletonPuzzles(singleton_mod_hash_pre_computed=None).singleton_mod_hash
-        == SingletonPuzzles().singleton_mod_hash
+        SingletonCorePuzzles(singleton_mod_hash_pre_computed=None).singleton_mod_hash
+        == SingletonCorePuzzles().singleton_mod_hash
     )
     assert (
-        SingletonPuzzles(singleton_launcher_hash_pre_computed=None).singleton_launcher_hash
-        == SingletonPuzzles().singleton_launcher_hash
+        SingletonCorePuzzles(singleton_launcher_hash_pre_computed=None).singleton_launcher_hash
+        == SingletonCorePuzzles().singleton_launcher_hash
     )
