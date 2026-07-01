@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -44,18 +43,19 @@ from chia.wallet.wallet_request_types import (
     DIDType,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-async def get_wallet_num(wallet_manager):
-    return len(await wallet_manager.get_all_wallet_info_entries())
+async def get_wallet_num(wallet_state_manager: WalletStateManager) -> int:
+    return len(await wallet_state_manager.get_all_wallet_info_entries())
 
 
-def get_parent_num(did_wallet: DIDWallet):
+def get_parent_num(did_wallet: DIDWallet) -> int:
     return len(did_wallet.did_info.parent_info)
 
 
 async def make_did_wallet(
-    wallet_state_manager: Any,
+    wallet_state_manager: WalletStateManager,
     wallet: Wallet,
     amount: uint64,
     action_scope: WalletActionScope,
@@ -71,7 +71,7 @@ async def make_did_wallet(
 
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_create_new_did_wallet_failures_no_orphan(wallet_environments: WalletTestFramework):
+async def test_create_new_did_wallet_failures_no_orphan(wallet_environments: WalletTestFramework) -> None:
     """
     Regression test for https://github.com/Chia-Network/chia-blockchain/pull/20575
     create_new_did_wallet should not leave orphaned wallet records in failure paths.
@@ -190,7 +190,7 @@ async def test_creation_from_coin_spend(
         )
 
     with pytest.raises(RuntimeError):
-        assert await did_wallet_0.get_coin() == set()
+        await did_wallet_0.get_coin()
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1])
@@ -374,7 +374,7 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
+async def test_did_find_lost_did(wallet_environments: WalletTestFramework) -> None:
     env_0 = wallet_environments.environments[0]
     wallet_node_0 = env_0.node
     wallet_0 = env_0.xch_wallet
@@ -434,7 +434,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     await env_0.rpc_client.find_lost_did(DIDFindLostDID(coin_id=did_wallet_0.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -504,7 +504,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
-async def test_did_transfer(wallet_environments: WalletTestFramework):
+async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_node_0 = env_0.node
@@ -607,7 +607,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework):
     # Get the new DID wallet
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -696,7 +696,7 @@ async def test_did_auto_transfer_limit(
     # Get the new DID wallets
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -735,7 +735,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -745,7 +745,7 @@ async def test_did_auto_transfer_limit(
     await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -769,7 +769,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -779,7 +779,7 @@ async def test_did_auto_transfer_limit(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
-async def test_get_info(wallet_environments: WalletTestFramework):
+async def test_get_info(wallet_environments: WalletTestFramework) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_node_0 = env_0.node
@@ -925,7 +925,7 @@ async def test_get_info(wallet_environments: WalletTestFramework):
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_message_spend(wallet_environments: WalletTestFramework):
+async def test_message_spend(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -993,7 +993,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework):
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_update_metadata(wallet_environments: WalletTestFramework):
+async def test_update_metadata(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -1099,7 +1099,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework):
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_did_sign_message(wallet_environments: WalletTestFramework):
+async def test_did_sign_message(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
