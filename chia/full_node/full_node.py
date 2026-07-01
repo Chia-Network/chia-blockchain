@@ -53,6 +53,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
+from chia.full_node.compact_vdf_file import CompactVdfEntry, apply_compact_proof_to_block
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -61,6 +62,11 @@ from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.remote_compact_vdf import (
+    DEFAULT_REMOTE_COMPACT_VDF_BASE_URL,
+    apply_compact_vdf_entries,
+    fetch_remote_compact_vdf_entries,
+)
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -176,6 +182,22 @@ class FullNode:
     bad_peak_cache: dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: asyncio.Task[None] | None = None
     _bls_cache: BLSCache = dataclasses.field(default_factory=lambda: BLSCache(50000))
+
+    def remote_compact_vdf_base_url(self) -> str | None:
+        url = self.config.get("remote_compact_vdf_base_url", DEFAULT_REMOTE_COMPACT_VDF_BASE_URL)
+        if url is None or url == "":
+            return None
+        return str(url)
+
+    async def prefetch_remote_compact_vdf_entries(self, height: uint32) -> list[CompactVdfEntry] | None:
+        url = self.remote_compact_vdf_base_url()
+        if url is None:
+            return None
+        return await fetch_remote_compact_vdf_entries(url, height)
+
+    async def block_with_remote_compact_vdfs(self, block: FullBlock) -> FullBlock:
+        entries = await self.prefetch_remote_compact_vdf_entries(block.height)
+        return await apply_compact_vdf_entries(self.constants, block, entries, self.pool)
 
     @property
     def server(self) -> ChiaServer:
@@ -1400,6 +1422,9 @@ class FullNode:
 
                     first_batch = False
 
+                    for i in range(len(blocks_to_validate)):
+                        blocks_to_validate[i] = await self.block_with_remote_compact_vdfs(blocks_to_validate[i])
+
                     futures: list[Awaitable[PreValidationResult]] = []
                     for block in blocks_to_validate:
                         futures.extend(
@@ -2235,6 +2260,7 @@ class FullNode:
                 return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
+        block = await self.block_with_remote_compact_vdfs(block)
         async with (
             self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high),
             enable_profiler(self.profile_block_validation) as pr,
@@ -3246,36 +3272,7 @@ class FullNode:
         if block is None:
             return False
 
-        new_block = None
-
-        if field_vdf == CompressibleVDFField.CC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
-                    new_proofs = sub_slot.proofs.replace(challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
-                    break
-        if field_vdf == CompressibleVDFField.ICC_EOS_VDF:
-            for index, sub_slot in enumerate(block.finished_sub_slots):
-                if (
-                    sub_slot.infused_challenge_chain is not None
-                    and sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info
-                ):
-                    new_proofs = sub_slot.proofs.replace(infused_challenge_chain_slot_proof=vdf_proof)
-                    new_subslot = sub_slot.replace(proofs=new_proofs)
-                    new_finished_subslots = block.finished_sub_slots
-                    new_finished_subslots[index] = new_subslot
-                    new_block = block.replace(finished_sub_slots=new_finished_subslots)
-                    break
-        if field_vdf == CompressibleVDFField.CC_SP_VDF:
-            if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = block.replace(challenge_chain_sp_proof=vdf_proof)
-        if field_vdf == CompressibleVDFField.CC_IP_VDF:
-            if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
-                new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
+        new_block = apply_compact_proof_to_block(block, vdf_info, vdf_proof, field_vdf)
         if new_block is None:
             return False
         async with self.db_wrapper.writer():

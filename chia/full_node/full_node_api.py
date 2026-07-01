@@ -1756,65 +1756,16 @@ class FullNodeAPI:
     async def new_compact_vdf(
         self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection, request_bytes: bytes = b""
     ) -> None:
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-
-        name = std_hash(request_bytes)
-        if name in self.full_node.compact_vdf_requests:
-            self.log.debug("Ignoring NewCompactVDF, already requested: %s %s", peer.get_peer_logging(), request)
-            return None
-        self.full_node.compact_vdf_requests.add(name)
-
-        # this semaphore will only allow a limited number of tasks call
-        # new_compact_vdf() at a time, since it can be expensive
-        try:
-            async with self.full_node.compact_vdf_sem.acquire():
-                try:
-                    await self.full_node.new_compact_vdf(request, peer)
-                finally:
-                    self.full_node.compact_vdf_requests.remove(name)
-        except LimitedSemaphoreFullError:
-            self.full_node.compact_vdf_requests.discard(name)
-            self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
-            return None
-
         return None
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
     async def request_compact_vdf(
         self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection
     ) -> Message | None:
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        vdf_proof = await self.full_node.request_compact_vdf(request, peer.peer_node_id)
-        if vdf_proof is None:
-            return None
-        return make_msg(
-            ProtocolMessageTypes.respond_compact_vdf,
-            full_node_protocol.RespondCompactVDF(
-                height=request.height,
-                header_hash=request.header_hash,
-                field_vdf=request.field_vdf,
-                vdf_info=request.vdf_info,
-                vdf_proof=vdf_proof,
-            ),
-        )
+        return None
 
     @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
-        request_key = full_node_protocol.RequestCompactVDF(
-            request.height, request.header_hash, request.field_vdf, request.vdf_info
-        ).get_hash()
-        if request_key not in peer.pending_compact_vdfs:
-            if not self.is_trusted(peer):
-                await peer.ban_peer_bad_protocol("Received unsolicited RespondCompactVDF")
-                return None
-        else:
-            peer.pending_compact_vdfs.remove(request_key)
-
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        await self.full_node.add_compact_vdf(request, peer)
         return None
 
     @metadata.request(

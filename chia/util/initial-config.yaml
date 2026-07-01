@@ -406,6 +406,10 @@ full_node:
   send_uncompact_interval: 0
   # At every 'send_uncompact_interval' seconds, send blueboxes 'target_uncompact_proofs' proofs to be normalized.
   target_uncompact_proofs: 100
+  # Before validating a block, fetch compact VDF proofs from this URL prefix.
+  # Files are named {url}-{height_start}to{height_end} in 10000-block ranges.
+  # Set to empty string to disable.
+  remote_compact_vdf_base_url: https://www.xchos.com/vdfs
   # Setting this flag as True, blueboxes will sanitize only data needed in weight proof calculation, as opposed to whole blocks.
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False

@@ -12,6 +12,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.full_node.compact_vdf_file import is_fully_compactified_header_block
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -125,7 +126,7 @@ class BlockStore:
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
                 (
                     block_bytes,
-                    int(block.is_fully_compactified()),
+                    int(is_fully_compactified_header_block(block)),
                     header_hash,
                 ),
             )
@@ -154,7 +155,7 @@ class BlockStore:
                     block.prev_header_hash,
                     block.height,
                     ses,
-                    int(block.is_fully_compactified()),
+                    int(is_fully_compactified_header_block(block)),
                     False,  # in_main_chain
                     compress(block),
                     bytes(block_record),
