@@ -24,14 +24,14 @@ if TYPE_CHECKING:
 T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class WalletProtocol(Protocol[T_contra]):
+class WalletProtocol(Protocol):
     @classmethod
     def type(cls) -> WalletType: ...
 
     def id(self) -> uint32: ...
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: T_contra | None
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None
     ) -> None: ...
 
     async def select_coins(

@@ -249,7 +249,7 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
-async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol[Any]) -> None:
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
     expected_balance = await wallet_node.get_balance(wallet.id())
     expected_balance_dict = expected_balance.to_json_dict()
     expected_balance_dict.setdefault("pending_approval_balance", None)

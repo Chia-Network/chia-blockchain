@@ -108,7 +108,7 @@ class DataLayerSummary(Streamable):
 class DataLayerWallet:
     if TYPE_CHECKING:
         # TODO Create DataLayer coin data model if necessary
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("DataLayerWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("DataLayerWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger

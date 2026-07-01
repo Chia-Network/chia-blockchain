@@ -35,7 +35,7 @@ class PlotNFT2Wallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("PlotNFT2Wallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("PlotNFT2Wallet", None)
 
     wallet_state_manager: WalletStateManager
     xch_wallet: Wallet

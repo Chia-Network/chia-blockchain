@@ -22,7 +22,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 # Furthermore the wallet will act mainly as a sentinel for CoinRecords that are related to the remote wallet.
 class RemoteWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("RemoteWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("RemoteWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
