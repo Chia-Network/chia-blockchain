@@ -3,16 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Protocol
 
 import pytest
-from aiohttp import (
-    ClientSession,
-    ClientTimeout,
-    WSCloseCode,
-    WSMsgType,
-    WSServerHandshakeError,
-)
+from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint64
 
@@ -42,17 +35,6 @@ from chia.wallet.wallet_node import WalletNode
 log = logging.getLogger(__name__)
 
 
-class WsMessageLike(Protocol):
-    @property
-    def type(self) -> WSMsgType: ...
-
-    @property
-    def data(self) -> Any: ...
-
-    @property
-    def extra(self) -> str | None: ...
-
-
 def not_localhost(host: str) -> bool:
     return False
 
@@ -70,7 +52,7 @@ async def send_handshake_and_assert_protocol_error(
     self_hostname: str,
     payload: Handshake | bytes,
     message_type: int = ProtocolMessageTypes.handshake.value,
-) -> WsMessageLike:
+) -> WSMessage:
     server_1.invalid_protocol_ban_seconds = 10
     timeout = ClientTimeout(total=5)
     async with ClientSession(timeout=timeout) as session:
@@ -135,11 +117,7 @@ class TestDos:
         async with (
             ClientSession(timeout=timeout) as session,
             session.ws_connect(
-                url,
-                autoclose=True,
-                autoping=True,
-                ssl=ssl_context,
-                max_msg_size=100 * 1024 * 1024,
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             ) as ws,
         ):
             large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
@@ -147,7 +125,7 @@ class TestDos:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
                 await ws.send_bytes(large_msg)
 
-                response = await ws.receive()
+                response: WSMessage = await ws.receive()
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
             print(response)
@@ -174,18 +152,14 @@ class TestDos:
         async with (
             ClientSession(timeout=timeout) as session,
             session.ws_connect(
-                url,
-                autoclose=True,
-                autoping=True,
-                ssl=ssl_context,
-                max_msg_size=100 * 1024 * 1024,
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             ) as ws,
         ):
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
                 await ws.send_bytes(bytes([1] * 1024))
 
-                response = await ws.receive()
+                response: WSMessage = await ws.receive()
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
             print(response)
