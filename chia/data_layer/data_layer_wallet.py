@@ -955,7 +955,7 @@ class DataLayerWallet:
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
     async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
@@ -964,7 +964,7 @@ class DataLayerWallet:
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
     def get_name(self) -> str:
