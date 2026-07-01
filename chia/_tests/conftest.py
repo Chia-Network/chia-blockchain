@@ -1078,7 +1078,7 @@ async def get_b_tools(get_temp_keyring, testrun_uid):
 @pytest.fixture(scope="function")
 async def daemon_connection_and_temp_keychain(
     get_b_tools: BlockTools,
-) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse[bool], Keychain]]:
+) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
     async with setup_daemon(btools=get_b_tools) as daemon:
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:

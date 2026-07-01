@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
-import math
-import os
-import socket
-import struct
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import ClassVar, cast
@@ -44,48 +39,6 @@ from chia.util.task_referencer import create_referenced_task
 from chia.wallet.start_wallet import create_wallet_service
 
 
-async def _send_masked_websocket_binary_frame_slowly(
-    host: str,
-    port: int,
-    payload: bytes,
-    *,
-    chunk_size: int,
-    chunk_delay: float,
-) -> None:
-    reader, writer = await asyncio.open_connection(host, port)
-    try:
-        key = base64.b64encode(os.urandom(16)).decode("ascii")
-        writer.write(
-            (
-                "GET /ws HTTP/1.1\r\n"
-                f"Host: {host}:{port}\r\n"
-                "Upgrade: websocket\r\n"
-                "Connection: Upgrade\r\n"
-                f"Sec-WebSocket-Key: {key}\r\n"
-                "Sec-WebSocket-Version: 13\r\n"
-                "\r\n"
-            ).encode("ascii")
-        )
-        await writer.drain()
-
-        response_headers = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=5)
-        assert response_headers.startswith(b"HTTP/1.1 101 "), response_headers.decode("ascii", errors="replace")
-
-        mask = os.urandom(4)
-        writer.write(bytes([0x82, 0x80 | 127]) + struct.pack("!Q", len(payload)) + mask)
-        await writer.drain()
-
-        for offset in range(0, len(payload), chunk_size):
-            chunk = payload[offset : offset + chunk_size]
-            masked_chunk = bytes(byte ^ mask[(offset + index) % 4] for index, byte in enumerate(chunk))
-            writer.write(masked_chunk)
-            await writer.drain()
-            await asyncio.sleep(chunk_delay)
-    finally:
-        writer.close()
-        await writer.wait_closed()
-
-
 @dataclass
 class TestAPI:
     log: logging.Logger = logging.getLogger(__name__)
@@ -98,59 +51,6 @@ class TestAPI:
     @metadata.request()
     async def request_transaction(self, request: RequestTransaction) -> None:
         raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
-
-
-@pytest.mark.anyio
-async def test_aiohttp_websocket_heartbeat_survives_slow_large_frame() -> None:
-    received_messages: list[aiohttp.WSMessage] = []
-    message_received = asyncio.Event()
-    heartbeat = 0.2
-
-    async def websocket_handler(request: aiohttp.web.Request) -> aiohttp.web.WebSocketResponse:
-        ws = aiohttp.web.WebSocketResponse(heartbeat=heartbeat, max_msg_size=1024 * 1024)
-        await ws.prepare(request)
-
-        received_messages.append(await ws.receive())
-        message_received.set()
-        await ws.close()
-        return ws
-
-    app = aiohttp.web.Application()
-    app.router.add_get("/ws", websocket_handler)
-    runner = aiohttp.web.AppRunner(app)
-    await runner.setup()
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(("127.0.0.1", 0))
-    server_socket.listen(128)
-    server_socket.setblocking(False)
-    port = server_socket.getsockname()[1]
-
-    site = aiohttp.web.SockSite(runner, server_socket)
-    await site.start()
-
-    try:
-        payload = b"slow websocket frame" * 4096
-        chunk_size = 4096
-        chunk_delay = 0.04
-        expected_send_time = math.ceil(len(payload) / chunk_size) * chunk_delay
-        assert expected_send_time > heartbeat + heartbeat / 2
-
-        await _send_masked_websocket_binary_frame_slowly(
-            "127.0.0.1",
-            port,
-            payload,
-            chunk_size=chunk_size,
-            chunk_delay=chunk_delay,
-        )
-        await asyncio.wait_for(message_received.wait(), timeout=3)
-    finally:
-        await runner.cleanup()
-
-    assert len(received_messages) == 1
-    message = received_messages[0]
-    assert message.type == aiohttp.WSMsgType.BINARY
-    assert message.data == payload
 
 
 @pytest.mark.anyio
