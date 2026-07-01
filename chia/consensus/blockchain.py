@@ -725,6 +725,16 @@ class Blockchain:
         if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
+        # TODO: todo_v2_plots allow version 1 after the hard fork activates
+        # block_height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+        # if block.version == 1:
+        #     if block_height < self.constants.HARD_FORK2_HEIGHT:
+        #         return None, Err.INVALID_BLOCK_VERSION
+        # elif block.version != 0:
+        #     return None, Err.INVALID_BLOCK_VERSION
+        if block.version != 0:
+            return None, Err.INVALID_BLOCK_VERSION
+
         prev_tx_height = pre_sp_tx_block_height(
             constants=self.constants,
             blocks=self,

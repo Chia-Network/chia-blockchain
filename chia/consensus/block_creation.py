@@ -405,6 +405,8 @@ def create_unfinished_block(
         transactions_info,
         new_block_gen.program if new_block_gen else None,
         new_block_gen.block_refs if new_block_gen else [],
+        None,
+        uint8(0),
     )
 
 
@@ -499,6 +501,7 @@ def unfinished_block_to_full_block(
             foliage_transaction_block_hash=new_fbh,
             foliage_transaction_block_signature=new_fbs,
         )
+    new_generator_buffer = unfinished_block.transactions_generator_buffer if is_transaction_block else None
     ret = FullBlock(
         finished_sub_slots,
         reward_chain_block,
@@ -512,6 +515,8 @@ def unfinished_block_to_full_block(
         new_tx_info,
         new_generator,
         new_generator_ref_list,
+        new_generator_buffer,
+        unfinished_block.version,
     )
     return ret
 

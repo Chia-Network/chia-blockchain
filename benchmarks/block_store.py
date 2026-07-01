@@ -196,6 +196,8 @@ async def run_add_block_benchmark(version: int) -> None:
                 transactions_info,
                 SerializedProgram.from_bytes(clvm_generator) if is_transaction else None,  # transactions_generator
                 [],  # transactions_generator_ref_list
+                None,
+                uint8(0),
             )
 
             header_hash = full_block.header_hash

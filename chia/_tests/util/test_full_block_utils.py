@@ -300,6 +300,8 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
                                                 transactions_info,
                                                 gen,  # transactions_generator
                                                 refs_list,  # transactions_generator_ref_list
+                                                None,
+                                                uint8(0),
                                             )
 
 

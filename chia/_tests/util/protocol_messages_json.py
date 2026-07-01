@@ -609,6 +609,8 @@ respond_blocks_json: dict[str, Any] = {
             },
             "transactions_generator": "0xff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080",
             "transactions_generator_ref_list": [2456207540],
+            "transactions_generator_buffer": None,
+            "version": 0,
         },
         {
             "finished_sub_slots": [
@@ -790,6 +792,8 @@ respond_blocks_json: dict[str, Any] = {
             },
             "transactions_generator": "0xff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080",
             "transactions_generator_ref_list": [2456207540],
+            "transactions_generator_buffer": None,
+            "version": 0,
         },
     ],
 }
@@ -977,6 +981,8 @@ respond_block_json: dict[str, Any] = {
         },
         "transactions_generator": "0xff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080",
         "transactions_generator_ref_list": [2456207540],
+        "transactions_generator_buffer": None,
+        "version": 0,
     }
 }
 
@@ -1129,6 +1135,8 @@ respond_unfinished_block_json: dict[str, Any] = {
         },
         "transactions_generator": "0xff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080",
         "transactions_generator_ref_list": [1862532955],
+        "transactions_generator_buffer": None,
+        "version": 0,
     }
 }
 
