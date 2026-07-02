@@ -1,5 +1,11 @@
 line-length = 120
 
+# Vendored third-party code is kept as-is and exempt from our lint rules.
+# force-exclude ensures these paths are skipped even when passed explicitly
+# (e.g. by pre-commit, which invokes ruff with a list of filenames).
+extend-exclude = ["chia/_vendored"]
+force-exclude = true
+
 [lint]
 preview = true
 select = ["ALL"]

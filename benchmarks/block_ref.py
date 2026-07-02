@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
-import aiosqlite
 import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia._vendored import aiosqlite
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

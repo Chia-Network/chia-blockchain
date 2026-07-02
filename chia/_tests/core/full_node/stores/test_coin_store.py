@@ -4,7 +4,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-import aiosqlite
 import pytest
 from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
@@ -14,6 +13,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.coin_store import add_coin_records_to_db
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.misc import Marks, datacases
+from chia._vendored import aiosqlite
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward

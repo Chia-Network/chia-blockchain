@@ -15,11 +15,11 @@ from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
-import aiosqlite
 from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
+from chia._vendored import aiosqlite
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict

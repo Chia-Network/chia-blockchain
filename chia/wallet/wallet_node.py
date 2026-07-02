@@ -13,12 +13,12 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, overload
 
-import aiosqlite
 from chia_rs import AugSchemeMPL, CoinState, ConsensusConstants, G1Element, G2Element, HeaderBlock, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from packaging.version import Version
 
+from chia._vendored import aiosqlite
 from chia.consensus.blockchain import AddBlockResult
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI

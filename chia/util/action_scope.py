@@ -5,9 +5,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Generic, Protocol, TypeVar
 
-import aiosqlite
 from typing_extensions import Self
 
+from chia._vendored import aiosqlite
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 
 
