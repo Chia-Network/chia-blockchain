@@ -10,8 +10,8 @@ from chia.util.streamable import Streamable, streamable
 
 protocol_version = {
     NodeType.FULL_NODE: "0.0.36",
-    NodeType.HARVESTER: "0.0.37",
-    NodeType.FARMER: "0.0.37",
+    NodeType.HARVESTER: "0.0.38",
+    NodeType.FARMER: "0.0.38",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
     NodeType.WALLET: "0.0.38",
@@ -66,9 +66,6 @@ _capabilities: list[tuple[uint16, str]] = [
 ]
 _mempool_updates = [
     (uint16(Capability.MEMPOOL_UPDATES.value), "1"),
-]
-_rate_limits_v3 = [
-    (uint16(Capability.RATE_LIMITS_V3.value), "1"),
 ]
 
 default_capabilities = {
