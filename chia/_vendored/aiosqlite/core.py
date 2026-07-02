@@ -29,23 +29,23 @@ LOG = logging.getLogger("aiosqlite")
 IsolationLevel = Optional[Literal["DEFERRED", "IMMEDIATE", "EXCLUSIVE"]]
 
 
-def set_result(fut: asyncio.Future, result: Any) -> None:
+def set_result(fut: asyncio.Future[Any], result: Any) -> None:
     """Set the result of a future if it hasn't been set already."""
     if not fut.done():
         fut.set_result(result)
 
 
-def set_exception(fut: asyncio.Future, e: BaseException) -> None:
+def set_exception(fut: asyncio.Future[Any], e: BaseException) -> None:
     """Set the exception of a future if it hasn't been set already."""
     if not fut.done():
         fut.set_exception(e)
 
 
 _STOP_RUNNING_SENTINEL = object()
-_TxQueue = SimpleQueue[tuple[Optional[asyncio.Future], Callable[[], Any]]]
+_TxQueue = SimpleQueue[tuple[Optional[asyncio.Future[Any]], Callable[[], Any]]]
 
 
-def _connection_worker_thread(tx: _TxQueue):
+def _connection_worker_thread(tx: _TxQueue) -> None:
     """
     Execute function calls on a separate thread.
 
@@ -95,7 +95,7 @@ class Connection:
                 DeprecationWarning,
             )
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._connection is None:
             return
 
@@ -113,11 +113,11 @@ class Connection:
         # be finalized by its own __del__.
         self.stop()
 
-    def stop(self) -> Optional[asyncio.Future]:
+    def stop(self) -> Optional[asyncio.Future[Any]]:
         """Stop the background thread. Prefer `async with` or `await close()`"""
         self._running = False
 
-        def close_and_stop():
+        def close_and_stop() -> object:
             if self._connection is not None:
                 self._connection.close()
                 self._connection = None
@@ -141,13 +141,13 @@ class Connection:
     def _execute_insert(self, sql: str, parameters: Any) -> Optional[sqlite3.Row]:
         cursor = self._conn.execute(sql, parameters)
         cursor.execute("SELECT last_insert_rowid()")
-        return cursor.fetchone()
+        return cursor.fetchone()  # type: ignore[no-any-return]
 
     def _execute_fetchall(self, sql: str, parameters: Any) -> Iterable[sqlite3.Row]:
         cursor = self._conn.execute(sql, parameters)
         return cursor.fetchall()
 
-    async def _execute(self, fn, *args, **kwargs):
+    async def _execute(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Queue a function with the given arguments for execution."""
         if not self._running or not self._connection:
             raise ValueError("Connection closed")
@@ -180,7 +180,7 @@ class Connection:
     async def __aenter__(self) -> "Connection":
         return await self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
     @contextmanager
@@ -230,7 +230,7 @@ class Connection:
         """Helper to insert and get the last_insert_rowid."""
         if parameters is None:
             parameters = []
-        return await self._execute(self._execute_insert, sql, parameters)
+        return await self._execute(self._execute_insert, sql, parameters)  # type: ignore[no-any-return]
 
     @contextmanager
     async def execute_fetchall(
@@ -239,7 +239,7 @@ class Connection:
         """Helper to execute a query and return all the data."""
         if parameters is None:
             parameters = []
-        return await self._execute(self._execute_fetchall, sql, parameters)
+        return await self._execute(self._execute_fetchall, sql, parameters)  # type: ignore[no-any-return]
 
     @contextmanager
     async def executemany(
@@ -260,7 +260,7 @@ class Connection:
         return self._conn.interrupt()
 
     async def create_function(
-        self, name: str, num_params: int, func: Callable, deterministic: bool = False
+        self, name: str, num_params: int, func: Callable[..., Any], deterministic: bool = False
     ) -> None:
         """
         Create user-defined function that can be later used
@@ -295,7 +295,7 @@ class Connection:
 
     @property
     def row_factory(self) -> Optional[type]:
-        return self._conn.row_factory
+        return self._conn.row_factory  # type: ignore[return-value]
 
     @row_factory.setter
     def row_factory(self, factory: Optional[type]) -> None:
@@ -303,7 +303,7 @@ class Connection:
 
     @property
     def text_factory(self) -> Callable[[bytes], Any]:
-        return self._conn.text_factory
+        return self._conn.text_factory  # type: ignore[no-any-return]
 
     @text_factory.setter
     def text_factory(self, factory: Callable[[bytes], Any]) -> None:
@@ -314,17 +314,17 @@ class Connection:
         return self._conn.total_changes
 
     async def enable_load_extension(self, value: bool) -> None:
-        await self._execute(self._conn.enable_load_extension, value)  # type: ignore
+        await self._execute(self._conn.enable_load_extension, value)
 
-    async def load_extension(self, path: str):
-        await self._execute(self._conn.load_extension, path)  # type: ignore
+    async def load_extension(self, path: str) -> None:
+        await self._execute(self._conn.load_extension, path)
 
     async def set_progress_handler(
         self, handler: Callable[[], Optional[int]], n: int
     ) -> None:
         await self._execute(self._conn.set_progress_handler, handler, n)
 
-    async def set_trace_callback(self, handler: Callable) -> None:
+    async def set_trace_callback(self, handler: Callable[..., Any]) -> None:
         await self._execute(self._conn.set_trace_callback, handler)
 
     async def set_authorizer(
@@ -381,9 +381,9 @@ class Connection:
                 ...
 
         """
-        dump_queue: Queue = Queue()
+        dump_queue: Queue[Optional[str]] = Queue()
 
-        def dumper():
+        def dumper() -> None:
             try:
                 for line in self._conn.iterdump():
                     dump_queue.put_nowait(line)
@@ -443,7 +443,7 @@ class Connection:
 def connect(
     database: Union[str, Path],
     *,
-    iter_chunk_size=64,
+    iter_chunk_size: int = 64,
     loop: Optional[asyncio.AbstractEventLoop] = None,
     **kwargs: Any,
 ) -> Connection:
@@ -463,6 +463,6 @@ def connect(
         else:
             loc = str(database)
 
-        return sqlite3.connect(loc, **kwargs)
+        return sqlite3.connect(loc, **kwargs)  # type: ignore[no-any-return]
 
     return Connection(connector, iter_chunk_size)
