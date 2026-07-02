@@ -102,14 +102,17 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
+    compute_plot_group_id,
     generate_plot_public_key,
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
     num_phase_out_epochs,
     passes_plot_filter,
+    passes_plot_filter_v2,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -161,7 +164,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
-    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(1),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(0),
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -1047,6 +1050,14 @@ class BlockTools:
                         sp_index=uint8(signage_point_index),
                         finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
+                    filter_challenge = get_filter_challenge(
+                        constants,
+                        blocks,
+                        finished_sub_slots_at_ip,
+                        latest_block.header_hash,
+                        slot_cc_challenge,
+                        signage_point_index,
+                    )
 
                     qualified_proofs: list[tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                         constants,
@@ -1057,6 +1068,8 @@ class BlockTools:
                         sub_slot_iters,
                         curr.height,
                         prev_tx_height,
+                        filter_challenge=filter_challenge,
+                        signage_point_index=signage_point_index,
                         force_plot_id=force_plot_id,
                     )
 
@@ -1177,6 +1190,7 @@ class BlockTools:
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
+                        finished_sub_slots_at_sp = []
                         finished_sub_slots_at_ip = []
                         # Reset pending_ses when a new block is created
                         pending_ses = False
@@ -1382,6 +1396,14 @@ class BlockTools:
                         sp_index=uint8(signage_point_index),
                         finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
+                    filter_challenge = get_filter_challenge(
+                        constants,
+                        blocks,
+                        finished_sub_slots_at_ip,
+                        latest_block.header_hash,
+                        slot_cc_challenge,
+                        signage_point_index,
+                    )
 
                     qualified_proofs = self.get_pospaces_for_challenge(
                         constants,
@@ -1392,6 +1414,8 @@ class BlockTools:
                         sub_slot_iters,
                         curr.height,
                         prev_tx_height,
+                        filter_challenge=filter_challenge,
+                        signage_point_index=signage_point_index,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1504,6 +1528,7 @@ class BlockTools:
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
+                        finished_sub_slots_at_sp = []
                         finished_sub_slots_at_ip = []
                         # Reset pending_ses when a new block is created
                         pending_ses = False
@@ -1571,6 +1596,15 @@ class BlockTools:
                     constants.SUB_SLOT_ITERS_STARTING,
                     uint32(0),
                     uint32(0),
+                    filter_challenge=get_filter_challenge(
+                        constants,
+                        {},
+                        finished_sub_slots,
+                        None,
+                        cc_challenge,
+                        signage_point_index,
+                    ),
+                    signage_point_index=signage_point_index,
                 )
 
                 # Try each of the proofs of space
@@ -1728,6 +1762,8 @@ class BlockTools:
         height: uint32,
         prev_tx_height: uint32,
         force_plot_id: bytes32 | None = None,
+        filter_challenge: bytes32 | None = None,
+        signage_point_index: int | None = None,
     ) -> list[tuple[uint64, ProofOfSpace]]:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
@@ -1739,9 +1775,6 @@ class BlockTools:
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
-                continue
-            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
-            if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
             if plot_info.prover.get_version() == PlotVersion.V2:
@@ -1757,12 +1790,39 @@ class BlockTools:
                     continue
                 if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
                     self.log.warn(
-                        f"Plot strength ({plot_info.prover.get_strength()}) too high, "
-                        f"cannot be used for farming: {plot_info.prover.get_filename()}"
+                        f"Plot strength ({plot_info.prover.get_strength()}) exceeds max "
+                        f"({constants.MAX_PLOT_STRENGTH}): {plot_info.prover.get_filename()}"
                     )
                     continue
-            elif prev_tx_height >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS:
-                continue
+                if filter_challenge is None or signage_point_index is None:
+                    continue
+                pool_info = (
+                    plot_info.pool_contract_puzzle_hash
+                    if plot_info.pool_contract_puzzle_hash is not None
+                    else plot_info.pool_public_key
+                )
+                assert pool_info is not None
+                plot_param = plot_info.prover.get_param()
+                assert plot_param.strength_v2 is not None
+                plot_group_id = compute_plot_group_id(
+                    plot_info.prover.get_strength(), plot_info.plot_public_key, pool_info
+                )
+                group_strength = calculate_plot_filter_bits(prev_tx_height, constants, plot_param.strength_v2)
+                if not passes_plot_filter_v2(
+                    plot_group_id,
+                    plot_param.meta_group,
+                    group_strength,
+                    filter_challenge,
+                    signage_point_index,
+                ):
+                    continue
+            else:
+                # V1 plots: prefix-bits filter + phase-out check
+                prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
+                if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
+                    continue
+                if prev_tx_height >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS:
+                    continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
@@ -2001,6 +2061,43 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
+def get_filter_challenge(
+    constants: ConsensusConstants,
+    blocks: dict[bytes32, BlockRecord],
+    finished_sub_slots: list[EndOfSubSlotBundle],
+    prev_header_hash: bytes32 | None,
+    current_challenge: bytes32,
+    signage_point_index: int,
+    window_size: int = 16,
+) -> bytes32 | None:
+    window_start = (signage_point_index // window_size) * window_size
+    sub_slots_back = 2 if window_start == 0 else 1
+
+    reversed_challenges = [sub_slot.challenge_chain.get_hash() for sub_slot in reversed(finished_sub_slots)]
+    if prev_header_hash is not None:
+        curr = blocks[prev_header_hash]
+        while True:
+            if curr.first_in_sub_slot:
+                assert curr.finished_challenge_slot_hashes is not None
+                reversed_challenges.extend(reversed(curr.finished_challenge_slot_hashes))
+            if curr.height == 0:
+                break
+            if len(reversed_challenges) > sub_slots_back + 3:
+                break
+            curr = blocks[curr.prev_hash]
+
+    reversed_challenges.append(constants.GENESIS_CHALLENGE)
+    try:
+        challenge_index = reversed_challenges.index(current_challenge)
+    except ValueError:
+        return None
+
+    target_index = challenge_index + sub_slots_back
+    if target_index >= len(reversed_challenges):
+        return None
+    return reversed_challenges[target_index]
+
+
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
     root_dir = DEFAULT_ROOT_PATH.parent
     if not automated_testing:  # make sure we don't accidentally stack directories.
@@ -2054,6 +2151,14 @@ def load_block_list(
             sp_index=full_block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(full_block.finished_sub_slots),
         )
+        filter_challenge = get_filter_challenge(
+            constants,
+            blocks,
+            list(full_block.finished_sub_slots),
+            None if full_block.height == 0 else full_block.prev_header_hash,
+            full_block.reward_chain_block.pos_ss_cc_challenge_hash,
+            full_block.reward_chain_block.signage_point_index,
+        )
         required_iters = validate_pospace_and_get_required_iters(
             constants,
             full_block.reward_chain_block.proof_of_space,
@@ -2062,6 +2167,8 @@ def load_block_list(
             full_block.height,
             uint64(difficulty),
             prev_transaction_b_height,
+            filter_challenge=filter_challenge,
+            signage_point_index=full_block.reward_chain_block.signage_point_index,
         )
         assert required_iters is not None
 
