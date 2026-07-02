@@ -19,17 +19,17 @@ class Result(AbstractAsyncContextManager[_T], Coroutine[Any, Any, _T]):
         self._coro = coro
         self._obj: _T
 
-    def send(self, value) -> None:
-        return self._coro.send(value)
+    def send(self, value: Any) -> None:
+        return self._coro.send(value)  # type: ignore[no-any-return]
 
-    def throw(self, typ, val=None, tb=None) -> None:
+    def throw(self, typ: Any, val: Any = None, tb: Any = None) -> None:
         if val is None:
-            return self._coro.throw(typ)
+            return self._coro.throw(typ)  # type: ignore[no-any-return]
 
         if tb is None:
-            return self._coro.throw(typ, val)
+            return self._coro.throw(typ, val)  # type: ignore[no-any-return]
 
-        return self._coro.throw(typ, val, tb)
+        return self._coro.throw(typ, val, tb)  # type: ignore[no-any-return]
 
     def close(self) -> None:
         return self._coro.close()
@@ -41,7 +41,7 @@ class Result(AbstractAsyncContextManager[_T], Coroutine[Any, Any, _T]):
         self._obj = await self._coro
         return self._obj
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         if isinstance(self._obj, Cursor):
             await self._obj.close()
 
@@ -50,7 +50,7 @@ def contextmanager(
     method: Callable[..., Coroutine[Any, Any, _T]],
 ) -> Callable[..., Result[_T]]:
     @wraps(method)
-    def wrapper(self, *args, **kwargs) -> Result[_T]:
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Result[_T]:
         return Result(method(self, *args, **kwargs))
 
     return wrapper
