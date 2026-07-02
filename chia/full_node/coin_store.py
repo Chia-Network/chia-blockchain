@@ -8,11 +8,11 @@ from collections.abc import Collection
 from typing import Any, ClassVar
 
 import typing_extensions
-from aiosqlite import Cursor
 from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._vendored.aiosqlite import Cursor
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.batches import to_batches

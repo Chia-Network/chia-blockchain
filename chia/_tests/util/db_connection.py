@@ -5,8 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import aiosqlite
-
+from chia._vendored import aiosqlite
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 
 

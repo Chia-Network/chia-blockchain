@@ -14,10 +14,10 @@ from pathlib import Path
 from types import FrameType
 from typing import Any
 
-import aiosqlite
 import dns.asyncresolver
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
+from chia._vendored import aiosqlite
 from chia.seeder.crawl_store import CrawlStore
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_service_logging
