@@ -12,14 +12,19 @@ from chia_rs.sized_ints import uint8, uint32
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
+    calculate_plot_filter_bits,
     calculate_prefix_bits,
     check_plot_param,
+    compute_plot_group_id,
     is_v1_phased_out,
     make_pos,
     num_phase_out_epochs,
     passes_plot_filter,
+    passes_plot_filter_v2,
     verify_and_get_quality_string,
 )
+from chia.util.hash import std_hash
 
 
 @dataclass
@@ -291,6 +296,65 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
     assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
+
+
+def test_base_filter_relative_to_fork_height() -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1_000_000),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
+    )
+    assert calculate_base_plot_filter_bits(uint32(1_000_000), constants) == 9
+    assert calculate_base_plot_filter_bits(uint32(11_101_000), constants) == 8
+    assert calculate_base_plot_filter_bits(uint32(0), constants) == 9  # before fork
+
+
+@pytest.mark.parametrize(
+    "plot_strength,expected_bits",
+    [
+        (0, 9),  # at min strength (0) -> plain base filter
+        (1, 10),
+        (2, 11),
+        (4, 13),  # reaches the 8192 cap
+        (5, 13),  # capped
+        (17, 13),  # capped
+    ],
+)
+def test_calculate_plot_filter_bits(plot_strength: int, expected_bits: int) -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1_000_000),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
+        MIN_PLOT_STRENGTH=uint8(0),
+    )
+    assert calculate_plot_filter_bits(uint32(1_000_000), constants, plot_strength) == expected_bits
+
+
+def test_effective_bits_relative_to_min_strength() -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1_000_000),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
+        MIN_PLOT_STRENGTH=uint8(2),
+    )
+    assert calculate_plot_filter_bits(uint32(1_000_000), constants, 2) == 9
+    assert calculate_plot_filter_bits(uint32(1_000_000), constants, 3) == 10
+
+
+class TestV2PlotFilter:
+    def test_passes_plot_filter_v2_deterministic(self) -> None:
+        plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+        filter_challenge = bytes32.from_hexstr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+
+        assert passes_plot_filter_v2(plot_group_id, 42, 8, filter_challenge, 5) == passes_plot_filter_v2(
+            plot_group_id, 42, 8, filter_challenge, 5
+        )
+
+    def test_compute_plot_group_id_formula(self) -> None:
+        plot_public_key = G1Element()
+        pool_ph = bytes32.from_hexstr("0x" + "cd" * 32)
+        strength = 3
+
+        assert compute_plot_group_id(strength, plot_public_key, pool_ph) == std_hash(
+            bytes([strength]) + bytes(plot_public_key) + bytes(pool_ph)
+        )
 
 
 def test_v1_phase_out() -> None:
