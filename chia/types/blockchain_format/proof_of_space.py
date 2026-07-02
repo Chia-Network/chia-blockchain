@@ -165,14 +165,11 @@ def verify_and_get_quality_string(
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
 
+    # check_plot_param enforces MIN_PLOT_STRENGTH/MAX_PLOT_STRENGTH directly from
+    # constants. If a height-based min-strength schedule is introduced, a
+    # height-aware check must be added here.
     if not check_plot_param(constants, plot_param):
         return None
-
-    if plot_param.strength_v2 is not None and not height_agnostic:
-        max_strength = calculate_max_plot_strength(height, constants)
-        if plot_param.strength_v2 > max_strength:
-            log.error(f"Plot strength ({plot_param.strength_v2}) exceeds max ({max_strength}) at height {height}")
-            return None
 
     plot_id: bytes32 = pos.compute_plot_id()
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
@@ -187,7 +184,9 @@ def verify_and_get_quality_string(
         # VDF chain integrity + PoSpace validity is sufficient there.
         if filter_challenge is not None and signage_point_index is not None:
             plot_group_id = compute_plot_group_id_from_pos(pos)
-            group_strength = calculate_base_plot_filter_bits(height, constants) + plot_param.strength_v2
+            group_strength = calculate_plot_filter_bits(
+                prev_transaction_block_height, constants, plot_param.strength_v2
+            )
             if not passes_plot_filter_v2(
                 plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
             ):
@@ -270,6 +269,7 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 # V2 Plot Filter Constants
 # TODO: todo_v2_plots move FILTER_WINDOW_SIZE and _BASE_FILTER_OFFSETS to ConsensusConstants in chia_rs
 FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
+MAX_EFFECTIVE_PLOT_FILTER_BITS: int = 13  # 8192 effective plot filter cap
 
 # Base plot filter reduction schedule — offsets from HARD_FORK2_HEIGHT
 # Starts at 9 bits (512), reduces every 3-6 years until 0 bits (1)
@@ -287,10 +287,6 @@ _BASE_FILTER_OFFSETS: list[tuple[int, int]] = [
 ]
 
 
-def calculate_max_plot_strength(height: uint32, constants: ConsensusConstants) -> int:
-    return 17 - calculate_base_plot_filter_bits(height, constants)
-
-
 def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
     relative_height = int(height) - constants.HARD_FORK2_HEIGHT
     if relative_height < 0:
@@ -299,6 +295,13 @@ def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstant
         if relative_height >= offset:
             return min(bits, constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
     return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+
+
+def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, plot_strength: int) -> int:
+    # TODO: todo_v2_plots MIN_PLOT_STRENGTH is fixed for now; a height-based
+    # min-strength schedule would change the zero point here.
+    strength_delta = max(0, int(plot_strength) - constants.MIN_PLOT_STRENGTH)
+    return min(calculate_base_plot_filter_bits(height, constants) + strength_delta, MAX_EFFECTIVE_PLOT_FILTER_BITS)
 
 
 def passes_plot_filter_v2(

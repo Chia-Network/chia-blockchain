@@ -26,7 +26,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_base_plot_filter_bits,
+    calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
     compute_plot_group_id,
@@ -78,8 +78,8 @@ class HarvesterAPI:
             assert pool_info is not None
             assert param.strength_v2 is not None
             plot_group_id = compute_plot_group_id(param.strength_v2, plot_info.plot_public_key, pool_info)
-            group_strength = (
-                calculate_base_plot_filter_bits(challenge.peak_height, self.harvester.constants) + param.strength_v2
+            group_strength = calculate_plot_filter_bits(
+                challenge.last_tx_height, self.harvester.constants, param.strength_v2
             )
             return passes_plot_filter_v2(
                 plot_group_id,

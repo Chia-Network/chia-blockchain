@@ -102,8 +102,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_base_plot_filter_bits,
-    calculate_max_plot_strength,
+    calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
     compute_plot_group_id,
@@ -1789,11 +1788,10 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-                max_strength = calculate_max_plot_strength(height, constants)
-                if plot_info.prover.get_strength() > max_strength:
+                if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
                     self.log.warn(
-                        f"Plot strength ({plot_info.prover.get_strength()}) exceeds max ({max_strength}) "
-                        f"at height {height}: {plot_info.prover.get_filename()}"
+                        f"Plot strength ({plot_info.prover.get_strength()}) exceeds max "
+                        f"({constants.MAX_PLOT_STRENGTH}): {plot_info.prover.get_filename()}"
                     )
                     continue
                 if filter_challenge is None or signage_point_index is None:
@@ -1809,7 +1807,7 @@ class BlockTools:
                 plot_group_id = compute_plot_group_id(
                     plot_info.prover.get_strength(), plot_info.plot_public_key, pool_info
                 )
-                group_strength = calculate_base_plot_filter_bits(height, constants) + plot_param.strength_v2
+                group_strength = calculate_plot_filter_bits(prev_tx_height, constants, plot_param.strength_v2)
                 if not passes_plot_filter_v2(
                     plot_group_id,
                     plot_param.meta_group,
