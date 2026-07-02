@@ -19,7 +19,7 @@ class Cursor:
         """The cursor proxy is also an async iterator."""
         return self._fetch_chunked()
 
-    async def _fetch_chunked(self):
+    async def _fetch_chunked(self) -> AsyncIterator[sqlite3.Row]:
         while True:
             rows = await self.fetchmany(self.iter_chunk_size)
             if not rows:
@@ -27,7 +27,7 @@ class Cursor:
             for row in rows:
                 yield row
 
-    async def _execute(self, fn, *args, **kwargs):
+    async def _execute(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Execute the given function on the shared connection's thread."""
         return await self._conn._execute(fn, *args, **kwargs)
 
@@ -54,18 +54,18 @@ class Cursor:
 
     async def fetchone(self) -> Optional[sqlite3.Row]:
         """Fetch a single row."""
-        return await self._execute(self._cursor.fetchone)
+        return await self._execute(self._cursor.fetchone)  # type: ignore[no-any-return]
 
     async def fetchmany(self, size: Optional[int] = None) -> Iterable[sqlite3.Row]:
         """Fetch up to `cursor.arraysize` number of rows."""
         args: tuple[int, ...] = ()
         if size is not None:
             args = (size,)
-        return await self._execute(self._cursor.fetchmany, *args)
+        return await self._execute(self._cursor.fetchmany, *args)  # type: ignore[no-any-return]
 
     async def fetchall(self) -> Iterable[sqlite3.Row]:
         """Fetch all remaining rows."""
-        return await self._execute(self._cursor.fetchall)
+        return await self._execute(self._cursor.fetchall)  # type: ignore[no-any-return]
 
     async def close(self) -> None:
         """Close the cursor."""
@@ -93,7 +93,7 @@ class Cursor:
 
     @property
     def row_factory(self) -> Optional[Callable[[sqlite3.Cursor, sqlite3.Row], object]]:
-        return self._cursor.row_factory
+        return self._cursor.row_factory  # type: ignore[return-value]
 
     @row_factory.setter
     def row_factory(self, factory: Optional[type]) -> None:
@@ -103,8 +103,8 @@ class Cursor:
     def connection(self) -> sqlite3.Connection:
         return self._cursor.connection
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Cursor":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
