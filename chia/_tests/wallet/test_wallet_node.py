@@ -1458,6 +1458,17 @@ async def test_transaction_ack_duplicate_without_resend_ignored(
     await conn.incoming_queue.put(msg)
     await time_out_assert(5, check_wallet_cache_empty, True)
 
+    # The handler clears _tx_messages_in_progress *before* it awaits
+    # remove_from_queue(), so an empty cache does not yet imply the record was
+    # updated. Wait for the record itself to reflect the processed first ack
+    # before capturing the baseline, otherwise we can read a stale sent=0 while
+    # the increment is still in flight (consistently observable on Python 3.14).
+    async def first_ack_applied() -> bool:
+        rec = await wallet_node.wallet_state_manager.get_transaction(tx.name)
+        return rec is not None and rec.sent == 1
+
+    await time_out_assert(5, first_ack_applied, True)
+
     first_tx_record = await wallet_node.wallet_state_manager.get_transaction(tx.name)
     assert first_tx_record is not None
     first_sent = first_tx_record.sent
