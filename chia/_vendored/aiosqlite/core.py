@@ -157,7 +157,51 @@ class Connection:
 
         self._tx.put_nowait((future, function))
 
-        return await future
+        # The worker thread runs the queued job to completion no matter what
+        # happens here, and callers rely on that (a queued COMMIT/RELEASE must
+        # not be dropped on cancellation), so we never yank a job from the queue.
+        # ``asyncio.wait`` waits for ``future`` without cancelling it or draining
+        # its result/exception when we are cancelled, so the worker's outcome is
+        # never lost and stays available for ``future.result()`` below.
+        #
+        # When cancelled while waiting we must still return the operation's *real*
+        # outcome rather than raising CancelledError: the job already ran, and
+        # reporting CancelledError would hide a successful side effect (e.g. a
+        # BEGIN/SAVEPOINT that took hold), breaking the guarantee that a raised
+        # exception means the operation had no effect. Instead we re-arm the
+        # task's cancellation so it fires at the caller's next await, keeping the
+        # task cancelled without corrupting this operation's result. Cleanup
+        # statements (ROLLBACK/RELEASE) still run because they are queued via
+        # ``put_nowait`` before that re-armed cancellation can fire. The
+        # ``cancel()``/``uncancel()`` pair re-arms ``_must_cancel`` without
+        # inflating the cancellation counter (which would otherwise disturb an
+        # enclosing ``asyncio.timeout()``/``TaskGroup``); ``uncancel()`` is 3.11+.
+        #
+        # We preserve the original cancellation *message* when re-arming. anyio
+        # tags its cancel-scope cancellations with a marker message
+        # ("Cancelled via cancel scope ...") and only reabsorbs a CancelledError
+        # that still carries it (see ``is_anyio_cancellation``). Dropping the
+        # message would make the re-armed cancellation escape an enclosing
+        # ``move_on_after``/``fail_after`` instead of being contained.
+        cancelled = False
+        cancel_msg: Optional[str] = None
+        while not future.done():
+            try:
+                await asyncio.wait({future})
+            except asyncio.CancelledError as exc:
+                cancelled = True
+                if exc.args:
+                    cancel_msg = exc.args[0]
+
+        if cancelled:
+            task = asyncio.current_task()
+            if task is not None:
+                task.cancel(cancel_msg)
+                uncancel = getattr(task, "uncancel", None)
+                if uncancel is not None:
+                    uncancel()
+
+        return future.result()
 
     async def _connect(self) -> "Connection":
         """Connect to the actual sqlite database."""
