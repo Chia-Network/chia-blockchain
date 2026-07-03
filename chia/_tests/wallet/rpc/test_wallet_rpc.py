@@ -46,9 +46,9 @@ from chia._tests.wallet.test_wallet_coin_store import (
     record_8,
     record_9,
 )
+from chia._vendored import aiosqlite
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
-from chia._vendored import aiosqlite
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.wallet import (
