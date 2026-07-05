@@ -1554,7 +1554,6 @@ class GetNotificationsCMD:
         type=Bytes32ParamType(),
         multiple=True,
         required=False,
-        default=None,
     )
     start: int | None = option(
         "-s",

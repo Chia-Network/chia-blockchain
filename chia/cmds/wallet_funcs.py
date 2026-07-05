@@ -1654,14 +1654,16 @@ async def send_notification(
 
 async def get_notifications(
     wallet_info: WalletClientInfo,
-    ids: Sequence[bytes32] | None,
+    ids: Sequence[bytes32],
     start: int | None,
     end: int | None,
 ) -> None:
-    if ids is not None:
-        ids = None if len(ids) == 0 else list(ids)
     response = await wallet_info.client.get_notifications(
-        GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
+        GetNotifications(
+            ids=None if len(ids) == 0 else list(ids),
+            start=uint32.construct_optional(start),
+            end=uint32.construct_optional(end),
+        )
     )
     for notification in response.notifications:
         print("")
@@ -1672,7 +1674,7 @@ async def get_notifications(
 
 async def delete_notifications(wallet_info: WalletClientInfo, ids: Sequence[bytes32] | None, delete_all: bool) -> None:
     if not delete_all and ids is None:
-        print("Must specify --delete-all if you intend to delete all notifications")
+        print("Must specify --all if you intend to delete all notifications")
         return
     if delete_all:
         await wallet_info.client.delete_notifications(DeleteNotifications())

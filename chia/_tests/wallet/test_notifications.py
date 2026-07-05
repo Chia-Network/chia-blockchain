@@ -9,10 +9,12 @@ from chia_rs import CoinSpend, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.wallet import DeleteNotificationsCMD, GetNotificationsCMD, SendNotificationCMD
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.notification_store import NotificationStore
 from chia.wallet.util.address_type import AddressType
@@ -242,3 +244,81 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
     await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True).run()
     assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
+
+
+def test_notification_command_parsing() -> None:
+    puzzle_hash = bytes32.zeros
+    address = encode_puzzle_hash(puzzle_hash, "txch")
+    check_click_parsing(
+        SendNotificationCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            to_address=CliAddress(puzzle_hash, address, AddressType.XCH),
+            message="a message",
+            amount=CliAmount(amount=uint64(1), mojos=False),
+            fee=uint64(0),
+        ),
+        "--to-address",
+        address,
+        "--message",
+        "a message",
+        "--amount",
+        "1",
+        "--fee",
+        "0",
+    )
+
+    check_click_parsing(
+        GetNotificationsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            ids=tuple(),
+            start=None,
+            end=None,
+        ),
+    )
+
+    check_click_parsing(
+        GetNotificationsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            ids=(bytes32.zeros, bytes32(bytes([1] * 32))),
+            start=100,
+            end=200,
+        ),
+        "--id",
+        bytes32.zeros.hex(),
+        "--id",
+        "01" * 32,
+        "--start",
+        "100",
+        "--end",
+        "200",
+    )
+
+    check_click_parsing(
+        DeleteNotificationsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), ids=tuple()
+        )
+    )
+
+    check_click_parsing(
+        DeleteNotificationsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            ids=(bytes32.zeros, bytes32(bytes([1] * 32))),
+        ),
+        "--id",
+        bytes32.zeros.hex(),
+        "--id",
+        "01" * 32,
+    )
+
+    check_click_parsing(
+        DeleteNotificationsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            ids=tuple(),
+            delete_all=True,
+        ),
+        "--all",
+    )
