@@ -1614,6 +1614,9 @@ class DeleteNotificationsCMD:
             )
 
 
+wallet_cmd.add_command(notification_cmd)
+
+
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
 def vcs_cmd() -> None:  # pragma: no cover
     pass
