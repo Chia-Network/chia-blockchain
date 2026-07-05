@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-import random
 import tempfile
 from pathlib import Path
-from typing import Any
+from unittest.mock import Mock
 
 import pytest
+from chia_rs import CoinSpend, CoinState
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint64
 
-from chia._tests.conftest import ConsensusMode
-from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
+from chia.cmds.param_types import CliAddress, CliAmount
+from chia.cmds.wallet import DeleteNotificationsCMD, GetNotificationsCMD, SendNotificationCMD
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.notification_store import NotificationStore
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.address_type import AddressType
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -49,152 +47,198 @@ async def test_notification_store_backwards_compat() -> None:
 
 
 @pytest.mark.parametrize(
-    "trusted",
-    [True, False],
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [2, 1]}],
+    indirect=True,
 )
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_notifications(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
-) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_1, server_0 = wallets[0]
-    wallet_node_2, server_1 = wallets[1]
-    wsm_1 = wallet_node_1.wallet_state_manager
-    wsm_2 = wallet_node_2.wallet_state_manager
-    wallet_1 = wsm_1.main_wallet
-    wallet_2 = wsm_2.main_wallet
+async def test_notifications(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
-    ph_token = bytes32.random(seeded_random)
+    env_1.wallet_aliases = {"xch": 1}
+    env_2.wallet_aliases = {"xch": 1}
 
-    if trusted:
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_2.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_1.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
+    client_info_1 = WalletClientInfo(
+        env_1.rpc_client,
+        env_1.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env_1.wallet_state_manager.config,
+    )
+    client_info_2 = WalletClientInfo(
+        env_2.rpc_client,
+        env_2.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env_2.wallet_state_manager.config,
+    )
 
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    async with env_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        ph_2 = await action_scope.get_puzzle_hash(env_2.wallet_state_manager)
 
-    for i in range(2):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
+    notification_manager_1 = env_1.wallet_state_manager.notification_manager
+    notification_manager_2 = env_2.wallet_state_manager.notification_manager
 
-    funds_1 = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
-    funds_2 = 0
-
-    await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
-    await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
-
-    notification_manager_1 = wsm_1.notification_manager
-    notification_manager_2 = wsm_2.notification_manager
+    most_recent_args: tuple[CoinState, CoinSpend] = (Mock(), Mock())
 
     func = notification_manager_2.potentially_add_new_notification
-    notification_manager_2.most_recent_args = tuple()
 
-    async def track_coin_state(*args: Any) -> bool:
-        notification_manager_2.most_recent_args = args
-        result: bool = await func(*args)
+    async def track_coin_state(coin_state: CoinState, parent_spend: CoinSpend) -> bool:
+        nonlocal most_recent_args
+        most_recent_args = (coin_state, parent_spend)
+        result: bool = await func(coin_state, parent_spend)
         return result
 
-    notification_manager_2.potentially_add_new_notification = track_coin_state
+    # there's maybe a more reasonable way to do this with monkypatching but this works for now
+    notification_manager_2.potentially_add_new_notification = track_coin_state  # type: ignore[method-assign]
 
     allow_larger_height: int | None = None
     allow_height: int | None = None
 
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
-        msg: bytes = bytes(case, "utf8")
+        msg = case
         if case == "block all":
-            wallet_node_2.config["enable_notifications"] = False
-            wallet_node_2.config["required_notification_amount"] = 100
+            env_2.node.config["enable_notifications"] = False
+            env_2.node.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
             FEE = uint64(0)
         elif case == "block too low":
-            wallet_node_2.config["enable_notifications"] = True
+            env_2.node.config["enable_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
         elif case in {"allow", "allow_larger"}:
-            wallet_node_2.config["required_notification_amount"] = 750000000000
+            env_2.node.config["required_notification_amount"] = 750000000000
             if case == "allow_larger":
                 AMOUNT = uint64(1000000000000)
             else:
                 AMOUNT = uint64(750000000000)
             FEE = uint64(1)
         elif case == "block_too_large":
-            msg = bytes([0] * 10001)
+            msg = str(bytes([0] * 10001), "utf8")
             AMOUNT = uint64(750000000000)
             FEE = uint64(0)
         else:
             raise Exception(f"Unhandled case: {case!r}")
-        peak = full_node_api.full_node.blockchain.get_peak()
+        peak = wallet_environments.full_node.full_node.blockchain.get_peak()
         assert peak is not None
         if case == "allow":
             allow_height = peak.height + 1
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
-        async with notification_manager_1.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True
-        ) as action_scope:
-            await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope, fee=FEE)
-        [tx] = action_scope.side_effects.transactions
-        await time_out_assert_not_none(
-            5,
-            full_node_api.full_node.mempool_manager.get_spendbundle,
-            tx.spend_bundle.name(),
+        await SendNotificationCMD(
+            rpc_info=NeedsWalletRPC(client_info=client_info_1),
+            tx_config_loader=NeedsTXConfig(
+                min_coin_amount=CliAmount(amount=wallet_environments.tx_config.min_coin_amount, mojos=True),
+                max_coin_amount=CliAmount(amount=wallet_environments.tx_config.max_coin_amount, mojos=True),
+                coins_to_exclude=wallet_environments.tx_config.excluded_coin_ids,
+                coins_to_include=wallet_environments.tx_config.included_coin_ids,
+                amounts_to_exclude=[
+                    CliAmount(amount=amount, mojos=True)
+                    for amount in wallet_environments.tx_config.excluded_coin_amounts
+                ],
+                primary_coin=wallet_environments.tx_config.primary_coin,
+                reuse=wallet_environments.tx_config.reuse_puzhash,
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            to_address=CliAddress(ph_2, "doesn't matter", AddressType.XCH),
+            message=msg,
+            amount=CliAmount(amount=AMOUNT, mojos=True),
+            fee=uint64(FEE),
+            push=True,
+        ).run()
+        capsys.readouterr()
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": -(AMOUNT + FEE),
+                            "<=#spendable_balance": -(AMOUNT + FEE),
+                            "<=#max_send_amount": -(AMOUNT + FEE),
+                            ">=#pending_change": 0,
+                            ">=#pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        "xch": {
+                            "confirmed_wallet_balance": -(AMOUNT + FEE),
+                            ">=#spendable_balance": 0,
+                            ">=#max_send_amount": 0,
+                            "<=#pending_change": 0,
+                            "<=#pending_coin_removal_count": -1,
+                            "<=#unspent_coin_count": 0,
+                        }
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={
+                        "xch": {
+                            "confirmed_wallet_balance": AMOUNT,
+                            "unconfirmed_wallet_balance": AMOUNT,
+                            "spendable_balance": AMOUNT,
+                            "max_send_amount": AMOUNT,
+                            "unspent_coin_count": 1,
+                        }
+                    },
+                ),
+            ]
         )
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-
-        funds_1 = funds_1 - AMOUNT - FEE
-        funds_2 += AMOUNT
-
-        await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
-        await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
-        await time_out_assert(30, wallet_2.get_unconfirmed_balance, funds_2)
-        await time_out_assert(30, wallet_2.get_confirmed_balance, funds_2)
 
     assert allow_larger_height is not None
     assert allow_height is not None
 
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 2))
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=0, end=2).run()
+    out, _ = capsys.readouterr()
+    assert "message: allow_larger\n" in out
+    assert "message: allow\n" in out
     assert len(notifications) == 2
     assert notifications[0].message == b"allow_larger"
     assert notifications[0].height == allow_larger_height
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(1, None))
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=1, end=None).run()
+    out, _ = capsys.readouterr()
+    assert "message: allow_larger\n" not in out
+    assert "message: allow\n" in out
     assert len(notifications) == 1
     assert notifications[0].message == b"allow"
     assert notifications[0].height == allow_height
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 1))
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=0, end=1).run()
+    out, _ = capsys.readouterr()
+    assert "message: allow_larger\n" in out
+    assert "message: allow\n" not in out
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(None, 1))
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=None, end=1).run()
+    out, _ = capsys.readouterr()
+    assert "message: allow_larger\n" in out
+    assert "message: allow\n" not in out
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     assert (
         await notification_manager_2.notification_store.get_notifications(coin_ids=[n.id for n in notifications])
         == notifications
     )
+    await GetNotificationsCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=[n.id for n in notifications]
+    ).run()
+    out, _ = capsys.readouterr()
+    assert "message: allow_larger\n" in out
+    assert "message: allow\n" not in out
 
     sent_notifications = await notification_manager_1.notification_store.get_notifications()
     assert len(sent_notifications) == 0
 
-    await notification_manager_2.notification_store.delete_notifications()
+    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True).run()
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications(coin_ids=[n.id for n in notifications])
+    await DeleteNotificationsCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=[n.id for n in notifications]
+    ).run()
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
 
-    assert not await func(*notification_manager_2.most_recent_args)
-    await notification_manager_2.notification_store.delete_notifications()
-    assert not await func(*notification_manager_2.most_recent_args)
+    assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
+    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True).run()
+    assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
