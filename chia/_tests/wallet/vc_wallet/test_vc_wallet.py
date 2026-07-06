@@ -18,6 +18,7 @@ from chia._tests.environments.wallet import (
     WalletTestFramework,
 )
 from chia._tests.util.time_out_assert import time_out_assert_not_none
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.wallet import (
@@ -991,6 +992,7 @@ def test_vc_command_parsing() -> None:
         target_address,
         "-m",
         "0.5",
+        context=ChiaCliContext(expected_prefix="txch"),
     )
 
     check_click_parsing(
