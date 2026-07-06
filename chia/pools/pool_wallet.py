@@ -63,7 +63,7 @@ class PoolWallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("PoolWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("PoolWallet", None)
 
     MINIMUM_INITIAL_BALANCE: ClassVar[int] = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT: ClassVar[int] = 5
