@@ -1097,6 +1097,7 @@ class FullNodeAPI:
                 request.proof_of_space.param(),
                 difficulty,
                 request.challenge_chain_sp,
+                height=tx_height,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(

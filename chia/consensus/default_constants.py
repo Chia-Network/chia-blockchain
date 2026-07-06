@@ -30,8 +30,8 @@ DEFAULT_CONSTANTS = ConsensusConstants(
         9
     ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
-        5
-    ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
+        9
+    ),  # V2 predictable filter starts at this many base bits before scheduled reductions
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
     PLOT_SIZE_V2=uint8(28),
@@ -92,9 +92,10 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
-    MIN_PLOT_STRENGTH=uint8(2),
-    MAX_PLOT_STRENGTH=uint8(32),
-    # TODO: todo_v2_plots finalize plot filter schedule
+    MIN_PLOT_STRENGTH=uint8(0),
+    MAX_PLOT_STRENGTH=uint8(17),
+    # TODO: todo_v2_plots remove these dead constants from chia_rs ConsensusConstants —
+    # V2 uses _BASE_FILTER_OFFSETS schedule instead of prefix-bits adjustment heights
     PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
     PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
     PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),

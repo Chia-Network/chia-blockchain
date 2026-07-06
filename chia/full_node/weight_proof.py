@@ -1373,20 +1373,35 @@ def _validate_pospace_recent_chain(
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     assert cc_sp_hash is not None
 
-    required_iters = validate_pospace_and_get_required_iters(
-        constants,
-        block.reward_chain_block.proof_of_space,
-        challenge if not overflow else prev_challenge,
-        cc_sp_hash,
-        block.height,
-        diff,
-        pre_sp_tx_block_height(
+    challenge = challenge if not overflow else prev_challenge
+    proof_of_space = block.reward_chain_block.proof_of_space
+    height_agnostic = proof_of_space.param().strength_v2 is not None
+    if height_agnostic:
+        # V2 weight-proof recent-chain skips the filter (filter_challenge unavailable
+        # here — see the not is_v2_plot guard in validate_recent_blocks), but the V2
+        # strength compensation in calculate_iterations_quality is height-dependent
+        # (base filter schedule). Use block.height so the compensation matches the
+        # real block's; the schedule's ~10M-block granularity makes block.height
+        # equivalent to pre_sp_tx_block_height (same schedule window) without needing
+        # a block-record walk that the recent-chain cache may not cover.
+        prev_tx_block_height = block.height
+    else:
+        prev_tx_block_height = pre_sp_tx_block_height(
             constants=constants,
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
-        ),
+        )
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        proof_of_space,
+        challenge,
+        cc_sp_hash,
+        block.height,
+        diff,
+        prev_tx_block_height,
+        height_agnostic=height_agnostic,
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")

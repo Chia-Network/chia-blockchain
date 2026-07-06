@@ -26,12 +26,15 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
+    compute_plot_group_id,
     generate_plot_public_key,
     is_v1_phased_out,
     make_pos,
     passes_plot_filter,
+    passes_plot_filter_v2,
     v1_cut_off_height,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
@@ -56,7 +59,37 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester2) -> bool:
+    def _plot_passes_filter(
+        self,
+        plot_info: PlotInfo,
+        challenge: harvester_protocol.NewSignagePointHarvester2,
+    ) -> bool:
+        if plot_info.prover.get_version() == PlotVersion.V2:
+            # V2 plots always use predictable filter — no fallback
+            filter_challenge = getattr(challenge, "filter_challenge", None)
+            if filter_challenge is None:
+                return False
+            param = plot_info.prover.get_param()
+            pool_info = (
+                plot_info.pool_contract_puzzle_hash
+                if plot_info.pool_contract_puzzle_hash
+                else plot_info.pool_public_key
+            )
+            assert pool_info is not None
+            assert param.strength_v2 is not None
+            plot_group_id = compute_plot_group_id(param.strength_v2, plot_info.plot_public_key, pool_info)
+            group_strength = calculate_plot_filter_bits(
+                challenge.last_tx_height, self.harvester.constants, param.strength_v2
+            )
+            return passes_plot_filter_v2(
+                plot_group_id,
+                param.meta_group,
+                group_strength,
+                filter_challenge,
+                challenge.signage_point_index,
+            )
+
+        # V1 plots use original prefix-bits filter
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,
@@ -194,6 +227,7 @@ class HarvesterAPI:
                         plot_info.prover.get_param(),
                         difficulty,
                         new_challenge.sp_hash,
+                        height=new_challenge.last_tx_height,
                     )
 
                     if required_iters >= sp_interval_iters:
@@ -225,7 +259,6 @@ class HarvesterAPI:
                     plot_info.pool_contract_puzzle_hash,
                     plot_info.plot_public_key,
                 )
-                return None
             except Exception:
                 self.harvester.log.exception("Failed V2 partial proof lookup")
                 return None
@@ -287,6 +320,7 @@ class HarvesterAPI:
                             plot_info.prover.get_param(),
                             difficulty,
                             new_challenge.sp_hash,
+                            height=new_challenge.last_tx_height,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
@@ -525,7 +559,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @metadata.request()
+    @metadata.request(peer_required=True)
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):

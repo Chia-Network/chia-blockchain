@@ -108,6 +108,8 @@ class FarmerAPI:
                 new_proof_of_space.sp_hash,
                 height=sp.peak_height,
                 prev_transaction_block_height=sp.last_tx_height,
+                filter_challenge=sp.filter_challenge,
+                signage_point_index=sp.signage_point_index,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = new_proof_of_space.proof.compute_plot_id()
@@ -122,6 +124,7 @@ class FarmerAPI:
                 new_proof_of_space.proof.param(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
+                height=sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -229,6 +232,7 @@ class FarmerAPI:
                     new_proof_of_space.proof.param(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
+                    height=sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -668,6 +672,7 @@ class FarmerAPI:
                 pool_difficulties,
                 new_signage_point.peak_height,
                 new_signage_point.last_tx_height,
+                new_signage_point.filter_challenge,
             )
 
             # The plot size in the call to calculate_prefix_bits is only used
@@ -865,6 +870,8 @@ class FarmerAPI:
             response.sp_hash,
             height=peak_height,
             prev_transaction_block_height=last_tx_height,
+            filter_challenge=sps[0].filter_challenge,
+            signage_point_index=signage_point_index,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
