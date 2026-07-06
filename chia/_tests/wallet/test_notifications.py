@@ -190,7 +190,7 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     assert allow_height is not None
 
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 2))
-    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=0, end=2).run()
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=tuple(), start=0, end=2).run()
     out, _ = capsys.readouterr()
     assert "message: allow_larger\n" in out
     assert "message: allow\n" in out
@@ -198,7 +198,7 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     assert notifications[0].message == b"allow_larger"
     assert notifications[0].height == allow_larger_height
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(1, None))
-    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=1, end=None).run()
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=tuple(), start=1, end=None).run()
     out, _ = capsys.readouterr()
     assert "message: allow_larger\n" not in out
     assert "message: allow\n" in out
@@ -206,14 +206,14 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     assert notifications[0].message == b"allow"
     assert notifications[0].height == allow_height
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 1))
-    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=0, end=1).run()
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=tuple(), start=0, end=1).run()
     out, _ = capsys.readouterr()
     assert "message: allow_larger\n" in out
     assert "message: allow\n" not in out
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     notifications = await notification_manager_2.notification_store.get_notifications(pagination=(None, 1))
-    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), start=None, end=1).run()
+    await GetNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), ids=tuple(), start=None, end=1).run()
     out, _ = capsys.readouterr()
     assert "message: allow_larger\n" in out
     assert "message: allow\n" not in out
