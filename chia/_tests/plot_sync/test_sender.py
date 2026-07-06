@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import random
+from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint64
+from packaging.version import Version
 
 from chia._tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -47,6 +49,27 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     sender.set_connection(farmer_connection)  # type:ignore[arg-type]
     assert sender._connection is not None
     assert id(sender._connection) == id(farmer_connection)
+
+
+@pytest.mark.parametrize(
+    "protocol_version,expected_message_type",
+    [
+        (Version("0.0.37"), ProtocolMessageTypes.plot_sync_loaded),
+        (Version("0.0.38"), ProtocolMessageTypes.plot_sync_loaded2),
+    ],
+)
+def test_process_batch_uses_plot_serialization_for_farmer_protocol(
+    bt: BlockTools, seeded_random: random.Random, protocol_version: Version, expected_message_type: ProtocolMessageTypes
+) -> None:
+    farmer_connection = cast(WSChiaConnection, get_dummy_connection(NodeType.FARMER, bytes32.random(seeded_random)))
+    farmer_connection.protocol_version = protocol_version
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
+    sender.set_connection(farmer_connection)
+    sender.sync_start(1, True)
+
+    sender.process_batch(list(bt.plot_manager.plots.values())[:1], 0)
+
+    assert sender._messages[-1].message_type == expected_message_type
 
 
 @pytest.mark.anyio
