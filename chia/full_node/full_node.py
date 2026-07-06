@@ -1889,6 +1889,12 @@ class FullNode:
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
         tx_peak = self.blockchain.get_tx_peak()
+        # Get filter_challenge for V2 plot filter (challenge hash of a previously
+        # completed sub-slot: SS(n-2) for SPs 0-15, SS(n-1) for SPs 16-63)
+        filter_challenge = self.full_node_store.get_filter_challenge(
+            request.challenge_chain_vdf.challenge,
+            request.index_from_challenge,
+        )
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1902,6 +1908,7 @@ class FullNode:
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
+            filter_challenge=filter_challenge,
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
@@ -2837,6 +2844,12 @@ class FullNode:
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
                 tx_peak = self.blockchain.get_tx_peak()
+                # Get filter_challenge for V2 plot filter (challenge hash of a previously
+                # completed sub-slot; SP index 0 is in the first window, so SS(n-2))
+                filter_challenge = self.full_node_store.get_filter_challenge(
+                    end_of_slot_bundle.challenge_chain.get_hash(),
+                    uint8(0),
+                )
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -2852,6 +2865,7 @@ class FullNode:
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain
                         )
                     ),
+                    filter_challenge=filter_challenge,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)

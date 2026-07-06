@@ -864,6 +864,75 @@ class FullNodeStore:
                         return sp
         return None
 
+    def get_filter_challenge(self, challenge: bytes32, index: uint8, *, window_size: int = 16) -> bytes32 | None:
+        """
+        Get the filter_challenge for V2 plot filter.
+
+        The filter_challenge is the cc sub-slot challenge hash of a previously
+        completed sub-slot.  All SPs in the same window share the same value.
+
+        Windows (default 16): [0-15], [16-31], [32-47], [48-63]
+        - Window [0-15]:  uses SS(n-2) challenge hash (~10 min notice)
+        - Window [16-63]: uses SS(n-1) challenge hash (~2.5-7.5 min notice)
+
+        This value is also available during sync via
+        BlockRecord.finished_challenge_slot_hashes, enabling trustless
+        verification without extra VDF proofs.
+
+        Returns None when the target sub-slot is unavailable (not enough history).
+        """
+        assert len(self.finished_sub_slots) >= 1
+
+        def previous_sub_slot_challenge(sub_slot: EndOfSubSlotBundle) -> bytes32:
+            return sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+
+        def get_active_or_recent_sub_slot(slot_challenge: bytes32) -> EndOfSubSlotBundle | None:
+            for active_sub_slot, _, _ in self.finished_sub_slots:
+                if active_sub_slot is not None and active_sub_slot.challenge_chain.get_hash() == slot_challenge:
+                    return active_sub_slot
+
+            recent_eos = self.recent_eos.get(slot_challenge)
+            if recent_eos is None:
+                return None
+
+            return recent_eos[0]
+
+        window_start = (index // window_size) * window_size
+
+        for sub_slot, _, _ in self.finished_sub_slots:
+            slot_challenge = (
+                sub_slot.challenge_chain.get_hash() if sub_slot is not None else self.constants.GENESIS_CHALLENGE
+            )
+            if slot_challenge != challenge:
+                continue
+
+            if window_start == 0:
+                # Window [0-15]: use SS(n-2) challenge hash
+                if sub_slot is None:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+
+                previous_challenge = previous_sub_slot_challenge(sub_slot)
+                if previous_challenge == self.constants.GENESIS_CHALLENGE:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+
+                previous_sub_slot = get_active_or_recent_sub_slot(previous_challenge)
+                if previous_sub_slot is None:
+                    log.debug("filter_challenge unavailable: missing previous sub-slot for window 0")
+                    return None
+
+                return previous_sub_slot_challenge(previous_sub_slot)
+            else:
+                # Windows [16-31], [32-47], [48-63]: use SS(n-1) challenge hash
+                if sub_slot is None:
+                    log.debug("filter_challenge unavailable: no previous sub-slot")
+                    return None
+                return previous_sub_slot_challenge(sub_slot)
+
+        log.debug("filter_challenge unavailable: challenge %s not found", challenge.hex()[:16])
+        return None
+
     def get_signage_point_by_index_and_cc_output(
         self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
     ) -> SignagePoint | None:
