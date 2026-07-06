@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING, cast, final
 
 from chia_rs.chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.singleton_record import SingletonRecord
+from chia.pools.plotnft_drivers import PoolConfig
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.action_scope import ActionScope
@@ -26,6 +28,50 @@ if TYPE_CHECKING:
 
 
 @streamable
+@dataclass(kw_only=True, frozen=True)
+class PlotNFTTargetStateInfo(Streamable):
+    wallet_id: uint32
+    exiting_fee: uint64
+    next_pool_url: str | None
+    next_pool_puzzle_hash: bytes32 | None
+    next_heightlock: uint32 | None
+    next_pool_memoization: Program | None
+
+    def __post_init__(self) -> None:
+        if (self.next_pool_url, self.next_pool_puzzle_hash, self.next_heightlock, self.next_pool_memoization) != (
+            None,
+            None,
+            None,
+            None,
+        ) and (
+            None
+            in {
+                self.next_pool_url,
+                self.next_pool_puzzle_hash,
+                self.next_heightlock,
+            }
+            or self.next_pool_memoization is None
+        ):
+            raise ValueError("Error initializing next PlotNFT target state, not all options for join were specified")
+        return super().__post_init__()
+
+    @property
+    def pool_url_and_config(self) -> tuple[str, PoolConfig] | None:
+        if (
+            self.next_pool_url is None
+            or self.next_pool_puzzle_hash is None
+            or self.next_heightlock is None
+            or self.next_pool_memoization is None
+        ):
+            return None
+        return self.next_pool_url, PoolConfig(
+            pool_puzzle_hash=self.next_pool_puzzle_hash,
+            heightlock=self.next_heightlock,
+            pool_memoization=self.next_pool_memoization,
+        )
+
+
+@streamable
 @dataclass(frozen=True)
 class _StreamableWalletSideEffects(Streamable):
     transactions: list[TransactionRecord]
@@ -33,6 +79,7 @@ class _StreamableWalletSideEffects(Streamable):
     extra_spends: list[WalletSpendBundle]
     selected_coins: list[Coin]
     singleton_records: list[SingletonRecord]
+    plotnft_exiting_info: PlotNFTTargetStateInfo | None
     get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None
 
 
@@ -43,6 +90,7 @@ class WalletSideEffects:
     extra_spends: list[WalletSpendBundle] = field(default_factory=list)
     selected_coins: list[Coin] = field(default_factory=list)
     singleton_records: list[SingletonRecord] = field(default_factory=list)
+    plotnft_exiting_info: PlotNFTTargetStateInfo | None = None
     get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None = None
 
     def __bytes__(self) -> bytes:
@@ -156,14 +204,16 @@ async def new_wallet_action_scope(
 
         yield self
 
-    self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
-        self.side_effects.transactions,
-        push=push,
-        merge_spends=merge_spends,
-        sign=sign,
-        additional_signing_responses=self.side_effects.signing_responses,
-        extra_spends=self.side_effects.extra_spends,
-        singleton_records=self.side_effects.singleton_records,
-    )
+    if self.side_effects.transactions != []:
+        self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
+            self.side_effects.transactions,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=self.side_effects.signing_responses,
+            extra_spends=self.side_effects.extra_spends,
+            singleton_records=self.side_effects.singleton_records,
+            plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
+        )
     if push and self.side_effects.get_unused_derivation_record_result is not None:
         await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)
