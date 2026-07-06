@@ -1588,14 +1588,13 @@ class GetNotificationsCMD:
 )
 class DeleteNotificationsCMD:
     rpc_info: NeedsWalletRPC
-    ids: Sequence[bytes32] | None = option(
+    ids: Sequence[bytes32] = option(
         "-i",
         "--id",
         help="A specific notification ID to delete",
         type=Bytes32ParamType(),
         multiple=True,
         required=False,
-        default=None,
     )
     delete_all: bool = option(
         "--all",

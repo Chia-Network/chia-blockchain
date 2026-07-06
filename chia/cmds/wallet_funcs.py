@@ -1672,8 +1672,8 @@ async def get_notifications(
         print(f"amount: {notification.amount}")
 
 
-async def delete_notifications(wallet_info: WalletClientInfo, ids: Sequence[bytes32] | None, delete_all: bool) -> None:
-    if not delete_all and ids is None:
+async def delete_notifications(wallet_info: WalletClientInfo, ids: Sequence[bytes32], delete_all: bool) -> None:
+    if not delete_all and len(ids) == 0:
         print("Must specify --all if you intend to delete all notifications")
         return
     if delete_all:
