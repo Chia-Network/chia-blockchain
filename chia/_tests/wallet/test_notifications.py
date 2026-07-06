@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.wallet import DeleteNotificationsCMD, GetNotificationsCMD, SendNotificationCMD
@@ -269,6 +270,8 @@ def test_notification_command_parsing() -> None:
         "1",
         "--fee",
         "0",
+        # Needed for AddressParamType to work correctly without config
+        context=ChiaCliContext(expected_prefix="txch"),
     )
 
     check_click_parsing(
