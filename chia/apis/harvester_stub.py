@@ -46,8 +46,8 @@ class HarvesterApiStub(ApiProtocol, Protocol):
         """Handle signature request from farmer."""
         ...
 
-    @metadata.request()
-    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
+    @metadata.request(peer_required=True)
+    async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         """Handle request for plot information."""
         ...
 
