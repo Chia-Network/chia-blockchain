@@ -1294,7 +1294,13 @@ def validate_recent_blocks(
                 sub_blocks.add_block(prev_block_record)
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
-            if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
+            is_v2_plot = block.reward_chain_block.proof_of_space.param().strength_v2 is not None
+            if (
+                not is_v2_plot
+                and sub_slots > 2
+                and transaction_blocks > 11
+                and (tip_height - block.height < last_blocks_to_validate)
+            ):
                 expected_vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
                     constants,
