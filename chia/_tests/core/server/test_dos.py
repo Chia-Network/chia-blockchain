@@ -407,6 +407,15 @@ class TestDos:
         def is_closed() -> bool:
             return ws_con.closed
 
+        # This test drives sends manually via the private ``_send_message`` while
+        # controlling the outbound rate limiter. Stop the connection's own
+        # outbound handler first so it can't concurrently send a message that an
+        # earlier rate-limited send re-queued via ``_wait_and_retry``. Two tasks
+        # calling ``ws.send_bytes`` on the same websocket corrupts the connection
+        # (observed as a spurious cancellation on Python 3.10).
+        assert ws_con.outbound_task is not None
+        ws_con.outbound_task.cancel()
+
         new_message = make_msg(
             ProtocolMessageTypes.request_mempool_transactions,
             full_node_protocol.RequestMempoolTransactions(bytes([0] * 5 * 1024 * 1024)),
