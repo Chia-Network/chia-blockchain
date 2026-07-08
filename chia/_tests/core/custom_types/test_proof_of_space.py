@@ -119,9 +119,9 @@ def b32(key: str) -> bytes32:
         height=uint32(5496000),
     ),
     ProofOfSpaceCase(
-        id="v2 plot strength 0 challenge mismatch",
+        id="v2 plot min strength challenge mismatch",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(0, 0, 0),
+        plot_size=PlotParam.make_v2(0, 0, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
         expected_error="Calculated pos challenge doesn't match the provided one",
@@ -227,8 +227,8 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v1(49), True),
         (PlotParam.make_v1(50), True),
         (PlotParam.make_v1(51), False),  # too large
-        (PlotParam.make_v2(0, 0, 0), True),
-        (PlotParam.make_v2(0, 0, 1), True),
+        (PlotParam.make_v2(0, 0, 0), False),  # strength too low
+        (PlotParam.make_v2(0, 0, 1), False),  # strength too low
         (PlotParam.make_v2(0, 0, 2), True),
         (PlotParam.make_v2(0, 0, 3), True),
         (PlotParam.make_v2(0, 0, 17), True),
@@ -305,11 +305,11 @@ def test_base_filter_can_be_lowered_for_test_constants() -> None:
 @pytest.mark.parametrize(
     "plot_strength,expected_bits",
     [
-        (0, 9),  # at min strength (0) -> plain base filter
-        (1, 10),
-        (2, 11),
-        (4, 13),  # reaches the 8192 cap
-        (5, 13),  # capped
+        (2, 9),  # at min strength (2) -> plain base filter
+        (3, 10),
+        (4, 11),
+        (6, 13),  # reaches the 8192 cap
+        (7, 13),  # capped
         (17, 13),  # capped
     ],
 )
