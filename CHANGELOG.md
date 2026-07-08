@@ -23,7 +23,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - Add `offer_only` option to `create_offer_for_ids`
 - Change how `offer_only` works on `create_offer_for_id`
-- Wallet fee estimation
+- Add `get_fee_estimate` wallet RPC that retrieves fee-per-cost estimates from a connected full node peer, allowing wallet clients to get fee guidance without calling the full node RPC directly
 - Use a separate config for pooling information
 - Use `SQLITE_MAX_VARIABLE_NUMBER` for chunking limit
 - Simplify `TransactionQueueEntry`
