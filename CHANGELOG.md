@@ -67,6 +67,12 @@ for setuptools_scm/PEP 440 reasons.
 - Upgrade `chia_rs` to 0.45.0
 - Upgrade `chia_rs` to 0.45.1
 
+### Additional Notes
+
+When building the Electron GUI from source, if you use Node.js version 24.16 or greater, only the first file will be extracted. As a result, the GUI won't install correctly. This is an [issue with Node](https://github.com/electron/electron/issues/51623). We plan to fix this on our end in the next release. Meanwhile, for Chia 2.7.2, Node 24.15 is the newest supported version when installing the GUI from source.
+
+In 2.7.1, we fixed a bug that prevented the GUI from loading properly. However, the issue still exists for confirmation dialogs in the Linux GUI. As a result, when performing operations such as sending funds, creating offers, etc, a timeout will occur. This only affects Linux, and it affects both 2.7.1 and 2.7.2. As a workaround, Linux users can continue to use the CLI for the aforementioned operations.
+
 ## 2.7.1 Chia blockchain 2026-05-19
 
 ## What's Changed
