@@ -228,7 +228,8 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v1(49), True),
         (PlotParam.make_v1(50), True),
         (PlotParam.make_v1(51), False),  # too large
-        (PlotParam.make_v2(0, 0, 1), False),  # too small
+        (PlotParam.make_v2(0, 0, 0), False),  # strength too low
+        (PlotParam.make_v2(0, 0, 1), False),  # strength too low
         (PlotParam.make_v2(0, 0, 2), True),
         (PlotParam.make_v2(0, 0, 3), True),
         (PlotParam.make_v2(0, 0, 32), True),
@@ -311,11 +312,11 @@ def test_base_filter_relative_to_fork_height() -> None:
 @pytest.mark.parametrize(
     "plot_strength,expected_bits",
     [
-        (0, 9),  # at min strength (0) -> plain base filter
-        (1, 10),
-        (2, 11),
-        (4, 13),  # reaches the 8192 cap
-        (5, 13),  # capped
+        (2, 9),  # at min strength (2) -> plain base filter
+        (3, 10),
+        (4, 11),
+        (6, 13),  # reaches the 8192 cap
+        (7, 13),  # capped
         (17, 13),  # capped
     ],
 )
@@ -323,7 +324,7 @@ def test_calculate_plot_filter_bits(plot_strength: int, expected_bits: int) -> N
     constants = DEFAULT_CONSTANTS.replace(
         HARD_FORK2_HEIGHT=uint32(1_000_000),
         NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
-        MIN_PLOT_STRENGTH=uint8(0),
+        MIN_PLOT_STRENGTH=uint8(2),
     )
     assert calculate_plot_filter_bits(uint32(1_000_000), constants, plot_strength) == expected_bits
 
