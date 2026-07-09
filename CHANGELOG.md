@@ -7,7 +7,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 for setuptools_scm/PEP 440 reasons.
 
 
-## 2.7.2 Chia blockchain YYYY-MM-DD
+## 2.7.2 Chia blockchain 2026-07-09
 
 ## What's Changed
 
