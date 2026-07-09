@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
+from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, TransactionsInfo, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -560,6 +560,111 @@ async def test_signage_points(
         assert "signage_point" not in res
         assert res["eos"] == selected_eos
         assert res["reverted"]
+
+
+@pytest.mark.anyio
+async def test_create_block_generator(
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, empty_blockchain: Blockchain
+) -> None:
+    # Covers the create_block_generator RPC: the legacy no-arg response, the opt-in "farmer template"
+    # mode that returns the transaction-block foliage for a signage point, and the error path.
+    nodes, _, bt = two_nodes_sim_and_wallets_services
+    full_node_service_1, full_node_service_2 = nodes
+    full_node_api_1 = full_node_service_1._api
+    full_node_api_2 = full_node_service_2._api
+    server_1 = full_node_api_1.full_node.server
+    server_2 = full_node_api_2.full_node.server
+    self_hostname = bt.config["self_hostname"]
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+    assert full_node_service_1.rpc_server is not None
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        # Build a short chain and register a live signage point (mirrors test_signage_points)
+        blocks = bt.get_consecutive_blocks(5)
+        for block in blocks:
+            await full_node_api_1.full_node.add_block(block)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
+        for block in blocks:
+            await _validate_and_add_block(empty_blockchain, block)
+
+        peak_2 = empty_blockchain.get_peak()
+        assert peak_2 is not None
+        sp_index = uint8(4)
+        sp: SignagePoint = get_signage_point(
+            bt.constants,
+            full_node_api_1.full_node.blockchain,
+            peak_2,
+            peak_2.ip_sub_slot_total_iters(bt.constants),
+            sp_index,
+            [],
+            peak_2.sub_slot_iters,
+        )
+        assert sp.cc_vdf is not None and sp.cc_proof is not None
+        assert sp.rc_vdf is not None and sp.rc_proof is not None
+
+        await full_node_api_1.full_node.add_block(blocks[-1])
+        await full_node_api_1.respond_signage_point(
+            full_node_protocol.RespondSignagePoint(sp_index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+        )
+        assert full_node_api_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
+
+        # 1) Legacy no-arg call is unchanged and exposes no farmer-template fields
+        legacy = await client.create_block_generator()
+        assert legacy is not None
+        for key in ("generator", "refs", "additions", "removals", "sig", "cost"):
+            assert key in legacy
+        assert "tx_block_info" not in legacy
+        assert "prev_block_header_hash" not in legacy
+        assert "peak_height" not in legacy
+
+        # 2) Farmer template mode returns the transaction-block foliage for the signage point
+        result = await client.create_block_generator(
+            signage_point_index=int(sp_index),
+            challenge_hash=sp.cc_vdf.challenge,
+            challenge_chain_sp=sp.cc_vdf.output.get_hash(),
+            reward_chain_sp=sp.rc_vdf.output.get_hash(),
+        )
+        assert result is not None
+        for key in ("generator", "refs", "additions", "removals", "sig", "cost"):
+            assert key in result
+        peak = full_node_api_1.full_node.blockchain.get_peak()
+        assert peak is not None
+        assert result["peak_height"] == peak.height
+        assert result["prev_block_header_hash"] is not None
+
+        tx_block_info = result["tx_block_info"]
+        assert tx_block_info is not None
+        assert tx_block_info["is_transaction_block"] is True
+        for key in (
+            "prev_transaction_block_hash",
+            "prev_transaction_block_timestamp",
+            "filter_hash",
+            "additions_root",
+            "removals_root",
+            "transactions_info",
+            "transactions_info_hash",
+            "fees",
+            "reward_claims_incorporated",
+        ):
+            assert key in tx_block_info
+        # transactions_info_hash must be consistent with the returned transactions_info
+        ti = TransactionsInfo.from_json_dict(tx_block_info["transactions_info"])
+        assert bytes32.from_hexstr(tx_block_info["transactions_info_hash"]) == ti.get_hash()
+
+        # 3) An unknown signage point is rejected
+        with pytest.raises(ValueError):
+            await client.create_block_generator(
+                signage_point_index=int(sp_index),
+                challenge_hash=std_hash(b"unknown-challenge"),
+                challenge_chain_sp=std_hash(b"unknown-cc-sp"),
+                reward_chain_sp=std_hash(b"unknown-rc-sp"),
+            )
 
 
 @pytest.mark.anyio
