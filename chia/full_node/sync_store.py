@@ -76,6 +76,10 @@ class SyncStore:
                     self.peak_to_peer[item[0]] = item[1]  # Put it back in if it was the sync target
                     self.peak_to_peer.popitem(last=False)  # Remove the oldest entry again
         if new_peak:
+            old_peak = self.peer_to_peak.get(peer_id)
+            if old_peak is not None and old_peak.header_hash != header_hash:
+                if old_peak.header_hash in self.peak_to_peer:
+                    self.peak_to_peer[old_peak.header_hash].discard(peer_id)
             self.peer_to_peak[peer_id] = Peak(header_hash, height, weight)
 
     def get_peers_that_have_peak(self, header_hashes: list[bytes32]) -> set[bytes32]:
@@ -101,6 +105,17 @@ class SyncStore:
                 continue
             ret[peer_id] = peak
         return ret
+
+    def get_advertisers_of_peak(self, peak: Peak) -> set[bytes32]:
+        """
+        Returns: peer IDs whose currently advertised peak exactly matches `peak`.
+
+        Intended to snapshot advertisers at peak-selection time so a peer that
+        overwrites its `peer_to_peak` entry with a fresh `NewPeak` afterward
+        cannot escape downstream banning for the earlier advertisement.
+        """
+
+        return {peer_id for peer_id, p in self.peer_to_peak.items() if p == peak}
 
     def get_heaviest_peak(self) -> Peak | None:
         """

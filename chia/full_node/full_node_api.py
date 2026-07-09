@@ -49,7 +49,7 @@ from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS, RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
@@ -209,7 +209,18 @@ class FullNodeAPI:
         we can ask for it.
         """
         # this semaphore limits the number of tasks that can call new_peak() at
-        # the same time, since it can be expensive
+        # the same time, since it can be expensive.
+        # When all active slots are busy and we have at least one outbound
+        # full-node peer, drop additional inbound NewPeak requests.
+        # Without an outbound peer, let inbound peers use the bounded queue.
+        if (
+            not peer.is_outbound
+            and self.full_node.new_peak_sem.locked()
+            and len(self.full_node.server.get_connections(NodeType.FULL_NODE, outbound=True)) > 0
+        ):
+            self.log.debug("Dropping inbound NewPeak, active slots busy: %s %s", peer.get_peer_logging(), request)
+            return None
+
         try:
             async with self.full_node.new_peak_sem.acquire():
                 await self.full_node.new_peak(request, peer)
