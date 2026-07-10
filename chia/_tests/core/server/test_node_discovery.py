@@ -90,7 +90,7 @@ async def test_enable_private_networks(
 
 
 class TestPeerHostValidation:
-    """Regression tests for SEC-145: unbounded peer list host strings."""
+    """Regression tests for oversized peer list host strings."""
 
     @pytest.mark.anyio
     async def test_add_peers_common_rejects_oversized_host(

@@ -1613,6 +1613,22 @@ class WalletStateManager:
 
         if wallet_identifier is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
+            # Bound the number of auto-created DID-scoped NFT wallets. `new_did_id`
+            # is parsed from attacker-controllable NFT transfer data; without a cap a
+            # peer that spams inbound NFTs with unique foreign DIDs can force
+            # unbounded wallet creation. Mirrors `did_auto_add_limit`.
+            # Counter excludes the canonical did_id=None wallet so attacker-driven
+            # fanout cannot displace a user's legitimate no-DID NFT receives.
+            nft_wallet_count = sum(
+                1 for w in self.wallets.values() if isinstance(w, NFTWallet) and w.nft_wallet_info.did_id is not None
+            )
+            nft_limit = self.config.get("nft_auto_add_limit", 100)
+            if new_did_id is not None and nft_wallet_count >= nft_limit:
+                self.log.warning(
+                    f"You are at the max configured limit of {nft_limit} NFT wallets. "
+                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                )
+                return None
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
