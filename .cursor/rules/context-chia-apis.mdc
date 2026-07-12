@@ -1,0 +1,11 @@
+---
+description: Auto-attach curated context for chia-apis
+globs:
+  - chia/apis/**
+---
+
+# Chia APIs Context Available
+
+Curated context for this subsystem exists at `.cursor/context/chia-apis.md`.
+
+Read it before broad source exploration. If the change crosses protocol, server, or service boundaries, also read `.cursor/context/INDEX.md` and the coupled modules listed there.

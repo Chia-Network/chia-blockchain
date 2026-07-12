@@ -1,0 +1,11 @@
+---
+description: Auto-attach repository tooling context for build scripts
+globs:
+  - build_scripts/**
+---
+
+# Repository Tooling Context Available
+
+Consolidated repository tooling context exists at `.cursor/context/repo-tooling.md`.
+
+Read it before broad source exploration. If runtime behavior is involved, also read the affected source module context listed in `.cursor/context/INDEX.md`.

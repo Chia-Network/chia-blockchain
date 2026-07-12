@@ -1,0 +1,11 @@
+---
+description: Auto-attach curated context for chia-simulator
+globs:
+  - chia/simulator/**
+---
+
+# Chia Simulator Context Available
+
+Curated context for this subsystem exists at `.cursor/context/chia-simulator.md`.
+
+Read it before broad source exploration. If the change crosses subsystem boundaries, also read `.cursor/context/INDEX.md` and the coupled modules listed there.

@@ -2,7 +2,7 @@
 
 Use the repository context map before reporting issues that depend on
 cross-file invariants. Prefer the relevant context document over reasoning from
-a narrow diff alone.
+a narrow diff alone. Start with `.cursor/context/INDEX.md` when unsure.
 
 ## Context Routing
 
@@ -11,12 +11,14 @@ context document:
 
 | Changed area                                                             | Read first                             |
 | ------------------------------------------------------------------------ | -------------------------------------- |
-| `chia/consensus/**`, block validation, difficulty, SSI, reorgs           | `.cursor/context/consensus.md`         |
-| `chia/full_node/**`, sync, batch validation, node state                  | `.cursor/context/full-node.md`         |
+| `chia/consensus/**`, block validation, difficulty, SSI, reorgs           | `.cursor/context/chia-consensus.md`    |
+| `chia/full_node/**`, sync, batch validation, node state                  | `.cursor/context/chia-full-node.md`    |
 | `chia/full_node/mempool*.py`, fee logic, spend admission                 | `.cursor/context/mempool.md`           |
-| `chia/server/**`, `chia/protocols/**`, peer connections, rate limits     | `.cursor/context/networking.md`        |
-| `chia/wallet/**`                                                         | `.cursor/context/wallet.md`            |
+| `chia/server/**`, peer connections, rate limits                          | `.cursor/context/chia-server.md`       |
+| `chia/protocols/**`, wire messages                                       | `.cursor/context/chia-protocols.md`    |
+| `chia/wallet/**`                                                         | `.cursor/context/chia-wallet.md`       |
 | CLVM, generators, puzzles, conditions, `chia/types/blockchain_format/**` | `.cursor/context/clvm-execution.md`    |
+| Root config, build scripts, workflows, tooling                           | `.cursor/context/repo-tooling.md`      |
 | Cross-cutting or security-sensitive changes                              | `.cursor/context/global-invariants.md` |
 
 If multiple areas are touched, read each matching context document and check

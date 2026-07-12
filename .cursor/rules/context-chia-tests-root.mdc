@@ -1,0 +1,22 @@
+---
+description: Auto-attach curated context for chia-tests-root
+globs:
+  - chia/_tests/README.md
+  - chia/_tests/__init__.py
+  - chia/_tests/build-init-files.py
+  - chia/_tests/build-job-matrix.py
+  - chia/_tests/check_pytest_monitor_output.py
+  - chia/_tests/check_sql_statements.py
+  - chia/_tests/chia-start-sim
+  - chia/_tests/conftest.py
+  - chia/_tests/connection_utils.py
+  - chia/_tests/ether.py
+  - chia/_tests/process_junit.py
+  - chia/_tests/testconfig.py
+---
+
+# Chia Tests Root Context Available
+
+Curated context for this subsystem exists at `.cursor/context/chia-tests-root.md`.
+
+Read it before broad source exploration. If the change crosses subsystem boundaries, also read `.cursor/context/INDEX.md` and the coupled modules listed there.

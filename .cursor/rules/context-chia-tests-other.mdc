@@ -1,0 +1,26 @@
+---
+description: Auto-attach consolidated context for cross-subsystem tests
+globs:
+  - chia/_tests/chia-start-sim/**
+  - chia/_tests/db/**
+  - chia/_tests/environments/**
+  - chia/_tests/farmer_harvester/**
+  - chia/_tests/fee_estimation/**
+  - chia/_tests/generator/**
+  - chia/_tests/harvester/**
+  - chia/_tests/plot_sync/**
+  - chia/_tests/plotting/**
+  - chia/_tests/pools/**
+  - chia/_tests/rpc/**
+  - chia/_tests/simulation/**
+  - chia/_tests/solver/**
+  - chia/_tests/timelord/**
+  - chia/_tests/tools/**
+  - chia/_tests/weight_proof/**
+---
+
+# Chia Tests Integration Context Available
+
+Consolidated context for this test area exists at `.cursor/context/chia-tests-integration.md`.
+
+Read it before broad source exploration. If the change crosses subsystem boundaries, also read `.cursor/context/INDEX.md` and the coupled modules listed there.
