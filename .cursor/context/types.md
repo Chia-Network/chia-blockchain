@@ -71,7 +71,7 @@ Proof-of-space validation in `verify_and_get_quality_string()` couples:
 - SF9 V1 proof-size rejection;
 - V2 activation gating and Rust `validate_proof_v2()`.
 
-The `prev_transaction_block_height` parameter is not interchangeable with candidate height. It gates V1 phase-out and V2 activation based on the last transaction block before the current signage point, matching consensus hard-fork semantics. Candidate `height` still feeds V1 prefix reductions. V2 plots use the same prefix-bit plot filter path as V1; both call `calculate_prefix_bits()` and `passes_plot_filter()`.
+The `prev_transaction_block_height` parameter is not interchangeable with candidate height. It gates V1 phase-out and V2 activation based on the last transaction block before the current signage point, matching consensus hard-fork semantics. Candidate `height` feeds prefix-bit reductions for both V1 and V2 via `calculate_prefix_bits()`, which uses version-specific constants and height thresholds; both versions then pass through the same `passes_plot_filter()` check.
 
 VDF validation in `validate_vdf()` couples `VDFProof`, `VDFInfo`, `ClassgroupElement`, and consensus constants:
 
