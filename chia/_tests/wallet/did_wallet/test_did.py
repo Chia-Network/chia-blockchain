@@ -489,7 +489,11 @@ async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
     fee = uint64(1000)
 
     await create_did_via_cli(
-        wallet_environments, env_0, amount=101, name="Profile 1", metadata={"Twitter": "Test", "GitHub": "测试"}
+        wallet_environments,
+        env_0,
+        amount=101,
+        name="Profile 1",
+        metadata={"Twitter": "https://twitter.com/myusername", "GitHub": "测试"},
     )
     did_wallet_1 = await get_did_wallet(env_0)
     assert did_wallet_1.get_name() == "Profile 1"
@@ -571,7 +575,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
     assert len(env_0.wallet_state_manager.wallets) == 2
     assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
     metadata = json.loads(did_wallet_2.did_info.metadata)
-    assert metadata["Twitter"] == "Test"
+    assert metadata["Twitter"] == "https://twitter.com/myusername"
     assert metadata["GitHub"] == "测试"
     assert await did_wallet_2.match_hinted_coin(await did_wallet_2.get_coin(), new_puzhash)
 
@@ -620,7 +624,7 @@ async def test_did_auto_transfer_limit(
                 wallet,
                 uint64(101),
                 action_scope,
-                {"Twitter": "Test", "GitHub": "测试"},
+                {"Twitter": "https://twitter.com/myusername", "GitHub": "测试"},
                 fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
@@ -709,7 +713,7 @@ async def test_did_auto_transfer_limit(
             wallet2,
             uint64(101),
             action_scope,
-            {"Twitter": "Test", "GitHub": "测试"},
+            {"Twitter": "https://twitter.com/myusername", "GitHub": "测试"},
             fee=fee,
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -1000,7 +1004,12 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework, capsys
     fee = uint64(1000)
 
     did_wallet_1 = await create_did_via_cli(
-        wallet_environments, env, name="Profile 1", amount=101, fee=fee, metadata={"Twitter": "Test", "GitHub": "测试"}
+        wallet_environments,
+        env,
+        name="Profile 1",
+        amount=101,
+        fee=fee,
+        metadata={"Twitter": "https://twitter.com/myusername", "GitHub": "测试"},
     )
     await wallet_environments.process_pending_states(
         [
@@ -1328,7 +1337,7 @@ async def test_did_resync(
             wallet,
             uint64(101),
             action_scope,
-            {"Twitter": "Test", "GitHub": "测试"},
+            {"Twitter": "https://twitter.com/myusername", "GitHub": "测试"},
             fee=fee,
         )
     assert did_wallet_1.get_name() == "Profile 1"

@@ -1076,10 +1076,6 @@ async def create_did_wallet(
     condition_valid_times: ConditionValidTimes,
     tx_config: TXConfig,
 ) -> list[TransactionRecord]:
-    for key_value_pair in metadata:
-        if key_value_pair.count(":") != 1:
-            print(f"Invalid format for metadata: {key_value_pair}")
-            return []
     try:
         response = await wallet_info.client.create_new_wallet(
             CreateNewWallet(
@@ -1089,7 +1085,9 @@ async def create_did_wallet(
                 fee=fee,
                 wallet_name=name,
                 push=push,
-                metadata={key: value for key, value in (pair.split(":") for pair in metadata)},
+                metadata={
+                    split_args[0]: ":".join(split_args[1:]) for split_args in (pair.split(":") for pair in metadata)
+                },
             ),
             tx_config=tx_config,
             timelock_info=condition_valid_times,
