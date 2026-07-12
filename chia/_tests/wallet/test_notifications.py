@@ -234,7 +234,7 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     sent_notifications = await notification_manager_1.notification_store.get_notifications()
     assert len(sent_notifications) == 0
 
-    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True).run()
+    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True, ids=tuple()).run()
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
     await DeleteNotificationsCMD(
@@ -243,7 +243,7 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
 
     assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
-    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True).run()
+    await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True, ids=tuple()).run()
     assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
 
 
