@@ -15,9 +15,10 @@ from chia.cmds.cmd_helpers import (
     NeedsWalletRPC,
     TransactionEndpoint,
     TransactionEndpointWithTimelocks,
+    TransactionsOut,
     transaction_endpoint_runner,
 )
-from chia.cmds.cmds_util import timelock_args, tx_out_cmd
+from chia.cmds.cmds_util import CMDTXConfigLoader, timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
     AddressParamType,
@@ -759,362 +760,314 @@ def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
 
 
 @wallet_cmd.group("did", help="DID related actions")
-def did_cmd() -> None:
+def did_cmd() -> None:  # pragma: no cover
     pass
 
 
-@did_cmd.command("create", help="Create DID wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=did_cmd,
+    name="create",
+    short_help="Create DID wallet",
+    help="Create DID wallet",
 )
-@options.create_fingerprint()
-@click.option("-n", "--name", help="Set the DID wallet name", type=str)
-@click.option(
-    "-a",
-    "--amount",
-    help="Set the DID amount in mojos. Value must be an odd number.",
-    type=int,
-    default=1,
-    show_default=True,
-)
-@options.create_fee()
-@tx_out_cmd()
-@click.pass_context
-def did_create_wallet_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    name: str | None,
-    amount: int,
-    fee: uint64,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import create_did_wallet
-
-    return asyncio.run(
-        create_did_wallet(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            fee,
-            name,
-            amount,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+class CreateDidWalletCMD(TransactionEndpointWithTimelocks):
+    name: str | None = option("-n", "--name", help="Set the DID wallet name", type=str, default=None)
+    amount: int = option(
+        "-a",
+        "--amount",
+        help="Set the DID amount in mojos. Value must be an odd number.",
+        type=int,
+        default=1,
+        show_default=True,
+    )
+    metadata: Sequence[str] = option(
+        "--metadata",
+        help="A key value pair of metadata to set on the created DID (format == key:value)",
+        type=str,
+        multiple=True,
+        default=tuple(),
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import create_did_wallet
 
-@did_cmd.command("sign_message", help="Sign a message by a DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await create_did_wallet(
+                wallet_info,
+                self.fee,
+                self.name,
+                self.amount,
+                self.push,
+                self.metadata,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=did_cmd,
+    name="sign_message",
+    short_help="Sign a message by a DID",
+    help="Sign a message by a DID",
 )
-@options.create_fingerprint()
-@click.option("-i", "--did_id", help="DID ID you want to use for signing", type=AddressParamType(), required=True)
-@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
-@click.pass_context
-def did_sign_message(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, did_id: CliAddress, hex_message: str
-) -> None:
-    from chia.cmds.wallet_funcs import sign_message
+class DidSignMessageCMD:
+    rpc_info: NeedsWalletRPC
+    did_id: CliAddress = option(
+        "-i", "--did_id", help="DID ID you want to use for signing", type=AddressParamType(), required=True
+    )
+    hex_message: str = option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 
-    asyncio.run(
-        sign_message(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            addr_type=AddressType.DID,
-            message=hex_message,
-            did_id=did_id,
-        )
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import sign_message
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await sign_message(
+                wallet_info=wallet_info,
+                addr_type=AddressType.DID,
+                message=self.hex_message,
+                did_id=self.did_id,
+            )
+
+
+@chia_command(
+    group=did_cmd,
+    name="set_name",
+    short_help="Set DID wallet name",
+    help="Set DID wallet name",
+)
+class DidSetWalletNameCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
+    name: str = option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import did_set_wallet_name
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await did_set_wallet_name(wallet_info, self.wallet_id, self.name)
+
+
+@chia_command(
+    group=did_cmd,
+    name="get_did",
+    short_help="Get DID from wallet",
+    help="Get DID from wallet",
+)
+class DidGetDidCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_did
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_did(wallet_info, self.wallet_id)
+
+
+@chia_command(
+    group=did_cmd,
+    name="get_details",
+    short_help="Get more details of any DID",
+    help="Get more details of any DID",
+)
+class DidGetDetailsCMD:
+    rpc_info: NeedsWalletRPC
+    coin_id: str = option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
+    latest: bool = option("-l", "--latest", help="Return latest DID information", is_flag=True, default=True)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_did_info
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_did_info(wallet_info, self.coin_id, self.latest)
+
+
+@chia_command(
+    group=did_cmd,
+    name="update_metadata",
+    short_help="Update the metadata of a DID",
+    help="Update the metadata of a DID",
+)
+class DidUpdateMetadataCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
+    metadata: str = option("-d", "--metadata", help="The new whole metadata in json format", type=str, required=True)
+
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import update_did_metadata
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await update_did_metadata(
+                wallet_info,
+                self.wallet_id,
+                self.metadata,
+                self.fee,
+                self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=did_cmd,
+    name="find_lost",
+    short_help="Find the did you should own and recovery the DID wallet",
+    help="Find the did you should own and recovery the DID wallet",
+)
+class DidFindLostCMD:
+    rpc_info: NeedsWalletRPC
+    coin_id: str = option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
+    metadata: str | None = option(
+        "-m", "--metadata", help="The new whole metadata in json format", type=str, required=False
+    )
+    recovery_list_hash: str | None = option(
+        "-r",
+        "--recovery_list_hash",
+        help="Override the recovery list hash of the DID. Only set this "
+        "if your last DID spend updated the recovery list",
+        type=str,
+        required=False,
+    )
+    num_verification: int | None = option(
+        "-n",
+        "--num_verification",
+        help="Override the required verification number of the DID."
+        " Only set this if your last DID spend updated the required verification number",
+        type=int,
+        required=False,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import find_lost_did
 
-@did_cmd.command("set_name", help="Set DID wallet name")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await find_lost_did(
+                wallet_info,
+                self.coin_id,
+                self.metadata,
+                self.recovery_list_hash,
+                self.num_verification,
+            )
+
+
+@chia_command(
+    group=did_cmd,
+    name="message_spend",
+    short_help="Generate a DID spend bundle for announcements",
+    help="Generate a DID spend bundle for announcements",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
-@click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
-@click.pass_context
-def did_wallet_name_cmd(ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, id: int, name: str) -> None:
-    from chia.cmds.wallet_funcs import did_set_wallet_name
-
-    asyncio.run(did_set_wallet_name(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, name))
-
-
-@did_cmd.command("get_did", help="Get DID from wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
-@click.pass_context
-def did_get_did_cmd(ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, id: int) -> None:
-    from chia.cmds.wallet_funcs import get_did
-
-    asyncio.run(get_did(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id))
-
-
-@did_cmd.command("get_details", help="Get more details of any DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
-@click.option("-l", "--latest", help="Return latest DID information", is_flag=True, default=True)
-@click.pass_context
-def did_get_details_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, coin_id: str, latest: bool
-) -> None:
-    from chia.cmds.wallet_funcs import get_did_info
-
-    asyncio.run(get_did_info(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, coin_id, latest))
-
-
-@did_cmd.command("update_metadata", help="Update the metadata of a DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option("-d", "--metadata", help="The new whole metadata in json format", type=str, required=True)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def did_update_metadata_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    metadata: str,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import update_did_metadata
-
-    return asyncio.run(
-        update_did_metadata(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            metadata,
-            reuse,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+class DidMessageSpendCMD:
+    rpc_info: NeedsWalletRPC
+    transaction_writer: TransactionsOut
+    wallet_id: int = option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
+    puzzle_announcements: str | None = option(
+        "-pa",
+        "--puzzle_announcements",
+        help="The list of puzzle announcement hex strings, split by comma (,)",
+        type=str,
+        required=False,
+    )
+    coin_announcements: str | None = option(
+        "-ca",
+        "--coin_announcements",
+        help="The list of coin announcement hex strings, split by comma (,)",
+        type=str,
+        required=False,
+    )
+    push: bool = option(
+        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+    )
+    valid_at: int | None = option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+    )
+    expires_at: int | None = option(
+        "--expires-at",
+        help="UNIX timestamp at which the associated transactions expire",
+        type=int,
+        required=False,
+        default=None,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import did_message_spend
 
-@did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
-@click.option("-m", "--metadata", help="The new whole metadata in json format", type=str, required=False)
-@click.option(
-    "-r",
-    "--recovery_list_hash",
-    help="Override the recovery list hash of the DID. Only set this if your last DID spend updated the recovery list",
-    type=str,
-    required=False,
-)
-@click.option(
-    "-n",
-    "--num_verification",
-    help="Override the required verification number of the DID."
-    " Only set this if your last DID spend updated the required verification number",
-    type=int,
-    required=False,
-)
-@click.pass_context
-def did_find_lost_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    coin_id: str,
-    metadata: str | None,
-    recovery_list_hash: str | None,
-    num_verification: int | None,
-) -> None:
-    from chia.cmds.wallet_funcs import find_lost_did
+        puzzle_list: list[str] = []
+        coin_list: list[str] = []
+        if self.puzzle_announcements is not None:
+            try:
+                puzzle_list = self.puzzle_announcements.split(",")
+                for announcement in puzzle_list:
+                    bytes.fromhex(announcement)
+            except ValueError:
+                print("Invalid puzzle announcement format, should be a list of hex strings.")
+                return
+        if self.coin_announcements is not None:
+            try:
+                coin_list = self.coin_announcements.split(",")
+                for announcement in coin_list:
+                    bytes.fromhex(announcement)
+            except ValueError:
+                print("Invalid coin announcement format, should be a list of hex strings.")
+                return
 
-    asyncio.run(
-        find_lost_did(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            coin_id=coin_id,
-            metadata=metadata,
-            recovery_list_hash=recovery_list_hash,
-            num_verification=num_verification,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            txs = await did_message_spend(
+                wallet_info,
+                self.wallet_id,
+                puzzle_list,
+                coin_list,
+                self.push,
+                ConditionValidTimes(
+                    min_time=uint64.construct_optional(self.valid_at),
+                    max_time=uint64.construct_optional(self.expires_at),
+                ),
+                CMDTXConfigLoader().to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            )
+            self.transaction_writer.handle_transaction_output(txs)
+
+
+@chia_command(
+    group=did_cmd,
+    name="transfer",
+    short_help="Transfer a DID",
+    help="Transfer a DID",
+)
+class DidTransferDidCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
+    # TODO: Change RPC to use puzzlehash instead of address
+    target_address: CliAddress = option(
+        "-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True
+    )
+    reset_recovery: bool = option(
+        "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import transfer_did
 
-@did_cmd.command("message_spend", help="Generate a DID spend bundle for announcements")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option(
-    "-pa",
-    "--puzzle_announcements",
-    help="The list of puzzle announcement hex strings, split by comma (,)",
-    type=str,
-    required=False,
-)
-@click.option(
-    "-ca",
-    "--coin_announcements",
-    help="The list of coin announcement hex strings, split by comma (,)",
-    type=str,
-    required=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def did_message_spend_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    puzzle_announcements: str | None,
-    coin_announcements: str | None,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import did_message_spend
-
-    puzzle_list: list[str] = []
-    coin_list: list[str] = []
-    if puzzle_announcements is not None:
-        try:
-            puzzle_list = puzzle_announcements.split(",")
-            # validate puzzle announcements is list of hex strings
-            for announcement in puzzle_list:
-                bytes.fromhex(announcement)
-        except ValueError:
-            print("Invalid puzzle announcement format, should be a list of hex strings.")
-            return []
-    if coin_announcements is not None:
-        try:
-            coin_list = coin_announcements.split(",")
-            # validate that coin announcements is a list of hex strings
-            for announcement in coin_list:
-                bytes.fromhex(announcement)
-        except ValueError:
-            print("Invalid coin announcement format, should be a list of hex strings.")
-            return []
-
-    return asyncio.run(
-        did_message_spend(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            puzzle_list,
-            coin_list,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
-    )
-
-
-@did_cmd.command("transfer", help="Transfer a DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-# TODO: Change RPC to use puzzlehash instead of address
-@click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
-@click.option(
-    "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
-)
-@options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def did_transfer_did(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    target_address: CliAddress,
-    reset_recovery: bool,
-    fee: uint64,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import transfer_did
-
-    return asyncio.run(
-        transfer_did(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            fee,
-            target_address,
-            reset_recovery is False,
-            True if reuse else None,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
-    )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await transfer_did(
+                wallet_info,
+                self.wallet_id,
+                self.fee,
+                self.target_address,
+                not self.reset_recovery,
+                self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
 
 
 @wallet_cmd.group("nft", help="NFT related actions")
