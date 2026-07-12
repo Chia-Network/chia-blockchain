@@ -15,10 +15,9 @@ from chia.cmds.cmd_helpers import (
     NeedsWalletRPC,
     TransactionEndpoint,
     TransactionEndpointWithTimelocks,
-    TransactionsOut,
     transaction_endpoint_runner,
 )
-from chia.cmds.cmds_util import CMDTXConfigLoader, timelock_args, tx_out_cmd
+from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
     AddressParamType,
@@ -961,9 +960,7 @@ class DidFindLostCMD:
     short_help="Generate a DID spend bundle for announcements",
     help="Generate a DID spend bundle for announcements",
 )
-class DidMessageSpendCMD:
-    rpc_info: NeedsWalletRPC
-    transaction_writer: TransactionsOut
+class DidMessageSpendCMD(TransactionEndpointWithTimelocks):
     wallet_id: int = option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
     puzzle_announcements: str | None = option(
         "-pa",
@@ -979,25 +976,9 @@ class DidMessageSpendCMD:
         type=str,
         required=False,
     )
-    push: bool = option(
-        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
-    )
-    valid_at: int | None = option(
-        "--valid-at",
-        help="UNIX timestamp at which the associated transactions become valid",
-        type=int,
-        required=False,
-        default=None,
-    )
-    expires_at: int | None = option(
-        "--expires-at",
-        help="UNIX timestamp at which the associated transactions expire",
-        type=int,
-        required=False,
-        default=None,
-    )
 
-    async def run(self) -> None:
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
         from chia.cmds.wallet_funcs import did_message_spend
 
         puzzle_list: list[str] = []
@@ -1009,7 +990,7 @@ class DidMessageSpendCMD:
                     bytes.fromhex(announcement)
             except ValueError:
                 print("Invalid puzzle announcement format, should be a list of hex strings.")
-                return
+                return []
         if self.coin_announcements is not None:
             try:
                 coin_list = self.coin_announcements.split(",")
@@ -1017,22 +998,20 @@ class DidMessageSpendCMD:
                     bytes.fromhex(announcement)
             except ValueError:
                 print("Invalid coin announcement format, should be a list of hex strings.")
-                return
+                return []
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
-            txs = await did_message_spend(
+            return await did_message_spend(
                 wallet_info,
                 self.wallet_id,
                 puzzle_list,
                 coin_list,
                 self.push,
-                ConditionValidTimes(
-                    min_time=uint64.construct_optional(self.valid_at),
-                    max_time=uint64.construct_optional(self.expires_at),
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
                 ),
-                CMDTXConfigLoader().to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
             )
-            self.transaction_writer.handle_transaction_output(txs)
 
 
 @chia_command(

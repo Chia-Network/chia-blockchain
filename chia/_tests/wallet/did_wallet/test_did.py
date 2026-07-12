@@ -45,9 +45,11 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -897,14 +899,13 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
 
     capsys.readouterr()
     await DidMessageSpendCMD(
-        rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
-        transaction_writer=TransactionsOut(transaction_file_out=None),
-        wallet_id=env.wallet_aliases["did"],
-        coin_announcements="0abc",
-        puzzle_announcements="0def",
-        push=True,
-        valid_at=None,
-        expires_at=None,
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": env.wallet_aliases["did"],
+            "coin_announcements": "0abc",
+            "puzzle_announcements": "0def",
+            "push": True,
+        }
     ).run()
     command_output = capsys.readouterr().out
     assert "Message Spend Bundle:" in command_output
@@ -1250,10 +1251,12 @@ def test_did_command_parsing() -> None:
         DidMessageSpendCMD(
             rpc_info=bare_rpc,
             transaction_writer=TransactionsOut(transaction_file_out=None),
+            tx_config_loader=reuse_tx_config,
             wallet_id=3,
             puzzle_announcements=",".join([bytes32(bytes([3] * 32)).hex(), bytes32(bytes([4] * 32)).hex()]),
             coin_announcements=",".join([bytes32(bytes([1] * 32)).hex(), bytes32(bytes([2] * 32)).hex()]),
             push=True,
+            fee=uint64(0),
             valid_at=100,
             expires_at=150,
         ),
@@ -1263,6 +1266,7 @@ def test_did_command_parsing() -> None:
         ",".join([bytes32(bytes([1] * 32)).hex(), bytes32(bytes([2] * 32)).hex()]),
         "--puzzle_announcements",
         ",".join([bytes32(bytes([3] * 32)).hex(), bytes32(bytes([4] * 32)).hex()]),
+        "--reuse",
         "--valid-at",
         "100",
         "--expires-at",
@@ -1385,3 +1389,16 @@ async def test_did_resync(
     await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
     did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
     assert did_info == did_wallet_2.did_info
+
+
+@pytest.mark.parametrize(
+    argnames=["program", "result"],
+    argvalues=[
+        (Program.to(NIL_TREEHASH), True),
+        (Program.NIL, True),
+        (Program.to(bytes32([1] * 32)), False),
+    ],
+)
+def test_did_recovery_is_nil(program: Program, result: bool) -> None:
+    # test that the alternate wallet nil recovery list bytes are used
+    assert did_recovery_is_nil(program) is result
