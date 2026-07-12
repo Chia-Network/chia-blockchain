@@ -197,6 +197,23 @@ Called at epoch boundaries (every `EPOCH_BLOCKS = 4608` blocks).
 
 Difficulty and SSI can change at most 3× per epoch.
 
+### ValidationState and sub-epoch summaries
+
+Batch pre-validation treats `ValidationState` as an in-out scheduling state:
+the caller's object advances as blocks are queued, while each worker receives
+the state for the specific block it validates.
+
+Difficulty and SSI transitions must be carried by a valid sub-epoch summary.
+`validate_finished_header_block()` rejects `new_difficulty` or
+`new_sub_slot_iters` when the finished sub-slot does not also carry a valid
+`subepoch_summary_hash`. `block_to_block_record()` converts that validated hash
+into `block_rec.sub_epoch_summary_included`, and that computed block-record
+field is the authoritative source for updating shared `ValidationState`.
+
+Do not treat raw `block.finished_sub_slots[0].challenge_chain.new_*` fields as
+the source of truth for state advancement; they are peer-provided block data
+and are valid only when the SES path validates them.
+
 ---
 
 ## VDF iteration math
