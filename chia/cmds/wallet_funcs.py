@@ -1667,11 +1667,14 @@ async def sign_message(*, wallet_info: WalletClientInfo | None = None, **kwargs:
     if wallet_info is not None:
         await _sign_message(wallet_info=wallet_info, **kwargs)
     else:
-        async with get_wallet_client(kwargs["root_path"], kwargs.get("wallet_rpc_port"), kwargs.get("fingerprint")) as (
+        async with get_wallet_client(kwargs["root_path"], kwargs.get("wallet_rpc_port"), kwargs.get("fp")) as (
             wallet_client,
             fp,
             config,
         ):
+            del kwargs["root_path"]
+            del kwargs["wallet_rpc_port"]
+            del kwargs["fp"]
             await _sign_message(
                 wallet_info=WalletClientInfo(client=wallet_client, fingerprint=fp, config=config), **kwargs
             )
