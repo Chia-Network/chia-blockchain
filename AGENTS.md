@@ -1,6 +1,7 @@
 # Chia Context
 
-This repo ships curated architectural context for coding agents.
+This repo ships curated architectural context for coding agents, including
+EDC-generated module docs under `.cursor/context/`.
 
 Start with `.cursor/context/INDEX.md` for routing, critical invariants,
 cross-module coupling, architecture overview, and the module table.
