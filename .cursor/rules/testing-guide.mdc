@@ -1,34 +1,44 @@
 ---
-description: Chia test harness selection and routing to domain-specific guides
-alwaysApply: true
+description: Chia test harness routing — pick the right guide and harness before writing tests
+globs:
+  - chia/_tests/**
 ---
 
 # Chia Test Guide
 
-When writing or modifying tests under `chia/_tests/`, follow this sequence:
+When writing or modifying tests under `chia/_tests/`, read the matching on-demand
+guide before any code search.
 
-## 1. Route to the right guide
+## Route to the right guide
 
-Identify the area from the user-provided path or intent, then read the matching guide **before any code search**:
-
-- `chia/_tests/blockchain/**` or consensus/reorg/overflow intent -> `testing-guide-blockchain.mdc`
-- `chia/_tests/core/full_node/**` or sync/full-node intent -> `testing-guide-full-node.mdc`
-- `chia/_tests/core/mempool/**` or mempool intent -> `testing-guide-mempool.mdc`
-- `chia/_tests/core/data_layer/**` or data-layer intent -> `testing-guide-data-layer.mdc`
-- `chia/_tests/core/server/**` or server/network intent -> `testing-guide-server.mdc`
+| Path or intent | Read first |
+|----------------|------------|
+| `chia/_tests/blockchain/**` or consensus/reorg/overflow | `.cursor/context/testing/blockchain.md` |
+| `chia/_tests/core/full_node/**` or sync/full-node | `.cursor/context/testing/full-node.md` |
+| `chia/_tests/core/mempool/**` or mempool | `.cursor/context/testing/mempool.md` |
+| `chia/_tests/core/data_layer/**` or data-layer | `.cursor/context/testing/data-layer.md` |
+| `chia/_tests/core/server/**` or server/network | `.cursor/context/testing/server.md` |
+| `chia/_tests/core/**` cross-subsystem or service wiring | `.cursor/context/testing/service-wiring.md` |
+| `chia/_tests/wallet/**` | `.cursor/context/testing/wallet.md` |
+| `chia/_tests/clvm/**` or SpendSim | `.cursor/context/testing/clvm.md` |
+| `chia/_tests/cmds/**` or CLI | `.cursor/context/testing/cmds.md` |
+| `chia/_tests/util/**` or shared harness | `.cursor/context/testing/infrastructure.md` |
+| Any test area or CI partitioning | `.cursor/context/testing/architecture.md` |
+| Block/tx/assertion patterns for all tests | `.cursor/context/testing/patterns.md` |
 
 After reading, state: `Guide loaded: <guide-file> (area: <area>)`.
-If area is ambiguous, ask one clarifying question instead of broad repository search.
 
-## 2. Pick the right harness
+## Pick the right harness
 
 1. **Pure logic / parsing / utility** — no simulator, standard pytest.
-2. **Chain state / farming / wallets / mempool / reorg** — simulator fixtures from `chia/_tests/conftest.py`:
-   - `simulator_and_wallet`, `one_node`, `two_nodes`, `one_node_one_block`
-   - `wallet_environments` for wallet-heavy tests
-3. **Service wiring (farmer/harvester/solver/timelord)** — `setup_*` in `chia/_tests/util/setup_nodes.py`.
-4. **Lightweight CLVM spend sim** — `sim_and_client()` from `chia/_tests/util/spend_sim.py`.
+2. **Chain state / farming / wallets / mempool / reorg** — simulator fixtures from
+   `chia/_tests/conftest.py`: `simulator_and_wallet`, `one_node`, `two_nodes`,
+   `one_node_one_block`; `wallet_environments` for wallet-heavy tests.
+3. **Service wiring (farmer/harvester/solver/timelord)** — `setup_*` in
+   `chia/_tests/util/setup_nodes.py`.
+4. **Lightweight CLVM spend sim** — `sim_and_client()` from
+   `chia/_tests/util/spend_sim.py`.
 
-Key shared utilities: `chia/_tests/conftest.py`, `chia/simulator/block_tools.py`, `chia/_tests/util/time_out_assert.py`, `chia/_tests/environments/wallet.py`.
-
-For detailed block/tx/assertion patterns, see `testing-guide-patterns.mdc`.
+Key shared utilities: `chia/_tests/conftest.py`,
+`chia/simulator/block_tools.py`, `chia/_tests/util/time_out_assert.py`,
+`chia/_tests/environments/wallet.py`.

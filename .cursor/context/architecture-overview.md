@@ -44,6 +44,17 @@ Other Chia packages use minimum-version pins. See `pyproject.toml` for current v
 | `chia/data_layer/` | DataLayer (data-storage singleton)                                   | Medium       |
 | `chia/cmds/`       | CLI command handlers                                                 | Low          |
 
+## Package root
+
+`chia/__init__.py`, `chia/__main__.py`, and `chia/py.typed` are process-wide entrypoint and namespace glue, not authorities for consensus, wallet state, P2P semantics, daemon privileges, or RPC behavior.
+
+- `chia/__init__.py` resolves `__version__` from installed package metadata (falls back to `"unknown"` when unavailable). That value is visible in CLI output, daemon/RPC responses, peer handshakes, farmer pool headers, and logs.
+- Import-time runtime gates are process-wide: Python assertions are required and CPython free-threading is rejected, because consensus, networking, store, native-extension, async, and DB assumptions rely on those properties.
+- `chia/__main__.py` is a thin bridge to `chia.cmds.chia:main`; CLI behavior belongs in `chia/cmds/`.
+- `chia/py.typed` declares the package as typed for downstream consumers.
+- Console scripts in `pyproject.toml` are compatibility surfaces that must stay aligned with `chia.util.service_groups`, `chia start`, PyInstaller executable names, installer payloads, and GUI expectations. See `repo-tooling.md` for the full tooling contract.
+- Avoid adding package-root imports from heavy service modules; root imports run before root path, keys root, logging, config, and SSL checks are established.
+
 ## `chia_rs` boundary (largest external dependency)
 
 Nearly all core consensus types live in Rust via `chia_rs`:
@@ -115,7 +126,7 @@ Node roles are defined by `NodeType` in `chia/protocols/outbound_message.py`:
 
 ## Wire protocol overview
 
-109 message types in `ProtocolMessageTypes` enum. Key flows:
+110 message types in `ProtocolMessageTypes` enum. Key flows:
 
 - **Full Node ↔ Full Node**: `new_peak`, `new_transaction`, `request_block(s)`,
   `new_signage_point_or_end_of_sub_slot`, `request_compact_vdf`

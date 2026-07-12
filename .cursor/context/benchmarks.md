@@ -1,6 +1,6 @@
 # Benchmarks Module Context
 
-Verified: 2026-07-02 against 6526ab6f18. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
 
 `benchmarks/` is a set of standalone executable workloads for measuring performance of production Chia subsystems. It is not imported by node runtime code and it is not a pytest suite. Its value is in preserving representative pressure on hot paths: SQLite stores, mempool admission/rebuilds, streamable serialization, full-block JSON conversion, generator-reference lookup, test-chain materialization, and peer address persistence.
 
