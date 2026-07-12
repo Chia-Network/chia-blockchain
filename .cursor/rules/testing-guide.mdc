@@ -18,7 +18,7 @@ guide before any code search.
 | `chia/_tests/core/mempool/**` or mempool | `.cursor/context/testing/mempool.md` |
 | `chia/_tests/core/data_layer/**` or data-layer | `.cursor/context/testing/data-layer.md` |
 | `chia/_tests/core/server/**` or server/network | `.cursor/context/testing/server.md` |
-| `chia/_tests/core/**` cross-subsystem or service wiring | `.cursor/context/testing/service-wiring.md` |
+| `chia/_tests/core/**` cross-subsystem or service wiring | `.cursor/context/testing/architecture.md` |
 | `chia/_tests/wallet/**` | `.cursor/context/testing/wallet.md` |
 | `chia/_tests/clvm/**` or SpendSim | `.cursor/context/testing/clvm.md` |
 | `chia/_tests/cmds/**` or CLI | `.cursor/context/testing/cmds.md` |

@@ -15,14 +15,6 @@ Read this for changes to benchmark scripts, benchmark data setup, performance wo
 - The module depends heavily on `chia._tests.util.*` helpers for randomized blocks, reward coins, persistent test-chain data, and CLVM generator fixtures. Those helpers are test data factories, not stable public APIs.
 - Run benchmark scripts through the repository Python wrapper, for example `tools/py -m benchmarks.streamable`, to use the repo environment and pinned native dependencies.
 
-## Workload Groups
-
-- Store benchmarks exercise SQLite persistence through the same `DBWrapper2` path used by the node. `coin_store.py` stresses `CoinStore.new_block()` with addition-heavy, removal-heavy, and full-block-like mixes, then batch coin lookups and spent-height queries. `block_store.py` creates synthetic `FullBlock`/`BlockRecord` pairs and measures inserts, canonical marking, peak updates, byte/object fetches, generator fetches, range reads, and compactification selection.
-- Mempool benchmarks construct enough chain context for `MempoolManager` to accept synthetic spends. `mempool.py` compares threaded and inline validation for large bundles, normal bundles, replace-by-fee, block-generator construction, simple peak extension, and reorg-style peak changes. `mempool-long-lived.py` models a week of block arrivals with repeated transaction admission and spend invalidation.
-- Serialization benchmarks are split by data shape. `streamable.py` is a configurable microbenchmark for `Streamable` object creation, bytes round-trips, and JSON round-trips using both a local nested streamable class and randomized `FullBlock`s. `jsonify.py` times `FullBlock.to_json_dict()` over persisted test block shards.
-- Chain/generator benchmarks focus on realistic historical shape. `block_ref.py` opens an existing full-node database read-only, builds `Blockchain`, samples transaction-block reference lists from `transaction_height_delta`, and measures `get_block_generator()` over production `lookup_block_generators`.
-- Networking persistence is represented by `address_manager_store.py`, which manually populates a large `AddressManager` and measures `serialize_bytes()`/`deserialize_bytes()` plus file IO for the peers file format.
-
 ## Data And Fidelity Assumptions
 
 - Randomness is usually seeded to make comparisons reproducible. Preserve seeds unless the benchmark is deliberately being reshaped; unseeded randomness makes before/after comparisons noisy.

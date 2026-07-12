@@ -54,20 +54,19 @@ Test harness selection and patterns live under `.cursor/context/testing/` and
 are routed by `.cursor/rules/testing-guide.mdc`. Read that rule when working in
 `chia/_tests/`.
 
-| File                                                   | Covers                                                       |
-| ------------------------------------------------------ | ------------------------------------------------------------ |
-| [testing/architecture.md](testing/architecture.md)     | Test architecture, consensus modes, fixture authority, CI    |
-| [testing/patterns.md](testing/patterns.md)             | Block creation, transaction submission, assertion patterns   |
-| [testing/blockchain.md](testing/blockchain.md)         | Consensus/blockchain tests, reorg, overflow, fork invariants |
-| [testing/full-node.md](testing/full-node.md)           | Full node sync, propagation, mempool-to-block, reorg tests   |
-| [testing/mempool.md](testing/mempool.md)               | Mempool acceptance/rejection, replacement, eviction          |
-| [testing/data-layer.md](testing/data-layer.md)         | DataStore logic, wallet-backed RPC, singleton lifecycle      |
-| [testing/server.md](testing/server.md)                 | Connection lifecycle, API errors, DoS/ban, rate limiting     |
-| [testing/wallet.md](testing/wallet.md)                 | Wallet fixtures, `wallet_environments`, wallet RPC tests     |
-| [testing/clvm.md](testing/clvm.md)                     | Direct CLVM execution vs SpendSim                            |
-| [testing/cmds.md](testing/cmds.md)                     | CLI harness, mock RPC boundaries                             |
-| [testing/infrastructure.md](testing/infrastructure.md) | Shared harness, setup_nodes, SpendSim, convergence helpers   |
-| [testing/service-wiring.md](testing/service-wiring.md) | Cross-subsystem service setup, async test layering           |
+| File                                                   | Covers                                                                                 |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| [testing/architecture.md](testing/architecture.md)     | Test architecture, consensus modes, fixture authority, CI, cross-subsystem correlation |
+| [testing/patterns.md](testing/patterns.md)             | Block creation, transaction submission, assertion patterns                             |
+| [testing/blockchain.md](testing/blockchain.md)         | Consensus/blockchain tests, reorg, overflow, fork invariants                           |
+| [testing/full-node.md](testing/full-node.md)           | Full node sync, propagation, mempool-to-block, reorg tests                             |
+| [testing/mempool.md](testing/mempool.md)               | Mempool acceptance/rejection, replacement, eviction                                    |
+| [testing/data-layer.md](testing/data-layer.md)         | DataStore logic, wallet-backed RPC, singleton lifecycle                                |
+| [testing/server.md](testing/server.md)                 | Connection lifecycle, API errors, DoS/ban, rate limiting                               |
+| [testing/wallet.md](testing/wallet.md)                 | Wallet fixtures, `wallet_environments`, wallet RPC tests                               |
+| [testing/clvm.md](testing/clvm.md)                     | Direct CLVM execution vs SpendSim                                                      |
+| [testing/cmds.md](testing/cmds.md)                     | CLI harness, mock RPC boundaries                                                       |
+| [testing/infrastructure.md](testing/infrastructure.md) | Shared harness, setup_nodes, SpendSim, convergence helpers                             |
 
 ---
 

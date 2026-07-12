@@ -1,97 +1,20 @@
 # Full Node Tests
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against a5647a9327e5. If source contradlicts this doc, trust source and update the doc.
 
 ## Scope
 
-Use this when testing behavior driven by full node state transitions:
+Use this when testing behavior driven by full node state transitions: sync,
+block acceptance, mempool-to-block inclusion, wallet-connected flows, and reorg.
 
-- node sync / backtrack / batch sync
-- block acceptance and propagation
-- mempool to block inclusion
-- wallet-connected full node flows
-- reorg and chain preference behavior
+For harness selection and block/transaction patterns, see `patterns.md` and
+`architecture.md`. For mempool-specific tests, see `mempool.md`.
 
-Primary references:
+## Key Tips
 
-- `chia/_tests/core/full_node/test_full_node.py`
-- `chia/_tests/core/full_node/test_transactions.py`
-- `chia/_tests/core/full_node/full_sync/test_full_sync.py`
-
-## Go-To Fixtures and Harness
-
-Pick the smallest fixture that covers your case:
-
-- single-node state checks: `one_node_one_block`, `one_node`
-- two/three/five node sync tests: `two_nodes`, `three_nodes`, `five_nodes`
-- wallet + full node integration: `simulator_and_wallet`, `setup_two_nodes_and_wallet`, `three_nodes_two_wallets`
-- custom service setup: `setup_simulators_and_wallets(...)` from `chia/_tests/util/setup_nodes.py`
-
-Typical test setup pattern:
-
-1. Connect peers with `start_client(...)` or `connect_and_get_peer(...)`.
-2. Seed chain with deterministic blocks or farmed tx blocks.
-3. Submit spend(s) and wait for mempool visibility.
-4. Farm include block and assert final chain/wallet state.
-
-## Block Creation Patterns
-
-Use deterministic block construction when sequence matters:
-
-- `bt.get_consecutive_blocks(...)`
-  - Common options: `block_list_input`, `seed`, `guarantee_transaction_block`, `skip_slots`, `force_overflow`.
-
-Add blocks with:
-
-- `await add_blocks_in_batches(blocks, full_node)` for bulk chain setup.
-- `await full_node.add_block(block)` when each step needs validation.
-
-Use simulator helpers when internals are less important:
-
-- `farm_new_transaction_block(FarmNewBlockProtocol(...))`
-- `farm_blocks_to_puzzlehash(...)`
-
-## Transaction Submission Patterns
-
-Wallet-first path (common):
-
-1. Build tx in `new_action_scope(..., push=True)`.
-2. `await wallet.generate_signed_transaction(...)`.
-3. Read created records from `action_scope.side_effects.transactions`.
-
-Protocol path (for peer/mempool behavior):
-
-1. Wrap spend bundle in `wallet_protocol.SendTransaction(...)`.
-2. Submit via `full_node_api.send_transaction(...)` using a dummy or connected peer.
-
-## How To Assert Steps Happened
-
-Use layered checks:
-
-1. **Mempool entered**
-   - `time_out_assert(..., mempool_manager.get_spendbundle, expected_bundle, tx_name)`
-2. **Block inclusion**
-   - farm tx block, then assert mempool no longer contains bundle
-3. **Heights/sync convergence**
-   - `time_out_assert(..., node_height_at_least|node_height_exactly, ...)`
-4. **Wallet convergence**
-   - `wait_for_wallet_synced(...)` + balance assertions
-5. **Failure path**
-   - `pytest.raises(...)` and explicit `Err`/status checks where applicable
-
-## Anti-Flake Guidance
-
-- Prefer `time_out_assert` and sync wait helpers over raw sleeps.
-- Use deterministic seeds in `get_consecutive_blocks` for fork/reorg scenarios.
-- For sync tests, assert both node height and peak equality when possible.
+- For sync tests, assert both node height and peak equality — height alone can
+  lag behind peak acceptance.
 - Keep fixture scope narrow; large shared state increases intermittent failures.
-
-## Quick Checklist
-
-- Fixture matches topology (single node vs multi-node vs wallet-connected).
-- Block sequence is deterministic if order-sensitive.
-- Mempool, inclusion, and sync are asserted as separate steps.
-- Negative path validates expected `Err` or status, not just generic failure.
 
 ## Starter Template
 
@@ -119,11 +42,9 @@ async def test_example(
     full_node_api, server, bt = one_node_one_block
     full_node = full_node_api.full_node
 
-    # Build and add blocks
     blocks = bt.get_consecutive_blocks(3)
     for block in blocks:
         await full_node.add_block(block)
 
-    # Assert height convergence
     await time_out_assert(10, node_height_at_least, True, full_node, 3)
 ```

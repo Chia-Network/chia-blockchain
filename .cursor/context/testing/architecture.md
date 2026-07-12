@@ -77,6 +77,18 @@ Keyrings are isolated by autouse/root fixtures. Test code must not prompt for pr
 
 `util/`, `clvm/`, `generator/`, `fee_estimation/`, `db/`, and custom-type tests are mostly fast deterministic guards for serialization, CLVM execution, cost accounting, DB wrappers, cache behavior, network protocol files, and helper APIs. Prefer local assertions here instead of service topology.
 
+## Cross-Subsystem Correlation
+
+These per-cluster details are not obvious from conftest or individual test files:
+
+- Farmer proof flow is correlation-heavy: `sps`, `proofs_of_space`, `quality_str_to_identifiers`, `number_of_responses`, `cache_add_time`, and `pending_solver_requests` must agree across async harvester, full-node, pool, and solver messages.
+- Plotting and plot-sync tests protect the harvester-to-farmer inventory state machine: `(sync_id, message_id)` ordering, dropped/delayed/duplicated responses, quarantine behavior, and reset/retry.
+- Pool tests span config/CLI parsing, CLVM pool puzzle lifecycle, wallet pool store, `plotnft` commands, singleton identity, trusted/untrusted wallet sync, and reorg/revert.
+- Daemon tests: websocket registration, keychain proxy, and do not apply P2P message/rate-limit assumptions to daemon JSON traffic.
+- RPC structured error tests intentionally preserve both legacy `error` strings and newer `structuredError` payloads.
+- Directory config files affect runtime shape: moving tests between core subdirectories can change checked-out blocks/plots, parallelism, CI timeout behavior, and consensus-mode coverage.
+- DB wrapper behavior underpins full-node, wallet, and DataLayer stores. Reader transaction visibility, WAL mode, savepoint rollback, and foreign-key delay semantics are infrastructure contracts.
+
 ## CI And Test Partitioning
 
 `chia/_tests/README.md` and `testconfig.py` define CI job generation. Treat `testconfig.py` as the source of truth for default settings, with the README as process guidance for regenerating workflows. Test files are discovered by `test_*.py`; each subdirectory below configured root test dirs becomes a workflow matrix job. Parent-directory jobs do not include subdirectory tests, and subdirectory jobs do not include parent tests.

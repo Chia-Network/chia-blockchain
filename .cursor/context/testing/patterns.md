@@ -2,66 +2,7 @@
 
 Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
 
-## How We Make Blocks
-
-### 1) Deterministic block lists (`BlockTools`)
-
-Use `bt.get_consecutive_blocks(...)` when you need exact block structure, specific spend inclusion, or malformed block variants.
-
-Common options:
-
-- `block_list_input=` continue from existing chain
-- `transaction_data=` include a spend bundle
-- `guarantee_transaction_block=True` force tx block
-- `force_overflow`, `skip_slots`, `seed`, `time_per_block`
-
-Then add blocks with:
-
-- `await full_node.add_block(block)` for single steps, or
-- `await add_blocks_in_batches(blocks, full_node)` for larger sets
-
-### 2) High-level farming APIs (`FullNodeSimulator`)
-
-Use these for behavior tests where exact block internals do not matter:
-
-- `farm_blocks_to_puzzlehash()`
-- `farm_blocks_to_wallet()`
-- `farm_rewards_to_wallet()`
-- `farm_new_transaction_block()`
-- `reorg_from_index_to_new_index()`
-- `revert_block_height()`
-
-### 3) Pre-generated persistent chains
-
-Use fixtures like:
-
-- `default_400_blocks`, `default_1000_blocks`, `default_10000_blocks`
-- reorg variants and compact variants
-
-These come from `persistent_blocks(...)` and are used heavily in consensus/timelord/weight proof tests.
-
-## How We Submit Transactions
-
-### A) Wallet-internal (most common)
-
-1. `async with wallet.wallet_state_manager.new_action_scope(..., push=True) as action_scope:`
-2. `await wallet.generate_signed_transaction(...)`
-3. Records from `action_scope.side_effects.transactions`
-4. Wait via `wait_transaction_records_entered_mempool` or `process_pending_states`.
-
-### B) Wallet RPC
-
-`WalletRpcClient`: `send_transaction(...)`, `create_signed_transactions(...)`, `push_transactions(...)`, `push_tx(...)`.
-
-### C) Full node protocol-level
-
-Build `wallet_protocol.SendTransaction(spend_bundle)`, send via `full_node_api.send_transaction(...)` with dummy peers from `chia/_tests/connection_utils.py`.
-
-### D) CLVM simulator
-
-`status, err = await sim_client.push_tx(spend_bundle)`
-
-## How We Assert Steps Happened
+## Layered Assertions
 
 Use layered assertions instead of a single final check:
 
@@ -89,26 +30,6 @@ Use layered assertions instead of a single final check:
 | `simulation`       | `simulator_and_wallet`, full system fixture                              | high-level simulator farming/reorg                             | wallet-generated spends                                                                            | heavy `time_out_assert`, mempool/coin-store confirmations                     |
 | `wallet`           | `wallet_environments` (primary), simulator fixtures                      | frequent farming/reorg                                         | wallet action scopes, wallet RPC                                                                   | `process_pending_states`, `time_out_assert`, mempool checks                   |
 | `weight_proof`     | pre-generated block fixtures + `BlockchainMock`                          | `get_consecutive_blocks` for edge chains                       | none                                                                                               | proof validity/fork point assertions                                          |
-
-## Agent Templates
-
-### Wallet transfer with robust checks
-
-1. Use `wallet_environments` with needed prefarm.
-2. Build tx inside `new_action_scope(..., push=True)`.
-3. Call `wallet_environments.process_pending_states([...])` with pre-block and post-block expected deltas.
-
-### Protocol/mempool acceptance test
-
-1. Create spend bundle (`WalletTool` or wallet action scope).
-2. Submit with `full_node_api.send_transaction(...)` via dummy peer.
-3. Assert mempool inclusion, farm tx block, assert eviction + coin-store updates.
-
-### Consensus block validation test
-
-1. Build base chain using `bt.get_consecutive_blocks`.
-2. Mutate crafted block (or use transaction conditions).
-3. Validate with `_validate_and_add_block(...)` expecting specific `Err`.
 
 ## Checklist
 
