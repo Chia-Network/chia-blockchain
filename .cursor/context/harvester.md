@@ -1,6 +1,6 @@
 # Chia Harvester Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/harvester/` is the local farming edge. It connects only to farmers, learns the farmer/pool keys through the farmer-initiated harvester handshake, discovers local plot files, checks signage-point eligibility, returns V1 proofs or V2 partial proofs, signs selected farmer requests with plot-local keys, and streams plot inventory changes back to the farmer.
 

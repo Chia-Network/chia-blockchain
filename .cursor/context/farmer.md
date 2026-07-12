@@ -1,6 +1,6 @@
 # Chia Farmer Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/farmer/` is the block-production coordinator between the full node, harvesters, pool HTTP APIs, local keychain, plot-sync state, RPC clients, and optional solver services for v2 plots. It does not own chain consensus or plot lookup; its safety depends on forwarding only locally verified proof/signature material across these boundaries while keeping short-lived signage-point state coherent.
 

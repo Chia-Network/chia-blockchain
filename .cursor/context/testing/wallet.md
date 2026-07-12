@@ -1,6 +1,6 @@
 # Chia Wallet Tests Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/_tests/wallet/` is the main behavioral safety net for the wallet stack. It mixes fast unit tests for stores, puzzles, request types, and CLVM helpers with simulator-backed integration tests that exercise wallet sync, transaction construction, subwallet recognition, RPC endpoints, offers, and reorg handling. Treat it as a specification for wallet invariants, not just regression coverage.
 

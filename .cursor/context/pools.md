@@ -1,6 +1,6 @@
 # Chia Pools Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/pools/` is the plot-NFT/pooling singleton adapter. It bridges wallet-owned singleton state, CLVM pool puzzles, farmer-facing pooling configuration, consensus reward coin shape, and the external pool HTTP protocol. The module is small, but it sits on several trust boundaries: wallet sync reconstructs state from on-chain coin spends, the farmer reads a YAML mirror rather than wallet DB state, and reward claiming depends on exact consensus coin IDs and puzzle hashes.
 

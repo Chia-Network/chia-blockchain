@@ -1,6 +1,6 @@
 # Chia Plot Sync Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/plot_sync/` is the farmer-harvester inventory replication protocol. The harvester-side `Sender` converts `PlotManager` refresh callbacks into an ordered stream of plot-sync messages; the farmer-side `Receiver` validates that stream, accumulates a delta, commits it only at `plot_sync_done`, and exposes the farmer/UI view of each harvester's plots.
 

@@ -1,6 +1,6 @@
 # Chia Data Layer Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/data_layer/` implements Chia DataLayer: an off-chain key/value Merkle store whose committed roots are anchored by wallet-managed DataLayer singletons. The module is not just a local database. Correctness depends on alignment between local Merkle roots, wallet singleton history, static delta/full-tree files, mirror subscriptions, and optional downloader/uploader plugins.
 

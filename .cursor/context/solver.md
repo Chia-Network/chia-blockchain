@@ -1,6 +1,6 @@
 # Chia Solver Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/solver/` is a small service boundary for v2 plot solving. It receives `SolverInfo` messages from farmers, turns Rust-backed `PartialProof` fragments into full proof bytes via `chia_rs.solve_proof()`, and returns `SolverResponse` messages that the farmer folds back into normal proof-of-space processing. It is not a chain, plot, key, or farmer-state authority.
 

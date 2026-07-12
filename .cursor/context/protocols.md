@@ -1,6 +1,6 @@
 # Chia Protocols Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/protocols/` is the wire-contract layer for Chia services. It does not usually enforce behavior itself; it defines the immutable `Streamable` payloads, numeric message IDs, node roles, request/reply state machine, and capability/version declarations that `chia/server/` and API classes enforce at runtime. Treat edits here as network compatibility changes, not local refactors.
 

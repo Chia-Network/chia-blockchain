@@ -1,6 +1,6 @@
 # chia-tests-util
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 Scope: `chia/_tests/util/`. This is distilled architectural context for future audit or implementation agents. It intentionally omits helper-by-helper inventory and focuses on contracts that affect the wider test suite.
 

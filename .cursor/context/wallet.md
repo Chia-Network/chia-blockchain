@@ -1,6 +1,6 @@
 # Chia Wallet Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/wallet/` is the SPV wallet, transaction-construction, subwallet, offer, and wallet-RPC boundary. Its safety properties are distributed across the wallet node's peer trust model, `WalletStateManager`'s state ownership, action-scope staging, SQLite stores, and CLVM puzzle-driver conventions. Do not treat any single wallet class as the source of truth without checking the surrounding persistence and sync path.
 

@@ -1,6 +1,6 @@
 # Chia Full Node Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 This module is the orchestration boundary where untrusted peer/RPC inputs become consensus, mempool, wallet-notification, and timelord/farmer side effects. The main safety property is not held in one class: it depends on preserving exact ordering between `Blockchain`, `FullNodeStore`, `MempoolManager`, SQLite stores, peer caches, and async fanout.
 

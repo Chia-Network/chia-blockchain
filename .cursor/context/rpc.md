@@ -1,6 +1,6 @@
 # Chia RPC Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/rpc/` is the local operator/API boundary for Chia services. It is separate from the peer protocol: service-specific RPC APIs expose HTTP POST routes and daemon websocket commands, while this module supplies the shared server wrapper, client base class, typed marshalling helper, and structured error normalization.
 

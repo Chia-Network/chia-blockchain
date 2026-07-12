@@ -1,6 +1,6 @@
 # Repository Tooling Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 Scope: root-level packaging/config, service entrypoints, install wrappers, GitHub workflows, build/release scripts, developer tools, and GUI submodule integration. This is the single context file for repository tooling because these risks are tightly coupled.
 

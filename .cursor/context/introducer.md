@@ -1,6 +1,6 @@
 # Chia Introducer Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/introducer/` is a small bootstrap service whose job is to help wallets,
 farmers, and full nodes discover full-node peers. It is not an address-book

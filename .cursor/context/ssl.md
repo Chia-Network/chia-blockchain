@@ -1,6 +1,6 @@
 # Chia SSL Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/ssl/` is the certificate material and permission hygiene layer for Chia's local config root. It does not build network connections itself; it provisions trust roots and node certificates that `chia/server/`, `chia/rpc/`, and `chia/daemon/` turn into mutual-TLS contexts.
 

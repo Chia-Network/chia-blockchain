@@ -1,6 +1,6 @@
 # Chia APIs Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/apis/` is the protocol metadata surface for service APIs. The classes are non-functional `Protocol` stubs, but their `ApiMetadata` decorators are runtime-relevant: outbound `WSChiaConnection.call_api()` uses remote stub metadata to decide whether a request can be sent, and local stub metadata to decode typed responses.
 

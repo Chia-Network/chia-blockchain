@@ -1,6 +1,6 @@
 # Chia Plotting Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/plotting/` is the shared plot lifecycle boundary. It creates plot files, opens and abstracts V1/V2 provers, scans configured harvester plot directories, persists a prover cache, parses plot memos into farming keys, and supplies the lock-protected plot inventory consumed by the harvester, plot sync, `chia plots check`, simulator block tools, and external plotter wrappers.
 

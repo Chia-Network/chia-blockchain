@@ -1,6 +1,6 @@
 # Chia Commands Tests Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/_tests/cmds/` is the CLI contract test module. It primarily verifies that Click parsing, command helper dataclasses, config/root-path handling, RPC-client selection, wallet request construction, transaction output files, and user-facing text stay aligned with `chia/cmds/`. Most tests intentionally stop at the command/RPC boundary; they are not full wallet or node behavior tests unless they explicitly use service fixtures.
 

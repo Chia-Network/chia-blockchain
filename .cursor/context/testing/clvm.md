@@ -1,6 +1,6 @@
 # chia-tests-clvm
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 Scope: `chia/_tests/clvm/`. This is distilled architectural context for future audit or implementation agents. It intentionally omits exhaustive test inventory and obvious helper summaries.
 

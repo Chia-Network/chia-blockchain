@@ -1,6 +1,6 @@
 # Chia Server Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/server/` is the network boundary where remote TLS peers become typed protocol calls on node APIs. Its core safety property is distributed across TLS identity, handshake/capability negotiation, per-peer message routing, rate limiting, peer admission, and address discovery. Do not reason about any one of these in isolation.
 

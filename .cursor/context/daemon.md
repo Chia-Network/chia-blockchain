@@ -1,6 +1,6 @@
 # Chia Daemon Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/daemon/` is the local process-control and keychain RPC boundary. It is not
 part of the peer wire protocol: clients and node services connect to a local TLS

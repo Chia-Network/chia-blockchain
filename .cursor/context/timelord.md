@@ -1,6 +1,6 @@
 # Chia Timelord Module Context
 
-Verified: 2026-07-12 against a5647a9327e5. If source contradicts this doc, trust source and update the doc.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 `chia/timelord/` is the proof-of-time production service. It does not decide chain validity: the full node sends peaks and unfinished blocks, the timelord schedules VDF work against its current local view, and the full node later validates every returned signage point, end-of-sub-slot, compact proof, and infusion point before accepting side effects.
 
