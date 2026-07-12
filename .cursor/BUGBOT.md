@@ -1,28 +1,24 @@
 # Bugbot Review Guidance
 
-Use these repository-specific invariants when reviewing pull requests. Prefer
-these rules over local reasoning from a narrow diff when they apply.
+Use the repository context map before reporting issues that depend on
+cross-file invariants. Prefer the relevant context document over reasoning from
+a narrow diff alone.
 
-## Consensus Validation
+## Context Routing
 
-When reviewing `chia/consensus/**` or `chia/full_node/full_node.py`, remember:
+Before reviewing a changed file, identify the subsystem and read the matching
+context document:
 
-- `ValidationState` contains the sub-slot iterations, difficulty, and previous
-  sub-epoch-summary block used for header validation.
-- Batch pre-validation intentionally mutates the caller-provided
-  `ValidationState` while scheduling blocks, then passes each worker the state
-  for that specific block.
-- Difficulty and sub-slot-iteration changes are valid only through a
-  sub-epoch summary. `validate_finished_header_block()` rejects
-  `new_difficulty` or `new_sub_slot_iters` when the finished sub-slot does not
-  carry a valid `subepoch_summary_hash`.
-- `block_to_block_record()` converts the validated sub-epoch-summary hash into
-  `block_rec.sub_epoch_summary_included`.
-- The authoritative source for advancing shared validation state after a block
-  is `block_rec.sub_epoch_summary_included`, not the raw peer-provided
-  `block.finished_sub_slots[0].challenge_chain.new_*` fields.
+| Changed area                                                             | Read first                             |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| `chia/consensus/**`, block validation, difficulty, SSI, reorgs           | `.cursor/context/consensus.md`         |
+| `chia/full_node/**`, sync, batch validation, node state                  | `.cursor/context/full-node.md`         |
+| `chia/full_node/mempool*.py`, fee logic, spend admission                 | `.cursor/context/mempool.md`           |
+| `chia/server/**`, `chia/protocols/**`, peer connections, rate limits     | `.cursor/context/networking.md`        |
+| `chia/wallet/**`                                                         | `.cursor/context/wallet.md`            |
+| CLVM, generators, puzzles, conditions, `chia/types/blockchain_format/**` | `.cursor/context/clvm-execution.md`    |
+| Cross-cutting or security-sensitive changes                              | `.cursor/context/global-invariants.md` |
 
-Do not report stale `ValidationState` across a valid difficulty/SSI transition
-unless you can show a valid path where `new_difficulty` or
-`new_sub_slot_iters` is accepted while `block_rec.sub_epoch_summary_included`
-remains `None`.
+If multiple areas are touched, read each matching context document and check
+the interaction between their invariants. If a suspected issue contradicts the
+context, verify the full path before reporting it.
