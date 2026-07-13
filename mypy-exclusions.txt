@@ -36,4 +36,3 @@ chia._tests.plotting.test_plot_manager
 chia._tests.pools.test_pool_puzzles_lifecycle
 chia._tests.simulation.test_simulation
 chia._tests.util.test_misc
-chia._tests.wallet.did_wallet.test_did
