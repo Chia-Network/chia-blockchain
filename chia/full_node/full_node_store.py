@@ -870,16 +870,6 @@ class FullNodeStore:
 
         The filter_challenge is the cc sub-slot challenge hash of a previously
         completed sub-slot.  All SPs in the same window share the same value.
-
-        Windows (default 16): [0-15], [16-31], [32-47], [48-63]
-        - Window [0-15]:  uses SS(n-2) challenge hash (~10 min notice)
-        - Window [16-63]: uses SS(n-1) challenge hash (~2.5-7.5 min notice)
-
-        This value is also available during sync via
-        BlockRecord.finished_challenge_slot_hashes, enabling trustless
-        verification without extra VDF proofs.
-
-        Returns None when the target sub-slot is unavailable (not enough history).
         """
         assert len(self.finished_sub_slots) >= 1
 

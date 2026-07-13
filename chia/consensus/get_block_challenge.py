@@ -188,12 +188,7 @@ def get_filter_challenge_from_chain(
 ) -> bytes32 | None:
     """Derive filter_challenge for V2 plot filter from chain data.
 
-    Returns the cc sub-slot challenge hash of a previously completed sub-slot:
-    - Window [0-15]:  SS(n-2) challenge hash (2 sub-slots back)
-    - Window [16-63]: SS(n-1) challenge hash (1 sub-slot back)
-
-    Uses the same data available during sync (finished_sub_slots on blocks
-    and finished_challenge_slot_hashes on BlockRecords).
+    Returns the cc sub-slot challenge hash of a previously completed sub-slot
     """
     window_start = (signage_point_index // FILTER_WINDOW_SIZE) * FILTER_WINDOW_SIZE
     n_back = 2 if window_start == 0 else 1
