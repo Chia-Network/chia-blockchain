@@ -18,7 +18,10 @@
   "win": {
     "target": "nsis",
     "icon": "src/assets/img/chia.ico",
-    "executableName": "Chia"
+    "executableName": "Chia",
+    "signtoolOptions": {
+      "sign": null
+    }
   },
   "nsis": {
     "artifactName": "ChiaSetup-${env.CHIA_INSTALLER_VERSION}.exe",

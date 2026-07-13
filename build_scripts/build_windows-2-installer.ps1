@@ -73,7 +73,8 @@ rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
-# Signing is done with signtool /dlib after packaging. Disable electron-builder signing.
+# Signing is done with signtool /dlib after packaging. electron-builder signing is
+# disabled via win.signtoolOptions.sign=null in electron-builder.json.
 $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
 
 function Request-AzureFederatedToken {
