@@ -44,6 +44,19 @@ async def test_get_rate_limits_to_use() -> None:
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
 
 
+@pytest.mark.parametrize(
+    "message_type",
+    [
+        ProtocolMessageTypes.respond_plots2,
+        ProtocolMessageTypes.plot_sync_loaded2,
+    ],
+)
+def test_new_plot_serialization_messages_have_time_based_rate_limits(message_type: ProtocolMessageTypes) -> None:
+    r = RateLimiter(incoming=False, get_time=lambda: 0)
+    assert r.process_msg_and_check(make_msg(message_type, b""), rl_v1, rl_v1) is None
+    assert r.process_msg_and_check(make_msg(message_type, b""), rl_v2, rl_v2) is None
+
+
 # we want to exercise every possibly limit we may hit
 # they are:
 # * total number of messages / 60 seconds for non-transaction messages

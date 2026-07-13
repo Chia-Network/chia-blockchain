@@ -5,13 +5,14 @@ import logging
 
 import pytest
 from chia_rs import RespondToPhUpdates
-from chia_rs.sized_ints import uint8, uint16, uint32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.util import network_protocol_data
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols import harvester_protocol
 from chia.protocols.full_node_protocol import (
     RejectBlocks,
     RequestBlocks,
@@ -260,6 +261,12 @@ async def test_unsolicited_unlimited_v3_messages(
         ProtocolMessageTypes.respond_proof_of_weight: network_protocol_data.respond_proof_of_weight,
         ProtocolMessageTypes.respond_puzzle_solution: network_protocol_data.respond_puzzle_solution,
         ProtocolMessageTypes.reject_puzzle_solution: network_protocol_data.reject_puzzle_solution,
+        ProtocolMessageTypes.respond_plots2: network_protocol_data.respond_plots2,
+        ProtocolMessageTypes.plot_sync_loaded2: harvester_protocol.PlotSyncPlotList2(
+            harvester_protocol.PlotSyncIdentifier(uint64(1), uint64(2), uint64(3)),
+            [network_protocol_data.plot2],
+            False,
+        ),
     }
     expected_unlimited = {msg_type for msg_type, settings in rate_limits_v3.items() if settings.window_size is None}
     current_unlimited = set(unsolicited_messages)
