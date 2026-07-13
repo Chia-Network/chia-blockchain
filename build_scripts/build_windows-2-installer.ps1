@@ -76,6 +76,30 @@ Write-Output "   ---"
 # Signing is done with signtool /dlib after packaging. Disable electron-builder signing.
 $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
 
+function Request-AzureFederatedToken {
+    # prod credential chain needs AZURE_FEDERATED_TOKEN_FILE (not Azure CLI).
+    # Request a fresh GitHub OIDC token immediately before signing so it does not expire
+    # during the long pyinstaller / electron-builder packaging steps above.
+    if (-not $env:ACTIONS_ID_TOKEN_REQUEST_URL -or -not $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) {
+        throw "ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN not available; ensure permissions.id-token: write is set"
+    }
+    if (-not $env:AZURE_TENANT_ID -or -not $env:AZURE_CLIENT_ID) {
+        throw "AZURE_TENANT_ID and AZURE_CLIENT_ID must be set for AZURE_TOKEN_CREDENTIALS=prod"
+    }
+
+    $tokenUrl = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=api://AzureADTokenExchange"
+    $headers = @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" }
+    $response = Invoke-RestMethod -Uri $tokenUrl -Headers $headers -Method GET
+    if (-not $response.value) {
+        throw "Failed to obtain GitHub OIDC token for Azure federated credential"
+    }
+
+    $tokenFile = Join-Path $env:RUNNER_TEMP "azure-federated-token"
+    Set-Content -Path $tokenFile -Value $response.value -NoNewline
+    $env:AZURE_FEDERATED_TOKEN_FILE = $tokenFile
+    Write-Output "Wrote Azure federated token to $tokenFile"
+}
+
 function Sign-WithAzureArtifactSigning {
     param(
         [Parameter(Mandatory = $true)]
@@ -114,6 +138,7 @@ If ($env:HAS_SIGNING_SECRET) {
     Write-Output "   ---"
     Write-Output "Sign all EXEs with Azure Artifact Signing"
     Write-Output "   ---"
+    Request-AzureFederatedToken
     Get-ChildItem ".\dist\win-unpacked" -Recurse -File |
         Where-Object { $_.Extension -eq ".exe" } |
         ForEach-Object {
@@ -143,6 +168,7 @@ If ($env:HAS_SIGNING_SECRET) {
     Write-Output "   ---"
     Write-Output "Sign Final Installer App"
     Write-Output "   ---"
+    Request-AzureFederatedToken
     Sign-WithAzureArtifactSigning -FilePath $installerPath
 
     Write-Output "   ---"
