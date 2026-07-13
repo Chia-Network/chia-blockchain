@@ -113,14 +113,6 @@ jobs:
         env:
           SIGNING_SECRET: "${{ secrets.AZURE_SIGNING_CLIENT_ID }}"
 
-      - name: Azure CLI Login
-        if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SIGNING_SUBSCRIPTION_ID }}
-
       - name: Install Azure Artifact Signing client
         if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
         shell: pwsh
