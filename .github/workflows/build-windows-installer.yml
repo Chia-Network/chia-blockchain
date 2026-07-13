@@ -203,6 +203,9 @@ jobs:
         shell: pwsh
         env:
           HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
+          # Allow signing on PRs when the windows-code-signing environment secrets are available.
+          # electron-builder 26.15+ uses DefaultAzureCredential after azure/login (OIDC / Azure CLI).
+          CSC_FOR_PULL_REQUEST: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && 'true' || '' }}
         run: |
           $env:path="C:\Program` Files\Microsoft` Visual` Studio\2022\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
