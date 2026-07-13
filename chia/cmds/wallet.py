@@ -1051,370 +1051,274 @@ class DidTransferDidCMD(TransactionEndpointWithTimelocks):
 
 
 @wallet_cmd.group("nft", help="NFT related actions")
-def nft_cmd() -> None:
+def nft_cmd() -> None:  # pragma: no cover
     pass
 
 
-@nft_cmd.command("create", help="Create an NFT wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=nft_cmd,
+    name="create",
+    short_help="Create an NFT wallet",
+    help="Create an NFT wallet",
 )
-@options.create_fingerprint()
-# TODO: Change RPC to use puzzlehash instead of address
-@click.option("-di", "--did-id", help="DID Id to use", type=AddressParamType())
-@click.option("-n", "--name", help="Set the NFT wallet name", type=str)
-@click.pass_context
-def nft_wallet_create_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    did_id: CliAddress | None,
-    name: str | None,
-) -> None:
-    from chia.cmds.wallet_funcs import create_nft_wallet
+class CreateNftWalletCMD:
+    rpc_info: NeedsWalletRPC
+    # TODO: Change RPC to use puzzlehash instead of address
+    did_id: CliAddress | None = option("-di", "--did-id", help="DID Id to use", type=AddressParamType(), default=None)
+    name: str | None = option("-n", "--name", help="Set the NFT wallet name", type=str, default=None)
 
-    asyncio.run(
-        create_nft_wallet(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, did_id, name)
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import create_nft_wallet
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await create_nft_wallet(wallet_info, self.did_id, self.name)
+
+
+@chia_command(
+    group=nft_cmd,
+    name="sign_message",
+    short_help="Sign a message by a NFT",
+    help="Sign a message by a NFT",
+)
+class NftSignMessageCMD:
+    rpc_info: NeedsWalletRPC
+    nft_id: CliAddress = option(
+        "-i", "--nft_id", help="NFT ID you want to use for signing", type=AddressParamType(), required=True
+    )
+    hex_message: str = option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import sign_message
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await sign_message(
+                wallet_info=wallet_info,
+                addr_type=AddressType.NFT,
+                message=self.hex_message,
+                nft_id=self.nft_id,
+            )
+
+
+@chia_command(
+    group=nft_cmd,
+    name="mint",
+    short_help="Mint an NFT",
+    help="Mint an NFT",
+)
+class MintNftCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+    royalty_address: CliAddress | None = option(
+        "-ra", "--royalty-address", help="Royalty address", type=AddressParamType(), default=None
+    )
+    target_address: CliAddress | None = option(
+        "-ta", "--target-address", help="Target address", type=AddressParamType(), default=None
+    )
+    no_did_ownership: bool = option(
+        "--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False
+    )
+    hash: str = option("-nh", "--hash", help="NFT content hash", type=str, required=True)
+    uris: str = option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
+    metadata_hash: str | None = option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default=None)
+    metadata_uris: str | None = option(
+        "-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str, default=None
+    )
+    license_hash: str | None = option("-lh", "--license-hash", help="NFT license hash", type=str, default=None)
+    license_uris: str | None = option(
+        "-lu", "--license-uris", help="Comma separated list of license URIs", type=str, default=None
+    )
+    edition_total: int = option(
+        "-et", "--edition-total", help="NFT edition total", type=int, show_default=True, default=1
+    )
+    edition_number: int = option(
+        "-en", "--edition-number", help="NFT edition number", show_default=True, default=1, type=int
+    )
+    royalty_percentage_fraction: int = option(
+        "-rp",
+        "--royalty-percentage-fraction",
+        help="NFT royalty percentage fraction in basis points. Example: 175 would represent 1.75%",
+        type=int,
+        default=0,
+        show_default=True,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import mint_nft
 
-@nft_cmd.command("sign_message", help="Sign a message by a NFT")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        metadata_uris_list = [] if self.metadata_uris is None else [mu.strip() for mu in self.metadata_uris.split(",")]
+        license_uris_list = [] if self.license_uris is None else [lu.strip() for lu in self.license_uris.split(",")]
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await mint_nft(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                royalty_cli_address=self.royalty_address,
+                target_cli_address=self.target_address,
+                no_did_ownership=self.no_did_ownership,
+                hash=self.hash,
+                uris=[u.strip() for u in self.uris.split(",")],
+                metadata_hash=self.metadata_hash,
+                metadata_uris=metadata_uris_list,
+                license_hash=self.license_hash,
+                license_uris=license_uris_list,
+                edition_total=self.edition_total,
+                edition_number=self.edition_number,
+                fee=self.fee,
+                royalty_percentage=self.royalty_percentage_fraction,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=nft_cmd,
+    name="add_uri",
+    short_help="Add an URI to an NFT",
+    help="Add an URI to an NFT",
 )
-@options.create_fingerprint()
-@click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=AddressParamType(), required=True)
-@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
-@click.pass_context
-def nft_sign_message(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, nft_id: CliAddress, hex_message: str
-) -> None:
-    from chia.cmds.wallet_funcs import sign_message
-
-    asyncio.run(
-        sign_message(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            addr_type=AddressType.NFT,
-            message=hex_message,
-            nft_id=nft_id,
-        )
+class AddUriToNftCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+    # TODO: change rpc to take bytes instead of a hex string
+    nft_coin_id: str = option(
+        "-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True
+    )
+    uri: str | None = option("-u", "--uri", help="URI to add to the NFT", type=str, default=None)
+    metadata_uri: str | None = option(
+        "-mu", "--metadata-uri", help="Metadata URI to add to the NFT", type=str, default=None
+    )
+    license_uri: str | None = option(
+        "-lu", "--license-uri", help="License URI to add to the NFT", type=str, default=None
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import add_uri_to_nft
 
-@nft_cmd.command("mint", help="Mint an NFT")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await add_uri_to_nft(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                fee=self.fee,
+                nft_coin_id=self.nft_coin_id,
+                uri=self.uri,
+                metadata_uri=self.metadata_uri,
+                license_uri=self.license_uri,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=nft_cmd,
+    name="transfer",
+    short_help="Transfer an NFT",
+    help="Transfer an NFT",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-@click.option("-ra", "--royalty-address", help="Royalty address", type=AddressParamType())
-@click.option("-ta", "--target-address", help="Target address", type=AddressParamType())
-@click.option("--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False)
-@click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
-@click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
-@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default=None)
-@click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
-@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default=None)
-@click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
-@click.option("-et", "--edition-total", help="NFT edition total", type=int, show_default=True, default=1)
-@click.option("-en", "--edition-number", help="NFT edition number", show_default=True, default=1, type=int)
-@options.create_fee()
-@click.option(
-    "-rp",
-    "--royalty-percentage-fraction",
-    help="NFT royalty percentage fraction in basis points. Example: 175 would represent 1.75%",
-    type=int,
-    default=0,
-    show_default=True,
-)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def nft_mint_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    royalty_address: CliAddress | None,
-    target_address: CliAddress | None,
-    no_did_ownership: bool,
-    hash: str,
-    uris: str,
-    metadata_hash: str | None,
-    metadata_uris: str | None,
-    license_hash: str | None,
-    license_uris: str | None,
-    edition_total: int | None,
-    edition_number: int | None,
-    fee: uint64,
-    royalty_percentage_fraction: int,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import mint_nft
-
-    if metadata_uris is None:
-        metadata_uris_list = []
-    else:
-        metadata_uris_list = [mu.strip() for mu in metadata_uris.split(",")]
-
-    if license_uris is None:
-        license_uris_list = []
-    else:
-        license_uris_list = [lu.strip() for lu in license_uris.split(",")]
-
-    return asyncio.run(
-        mint_nft(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            royalty_cli_address=royalty_address,
-            target_cli_address=target_address,
-            no_did_ownership=no_did_ownership,
-            hash=hash,
-            uris=[u.strip() for u in uris.split(",")],
-            metadata_hash=metadata_hash,
-            metadata_uris=metadata_uris_list,
-            license_hash=license_hash,
-            license_uris=license_uris_list,
-            edition_total=edition_total,
-            edition_number=edition_number,
-            fee=fee,
-            royalty_percentage=royalty_percentage_fraction,
-            reuse_puzhash=True if reuse else None,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+class TransferNftCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+    nft_coin_id: str = option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
+    # TODO: Change RPC to use puzzlehash instead of address
+    target_address: CliAddress = option(
+        "-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import transfer_nft
 
-@nft_cmd.command("add_uri", help="Add an URI to an NFT")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-# TODO: change rpc to take bytes instead of a hex string
-@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
-@click.option("-u", "--uri", help="URI to add to the NFT", type=str)
-@click.option("-mu", "--metadata-uri", help="Metadata URI to add to the NFT", type=str)
-@click.option("-lu", "--license-uri", help="License URI to add to the NFT", type=str)
-@options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def nft_add_uri_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    nft_coin_id: str,
-    uri: str,
-    metadata_uri: str,
-    license_uri: str,
-    fee: uint64,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import add_uri_to_nft
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await transfer_nft(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                fee=self.fee,
+                nft_coin_id=self.nft_coin_id,
+                target_cli_address=self.target_address,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
 
-    return asyncio.run(
-        add_uri_to_nft(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            fee=fee,
-            nft_coin_id=nft_coin_id,
-            uri=uri,
-            metadata_uri=metadata_uri,
-            license_uri=license_uri,
-            reuse_puzhash=True if reuse else None,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(
+    group=nft_cmd,
+    name="list",
+    short_help="List the current NFTs",
+    help="List the current NFTs",
+)
+class ListNftsCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+    num: int = option("--num", help="Number of NFTs to return", type=int, default=50)
+    start_index: int = option(
+        "--start-index", help="Which starting index to start listing NFTs from", type=int, default=0
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import list_nfts
 
-@nft_cmd.command("transfer", help="Transfer an NFT")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
-# TODO: Change RPC to use puzzlehash instead of address
-@click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
-@options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def nft_transfer_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    nft_coin_id: str,
-    target_address: CliAddress,
-    fee: uint64,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import transfer_nft
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await list_nfts(wallet_info, self.wallet_id, self.num, self.start_index)
 
-    return asyncio.run(
-        transfer_nft(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            fee=fee,
-            nft_coin_id=nft_coin_id,
-            target_cli_address=target_address,
-            reuse_puzhash=True if reuse else None,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(
+    group=nft_cmd,
+    name="set_did",
+    short_help="Set a DID on an NFT",
+    help="Set a DID on an NFT",
+)
+class SetNftDidCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+    # TODO: Change RPC to use bytes instead of hex string
+    did_id: str = option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
+    nft_coin_id: str = option(
+        "-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import set_nft_did
 
-@nft_cmd.command("list", help="List the current NFTs")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await set_nft_did(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                fee=self.fee,
+                nft_coin_id=self.nft_coin_id,
+                did_id=self.did_id,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=nft_cmd,
+    name="get_info",
+    short_help="Get NFT information",
+    help="Get NFT information",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-@click.option("--num", help="Number of NFTs to return", type=int, default=50)
-@click.option("--start-index", help="Which starting index to start listing NFTs from", type=int, default=0)
-@click.pass_context
-def nft_list_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, id: int, num: int, start_index: int
-) -> None:
-    from chia.cmds.wallet_funcs import list_nfts
-
-    asyncio.run(
-        list_nfts(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, num, start_index)
+class GetNftInfoCMD:
+    rpc_info: NeedsWalletRPC
+    # TODO: Change RPC to use bytes instead of hex string
+    nft_coin_id: str = option(
+        "-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_nft_info
 
-@nft_cmd.command("set_did", help="Set a DID on an NFT")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-# TODO: Change RPC to use bytes instead of hex string
-@click.option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
-@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True)
-@options.create_fee()
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def nft_set_did_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    did_id: str,
-    nft_coin_id: str,
-    fee: uint64,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import set_nft_did
-
-    return asyncio.run(
-        set_nft_did(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            fee=fee,
-            nft_coin_id=nft_coin_id,
-            did_id=did_id,
-            reuse_puzhash=True if reuse else None,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
-    )
-
-
-@nft_cmd.command("get_info", help="Get NFT information")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-# TODO: Change RPC to use bytes instead of hex string
-@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
-@click.pass_context
-def nft_get_info_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    nft_coin_id: str,
-) -> None:
-    from chia.cmds.wallet_funcs import get_nft_info
-
-    asyncio.run(get_nft_info(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, nft_coin_id))
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_nft_info(wallet_info, self.nft_coin_id)
 
 
 # Keep at bottom.
