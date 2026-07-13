@@ -176,9 +176,6 @@ def verify_and_get_quality_string(
         return None
 
     if plot_param.strength_v2 is not None:
-        # V2 plots always use the predictable filter — no fallback to prefix-bits.
-        # Weight proofs (height_agnostic=True) skip the filter check:
-        # VDF chain integrity + PoSpace validity is sufficient there.
         if filter_challenge is not None and signage_point_index is not None:
             plot_group_id = compute_plot_group_id_from_pos(pos)
             group_strength = calculate_plot_filter_bits(
