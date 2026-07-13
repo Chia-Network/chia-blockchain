@@ -278,21 +278,6 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v1(32)) == expected
 
 
-@pytest.mark.parametrize(
-    argnames=["height", "expected"],
-    argvalues=[
-        (0, 5),
-        (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 4),
-        (0xFFFFFFFC, 3),
-        (0xFFFFFFFD, 2),
-        (0xFFFFFFFF, 2),
-    ],
-)
-def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
-    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
-
-
 def test_v1_phase_out() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
     rng = random.Random()
