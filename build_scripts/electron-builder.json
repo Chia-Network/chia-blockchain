@@ -19,8 +19,15 @@
     "target": "nsis",
     "icon": "src/assets/img/chia.ico",
     "executableName": "Chia",
-    "signtoolOptions": {
-      "timeStampServer": "http://timestamp.comodoca.com"
+    "signExts": [".exe"],
+    "azureSignOptions": {
+      "publisherName": "Chia Network Inc.",
+      "endpoint": "https://wus2.codesigning.azure.net/",
+      "codeSigningAccountName": "ChiaNetworkInc",
+      "certificateProfileName": "ChiaNetworkInc",
+      "fileDigest": "SHA256",
+      "timestampDigest": "SHA256",
+      "timestampRfc3161": "http://timestamp.acs.microsoft.com"
     }
   },
   "nsis": {
