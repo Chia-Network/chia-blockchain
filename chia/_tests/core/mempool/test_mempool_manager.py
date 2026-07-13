@@ -1684,12 +1684,16 @@ def test_dedup_info_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     mempool_item = mempool_item_from_spendbundle(sb)
     dedup_coin_spends = IdenticalSpendDedup()
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
     assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))]
+    assert dedup_state_update == {}
+    # get_deduplication_info must not mutate the dedup state on its own
+    assert dedup_coin_spends == IdenticalSpendDedup()
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     assert dedup_coin_spends == IdenticalSpendDedup()
 
 
@@ -1704,7 +1708,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     assert mempool_item.conds is not None
     dedup_coin_spends = IdenticalSpendDedup()
     solution = SerializedProgram.to(conditions)
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
@@ -1714,6 +1718,10 @@ def test_dedup_info_eligible_1st_time() -> None:
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(TEST_COIN_AMOUNT - 1)),
     }
     expected_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID].cost
+    # The update is returned but not applied until explicitly committed
+    assert dedup_coin_spends == IdenticalSpendDedup()
+    assert dedup_state_update == {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     assert dedup_coin_spends == IdenticalSpendDedup(
         {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
     )
@@ -1752,7 +1760,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     # Only the eligible one that we encountered more than once gets deduplicated
@@ -1760,8 +1768,11 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     assert cost_saving == test_coin_cost
     assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)]
     # The coin we encountered a second time is already in the map
-    # The coin we encountered for the first time gets added with its solution and cost
+    # The coin we encountered for the first time is only reported in the update,
+    # not committed until we explicitly do so
     test_coin2_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID2].cost
+    assert dedup_state_update == {TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=test_coin2_cost)}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=test_coin_cost),
@@ -1801,13 +1812,16 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb3.coin_spends
     assert cost_saving == test_coin_cost + test_coin2_cost
     assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)]
-    # TEST_COIN_ID3 is non-eligible, so it doesn't end up in this map
+    # Both eligible coins were already known, so there's nothing new to commit
+    # (TEST_COIN_ID3 is non-eligible, so it never ends up in the map)
+    assert dedup_state_update == {}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(initial_solution, test_coin_cost),
