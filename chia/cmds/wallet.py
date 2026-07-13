@@ -1006,6 +1006,7 @@ class DidMessageSpendCMD(TransactionEndpointWithTimelocks):
                 self.wallet_id,
                 puzzle_list,
                 coin_list,
+                self.fee,
                 self.push,
                 condition_valid_times=self.load_condition_valid_times(),
                 tx_config=self.tx_config_loader.load_tx_config(

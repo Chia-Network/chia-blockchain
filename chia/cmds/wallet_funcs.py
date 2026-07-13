@@ -1177,13 +1177,14 @@ async def did_message_spend(
     did_wallet_id: int,
     puzzle_announcements: list[str],
     coin_announcements: list[str],
+    fee: uint64,
     push: bool,
     condition_valid_times: ConditionValidTimes,
     tx_config: TXConfig,
 ) -> list[TransactionRecord]:
     try:
         response = await wallet_info.client.did_message_spend(
-            DIDMessageSpend(wallet_id=uint32(did_wallet_id), push=push),
+            DIDMessageSpend(wallet_id=uint32(did_wallet_id), fee=fee, push=push),
             tx_config,
             extra_conditions=(
                 *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),
