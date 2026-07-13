@@ -18,17 +18,7 @@
   "win": {
     "target": "nsis",
     "icon": "src/assets/img/chia.ico",
-    "executableName": "Chia",
-    "signExts": [".exe"],
-    "azureSignOptions": {
-      "publisherName": "Chia Network Inc.",
-      "endpoint": "https://wus2.codesigning.azure.net/",
-      "codeSigningAccountName": "ChiaNetworkInc",
-      "certificateProfileName": "ChiaNetworkInc",
-      "fileDigest": "SHA256",
-      "timestampDigest": "SHA256",
-      "timestampRfc3161": "http://timestamp.acs.microsoft.com"
-    }
+    "executableName": "Chia"
   },
   "nsis": {
     "artifactName": "ChiaSetup-${env.CHIA_INSTALLER_VERSION}.exe",

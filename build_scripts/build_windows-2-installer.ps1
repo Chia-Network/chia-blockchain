@@ -73,23 +73,37 @@ rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
-# When signing secrets are absent, disable Azure signing so unsigned builds still succeed.
-$electronBuilderArgs = @(
-    "build",
-    "--win",
-    "--x64",
-    "--config.productName=Chia",
-    "--config", "../../../build_scripts/electron-builder.json"
-)
-if (-not $env:HAS_SIGNING_SECRET) {
-    $electronBuilderArgs += "--config.win.azureSignOptions=null"
+# Signing is done with signtool /dlib after packaging. Disable electron-builder signing.
+$env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
+
+function Sign-WithAzureArtifactSigning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    if (-not $env:AZURE_CODE_SIGNING_DLIB -or -not (Test-Path $env:AZURE_CODE_SIGNING_DLIB)) {
+        throw "AZURE_CODE_SIGNING_DLIB is not set or does not exist: $env:AZURE_CODE_SIGNING_DLIB"
+    }
+    if (-not $env:AZURE_CODE_SIGNING_METADATA -or -not (Test-Path $env:AZURE_CODE_SIGNING_METADATA)) {
+        throw "AZURE_CODE_SIGNING_METADATA is not set or does not exist: $env:AZURE_CODE_SIGNING_METADATA"
+    }
+
+    Write-Output "Signing $FilePath"
+    signtool.exe sign /v /fd SHA256 /tr "http://timestamp.acs.microsoft.com" /td SHA256 `
+        /dlib $env:AZURE_CODE_SIGNING_DLIB `
+        /dmdf $env:AZURE_CODE_SIGNING_METADATA `
+        $FilePath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Azure Artifact Signing failed for $FilePath with exit code $LASTEXITCODE"
+    }
 }
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
 Write-Output "   ---"
 & "$NPM_PATH/electron-builder.ps1" --version
-& "$NPM_PATH/electron-builder.ps1" @electronBuilderArgs --dir
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 if ($LASTEXITCODE -ne 0) {
     throw "electron-builder package-directory build failed with exit code $LASTEXITCODE"
 }
@@ -98,25 +112,26 @@ Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {
     Write-Output "   ---"
-    Write-Output "Verify packaged executable signatures"
+    Write-Output "Sign all EXEs with Azure Artifact Signing"
     Write-Output "   ---"
     Get-ChildItem ".\dist\win-unpacked" -Recurse -File |
         Where-Object { $_.Extension -eq ".exe" } |
         ForEach-Object {
-            Write-Output "Verifying $($_.FullName)"
+            Sign-WithAzureArtifactSigning -FilePath $_.FullName
+            Write-Output "Verify signature"
             signtool.exe verify /v /pa $_.FullName
             if ($LASTEXITCODE -ne 0) {
                 throw "Signature verification failed for $($_.FullName)"
             }
         }
 } Else {
-    Write-Output "Skipping verify signatures - no authorization to install certificates"
+    Write-Output "Skipping signing/verify - no authorization for Azure Artifact Signing"
 }
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
 Write-Output "   ---"
-& "$NPM_PATH/electron-builder.ps1" @electronBuilderArgs --pd ".\dist\win-unpacked" --publish never
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json --publish never
 if ($LASTEXITCODE -ne 0) {
     throw "electron-builder installer build failed with exit code $LASTEXITCODE"
 }
@@ -125,6 +140,11 @@ Write-Output "   ---"
 $installerPath = ".\dist\ChiaSetup-$packageVersion.exe"
 
 If ($env:HAS_SIGNING_SECRET) {
+    Write-Output "   ---"
+    Write-Output "Sign Final Installer App"
+    Write-Output "   ---"
+    Sign-WithAzureArtifactSigning -FilePath $installerPath
+
     Write-Output "   ---"
     Write-Output "Verify final installer signature"
     Write-Output "   ---"
@@ -137,7 +157,7 @@ If ($env:HAS_SIGNING_SECRET) {
     $signature | Select-Object Status, StatusMessage
     $signature.SignerCertificate | Select-Object Subject, Issuer, Thumbprint, NotBefore, NotAfter
 } Else {
-    Write-Output "Skipping verify signatures - no authorization to install certificates"
+    Write-Output "Skipping signing/verify - no authorization for Azure Artifact Signing"
 }
 
 Write-Output "   ---"

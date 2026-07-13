@@ -121,6 +121,40 @@ jobs:
           tenant-id: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SIGNING_SUBSCRIPTION_ID }}
 
+      - name: Install Azure Artifact Signing client
+        if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+        shell: pwsh
+        run: |
+          $toolsDir = Join-Path $env:RUNNER_TEMP "artifact-signing-client"
+          New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
+          Push-Location $toolsDir
+
+          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile nuget.exe
+          .\nuget.exe install Microsoft.ArtifactSigning.Client -x -OutputDirectory .
+
+          $dlib = Get-ChildItem -Recurse -Filter "Azure.CodeSigning.Dlib.dll" |
+            Where-Object { $_.FullName -match '[\\/]x64[\\/]' } |
+            Select-Object -First 1
+          if (-not $dlib) {
+            throw "Azure.CodeSigning.Dlib.dll (x64) not found after installing Microsoft.ArtifactSigning.Client"
+          }
+
+          $metadataPath = Join-Path $toolsDir "metadata.json"
+          @{
+            Endpoint = "https://wus2.codesigning.azure.net/"
+            CodeSigningAccountName = "ChiaNetworkInc"
+            CertificateProfileName = "ChiaNetworkInc"
+            CorrelationId = "github-actions-$env:GITHUB_RUN_ID"
+          } | ConvertTo-Json | Set-Content -Path $metadataPath
+
+          Add-Content -Path $env:GITHUB_ENV -Value "AZURE_CODE_SIGNING_DLIB=$($dlib.FullName)"
+          Add-Content -Path $env:GITHUB_ENV -Value "AZURE_CODE_SIGNING_METADATA=$metadataPath"
+
+          Write-Output "dlib=$($dlib.FullName)"
+          Write-Output "metadata=$metadataPath"
+          Get-Content $metadataPath
+          Pop-Location
+
       - name: Get latest madmax plotter
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -203,9 +237,8 @@ jobs:
         shell: pwsh
         env:
           HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
-          # Allow signing on PRs when the windows-code-signing environment secrets are available.
-          # electron-builder 26.15+ uses DefaultAzureCredential after azure/login (OIDC / Azure CLI).
-          CSC_FOR_PULL_REQUEST: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && 'true' || '' }}
+          # Prefer Azure CLI credential from azure/login; avoid interactive browser hangs in CI.
+          AZURE_TOKEN_CREDENTIALS: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && 'AzureCliCredential' || '' }}
         run: |
           $env:path="C:\Program` Files\Microsoft` Visual` Studio\2022\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
