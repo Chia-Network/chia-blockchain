@@ -101,7 +101,7 @@ function Request-AzureFederatedToken {
     Write-Output "Wrote Azure federated token to $tokenFile"
 }
 
-function Sign-WithAzureArtifactSigning {
+function Invoke-AzureArtifactSigning {
     param(
         [Parameter(Mandatory = $true)]
         [string]$FilePath
@@ -143,7 +143,7 @@ If ($env:HAS_SIGNING_SECRET) {
     Get-ChildItem ".\dist\win-unpacked" -Recurse -File |
         Where-Object { $_.Extension -eq ".exe" } |
         ForEach-Object {
-            Sign-WithAzureArtifactSigning -FilePath $_.FullName
+            Invoke-AzureArtifactSigning -FilePath $_.FullName
             Write-Output "Verify signature"
             signtool.exe verify /v /pa $_.FullName
             if ($LASTEXITCODE -ne 0) {
@@ -170,7 +170,7 @@ If ($env:HAS_SIGNING_SECRET) {
     Write-Output "Sign Final Installer App"
     Write-Output "   ---"
     Request-AzureFederatedToken
-    Sign-WithAzureArtifactSigning -FilePath $installerPath
+    Invoke-AzureArtifactSigning -FilePath $installerPath
 
     Write-Output "   ---"
     Write-Output "Verify final installer signature"
