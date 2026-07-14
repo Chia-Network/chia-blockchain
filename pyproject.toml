@@ -65,7 +65,7 @@ concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs
 cryptography = ">=48.0.0"  # Python cryptography library for TLS - keyring conflict
 dnslib = ">=0.9.25"  # dns lib
 dnspython = ">=2.6.1"  # Query DNS seeds
-filelock = ">=3.29.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+filelock = ">=3.29.6"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = ">=25.5.0"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = ">=26.2"
 pip = ">=26.1.1"
