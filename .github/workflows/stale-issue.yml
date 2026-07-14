@@ -8,7 +8,7 @@ jobs:
     if: github.repository_owner == 'Chia-Network'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v10.3.0
         with:
           operations-per-run: 10000
           ascending: true
