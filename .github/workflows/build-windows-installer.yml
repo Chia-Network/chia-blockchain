@@ -45,6 +45,7 @@ jobs:
   build:
     name: Build EXE
     runs-on: [windows-2022]
+    environment: windows-code-signing
     needs:
       - version
     timeout-minutes: 65
@@ -110,41 +111,41 @@ jobs:
           if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
           echo "HAS_SIGNING_SECRET=${HAS_SIGNING_SECRET}" >> "$GITHUB_OUTPUT"
         env:
-          SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
+          SIGNING_SECRET: "${{ secrets.AZURE_SIGNING_CLIENT_ID }}"
 
-      - name: Setup Certificate
+      - name: Install Azure Artifact Signing client
         if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-        shell: bash
+        shell: pwsh
         run: |
-          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+          $toolsDir = Join-Path $env:RUNNER_TEMP "artifact-signing-client"
+          New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
+          Push-Location $toolsDir
 
-      - name: Set signing variables
-        if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-        shell: bash
-        run: |
-          {
-            echo "SM_HOST=${{ secrets.SM_HOST }}"
-            echo "SM_API_KEY=${{ secrets.SM_API_KEY }}"
-            echo "SM_CLIENT_CERT_FILE=D:/Certificate_pkcs12.p12"
-            echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
-            echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}"
-          } >> "$GITHUB_ENV"
-          {
-            echo "C:/Program Files (x86)/Windows Kits/10/App Certification Kit"
-            echo "C:/Program Files (x86)/Microsoft SDKs/Windows/v10.0A/bin/NETFX 4.8 Tools"
-            echo "C:/Program Files/DigiCert/DigiCert One Signing Manager Tools"
-          } >> "$GITHUB_PATH"
+          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile nuget.exe
+          .\nuget.exe install Microsoft.ArtifactSigning.Client -x -OutputDirectory .
 
-      - name: Setup SSM KSP on windows latest
-        if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-        shell: cmd
-        run: |
-          curl -X GET https://download.chia.net/dc/smtools-windows-x64.msi -o smtools-windows-x64.msi
-          msiexec /i smtools-windows-x64.msi /quiet /qn
-          smksp_registrar.exe list
-          smctl.exe keypair ls
-          C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-          smctl.exe windows certsync --keypair-alias=${{ secrets.SM_CERTKEY_ALIAS }}
+          $dlib = Get-ChildItem -Recurse -Filter "Azure.CodeSigning.Dlib.dll" |
+            Where-Object { $_.FullName -match '[\\/]x64[\\/]' } |
+            Select-Object -First 1
+          if (-not $dlib) {
+            throw "Azure.CodeSigning.Dlib.dll (x64) not found after installing Microsoft.ArtifactSigning.Client"
+          }
+
+          $metadataPath = Join-Path $toolsDir "metadata.json"
+          @{
+            Endpoint = "https://wus2.codesigning.azure.net/"
+            CodeSigningAccountName = "ChiaNetworkInc"
+            CertificateProfileName = "ChiaNetworkInc"
+            CorrelationId = "github-actions-$env:GITHUB_RUN_ID"
+          } | ConvertTo-Json | Set-Content -Path $metadataPath
+
+          Add-Content -Path $env:GITHUB_ENV -Value "AZURE_CODE_SIGNING_DLIB=$($dlib.FullName)"
+          Add-Content -Path $env:GITHUB_ENV -Value "AZURE_CODE_SIGNING_METADATA=$metadataPath"
+
+          Write-Output "dlib=$($dlib.FullName)"
+          Write-Output "metadata=$metadataPath"
+          Get-Content $metadataPath
+          Pop-Location
 
       - name: Get latest madmax plotter
         env:
@@ -228,6 +229,10 @@ jobs:
         shell: pwsh
         env:
           HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
+          # prod chain: EnvironmentCredential / WorkloadIdentity (not Azure CLI).
+          AZURE_TOKEN_CREDENTIALS: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && 'prod' || '' }}
+          AZURE_TENANT_ID: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && secrets.AZURE_SIGNING_TENANT_ID || '' }}
+          AZURE_CLIENT_ID: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET && secrets.AZURE_SIGNING_CLIENT_ID || '' }}
         run: |
           $env:path="C:\Program` Files\Microsoft` Visual` Studio\2022\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
