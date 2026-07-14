@@ -22,6 +22,7 @@ from chia_rs import (
     check_time_locks,
     get_conditions_from_spendbundle,
     run_block_generator2,
+    supports_fast_forward,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -2479,8 +2480,6 @@ class TestCoins:
 def make_singleton_spend(
     launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1
 ) -> CoinSpend:
-    from chia_rs import supports_fast_forward
-
     from chia.wallet.lineage_proof import LineageProof
     from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, solution_for_singleton
 

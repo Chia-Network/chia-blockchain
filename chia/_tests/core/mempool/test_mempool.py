@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 import pytest
 from chia_rs import (
+    ELIGIBLE_FOR_DEDUP,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     CoinSpend,
@@ -3473,8 +3474,6 @@ def test_max_spends_per_block(old: bool) -> None:
 
 @pytest.mark.parametrize("old", [True, False])
 def test_max_spends_per_block_with_dedup(old: bool) -> None:
-    from chia_rs import ELIGIBLE_FOR_DEDUP
-
     max_cost = uint64(11_000_000_000)
     fee_estimator = create_bitcoin_fee_estimator(max_cost)
     mempool_info = MempoolInfo(
@@ -3516,13 +3515,13 @@ def test_max_spends_per_block_with_dedup(old: bool) -> None:
 
 @pytest.mark.parametrize("old", [True, False])
 def test_skipped_item_does_not_leak_dedup_state(old: bool) -> None:
-    # Regression test: an item that is processed (and thus registers a shared
-    # dedup coin) but ultimately dropped must not leave that coin registered in
-    # the dedup state. Otherwise a later item spending the same coin gets
-    # "deduplicated" against a spend that never makes it into the block, dropping
-    # the coin from the block entirely.
-    from chia_rs import ELIGIBLE_FOR_DEDUP
-
+    """
+    an item that is processed (and thus registers a shared
+    dedup coin) but ultimately dropped must not leave that coin registered in
+    the dedup state. Otherwise a later item spending the same coin gets
+    "deduplicated" against a spend that never makes it into the block, dropping
+    the coin from the block entirely.
+    """
     max_cost = uint64(11_000_000_000)
     fee_estimator = create_bitcoin_fee_estimator(max_cost)
     mempool_info = MempoolInfo(
