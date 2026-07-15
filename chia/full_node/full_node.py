@@ -1890,7 +1890,7 @@ class FullNode:
 
         tx_peak = self.blockchain.get_tx_peak()
         # Get filter_challenge for V2 plot filter (challenge hash of a previously
-        # completed sub-slot: SS(n-2) for SPs 0-15, SS(n-1) for SPs 16-63)
+        # completed sub-slot
         filter_challenge = self.full_node_store.get_filter_challenge(
             request.challenge_chain_vdf.challenge,
             request.index_from_challenge,
