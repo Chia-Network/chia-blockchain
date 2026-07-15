@@ -737,6 +737,28 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework, capsys: py
     assert vc_record_updated is not None
 
     # Revoke VC
+    # Test with netiher
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=None,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert "Must specify either --parent-coin-id or --vc-id" in capsys.readouterr().out
+    # Try one that doesn't exist
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=bytes32.zeros,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert f"Cannot find a VC with ID {bytes32.zeros.hex()}" in capsys.readouterr().out
     # Test with the VC ID
     await RevokeVCCMD(
         rpc_info=NeedsWalletRPC(client_info=client_info_1),
