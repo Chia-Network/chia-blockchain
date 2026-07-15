@@ -147,7 +147,7 @@ def verify_and_get_quality_string(
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
     height_agnostic: bool = False,
-    # Threaded by the filter-challenge PR; consumed by the later activation PR.
+    # V2 predictable filter inputs; required unless validation is height-agnostic.
     filter_challenge: bytes32 | None = None,
     signage_point_index: int | None = None,
 ) -> bytes32 | None:
@@ -181,16 +181,25 @@ def verify_and_get_quality_string(
         log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
         return None
 
-    # PR A introduces the V2 predictable-filter helpers but intentionally keeps
-    # V2 validation on the old prefix-bits path. The activation PR switches this
-    # branch to passes_plot_filter_v2().
-    skip_plot_filter = height_agnostic and is_v2
-    if not skip_plot_filter:
+    if plot_param.strength_v2 is not None:
+        if filter_challenge is not None and signage_point_index is not None:
+            plot_group_id = compute_plot_group_id_from_pos(pos)
+            group_strength = calculate_plot_filter_bits(
+                prev_transaction_block_height, constants, plot_param.strength_v2
+            )
+            if not passes_plot_filter_v2(
+                plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
+            ):
+                log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
+                return None
+        elif not height_agnostic:
+            log.error("V2 plot requires filter_challenge and signage_point_index")
+            return None
+    else:
+        # V1 plots use the original prefix-bits filter
         prefix_bits = calculate_prefix_bits(constants, height, plot_param)
         if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
-            log.error(
-                f"Did not pass the plot filter. prefix bits: {prefix_bits} {'V1' if plot_param.size_v1 else 'V2'}"
-            )
+            log.error(f"Did not pass the plot filter. prefix bits: {prefix_bits}")
             return None
 
     if not is_v2:
@@ -239,15 +248,7 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_param: PlotParam) -> int:
-    if plot_param.strength_v2 is not None:
-        prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
-        if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 3
-        elif height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 2
-        elif height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
-            prefix_bits -= 1
-        return max(0, prefix_bits)
+    assert plot_param.strength_v2 is None, "V2 plots use the predictable filter, not prefix bits"
 
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
