@@ -63,7 +63,7 @@ class PoolWallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("PoolWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("PoolWallet", None)
 
     MINIMUM_INITIAL_BALANCE: ClassVar[int] = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT: ClassVar[int] = 5
@@ -855,7 +855,7 @@ class PoolWallet:
         )
         return len(unconfirmed) > 0
 
-    async def get_confirmed_balance(self, _: object | None = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: object | None = None) -> uint128:
         amount: uint128 = uint128(0)
         if (await self.get_current_state()).current.state == SELF_POOLING.value:
             unspent_coin_records: list[WalletCoinRecord] = list(
@@ -866,11 +866,11 @@ class PoolWallet:
                     amount = uint128(amount + record.coin.amount)
         return amount
 
-    async def get_unconfirmed_balance(self, record_list: object | None = None) -> uint128:
-        return await self.get_confirmed_balance(record_list)
+    async def get_unconfirmed_balance(self, unspent_records: object | None = None) -> uint128:
+        return await self.get_confirmed_balance(unspent_records)
 
-    async def get_spendable_balance(self, record_list: object | None = None) -> uint128:
-        return await self.get_confirmed_balance(record_list)
+    async def get_spendable_balance(self, unspent_records: object | None = None) -> uint128:
+        return await self.get_confirmed_balance(unspent_records)
 
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)

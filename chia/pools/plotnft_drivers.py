@@ -507,6 +507,8 @@ class PlotNFT(PlotNFTPuzzle):
                 exiting=exiting,
                 genesis_challenge=genesis_challenge,
             )
+            if plotnft_puzzle.inner_puzzle_hash() != singleton_create_coin.puzzle_hash:
+                raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
 
         return cls(
             coin=Coin(

@@ -132,8 +132,10 @@ def test_invalid_input_type() -> None:
 @contextlib.contextmanager
 def sync_manager(y: list[str]) -> Iterator[None]:
     y.append("entered")
-    yield
-    y.append("exited")
+    try:
+        yield
+    finally:
+        y.append("exited")
 
 
 def test_split_manager_class_works() -> None:
@@ -220,8 +222,10 @@ def test_split_manager_raises_on_exit_without_entry() -> None:
 @contextlib.asynccontextmanager
 async def async_manager(y: list[str]) -> AsyncIterator[None]:
     y.append("entered")
-    yield
-    y.append("exited")
+    try:
+        yield
+    finally:
+        y.append("exited")
 
 
 @pytest.mark.anyio

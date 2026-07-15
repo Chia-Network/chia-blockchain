@@ -14,11 +14,22 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, ProofOfSpace
+from chia_rs import (
+    AugSchemeMPL,
+    ConsensusConstants,
+    G1Element,
+    G2Element,
+    PrivateKey,
+    ProofOfSpace,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
-from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.daemon.keychain_proxy import (
+    KeychainProxy,
+    connect_to_keychain_and_validate,
+    wrap_local_keychain,
+)
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolingShareState, perform_migration_from_old_config
@@ -143,9 +154,15 @@ async def make_pool_protocol_request(
                             time.time(),
                             value=json_response,
                         )
-                    self.log.log(log_level, f"{method} /{endpoint_name} response: {json_response}")
+                    self.log.log(
+                        log_level,
+                        f"{method} /{endpoint_name} response: {json_response}",
+                    )
                     if "error_code" in json_response:
-                        return (pool_protocol.ErrorResponse.from_json_dict(json_response), resp)
+                        return (
+                            pool_protocol.ErrorResponse.from_json_dict(json_response),
+                            resp,
+                        )
                     else:
                         return (response_type.from_json_dict(json_response), resp)
                 else:
@@ -156,7 +173,8 @@ async def make_pool_protocol_request(
                     return None, resp
     except Exception as e:
         self.handle_failed_pool_response(
-            pool_config.p2_singleton_puzzle_hash, f"Exception in {method} /{endpoint_name} {pool_config.pool_url}, {e}"
+            pool_config.p2_singleton_puzzle_hash,
+            f"Exception in {method} /{endpoint_name} {pool_config.pool_url}, {e}",
         )
     return None, None
 
@@ -253,7 +271,10 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                create_referenced_task(profile_task(self._root_path, "farmer", self.log), known_unreferenced=True)
+                create_referenced_task(
+                    profile_task(self._root_path, "farmer", self.log),
+                    known_unreferenced=True,
+                )
 
         create_referenced_task(start_task(), known_unreferenced=True)
         try:
@@ -498,7 +519,10 @@ class Farmer:
         if pool_config.version == 1:
             message: bytes32 = std_hash(
                 pool_protocol.AuthenticationPayloadV1(
-                    "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, uint64(authentication_token)
+                    "get_farmer",
+                    pool_config.launcher_id,
+                    pool_config.target_puzzle_hash,
+                    uint64(authentication_token),
                 )
             )
             authentication_sk = self.get_authentication_sk(pool_config)
@@ -628,7 +652,9 @@ class Farmer:
         for p2_singleton_puzzle_hash in p2_singleton_puzhashes:
             try:
                 with PoolingShareState.acquire(
-                    root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, read_only=True
+                    root_path=self._root_path,
+                    p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+                    read_only=True,
                 ) as pool_config:
                     pass  # Just releases the config without any edits
             except Exception as e:
@@ -693,7 +719,8 @@ class Farmer:
 
                     if pool_info_result is not None and pool_info_result.new_pool_url is not None:
                         with PoolingShareState.acquire(
-                            root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+                            root_path=self._root_path,
+                            p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
                         ) as editable_pool_config:
                             editable_pool_config.pool_url = pool_info_result.new_pool_url
                             self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = editable_pool_config
@@ -704,7 +731,8 @@ class Farmer:
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
                     async def update_pool_farmer_info() -> tuple[
-                        pool_protocol.GetFarmerResponse | None, pool_protocol.PoolErrorCode | None
+                        pool_protocol.GetFarmerResponse | None,
+                        pool_protocol.PoolErrorCode | None,
                     ]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(pool_config, authentication_token_timeout)
@@ -731,7 +759,10 @@ class Farmer:
                                     f"Welcome message from {pool_config.pool_url}: {post_response.welcome_message}"
                                 )
                                 # Now we should be able to update the local farmer info
-                                farmer_info, farmer_is_known = await update_pool_farmer_info()
+                                (
+                                    farmer_info,
+                                    farmer_is_known,
+                                ) = await update_pool_farmer_info()
                                 if farmer_info is None and not farmer_is_known:
                                     self.log.error("Failed to update farmer info after POST /farmer.")
 
@@ -808,7 +839,8 @@ class Farmer:
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
                 with PoolingShareState.acquire(
-                    root_path=self._root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+                    root_path=self._root_path,
+                    p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
                 ) as pool_config:
                     pool_config.payout_instructions = payout_instructions
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
@@ -958,7 +990,9 @@ class Farmer:
             await asyncio.sleep(1)
 
     def notify_farmer_reward_taken_by_harvester_as_fee(
-        self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+        self,
+        sp: farmer_protocol.NewSignagePoint,
+        proof_of_space: harvester_protocol.NewProofOfSpace,
     ) -> None:
         """
         Apply a fee quality convention (see CHIP-22: https://github.com/Chia-Network/chips/pull/88)

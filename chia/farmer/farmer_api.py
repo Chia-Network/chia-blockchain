@@ -32,6 +32,7 @@ from chia.protocols.pool_protocol import (
     PoolErrorCode,
     PostPartialPayload,
     PostPartialRequest,
+    PostPartialResponse,
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -434,13 +435,25 @@ class FarmerAPI:
                                     )
                                 return
 
+                            try:
+                                partial_response = PostPartialResponse.from_json_dict(pool_response)
+                            except Exception as e:
+                                self.farmer.log.error(f"Invalid pool partial response: {e}")
+                                increment_pool_stats(
+                                    self.farmer.pool_state,
+                                    p2_singleton_puzzle_hash,
+                                    "invalid_partials",
+                                    time.time(),
+                                )
+                                return
+
                             increment_pool_stats(
                                 self.farmer.pool_state,
                                 p2_singleton_puzzle_hash,
                                 "valid_partials",
                                 time.time(),
                             )
-                            new_difficulty = pool_response["new_difficulty"]
+                            new_difficulty = partial_response.new_difficulty
                             increment_pool_stats(
                                 self.farmer.pool_state,
                                 p2_singleton_puzzle_hash,
@@ -637,13 +650,21 @@ class FarmerAPI:
                         f"{pool_dict['pool_config'].pool_url} "
                     )
                     continue
-                pool_difficulties.append(
-                    PoolDifficulty(
-                        pool_dict["current_difficulty"],
-                        self.farmer.constants.POOL_SUB_SLOT_ITERS,
-                        p2_singleton_puzzle_hash,
+                try:
+                    pool_difficulties.append(
+                        PoolDifficulty(
+                            pool_dict["current_difficulty"],
+                            self.farmer.constants.POOL_SUB_SLOT_ITERS,
+                            p2_singleton_puzzle_hash,
+                        )
                     )
-                )
+                except Exception as e:
+                    self.farmer.log.warning(
+                        f"Invalid pool difficulty for {p2_singleton_puzzle_hash}, "
+                        f"check communication with the pool, skipping this pool: "
+                        f"{pool_dict['pool_config'].pool_url}, {e}"
+                    )
+                    continue
 
             message2 = harvester_protocol.NewSignagePointHarvester2(
                 new_signage_point.challenge_hash,

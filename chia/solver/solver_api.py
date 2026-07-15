@@ -36,7 +36,7 @@ class SolverAPI:
     ) -> Message | None:
         """
         Solve a V2 plot partial proof to get the full proof of space.
-        This is called by the farmer when it receives V2 parital proofs from harvester.
+        This is called by the farmer when it receives V2 partial proofs from harvester.
         """
         if not self.solver.started:
             self.log.error("Solver is not started")
@@ -47,7 +47,7 @@ class SolverAPI:
         try:
             proof = self.solver.solve(request.partial_proof, request.plot_id, request.strength, request.size)
             if proof is None:
-                self.log.warning(f"Solver returned no proof for parital {request.partial_proof.fragments[:5]}")
+                self.log.warning(f"Solver returned no proof for partial {request.partial_proof.fragments[:5]}")
                 return None
 
             self.log.debug(f"Successfully solved partial proof, returning {len(proof)} byte proof")
@@ -57,5 +57,5 @@ class SolverAPI:
             )
 
         except Exception as e:
-            self.log.error(f"Error solving parital {request.partial_proof.fragments[:5]}: {e}")
+            self.log.error(f"Error solving partial {request.partial_proof.fragments[:5]}: {e}")
             return None

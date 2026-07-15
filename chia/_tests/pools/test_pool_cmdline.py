@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from io import StringIO
@@ -55,6 +56,11 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
 
 
+@pytest.fixture(autouse=True)
+def enable_env_var() -> None:
+    os.environ["CHIA_PLOTNFT_V2_ENABLED"] = "TRUE"
+
+
 @dataclass
 class StateUrlCase:
     id: str
@@ -84,6 +90,7 @@ async def test_plotnft_cli_create(
     prompt: bool,
     version: int,
     mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -165,6 +172,20 @@ async def test_plotnft_cli_create(
     wallet_id: int = summaries_response.wallets[0].id
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
+
+    if version == 2:
+        os.environ["CHIA_PLOTNFT_V2_ENABLED"] = "FALSE"
+        await CreatePlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+            ),
+            state=state,
+            dont_prompt=not prompt,
+            pool_url=pool_url,
+            version=str(version),
+        ).run()
+        out, _err = capsys.readouterr()
+        assert "Version 2 PlotNFTs not currently supported" in out
 
 
 @datacases(

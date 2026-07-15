@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import socket
+import struct
 from logging.handlers import SysLogHandler
 from pathlib import Path
 from typing import Any, cast
@@ -14,6 +16,83 @@ from chia.util.chia_version import chia_short_version
 from chia.util.path import path_from_root
 
 default_log_level = "WARNING"
+systemd_journal_socket_path = "/run/systemd/journal/socket"
+
+
+def _encode_journal_field(name: str, value: str | bytes) -> bytes:
+    payload = value.encode("utf-8", errors="surrogateescape") if isinstance(value, str) else value
+    key = name.encode("ascii")
+    if b"\n" not in payload:
+        return key + b"=" + payload + b"\n"
+
+    # Values with newlines use journald's length-prefixed field format.
+    return key + b"\n" + struct.pack("<Q", len(payload)) + payload + b"\n"
+
+
+class JournalSocketHandler(logging.Handler):
+    def __init__(self, identifier: str, address: str = systemd_journal_socket_path) -> None:
+        super().__init__()
+        self.identifier = identifier
+        self.address = address
+        self._socket = self._create_socket()
+
+    def _create_socket(self) -> socket.socket:
+        family = getattr(socket, "AF_UNIX", None)
+        if family is None:
+            raise OSError("AF_UNIX not supported on this platform")
+
+        journal_socket = socket.socket(family, socket.SOCK_DGRAM)
+        try:
+            journal_socket.connect(self.address)
+        except Exception:
+            journal_socket.close()
+            raise
+
+        return journal_socket
+
+    def _send(self, payload: bytes) -> None:
+        try:
+            self._socket.send(payload)
+        except OSError:
+            self._socket.close()
+            self._socket = self._create_socket()
+            self._socket.send(payload)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+            fields = [
+                _encode_journal_field("MESSAGE", message),
+                _encode_journal_field("PRIORITY", str(self.map_priority(record.levelno))),
+                _encode_journal_field("SYSLOG_IDENTIFIER", self.identifier),
+                _encode_journal_field("SYSLOG_PID", str(record.process if record.process is not None else os.getpid())),
+                _encode_journal_field("LOGGER", record.name),
+                _encode_journal_field("THREAD_NAME", record.threadName or ""),
+                _encode_journal_field("CODE_FILE", record.pathname),
+                _encode_journal_field("CODE_LINE", str(record.lineno)),
+                _encode_journal_field("CODE_FUNC", record.funcName or ""),
+            ]
+            self._send(b"".join(fields))
+        except Exception:
+            self.handleError(record)
+
+    def close(self) -> None:
+        try:
+            self._socket.close()
+        finally:
+            super().close()
+
+    @staticmethod
+    def map_priority(level: int) -> int:
+        if level >= logging.CRITICAL:
+            return 2
+        if level >= logging.ERROR:
+            return 3
+        if level >= logging.WARNING:
+            return 4
+        if level >= logging.INFO:
+            return 6
+        return 7
 
 
 def get_beta_logging_config() -> dict[str, Any]:
@@ -87,6 +166,20 @@ def initialize_logging(
         log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
         log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
         handlers.append(log_syslog_handler)
+
+    if logging_config.get("log_systemd", False):
+        # Prefix service name with "chia." for better filtering in journal
+        # e.g. "chia.full_node", "chia.farmer"
+        identifier = f"chia.{service_name}" if not service_name.startswith("chia.") else service_name
+        try:
+            log_systemd_handler = JournalSocketHandler(identifier=identifier)
+            log_systemd_handler.setFormatter(logging.Formatter(fmt="%(message)s"))
+            handlers.append(log_systemd_handler)
+        except OSError:
+            logging.warning(
+                f"{service_name}: log_systemd enabled but {systemd_journal_socket_path} is unavailable. "
+                "Skipping systemd journal logging."
+            )
 
     if beta_root_path is not None:
         handlers.append(get_file_log_handler(file_log_formatter, beta_root_path, get_beta_logging_config()))

@@ -151,8 +151,13 @@ class TestDos:
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
             print(response)
-            assert response.type == WSMsgType.CLOSE
-            assert response.data == WSCloseCode.MESSAGE_TOO_BIG
+            # aiohttp rejects the oversized frame from its header before reading the payload, so the
+            # server tears down the socket while the ~60MB message is still in flight. The resulting
+            # TCP reset can discard the server's close frame, leaving the client with an abrupt CLOSED
+            # instead of a clean CLOSE carrying the MESSAGE_TOO_BIG code.
+            assert response.type in {WSMsgType.CLOSE, WSMsgType.CLOSED}
+            if response.type == WSMsgType.CLOSE:
+                assert response.data == WSCloseCode.MESSAGE_TOO_BIG
 
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
@@ -406,6 +411,15 @@ class TestDos:
 
         def is_closed() -> bool:
             return ws_con.closed
+
+        # This test drives sends manually via the private ``_send_message`` while
+        # controlling the outbound rate limiter. Stop the connection's own
+        # outbound handler first so it can't concurrently send a message that an
+        # earlier rate-limited send re-queued via ``_wait_and_retry``. Two tasks
+        # calling ``ws.send_bytes`` on the same websocket corrupts the connection
+        # (observed as a spurious cancellation on Python 3.10).
+        assert ws_con.outbound_task is not None
+        ws_con.outbound_task.cancel()
 
         new_message = make_msg(
             ProtocolMessageTypes.request_mempool_transactions,
