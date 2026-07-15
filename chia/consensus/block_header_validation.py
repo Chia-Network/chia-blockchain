@@ -54,6 +54,7 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
+    height_agnostic: bool = False,
 ) -> tuple[uint64 | None, ValidationError | None]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -509,14 +510,13 @@ def validate_unfinished_header_block(
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
     filter_challenge = None
-    if header_block.reward_chain_block.proof_of_space.version == 1:
+    if not height_agnostic and header_block.reward_chain_block.proof_of_space.version == 1:
         filter_challenge = get_filter_challenge_from_chain(
             constants,
             blocks,
             header_block,
             challenge,
             header_block.reward_chain_block.signage_point_index,
-            genesis_block,
         )
 
     required_iters = validate_pospace_and_get_required_iters(
@@ -533,6 +533,7 @@ def validate_unfinished_header_block(
             sp_index=header_block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(header_block.finished_sub_slots),
         ),
+        height_agnostic=height_agnostic,
         filter_challenge=filter_challenge,
         signage_point_index=header_block.reward_chain_block.signage_point_index,
     )
@@ -868,6 +869,7 @@ def validate_finished_header_block(
     *,
     check_sub_epoch_summary: bool = True,
     skip_commitment_validation: bool = False,
+    height_agnostic: bool = False,
 ) -> tuple[uint64 | None, ValidationError | None]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -891,6 +893,7 @@ def validate_finished_header_block(
         expected_vs,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
+        height_agnostic=height_agnostic,
     )
 
     genesis_block = False

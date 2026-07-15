@@ -1552,13 +1552,6 @@ async def test_new_finished_sub_slot_eos_per_key_drop() -> None:
     assert store.future_eos_cache.total_entries == FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY
 
 
-def _make_signage_point(sp_hash: bytes32) -> SignagePoint:
-    """Create a SignagePoint whose cc_vdf output hashes to a deterministic value."""
-    cge = ClassgroupElement(bytes100(sp_hash + bytes(68)))
-    vdf_info = VDFInfo(bytes32.zeros, uint64(1), cge)
-    return SignagePoint(vdf_info, None, None, None)
-
-
 def _add_subslot(
     store: FullNodeStore, prev_challenge: bytes32, vdf_output_seed: int = 0
 ) -> tuple[bytes32, list[SignagePoint | None]]:

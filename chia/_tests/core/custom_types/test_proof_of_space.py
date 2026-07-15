@@ -18,6 +18,7 @@ from chia.types.blockchain_format.proof_of_space import (
     check_plot_param,
     compute_plot_group_id,
     is_v1_phased_out,
+    is_v2_plot,
     make_pos,
     num_phase_out_epochs,
     passes_plot_filter,
@@ -52,6 +53,24 @@ def b32(key: str) -> bytes32:
     return bytes32.from_hexstr(key)
 
 
+@pytest.mark.parametrize(
+    "plot_param,expected",
+    [(PlotParam.make_v1(32), False), (PlotParam.make_v2(0, 0, 28), True)],
+)
+def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
+    pos = make_pos(
+        bytes32(b"1" * 32),
+        G1Element(),
+        None,
+        G1Element(),
+        plot_param,
+        b"proof",
+    )
+
+    assert is_v2_plot(pos) is expected
+
+
+# TODO: todo_v2_plots more test cases, cover plot_index and group_id
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
@@ -313,8 +332,12 @@ def test_base_filter_can_be_lowered_for_test_constants() -> None:
         (17, 13),  # capped
     ],
 )
-def test_calculate_effective_plot_filter_bits(plot_strength: int, expected_bits: int) -> None:
-    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+def test_calculate_plot_filter_bits(plot_strength: int, expected_bits: int) -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(1_000_000),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(9),
+        MIN_PLOT_STRENGTH=uint8(2),
+    )
     assert calculate_plot_filter_bits(uint32(1_000_000), constants, plot_strength) == expected_bits
 
 
