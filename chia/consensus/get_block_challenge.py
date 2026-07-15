@@ -184,14 +184,12 @@ def get_filter_challenge_from_chain(
     header_block: UnfinishedHeaderBlock | HeaderBlock | FullBlock,
     current_challenge: bytes32,
     signage_point_index: int,
-    genesis_block: bool,
 ) -> bytes32 | None:
     """Derive filter_challenge for V2 plot filter from chain data.
 
     Returns the cc sub-slot challenge hash of a previously completed sub-slot
     """
-    window_start = (signage_point_index // FILTER_WINDOW_SIZE) * FILTER_WINDOW_SIZE
-    n_back = 2 if window_start == 0 else 1
+    sub_slots_back = 2 if signage_point_index < FILTER_WINDOW_SIZE else 1
 
     # Collect sub-slot challenge hashes newest-first
     reversed_challenges: list[bytes32] = []
@@ -199,7 +197,8 @@ def get_filter_challenge_from_chain(
     for fss in reversed(header_block.finished_sub_slots):
         reversed_challenges.append(fss.challenge_chain.get_hash())
 
-    if not genesis_block:
+    reached_genesis = header_block.prev_header_hash == constants.GENESIS_CHALLENGE
+    if not reached_genesis:
         curr = blocks.block_record(header_block.prev_header_hash)
         while True:
             if curr.first_in_sub_slot:
@@ -207,19 +206,21 @@ def get_filter_challenge_from_chain(
                 for ch in reversed(curr.finished_challenge_slot_hashes):
                     reversed_challenges.append(ch)
             if curr.height == 0:
+                reached_genesis = True
                 break
-            if len(reversed_challenges) > n_back + 3:
+            if len(reversed_challenges) > sub_slots_back + 3:
                 break
             curr = blocks.block_record(curr.prev_hash)
 
-    reversed_challenges.append(constants.GENESIS_CHALLENGE)
+    if reached_genesis and constants.GENESIS_CHALLENGE not in reversed_challenges:
+        reversed_challenges.append(constants.GENESIS_CHALLENGE)
 
     try:
         idx = reversed_challenges.index(current_challenge)
     except ValueError:
         return None
 
-    target_idx = idx + n_back
+    target_idx = idx + sub_slots_back
     if target_idx >= len(reversed_challenges):
         return None
 

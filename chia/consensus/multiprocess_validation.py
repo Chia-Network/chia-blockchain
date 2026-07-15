@@ -240,7 +240,6 @@ async def pre_validate_block(
             block,
             challenge,
             block.reward_chain_block.signage_point_index,
-            prev_b is None,
         )
 
     required_iters = validate_pospace_and_get_required_iters(

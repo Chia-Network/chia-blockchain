@@ -14,6 +14,10 @@ from chia.util.hash import std_hash
 log = logging.getLogger(__name__)
 
 
+def is_v2_plot(pos: ProofOfSpace) -> bool:
+    return pos.version == 1
+
+
 def make_pos(
     challenge: bytes32,
     pool_public_key: G1Element | None,
@@ -147,13 +151,14 @@ def verify_and_get_quality_string(
     signage_point_index: int | None = None,  # For V2 plot filter
 ) -> bytes32 | None:
     plot_param = pos.param()
+    is_v2 = is_v2_plot(pos)
 
     if not height_agnostic:
-        if plot_param.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
+        if not is_v2 and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
             log.info("v1 proof has been phased-out and is no longer valid")
             return None
 
-        if plot_param.strength_v2 is not None and prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
+        if is_v2 and prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
             log.info("v2 proof support has not yet activated")
             return None
 
@@ -178,13 +183,18 @@ def verify_and_get_quality_string(
     # PR A introduces the V2 predictable-filter helpers but intentionally keeps
     # V2 validation on the old prefix-bits path. The activation PR switches this
     # branch to passes_plot_filter_v2().
-    prefix_bits = calculate_prefix_bits(constants, height, plot_param)
-    if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
-        log.error(f"Did not pass the plot filter. prefix bits: {prefix_bits} {'V1' if plot_param.size_v1 else 'V2'}")
-        return None
+    skip_plot_filter = height_agnostic and is_v2
+    if not skip_plot_filter:
+        prefix_bits = calculate_prefix_bits(constants, height, plot_param)
+        if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
+            log.error(
+                f"Did not pass the plot filter. prefix bits: {prefix_bits} {'V1' if plot_param.size_v1 else 'V2'}"
+            )
+            return None
 
-    if plot_param.size_v1 is not None:
+    if not is_v2:
         # === V1 plots ===
+        assert plot_param.size_v1 is not None
         assert plot_param.strength_v2 is None
 
         if not height_agnostic and prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
