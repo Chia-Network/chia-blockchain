@@ -1293,6 +1293,7 @@ async def test_farmer_pool_info_config_update(
     }
     if case.initial_current_difficulty is not None:
         pool_state_overrides["current_difficulty"] = case.initial_current_difficulty
+        pool_state_overrides["authentication_token_timeout"] = 10
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
         p2_singleton_puzzle_hash,
         overrides=pool_state_overrides,
