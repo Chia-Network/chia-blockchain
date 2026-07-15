@@ -213,7 +213,10 @@ async def pre_validate_block(
     async def return_error(error_code: Err) -> PreValidationResult:
         return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
-    if block.height > 0:
+    if block.height == 0:
+        if block.prev_header_hash != constants.GENESIS_CHALLENGE:
+            return return_error(Err.INVALID_PREV_BLOCK_HASH)
+    else:
         curr = blockchain.try_block_record(block.prev_header_hash)
         if curr is None:
             return return_error(Err.INVALID_PREV_BLOCK_HASH)
