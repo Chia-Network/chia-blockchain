@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-import asyncio
 import pathlib
 from collections.abc import Sequence
+from typing import cast
 
 import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
-from chia.cmds.cmd_classes import ChiaCliContext, chia_command, get_chia_command_metadata, option
+from chia.cmds.cmd_classes import ChiaCliContext, argument, chia_command, get_chia_command_metadata, option
 from chia.cmds.cmd_helpers import (
     NeedsWalletRPC,
     TransactionEndpoint,
     TransactionEndpointWithTimelocks,
     transaction_endpoint_runner,
 )
-from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
     AddressParamType,
@@ -25,7 +23,7 @@ from chia.cmds.param_types import (
     Bytes32ParamType,
     CliAddress,
     CliAmount,
-    cli_amount_none,
+    TransactionFeeParamType,
 )
 from chia.cmds.signer import PushTransactionsCMD, signer_cmd
 from chia.cmds.units import units
@@ -47,715 +45,554 @@ wallet_cmd.add_command(signer_cmd)
 wallet_cmd.add_command(get_chia_command_metadata(PushTransactionsCMD).command)
 
 
-@wallet_cmd.command("get_transaction", help="Get a transaction")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-# TODO: Remove unused wallet id option
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
-@click.option("--verbose", "-v", count=True, type=int)
-@click.pass_context
-def get_transaction_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, id: int, tx_id: str, verbose: int
-) -> None:
-    from chia.cmds.wallet_funcs import get_transaction
+@chia_command(group=wallet_cmd, name="get_transaction", short_help="Get a transaction", help="Get a transaction")
+class GetTransactionCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    tx_id: str = option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
+    verbose: int = option("--verbose", "-v", count=True, type=int)
 
-    asyncio.run(
-        get_transaction(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fingerprint=fingerprint,
-            tx_id=tx_id,
-            verbose=verbose,
-        )
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_transaction
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_transaction(wallet_info=wallet_info, tx_id=self.tx_id, verbose=self.verbose)
+
+
+@chia_command(group=wallet_cmd, name="get_transactions", short_help="Get all transactions", help="Get all transactions")
+class GetTransactionsCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    offset: int = option(
+        "-o",
+        "--offset",
+        help="Skip transactions from the beginning of the list",
+        type=int,
+        default=0,
+        show_default=True,
+        required=True,
+    )
+    limit: int = option(
+        "-l", "--limit", help="Max number of transactions to return", type=int, default=2**32 - 1, show_default=True
+    )
+    verbose: int = option("--verbose", "-v", count=True, type=int)
+    paginate: bool | None = option(
+        "--paginate/--no-paginate",
+        default=None,
+        help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
+    )
+    sort_key: SortKey = option(
+        "--sort-by-relevance",
+        flag_value=SortKey.RELEVANCE,
+        type=SortKey,
+        default=SortKey.RELEVANCE,
+        help="Sort transactions by {confirmed, height, time}",
+    )
+    sort_by_height: bool = option("--sort-by-height", is_flag=True, default=False, help="Sort transactions by height")
+    reverse: bool = option("--reverse", is_flag=True, default=False, help="Reverse the transaction ordering")
+    clawback: bool = option("--clawback", is_flag=True, default=False, help="Only show clawback transactions")
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_transactions
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_transactions(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                verbose=self.verbose,
+                paginate=self.paginate,
+                offset=self.offset,
+                limit=self.limit,
+                sort_key=SortKey.CONFIRMED_AT_HEIGHT if self.sort_by_height else self.sort_key,
+                reverse=self.reverse,
+                clawback=self.clawback,
+            )
+
+
+@chia_command(
+    group=wallet_cmd,
+    name="send",
+    short_help="Send chia or other assets to another wallet",
+    help="Send chia or other assets to another wallet",
+)
+class SendCMD(TransactionEndpoint):
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    amount: CliAmount = option(
+        "-a", "--amount", help="How much chia to send, in XCH or CAT units", type=AmountParamType(), required=True
+    )
+    memo: str | None = option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
+    address: CliAddress = option(
+        "-t", "--address", help="Address to send the XCH", type=AddressParamType(), required=True
+    )
+    override: bool = option(
+        "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
+    )
+    clawback_time: int = option(
+        "--clawback_time",
+        help="The seconds that the recipient needs to wait to claim the fund. "
+        "A positive number will enable the Clawback features.",
+        type=int,
+        default=0,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import send
 
-@wallet_cmd.command("get_transactions", help="Get all transactions")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option(
-    "-o",
-    "--offset",
-    help="Skip transactions from the beginning of the list",
-    type=int,
-    default=0,
-    show_default=True,
-    required=True,
-)
-@click.option(
-    "-l",
-    "--limit",
-    help="Max number of transactions to return",
-    type=int,
-    default=(2**32 - 1),
-    show_default=True,
-    required=False,
-)
-@click.option("--verbose", "-v", count=True, type=int)
-@click.option(
-    "--paginate/--no-paginate",
-    default=None,
-    help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
-)
-@click.option(
-    "--sort-by-relevance",
-    "sort_key",
-    flag_value=SortKey.RELEVANCE,
-    type=SortKey,
-    default=SortKey.RELEVANCE,
-    help="Sort transactions by {confirmed, height, time}",
-)
-@click.option(
-    "--sort-by-height",
-    "sort_key",
-    flag_value=SortKey.CONFIRMED_AT_HEIGHT,
-    type=SortKey,
-    help="Sort transactions by height",
-)
-@click.option(
-    "--reverse",
-    is_flag=True,
-    default=False,
-    help="Reverse the transaction ordering",
-)
-@click.option(
-    "--clawback",
-    is_flag=True,
-    default=False,
-    help="Only show clawback transactions",
-)
-@click.pass_context
-def get_transactions_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    offset: int,
-    limit: int,
-    verbose: bool,
-    paginate: bool | None,
-    sort_key: SortKey,
-    reverse: bool,
-    clawback: bool,
-) -> None:  # pragma: no cover
-    from chia.cmds.wallet_funcs import get_transactions
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await send(
+                wallet_info=wallet_info,
+                wallet_id=self.wallet_id,
+                amount=self.amount,
+                memo=self.memo,
+                fee=self.fee,
+                address=self.address,
+                override=self.override,
+                clawback_time_lock=self.clawback_time,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config_loader=self.tx_config_loader,
+            )
 
-    asyncio.run(
-        get_transactions(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            verbose=verbose,
-            paginate=paginate,
-            offset=offset,
-            limit=limit,
-            sort_key=sort_key,
-            reverse=reverse,
-            clawback=clawback,
-        )
+
+@chia_command(group=wallet_cmd, name="show", short_help="Show wallet information", help="Show wallet information")
+class ShowCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_type: str | None = option(
+        "-w",
+        "--wallet_type",
+        help="Choose a specific wallet type to return",
+        type=click.Choice([x.name.lower() for x in WalletType]),
+        default=None,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import print_balances
 
-@wallet_cmd.command("send", help="Send chia or other assets to another wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option(
-    "-a", "--amount", help="How much chia to send, in XCH or CAT units", type=AmountParamType(), required=True
-)
-@click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
-@options.create_fee()
-# TODO: Fix RPC as this should take a puzzle_hash not an address.
-@click.option("-t", "--address", help="Address to send the XCH", type=AddressParamType(), required=True)
-@click.option(
-    "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
-)
-@click.option(
-    "-ma",
-    "--min-coin-amount",
-    help="Ignore coins worth less then this much XCH or CAT units",
-    type=AmountParamType(),
-    required=False,
-    default=cli_amount_none,
-)
-@click.option(
-    "-l",
-    "--max-coin-amount",
-    help="Ignore coins worth more then this much XCH or CAT units",
-    type=AmountParamType(),
-    required=False,
-    default=cli_amount_none,
-)
-@click.option(
-    "--exclude-coin",
-    "coins_to_exclude",
-    multiple=True,
-    type=Bytes32ParamType(),
-    help="Exclude this coin from being spent.",
-)
-@click.option(
-    "--include-coin",
-    "coins_to_include",
-    multiple=True,
-    type=Bytes32ParamType(),
-    help="Include this coin from being spent.",
-)
-@click.option(
-    "--primary-coin",
-    "primary_coin",
-    type=Bytes32ParamType(),
-    required=False,
-    default=None,
-    help="Use this coin as the primary coin which outputs the conditions.",
-)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@click.option(
-    "--clawback_time",
-    help="The seconds that the recipient needs to wait to claim the fund."
-    " A positive number will enable the Clawback features.",
-    type=int,
-    default=0,
-)
-@tx_out_cmd()
-@click.pass_context
-def send_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    amount: CliAmount,
-    memo: str | None,
-    fee: uint64,
-    address: CliAddress,
-    override: bool,
-    min_coin_amount: CliAmount,
-    max_coin_amount: CliAmount,
-    coins_to_exclude: Sequence[bytes32],
-    coins_to_include: Sequence[bytes32],
-    primary_coin: bytes32 | None,
-    reuse: bool,
-    clawback_time: int,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import send
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await print_balances(wallet_info, WalletType[self.wallet_type.upper()] if self.wallet_type else None)
 
-    return asyncio.run(
-        send(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            wallet_id=id,
-            amount=amount,
-            memo=memo,
-            fee=fee,
-            address=address,
-            override=override,
-            min_coin_amount=min_coin_amount,
-            max_coin_amount=max_coin_amount,
-            excluded_coin_ids=coins_to_exclude,
-            included_coin_ids=coins_to_include,
-            primary_coin=primary_coin,
-            reuse_puzhash=True if reuse else None,
-            clawback_time_lock=clawback_time,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(
+    group=wallet_cmd, name="get_address", short_help="Get a wallet receive address", help="Get a wallet receive address"
+)
+class GetAddressCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    new_address: bool = option(
+        "-n/-l",
+        "--new-address/--latest-address",
+        help="Create a new wallet receive address, or show the most recently created wallet receive address"
+        " [default: show most recent address]",
+        is_flag=True,
+        default=False,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_address
 
-@wallet_cmd.command("show", help="Show wallet information")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option(
-    "-w",
-    "--wallet_type",
-    help="Choose a specific wallet type to return",
-    type=click.Choice([x.name.lower() for x in WalletType]),
-    default=None,
-)
-@click.pass_context
-def show_cmd(ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, wallet_type: str | None) -> None:
-    from chia.cmds.wallet_funcs import print_balances
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_address(wallet_info, self.wallet_id, self.new_address)
 
-    asyncio.run(
-        print_balances(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            WalletType[wallet_type.upper()] if wallet_type else None,
-        )
+
+@chia_command(
+    group=wallet_cmd,
+    name="clawback",
+    short_help="Claim or revert a Clawback transaction.",
+    help="Claim or revert a Clawback transaction. "
+    "The wallet will automatically detect if you are able to revert or claim.",
+)
+class ClawbackCMD(TransactionEndpoint):
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="A fee to add to the offer when it gets taken, in XCH",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    tx_ids: str = option(
+        "-ids",
+        "--tx_ids",
+        help="IDs of the Clawback transactions you want to revert or claim. Separate multiple IDs by comma (,).",
+        type=str,
+        default="",
+        required=True,
+    )
+    force: bool = option(
+        "--force", help="Force to push the spend bundle even it may be a double spend", is_flag=True, default=False
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import spend_clawback
 
-@wallet_cmd.command("get_address", help="Get a wallet receive address")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@options.create_fingerprint()
-@click.option(
-    "-n/-l",
-    "--new-address/--latest-address",
-    help=(
-        "Create a new wallet receive address, or show the most recently created wallet receive address"
-        "  [default: show most recent address]"
-    ),
-    is_flag=True,
-    default=False,
-)
-@click.pass_context
-def get_address_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, id: int, fingerprint: int, new_address: bool
-) -> None:
-    from chia.cmds.wallet_funcs import get_address
-
-    asyncio.run(get_address(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, new_address))
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await spend_clawback(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                tx_ids_str=self.tx_ids,
+                force=self.force,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
 
 
-@wallet_cmd.command(
-    "clawback",
-    help="Claim or revert a Clawback transaction."
-    " The wallet will automatically detect if you are able to revert or claim.",
+@chia_command(
+    group=wallet_cmd,
+    name="delete_unconfirmed_transactions",
+    short_help="Deletes all unconfirmed transactions for this wallet ID",
+    help="Deletes all unconfirmed transactions for this wallet ID",
 )
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-# TODO: Remove unused wallet id option
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@options.create_fingerprint()
-@click.option(
-    "-ids",
-    "--tx_ids",
-    help="IDs of the Clawback transactions you want to revert or claim. Separate multiple IDs by comma (,).",
-    type=str,
-    default="",
-    required=True,
-)
-@options.create_fee("A fee to add to the offer when it gets taken, in XCH")
-@click.option(
-    "--force",
-    help="Force to push the spend bundle even it may be a double spend",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def clawback(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    id: int,
-    fingerprint: int,
-    tx_ids: str,
-    fee: uint64,
-    force: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import spend_clawback
-
-    return asyncio.run(
-        spend_clawback(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            fee=fee,
-            tx_ids_str=tx_ids,
-            force=force,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+class DeleteUnconfirmedTransactionsCMD:
+    rpc_info: NeedsWalletRPC
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import delete_unconfirmed_transactions
 
-@wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await delete_unconfirmed_transactions(wallet_info, self.wallet_id)
+
+
+@chia_command(
+    group=wallet_cmd,
+    name="get_derivation_index",
+    short_help="Get the last puzzle hash derivation path index",
+    help="Get the last puzzle hash derivation path index",
 )
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@options.create_fingerprint()
-@click.pass_context
-def delete_unconfirmed_transactions_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, id: int, fingerprint: int
-) -> None:
-    from chia.cmds.wallet_funcs import delete_unconfirmed_transactions
+class GetDerivationIndexCMD:
+    rpc_info: NeedsWalletRPC
 
-    asyncio.run(
-        delete_unconfirmed_transactions(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id)
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_derivation_index
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_derivation_index(wallet_info)
+
+
+@chia_command(
+    group=wallet_cmd,
+    name="sign_message",
+    short_help="Sign a message by a derivation address",
+    help="Sign a message by a derivation address",
+)
+class SignMessageCMD:
+    rpc_info: NeedsWalletRPC
+    address: CliAddress = option(
+        "-a", "--address", help="The address you want to use for signing", type=AddressParamType(), required=True
+    )
+    hex_message: str = option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import sign_message
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await sign_message(
+                wallet_info=wallet_info, addr_type=AddressType.XCH, message=self.hex_message, address=self.address
+            )
+
+
+@chia_command(
+    group=wallet_cmd,
+    name="update_derivation_index",
+    short_help="Generate additional derived puzzle hashes starting at the provided index",
+    help="Generate additional derived puzzle hashes starting at the provided index",
+)
+class UpdateDerivationIndexCMD:
+    rpc_info: NeedsWalletRPC
+    index: int = option(
+        "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import update_derivation_index
 
-@wallet_cmd.command("get_derivation_index", help="Get the last puzzle hash derivation path index")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await update_derivation_index(wallet_info, self.index)
+
+
+@chia_command(
+    group=wallet_cmd,
+    name="add_token",
+    short_help="Add/Rename a CAT to the wallet by its asset ID",
+    help="Add/Rename a CAT to the wallet by its asset ID",
 )
-@options.create_fingerprint()
-@click.pass_context
-def get_derivation_index_cmd(ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int) -> None:
-    from chia.cmds.wallet_funcs import get_derivation_index
-
-    asyncio.run(get_derivation_index(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint))
-
-
-@wallet_cmd.command("sign_message", help="Sign a message by a derivation address")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-# TODO: Change RPC's to use the puzzle hash instead of address
-@click.option("-a", "--address", help="The address you want to use for signing", type=AddressParamType(), required=True)
-@click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
-@click.pass_context
-def address_sign_message(
-    ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, address: CliAddress, hex_message: str
-) -> None:
-    from chia.cmds.wallet_funcs import sign_message
-
-    asyncio.run(
-        sign_message(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            addr_type=AddressType.XCH,
-            message=hex_message,
-            address=address,
-        )
+class AddTokenCMD:
+    rpc_info: NeedsWalletRPC
+    asset_id: bytes32 = option(
+        "-id",
+        "--asset-id",
+        help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
+        type=Bytes32ParamType(),
+        required=True,
+    )
+    token_name: str | None = option(
+        "-n",
+        "--token-name",
+        help="The name you wish to designate to the token",
+        type=str,
+        default=None,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import add_token
 
-@wallet_cmd.command(
-    "update_derivation_index", help="Generate additional derived puzzle hashes starting at the provided index"
-)
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option(
-    "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
-)
-@click.pass_context
-def update_derivation_index_cmd(ctx: click.Context, wallet_rpc_port: int | None, fingerprint: int, index: int) -> None:
-    from chia.cmds.wallet_funcs import update_derivation_index
-
-    asyncio.run(update_derivation_index(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, index))
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            # Preserve the legacy command's optional Click option. If omitted, None is
+            # passed through to the RPC as it was before this command was ported.
+            await add_token(wallet_info, self.asset_id, cast(str, self.token_name))
 
 
-@wallet_cmd.command("add_token", help="Add/Rename a CAT to the wallet by its asset ID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=wallet_cmd,
+    name="make_offer",
+    short_help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs",
+    help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs",
 )
-@click.option(
-    "-id",
-    "--asset-id",
-    help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
-    type=Bytes32ParamType(),
-    required=True,
-)
-@click.option(
-    "-n",
-    "--token-name",
-    help="The name you wish to designate to the token",
-)
-@options.create_fingerprint()
-@click.pass_context
-def add_token_cmd(
-    ctx: click.Context, wallet_rpc_port: int | None, asset_id: bytes32, token_name: str, fingerprint: int
-) -> None:
-    from chia.cmds.wallet_funcs import add_token
-
-    asyncio.run(
-        add_token(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, asset_id, token_name)
+class MakeOfferCMD:
+    rpc_info: NeedsWalletRPC
+    offers: Sequence[str] = option(
+        "-o",
+        "--offer",
+        help="A wallet id to offer and the amount to offer (formatted like wallet_id:amount)",
+        required=True,
+        multiple=True,
+    )
+    requests: Sequence[str] = option(
+        "-r",
+        "--request",
+        help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
+        multiple=True,
+    )
+    filepath: pathlib.Path = option(
+        "-p",
+        "--filepath",
+        help="The path to write the generated offer file to",
+        required=True,
+        type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path),
+    )
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="A fee to add to the offer when it gets taken, in XCH",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+    reuse: bool = option("--reuse", help="Reuse existing address for the offer.", is_flag=True, default=False)
+    override: bool = option(
+        "--override", help="Creates offer without checking for unusual values", is_flag=True, default=False
+    )
+    valid_at: int | None = option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+    )
+    expires_at: int | None = option(
+        "--expires-at",
+        help="UNIX timestamp at which the associated transactions expire",
+        type=int,
+        required=False,
+        default=None,
     )
 
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import make_offer
 
-@wallet_cmd.command("make_offer", help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option(
-    "-o",
-    "--offer",
-    help="A wallet id to offer and the amount to offer (formatted like wallet_id:amount)",
-    required=True,
-    multiple=True,
-)
-@click.option(
-    "-r",
-    "--request",
-    help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
-    multiple=True,
-)
-@click.option(
-    "-p",
-    "--filepath",
-    help="The path to write the generated offer file to",
-    required=True,
-    type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path),
-)
-@options.create_fee("A fee to add to the offer when it gets taken, in XCH")
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the offer.",
-    is_flag=True,
-    default=False,
-)
-@click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
-@timelock_args(enable=True)
-@click.pass_context
-# This command looks like a good candidate for @tx_out_cmd however, pushing an incomplete tx is nonsensical and
-# we already have a canonical offer file format which the idea of exporting a different transaction conflicts with
-def make_offer_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    offer: Sequence[str],
-    request: Sequence[str],
-    filepath: pathlib.Path,
-    fee: uint64,
-    reuse: bool,
-    override: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> None:
-    from chia.cmds.wallet_funcs import make_offer
+        if len(self.requests) == 0 and not self.override:
+            print("Cannot make an offer without requesting something without --override")
+            return
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await make_offer(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                offers=self.offers,
+                requests=self.requests,
+                filepath=self.filepath,
+                reuse_puzhash=True if self.reuse else None,
+                condition_valid_times=ConditionValidTimes(
+                    min_time=uint64.construct_optional(self.valid_at),
+                    max_time=uint64.construct_optional(self.expires_at),
+                ),
+            )
 
-    if len(request) == 0 and not override:
-        print("Cannot make an offer without requesting something without --override")
-        return
 
-    asyncio.run(
-        make_offer(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            fee=fee,
-            offers=offer,
-            requests=request,
-            filepath=filepath,
-            reuse_puzhash=True if reuse else None,
-            condition_valid_times=condition_valid_times,
-        )
+@chia_command(
+    group=wallet_cmd,
+    name="get_offers",
+    short_help="Get the status of existing offers.",
+    help="Get the status of existing offers. Displays only active/pending offers by default.",
+)
+class GetOffersCMD:
+    rpc_info: NeedsWalletRPC
+    offer_id: bytes32 | None = option(
+        "-id", "--id", help="The ID of the offer that you wish to examine", type=Bytes32ParamType(), default=None
+    )
+    filepath: str | None = option(
+        "-p",
+        "--filepath",
+        help="The path to rewrite the offer file to (must be used in conjunction with --id)",
+        default=None,
+    )
+    exclude_my_offers: bool = option(
+        "-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True, default=False
+    )
+    exclude_taken_offers: bool = option(
+        "-et",
+        "--exclude-taken-offers",
+        help="Exclude offers that you've accepted from the output",
+        is_flag=True,
+        default=False,
+    )
+    include_completed: bool = option(
+        "-ic",
+        "--include-completed",
+        help="Include offers that have been confirmed/cancelled or failed",
+        is_flag=True,
+        default=False,
+    )
+    summaries: bool = option(
+        "-s",
+        "--summaries",
+        help="Show the assets being offered and requested for each offer",
+        is_flag=True,
+        default=False,
+    )
+    sort_by_relevance: bool = option(
+        "--sort-by-relevance/--sort-by-confirmed-height",
+        help="Sort the offers one of two ways",
+        is_flag=True,
+        default=False,
+    )
+    reverse: bool = option("-r", "--reverse", help="Reverse the order of the output", is_flag=True, default=False)
+
+    async def run(self) -> None:
+        from chia.cmds.wallet_funcs import get_offers
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_offers(
+                wallet_info=wallet_info,
+                offer_id=self.offer_id,
+                filepath=self.filepath,
+                exclude_my_offers=self.exclude_my_offers,
+                exclude_taken_offers=self.exclude_taken_offers,
+                include_completed=self.include_completed,
+                summaries=self.summaries,
+                reverse=self.reverse,
+                sort_by_relevance=self.sort_by_relevance,
+            )
+
+
+@chia_command(
+    group=wallet_cmd, name="take_offer", short_help="Examine or take an offer", help="Examine or take an offer"
+)
+class TakeOfferCMD(TransactionEndpoint):
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="The fee to use when pushing the completed offer, in XCH",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+    path_or_hex: str = argument("path_or_hex", type=str, nargs=1, required=True)
+    examine_only: bool = option(
+        "-e",
+        "--examine-only",
+        help="Print the summary of the offer file but do not take it",
+        is_flag=True,
+        default=False,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import take_offer
 
-@wallet_cmd.command(
-    "get_offers", help="Get the status of existing offers. Displays only active/pending offers by default."
-)
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-id", "--id", help="The ID of the offer that you wish to examine", type=Bytes32ParamType())
-@click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
-@click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
-@click.option("-et", "--exclude-taken-offers", help="Exclude offers that you've accepted from the output", is_flag=True)
-@click.option(
-    "-ic", "--include-completed", help="Include offers that have been confirmed/cancelled or failed", is_flag=True
-)
-@click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
-@click.option("--sort-by-relevance/--sort-by-confirmed-height", help="Sort the offers one of two ways", is_flag=True)
-@click.option("-r", "--reverse", help="Reverse the order of the output", is_flag=True)
-@click.pass_context
-def get_offers_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: bytes32 | None,
-    filepath: str | None,
-    exclude_my_offers: bool,
-    exclude_taken_offers: bool,
-    include_completed: bool,
-    summaries: bool,
-    reverse: bool,
-    sort_by_relevance: bool,
-) -> None:
-    from chia.cmds.wallet_funcs import get_offers
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await take_offer(
+                wallet_info,
+                self.fee,
+                self.path_or_hex,
+                self.examine_only,
+                self.push,
+                self.load_condition_valid_times(),
+                self.tx_config_loader.load_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            )
 
-    asyncio.run(
-        get_offers(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            offer_id=id,
-            filepath=filepath,
-            exclude_my_offers=exclude_my_offers,
-            exclude_taken_offers=exclude_taken_offers,
-            include_completed=include_completed,
-            summaries=summaries,
-            reverse=reverse,
-            sort_by_relevance=sort_by_relevance,
-        )
+
+@chia_command(
+    group=wallet_cmd, name="cancel_offer", short_help="Cancel an existing offer", help="Cancel an existing offer"
+)
+class CancelOfferCMD(TransactionEndpoint):
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="The fee to use when cancelling the offer securely, in XCH",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+    offer_id: bytes32 = option(
+        "-id", "--id", help="The offer ID that you wish to cancel", required=True, type=Bytes32ParamType()
+    )
+    insecure: bool = option(
+        "--insecure",
+        help="Don't make an on-chain transaction, simply mark the offer as cancelled",
+        is_flag=True,
+        default=False,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import cancel_offer
 
-@wallet_cmd.command("take_offer", help="Examine or take an offer")
-@click.argument("path_or_hex", type=str, nargs=1, required=True)
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
-@options.create_fee("The fee to use when pushing the completed offer, in XCH")
-# TODO: Reuse is not used
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the offer.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def take_offer_cmd(
-    ctx: click.Context,
-    path_or_hex: str,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    examine_only: bool,
-    fee: uint64,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import take_offer
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await cancel_offer(
+                wallet_info,
+                self.fee,
+                self.offer_id,
+                not self.insecure,
+                self.push,
+                self.load_condition_valid_times(),
+                self.tx_config_loader.load_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            )
 
-    return asyncio.run(
-        take_offer(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            fee,
-            path_or_hex,
-            examine_only,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(group=wallet_cmd, name="check", short_help="Check wallet DB integrity", help=check_help_text)
+class CheckWalletCMD:
+    context: ChiaCliContext
+    verbose: bool = option("-v", "--verbose", help="Print more information", is_flag=True, default=False)
+    db_path: str | None = option(
+        "--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.", default=None
     )
 
+    async def run(self) -> None:
+        from chia.cmds.check_wallet_db import scan
 
-@wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True, type=Bytes32ParamType())
-@click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
-@options.create_fee("The fee to use when cancelling the offer securely, in XCH")
-@tx_out_cmd()
-@click.pass_context
-def cancel_offer_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: bytes32,
-    insecure: bool,
-    fee: uint64,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import cancel_offer
-
-    return asyncio.run(
-        cancel_offer(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            fee,
-            id,
-            not insecure,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
-    )
-
-
-@wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
-@click.option("-v", "--verbose", help="Print more information", is_flag=True)
-@click.option("--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.")
-@click.pass_context
-# TODO: accept multiple dbs on commandline
-# TODO: Convert to Path earlier
-def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
-    """check, scan, diagnose, fsck Chia Wallet DBs"""
-
-    from chia.cmds.check_wallet_db import scan
-
-    asyncio.run(scan(ChiaCliContext.set_default(ctx).root_path, db_path, verbose=verbose))
+        await scan(self.context.root_path, self.db_path, verbose=self.verbose)
 
 
 @wallet_cmd.group("did", help="DID related actions")
