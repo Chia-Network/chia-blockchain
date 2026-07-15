@@ -1821,8 +1821,8 @@ async def spend_vc(
     fee: uint64,
     new_puzhash: bytes32 | None,
     new_proof_hash: str | None,
-    reuse_puzhash: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     txs = (
@@ -1834,9 +1834,7 @@ async def spend_vc(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                reuse_puzhash=reuse_puzhash,
-            ).to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions
@@ -1887,8 +1885,8 @@ async def revoke_vc(
     parent_coin_id: bytes32 | None,
     vc_id: bytes32 | None,
     fee: uint64,
-    reuse_puzhash: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     if parent_coin_id is None:
@@ -1909,9 +1907,7 @@ async def revoke_vc(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                reuse_puzhash=reuse_puzhash,
-            ).to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions
@@ -1936,10 +1932,8 @@ async def approve_r_cats(
     wallet_id: uint32,
     min_amount_to_claim: CliAmount,
     fee: uint64,
-    min_coin_amount: CliAmount,
-    max_coin_amount: CliAmount,
-    reuse: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     txs = (
@@ -1950,11 +1944,7 @@ async def approve_r_cats(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions
