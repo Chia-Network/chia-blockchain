@@ -147,8 +147,9 @@ def verify_and_get_quality_string(
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
     height_agnostic: bool = False,
-    filter_challenge: bytes32 | None = None,  # For V2 plot filter
-    signage_point_index: int | None = None,  # For V2 plot filter
+    # Threaded by the filter-challenge PR; consumed by the later activation PR.
+    filter_challenge: bytes32 | None = None,
+    signage_point_index: int | None = None,
 ) -> bytes32 | None:
     plot_param = pos.param()
     is_v2 = is_v2_plot(pos)

@@ -21,6 +21,7 @@ from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.util.lru_cache import LRUCache, LRUKeyedListCache, LRUSet
 from chia.util.streamable import Streamable, streamable
@@ -864,7 +865,7 @@ class FullNodeStore:
                         return sp
         return None
 
-    def get_filter_challenge(self, challenge: bytes32, index: uint8, *, window_size: int = 16) -> bytes32 | None:
+    def get_filter_challenge(self, challenge: bytes32, index: uint8) -> bytes32 | None:
         """
         Get the filter_challenge for V2 plot filter.
 
@@ -887,7 +888,7 @@ class FullNodeStore:
 
             return recent_eos[0]
 
-        window_start = (index // window_size) * window_size
+        window_start = (index // FILTER_WINDOW_SIZE) * FILTER_WINDOW_SIZE
 
         for sub_slot, _, _ in self.finished_sub_slots:
             slot_challenge = (
