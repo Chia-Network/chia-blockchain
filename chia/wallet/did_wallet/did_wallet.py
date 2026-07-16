@@ -42,10 +42,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.util.wallet_sync_utils import (
-    fetch_coin_spend,
-    fetch_coin_spend_for_coin_state,
-)
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -126,9 +123,7 @@ class DIDWallet:
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name,
-            wallet_type=WalletType.DECENTRALIZED_ID.value,
-            data=info_as_string,
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
         try:
@@ -143,10 +138,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        backup_data: str,
-        name: str | None = None,
+        wallet_state_manager: WalletStateManager, wallet: Wallet, backup_data: str, name: str | None = None
     ) -> DIDWallet:
         """
         Create a DID wallet from a backup file
@@ -170,9 +162,7 @@ class DIDWallet:
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name,
-            wallet_type=WalletType.DECENTRALIZED_ID.value,
-            data=info_as_string,
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.did_info)
@@ -247,9 +237,7 @@ class DIDWallet:
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name,
-            wallet_type=WalletType.DECENTRALIZED_ID.value,
-            data=info_as_string,
+            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
@@ -262,10 +250,7 @@ class DIDWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
-        name: str | None = None,
+        wallet_state_manager: WalletStateManager, wallet: Wallet, wallet_info: WalletInfo, name: str | None = None
     ) -> DIDWallet:
         """
         Create a DID wallet based on the local database
@@ -363,13 +348,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(
-        self,
-        coin: Coin,
-        height: uint32,
-        peer: WSChiaConnection,
-        coin_data: object | None,
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if coin_data is not None:
@@ -385,13 +364,7 @@ class DIDWallet:
             uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             assert did_curried_args is not None
-            (
-                p2_puzzle,
-                recovery_list_hash,
-                num_verification,
-                singleton_struct,
-                metadata,
-            ) = did_curried_args
+            (p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata) = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
                 recovery_list_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
@@ -783,13 +756,7 @@ class DIDWallet:
             metadata=metadata,
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                CreateCoin(
-                    puzzle_hash=new_innerpuzzle_hash,
-                    amount=uint64(coin.amount),
-                    memos=[p2_ph],
-                )
-            ],
+            primaries=[CreateCoin(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -844,8 +811,7 @@ class DIDWallet:
 
         return did_wallet_puzzles.create_innerpuz(
             p2_puzzle_or_hash=await action_scope.get_puzzle(
-                self.wallet_state_manager,
-                override_reuse_puzhash_with=override_reuse_puzhash_with,
+                self.wallet_state_manager, override_reuse_puzhash_with=override_reuse_puzhash_with
             ),
             recovery_list=self.did_info.backup_ids,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
@@ -1029,11 +995,7 @@ class DIDWallet:
             interface.side_effects.transactions.append(did_record)
 
     async def generate_eve_spend(
-        self,
-        coin: Coin,
-        full_puzzle: Program,
-        innerpuz: Program,
-        extra_conditions: tuple[Condition, ...] = tuple(),
+        self, coin: Coin, full_puzzle: Program, innerpuz: Program, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> WalletSpendBundle:
         assert self.did_info.origin_coin is not None
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
@@ -1041,23 +1003,14 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                CreateCoin(
-                    innerpuz.get_tree_hash(),
-                    uint64(coin.amount),
-                    [p2_puzzle.get_tree_hash()],
-                )
-            ],
+            primaries=[CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
-                [
-                    self.did_info.origin_coin.parent_coin_info,
-                    self.did_info.origin_coin.amount,
-                ],
+                [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
                 coin.amount,
                 innersol,
             ]
