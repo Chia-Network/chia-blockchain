@@ -1839,7 +1839,7 @@ class ApproveRCATsVCCMD(TransactionEndpointWithTimelocks):
                 self.fee,
                 self.push,
                 tx_config=self.tx_config_loader.load_tx_config(
-                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                    units["cat"], wallet_info.config, wallet_info.fingerprint
                 ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
