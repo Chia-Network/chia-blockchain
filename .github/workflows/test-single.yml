@@ -51,9 +51,61 @@ defaults:
   run:
     shell: bash
 
+env:
+  BLOCKS_AND_PLOTS_VERSION: 0.45.21
+
 jobs:
+  # Download the test blocks and plots exactly once per runner OS and store them
+  # in the GitHub Actions cache. Every test job below `needs:` this and restores
+  # from the cache instead of hitting codeload.github.com. Without this, the whole
+  # matrix (many jobs per OS) races on a cold cache and downloads concurrently,
+  # which gets rate limited (HTTP 429) by codeload.
+  warm-cache:
+    name: ${{ inputs.os-emoji }} ${{ inputs.arch-emoji }} warm test cache
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Cache test blocks and plots
+        if: 'contains(inputs.configuration, ''"checkout_blocks_and_plots": true'')'
+        uses: actions/cache@v5
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
+        id: test-blocks-plots
+        with:
+          path: |
+            ${{ github.workspace }}/.chia/blocks
+            ${{ github.workspace }}/.chia/test-plots
+            ${{ github.workspace }}/.chia/test-bundles
+          key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
+
+      - name: Download test blocks and plots
+        if: 'contains(inputs.configuration, ''"checkout_blocks_and_plots": true'') && steps.test-blocks-plots.outputs.cache-hit != ''true'''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          attempts=5
+          downloaded=0
+          for attempt in $(seq 1 "${attempts}"); do
+            if gh release download -R Chia-Network/test-cache "${BLOCKS_AND_PLOTS_VERSION}" --archive=tar.gz -O - | tar xzf -; then
+              downloaded=1
+              break
+            fi
+            echo "::warning::test-cache download attempt ${attempt}/${attempts} failed"
+            if [ "${attempt}" -lt "${attempts}" ]; then
+              sleep "$((15 * attempt))"
+            fi
+          done
+          if [ "${downloaded}" -ne 1 ]; then
+            echo "::error::Failed to download test-cache ${BLOCKS_AND_PLOTS_VERSION} after ${attempts} attempts"
+            exit 1
+          fi
+          mkdir "${GITHUB_WORKSPACE}/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${BLOCKS_AND_PLOTS_VERSION}/"* "${GITHUB_WORKSPACE}/.chia"
+
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    needs: warm-cache
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
@@ -140,7 +192,6 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
-      BLOCKS_AND_PLOTS_VERSION: 0.45.21
 
     steps:
       - name: Checkout code
@@ -201,9 +252,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+          attempts=5
+          downloaded=0
+          for attempt in $(seq 1 "${attempts}"); do
+            if gh release download -R Chia-Network/test-cache "${BLOCKS_AND_PLOTS_VERSION}" --archive=tar.gz -O - | tar xzf -; then
+              downloaded=1
+              break
+            fi
+            echo "::warning::test-cache download attempt ${attempt}/${attempts} failed"
+            if [ "${attempt}" -lt "${attempts}" ]; then
+              sleep "$((15 * attempt))"
+            fi
+          done
+          if [ "${downloaded}" -ne 1 ]; then
+            echo "::error::Failed to download test-cache ${BLOCKS_AND_PLOTS_VERSION} after ${attempts} attempts"
+            exit 1
+          fi
           mkdir "${GITHUB_WORKSPACE}/.chia"
-          mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${BLOCKS_AND_PLOTS_VERSION}/"* "${GITHUB_WORKSPACE}/.chia"
 
       - uses: ./.github/actions/install
         with:
