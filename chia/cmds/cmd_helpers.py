@@ -7,8 +7,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, TypeVar
 
+import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
+from click import ParameterSource
 
 from chia.cmds.cmd_classes import ChiaCliContext, command_helper, option
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, TransactionBundle, get_wallet_client
@@ -178,6 +180,16 @@ def transaction_endpoint_runner(
     func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]],
 ) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
     async def wrapped_func(self: _T_TransactionEndpoint) -> None:
+        if (
+            self.rpc_info.context.original_click_context is not None
+            and self.push
+            and self.rpc_info.context.original_click_context.get_parameter_source("push") != ParameterSource.COMMANDLINE
+        ):
+            click.confirm(
+                "This command will push transactions to the network if it succeeds. (Use --no-push to disable.)"
+                " Would you like to continue?",
+                abort=True,
+            )
         txs = await func(self)
         self.transaction_writer.handle_transaction_output(txs)
 

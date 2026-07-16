@@ -8,7 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
-from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm
+from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader
 from chia.cmds.param_types import CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.types.blockchain_format.coin import Coin
@@ -175,7 +175,6 @@ async def async_combine(
 
     print(f"Transactions would combine up to {number_of_coins} coins.")
     if push:
-        cli_confirm("Would you like to Continue? (y/n): ")
         resp = await client_info.client.combine_coins(
             dataclasses.replace(combine_request, push=True),
             tx_config,
