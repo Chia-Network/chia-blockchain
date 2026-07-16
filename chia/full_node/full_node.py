@@ -634,32 +634,35 @@ class FullNode:
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
-
-        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
-        if start_height > 0:
-            first = await peer.call_api(
-                FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(start_height), False)
-            )
-            if first is None or not isinstance(first, full_node_protocol.RespondBlock):
-                self.sync_store.batch_syncing.remove(peer.peer_node_id)
-                self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
-                return False
-            hash = self.blockchain.height_to_hash(uint32(first.block.height - 1))
-            assert hash is not None
-            if hash != first.block.prev_header_hash:
-                self.log.info("Batch syncing stopped, this is a deep chain")
-                self.sync_store.batch_syncing.remove(peer.peer_node_id)
-                # First sb not connected to our blockchain, do a long sync instead
-                return False
-
-        batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        for task in self._segment_task_list[:]:
-            if task.done():
-                self._segment_task_list.remove(task)
-            else:
-                cancel_task_safe(task=task, log=self.log)
-
         try:
+            self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
+            if start_height > 0:
+                first = await peer.call_api(
+                    FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(start_height), False)
+                )
+                if first is None or not isinstance(first, full_node_protocol.RespondBlock):
+                    self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
+                    return False
+                first_prev_hash = (
+                    self.blockchain.height_to_hash(uint32(first.block.height - 1)) if first.block.height > 0 else None
+                )
+                if first_prev_hash is None:
+                    self.log.info(
+                        f"Batch syncing stopped, block at height {first.block.height} does not connect to our chain"
+                    )
+                    return False
+                if first_prev_hash != first.block.prev_header_hash:
+                    self.log.info("Batch syncing stopped, this is a deep chain")
+                    # First block is not connected to our blockchain; do a long sync instead
+                    return False
+
+            batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+            for task in self._segment_task_list[:]:
+                if task.done():
+                    self._segment_task_list.remove(task)
+                else:
+                    cancel_task_safe(task=task, log=self.log)
+
             peer_info = peer.get_peer_logging()
             if start_height > 0:
                 fork_hash = self.blockchain.height_to_hash(uint32(start_height - 1))
@@ -713,7 +716,7 @@ class FullNode:
                     # Call outside of priority_mutex to encourage concurrency
                     await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
         finally:
-            self.sync_store.batch_syncing.remove(peer.peer_node_id)
+            self.sync_store.batch_syncing.discard(peer.peer_node_id)
         return True
 
     async def short_sync_backtrack(
