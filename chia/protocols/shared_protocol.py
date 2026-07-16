@@ -67,6 +67,9 @@ _capabilities: list[tuple[uint16, str]] = [
 _mempool_updates = [
     (uint16(Capability.MEMPOOL_UPDATES.value), "1"),
 ]
+_rate_limits_v3 = [
+    (uint16(Capability.RATE_LIMITS_V3.value), "1"),
+]
 
 default_capabilities = {
     NodeType.FULL_NODE: _capabilities + _mempool_updates,
