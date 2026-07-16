@@ -300,7 +300,6 @@ class SingletonFastForward:
             # Update the list of coins spends that make the new fast forward bundle
             new_coin_spends.append(new_coin_spend)
             fast_forwarded_spends += 1
-        assert mempool_item.conds is not None
         if fast_forwarded_spends == 0:
             # Nothing was fast forwarded, so the cost is unchanged.
             return new_bundle_coin_spends, ff_state_update

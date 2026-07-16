@@ -72,6 +72,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -2430,8 +2431,6 @@ async def test_height_added_to_mempool(optimized_path: bool, test_coins_mempool_
 # block building) verify that. We recover it from the lineage proof embedded in
 # the singleton solution rather than fabricating a placeholder.
 def singleton_lineage_info(coin_spend: CoinSpend) -> UnspentLineageInfo:
-    from chia.wallet.lineage_proof import LineageProof, LineageProofField
-
     solution = Program.from_bytes(bytes(coin_spend.solution))
     lineage_proof = LineageProof.from_program(
         solution.first(),
