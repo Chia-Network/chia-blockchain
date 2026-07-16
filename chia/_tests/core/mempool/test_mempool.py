@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 import pytest
 from chia_rs import (
+    ELIGIBLE_FOR_DEDUP,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
     CoinSpend,
@@ -3473,8 +3474,6 @@ def test_max_spends_per_block(old: bool) -> None:
 
 @pytest.mark.parametrize("old", [True, False])
 def test_max_spends_per_block_with_dedup(old: bool) -> None:
-    from chia_rs import ELIGIBLE_FOR_DEDUP
-
     max_cost = uint64(11_000_000_000)
     fee_estimator = create_bitcoin_fee_estimator(max_cost)
     mempool_info = MempoolInfo(
@@ -3512,6 +3511,62 @@ def test_max_spends_per_block_with_dedup(old: bool) -> None:
     # Verify dedup actually helped: without dedup each item would need 2 spend
     # slots, limiting us to 3000 items. With dedup we should fit more.
     assert len(generator.removals) > MAX_SPENDS_PER_BLOCK // 2
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_skipped_item_does_not_leak_dedup_state(old: bool) -> None:
+    """
+    an item that is processed (and thus registers a shared
+    dedup coin) but ultimately dropped must not leave that coin registered in
+    the dedup state. Otherwise a later item spending the same coin gets
+    "deduplicated" against a spend that never makes it into the block, dropping
+    the coin from the block entirely.
+    """
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    shared_coin = make_coin(0)
+
+    # The "big" item registers the shared dedup coin but has more spends than a
+    # block can hold, so it gets skipped. Its high fee gives it the highest
+    # priority, so it's the first item processed (and the first to touch the
+    # shared coin).
+    big_item = mk_item(
+        [shared_coin, *[make_coin(i + 1) for i in range(MAX_SPENDS_PER_BLOCK)]],
+        cost=1,
+        fee=1_000_000_000,
+        flags=[ELIGIBLE_FOR_DEDUP],
+    )
+    info = mempool.add_to_pool(big_item)
+    assert info.error is None
+
+    # The "small" item spends the same shared dedup coin plus one unique coin.
+    # It's small enough to fit and is processed after the big item.
+    unique_coin = make_coin(MAX_SPENDS_PER_BLOCK + 1)
+    small_item = mk_item(
+        [shared_coin, unique_coin],
+        cost=1,
+        fee=0,
+        flags=[ELIGIBLE_FOR_DEDUP, 0],
+    )
+    info = mempool.add_to_pool(small_item)
+    assert info.error is None
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+
+    removals = set(generator.removals)
+    # The small item was included, so every coin it spends must be in the block.
+    # In particular the shared coin must not have been deduplicated away against
+    # the skipped big item.
+    assert removals == {shared_coin, unique_coin}
 
 
 def test_keccak() -> None:
