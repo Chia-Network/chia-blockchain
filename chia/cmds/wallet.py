@@ -1654,6 +1654,9 @@ class MintVCCMD(TransactionEndpointWithTimelocks):
                 self.fee,
                 self.target_address,
                 self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 

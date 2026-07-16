@@ -1765,6 +1765,7 @@ async def mint_vc(
     fee: uint64,
     target_address: CliAddress | None,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     res = await wallet_info.client.vc_mint(
@@ -1774,7 +1775,7 @@ async def mint_vc(
             fee=fee,
             push=push,
         ),
-        CMDTXConfigLoader().to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+        tx_config=tx_config,
         timelock_info=condition_valid_times,
     )
 
