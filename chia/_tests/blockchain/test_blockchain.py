@@ -320,6 +320,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -354,6 +356,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -449,6 +453,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
+                    None,
+                    uint8(0),
                 )
                 conds = None
                 # if this assert fires, remove it along with the pragma for the block

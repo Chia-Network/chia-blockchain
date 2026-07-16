@@ -79,6 +79,8 @@ async def test1(
                 block.transactions_info,
                 block.transactions_generator,
                 [],
+                None,
+                uint8(0),
             )
             await full_node_api_1.full_node.add_unfinished_block(unf, None)
             await full_node_api_1.full_node.add_block(block, None)
@@ -652,6 +654,8 @@ async def test_get_blockchain_state(
                 block.transactions_info,
                 block.transactions_generator,
                 [],
+                None,
+                uint8(0),
             )
             await full_node_api_1.full_node.add_unfinished_block(unf, None)
             await full_node_api_1.full_node.add_block(block, None)
@@ -765,6 +769,8 @@ async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices
                 block.transactions_info,
                 block.transactions_generator,
                 [],
+                None,
+                uint8(0),
             )
             await full_node_api.full_node.add_unfinished_block(unf, None)
             await full_node_api.full_node.add_block(block, None)
