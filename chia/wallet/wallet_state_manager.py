@@ -142,7 +142,12 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import (
+    IsCoinSpendableWallet,
+    MatchPuzzleInfoWallet,
+    MaxSendQuantityWallet,
+    WalletProtocol,
+)
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -150,7 +155,7 @@ from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.wallet.wsm_apis import CreateMorePuzzleHashesResult, GetUnusedDerivationRecordResult
 
-TWalletType = TypeVar("TWalletType", bound=WalletProtocol[Any])
+TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_node import WalletNode
@@ -195,7 +200,7 @@ class WalletStateManager:
     db_wrapper: DBWrapper2
 
     main_wallet: Wallet
-    wallets: dict[uint32, WalletProtocol[Any]]
+    wallets: dict[uint32, WalletProtocol]
     private_key: PrivateKey | None
     root_pubkey: G1Element
 
@@ -308,7 +313,7 @@ class WalletStateManager:
 
         pool_config.perform_migration_from_old_config(root_path=self.root_path)
 
-        wallet: WalletProtocol[Any] | None = None
+        wallet: WalletProtocol | None = None
         for wallet_info in await self.get_all_wallet_info_entries():
             wallet_type = WalletType(wallet_info.type)
             if wallet_type == WalletType.STANDARD_WALLET:
@@ -2566,7 +2571,7 @@ class WalletStateManager:
         result = await self.coin_store.get_coin_records(**kwargs)
         return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
-    async def get_wallet_for_coin(self, coin_id: bytes32) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_coin(self, coin_id: bytes32) -> WalletProtocol | None:
         coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
             return None
@@ -2622,7 +2627,7 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
-    async def get_wallet_for_asset_id(self, asset_id: bytes32) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_asset_id(self, asset_id: bytes32) -> WalletProtocol | None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
@@ -2639,11 +2644,10 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> WalletProtocol | None:
         for wallet in self.wallets.values():
-            match_function = getattr(wallet, "match_puzzle_info", None)
-            if match_function is not None and callable(match_function):
-                if await match_function(puzzle_driver):
+            if isinstance(wallet, MatchPuzzleInfoWallet):
+                if await wallet.match_puzzle_info(puzzle_driver):
                     return wallet
         return None
 
@@ -2660,7 +2664,7 @@ class WalletStateManager:
                 },
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol[Any]) -> None:
+    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
         self.wallets[wallet.id()] = wallet
         result = await self.create_more_puzzle_hashes()
         await result.commit(self)
@@ -2711,11 +2715,11 @@ class WalletStateManager:
         for record in records:
             if record.coin.name() in {*offer_locked_coins.keys(), *pending_removals}:
                 continue
-            if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
+            if isinstance(wallet, IsCoinSpendableWallet) and not await wallet.is_coin_spendable(record):
                 continue
             filtered.add(record)
 
-        if hasattr(wallet, "max_send_quantity") and in_one_block:
+        if isinstance(wallet, MaxSendQuantityWallet) and in_one_block:
             filtered_as_list = list(filtered)
             filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
             return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])

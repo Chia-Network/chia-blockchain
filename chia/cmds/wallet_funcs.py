@@ -161,6 +161,7 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
+        WalletType.PLOTNFT_2,
         WalletType.DATA_LAYER,
         WalletType.VC,
     }:
@@ -195,6 +196,7 @@ async def get_unit_name_for_wallet_id(
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
+        WalletType.PLOTNFT_2,
         WalletType.DATA_LAYER,
         WalletType.VC,
     }:
@@ -977,7 +979,7 @@ async def cancel_offer(
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> tuple[str, int]:
     if typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
         return "", units["cat"]
-    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG}:
+    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.PLOTNFT_2, WalletType.MULTI_SIG}:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 

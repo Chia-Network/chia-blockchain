@@ -246,6 +246,11 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True, ids=tuple()).run()
     assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
 
+    await DeleteNotificationsCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=False, ids=tuple()
+    ).run()
+    assert "Must specify --all if you intend to delete all notifications" in capsys.readouterr().out
+
 
 def test_notification_command_parsing() -> None:
     puzzle_hash = bytes32.zeros
