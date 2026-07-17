@@ -569,7 +569,7 @@ class FarmerAPI:
 
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
-        if proof_bytes is None or len(proof_bytes) == 0:
+        if len(proof_bytes) == 0:
             self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.fragments[:5]}...")
             return
 

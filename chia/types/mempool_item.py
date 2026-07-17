@@ -82,11 +82,11 @@ class MempoolItem:
 
     @property
     def cost(self) -> uint64:
-        return uint64(0 if self.conds is None else self.conds.cost)
+        return uint64(self.conds.cost)
 
     @property
     def num_spends(self) -> int:
-        return 0 if self.conds is None else len(self.conds.spends)
+        return len(self.conds.spends)
 
     @property
     def virtual_cost(self) -> uint64:

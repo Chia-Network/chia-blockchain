@@ -738,8 +738,8 @@ async def test_create_signed_transaction(
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
-                            ">=#pending_change": 1 if is_cat else 0,
-                            "pending_coin_removal_count": 1 if is_cat else 0,
+                            ">=#pending_change": 1,
+                            "pending_coin_removal_count": 1,
                         }
                     }
                     if is_cat
@@ -759,10 +759,10 @@ async def test_create_signed_transaction(
                     {
                         "cat": {
                             "confirmed_wallet_balance": -cat_delta,
-                            ">=#spendable_balance": 1 if is_cat else 0,
-                            ">=#max_send_amount": 1 if is_cat else 0,
-                            "<=#pending_change": -1 if is_cat else 0,
-                            "pending_coin_removal_count": -1 if is_cat else 0,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": -1,
+                            "pending_coin_removal_count": -1,
                         }
                     }
                     if is_cat

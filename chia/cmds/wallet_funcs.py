@@ -1681,7 +1681,7 @@ async def delete_notifications(wallet_info: WalletClientInfo, ids: Sequence[byte
     if delete_all:
         await wallet_info.client.delete_notifications(DeleteNotifications())
     else:
-        await wallet_info.client.delete_notifications(DeleteNotifications(ids=list(ids) if ids is not None else None))
+        await wallet_info.client.delete_notifications(DeleteNotifications(ids=list(ids)))
     print("Success!")
 
 

@@ -423,7 +423,7 @@ def validate_unfinished_header_block(
                 assert prev_b is not None
 
                 # 3b. Check that we finished a slot and we finished a sub-epoch
-                if not new_sub_slot or not can_finish_se:
+                if not can_finish_se:
                     return (
                         None,
                         ValidationError(
@@ -455,7 +455,7 @@ def validate_unfinished_header_block(
                             ),
                         )
 
-            elif new_sub_slot and not genesis_block:
+            elif not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
                 if can_finish_se or can_finish_epoch:
                     return (

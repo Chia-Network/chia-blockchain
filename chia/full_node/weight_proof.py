@@ -156,7 +156,7 @@ class WeightProofHandler:
             # sample sub epoch
             # next sub block
             ses_block = ses_blocks[sub_epoch_n]
-            if ses_block is None or ses_block.sub_epoch_summary_included is None:
+            if ses_block.sub_epoch_summary_included is None:
                 log.error("error while building proof")
                 return None
 
@@ -278,7 +278,7 @@ class WeightProofHandler:
             if ses_height > peak_height:
                 break
             ses_block = ses_blocks[sub_epoch_n]
-            if ses_block is None or ses_block.sub_epoch_summary_included is None:
+            if ses_block.sub_epoch_summary_included is None:
                 log.error("error while building proof")
                 return None
             await self.__create_persist_segment(prev_ses_block, ses_block, ses_height, sub_epoch_n)
@@ -654,7 +654,7 @@ class WeightProofHandler:
             if idx == len(received_summaries) - 1:
                 # end of wp summaries, local chain is longer or equal to wp chain
                 break
-            if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
+            if local_ses.get_hash() != received_summaries[idx].get_hash():
                 break
             fork_point_index = idx
 
@@ -785,11 +785,7 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, icc_end_of_slot_info:
         None,
         None,
         None,
-        (
-            None
-            if end_of_slot.proofs.challenge_chain_slot_proof is None
-            else end_of_slot.proofs.challenge_chain_slot_proof
-        ),
+        end_of_slot.proofs.challenge_chain_slot_proof,
         (
             None
             if end_of_slot.proofs.infused_challenge_chain_slot_proof is None
@@ -1284,7 +1280,7 @@ def validate_recent_blocks(
 
         # we need at least two challenges and more than 2 transaction blocks in the cache to validate pospace
         # otherwise we might fail to validate due to lack of information
-        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 2:
+        if (prev_challenge is not None) and transaction_blocks > 2:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None
@@ -1471,9 +1467,9 @@ def __get_rc_sub_slot(
         if idx >= 2 and slots[idx - 2].cc_slot_end is None:
             slots_n = 2
 
-    new_diff = None if ses is None else ses.new_difficulty
-    new_ssi = None if ses is None else ses.new_sub_slot_iters
-    ses_hash: bytes32 | None = None if ses is None else ses.get_hash()
+    new_diff = ses.new_difficulty
+    new_ssi = ses.new_sub_slot_iters
+    ses_hash: bytes32 | None = ses.get_hash()
     overflow = is_overflow_block(constants, first.signage_point_index)
     if overflow:
         if idx >= 2 and slots[idx - 2].cc_slot_end is not None and slots[idx - 1].cc_slot_end is not None:

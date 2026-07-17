@@ -320,7 +320,7 @@ class CRCATWallet(CATWallet):
 
     async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
         crcat: CRCAT = self.coin_record_to_crcat(record)
-        if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+        if not crcat.lineage_proof.is_none():
             return True
         return False
 
@@ -332,7 +332,7 @@ class CRCATWallet(CATWallet):
         amount: uint128 = uint128(0)
         for record in record_list:
             crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            if not crcat.lineage_proof.is_none():
                 amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
@@ -346,7 +346,7 @@ class CRCATWallet(CATWallet):
         amount: uint128 = uint128(0)
         for record in record_list:
             crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            if not crcat.lineage_proof.is_none():
                 amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Pending approval balance for cat wallet {self.id()} is {amount}")
