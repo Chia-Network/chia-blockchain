@@ -6,7 +6,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
@@ -41,7 +41,10 @@ from chia.wallet.wallet_request_types import (
     DIDFindLostDID,
     DIDGetCurrentCoinInfo,
     DIDGetInfo,
+    DIDMessageSpend,
     DIDType,
+    SetWalletResyncOnStartup,
+    SignMessageByID,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 
@@ -720,7 +723,7 @@ async def test_did_auto_transfer_limit(
             backup_data,
         )
     assert did_wallet_10.did_info.origin_coin is not None
-    await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
+    await api_1.did_find_lost_did(DIDFindLostDID(coin_id=did_wallet_10.did_info.origin_coin.name().hex()))
     await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
     await time_out_assert(15, did_wallet_10.get_unconfirmed_balance, 101)
 
@@ -742,7 +745,7 @@ async def test_did_auto_transfer_limit(
     assert len(did_wallets) == 9
 
     # Try and find lost coin
-    await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+    await api_1.did_find_lost_did(DIDFindLostDID(coin_id=origin_coin.name().hex()))
     did_wallets = list(
         filter(
             lambda w: w.type == WalletType.DECENTRALIZED_ID,
@@ -976,10 +979,17 @@ async def test_message_spend(wallet_environments: WalletTestFramework):
             ),
         ]
     )
-    response = await api_0.did_message_spend(
-        {"wallet_id": did_wallet_1.wallet_id, "coin_announcements": ["0abc"], "puzzle_announcements": ["0def"]}
-    )
-    spend = response["spend_bundle"].coin_spends[0]
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        await api_0.did_message_spend(
+            DIDMessageSpend(
+                wallet_id=uint32(did_wallet_1.wallet_id),
+                coin_announcements=[bytes.fromhex("0abc")],
+                puzzle_announcements=[bytes.fromhex("0def")],
+            ),
+            action_scope,
+        )
+        assert action_scope.side_effects.transactions[0].spend_bundle is not None
+        spend = action_scope.side_effects.transactions[0].spend_bundle.coin_spends[0]
     conditions = conditions_dict_for_solution(
         spend.puzzle_reveal, spend.solution, wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
     )
@@ -1157,67 +1167,67 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
     message = "Hello World"
     assert did_wallet_1.did_info.origin_coin is not None
     response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
-            "message": message,
-        }
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+        )
     )
     puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
     # Test hex string
     message = "0123456789ABCDEF"
     response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
-            "message": message,
-            "is_hex": True,
-        }
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=True,
+        )
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
 
     # Test BLS sign string
     message = "Hello World"
     assert did_wallet_1.did_info.origin_coin is not None
     response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
-            "message": message,
-            "is_hex": False,
-            "safe_mode": False,
-        }
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=False,
+            safe_mode=False,
+        )
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
         bytes(message, "utf-8"),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
     # Test BLS sign hex
     message = "0123456789ABCDEF"
     assert did_wallet_1.did_info.origin_coin is not None
     response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
-            "message": message,
-            "is_hex": True,
-            "safe_mode": False,
-        }
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=True,
+            safe_mode=False,
+        )
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
         hexstr_to_bytes(message),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
 
 
@@ -1282,9 +1292,9 @@ async def test_did_resync(
     did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
     did_info = did_wallet_2.did_info
     # set flag to reset wallet sync data on start
-    await wallet_api_1.set_wallet_resync_on_startup({"enable": True})
+    await wallet_api_1.set_wallet_resync_on_startup(SetWalletResyncOnStartup(enable=True))
     fingerprint_1 = wallet_node_1.logged_in_fingerprint
-    await wallet_api_2.set_wallet_resync_on_startup({"enable": True})
+    await wallet_api_2.set_wallet_resync_on_startup(SetWalletResyncOnStartup(enable=True))
     fingerprint_2 = wallet_node_2.logged_in_fingerprint
     # 2 reward coins
     assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
