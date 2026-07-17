@@ -2887,9 +2887,13 @@ class WalletRpcApi:
                     type=uint16(coin_record.coin_type.value),
                     wallet_identifier=coin_record.wallet_identifier(),
                     clawback_metadata=metadata
-                    if isinstance(metadata := coin_record.parsed_metadata(), ClawbackMetadata)
+                    if coin_record.metadata is not None
+                    and isinstance(metadata := coin_record.parsed_metadata(), ClawbackMetadata)
                     else None,
-                    cr_cat_metadata=metadata if isinstance(metadata, CRCATMetadata) else None,
+                    cr_cat_metadata=metadata
+                    if coin_record.metadata is not None
+                    and isinstance(metadata := coin_record.parsed_metadata(), CRCATMetadata)
+                    else None,
                     confirmed_height=coin_record.confirmed_block_height,
                     spent_height=coin_record.spent_block_height,
                     coinbase=coin_record.coinbase,

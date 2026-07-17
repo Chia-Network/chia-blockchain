@@ -638,11 +638,11 @@ class WalletCoinRecordWithMetadata(Streamable):
     id: bytes32
     type: uint16
     wallet_identifier: StreamableWalletIdentifier
-    clawback_metadata: ClawbackMetadata | None
-    cr_cat_metadata: CRCATMetadata | None
     confirmed_height: uint32
     spent_height: uint32
     coinbase: bool
+    clawback_metadata: ClawbackMetadata | None = None
+    cr_cat_metadata: CRCATMetadata | None = None
 
     def __post_init__(self) -> None:
         if self.clawback_metadata is not None and self.cr_cat_metadata is not None:
@@ -652,18 +652,21 @@ class WalletCoinRecordWithMetadata(Streamable):
         serialized_json = super().to_json_dict()
         if self.clawback_metadata is not None:
             serialized_json["metadata"] = self.clawback_metadata.to_json_dict()
-            del serialized_json["clawback_metadata"]
         elif self.cr_cat_metadata is not None:
             serialized_json["metadata"] = self.cr_cat_metadata.to_json_dict()
-            del serialized_json["cr_cat_metadata"]
+        else:
+            serialized_json["metadata"] = None
+        del serialized_json["clawback_metadata"]
+        del serialized_json["cr_cat_metadata"]
         return serialized_json
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        if "time_lock" in json_dict["metadata"]:
-            json_dict["clawback_metadata"] = json_dict["metadata"]
-        else:
-            json_dict["cr_cat_metadata"] = json_dict["metadata"]
+        if json_dict["metadata"] is not None:
+            if "time_lock" in json_dict["metadata"]:
+                json_dict["clawback_metadata"] = json_dict["metadata"]
+            else:
+                json_dict["cr_cat_metadata"] = json_dict["metadata"]
         del json_dict["metadata"]
         return super().from_json_dict(json_dict)
 
