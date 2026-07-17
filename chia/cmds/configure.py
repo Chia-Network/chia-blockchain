@@ -31,10 +31,10 @@ def configure(
     set_peer_count: str,
     testnet: str,
     peer_connect_timeout: str,
-    crawler_db_path: str,
+    crawler_db_path: str | None,
     crawler_minimum_version_count: int | None,
-    seeder_domain_name: str,
-    seeder_nameserver: str,
+    seeder_domain_name: str | None,
+    seeder_nameserver: str | None,
     set_solver_trusted_peers_only: str,
     set_log_systemd: str,
 ) -> None:
@@ -349,10 +349,10 @@ def configure_cmd(
     set_peer_count: str,
     testnet: str,
     set_peer_connect_timeout: str,
-    crawler_db_path: str,
-    crawler_minimum_version_count: int,
-    seeder_domain_name: str,
-    seeder_nameserver: str,
+    crawler_db_path: str | None,
+    crawler_minimum_version_count: int | None,
+    seeder_domain_name: str | None,
+    seeder_nameserver: str | None,
     set_solver_trusted_peers_only: str,
 ) -> None:
     configure(
