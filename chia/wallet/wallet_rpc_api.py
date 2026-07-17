@@ -596,7 +596,7 @@ class WalletRpcApi:
             return marshalled_func
 
         return {
-            endpoint.endpoint_name: apply_wrappers(getattr(self, endpoint.endpoint_name), endpoint)
+            "/" + endpoint.endpoint_name: apply_wrappers(getattr(self, endpoint.endpoint_name), endpoint)
             for endpoint in WALLET_RPC_ENDPOINT_METADATA
         }
 
