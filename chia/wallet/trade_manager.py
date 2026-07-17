@@ -463,7 +463,7 @@ class TradeManager:
             valid_times=parse_timelock_info(extra_conditions),
         )
 
-        if success is True and trade_offer is not None and not validate_only:
+        if not validate_only:
             await self.save_trade(trade_offer, created_offer)
 
         return success, trade_offer, error

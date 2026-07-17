@@ -150,11 +150,7 @@ async def new_transaction_not_requested(incoming: asyncio.Queue[Message], new_sp
     await asyncio.sleep(3)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return False
@@ -165,11 +161,7 @@ async def new_transaction_requested(incoming: asyncio.Queue[Message], new_spend:
     await asyncio.sleep(1)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return True
@@ -634,7 +626,7 @@ async def test_request_peers(
         msg_bytes = await full_node_peers.request_peers(PeerInfo("::1", server_2._port))
         assert msg_bytes is not None
         msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
-        if msg is not None and not (len(msg.peer_list) == 1):
+        if not (len(msg.peer_list) == 1):
             return False
         peer = msg.peer_list[0]
         return (peer.host in {self_hostname, "127.0.0.1"}) and peer.port == 1000
@@ -1664,7 +1656,7 @@ async def test_new_unfinished_block(
     else:
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        assert res is not None and res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        assert res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
 
     # when we receive a new unfinished block, we advertise it to our peers.
     # We send new_unfinished_blocks to old peers (0.0.35 and earlier) and we
@@ -3984,7 +3976,7 @@ async def declare_pos_unfinished_block_pos_request(
             eos,
             blockchain,
             peak,
-            ssi if ssi is not None else None,
+            ssi,
             diff,
             full_peak,
         )

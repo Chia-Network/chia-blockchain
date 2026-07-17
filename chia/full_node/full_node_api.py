@@ -850,7 +850,7 @@ class FullNodeAPI:
         peer_host = peer.peer_info.host
         if is_localhost(peer_host):
             self.log.debug(f"Not banning localhost peer for invalid signage point VDF proof: {peer_host}")
-        elif server is not None and is_in_network(peer_host, server.exempt_peer_networks):
+        elif is_in_network(peer_host, server.exempt_peer_networks):
             self.log.debug(f"Not banning exempt network peer for invalid signage point VDF proof: {peer_host}")
         else:
             self.log.warning(
@@ -1493,7 +1493,7 @@ class FullNodeAPI:
                     msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
                     return msg
 
-                assert block is not None and block.foliage_transaction_block is not None
+                assert block.foliage_transaction_block is not None
 
                 all_removals: list[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(
                     block.height

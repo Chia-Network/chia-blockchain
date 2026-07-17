@@ -265,7 +265,7 @@ class SpendSim:
         generator_bundle: SpendBundle | None = None
         tx_additions = []
         tx_removals = []
-        spent_coins_ids = None
+        spent_coins_ids: list[bytes32] = []
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
@@ -274,7 +274,6 @@ class SpendSim:
                     bundle, additions = result
                     generator_bundle = bundle
                     spent_coins: dict[bytes32, Coin] = {}
-                    spent_coins_ids = []
                     for spend in generator_bundle.coin_spends:
                         hint_dict, _ = compute_spend_hints_and_additions(spend)
                         hints: list[tuple[bytes32, bytes]] = []
@@ -297,7 +296,7 @@ class SpendSim:
             timestamp=self.timestamp,
             included_reward_coins=included_reward_coins,
             tx_additions=tx_additions,
-            tx_removals=spent_coins_ids if spent_coins_ids is not None else [],
+            tx_removals=spent_coins_ids,
         )
         # SimBlockRecord is created
         generator: BlockGenerator | None = await self.generate_transaction_generator(generator_bundle)

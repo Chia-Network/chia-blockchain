@@ -44,7 +44,7 @@ class IntroducerAPI:
         peer: WSChiaConnection,
     ) -> Message | None:
         max_peers = self.introducer.max_peers_to_send
-        if self.introducer.server is None or self.introducer.server.introducer_peers is None:
+        if self.introducer.server.introducer_peers is None:
             return None
         rawpeers = self.introducer.server.introducer_peers.get_peers(
             max_peers * 5, True, self.introducer.recent_peer_threshold

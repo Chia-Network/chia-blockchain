@@ -174,7 +174,7 @@ def next_sub_epoch_summary(
             constants,
             blocks,
             uint32(prev_b.height + 1),
-            prev_b.header_hash if prev_b is not None else None,
+            prev_b.header_hash,
             deficit,
             False,
         )

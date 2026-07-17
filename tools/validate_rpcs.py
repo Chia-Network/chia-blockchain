@@ -31,7 +31,7 @@ def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path
     db_path_replaced: Path = root_path / config["full_node"]["database_path"]
     db_directory: Path = path_from_root(root_path, db_path_replaced).parent
     selected_network: str = config["full_node"]["selected_network"]
-    suffix = "" if (selected_network is None or selected_network == "mainnet") else f"-{selected_network}"
+    suffix = "" if selected_network == "mainnet" else f"-{selected_network}"
     return db_directory / f"height-to-hash{suffix}"
 
 
@@ -210,7 +210,7 @@ async def cli_async(
         config,
     ):
         blockchain_state: dict[str, Any] = await node_client.get_blockchain_state()
-        if blockchain_state is None or blockchain_state["peak"] is None:
+        if blockchain_state["peak"] is None:
             # Peak height is required for the cache.
             print("No blockchain found. Exiting.")
             return

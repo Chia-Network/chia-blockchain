@@ -766,7 +766,7 @@ class DataLayer:
         latest_generation = root.generation
         # Don't store full tree files before this generation.
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        publish_generation = min(singleton_record.generation, root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
@@ -783,7 +783,7 @@ class DataLayer:
                 # this particular return only happens if the files already exist, no need to log anything
                 break
             try:
-                if uploaders is not None and len(uploaders) > 0:
+                if len(uploaders) > 0:
                     request_json = {
                         "store_id": store_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
@@ -830,7 +830,7 @@ class DataLayer:
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
-        max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        max_generation = min(singleton_record.generation, root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
         files = []
         for generation in range(1, max_generation + 1):
@@ -849,7 +849,7 @@ class DataLayer:
                 files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
-        if uploaders is not None and len(uploaders) > 0:
+        if len(uploaders) > 0:
             request_json = {
                 "store_id": store_id.hex(),
                 "files": json.dumps(files),

@@ -121,7 +121,7 @@ def match_address_to_sk(
     Checks the list of given address is a derivation of the given sk within the given number of derivations
     Returns a Set of the addresses that are derivations of the given sk
     """
-    if sk is None or not addresses_to_search:
+    if not addresses_to_search:
         return set()
 
     found_addresses: set[bytes32] = set()

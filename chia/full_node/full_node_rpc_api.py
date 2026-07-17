@@ -1131,7 +1131,7 @@ class FullNodeRpcApi:
             last_peak_timestamp = peak.timestamp
             peak_with_timestamp = peak_height  # Last transaction block height
             last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            while last_tx_block is None or last_peak_timestamp is None:
+            while last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
                 last_peak_timestamp = last_tx_block.timestamp
