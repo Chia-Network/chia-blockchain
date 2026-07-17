@@ -3168,6 +3168,7 @@ async def test_sync_from_fork_point_logs_fetch_stage_exception(
         def __init__(self) -> None:
             self.closed = False
             self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self.peer_capabilities: list[Capability] = []
 
         async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
             raise RuntimeError("forced fetch failure")
@@ -3201,6 +3202,7 @@ async def test_sync_from_fork_point_logs_validate_stage_exception(
         def __init__(self, blocks: list[FullBlock]) -> None:
             self.closed = False
             self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self.peer_capabilities: list[Capability] = []
             self._blocks = blocks
 
         async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
