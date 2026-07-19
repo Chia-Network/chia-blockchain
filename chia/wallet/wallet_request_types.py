@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field, fields
 from enum import Enum
 from functools import cached_property
@@ -674,7 +675,7 @@ class GetCoinRecordsResponse(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        dict_copy = json_dict.copy()
+        dict_copy = deepcopy(json_dict)
         for coin_record in dict_copy["coin_records"]:
             if coin_record["metadata"] is not None:
                 if "time_lock" in coin_record["metadata"]:
