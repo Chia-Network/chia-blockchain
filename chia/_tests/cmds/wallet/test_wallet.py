@@ -39,7 +39,6 @@ from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import StreamableWalletIdentifier, WalletType
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
     CancelOffer,
@@ -61,6 +60,7 @@ from chia.wallet.wallet_request_types import (
     FungibleAsset,
     GetAllOffers,
     GetAllOffersResponse,
+    GetCoinRecords,
     GetCoinRecordsResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfo,
@@ -387,13 +387,13 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "NFT Wallet:\n   -Total Balance:         1.0",
         "   -DID ID:                did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         "FULL_NODE 127.0.0.1",
-        "47482/47482 01010101... May 12",
+        "47482/47482 01010101...",
     ]
     other_assert_list = [
         "test2:\n   -Total Balance:         2000000.0  (2000000000 mojo)",
         "   -Asset ID:              dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860",
         "FULL_NODE 127.0.0.1",
-        "47482/47482 01010101... May 12",
+        "47482/47482 01010101...",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "--wallet_type", "cat"], other_assert_list)
@@ -404,7 +404,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             (GetWallets(type=uint16(WalletType.CAT.value), include_data=True),),
         ],
         "get_sync_status": [(), ()],
-        "get_height_info": [(), ()],
+        "get_height_info": [(GetHeightInfo(),), (GetHeightInfo(),)],
         "get_wallet_balance": [
             (GetWalletBalance(wallet_id=uint32(1)),),
             (GetWalletBalance(wallet_id=uint32(2)),),

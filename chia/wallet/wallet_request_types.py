@@ -648,35 +648,41 @@ class WalletCoinRecordWithMetadata(Streamable):
         if self.clawback_metadata is not None and self.cr_cat_metadata is not None:
             raise ValueError("clawback_metadata and cr_cat_metadata are mutually exclusive")
 
-    def to_json_dict(self) -> dict[str, Any]:
-        serialized_json = super().to_json_dict()
-        if self.clawback_metadata is not None:
-            serialized_json["metadata"] = self.clawback_metadata.to_json_dict()
-        elif self.cr_cat_metadata is not None:
-            serialized_json["metadata"] = self.cr_cat_metadata.to_json_dict()
-        else:
-            serialized_json["metadata"] = None
-        del serialized_json["clawback_metadata"]
-        del serialized_json["cr_cat_metadata"]
-        return serialized_json
-
-    @classmethod
-    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        dict_copy = json_dict.copy()
-        if dict_copy["metadata"] is not None:
-            if "time_lock" in dict_copy["metadata"]:
-                dict_copy["clawback_metadata"] = dict_copy["metadata"]
-            else:
-                dict_copy["cr_cat_metadata"] = dict_copy["metadata"]
-        del dict_copy["metadata"]
-        return super().from_json_dict(dict_copy)
-
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsResponse(Streamable):
     coin_records: list[WalletCoinRecordWithMetadata]
     total_count: uint32 | None
+
+    def to_json_dict(self) -> dict[str, Any]:
+        serialized_json = super().to_json_dict()
+        new_coin_records = []
+        for coin_record in serialized_json["coin_records"]:
+            new_coin_record = coin_record.copy()
+            if new_coin_record["clawback_metadata"] is not None:
+                new_coin_record["metadata"] = new_coin_record["clawback_metadata"]
+            elif new_coin_record["cr_cat_metadata"] is not None:
+                new_coin_record["metadata"] = new_coin_record["cr_cat_metadata"]
+            else:
+                new_coin_record["metadata"] = None
+            del new_coin_record["clawback_metadata"]
+            del new_coin_record["cr_cat_metadata"]
+            new_coin_records.append(new_coin_record)
+        serialized_json["coin_records"] = new_coin_records
+        return serialized_json
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        dict_copy = json_dict.copy()
+        for coin_record in dict_copy["coin_records"]:
+            if coin_record["metadata"] is not None:
+                if "time_lock" in coin_record["metadata"]:
+                    coin_record["clawback_metadata"] = coin_record["metadata"]
+                else:
+                    coin_record["cr_cat_metadata"] = coin_record["metadata"]
+            del coin_record["metadata"]
+        return super().from_json_dict(dict_copy)
 
 
 @streamable
