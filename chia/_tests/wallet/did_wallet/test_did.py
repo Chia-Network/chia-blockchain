@@ -988,8 +988,8 @@ async def test_message_spend(wallet_environments: WalletTestFramework):
             ),
             action_scope,
         )
-        assert action_scope.side_effects.transactions[0].spend_bundle is not None
-        spend = action_scope.side_effects.transactions[0].spend_bundle.coin_spends[0]
+    assert action_scope.side_effects.transactions[0].spend_bundle is not None
+    spend = action_scope.side_effects.transactions[0].spend_bundle.coin_spends[0]
     conditions = conditions_dict_for_solution(
         spend.puzzle_reveal, spend.solution, wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
     )
