@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Any
 
 import importlib_resources
 import pytest
@@ -30,6 +29,7 @@ from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -38,7 +38,7 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import StreamableWalletIdentifier, WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
@@ -61,7 +61,9 @@ from chia.wallet.wallet_request_types import (
     FungibleAsset,
     GetAllOffers,
     GetAllOffersResponse,
+    GetCoinRecordsResponse,
     GetCurrentDerivationIndexResponse,
+    GetHeightInfo,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNextAddressResponse,
@@ -85,6 +87,7 @@ from chia.wallet.wallet_request_types import (
     TakeOffer,
     TakeOfferResponse,
     TransactionRecordWithMetadata,
+    WalletCoinRecordWithMetadata,
     WalletCreationMode,
     WalletInfoResponse,
 )
@@ -195,12 +198,29 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
             return GetTransactionsResponse(transactions=l_tx_rec, wallet_id=request.wallet_id)
 
-        async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
+        async def get_coin_records(self, request: GetCoinRecords) -> GetCoinRecordsResponse:
             self.add_to_log("get_coin_records", (request,))
-            return {
-                "coin_records": [{"metadata": {"time_lock": 12345678}}],
-                "total_count": 1,
-            }
+            return GetCoinRecordsResponse(
+                coin_records=[
+                    WalletCoinRecordWithMetadata(
+                        parent_coin_info=bytes32.zeros,
+                        puzzle_hash=bytes32.zeros,
+                        amount=uint64(0),
+                        id=bytes32.zeros,
+                        type=uint16(0),
+                        wallet_identifier=StreamableWalletIdentifier(id=uint32(0), type=uint8(0)),
+                        confirmed_height=uint32(0),
+                        spent_height=uint32(0),
+                        coinbase=False,
+                        clawback_metadata=ClawbackMetadata(
+                            time_lock=uint64(12345678),
+                            sender_puzzle_hash=bytes32.zeros,
+                            recipient_puzzle_hash=bytes32.zeros,
+                        ),
+                    )
+                ],
+                total_count=uint32(1),
+            )
 
     inst_rpc_client = GetTransactionsWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -305,8 +325,8 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 return GetWalletsResponse(wallets=[wallet_list[1]])
             return GetWalletsResponse(wallets=wallet_list)
 
-        async def get_height_info(self) -> GetHeightInfoResponse:
-            self.add_to_log("get_height_info", ())
+        async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
+            self.add_to_log("get_height_info", (request,))
             return GetHeightInfoResponse(
                 height=uint32(10),
                 latest_timestamp=uint64(1700000000),

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from itertools import count
 from pathlib import Path
+from types import MethodType
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
@@ -593,10 +594,10 @@ class WalletRpcApi:
                 marshalled_func = tx_endpoint(push=endpoint.auto_push, merge_spends=endpoint.auto_merge_spends)(
                     marshalled_func
                 )
-            return marshalled_func
+            return MethodType(marshalled_func, self)
 
         return {
-            "/" + endpoint.endpoint_name: apply_wrappers(getattr(self, endpoint.endpoint_name), endpoint)
+            "/" + endpoint.endpoint_name: apply_wrappers(getattr(WalletRpcApi, endpoint.endpoint_name), endpoint)
             for endpoint in WALLET_RPC_ENDPOINT_METADATA
         }
 

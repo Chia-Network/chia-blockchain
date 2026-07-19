@@ -662,13 +662,14 @@ class WalletCoinRecordWithMetadata(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        if json_dict["metadata"] is not None:
-            if "time_lock" in json_dict["metadata"]:
-                json_dict["clawback_metadata"] = json_dict["metadata"]
+        dict_copy = json_dict.copy()
+        if dict_copy["metadata"] is not None:
+            if "time_lock" in dict_copy["metadata"]:
+                dict_copy["clawback_metadata"] = dict_copy["metadata"]
             else:
-                json_dict["cr_cat_metadata"] = json_dict["metadata"]
-        del json_dict["metadata"]
-        return super().from_json_dict(json_dict)
+                dict_copy["cr_cat_metadata"] = dict_copy["metadata"]
+        del dict_copy["metadata"]
+        return super().from_json_dict(dict_copy)
 
 
 @streamable
