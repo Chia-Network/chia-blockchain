@@ -648,6 +648,7 @@ class WalletCoinRecordWithMetadata(Streamable):
     def __post_init__(self) -> None:
         if self.clawback_metadata is not None and self.cr_cat_metadata is not None:
             raise ValueError("clawback_metadata and cr_cat_metadata are mutually exclusive")
+        super().__post_init__()
 
 
 @streamable
