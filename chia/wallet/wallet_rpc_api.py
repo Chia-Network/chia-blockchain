@@ -89,7 +89,7 @@ from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
-from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
+from chia.wallet.wallet_coin_store import CoinRecordOrder, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_request_types import (
@@ -189,6 +189,7 @@ from chia.wallet.wallet_request_types import (
     GetAllOffers,
     GetAllOffersResponse,
     GetCATListResponse,
+    GetCoinRecords,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCoinRecordsResponse,
