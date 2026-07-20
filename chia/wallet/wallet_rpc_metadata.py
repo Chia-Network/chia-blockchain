@@ -23,9 +23,9 @@ class WalletRpcMetadata(RpcMetadata):
 
     def __post_init__(self) -> None:
         if self.tx_endpoint and not issubclass(self.request_type, wallet_request_types.TransactionEndpointRequest):
-            raise ValueError("tx_endpoint request type must subclass TransactionEndpointRequest")
+            raise TypeError("tx_endpoint request type must subclass TransactionEndpointRequest")
         if self.tx_endpoint and not issubclass(self.response_type, wallet_request_types.TransactionEndpointResponse):
-            raise ValueError("tx_endpoint response type must subclass TransactionEndpointResponse")
+            raise TypeError("tx_endpoint response type must subclass TransactionEndpointResponse")
 
 
 WALLET_RPC_ENDPOINT_METADATA: list[WalletRpcMetadata] = [

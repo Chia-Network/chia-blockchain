@@ -63,6 +63,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -77,6 +78,7 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
@@ -96,7 +98,7 @@ from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionT
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -178,6 +180,8 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
+    TransactionEndpointRequest,
+    TransactionEndpointResponse,
     VCSpend,
     VerifySignature,
     VerifySignatureResponse,
@@ -186,6 +190,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_rpc_metadata import WalletRpcMetadata
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import SyncStatus
 
@@ -5076,3 +5081,50 @@ def test_create_new_wallet_post_init() -> None:
 
     # Creating a Remote wallet via create_new_wallet() should require no extra fields.
     CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)
+
+
+def test_miscellaneous_wallet_rpc_errors() -> None:
+    with pytest.raises(ValueError, match="clawback_metadata and cr_cat_metadata are mutually exclusive"):
+        WalletCoinRecordWithMetadata(
+            parent_coin_info=bytes32.zeros,
+            puzzle_hash=bytes32.zeros,
+            amount=uint64(0),
+            id=bytes32.zeros,
+            type=uint16(0),
+            wallet_identifier=StreamableWalletIdentifier(id=uint32(0), type=uint8(0)),
+            clawback_metadata=ClawbackMetadata(
+                time_lock=uint64(0), sender_puzzle_hash=bytes32.zeros, recipient_puzzle_hash=bytes32.zeros
+            ),
+            cr_cat_metadata=CRCATMetadata(
+                lineage_proof=LineageProof(None, None, None), inner_puzzle_hash=bytes32.zeros
+            ),
+            confirmed_height=uint32(0),
+            spent_height=uint32(0),
+            coinbase=False,
+        )
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXRequest(Streamable):
+        pass
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXResponse(Streamable):
+        pass
+
+    class YesATXRequest(TransactionEndpointRequest):
+        pass
+
+    class YesATXResponse(TransactionEndpointResponse):
+        pass
+
+    with pytest.raises(TypeError, match="tx_endpoint request type must subclass TransactionEndpointRequest"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=NotATXRequest, response_type=YesATXResponse
+        )
+
+    with pytest.raises(TypeError, match="tx_endpoint response type must subclass TransactionEndpointResponse"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=YesATXRequest, response_type=NotATXResponse
+        )

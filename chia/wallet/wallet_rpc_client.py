@@ -69,13 +69,11 @@ def _make_endpoint_method(meta: WalletRpcMetadata) -> EndpointMethod:
             tx_config: TXConfig,
             extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> Streamable | None:
+        ) -> Streamable:
             payload = request.json_serialize_for_transport(  # type: ignore[attr-defined]
                 tx_config, extra_conditions, timelock_info
             )
             result = await self.fetch(meta.endpoint_name, payload)
-            if empty_response:
-                return None
             return json_deserialize_with_clvm_streamable(result, response_type)
 
         tx_method.__name__ = client_method_name(endpoint_name)
