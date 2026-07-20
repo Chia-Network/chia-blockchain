@@ -72,7 +72,6 @@ def generate() -> str:
             "def client_method_name(endpoint_name: str) -> str: ...",
             "",
             "class WalletRpcClient(RpcClient):",
-            "",
             *methods,
             "",
         ]
