@@ -625,7 +625,7 @@ async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, se
 
     # DISCONNECTED (line 745) — disconnect from peer
     await wallet_server.close_all_connections()
-    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+    await time_out_assert(5, lambda: len(wsm.wallet_node.server.get_connections(NodeType.FULL_NODE)), 0)
     assert await wsm.get_sync_status() == SyncStatus.DISCONNECTED
 
 
@@ -685,7 +685,7 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
 
     # Disconnect from all full node peers
     await env.peer_server.close_all_connections()
-    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+    await time_out_assert(5, lambda: len(wsm.wallet_node.server.get_connections(NodeType.FULL_NODE)), 0)
 
     # tx_endpoint decorator DISCONNECTED check (line 341)
     with pytest.raises(ValueError, match="not connected"):

@@ -464,7 +464,6 @@ class WalletNode:
             self.config,
             path,
             self.constants,
-            self.server,
             self.root_path,
             self,
             public_key,
