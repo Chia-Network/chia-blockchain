@@ -380,7 +380,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         f_internal: Endpoint | None = getattr(self, command, None)
         if f_internal is not None:
             return await f_internal(data)
-        f_rpc_api: Endpoint | None = getattr(self.rpc_api, command, None)
+        f_rpc_api: Endpoint | None = self.rpc_api.get_routes().get("/" + command)
         if f_rpc_api is not None:
             return await f_rpc_api(data)
 
