@@ -2478,13 +2478,6 @@ class WalletStateManager:
 
         return tx_records
 
-    async def add_transaction(self, tx_record: TransactionRecord) -> None:
-        """
-        Called from wallet to add transaction that is not being set to full_node
-        """
-        await self.tx_store.add_transaction_record(tx_record)
-        self.state_changed("pending_transaction", tx_record.wallet_id)
-
     async def remove_from_queue(
         self,
         spendbundle_id: bytes32,
@@ -2614,9 +2607,6 @@ class WalletStateManager:
 
     async def _await_closed(self) -> None:
         await self.db_wrapper.close()
-
-    def unlink_db(self) -> None:
-        Path(self.db_path).unlink()
 
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)

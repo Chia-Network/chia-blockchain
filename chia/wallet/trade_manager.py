@@ -191,9 +191,10 @@ class TradeManager:
                 tx_records: list[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
                 for tx in tx_records:
                     if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
-                        await self.wallet_state_manager.add_transaction(
+                        await self.wallet_state_manager.tx_store.add_transaction_record(
                             dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
                         )
+                        self.wallet_state_manager.state_changed("pending_transaction", tx.wallet_id)
 
                 self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
