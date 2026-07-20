@@ -149,6 +149,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     """
 
     rpc_api: _T_RpcApiProtocol
+    rpc_api_routes: dict[str, Endpoint]
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
@@ -183,6 +184,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(
             rpc_api,
+            rpc_api.get_routes(),
             stop_cb,
             service_name,
             ssl_context,
@@ -260,7 +262,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
     def _get_routes(self) -> dict[str, Endpoint]:
         return {
-            **self.rpc_api.get_routes(),
+            **self.rpc_api_routes,
             **{path: MethodType(handler, self) for path, handler in self._routes.items()},
         }
 
@@ -380,7 +382,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         f_internal: Endpoint | None = getattr(self, command, None)
         if f_internal is not None:
             return await f_internal(data)
-        f_rpc_api: Endpoint | None = self.rpc_api.get_routes().get("/" + command)
+        f_rpc_api: Endpoint | None = self.rpc_api_routes.get("/" + command)
         if f_rpc_api is not None:
             return await f_rpc_api(data)
 
