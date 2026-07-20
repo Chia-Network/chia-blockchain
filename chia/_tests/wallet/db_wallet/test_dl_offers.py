@@ -9,7 +9,8 @@ from chia_rs.sized_ints import uint64
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_wallet import DataLayerSummary, DataLayerWallet, SingletonDependencies, SingletonSummary
-from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -510,6 +511,71 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
+
+    # make_update_offer rejects non-DL legs.
+    dl_driver = await dl_wallet.get_puzzle_info(launcher_id)
+    base_solver = Solver({launcher_id.hex(): {"new_root": "0x" + root.hex(), "dependencies": []}})
+    bogus_asset = bytes32([0xFF] * 32)
+    cat_asset = bytes32([0xAA] * 32)
+    cat_driver = PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + cat_asset.hex()})
+    # Singleton without a METADATA layer — passes check_type([SINGLETON]) but fails the
+    # full [SINGLETON, METADATA] predicate.
+    non_dl_singleton_asset = bytes32([0xBB] * 32)
+    non_dl_singleton_driver = PuzzleInfo(
+        {
+            "type": AssetType.SINGLETON.value,
+            "launcher_id": "0x" + non_dl_singleton_asset.hex(),
+            "launcher_ph": "0x" + bytes32.zeros.hex(),
+            "also": {
+                "type": AssetType.OWNERSHIP.value,
+                "owner": "()",
+                "transfer_program": "()",
+            },
+        }
+    )
+
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
+        with pytest.raises(ValueError, match=r"cannot include an XCH leg"):
+            await DataLayerWallet.make_update_offer(
+                env_maker.wallet_state_manager,
+                {launcher_id: -1, None: 1000},
+                {launcher_id: dl_driver},
+                base_solver,
+                action_scope,
+                fee=uint64(0),
+            )
+
+        with pytest.raises(ValueError, match=rf"{cat_asset.hex()} is not a DataLayer singleton"):
+            await DataLayerWallet.make_update_offer(
+                env_maker.wallet_state_manager,
+                {launcher_id: -1, cat_asset: 1},
+                {launcher_id: dl_driver, cat_asset: cat_driver},
+                base_solver,
+                action_scope,
+                fee=uint64(0),
+            )
+
+        with pytest.raises(ValueError, match=rf"{non_dl_singleton_asset.hex()} is not a DataLayer singleton"):
+            await DataLayerWallet.make_update_offer(
+                env_maker.wallet_state_manager,
+                {launcher_id: -1, non_dl_singleton_asset: 1},
+                {launcher_id: dl_driver, non_dl_singleton_asset: non_dl_singleton_driver},
+                base_solver,
+                action_scope,
+                fee=uint64(0),
+            )
+
+        with pytest.raises(ValueError, match=rf"{bogus_asset.hex()} is not a DataLayer singleton"):
+            await DataLayerWallet.make_update_offer(
+                env_maker.wallet_state_manager,
+                {launcher_id: -1, bogus_asset: 1},
+                {launcher_id: dl_driver},
+                base_solver,
+                action_scope,
+                fee=uint64(0),
+            )
 
 
 @pytest.mark.limit_consensus_modes

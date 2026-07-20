@@ -102,6 +102,11 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_pipeline import TaskPipeline
 from chia.util.task_referencer import create_referenced_task
 
+# Per-request timeout for block fetches inside short_sync_backtrack.
+# Use 15s here instead of the default 60s call_api timeout to bound how
+# long short_sync_backtrack can occupy a new_peak slot.
+SHORT_SYNC_BACKTRACK_BLOCK_REQUEST_TIMEOUT_SEC: int = 15
+
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
@@ -745,7 +750,9 @@ class FullNode:
                 # but not the transactions
                 fetch_tx: bool = unfinished_block is None or curr_height != target_height
                 curr = await peer.call_api(
-                    FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx)
+                    FullNodeAPI.request_block,
+                    full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx),
+                    timeout=SHORT_SYNC_BACKTRACK_BLOCK_REQUEST_TIMEOUT_SEC,
                 )
                 if curr is None:
                     raise ValueError(f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, timed out")
@@ -1079,6 +1086,12 @@ class FullNode:
             if target_peak is None:
                 raise RuntimeError("Not performing sync, no peaks collected")
 
+            # Snapshot advertisers of the target peak before the first await. A
+            # peer that overwrites its peer_to_peak entry with a subsequent
+            # NewPeak during the peer-confirmation round-trip below would
+            # otherwise slip past a (header_hash, weight) lookup at ban time.
+            weight_liars = self.sync_store.get_advertisers_of_peak(target_peak)
+
             self.sync_store.target_peak = target_peak
 
             self.log.info(f"Selected peak {target_peak}")
@@ -1094,6 +1107,7 @@ class FullNode:
                         timeout=10,
                     )
                 )
+            any_peer_confirmed = False
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines, return_exceptions=True)):
                 if isinstance(target_peak_response, BaseException):
                     self.log.warning(
@@ -1109,10 +1123,25 @@ class FullNode:
                     and isinstance(target_peak_response, RespondBlock)
                     and target_peak_response.block.header_hash == target_peak.header_hash
                 ):
+                    any_peer_confirmed = True
+                    actual_weight = target_peak_response.block.reward_chain_block.weight
+                    if actual_weight != target_peak.weight:
+                        self.log.warning(
+                            f"Peer-confirmed block weight {actual_weight} differs from "
+                            f"advertised peak weight {target_peak.weight}, banning weight liars"
+                        )
+                        await self._ban_peak_weight_liars(weight_liars)
+                        raise RuntimeError("Advertised peak weight was a lie, banned offending peers")
                     self.sync_store.peer_has_block(
-                        target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
+                        target_peak.header_hash, peers[i].peer_node_id, actual_weight, target_peak.height, False
                     )
-            # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
+            if not any_peer_confirmed:
+                self.log.warning(
+                    f"No peer confirmed the advertised peak {target_peak.header_hash} "
+                    f"via RequestBlock, banning the peak advertiser(s)"
+                )
+                await self._ban_peak_weight_liars(weight_liars)
+                raise RuntimeError("No peer confirmed the advertised peak")
             fork_point, summaries = await self.request_validate_wp(
                 target_peak.header_hash, target_peak.height, target_peak.weight
             )
@@ -1192,6 +1221,19 @@ class FullNode:
         self.sync_store.set_sync_mode(True)
         self._state_changed("sync_mode")
         return fork_point, summaries
+
+    async def _ban_peak_weight_liars(self, weight_liars: set[bytes32]) -> None:
+        """Ban and disconnect the snapshot of peers that advertised the suspect peak.
+
+        The snapshot is captured synchronously at peak-selection time in `_sync()`
+        so a peer cannot escape banning by overwriting its `peer_to_peak` entry
+        with a subsequent `NewPeak` during the intervening async work.
+        """
+        for peer_id in weight_liars:
+            conn = self.server.all_connections.get(peer_id)
+            if conn is not None:
+                self.log.warning(f"Banning peer {conn.peer_info.host} for advertising inflated weight")
+                await conn.close(CONSENSUS_ERROR_BAN_SECONDS)
 
     async def sync_from_fork_point(
         self,
@@ -1679,7 +1721,6 @@ class FullNode:
         vs: ValidationState,  # in-out parameter
     ) -> tuple[StateChangeSummary | None, Err | None]:
         agg_state_change_summary: StateChangeSummary | None = None
-        block_record = await self.blockchain.get_block_record_from_db(blocks_to_validate[0].prev_header_hash)
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
@@ -1703,15 +1744,10 @@ class FullNode:
             if len(block.finished_sub_slots) > 0:
                 cc_sub_slot = block.finished_sub_slots[0].challenge_chain
                 if cc_sub_slot.new_sub_slot_iters is not None or cc_sub_slot.new_difficulty is not None:
-                    expected_sub_slot_iters, expected_difficulty = get_next_sub_slot_iters_and_difficulty(
-                        self.constants, True, block_record, blockchain
-                    )
                     assert cc_sub_slot.new_sub_slot_iters is not None
                     vs.ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
                     vs.difficulty = cc_sub_slot.new_difficulty
-                    assert expected_sub_slot_iters == vs.ssi
-                    assert expected_difficulty == vs.difficulty
             block_rec = blockchain.block_record(block.header_hash)
             result, error, state_change_summary = await self.blockchain.add_block(
                 block,
@@ -1747,7 +1783,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return agg_state_change_summary, error
-            block_record = blockchain.block_record(header_hash)
+            block_record = block_rec
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 vs.prev_ses_block = block_record

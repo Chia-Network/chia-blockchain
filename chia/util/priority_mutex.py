@@ -23,10 +23,11 @@ class NestedLockUnsupportedError(Exception):
 _T_Priority = TypeVar("_T_Priority", bound=IntEnum)
 
 
-@dataclasses.dataclass(frozen=True)
+# eq=False: queued waiters are removed by identity (deque.remove), so distinct waiters must never compare equal.
+@dataclasses.dataclass(frozen=True, eq=False)
 class _Element:
-    task: asyncio.Task[object] = dataclasses.field(compare=False)
-    ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
+    task: asyncio.Task[object]
+    ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
 
 
 @final
