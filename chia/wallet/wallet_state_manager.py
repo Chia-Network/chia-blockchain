@@ -2608,9 +2608,6 @@ class WalletStateManager:
     async def _await_closed(self) -> None:
         await self.db_wrapper.close()
 
-    def unlink_db(self) -> None:
-        Path(self.db_path).unlink()
-
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
