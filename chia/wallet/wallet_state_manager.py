@@ -1260,6 +1260,7 @@ class WalletStateManager:
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             wallet_type: type[CATWallet] = CATWallet
+            crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
                 uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
@@ -1279,7 +1280,7 @@ class WalletStateManager:
 
                     wallet_type = CRCATWallet
             if wallet_type is CRCATWallet:
-                assert crcat  # mypy doesn't get the semantics
+                assert crcat is not None  # mypy doesn't get the semantics
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
@@ -1331,6 +1332,7 @@ class WalletStateManager:
                 "automatically_add_unknown_cats", False
             ):
                 if wallet_type is CRCATWallet:
+                    assert crcat is not None
                     cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
