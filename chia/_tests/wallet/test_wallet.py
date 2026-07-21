@@ -1870,7 +1870,7 @@ class TestWalletSimulator:
         assert stolen_cs is not None
 
         # get a legit signature
-        stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
+        stolen_sb, _ = await wallet.wallet_state_manager.signer.sign_bundle([stolen_cs])
         stolen_tx = wallet.wallet_state_manager.new_outgoing_transaction(
             wallet_id=wallet.id(),
             puzzle_hash=bytes32.zeros,

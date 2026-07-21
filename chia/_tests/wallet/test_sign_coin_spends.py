@@ -22,10 +22,9 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
 )
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
-from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.wallet.wallet_user_store import WalletUserStore
+from chia.wallet.wallet_signer import WalletSigner
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 top_sk: PrivateKey = PrivateKey.from_bytes(bytes([1] * 32))
 sk1_h: PrivateKey = master_sk_to_wallet_sk(top_sk, uint32(1))
@@ -65,28 +64,31 @@ spend_u: CoinSpend = make_spend(
 )
 
 
+async def _noop_push(_bundle: WalletSpendBundle) -> None:
+    return None
+
+
 @pytest.mark.anyio
-async def test_wsm_sign_transaction() -> None:
+async def test_wallet_signer() -> None:
     async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="writer") as writer_conn:
         async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="reader") as reader_conn:
-            wsm = WalletStateManager()
             db = DBWrapper2(writer_conn)
             await db.add_connection(reader_conn)
-            wsm.puzzle_store = await WalletPuzzleStore.create(db)
-            wsm.constants = DEFAULT_CONSTANTS
-            wsm.private_key = top_sk
-            wsm.root_pubkey = top_sk.get_g1()
-            wsm.user_store = await WalletUserStore.create(db)
-            wallet_info = await wsm.user_store.get_wallet_by_id(1)
-            assert wallet_info is not None
-            wsm.main_wallet = await Wallet.create(wsm, wallet_info)
+            signer = WalletSigner(
+                root_pubkey=top_sk.get_g1(),
+                root_private_key=top_sk,
+                puzzle_store=await WalletPuzzleStore.create(db),
+                max_block_cost_clvm=DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                agg_sig_me_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
+                spend_bundle_push=_noop_push,
+            )
 
             with pytest.raises(
                 ValueError, match=re.escape(f"Pubkey {pk1_h.get_fingerprint()} not found (or path/sum hinted to)")
             ):
-                await wsm.sign_bundle([spend_h])
+                await signer.sign_bundle([spend_h])
 
-            await wsm.puzzle_store.add_derivation_paths(
+            await signer.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
                         uint32(1),
@@ -99,7 +101,7 @@ async def test_wsm_sign_transaction() -> None:
                 ]
             )
 
-            await wsm.puzzle_store.add_derivation_paths(
+            await signer.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
                         uint32(2),
@@ -112,7 +114,7 @@ async def test_wsm_sign_transaction() -> None:
                 ]
             )
 
-            signature: G2Element = ((await wsm.sign_bundle([spend_h]))[0]).aggregated_signature
+            signature: G2Element = ((await signer.sign_bundle([spend_h]))[0]).aggregated_signature
             assert signature == AugSchemeMPL.aggregate(
                 [
                     AugSchemeMPL.sign(sk1_h, msg1),
@@ -123,9 +125,9 @@ async def test_wsm_sign_transaction() -> None:
             with pytest.raises(
                 ValueError, match=re.escape(f"Pubkey {pk1_u.get_fingerprint()} not found (or path/sum hinted to)")
             ):
-                await wsm.sign_bundle([spend_u])
+                await signer.sign_bundle([spend_u])
 
-            await wsm.puzzle_store.add_derivation_paths(
+            await signer.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
                         uint32(1),
@@ -138,7 +140,7 @@ async def test_wsm_sign_transaction() -> None:
                 ]
             )
 
-            await wsm.puzzle_store.add_derivation_paths(
+            await signer.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
                         uint32(2),
@@ -150,7 +152,7 @@ async def test_wsm_sign_transaction() -> None:
                     )
                 ]
             )
-            signature2: G2Element = ((await wsm.sign_bundle([spend_u]))[0]).aggregated_signature
+            signature2: G2Element = ((await signer.sign_bundle([spend_u]))[0]).aggregated_signature
             assert signature2 == AugSchemeMPL.aggregate(
                 [
                     AugSchemeMPL.sign(sk1_u, msg1),
