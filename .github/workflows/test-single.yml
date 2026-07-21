@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Cache test blocks and plots
         if: 'contains(inputs.configuration, ''"checkout_blocks_and_plots": true'')'
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         id: test-blocks-plots
