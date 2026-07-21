@@ -27,10 +27,8 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools import pool_config
-from chia.pools.pool_puzzles import (
-    get_most_recent_singleton_coin_from_coin_spend,
-    solution_to_pool_state,
-)
+from chia.pools.plotnft_drivers import GetNextPlotNFTError, PlotNFT
+from chia.pools.pool_puzzles import get_most_recent_singleton_coin_from_coin_spend, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -89,6 +87,8 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.plotnft_wallet.plotnft_store import PlotNFTStore
+from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
@@ -134,7 +134,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential, match_revocatio
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, WalletCoinStore
@@ -211,6 +211,7 @@ class WalletStateManager:
     interested_store: WalletInterestedStore
     remote_coin_store: RemoteCoinStore
     retry_store: WalletRetryStore
+    plotnft2_store: PlotNFTStore
     multiprocessing_context: multiprocessing.context.BaseContext
     server: ChiaServer
     root_path: Path
@@ -273,6 +274,7 @@ class WalletStateManager:
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.remote_coin_store = await RemoteCoinStore.create(self.db_wrapper)
         self.retry_store = await WalletRetryStore.create(self.db_wrapper)
+        self.plotnft2_store = await PlotNFTStore.create(self.db_wrapper, self.constants.GENESIS_CHALLENGE)
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
@@ -364,6 +366,12 @@ class WalletStateManager:
                     self,
                     self.main_wallet,
                     wallet_info,
+                )
+            elif wallet_type == WalletType.PLOTNFT_2:
+                wallet = await PlotNFT2Wallet.create(
+                    wallet_state_manager=self,
+                    xch_wallet=self.main_wallet,
+                    wallet_info=wallet_info,
                 )
             elif wallet_type == WalletType.REMOTE:
                 wallet = await RemoteWallet.create(
@@ -972,6 +980,53 @@ class WalletStateManager:
             vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
             return await self.handle_vc(vc), vc
 
+        # Check if the coin is a PlotNFT
+        if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
+            try:
+                try:
+                    previous_plotnft = (await self.plotnft2_store.get_plotnfts(coin_ids=[coin_spend.coin.name()]))[0]
+                except ValueError:
+                    try:
+                        previous_plotnft = await self.plotnft2_store.get_latest_plotnft(
+                            launcher_id=bytes32(uncurried.args.at("frf").as_atom())
+                        )
+                    except RuntimeError:
+                        previous_plotnft = None
+                next_plot_nft = PlotNFT.get_next_from_coin_spend(
+                    coin_spend=coin_spend,
+                    genesis_challenge=self.constants.GENESIS_CHALLENGE,
+                    pre_uncurry=uncurried,
+                    previous_plotnft_puzzle=previous_plotnft,
+                )
+                for id, wallet in self.wallets.items():
+                    if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == next_plot_nft.launcher_id:
+                        matched_plotnft_wallet_id = id
+                        break
+                else:
+                    matched_plotnft_wallet_id = None
+                if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+                    matched_plotnft_wallet_id = uint32(len(self.wallets) + 1)
+                    self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
+                        wallet_state_manager=self,
+                        xch_wallet=self.main_wallet,
+                        wallet_info=WalletInfo(
+                            id=matched_plotnft_wallet_id,
+                            name=next_plot_nft.launcher_id.hex(),
+                            type=uint8(WalletType.PLOTNFT_2),
+                            data=next_plot_nft.launcher_id.hex(),
+                        ),
+                    )
+                if matched_plotnft_wallet_id is None:  # pragma: no cover
+                    # TODO: add support for receiving plotnfts you don't know about
+                    raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
+                # the Streamable hint is in error so we need this type ignore
+                return WalletIdentifier(  # type: ignore[return-value]
+                    id=matched_plotnft_wallet_id,
+                    type=WalletType.PLOTNFT_2,
+                ), next_plot_nft
+            except GetNextPlotNFTError:
+                pass
+
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
@@ -1565,6 +1620,22 @@ class WalletStateManager:
 
         if wallet_identifier is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
+            # Bound the number of auto-created DID-scoped NFT wallets. `new_did_id`
+            # is parsed from attacker-controllable NFT transfer data; without a cap a
+            # peer that spams inbound NFTs with unique foreign DIDs can force
+            # unbounded wallet creation. Mirrors `did_auto_add_limit`.
+            # Counter excludes the canonical did_id=None wallet so attacker-driven
+            # fanout cannot displace a user's legitimate no-DID NFT receives.
+            nft_wallet_count = sum(
+                1 for w in self.wallets.values() if isinstance(w, NFTWallet) and w.nft_wallet_info.did_id is not None
+            )
+            nft_limit = self.config.get("nft_auto_add_limit", 100)
+            if new_did_id is not None and nft_wallet_count >= nft_limit:
+                self.log.warning(
+                    f"You are at the max configured limit of {nft_limit} NFT wallets. "
+                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                )
+                return None
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
@@ -2089,6 +2160,25 @@ class WalletStateManager:
                             if coin_state.spent_height is not None:
                                 vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
                                 await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
+                        elif record.wallet_type == WalletType.PLOTNFT_2:
+                            if isinstance(coin_data, PlotNFT):
+                                await self.coin_added(
+                                    coin_state.coin,
+                                    uint32(coin_state.created_height),
+                                    all_unconfirmed,
+                                    wallet_identifier.id,
+                                    wallet_identifier.type,
+                                    peer,
+                                    coin_name,
+                                    coin_data,
+                                )
+                                await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
+                                await self.add_interested_coin_ids([coin_name])
+                            else:
+                                await self.plotnft2_store.mark_pool_reward_as_spent(
+                                    reward_id=coin_name,
+                                    spent_height=coin_state.spent_height,
+                                )
 
                         # Check if a child is a singleton launcher
                         for child in children:
@@ -2349,6 +2439,7 @@ class WalletStateManager:
         additional_signing_responses: list[SigningResponse] | None = None,
         extra_spends: list[WalletSpendBundle] | None = None,
         singleton_records: list[SingletonRecord] = [],
+        plotnft_exiting_info: PlotNFTTargetStateInfo | None = None,
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2397,6 +2488,9 @@ class WalletStateManager:
 
                 for singleton_record in singleton_records:
                     await self.dl_store.add_singleton_record(singleton_record)
+
+                if plotnft_exiting_info is not None:
+                    await self.plotnft2_store.add_exiting_info(exiting_info=plotnft_exiting_info)
 
             await self.add_interested_coin_ids(all_coins_names)
 
@@ -2513,6 +2607,7 @@ class WalletStateManager:
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
         await self.dl_store.rollback_to_block(height)
+        await self.plotnft2_store.rollback_to_block(height=height)
         reorged: list[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
@@ -2651,9 +2746,9 @@ class WalletStateManager:
 
     async def new_peak(self, height: uint32) -> None:
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == WalletType.POOLING_WALLET:
-                assert isinstance(wallet, PoolWallet)
+            if isinstance(wallet, (PoolWallet, PlotNFT2Wallet)):
                 await wallet.new_peak(height)
+
         current_time = int(time.time())
 
         if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:

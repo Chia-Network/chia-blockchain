@@ -356,6 +356,49 @@ async def test_cancellation_while_waiting() -> None:
     # TODO: do something other than hanging for ever on a, well, a hang
 
 
+@pytest.mark.anyio
+async def test_cancellation_of_non_first_waiter_releases_to_live_waiter() -> None:
+    # A waiter cancelled while it is not first in line must not strand the live
+    # waiter queued ahead of it, and the mutex must release to that live waiter.
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
+
+    blocker_continue_event = asyncio.Event()
+    blocker_acquired_event = asyncio.Event()
+    live_waiter_acquired_event = asyncio.Event()
+
+    async def block() -> None:
+        async with mutex.acquire(priority=MutexPriority.high):
+            blocker_acquired_event.set()
+            await blocker_continue_event.wait()
+
+    async def live_waiter() -> None:
+        async with mutex.acquire(priority=MutexPriority.high):
+            live_waiter_acquired_event.set()
+
+    block_task = create_referenced_task(block())
+    await blocker_acquired_event.wait()
+
+    # Queue the live waiter ahead of the one that will be cancelled.
+    live_waiter_task = create_referenced_task(live_waiter())
+    await wait_queued(mutex=mutex, task=live_waiter_task)
+
+    # Queue and cancel a waiter that is not first in line.
+    cancel_task = create_referenced_task(to_be_cancelled(mutex=mutex))
+    await wait_queued(mutex=mutex, task=cancel_task)
+
+    cancel_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await cancel_task
+
+    blocker_continue_event.set()
+    await block_task
+
+    with anyio.fail_after(delay=adjusted_timeout(timeout=10)):
+        await live_waiter_task
+
+    assert live_waiter_acquired_event.is_set()
+
+
 # testing many repeatable randomization cases
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.anyio

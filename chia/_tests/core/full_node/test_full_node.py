@@ -9,7 +9,7 @@ import platform
 import random
 import sqlite3
 import time
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from typing import Any
 
 import pytest
@@ -998,6 +998,124 @@ async def test_new_peak(
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0],
+    reason="admission control is consensus-mode independent",
+)
+async def test_new_peak_admission_gate(
+    one_node_one_block: tuple[FullNodeAPI | FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Exercise every branch of the new_peak admission gate in FullNodeAPI:
+
+    Phase 1 - outbound peer, sem exhausted: outbound skips the gate, hits
+              acquire() which raises LimitedSemaphoreFullError, API catches it.
+    Phase 2 - inbound + outbound present, sem locked: inbound is dropped at
+              the gate; outbound bypasses the gate and queues on the sem.
+    Phase 3 - inbound only (no outbound), sem locked: gate condition fails
+              (no outbound peers), so inbound queues on the sem instead of
+              being dropped.
+    """
+    full_node_api, server, _bt = one_node_one_block
+
+    _, inbound_id = await add_dummy_connection(server, self_hostname, 12316)
+    inbound_peer = server.all_connections[inbound_id]
+    assert not inbound_peer.is_outbound
+
+    _, outbound_id = await add_dummy_connection(server, self_hostname, 12317)
+    outbound_peer = server.all_connections[outbound_id]
+
+    fake_peak = fnp.NewPeak(
+        bytes32(b"\x00" * 32),
+        uint32(0),
+        uint128(0),
+        uint32(0),
+        bytes32(b"\x00" * 32),
+    )
+
+    async def noop(*_args: object) -> None:
+        pass
+
+    @contextlib.asynccontextmanager
+    async def hold_sem(sem: LimitedSemaphore, n: int = 1) -> AsyncIterator[None]:
+        """Acquire *n* slots on *sem*, wait for them to be held, then yield."""
+        event = asyncio.Event()
+
+        async def _hold() -> None:
+            async with sem.acquire():
+                await event.wait()
+
+        tasks = [create_referenced_task(_hold()) for _ in range(n)]
+        await asyncio.sleep(0)
+        try:
+            yield
+        finally:
+            event.set()
+            for t in tasks:
+                t.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await t
+
+    queued_tasks: list[asyncio.Task[None]] = []
+    with monkeypatch.context() as m:
+        m.setattr(full_node_api.full_node, "new_peak", noop)
+        m.setattr(outbound_peer, "is_outbound", True)
+
+        try:
+            # -- Phase 1: outbound, sem exhausted --
+            # Outbound peers skip the admission gate entirely and go straight to
+            # acquire(). With zero waiting slots the sem raises
+            # LimitedSemaphoreFullError; the API catches it and logs.
+            sem = LimitedSemaphore.create(active_limit=1, waiting_limit=0)
+            m.setattr(full_node_api.full_node, "_new_peak_sem", sem)
+            async with hold_sem(sem):
+                with caplog.at_level(logging.DEBUG, logger="chia.full_node.full_node_api"):
+                    caplog.clear()
+                    await full_node_api.new_peak(fake_peak, outbound_peer)
+                assert "limited semaphore full" in caplog.text
+
+            # -- Phase 2: inbound + outbound present, sem locked --
+            # With an outbound peer present and both active slots taken, the gate
+            # drops the inbound message. The outbound peer bypasses the gate and
+            # queues on the sem.
+            sem = LimitedSemaphore.create(active_limit=2, waiting_limit=4)
+            m.setattr(full_node_api.full_node, "_new_peak_sem", sem)
+            initial = sem._available_count
+            async with hold_sem(sem, n=2):
+                # Inbound: gate drops it; sem count unchanged.
+                await full_node_api.new_peak(fake_peak, inbound_peer)
+                assert sem._available_count == initial - 2
+
+                # Outbound: bypasses gate, queues on sem.
+                queued_tasks.append(create_referenced_task(full_node_api.new_peak(fake_peak, outbound_peer)))
+                await time_out_assert(2, lambda: sem._available_count == initial - 3)
+
+            # -- Phase 3: inbound only (no outbound), sem locked --
+            # Flip the outbound peer back to inbound so get_connections reports
+            # zero outbound peers. The gate condition (outbound count > 0) is
+            # now false, so inbound messages queue on the sem instead of being
+            # dropped.
+            m.setattr(outbound_peer, "is_outbound", False)
+
+            sem = LimitedSemaphore.create(active_limit=2, waiting_limit=4)
+            m.setattr(full_node_api.full_node, "_new_peak_sem", sem)
+            initial = sem._available_count
+            async with hold_sem(sem, n=2):
+                # Inbound queues instead of being dropped.
+                inbound_task = create_referenced_task(full_node_api.new_peak(fake_peak, inbound_peer))
+                queued_tasks.append(inbound_task)
+                await time_out_assert(2, lambda: sem._available_count == initial - 3)
+                assert not inbound_task.done()
+        finally:
+            for t in queued_tasks:
+                t.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await t
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
     allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
     reason="We can no longer (reliably) farm blocks from before the hard fork",
 )
@@ -1296,9 +1414,9 @@ async def test_respond_transaction_fail(
 async def test_add_transaction_seen_before_validation(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
 ) -> None:
-    """Regression test for SEC-111: tx must be marked in-flight before the
-    pre_validate_spendbundle call so concurrent workers don't redundantly
-    validate the same transaction.
+    """
+    Transaction must be marked in-flight before the pre_validate_spendbundle
+    call so concurrent workers don't redundantly validate the same transaction.
     """
     full_node_1, _server_1, _bt = one_node_one_block
     fn = full_node_1.full_node
@@ -1807,7 +1925,7 @@ async def test_new_unfinished_block2_forward_limit(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "committment,expected",
+    "commitment,expected",
     [
         (0, Err.INVALID_TRANSACTIONS_GENERATOR_HASH),
         (1, Err.INVALID_TRANSACTIONS_INFO_HASH),
@@ -1824,7 +1942,7 @@ async def test_unfinished_block_with_replaced_generator(
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
     self_hostname: str,
-    committment: int,
+    commitment: int,
     expected: Err,
 ) -> None:
     full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
@@ -1838,7 +1956,7 @@ async def test_unfinished_block_with_replaced_generator(
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")
 
-    if committment > 0:
+    if commitment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
@@ -1853,7 +1971,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.transactions_info is not None
         transactions_info = block.transactions_info
 
-    if committment > 1:
+    if commitment > 1:
         tb = block.foliage_transaction_block
         assert tb is not None
         transaction_block = FoliageTransactionBlock(
@@ -1868,7 +1986,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.foliage_transaction_block is not None
         transaction_block = block.foliage_transaction_block
 
-    if committment > 2:
+    if commitment > 2:
         fl = block.foliage
         foliage = Foliage(
             fl.prev_block_hash,
@@ -1881,7 +1999,7 @@ async def test_unfinished_block_with_replaced_generator(
     else:
         foliage = block.foliage
 
-    if committment > 3:
+    if commitment > 3:
         fl = block.foliage
 
         secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
@@ -1897,10 +2015,10 @@ async def test_unfinished_block_with_replaced_generator(
             signature,
         )
 
-        if committment > 4:
+        if commitment > 4:
             pos = block.reward_chain_block.proof_of_space
 
-            if committment > 5:
+            if commitment > 5:
                 if pos.pool_public_key is None:
                     assert pos.pool_contract_puzzle_hash is not None
                     plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
@@ -1949,7 +2067,7 @@ async def test_unfinished_block_with_replaced_generator(
         reward_chain_block = block.reward_chain_block.get_unfinished()
 
     generator_refs: list[uint32] = []
-    if committment > 6:
+    if commitment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
     unf = UnfinishedBlock(
