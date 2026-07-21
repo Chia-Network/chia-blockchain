@@ -102,7 +102,7 @@ types-setuptools = { version = ">=82.0.0.20260518", optional = true }
 types-psutil = { version = ">=7.2.2.20260518", optional = true }
 types-lxml = { version = ">=2026.2.16", optional = true }
 types-zstd = { version = ">=1.5.7.3.20260408", optional = true }
-boto3-stubs = { version = ">=1.43.18", optional = true }
+boto3-stubs = { version = ">=1.43.47", optional = true }
 sortedcontainers-stubs = {version = ">= 2.4.3", optional = true }
 types-colorama = { version = ">=0.4.15.20260508", optional = true }
 lxml = { version = ">=6.1.0", optional = true }
