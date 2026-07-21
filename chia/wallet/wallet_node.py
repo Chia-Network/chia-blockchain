@@ -1249,7 +1249,10 @@ class WalletNode:
 
             # Check if any coin needs auto spending
             if self.config.get("auto_claim", {}).get("enabled", False):
-                await self.wallet_state_manager.auto_claim_coins()
+                async with self.wallet_state_manager.new_action_scope(
+                    self.wallet_state_manager.tx_config, push=True
+                ) as action_scope:
+                    await self.wallet_state_manager.clawback_manager.auto_claim_coins(action_scope)
 
         if new_peak_hb.foliage_transaction_block is not None:
             await self._retry_fee_failed_transactions()

@@ -1671,7 +1671,7 @@ class WalletRpcApi:
             except WalletCoinRecordMetadataParsingError as e:
                 log.error("Failed to spend clawback coin: %s", e)
                 continue
-            await self.service.wallet_state_manager.spend_clawback_coins(
+            await self.service.wallet_state_manager.clawback_manager.spend_clawback_coins(
                 # Semantically, we're guaranteed the right type here, but the typing isn't there
                 coin_batch,  # type: ignore[arg-type]
                 request.fee,
