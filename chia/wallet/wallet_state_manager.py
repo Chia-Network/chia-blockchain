@@ -1104,8 +1104,6 @@ class WalletStateManager:
         local_records: GetCoinRecordsResult,
     ) -> int:
         # TODO: add comment about what this method does
-        if peer.closed:
-            raise ConnectionError("Connection closed")
         self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
         local_record = local_records.coin_id_to_record.get(coin_name)
 
@@ -1540,13 +1538,13 @@ class WalletStateManager:
         used_up_to: int,
         ph_to_index_cache: LRUCache[bytes32, uint32],
         local_records: GetCoinRecordsResult,
-    ) -> None:
+    ) -> int:
         rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
         try:
             async with self.db_wrapper.writer():
                 # This only succeeds if we don't raise out of the transaction
                 await self.retry_store.remove_state(coin_state)
-                used_up_to = await self._add_coin_state(
+                new_used_up_to = await self._add_coin_state(
                     coin_state,
                     coin_name,
                     peer,
@@ -1557,6 +1555,7 @@ class WalletStateManager:
                     ph_to_index_cache,
                     local_records,
                 )
+                return new_used_up_to
         except Exception as e:
             self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
             self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
@@ -1564,6 +1563,7 @@ class WalletStateManager:
                 await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
             else:
                 await self.retry_store.remove_state(coin_state)
+        return used_up_to
 
     async def add_coin_states(
         self,
@@ -1571,6 +1571,8 @@ class WalletStateManager:
         peer: WSChiaConnection,
         fork_height: uint32 | None,
     ) -> bool:
+        if peer.closed:
+            raise ConnectionError("Connection closed")
         # Input states should already be sorted by cs_height, with reorgs at the beginning
         curr_h = -1
         for c_state in coin_states:
@@ -1588,7 +1590,7 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
         try:
             for coin_name, coin_state in zip(coin_names, coin_states):
-                await self.add_coin_state(
+                used_up_to = await self.add_coin_state(
                     coin_state,
                     coin_name,
                     peer,
