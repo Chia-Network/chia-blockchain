@@ -1660,7 +1660,7 @@ class WalletRpcApi:
         batch_size = (
             request.batch_size
             if request.batch_size is not None
-            else self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
+            else self.service.wallet_state_manager.clawback_manager.auto_claim_batch_size
         )
         records_list = list(coin_records.coin_id_to_record.values())
         for i in range(0, len(records_list), batch_size):
