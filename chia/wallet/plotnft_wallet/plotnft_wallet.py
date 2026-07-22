@@ -4,13 +4,21 @@ import dataclasses
 import logging
 from typing import TYPE_CHECKING, ClassVar, cast, final
 
-from chia_rs import G2Element
+from chia_rs import CoinSpend, G2Element
 from chia_rs.chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
-from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
+from chia.pools.plotnft_drivers import (
+    GetNextPlotNFTError,
+    PlotNFT,
+    PoolConfig,
+    PoolReward,
+    RewardPuzzle,
+    SingletonStruct,
+    UserConfig,
+)
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
@@ -18,7 +26,8 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -408,6 +417,63 @@ class PlotNFT2Wallet:
             )
 
     # Syncing
+    @classmethod
+    async def identify(
+        cls,
+        wallet_state_manager: WalletStateManager,
+        uncurried: UncurriedPuzzle,
+        coin_spend: CoinSpend,
+    ) -> tuple[WalletIdentifier, PlotNFT] | None:
+        try:
+            try:
+                previous_plotnft = (
+                    await wallet_state_manager.plotnft2_store.get_plotnfts(coin_ids=[coin_spend.coin.name()])
+                )[0]
+            except ValueError:
+                try:
+                    previous_plotnft = await wallet_state_manager.plotnft2_store.get_latest_plotnft(
+                        launcher_id=bytes32(uncurried.args.at("frf").as_atom())
+                    )
+                except RuntimeError:
+                    previous_plotnft = None
+            next_plot_nft = PlotNFT.get_next_from_coin_spend(
+                coin_spend=coin_spend,
+                genesis_challenge=wallet_state_manager.constants.GENESIS_CHALLENGE,
+                pre_uncurry=uncurried,
+                previous_plotnft_puzzle=previous_plotnft,
+            )
+            for id, wallet in wallet_state_manager.wallets.items():
+                if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == next_plot_nft.launcher_id:
+                    matched_plotnft_wallet_id = id
+                    break
+            else:
+                matched_plotnft_wallet_id = None
+            if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+                matched_plotnft_wallet_id = uint32(len(wallet_state_manager.wallets) + 1)
+                wallet_state_manager.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
+                    wallet_state_manager=wallet_state_manager,
+                    xch_wallet=wallet_state_manager.main_wallet,
+                    wallet_info=WalletInfo(
+                        id=matched_plotnft_wallet_id,
+                        name=next_plot_nft.launcher_id.hex(),
+                        type=uint8(WalletType.PLOTNFT_2),
+                        data=next_plot_nft.launcher_id.hex(),
+                    ),
+                )
+            if matched_plotnft_wallet_id is None:  # pragma: no cover
+                # TODO: add support for receiving plotnfts you don't know about
+                raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
+            # the Streamable hint is in error so we need this type ignore
+            return (
+                WalletIdentifier(
+                    id=matched_plotnft_wallet_id,
+                    type=WalletType.PLOTNFT_2,
+                ),
+                next_plot_nft,
+            )
+        except GetNextPlotNFTError:
+            return None
+
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(

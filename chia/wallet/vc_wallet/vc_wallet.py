@@ -24,13 +24,14 @@ from chia.wallet.conditions import (
     CreatePuzzleAnnouncement,
     UnknownCondition,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
@@ -126,6 +127,28 @@ class VCWallet:
             "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
         )
         await self.store.add_or_replace_vc_record(vc_record)
+
+    @classmethod
+    async def identify(
+        cls, wallet_state_manager: WalletStateManager, vc: VerifiedCredential
+    ) -> WalletIdentifier | None:
+        # Check the ownership
+        derivation_record: (
+            DerivationRecord | None
+        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(vc.inner_puzzle_hash)
+        if derivation_record is None:
+            wallet_state_manager.log.warning(
+                f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet."
+            )  # pragma: no cover
+            return None  # pragma: no cover
+        wallet_state_manager.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
+        for wallet_info in await wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC):
+            return WalletIdentifier(wallet_info.id, WalletType.VC)
+        # Create a new VC wallet
+        vc_wallet = await VCWallet.create_new_vc_wallet(
+            wallet_state_manager, wallet_state_manager.main_wallet
+        )  # pragma: no cover
+        return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
         """
