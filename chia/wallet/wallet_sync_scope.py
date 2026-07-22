@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import pickle  # noqa: S403
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Self, cast, final
 
 from chia_rs.sized_ints import uint32
@@ -23,7 +23,7 @@ class WebSocketEvent:
 
 @dataclass
 class SyncSideEffects:
-    websocket_events: list[WebSocketEvent]
+    websocket_events: list[WebSocketEvent] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         return pickle.dumps(self)

@@ -560,7 +560,11 @@ class DIDWallet:
                 wallet_identifier = WalletIdentifier.create(did_wallet)
                 async with sync_scope.use() as interface:
                     interface.side_effects.websocket_events.append(
-                        WebSocketEvent(name="wallet_created", wallet_id=wallet_identifier.id)
+                        WebSocketEvent(
+                            name="wallet_created",
+                            wallet_id=wallet_identifier.id,
+                            data={"did_id": did_wallet.get_my_DID()},
+                        )
                     )
                 return wallet_identifier
             # we are over the limit

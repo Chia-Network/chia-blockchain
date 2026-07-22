@@ -793,7 +793,7 @@ class WalletNode:
         if peer.peer_node_id in self._tx_messages_in_progress:
             del self._tx_messages_in_progress[peer.peer_node_id]
 
-        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="sync_changed"))
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="close_connection"))
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
