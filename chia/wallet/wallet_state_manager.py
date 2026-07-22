@@ -1539,9 +1539,10 @@ class WalletStateManager:
         ph_to_index_cache: LRUCache[bytes32, uint32],
         local_records: GetCoinRecordsResult,
     ) -> int:
-        rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
+        rollback_wallets = None
         try:
             async with self.db_wrapper.writer():
+                rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
                 # This only succeeds if we don't raise out of the transaction
                 await self.retry_store.remove_state(coin_state)
                 new_used_up_to = await self._add_coin_state(
@@ -1558,7 +1559,8 @@ class WalletStateManager:
                 return new_used_up_to
         except Exception as e:
             self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
-            self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
+            if rollback_wallets is not None:
+                self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
             if isinstance(e, (PeerRequestException, aiosqlite.Error)):
                 await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
             else:
@@ -1571,24 +1573,24 @@ class WalletStateManager:
         peer: WSChiaConnection,
         fork_height: uint32 | None,
     ) -> bool:
-        # Input states should already be sorted by cs_height, with reorgs at the beginning
-        curr_h = -1
-        for c_state in coin_states:
-            last_change_height = last_change_height_cs(c_state)
-            if last_change_height < curr_h:
-                raise ValueError("Input coin_states is not sorted properly")
-            curr_h = last_change_height
-
-        trade_removals = await self.trade_manager.get_coins_of_interest()
-        all_unconfirmed: list[LightTransactionRecord] = await self.tx_store.get_all_unconfirmed()
-        used_up_to = -1
-        ph_to_index_cache: LRUCache[bytes32, uint32] = LRUCache(100)
-
-        coin_names = [bytes32(coin_state.coin.name()) for coin_state in coin_states]
-        local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
         try:
             if peer.closed:
                 raise ConnectionError("Connection closed")
+            # Input states should already be sorted by cs_height, with reorgs at the beginning
+            curr_h = -1
+            for c_state in coin_states:
+                last_change_height = last_change_height_cs(c_state)
+                if last_change_height < curr_h:
+                    raise ValueError("Input coin_states is not sorted properly")
+                curr_h = last_change_height
+
+            trade_removals = await self.trade_manager.get_coins_of_interest()
+            all_unconfirmed: list[LightTransactionRecord] = await self.tx_store.get_all_unconfirmed()
+            used_up_to = -1
+            ph_to_index_cache: LRUCache[bytes32, uint32] = LRUCache(100)
+
+            coin_names = [bytes32(coin_state.coin.name()) for coin_state in coin_states]
+            local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
             for coin_name, coin_state in zip(coin_names, coin_states):
                 used_up_to = await self.add_coin_state(
                     coin_state,
