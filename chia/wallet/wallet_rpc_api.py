@@ -1452,9 +1452,9 @@ class WalletRpcApi:
     async def split_coins(
         self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> SplitCoinsResponse:
-        await self.service.wallet_state_manager.split_coins(
+        await self.service.wallet_state_manager.fungibility_manager.split_coins(
             action_scope=action_scope,
-            wallet_id=request.wallet_id,
+            wallet=self.service.wallet_state_manager.fungibility_manager.get_fungible_wallet(request.wallet_id),
             target_coin_id=request.target_coin_id,
             amount_per_coin=request.amount_per_coin,
             number_of_coins=request.number_of_coins,
@@ -1470,12 +1470,11 @@ class WalletRpcApi:
     async def combine_coins(
         self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> CombineCoinsResponse:
-        await self.service.wallet_state_manager.combine_coins(
+        await self.service.wallet_state_manager.fungibility_manager.combine_coins(
             action_scope=action_scope,
-            wallet_id=request.wallet_id,
+            wallet=self.service.wallet_state_manager.fungibility_manager.get_fungible_wallet(request.wallet_id),
             number_of_coins=request.number_of_coins,
             largest_first=request.largest_first,
-            coin_num_limit=request.coin_num_limit,
             fee=request.fee,
             target_coin_amount=request.target_coin_amount,
             target_coin_ids=request.target_coin_ids if request.target_coin_ids != [] else None,
