@@ -129,7 +129,7 @@ def compute_plot_group_id(strength: int, plot_public_key: G1Element, pool_info: 
     Formula: sha256(strength || plot_pk || pool_info)
     Verified to match chia_rs compute_plot_id_v2 internals.
     """
-    return std_hash(bytes([strength]) + bytes(plot_public_key) + bytes(pool_info))
+    return std_hash(int(strength).to_bytes(1, "big") + bytes(plot_public_key) + bytes(pool_info))
 
 
 def compute_plot_group_id_from_pos(pos: ProofOfSpace) -> bytes32:
@@ -271,36 +271,39 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
 MAX_EFFECTIVE_PLOT_FILTER_BITS: int = 13  # 8192 effective plot filter cap
 
-# Base plot filter reduction schedule — offsets from HARD_FORK2_HEIGHT
-# Starts at 9 bits (512), reduces every 3-6 years until 0 bits (1)
-_BASE_FILTER_OFFSETS: list[tuple[int, int]] = [
-    (50_494_000, 0),  # +~31 years
-    (45_444_000, 1),  # +~28 years
-    (40_394_000, 2),  # +~25 years
-    (35_343_000, 3),  # +~21 years
-    (30_298_000, 4),  # +~18 years
-    (25_247_000, 5),  # +~15 years
-    (20_197_000, 6),  # +~12 years
-    (15_146_000, 7),  # +~9 years
-    (10_101_000, 8),  # +~6 years
-    (0, 9),  # at hard fork
+# Base plot filter reduction schedule — relative heights from HARD_FORK2_HEIGHT.
+# Starts at NUMBER_ZERO_BITS_PLOT_FILTER_V2 at the fork, then reduces over time.
+_BASE_FILTER_RELATIVE_HEIGHTS: list[uint32] = [
+    uint32(50_494_000),  # +~31 years
+    uint32(45_444_000),  # +~28 years
+    uint32(40_394_000),  # +~25 years
+    uint32(35_343_000),  # +~21 years
+    uint32(30_298_000),  # +~18 years
+    uint32(25_247_000),  # +~15 years
+    uint32(20_197_000),  # +~12 years
+    uint32(15_146_000),  # +~9 years
+    uint32(10_101_000),  # +~6 years
 ]
 
 
 def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
+    base_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
     relative_height = int(height) - constants.HARD_FORK2_HEIGHT
-    if relative_height < 0:
-        return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    for offset, bits in _BASE_FILTER_OFFSETS:
+    if relative_height <= 0:
+        return base_bits
+    for index, offset in enumerate(_BASE_FILTER_RELATIVE_HEIGHTS):
         if relative_height >= offset:
-            return min(bits, constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
-    return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+            reductions = len(_BASE_FILTER_RELATIVE_HEIGHTS) - index
+            return max(0, base_bits - reductions)
+    return base_bits
 
 
 def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, plot_strength: int) -> int:
     # TODO: todo_v2_plots MIN_PLOT_STRENGTH is fixed for now; a height-based
     # min-strength schedule would change the zero point here.
-    strength_delta = max(0, int(plot_strength) - constants.MIN_PLOT_STRENGTH)
+    if plot_strength < constants.MIN_PLOT_STRENGTH:
+        raise ValueError(f"Plot strength ({plot_strength}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
+    strength_delta = int(plot_strength) - constants.MIN_PLOT_STRENGTH
     return min(calculate_base_plot_filter_bits(height, constants) + strength_delta, MAX_EFFECTIVE_PLOT_FILTER_BITS)
 
 
