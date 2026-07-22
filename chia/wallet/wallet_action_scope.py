@@ -20,6 +20,7 @@ from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WebSocketEvent
 from chia.wallet.wsm_apis import GetUnusedDerivationRecordResult, StreambleGetUnusedDerivationRecordResult
 
 if TYPE_CHECKING:
@@ -175,6 +176,10 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
             return record.puzzle_hash
         else:
             return await self._get_new_puzzle_hash(wallet_state_manager)
+
+    # TODO: this should be part of the side effects like everything else
+    def dispatch_websocket_event(self, wallet_state_manager: WalletStateManager, event: WebSocketEvent) -> None:
+        wallet_state_manager._dispatch_websocket_event(event)
 
 
 @contextlib.asynccontextmanager

@@ -122,9 +122,13 @@ async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
-    assert (None, None) == await wallet_state_manager.determine_coin_type(
-        peer, CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)), None
-    )
+    async with wallet_state_manager.new_sync_scope() as sync_scope:
+        assert (None, None) == await wallet_state_manager.determine_coin_type(
+            peer,
+            CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)),
+            None,
+            sync_scope,
+        )
 
 
 @pytest.mark.parametrize(

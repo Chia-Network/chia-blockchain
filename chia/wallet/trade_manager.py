@@ -47,6 +47,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -139,7 +140,11 @@ class TradeManager:
         return trades_by_coin
 
     async def coins_of_interest_farmed(
-        self, coin_state: CoinState, fork_height: uint32 | None, peer: WSChiaConnection
+        self,
+        coin_state: CoinState,
+        fork_height: uint32 | None,
+        peer: WSChiaConnection,
+        sync_scope: WalletSyncScope,
     ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
@@ -194,7 +199,10 @@ class TradeManager:
                         await self.wallet_state_manager.tx_store.add_transaction_record(
                             dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
                         )
-                        self.wallet_state_manager.state_changed("pending_transaction", tx.wallet_id)
+                        async with sync_scope.use() as interface:
+                            interface.side_effects.websocket_events.append(
+                                WebSocketEvent(name="pending_transaction", wallet_id=tx.wallet_id)
+                            )
 
                 self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
@@ -237,9 +245,10 @@ class TradeManager:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
-    async def fail_pending_offer(self, trade_id: bytes32) -> None:
+    async def fail_pending_offer(self, trade_id: bytes32, sync_scope: WalletSyncScope) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.FAILED)
-        self.wallet_state_manager.state_changed("offer_failed")
+        async with sync_scope.use() as interface:
+            interface.side_effects.websocket_events.append(WebSocketEvent(name="offer_failed"))
 
     async def cancel_pending_offers(
         self,
@@ -287,7 +296,7 @@ class TradeManager:
             self.log.info(f"Secure-Cancel pending offer with id trade_id {trade.trade_id.hex()}")
 
             if not secure:
-                self.wallet_state_manager.state_changed("offer_cancelled")
+                action_scope.dispatch_websocket_event(self.wallet_state_manager, WebSocketEvent(name="offer_cancelled"))
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
                 continue
 
@@ -417,7 +426,7 @@ class TradeManager:
             [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
         )
 
-        self.wallet_state_manager.state_changed("offer_added")
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="offer_added"))
 
     async def create_offer_for_ids(
         self,

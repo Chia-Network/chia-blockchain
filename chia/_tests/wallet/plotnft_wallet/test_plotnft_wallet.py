@@ -970,6 +970,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
                 coin=Mock(),
                 singleton_lineage_proof=Mock(),
             ),
+            sync_scope=Mock(),
         )
     plotnft_after_raise = await plotnft_wallet.get_current_plotnft()
     assert plotnft_after_raise == plotnft

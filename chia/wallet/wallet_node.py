@@ -73,6 +73,7 @@ from chia.wallet.util.wallet_sync_utils import (
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_sync_scope import WebSocketEvent
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
 
@@ -481,7 +482,7 @@ class WalletNode:
 
         self.sync_event = asyncio.Event()
         self.log_in(fingerprint)
-        self.wallet_state_manager.state_changed("sync_changed")
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="sync_changed"))
 
         # Populate the balance caches for all wallets
         async with self.wallet_state_manager.lock:
@@ -792,7 +793,7 @@ class WalletNode:
         if peer.peer_node_id in self._tx_messages_in_progress:
             del self._tx_messages_in_progress[peer.peer_node_id]
 
-        self.wallet_state_manager.state_changed("close_connection")
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="sync_changed"))
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
@@ -811,7 +812,7 @@ class WalletNode:
 
         self.log.info(f"Connected peer {peer.get_peer_info()} is trusted: {trusted}")
         messages_peer_ids = await self._messages_to_resend()
-        self.wallet_state_manager.state_changed("add_connection")
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="add_connection"))
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
@@ -825,9 +826,12 @@ class WalletNode:
     async def perform_atomic_rollback(self, fork_height: int, cache: PeerRequestCache | None = None) -> None:
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         # this is to start a write transaction
-        async with self.wallet_state_manager.db_wrapper.writer():
+        async with (
+            self.wallet_state_manager.db_wrapper.writer(),
+            self.wallet_state_manager.new_sync_scope() as sync_scope,
+        ):
             try:
-                removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
+                removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height, sync_scope)
                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, in_rollback=True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
@@ -933,7 +937,7 @@ class WalletNode:
         if trusted:
             self.local_node_synced = True
 
-        self.wallet_state_manager.state_changed("new_block")
+        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="new_block"))
 
         self.synced_peers.add(full_node.peer_node_id)
         await self.update_ui()
@@ -1388,7 +1392,7 @@ class WalletNode:
             # Clear old entries that are no longer relevant
             cache.cleanup_race_cache(min_height=backtrack_fork_height + 1)
 
-            self.wallet_state_manager.state_changed("new_block")
+            self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="new_block"))
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
             return True
 
@@ -1458,9 +1462,15 @@ class WalletNode:
         return fork_height
 
     async def update_ui(self) -> None:
-        for wallet_id, wallet in self.wallet_state_manager.wallets.items():
-            self.wallet_state_manager.state_changed("coin_removed", wallet_id)
-            self.wallet_state_manager.state_changed("coin_added", wallet_id)
+        async with self.wallet_state_manager.new_sync_scope() as sync_scope:
+            async with sync_scope.use() as interface:
+                for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(name="coin_removed", wallet_id=wallet_id)
+                    )
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(name="coin_added", wallet_id=wallet_id)
+                    )
 
     async def fetch_and_update_weight_proof(self, peer: WSChiaConnection, peak: HeaderBlock) -> int:
         assert self._weight_proof_handler is not None

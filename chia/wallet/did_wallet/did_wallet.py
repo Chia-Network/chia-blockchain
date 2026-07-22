@@ -53,6 +53,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -351,7 +352,9 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if coin_data is not None:
@@ -401,7 +404,10 @@ class DIDWallet:
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
 
         if self.did_info.temp_coin is not None:
-            self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
+            async with sync_scope.use() as interface:
+                interface.side_effects.websocket_events.append(
+                    WebSocketEvent(name="did_coin_added", wallet_id=self.wallet_info.id)
+                )
 
         new_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
@@ -430,6 +436,7 @@ class DIDWallet:
     async def identify(
         cls,
         wallet_state_manager: WalletStateManager,
+        sync_scope: WalletSyncScope,
         parent_data: DIDCoinData,
         parent_coin_state: CoinState,
         coin_state: CoinState,
@@ -475,7 +482,10 @@ class DIDWallet:
             for remove_id in removed_wallet_ids:
                 wallet_state_manager.wallets.pop(remove_id)
                 wallet_state_manager.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
-                wallet_state_manager.state_changed("wallet_removed", remove_id)
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(name="wallet_removed", wallet_id=remove_id)
+                    )
             return None
         else:
             our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
@@ -548,9 +558,10 @@ class DIDWallet:
                     f"DID {encode_puzzle_hash(launch_id, AddressType.DID.hrp(wallet_state_manager.config))}",
                 )
                 wallet_identifier = WalletIdentifier.create(did_wallet)
-                wallet_state_manager.state_changed(
-                    "wallet_created", wallet_identifier.id, {"did_id": did_wallet.get_my_DID()}
-                )
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(name="wallet_created", wallet_id=wallet_identifier.id)
+                    )
                 return wallet_identifier
             # we are over the limit
             wallet_state_manager.log.warning(
