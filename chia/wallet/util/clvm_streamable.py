@@ -4,7 +4,7 @@ import dataclasses
 import functools
 from collections.abc import Callable
 from types import MappingProxyType
-from typing import Any, Generic, TypeGuard, TypeVar, get_type_hints
+from typing import Any, Generic, TypeGuard, TypeVar, cast, get_type_hints
 
 from clvm_rs import Program as CLVMRSProgram  # type: ignore[import-untyped]
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
@@ -79,8 +79,9 @@ def program_deserialize_clvm_streamable(
         if mapping is not None:
             as_instance = from_program_for_type(mapping.to_type)(CLVMRSProgram.to(program))
             return translation_layer.deserialize_from_translation(as_instance, mapping)
-    # Underlying hinting problem with clvm_serde
-    return from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))  # type: ignore[no-any-return]
+    # TODO: Fix underlying hinting problem with clvm_serde
+    result = from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))
+    return cast(_T_Streamable, result)
 
 
 def byte_deserialize_clvm_streamable(
