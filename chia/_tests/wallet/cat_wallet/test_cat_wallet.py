@@ -210,13 +210,11 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
         all_lineage = await cat_wallet.lineage_store.get_all_lineage_proofs()
         current_info = cat_wallet.wallet_info
         data_str = bytes(
-            LegacyCATInfo(
-                cat_wallet.cat_info.limitations_program_hash, cat_wallet.cat_info.my_tail, list(all_lineage.items())
-            )
+            LegacyCATInfo(cat_wallet.tail_hash, cat_wallet.cat_info.my_tail, list(all_lineage.items()))
         ).hex()
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         new_cat_wallet = await wallet_type.create(wsm, wallet, wallet_info)
-        assert new_cat_wallet.cat_info.limitations_program_hash == cat_wallet.cat_info.limitations_program_hash
+        assert new_cat_wallet.tail_hash == cat_wallet.tail_hash
         assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
         assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
@@ -353,7 +351,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
 
     cat_wallet = await mint_cat(wallet_environments, env_1, "xch", "cat", uint64(100), wallet_type, "cat wallet")
 
-    assert cat_wallet.cat_info.limitations_program_hash is not None
+    assert cat_wallet.tail_hash is not None
     asset_id = cat_wallet.get_asset_id()
 
     if wallet_type is RCATWallet:
@@ -364,7 +362,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
         wallet_node_2.wallet_state_manager, wallet2, asset_id, *extra_args
     )
 
-    assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
+    assert cat_wallet.tail_hash == cat_wallet_2.tail_hash
 
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -621,7 +619,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
 
     cat_wallet = await mint_cat(wallet_environments, env_1, "xch", "cat", uint64(100), wallet_type, "cat wallet")
 
-    assert cat_wallet.cat_info.limitations_program_hash is not None
+    assert cat_wallet.tail_hash is not None
     asset_id = cat_wallet.get_asset_id()
 
     if wallet_type is RCATWallet:
@@ -632,7 +630,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
         wallet_node_2.wallet_state_manager, wallet2, asset_id, *extra_args
     )
 
-    assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
+    assert cat_wallet.tail_hash == cat_wallet_2.tail_hash
 
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -795,7 +793,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
 
     cat_wallet_0 = await mint_cat(wallet_environments, env_0, "xch", "cat", uint64(100), wallet_type, "cat wallet")
 
-    assert cat_wallet_0.cat_info.limitations_program_hash is not None
+    assert cat_wallet_0.tail_hash is not None
     asset_id = cat_wallet_0.get_asset_id()
 
     if wallet_type is RCATWallet:
@@ -811,8 +809,8 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
         wallet_node_2.wallet_state_manager, wallet_2, asset_id, *extra_args
     )
 
-    assert cat_wallet_0.cat_info.limitations_program_hash == cat_wallet_1.cat_info.limitations_program_hash
-    assert cat_wallet_0.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
+    assert cat_wallet_0.tail_hash == cat_wallet_1.tail_hash
+    assert cat_wallet_0.tail_hash == cat_wallet_2.tail_hash
 
     async with cat_wallet_1.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1077,7 +1075,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
 
     cat_wallet = await mint_cat(wallet_environments, env, "xch", "cat", uint64(100000), wallet_type, "cat wallet")
 
-    assert cat_wallet.cat_info.limitations_program_hash is not None
+    assert cat_wallet.tail_hash is not None
 
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
@@ -1130,9 +1128,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
             inner_puzzle = create_revocation_layer(bytes32.zeros, cat_2_hash)
         else:
             inner_puzzle = cat_2
-        puzzle_hash = construct_cat_puzzle(
-            CAT_MOD, cat_wallet.cat_info.limitations_program_hash, inner_puzzle
-        ).get_tree_hash()
+        puzzle_hash = construct_cat_puzzle(CAT_MOD, cat_wallet.tail_hash, inner_puzzle).get_tree_hash()
         for i in range(1, 50):
             coin = Coin(spent_coin.name(), puzzle_hash, uint64(i))
             if coin.name() not in spendable_name_set:
@@ -1205,7 +1201,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
 
     cat_wallet = await mint_cat(wallet_environments, env_1, "xch", "cat", uint64(100), wallet_type, "cat wallet")
 
-    assert cat_wallet.cat_info.limitations_program_hash is not None
+    assert cat_wallet.tail_hash is not None
 
     async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_2_hash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
@@ -1260,8 +1256,8 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
 
     # Then we update the wallet's default CATs
     wallet_node_2.wallet_state_manager.default_cats = {
-        cat_wallet.cat_info.limitations_program_hash.hex(): {
-            "asset_id": cat_wallet.cat_info.limitations_program_hash.hex(),
+        cat_wallet.tail_hash.hex(): {
+            "asset_id": cat_wallet.tail_hash.hex(),
             "name": "Test",
             "symbol": "TST",
         }

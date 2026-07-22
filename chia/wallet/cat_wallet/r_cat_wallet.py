@@ -6,6 +6,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import G1Element
+from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16
 from typing_extensions import Self
@@ -16,7 +17,6 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
     CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
     QUOTED_CAT_MOD_HASH,
@@ -61,14 +61,14 @@ class RCATWallet(CATWallet):
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
-    cat_info: RCATInfo
+    info: RCATInfo
     standard_wallet: Wallet
     lineage_store: CATLineageStore
     wallet_type: ClassVar[WalletType] = WalletType.RCAT
-    wallet_info_type: ClassVar[type[RCATInfo]] = RCATInfo
 
-    # this is a legacy method and is not available on R-CAT wallets
+    # these are legacy methods and are not available on R-CAT wallets
     create_new_cat_wallet = None  # type: ignore[assignment]
+    puzzle_for_pk = None
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
@@ -103,9 +103,10 @@ class RCATWallet(CATWallet):
         elif name is None:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash)
 
-        self.cat_info = cls.wallet_info_type(limitations_program_hash, None, hidden_puzzle_hash)
-        info_as_string = bytes(self.cat_info).hex()
+        self.info = RCATInfo(limitations_program_hash, None, hidden_puzzle_hash)
+        info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
+        self.tail_hash = self.info.limitations_program_hash
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         # Inherited from duplicating parent
@@ -152,6 +153,25 @@ class RCATWallet(CATWallet):
             name,
         )
 
+    @classmethod
+    async def create(
+        cls,
+        wallet_state_manager: WalletStateManager,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+    ) -> Self:
+        self = cls()
+
+        self.log = logging.getLogger(__name__)
+
+        self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = wallet_info
+        self.standard_wallet = wallet
+        self.info = RCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.tail_hash = self.info.limitations_program_hash
+        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+        return self
+
     @property
     def cost_of_single_tx(self) -> int:
         return 78000000  # Estimate measured in testing
@@ -171,17 +191,16 @@ class RCATWallet(CATWallet):
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to R-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
         replace_self.lineage_store = cat_wallet.lineage_store
-        replace_self.cat_info = cls.wallet_info_type(
-            cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash
-        )
+        replace_self.info = RCATInfo(cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash)
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
             WalletInfo(
-                cat_wallet.id(), cat_wallet.get_name(), uint8(cls.wallet_type.value), bytes(replace_self.cat_info).hex()
+                cat_wallet.id(), cat_wallet.get_name(), uint8(cls.wallet_type.value), bytes(replace_self.info).hex()
             )
         )
         updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
         assert updated_wallet_info is not None
         replace_self.wallet_info = updated_wallet_info
+        replace_self.tail_hash = replace_self.info.limitations_program_hash
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
         await cat_wallet.wallet_state_manager.puzzle_store.delete_wallet(cat_wallet.id())
@@ -189,25 +208,18 @@ class RCATWallet(CATWallet):
         await result.commit(cat_wallet.wallet_state_manager)
         return True
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        inner_puzzle = create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
-        )
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
-        return cat_puzzle
-
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
+            self.info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
         ).get_tree_hash()
-        limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
+        limitations_program_hash_hash = Program.to(self.info.limitations_program_hash).get_tree_hash()
         return curry_and_treehash(
             QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
         )
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
         return create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
+            self.info.hidden_puzzle_hash, (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
         )
 
     async def make_inner_solution(
@@ -229,14 +241,14 @@ class RCATWallet(CATWallet):
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         if (
             AssetType(puzzle_driver.type()) == AssetType.CAT
-            and puzzle_driver["tail"] == self.cat_info.limitations_program_hash
+            and puzzle_driver["tail"] == self.info.limitations_program_hash
         ):
             inner_puzzle_driver: PuzzleInfo | None = puzzle_driver.also()
             if inner_puzzle_driver is None:
                 raise ValueError("Malformed puzzle driver passed to RCATWallet.match_puzzle_info")
             return (
                 AssetType(inner_puzzle_driver.type()) == AssetType.REVOCATION_LAYER
-                and bytes32(inner_puzzle_driver["hidden_puzzle_hash"]) == self.cat_info.hidden_puzzle_hash
+                and bytes32(inner_puzzle_driver["hidden_puzzle_hash"]) == self.info.hidden_puzzle_hash
             )
         return False
 
@@ -247,7 +259,7 @@ class RCATWallet(CATWallet):
                 "tail": "0x" + self.get_asset_id().hex(),
                 "also": {
                     "type": AssetType.REVOCATION_LAYER.value,
-                    "hidden_puzzle_hash": "0x" + self.cat_info.hidden_puzzle_hash.hex(),
+                    "hidden_puzzle_hash": "0x" + self.info.hidden_puzzle_hash.hex(),
                 },
             }
         )
@@ -258,13 +270,13 @@ class RCATWallet(CATWallet):
         """
 
         hint_inner_hash: bytes32 = create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash,
+            self.info.hidden_puzzle_hash,
             hint,
         ).get_tree_hash()
         if (
             construct_cat_puzzle(
                 Program.to(CAT_MOD_HASH),
-                self.cat_info.limitations_program_hash,
+                self.info.limitations_program_hash,
                 hint_inner_hash,
                 mod_code_hash=CAT_MOD_HASH_HASH,
             ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
