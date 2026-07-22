@@ -1571,8 +1571,6 @@ class WalletStateManager:
         peer: WSChiaConnection,
         fork_height: uint32 | None,
     ) -> bool:
-        if peer.closed:
-            raise ConnectionError("Connection closed")
         # Input states should already be sorted by cs_height, with reorgs at the beginning
         curr_h = -1
         for c_state in coin_states:
@@ -1589,6 +1587,8 @@ class WalletStateManager:
         coin_names = [bytes32(coin_state.coin.name()) for coin_state in coin_states]
         local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
         try:
+            if peer.closed:
+                raise ConnectionError("Connection closed")
             for coin_name, coin_state in zip(coin_names, coin_states):
                 used_up_to = await self.add_coin_state(
                     coin_state,
