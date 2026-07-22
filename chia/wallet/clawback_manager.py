@@ -167,7 +167,7 @@ class ClawbackManager:
                     spend_bundle,
                     *(
                         tx.spend_bundle
-                        for tx in inner_interface.side_effects.transactions
+                        for tx in inner_action_scope.side_effects.transactions
                         if tx.spend_bundle is not None
                     ),
                 ]
