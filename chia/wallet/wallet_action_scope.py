@@ -197,7 +197,7 @@ async def new_wallet_action_scope(
         puzzle_for_pk = wallet_state_manager.main_wallet.puzzle_for_pk
     assert puzzle_for_pk is not None
     async with WalletActionScope.new_scope(
-        WalletSideEffects,
+        WalletSideEffects(),
         WalletActionConfig(
             push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, puzzle_for_pk
         ),
