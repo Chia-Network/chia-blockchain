@@ -1660,7 +1660,7 @@ class WalletRpcApi:
         batch_size = (
             request.batch_size
             if request.batch_size is not None
-            else self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
+            else self.service.wallet_state_manager.clawback_manager.auto_claim_batch_size
         )
         records_list = list(coin_records.coin_id_to_record.values())
         for i in range(0, len(records_list), batch_size):
@@ -1671,7 +1671,7 @@ class WalletRpcApi:
             except WalletCoinRecordMetadataParsingError as e:
                 log.error("Failed to spend clawback coin: %s", e)
                 continue
-            await self.service.wallet_state_manager.spend_clawback_coins(
+            await self.service.wallet_state_manager.clawback_manager.spend_clawback_coins(
                 # Semantically, we're guaranteed the right type here, but the typing isn't there
                 coin_batch,  # type: ignore[arg-type]
                 request.fee,

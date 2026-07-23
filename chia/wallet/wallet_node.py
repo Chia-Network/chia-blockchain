@@ -322,6 +322,12 @@ class WalletNode:
         if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
             # Update in memory config
             self.config["auto_claim"] = auto_claim_config_json
+            if self._wallet_state_manager is not None:
+                self.wallet_state_manager.clawback_manager = dataclasses.replace(
+                    self.wallet_state_manager.clawback_manager,
+                    auto_claim_tx_fee=auto_claim_config.tx_fee,
+                    auto_claim_batch_size=auto_claim_config.batch_size,
+                )
             # Update config file
             with lock_and_load_config(self.root_path, "config.yaml") as config:
                 config["wallet"]["auto_claim"] = self.config["auto_claim"]
@@ -1249,7 +1255,10 @@ class WalletNode:
 
             # Check if any coin needs auto spending
             if self.config.get("auto_claim", {}).get("enabled", False):
-                await self.wallet_state_manager.auto_claim_coins()
+                async with self.wallet_state_manager.new_action_scope(
+                    self.wallet_state_manager.tx_config, push=True
+                ) as action_scope:
+                    await self.wallet_state_manager.clawback_manager.auto_claim_coins(action_scope)
 
         if new_peak_hb.foliage_transaction_block is not None:
             await self._retry_fee_failed_transactions()
