@@ -3444,7 +3444,8 @@ def test_create_block_generator_2026_skip_dedup() -> None:
 
 
 def test_create_block_generator_2026_zero_timeout() -> None:
-    """Zero timeout: 2026 generator skips the sleep branch and still returns a block."""
+    """Zero timeout: the deadline expires before any item is added, so no
+    block is produced (same timeout semantics as create_block_generator2)."""
     mempool_info = MempoolInfo(
         CLVMCost(uint64(11000000000 * 3)),
         FeeRate(uint64(1000000)),
@@ -3470,7 +3471,8 @@ def test_create_block_generator_2026_zero_timeout() -> None:
         mempool.add_to_pool(mempool_item_from_spendbundle(sb))
 
     height = test_constants.HARD_FORK2_HEIGHT
-    generator = mempool.create_block_generator_2026(test_constants, height, 0.0)
+    assert mempool.create_block_generator_2026(test_constants, height, 0.0) is None
+    generator = mempool.create_block_generator_2026(test_constants, height, 10.0)
     assert generator is not None
     assert len(generator.removals) > 0
 
