@@ -540,6 +540,15 @@ class TestWalletSimulator:
             wallet_environments.tx_config,
         )
         assert len(resp.transaction_ids) == 1
+        # just test that an extra submission doesn't do anything
+        await env.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(
+                coin_ids=[merkle_coin.name()],
+                fee=uint64(test_fee),
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
 
         await wallet_environments.process_pending_states(
             [

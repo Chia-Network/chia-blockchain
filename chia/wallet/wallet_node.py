@@ -322,6 +322,11 @@ class WalletNode:
         if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
             # Update in memory config
             self.config["auto_claim"] = auto_claim_config_json
+            self.wallet_state_manager.clawback_manager = dataclasses.replace(
+                self.wallet_state_manager.clawback_manager,
+                auto_claim_tx_fee=auto_claim_config.tx_fee,
+                auto_claim_batch_size=auto_claim_config.batch_size,
+            )
             # Update config file
             with lock_and_load_config(self.root_path, "config.yaml") as config:
                 config["wallet"]["auto_claim"] = self.config["auto_claim"]
