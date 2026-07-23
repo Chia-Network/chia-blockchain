@@ -56,7 +56,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia.wallet.wallet_sync_scope import WalletSyncScope
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -186,9 +186,11 @@ class NFTWallet:
             # already added
             return
         assert isinstance(coin_data, NFTCoinData), f"Invalid NFT coin data: {coin_data}"
-        await self.puzzle_solution_received(coin, coin_data, peer)
+        await self.puzzle_solution_received(coin, coin_data, peer, sync_scope)
 
-    async def puzzle_solution_received(self, coin: Coin, data: NFTCoinData, peer: WSChiaConnection) -> None:
+    async def puzzle_solution_received(
+        self, coin: Coin, data: NFTCoinData, peer: WSChiaConnection, sync_scope: WalletSyncScope
+    ) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
@@ -272,6 +274,7 @@ class NFTWallet:
             mint_height,
             minter_did,
             confirmed_height,
+            sync_scope,
         )
 
     @classmethod
@@ -279,6 +282,7 @@ class NFTWallet:
         cls,
         wallet_state_manager: WalletStateManager,
         nft_data: NFTCoinData,
+        sync_scope: WalletSyncScope,
     ) -> WalletIdentifier | None:
         """
         Handle the new coin when it is a NFT
@@ -338,7 +342,7 @@ class NFTWallet:
                 )
                 if nft_data.parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(
-                        nft_data.parent_coin_spend.coin, uint32(nft_data.parent_coin_state.spent_height)
+                        nft_data.parent_coin_spend.coin, uint32(nft_data.parent_coin_state.spent_height), sync_scope
                     )
                     is_empty = await nft_wallet.is_empty()
                     has_did = False
@@ -383,17 +387,24 @@ class NFTWallet:
         mint_height: uint32,
         minter_did: bytes32 | None,
         confirmed_height: uint32,
+        sync_scope: WalletSyncScope,
     ) -> None:
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
-        self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
+        async with sync_scope.use() as interface:
+            interface.side_effects.websocket_events.append(
+                WebSocketEvent(name="nft_coin_added", wallet_id=self.wallet_info.id)
+            )
 
-    async def remove_coin(self, coin: Coin, height: uint32) -> None:
+    async def remove_coin(self, coin: Coin, height: uint32, sync_scope: WalletSyncScope) -> None:
         nft_coin_info = await self.nft_store.get_nft_by_coin_id(coin.name())
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
-            self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+            async with sync_scope.use() as interface:
+                interface.side_effects.websocket_events.append(
+                    WebSocketEvent(name="nft_coin_removed", wallet_id=self.wallet_info.id)
+                )
             num = await self.get_nft_count()
             if num == 0 and self.did_id is not None:
                 # Check if the wallet owns the DID
@@ -579,7 +590,9 @@ class NFTWallet:
             extra_conditions=extra_conditions,
         )
         await self.update_coin_status(nft_coin_info.coin.name(), True)
-        self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
+        action_scope.dispatch_websocket_event(
+            self.wallet_state_manager, WebSocketEvent(name="nft_coin_updated", wallet_id=self.wallet_info.id)
+        )
 
     async def get_current_nfts(self, start_index: int = 0, count: int = 50) -> list[NFTCoinInfo]:
         return await self.nft_store.get_nft_list(wallet_id=self.id(), start_index=start_index, count=count)
@@ -1227,7 +1240,9 @@ class NFTWallet:
         )
 
         await self.update_coin_status(nft_coin_info.coin.name(), True)
-        self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
+        action_scope.dispatch_websocket_event(
+            self.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=self.wallet_info.id)
+        )
 
     async def mint_from_did(
         self,

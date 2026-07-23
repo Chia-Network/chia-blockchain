@@ -29,9 +29,10 @@ class SyncSideEffects:
     def __bytes__(self) -> bytes:
         serializable_websocket_events = []
         for event in self.websocket_events:
-            if event.data is not None and "transaction" in event.data:
-                event.data["transaction"] = bytes(event.data["transaction"])
-            serializable_websocket_events.append(event)
+            copied_event = WebSocketEvent(name=event.name, wallet_id=event.wallet_id, data=event.data)
+            if copied_event.data is not None and "transaction" in copied_event.data:
+                copied_event.data["transaction"] = bytes(copied_event.data["transaction"])
+            serializable_websocket_events.append(copied_event)
         return pickle.dumps(serializable_websocket_events)
 
     @classmethod

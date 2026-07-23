@@ -959,7 +959,7 @@ class WalletStateManager:
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
             nft_data = NFTCoinData(uncurried_nft, parent_coin_state, coin_spend)
-            return await NFTWallet.identify(self, nft_data), nft_data
+            return await NFTWallet.identify(self, nft_data, sync_scope), nft_data
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -999,7 +999,7 @@ class WalletStateManager:
             if plotnft_result is not None:
                 return plotnft_result  # type: ignore[return-value]
 
-        await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
+        await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend, sync_scope)
 
         return None, None
 
@@ -1435,7 +1435,7 @@ class WalletStateManager:
             elif record.wallet_type == WalletType.NFT:
                 if coin_state.spent_height is not None:
                     nft_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=NFTWallet)
-                    await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
+                    await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height), sync_scope)
             elif record.wallet_type == WalletType.VC:
                 if coin_state.spent_height is not None:
                     vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
