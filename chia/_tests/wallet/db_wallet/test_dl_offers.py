@@ -194,7 +194,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
-    [_maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(offer_maker.offer)])
+    [_maker_offer], signing_response = await wsm_maker.signer.sign_offers([Offer.from_bytes(offer_maker.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
@@ -684,7 +684,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     assert success is True
     assert offer_maker is not None
 
-    [_maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(offer_maker.offer)])
+    [_maker_offer], signing_response = await wsm_maker.signer.sign_offers([Offer.from_bytes(offer_maker.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:

@@ -1458,7 +1458,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
-    eve_spend, _ = await wsm.sign_bundle(
+    eve_spend, _ = await wsm.signer.sign_bundle(
         [
             make_spend(
                 cat_coin,
@@ -1674,7 +1674,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                 )
             ],
         )
-        signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
+        signed_spend, _ = await env.wallet_state_manager.signer.sign_bundle(new_spend.coin_spends)
         await env.rpc_client.push_tx(PushTX(spend_bundle=signed_spend))
         await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
 
