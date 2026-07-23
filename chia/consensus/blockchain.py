@@ -28,6 +28,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
@@ -38,7 +39,6 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.generator_types import BlockGenerator
@@ -105,7 +105,7 @@ class Blockchain:
     # Unspent Store
     coin_store: CoinStoreProtocol
     # Store
-    block_store: BlockStore
+    block_store: BlockStoreProtocol
     mmr_manager: MMRManagerProtocol
     # Used to verify blocks in parallel
     pool: Executor
@@ -124,7 +124,7 @@ class Blockchain:
     @staticmethod
     async def create(
         coin_store: CoinStoreProtocol,
-        block_store: BlockStore,
+        block_store: BlockStoreProtocol,
         height_map: BlockHeightMap,
         consensus_constants: ConsensusConstants,
         pool: Executor,
