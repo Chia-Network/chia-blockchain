@@ -3263,16 +3263,15 @@ class FullNode:
                 new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.writer():
-            try:
-                await self.block_store.replace_proof(header_hash, new_block)
-                return True
-            except BaseException as e:
-                self.log.error(
-                    f"_replace_proof error while adding block {block.header_hash} height {block.height},"
-                    f" rolling back: {e} {traceback.format_exc()}"
-                )
-                raise
+        try:
+            await self.block_store.replace_proof(header_hash, new_block)
+            return True
+        except BaseException as e:
+            self.log.error(
+                f"_replace_proof error while adding block {block.header_hash} height {block.height},"
+                f" rolling back: {e} {traceback.format_exc()}"
+            )
+            raise
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         peak = self.blockchain.get_peak()
