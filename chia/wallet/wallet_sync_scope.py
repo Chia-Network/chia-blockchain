@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Self, cast, final
 from chia_rs.sized_ints import uint32
 
 from chia.util.action_scope import ActionScope
+from chia.wallet.transaction_record import TransactionRecord
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -26,11 +27,22 @@ class SyncSideEffects:
     websocket_events: list[WebSocketEvent] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
-        return pickle.dumps(self)
+        serializable_websocket_events = []
+        for event in self.websocket_events:
+            if event.data is not None and "transaction" in event.data:
+                event.data["transaction"] = bytes(event.data["transaction"])
+            serializable_websocket_events.append(event)
+        return pickle.dumps(serializable_websocket_events)
 
     @classmethod
     def from_bytes(cls, blob: bytes) -> Self:
-        return cast(Self, pickle.loads(blob))  # noqa: S301
+        loaded_websocket_events = pickle.loads(blob)  # noqa: S301
+        deserialized_websocket_events = []
+        for event in loaded_websocket_events:
+            if event.data is not None and "transaction" in event.data:
+                event.data["transaction"] = TransactionRecord.from_bytes(event.data["transaction"])
+            deserialized_websocket_events.append(event)
+        return cls(websocket_events=deserialized_websocket_events)
 
 
 @final
