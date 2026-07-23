@@ -414,7 +414,7 @@ class TradeManager:
                     [dataclasses.replace(tx, spend_bundle=None, fee_amount=fee) for tx in all_txs[1:]]
                 )
 
-    async def save_trade(self, trade: TradeRecord, offer: Offer) -> None:
+    async def save_trade(self, trade: TradeRecord, offer: Offer, action_scope: WalletActionScope) -> None:
         offer_name: bytes32 = offer.name()
         await self.trade_store.add_trade_record(trade, offer_name)
 
@@ -426,7 +426,7 @@ class TradeManager:
             [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
         )
 
-        self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="offer_added"))
+        action_scope.dispatch_websocket_event(self.wallet_state_manager, WebSocketEvent(name="offer_added"))
 
     async def create_offer_for_ids(
         self,
@@ -474,7 +474,7 @@ class TradeManager:
         )
 
         if success is True and trade_offer is not None and not validate_only:
-            await self.save_trade(trade_offer, created_offer)
+            await self.save_trade(trade_offer, created_offer, action_scope)
 
         return success, trade_offer, error
 
@@ -908,7 +908,7 @@ class TradeManager:
             valid_times=parse_timelock_info(extra_conditions),
         )
 
-        await self.save_trade(trade_record, offer)
+        await self.save_trade(trade_record, offer, action_scope)
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(tx_records)

@@ -533,7 +533,7 @@ def tx_endpoint(
                     await self.service.wallet_state_manager.trade_manager.trade_store.delete_trade_record(
                         old_trade_record.trade_id
                     )
-                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer)
+                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer, action_scope)
                 for tx in await self.service.wallet_state_manager.tx_store.get_transactions_by_trade_id(
                     old_trade_record.trade_id
                 ):
