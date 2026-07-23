@@ -4,9 +4,10 @@ import contextlib
 import pickle  # noqa: S403
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Self, cast, final
+from typing import TYPE_CHECKING, Any, cast, final
 
 from chia_rs.sized_ints import uint32
+from typing_extensions import Self
 
 from chia.util.action_scope import ActionScope
 from chia.wallet.transaction_record import TransactionRecord
