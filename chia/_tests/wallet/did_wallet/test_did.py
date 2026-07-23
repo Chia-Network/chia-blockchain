@@ -401,6 +401,14 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     capsys.readouterr()
     await DidFindLostCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
+        coin_id=bytes32.zeros.hex(),
+        metadata=None,
+        recovery_list_hash=None,
+        num_verification=None,
+    ).run()
+    assert "Failed to find lost DID" in capsys.readouterr().out
+    await DidFindLostCMD(
+        rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
         coin_id=did_wallet_0.did_info.origin_coin.name().hex(),
         metadata=None,
         recovery_list_hash=None,
@@ -484,7 +492,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
-async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
+async def test_did_transfer(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env_0, env_1 = wallet_environments.environments
     env_0.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
     env_1.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
@@ -539,6 +547,14 @@ async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
         encode_puzzle_hash(new_puzhash, AddressType.XCH.hrp(env_1.node.config)),
         AddressType.XCH,
     )
+    await DidTransferDidCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env_0),
+            "wallet_id": 42,
+            "target_address": target_address,
+        }
+    ).run()
+    assert "Failed to transfer DID" in capsys.readouterr().out
     await DidTransferDidCMD(
         **{
             **wallet_environments.cmd_tx_endpoint_args(env_0),
@@ -903,6 +919,33 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
             **wallet_environments.cmd_tx_endpoint_args(env),
             "wallet_id": env.wallet_aliases["did"],
             "coin_announcements": "0abc",
+            "puzzle_announcements": "@",
+            "push": True,
+        }
+    ).run()
+    assert "Invalid puzzle announcement format, should be a list of hex strings." in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": env.wallet_aliases["did"],
+            "coin_announcements": "@",
+            "puzzle_announcements": "0abc",
+            "push": True,
+        }
+    ).run()
+    assert "Invalid coin announcement format, should be a list of hex strings." in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": 42,
+        }
+    ).run()
+    assert "Failed to create DID message spend" in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": env.wallet_aliases["did"],
+            "coin_announcements": "0abc",
             "puzzle_announcements": "0def",
             "push": True,
         }
@@ -924,7 +967,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_update_metadata(wallet_environments: WalletTestFramework) -> None:
+async def test_update_metadata(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
     fee = uint64(1000)
@@ -963,6 +1006,14 @@ async def test_update_metadata(wallet_environments: WalletTestFramework) -> None
     with pytest.raises(ValueError, match="Metadata key value pairs must be strings"):
         await did_wallet_1.update_metadata({"Twitter": {"url": "http://www.twitter.com"}})  # type: ignore[dict-item]
 
+    await DidUpdateMetadataCMD(
+        rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        tx_config_loader=wallet_environments.cmd_tx_endpoint_args(env)["tx_config_loader"],
+        wallet_id=42,
+        metadata="",
+    ).run()
+    assert "Failed to update DID metadata" in capsys.readouterr().out
     await DidUpdateMetadataCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
         transaction_writer=TransactionsOut(transaction_file_out=None),

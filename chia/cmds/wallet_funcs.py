@@ -1195,7 +1195,7 @@ async def did_message_spend(
         print(f"Message Spend Bundle: {json.dumps(response.spend_bundle.to_json_dict())}")
         return response.transactions
     except Exception as e:
-        print(f"Failed to update DID metadata: {e}")
+        print(f"Failed to create DID message spend: {e}")
         return []
 
 
@@ -1689,28 +1689,25 @@ async def _sign_message(
     nft_id: CliAddress | None = None,
 ) -> None:
     response: SignMessageByAddressResponse | SignMessageByIDResponse
+    # It's the responsiblity of our code to make sure the correct address/did/nft_id is provided for the address type
     if addr_type == AddressType.XCH:
-        if address is None:
-            print("Address is required for XCH address type.")
-            return
+        assert address is not None
         response = await wallet_info.client.sign_message_by_address(
             SignMessageByAddress(address=address.original_address, message=message)
         )
     elif addr_type == AddressType.DID:
-        if did_id is None:
-            print("DID id is required for DID address type.")
-            return
+        assert did_id is not None
         response = await wallet_info.client.sign_message_by_id(
             SignMessageByID(id=did_id.original_address, message=message)
         )
     elif addr_type == AddressType.NFT:
-        if nft_id is None:
-            print("NFT id is required for NFT address type.")
-            return
+        assert nft_id is not None
         response = await wallet_info.client.sign_message_by_id(
             SignMessageByID(id=nft_id.original_address, message=message)
         )
-    else:
+    # This should be impossible because all address types are in the if/else chain
+    # but just in case one is added in the future, we leave this in as a fallback
+    else:  # pragma: no cover
         print("Invalid wallet type.")
         return
 
