@@ -42,7 +42,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
+from chia.util.streamable import Streamable, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
@@ -52,7 +52,6 @@ from chia.wallet.clawback_manager import ClawbackManager
 from chia.wallet.conditions import (
     Condition,
     ConditionValidTimes,
-    CreateCoin,
     parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -76,6 +75,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     match_did_puzzle,
     metadata_to_program,
 )
+from chia.wallet.fungibility_manager import FungibilityManager
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -104,7 +104,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.query_filter import FilterMode, HashFilter
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import (
@@ -122,7 +122,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import CoinRecordOrder, WalletCoinStore
+from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -206,6 +206,7 @@ class WalletStateManager:
     decorator_manager: PuzzleDecoratorManager
     signer: WalletSigner
     clawback_manager: ClawbackManager
+    fungibility_manager: FungibilityManager
 
     @staticmethod
     async def create(
@@ -309,6 +310,7 @@ class WalletStateManager:
             puzzle_hash_encoder=self.encode_puzzle_hash,
             action_scope_sandbox=self.new_action_scope,
         )
+        self.fungibility_manager = FungibilityManager(coin_store=self.coin_store, wallet_state_manager=self)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
@@ -2714,159 +2716,6 @@ class WalletStateManager:
             name=name,
             memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
-        )
-
-    async def split_coins(
-        self,
-        *,
-        action_scope: WalletActionScope,
-        wallet_id: uint32,
-        target_coin_id: bytes32,
-        amount_per_coin: uint64,
-        number_of_coins: uint16,
-        fee: uint64,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> None:
-        optional_coin = await self.coin_store.get_coin_record(target_coin_id)
-        if optional_coin is None:
-            raise ValueError(f"Could not find coin with ID {target_coin_id}")
-        else:
-            coin = optional_coin.coin
-
-        total_amount = amount_per_coin * number_of_coins
-
-        if coin.amount < total_amount:
-            raise ValueError(f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}.")
-
-        if wallet_id not in self.wallets:
-            raise ValueError(f"Wallet with ID {wallet_id} does not exist")
-        wallet = self.wallets[wallet_id]
-        if not isinstance(wallet, (Wallet, CATWallet)):
-            raise ValueError("Cannot split coins from non-fungible wallet types")
-
-        outputs = [
-            CreateCoin(
-                await action_scope.get_puzzle_hash(self, override_reuse_puzhash_with=False),
-                amount_per_coin,
-            )
-            for _ in range(number_of_coins)
-        ]
-
-        if wallet.type() == WalletType.STANDARD_WALLET and coin.amount < total_amount + fee:
-            async with action_scope.use() as interface:
-                interface.side_effects.selected_coins.append(coin)
-            coins = await wallet.select_coins(
-                uint64(total_amount + fee - coin.amount),
-                action_scope,
-            )
-            coins.add(coin)
-        else:
-            coins = {coin}
-
-        await wallet.generate_signed_transaction(
-            [output.amount for output in outputs],
-            [output.puzzle_hash for output in outputs],
-            action_scope,
-            fee,
-            coins=coins,
-            extra_conditions=extra_conditions,
-        )
-
-    async def combine_coins(
-        self,
-        *,
-        action_scope: WalletActionScope,
-        wallet_id: uint32,
-        number_of_coins: uint16,
-        largest_first: bool,
-        coin_num_limit: uint16,
-        fee: uint64,
-        target_coin_amount: uint64 | None = None,
-        target_coin_ids: list[bytes32] | None = None,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> None:
-        if wallet_id not in self.wallets:
-            raise ValueError(f"Wallet with ID {wallet_id} does not exist")
-        wallet = self.wallets[wallet_id]
-        if not isinstance(wallet, (Wallet, CATWallet)):
-            raise ValueError("Cannot combine coins from non-fungible wallet types")
-
-        coins: list[Coin] = []
-
-        # First get the coin IDs specified
-        if target_coin_ids is not None:
-            target_records = (
-                await self.coin_store.get_coin_records(
-                    wallet_id=wallet_id,
-                    coin_id_filter=HashFilter(target_coin_ids, mode=uint8(FilterMode.include.value)),
-                )
-            ).records
-            spent_ids = [cr.coin.name() for cr in target_records if cr.spent]
-            if spent_ids:
-                raise ValueError(f"Cannot combine already-spent coins: {', '.join(c.hex() for c in spent_ids)}")
-            coins.extend(cr.coin for cr in target_records)
-
-        async with action_scope.use() as interface:
-            interface.side_effects.selected_coins.extend(coins)
-
-        # Next let's select enough coins to meet the target + fee if there is one
-        fungible_amount_needed = uint64(0) if target_coin_amount is None else target_coin_amount
-        if isinstance(wallet, Wallet):
-            fungible_amount_needed = uint64(fungible_amount_needed + fee)
-        amount_selected = sum(c.amount for c in coins)
-        if amount_selected < fungible_amount_needed:  # implicit fungible_amount_needed > 0 here
-            coins.extend(
-                await wallet.select_coins(
-                    amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
-                )
-            )
-
-        if len(coins) > number_of_coins:
-            raise ValueError(
-                f"Options specified cannot be met without selecting more coins than specified: {len(coins)}"
-            )
-
-        # Now let's select enough coins to get to the target number to combine
-        if len(coins) < number_of_coins:
-            coin_selection_config = action_scope.config.tx_config.coin_selection_config
-            async with action_scope.use() as interface:
-                coins.extend(
-                    cr.coin
-                    for cr in (
-                        await self.coin_store.get_coin_records(
-                            wallet_id=wallet_id,
-                            limit=uint32(number_of_coins - len(coins)),
-                            order=CoinRecordOrder.amount,
-                            coin_id_filter=HashFilter(
-                                [c.name() for c in interface.side_effects.selected_coins],
-                                mode=uint8(FilterMode.exclude.value),
-                            ),
-                            reverse=largest_first,
-                            spent_range=UInt32Range(stop=uint32(0)),
-                            amount_range=UInt64Range(
-                                start=coin_selection_config.min_coin_amount,
-                                stop=coin_selection_config.max_coin_amount,
-                            ),
-                        )
-                    ).records
-                )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.selected_coins.extend(coins)
-
-        primary_output_amount = (
-            uint64(sum(c.amount for c in coins)) if target_coin_amount is None else target_coin_amount
-        )
-        if isinstance(wallet, Wallet):
-            primary_output_amount = uint64(primary_output_amount - fee)
-
-        await wallet.generate_signed_transaction(
-            [primary_output_amount],
-            [await action_scope.get_puzzle_hash(self)],
-            action_scope,
-            fee,
-            coins=set(coins),
-            extra_conditions=extra_conditions,
         )
 
     def new_pool_wallet_pubkey(self) -> G1Element:

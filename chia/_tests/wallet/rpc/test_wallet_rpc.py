@@ -3918,7 +3918,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
 
     # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
-    with pytest.raises(ResponseFailureError, match="Cannot split coins from non-fungible wallet types"):
+    with pytest.raises(ResponseFailureError, match="Wallet 42 is not eligible for coin splitting"):
         assert xch_request.amount_per_coin is not None  # hey there mypy
         rpc_request = SplitCoins(
             wallet_id=uint32(42),
@@ -4108,7 +4108,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
 
     # This one only "works" on the RPC
     env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
-    with pytest.raises(ResponseFailureError, match="Cannot combine coins from non-fungible wallet types"):
+    with pytest.raises(ResponseFailureError, match="Wallet 42 is not eligible for coin splitting"):
         assert xch_combine_request.target_amount is not None  # hey there mypy
         rpc_request = CombineCoins(
             wallet_id=uint32(42),
