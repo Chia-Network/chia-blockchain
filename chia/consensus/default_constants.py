@@ -94,10 +94,24 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     MIN_PLOT_STRENGTH=uint8(2),
     MAX_PLOT_STRENGTH=uint8(32),
-    # TODO: todo_v2_plots finalize plot filter schedule
-    PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
-    PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
-    PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
+    # Base plot filter reduction schedule -- relative heights from
+    # HARD_FORK2_HEIGHT, in reverse chronological order (the first entry is
+    # the last to activate)
+    PLOT_FILTER_V2_RELATIVE_HEIGHT=[
+        uint32(50_494_000),
+        uint32(45_444_000),
+        uint32(40_394_000),
+        uint32(35_343_000),
+        uint32(30_298_000),
+        uint32(25_247_000),
+        uint32(20_197_000),
+        uint32(15_146_000),
+        uint32(10_101_000),
+    ],
+    # SPs per plot filter window (64 SPs / 4 windows), v2 plots
+    FILTER_WINDOW_SIZE=uint8(16),
+    # effective plot filter cap
+    MAX_EFFECTIVE_PLOT_FILTER_BITS=uint8(13),
     TESTNET=False,
 )
 

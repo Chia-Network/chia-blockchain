@@ -175,6 +175,8 @@ def rand_full_block() -> FullBlock:
         transactions_info,
         SerializedProgram.from_bytes(clvm_generator),
         [],
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     return full_block

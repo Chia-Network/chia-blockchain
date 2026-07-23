@@ -218,6 +218,8 @@ async def test_basic_store(
                 block.transactions_info,
                 block.transactions_generator,
                 [],
+                None,  # transactions_generator_buffer
+                uint8(0),  # version
             )
         )
 

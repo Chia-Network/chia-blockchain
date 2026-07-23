@@ -6,7 +6,7 @@ from typing import Any
 
 from chia_rs import FoliageTransactionBlock, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, run_cli_command_and_assert
 from chia._tests.cmds.testing_classes import hash_to_height, height_hash
@@ -75,6 +75,8 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
             transactions_info=tx_info,
             transactions_generator=SerializedProgram.from_bytes(bytes.fromhex("ff01820539")),
             transactions_generator_ref_list=[],
+            transactions_generator_buffer=None,
+            version=uint8(0),
         )
         return full_block
 

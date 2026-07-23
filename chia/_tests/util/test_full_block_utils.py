@@ -299,7 +299,9 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
                                                 foliage_transaction_block,
                                                 transactions_info,
                                                 gen,  # transactions_generator
-                                                refs_list,  # transactions_generator_ref_list
+                                                refs_list,  # transactions_generator_ref_list,
+                                                None,  # transactions_generator_buffer
+                                                uint8(0),  # version
                                             )
 
 

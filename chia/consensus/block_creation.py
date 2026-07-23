@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 from collections.abc import Callable, Sequence
-from typing import Optional
 
 import chia_rs
 from chia_rs import (
@@ -58,7 +57,7 @@ def validate_generator_encoding(
     height: int,
     prev_transaction_block_height: int,
     constants: ConsensusConstants,
-) -> Optional[Err]:
+) -> Err | None:
     """Reject generators whose wire-format encoding is not allowed at this height.
 
     Two height-gated rules:
@@ -456,6 +455,8 @@ def create_unfinished_block(
         transactions_info,
         new_block_gen.program if new_block_gen else None,
         new_block_gen.block_refs if new_block_gen else [],
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
 
@@ -563,6 +564,8 @@ def unfinished_block_to_full_block(
         new_tx_info,
         new_generator,
         new_generator_ref_list,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
     return ret
 

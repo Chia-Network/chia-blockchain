@@ -2087,6 +2087,8 @@ async def test_unfinished_block_with_replaced_generator(
         transactions_info,
         replaced_generator,
         generator_refs,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -4060,6 +4062,8 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
         block.transactions_info,
         block.transactions_generator,
         block.transactions_generator_ref_list,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     return unfinished_block_expected

@@ -324,6 +324,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,  # transactions_generator_buffer
+            uint8(0),  # version
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -358,6 +360,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,  # transactions_generator_buffer
+            uint8(0),  # version
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -404,6 +408,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,  # transactions_generator_buffer
+            uint8(0),  # version
         )
         flags = get_flags_for_height_and_constants(block.height, bt.constants)
         err, conds = run_block_generator2(
@@ -457,6 +463,8 @@ class TestBlockHeaderValidation:
             block_2.transactions_info,
             block_2.transactions_generator,
             [],
+            None,  # transactions_generator_buffer
+            uint8(0),  # version
         )
         validate_res = await blockchain.validate_unfinished_block(unf, None, False)
         assert validate_res.error == Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value
@@ -537,6 +545,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
+                    None,  # transactions_generator_buffer
+                    uint8(0),  # version
                 )
                 conds = None
                 # if this assert fires, remove it along with the pragma for the block

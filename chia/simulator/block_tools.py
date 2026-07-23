@@ -2438,4 +2438,6 @@ def make_unfinished_block(
         block.transactions_info,
         block.transactions_generator,
         block.transactions_generator_ref_list,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
