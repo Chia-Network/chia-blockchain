@@ -1254,33 +1254,28 @@ async def find_lost_did(
 
 
 async def create_nft_wallet(
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     did_id: CliAddress | None = None,
     name: str | None = None,
 ) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        try:
-            response = await wallet_client.create_new_wallet(
-                CreateNewWallet(
-                    wallet_type=CreateNewWalletType.NFT_WALLET,
-                    did_id=(did_id.original_address if did_id else None),
-                    name=name,
-                    push=True,
-                ),
-                DEFAULT_TX_CONFIG,
-            )
-            print(f"Successfully created an NFT wallet with id {response.wallet_id} on key {fingerprint}")
-        except Exception as e:
-            print(f"Failed to create NFT wallet: {e}")
+    try:
+        response = await wallet_info.client.create_new_wallet(
+            CreateNewWallet(
+                wallet_type=CreateNewWalletType.NFT_WALLET,
+                did_id=(did_id.original_address if did_id else None),
+                name=name,
+                push=True,
+            ),
+            DEFAULT_TX_CONFIG,
+        )
+        print(f"Successfully created an NFT wallet with id {response.wallet_id} on key {wallet_info.fingerprint}")
+    except Exception as e:
+        print(f"Failed to create NFT wallet: {e}")
 
 
 async def mint_nft(
     *,
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     wallet_id: int,
     royalty_cli_address: CliAddress | None,
     target_cli_address: CliAddress | None,
@@ -1295,149 +1290,136 @@ async def mint_nft(
     edition_number: int | None,
     fee: uint64,
     royalty_percentage: int,
-    reuse_puzhash: bool | None,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    tx_config: TXConfig,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        royalty_address = royalty_cli_address.validate_address_type(AddressType.XCH) if royalty_cli_address else None
-        target_address = target_cli_address.validate_address_type(AddressType.XCH) if target_cli_address else None
-        try:
-            response = await wallet_client.get_nft_wallet_did(NFTGetWalletDID(wallet_id=uint32(wallet_id)))
-            wallet_did = response.did_id
-            wallet_has_did = wallet_did is not None
-            did_id: str | None = wallet_did
-            # Handle the case when the user wants to disable DID ownership
-            if no_did_ownership:
-                if wallet_has_did:
-                    raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
-                else:
-                    did_id = None
-            elif not wallet_has_did:
-                did_id = ""
+    royalty_address = royalty_cli_address.validate_address_type(AddressType.XCH) if royalty_cli_address else None
+    target_address = target_cli_address.validate_address_type(AddressType.XCH) if target_cli_address else None
+    try:
+        response = await wallet_info.client.get_nft_wallet_did(NFTGetWalletDID(wallet_id=uint32(wallet_id)))
+        wallet_did = response.did_id
+        wallet_has_did = wallet_did is not None
+        did_id: str | None = wallet_did
+        # Handle the case when the user wants to disable DID ownership
+        if no_did_ownership:
+            if wallet_has_did:
+                raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
+            else:
+                did_id = None
+        elif not wallet_has_did:
+            did_id = ""
 
-            mint_response = await wallet_client.mint_nft(
-                request=NFTMintNFTRequest(
-                    wallet_id=uint32(wallet_id),
-                    royalty_address=royalty_address,
-                    target_address=target_address,
-                    hash=bytes32.from_hexstr(hash),
-                    uris=uris,
-                    meta_hash=bytes32.from_hexstr(metadata_hash) if metadata_hash is not None else None,
-                    meta_uris=metadata_uris,
-                    license_hash=bytes32.from_hexstr(license_hash) if license_hash is not None else None,
-                    license_uris=license_uris,
-                    edition_total=uint64(edition_total) if edition_total is not None else uint64(1),
-                    edition_number=uint64(edition_number) if edition_number is not None else uint64(1),
-                    fee=fee,
-                    royalty_percentage=uint16(royalty_percentage),
-                    did_id=did_id,
-                    push=push,
-                ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
-                timelock_info=condition_valid_times,
-            )
-            spend_bundle = mint_response.spend_bundle
-            if push:
-                print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
-            return mint_response.transactions
-        except Exception as e:
-            print(f"Failed to mint NFT: {e}")
-            return []
+        mint_response = await wallet_info.client.mint_nft(
+            request=NFTMintNFTRequest(
+                wallet_id=uint32(wallet_id),
+                royalty_address=royalty_address,
+                target_address=target_address,
+                hash=bytes32.from_hexstr(hash),
+                uris=uris,
+                meta_hash=bytes32.from_hexstr(metadata_hash) if metadata_hash is not None else None,
+                meta_uris=metadata_uris,
+                license_hash=bytes32.from_hexstr(license_hash) if license_hash is not None else None,
+                license_uris=license_uris,
+                edition_total=uint64(edition_total) if edition_total is not None else uint64(1),
+                edition_number=uint64(edition_number) if edition_number is not None else uint64(1),
+                fee=fee,
+                royalty_percentage=uint16(royalty_percentage),
+                did_id=did_id,
+                push=push,
+            ),
+            tx_config=tx_config,
+            timelock_info=condition_valid_times,
+        )
+        spend_bundle = mint_response.spend_bundle
+        if push:
+            print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+        return mint_response.transactions
+    except Exception as e:
+        print(f"Failed to mint NFT: {e}")
+        return []
 
 
 async def add_uri_to_nft(
     *,
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     wallet_id: int,
     fee: uint64,
     nft_coin_id: str,
     uri: str | None,
     metadata_uri: str | None,
     license_uri: str | None,
-    reuse_puzhash: bool | None,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    tx_config: TXConfig,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        try:
-            if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
-                raise ValueError("You must provide only one of the URI flags")
-            if uri is not None and len(uri) > 0:
-                key = "u"
-                uri_value = uri
-            elif metadata_uri is not None and len(metadata_uri) > 0:
-                key = "mu"
-                uri_value = metadata_uri
-            elif license_uri is not None and len(license_uri) > 0:
-                key = "lu"
-                uri_value = license_uri
-            else:
-                raise ValueError("You must provide at least one of the URI flags")
-            response = await wallet_client.add_uri_to_nft(
-                NFTAddURI(
-                    wallet_id=uint32(wallet_id),
-                    nft_coin_id=nft_coin_id,
-                    key=key,
-                    uri=uri_value,
-                    fee=fee,
-                    push=push,
-                ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
-                timelock_info=condition_valid_times,
-            )
-            spend_bundle = response.spend_bundle.to_json_dict()
-            if push:
-                print(f"URI added successfully with spend bundle: {spend_bundle}")
-            return response.transactions
-        except Exception as e:
-            print(f"Failed to add URI to NFT: {e}")
-            return []
+    try:
+        if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
+            raise ValueError("You must provide only one of the URI flags")
+        if uri is not None and len(uri) > 0:
+            key = "u"
+            uri_value = uri
+        elif metadata_uri is not None and len(metadata_uri) > 0:
+            key = "mu"
+            uri_value = metadata_uri
+        elif license_uri is not None and len(license_uri) > 0:
+            key = "lu"
+            uri_value = license_uri
+        else:
+            raise ValueError("You must provide at least one of the URI flags")
+        response = await wallet_info.client.add_uri_to_nft(
+            NFTAddURI(
+                wallet_id=uint32(wallet_id),
+                nft_coin_id=nft_coin_id,
+                key=key,
+                uri=uri_value,
+                fee=fee,
+                push=push,
+            ),
+            tx_config=tx_config,
+            timelock_info=condition_valid_times,
+        )
+        spend_bundle = response.spend_bundle.to_json_dict()
+        if push:
+            print(f"URI added successfully with spend bundle: {spend_bundle}")
+        return response.transactions
+    except Exception as e:
+        print(f"Failed to add URI to NFT: {e}")
+        return []
 
 
 async def transfer_nft(
     *,
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     wallet_id: int,
     fee: uint64,
     nft_coin_id: str,
     target_cli_address: CliAddress,
-    reuse_puzhash: bool | None,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    tx_config: TXConfig,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        try:
-            target_address = target_cli_address.validate_address_type(AddressType.XCH)
-            response = await wallet_client.transfer_nft(
-                NFTTransferNFT(
-                    wallet_id=uint32(wallet_id),
-                    nft_coin_id=nft_coin_id,
-                    target_address=target_address,
-                    fee=fee,
-                    push=push,
-                ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
-                timelock_info=condition_valid_times,
-            )
-            spend_bundle = response.spend_bundle.to_json_dict()
-            if push:
-                print("NFT transferred successfully")
-            print(f"spend bundle: {spend_bundle}")
-            return response.transactions
-        except Exception as e:
-            print(f"Failed to transfer NFT: {e}")
-            return []
+    try:
+        target_address = target_cli_address.validate_address_type(AddressType.XCH)
+        response = await wallet_info.client.transfer_nft(
+            NFTTransferNFT(
+                wallet_id=uint32(wallet_id),
+                nft_coin_id=nft_coin_id,
+                target_address=target_address,
+                fee=fee,
+                push=push,
+            ),
+            tx_config=tx_config,
+            timelock_info=condition_valid_times,
+        )
+        spend_bundle = response.spend_bundle.to_json_dict()
+        if push:
+            print("NFT transferred successfully")
+        print(f"spend bundle: {spend_bundle}")
+        return response.transactions
+    except Exception as e:
+        print(f"Failed to transfer NFT: {e}")
+        return []
 
 
 def print_nft_info(nft: NFTInfo, *, config: dict[str, Any]) -> None:
@@ -1478,71 +1460,62 @@ def print_nft_info(nft: NFTInfo, *, config: dict[str, Any]) -> None:
 
 
 async def list_nfts(
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     wallet_id: int,
     num: int,
     start_index: int,
 ) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        try:
-            response = await wallet_client.list_nfts(
-                NFTGetNFTs(wallet_id=uint32(wallet_id), start_index=uint32(start_index), num=uint32(num))
-            )
-            nft_list = response.nft_list
-            if len(nft_list) > 0:
-                for nft in nft_list:
-                    print_nft_info(nft, config=config)
-            else:
-                print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
-        except Exception as e:
-            print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
+    try:
+        response = await wallet_info.client.list_nfts(
+            NFTGetNFTs(wallet_id=uint32(wallet_id), start_index=uint32(start_index), num=uint32(num))
+        )
+        nft_list = response.nft_list
+        if len(nft_list) > 0:
+            for nft in nft_list:
+                print_nft_info(nft, config=wallet_info.config)
+        else:
+            print(f"No NFTs found for wallet with id {wallet_id} on key {wallet_info.fingerprint}")
+    except Exception as e:
+        print(f"Failed to list NFTs for wallet with id {wallet_id} on key {wallet_info.fingerprint}: {e}")
 
 
 async def set_nft_did(
     *,
-    root_path: pathlib.Path,
-    wallet_rpc_port: int | None,
-    fp: int | None,
+    wallet_info: WalletClientInfo,
     wallet_id: int,
     fee: uint64,
     nft_coin_id: str,
     did_id: str,
-    reuse_puzhash: bool | None,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    tx_config: TXConfig,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        try:
-            response = await wallet_client.set_nft_did(
-                NFTSetNFTDID(
-                    wallet_id=uint32(wallet_id),
-                    did_id=did_id,
-                    nft_coin_id=bytes32.from_hexstr(nft_coin_id),
-                    fee=fee,
-                    push=push,
-                ),
-                tx_config=CMDTXConfigLoader(
-                    reuse_puzhash=reuse_puzhash,
-                ).to_tx_config(units["chia"], config, fingerprint),
-                timelock_info=condition_valid_times,
-            )
-            spend_bundle = response.spend_bundle.to_json_dict()
-            print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
-            return response.transactions
-        except Exception as e:
-            print(f"Failed to set DID on NFT: {e}")
-            return []
+    try:
+        response = await wallet_info.client.set_nft_did(
+            NFTSetNFTDID(
+                wallet_id=uint32(wallet_id),
+                did_id=did_id,
+                nft_coin_id=bytes32.from_hexstr(nft_coin_id),
+                fee=fee,
+                push=push,
+            ),
+            tx_config=tx_config,
+            timelock_info=condition_valid_times,
+        )
+        spend_bundle = response.spend_bundle.to_json_dict()
+        print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+        return response.transactions
+    except Exception as e:
+        print(f"Failed to set DID on NFT: {e}")
+        return []
 
 
-async def get_nft_info(root_path: pathlib.Path, wallet_rpc_port: int | None, fp: int | None, nft_coin_id: str) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, config):
-        try:
-            response = await wallet_client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id))
-            print_nft_info(response.nft_info, config=config)
-        except Exception as e:
-            print(f"Failed to get NFT info: {e}")
+async def get_nft_info(wallet_info: WalletClientInfo, nft_coin_id: str) -> None:
+    try:
+        response = await wallet_info.client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id))
+        print_nft_info(response.nft_info, config=wallet_info.config)
+    except Exception as e:
+        print(f"Failed to get NFT info: {e}")
 
 
 async def get_nft_royalty_percentage_and_address(
