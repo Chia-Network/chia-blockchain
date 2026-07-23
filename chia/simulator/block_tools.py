@@ -213,7 +213,7 @@ def compute_block_cost(
         # the correct cost including tree-based serialization cost.
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
         try:
-            err, conds = run_block_generator2(
+            err, _err_msg, conds = run_block_generator2(
                 bytes(generator), [], constants.MAX_BLOCK_COST_CLVM, flags, G2Element(), None, constants
             )
             if err is None and conds is not None:

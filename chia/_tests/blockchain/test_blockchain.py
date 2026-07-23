@@ -412,7 +412,7 @@ class TestBlockHeaderValidation:
             uint8(0),  # version
         )
         flags = get_flags_for_height_and_constants(block.height, bt.constants)
-        err, conds = run_block_generator2(
+        err, _err_msg, conds = run_block_generator2(
             bytes(block.transactions_generator),
             [],
             block.transactions_info.cost,
