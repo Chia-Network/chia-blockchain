@@ -6,17 +6,17 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from time import monotonic, sleep
+from time import monotonic
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     AugSchemeMPL,
-    Block2026Builder,
     BlockBuilder,
     Coin,
     CoinSpend,
     ConsensusConstants,
     G2Element,
+    InternedBlockBuilder,
     SpendBundle,
     run_block_generator2,
     solution_generator_2026,
@@ -881,97 +881,99 @@ class Mempool:
     def create_block_generator_2026(
         self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
     ) -> NewBlockGenerator | None:
-        """Build a block using Block2026Builder (anytime builder + serde_2026).
+        """Build a block using InternedBlockBuilder with serde_2026 generator
+        serialization (post-HF2).
 
-        Snapshots mempool candidates into the builder (resolving dedup/FF in
-        priority order), then lets the builder pack and optimize in a background
-        thread for the remaining timeout.
+        Adds mempool candidates to the builder (resolving dedup/FF in priority
+        order) until the block is full or the timeout expires.
         """
         dedup_coin_spends = IdenticalSpendDedup()
         singleton_ff = SingletonFastForward()
+        # Fast forward and dedup state committed so far from accepted items,
+        # used to rollback when an item is skipped.
         committed_ff = singleton_ff.copy()
+        committed_dedup = dedup_coin_spends.copy()
 
         log.info(f"Starting to make block (2026), max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
 
-        # Per-candidate metadata for reconstructing additions/removals after
-        # the builder decides which candidates are included.
-        candidate_additions: list[list[Coin]] = []
-        candidate_removals: list[list[Coin]] = []
+        builder = InternedBlockBuilder(constants, serde_2026=True)
+
+        additions: list[Coin] = []
+        removals: list[Coin] = []
 
         fee_sum = 0
         num_spends = 0
 
-        with Block2026Builder(constants) as builder:
-            for row in cursor:
-                name = bytes32(row[0])
-                fee = int(row[1])
-                item = self._items[name]
+        for row in cursor:
+            current_time = monotonic()
+            if current_time - generator_creation_start >= timeout:
+                log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
+                break
 
-                try:
-                    assert item.conds is not None
-                    irreducible_cost = item.conds.condition_cost + item.conds.execution_cost
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
 
-                    bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
-                        mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
-                    )
-                    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-                        bundle_coin_spends=bundle_coin_spends
-                    )
+            try:
+                assert item.conds is not None
+                irreducible_cost = item.conds.condition_cost + item.conds.execution_cost
 
-                    new_fee_sum = fee_sum + fee
-                    if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
-                        # Such a fee is very unlikely to happen but we're defensively
-                        # accounting for it
-                        break  # pragma: no cover
+                # This `ff_state_update` is only committed later on via
+                # `update_fast_forward_spends` if the item gets added.
+                bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
+                    mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
+                )
+                # This `dedup_state_update` is only committed later on via
+                # `update_deduplication_spends` if the item gets added.
+                unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
+                    dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
+                )
 
-                    new_spend_count = num_spends + len(unique_coin_spends)
-                    if new_spend_count > MAX_SPENDS_PER_BLOCK:
-                        continue
+                new_fee_sum = fee_sum + fee
+                if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    # Such a fee is very unlikely to happen but we're defensively
+                    # accounting for it
+                    break  # pragma: no cover
 
+                new_spend_count = num_spends + len(unique_coin_spends)
+                if new_spend_count > MAX_SPENDS_PER_BLOCK:
+                    continue
+
+                bundle = SpendBundle(unique_coin_spends, item.aggregated_signature)
+                added, done = builder.add_spend_bundles([bundle], uint64(max(0, irreducible_cost - cost_saving)))
+
+                if added:
                     singleton_ff.update_fast_forward_spends(ff_state_update)
+                    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
                     committed_ff = singleton_ff.copy()
+                    committed_dedup = dedup_coin_spends.copy()
 
-                    bundle = SpendBundle(unique_coin_spends, item.aggregated_signature)
-                    builder.add_candidate(bundle, uint64(max(0, irreducible_cost - cost_saving)))
-
-                    candidate_additions.append(unique_additions)
-                    candidate_removals.append([cs.coin for cs in unique_coin_spends])
+                    additions.extend(unique_additions)
+                    removals.extend([cs.coin for cs in unique_coin_spends])
 
                     fee_sum = new_fee_sum
                     num_spends = new_spend_count
 
-                except SkipDedup as e:
-                    log.info(f"{e}")
-                    singleton_ff = committed_ff.copy()
-                    continue
-                except Exception as e:  # pragma: no cover
-                    log.info(f"Exception while processing mempool item for 2026 block: {e}")
-                    singleton_ff = committed_ff.copy()
-                    continue
+                if done:
+                    break
 
-            if not candidate_additions:
-                return None
+            except SkipDedup as e:
+                log.info(f"{e}")
+                singleton_ff = committed_ff.copy()
+                dedup_coin_spends = committed_dedup.copy()
+                continue
+            except Exception as e:  # pragma: no cover
+                log.info(f"Exception while processing mempool item for 2026 block: {e}")
+                singleton_ff = committed_ff.copy()
+                dedup_coin_spends = committed_dedup.copy()
+                continue
 
-            builder.start()
-
-            elapsed = monotonic() - generator_creation_start
-            remaining = max(0.0, timeout - elapsed)
-            if remaining > 0:
-                sleep(remaining)
-
-            block_program, signature, cost, included_indices = builder.best()
-            # __exit__ joins the thread
-
-        if not block_program:  # pragma: no cover
+        if not removals:
             return None
 
-        additions: list[Coin] = []
-        removals: list[Coin] = []
-        for idx in included_indices:
-            additions.extend(candidate_additions[idx])
-            removals.extend(candidate_removals[idx])
+        block_program, signature, cost = builder.finalize()
 
         duration = monotonic() - generator_creation_start
         log.log(

@@ -435,7 +435,7 @@ class MempoolManager:
 
     def create_block_generator_2026(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
         """
-        Returns a block generator using Block2026Builder (anytime builder + serde_2026).
+        Returns a block generator using InternedBlockBuilder with serde_2026 serialization (post-HF2).
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
