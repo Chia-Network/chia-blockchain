@@ -250,8 +250,28 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_mempool_items_by_coin_name", {"coin_name": coin_name.hex()})
         return response
 
-    async def create_block_generator(self) -> dict[str, Any] | None:
-        response = await self.fetch("create_block_generator", {})
+    async def create_block_generator(
+        self,
+        signage_point_index: int | None = None,
+        challenge_hash: bytes32 | None = None,
+        challenge_chain_sp: bytes32 | None = None,
+        reward_chain_sp: bytes32 | None = None,
+    ) -> dict[str, Any] | None:
+        # With no signage point, returns the transaction generator template for the current peak (legacy
+        # behavior). When a signage point is supplied, the response additionally includes the
+        # farmer-independent transaction-block foliage under "tx_block_info".
+        request: dict[str, Any] = {}
+        if signage_point_index is not None:
+            assert challenge_hash is not None
+            assert challenge_chain_sp is not None
+            assert reward_chain_sp is not None
+            request = {
+                "signage_point_index": signage_point_index,
+                "challenge_hash": challenge_hash.hex(),
+                "challenge_chain_sp": challenge_chain_sp.hex(),
+                "reward_chain_sp": reward_chain_sp.hex(),
+            }
+        response = await self.fetch("create_block_generator", request)
         return response
 
     async def get_recent_signage_point_or_eos(

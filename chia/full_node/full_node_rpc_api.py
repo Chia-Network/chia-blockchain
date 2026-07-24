@@ -19,11 +19,14 @@ from chia_rs import (
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
+from chia.consensus.block_creation import create_transaction_block_info
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.hard_fork_utils import get_flags
@@ -964,15 +967,123 @@ class FullNodeRpcApi:
 
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
-    async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
+    def _resolve_signage_point_context(
+        self,
+        peak: BlockRecord,
+        signage_point_index: uint8,
+        challenge_hash: bytes32,
+        challenge_chain_sp: bytes32,
+        reward_chain_sp: bytes32,
+    ) -> tuple[BlockRecord | None, uint128, str | None]:
+        """
+        Resolves the block that would be farmed at the given signage point, returning
+        ``(prev_block, total_iters_sp, error)``. On success ``error`` is None.
+
+        This mirrors the signage-point / previous-block resolution in
+        ``FullNodeAPI.declare_proof_of_space`` so that the resulting ``prev_block`` and
+        ``total_iters_sp`` (and therefore the transaction-block foliage computed from them) match what
+        the node itself would build for this signage point, including overflow blocks. It reuses the
+        existing ``full_node_store`` helpers rather than duplicating any consensus math.
+        """
+        store = self.service.full_node_store
+        constants = self.service.constants
+
+        sp_vdfs = store.get_signage_point_by_index_and_cc_output(
+            challenge_chain_sp, challenge_hash, signage_point_index
+        )
+        if sp_vdfs is None:
+            return None, uint128(0), f"unknown signage point {challenge_chain_sp.hex()}"
+        if signage_point_index > 0:
+            if sp_vdfs.rc_vdf is None or sp_vdfs.rc_vdf.output.get_hash() != reward_chain_sp:
+                return None, uint128(0), "reward chain signage point mismatch (stale signage point)"
+
+        if signage_point_index == 0:
+            cc_challenge_hash = challenge_chain_sp
+        else:
+            assert sp_vdfs.cc_vdf is not None
+            cc_challenge_hash = sp_vdfs.cc_vdf.challenge
+
+        pos_sub_slot = None
+        if challenge_hash != constants.GENESIS_CHALLENGE:
+            pos_sub_slot = store.get_sub_slot(cc_challenge_hash)
+            if pos_sub_slot is None:
+                return None, uint128(0), "unknown sub slot for signage point"
+            total_iters_pos_slot: uint128 = pos_sub_slot[2]
+        else:
+            total_iters_pos_slot = uint128(0)
+        if cc_challenge_hash != challenge_hash:
+            return None, uint128(0), "signage point challenge hash mismatch"
+
+        # Find the previous block from the signage point, ensuring the reward chain VDF is correct
+        prev_b: BlockRecord | None = peak
+        if signage_point_index == 0:
+            assert pos_sub_slot is not None
+            rc_challenge = pos_sub_slot[0].reward_chain.end_of_slot_vdf.challenge
+        else:
+            assert sp_vdfs.rc_vdf is not None
+            rc_challenge = sp_vdfs.rc_vdf.challenge
+
+        # Backtrack through empty sub-slots
+        for eos, _, _ in reversed(store.finished_sub_slots):
+            if eos is not None and eos.reward_chain.get_hash() == rc_challenge:
+                rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
+
+        found = False
+        attempts = 0
+        while prev_b is not None and attempts < 10:
+            if prev_b.reward_infusion_new_challenge == rc_challenge:
+                found = True
+                break
+            if prev_b.finished_reward_slot_hashes is not None and len(prev_b.finished_reward_slot_hashes) > 0:
+                if prev_b.finished_reward_slot_hashes[-1] == rc_challenge:
+                    prev_b = self.service.blockchain.try_block_record(prev_b.prev_hash)
+                    found = True
+                    break
+            prev_b = self.service.blockchain.try_block_record(prev_b.prev_hash)
+            attempts += 1
+        if not found:
+            return None, uint128(0), "did not find a previous block with the correct reward chain hash"
+
+        try:
+            finished_sub_slots = store.get_finished_sub_slots(self.service.blockchain, prev_b, cc_challenge_hash)
+        except ValueError as e:
+            return None, uint128(0), f"value error resolving finished sub slots: {e}"
+        if finished_sub_slots is None:
+            return None, uint128(0), "could not resolve finished sub slots"
+        if len(finished_sub_slots) > 0 and pos_sub_slot is not None and finished_sub_slots[-1] != pos_sub_slot[0]:
+            return None, uint128(0), "have different sub-slots than required to farm this block"
+
+        if peak.height <= constants.MAX_SUB_SLOT_BLOCKS:
+            sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
+        else:
+            sub_slot_iters = peak.sub_slot_iters
+            for sub_slot in finished_sub_slots:
+                if sub_slot.challenge_chain.new_sub_slot_iters is not None:
+                    sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
+
+        sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        total_iters_sp = uint128(total_iters_pos_slot + sp_iters)
+        return prev_b, total_iters_sp, None
+
+    async def create_block_generator(self, request: dict[str, Any]) -> EndpointResult:
+        # When a signage point is supplied ("farmer template" mode), additionally resolve the block that
+        # would be farmed at that signage point and return the farmer-independent transaction-block foliage
+        # (filter hash, additions/removals roots, transactions info). With no signage point this behaves
+        # exactly as before and is byte-for-byte backwards compatible.
+        sp_index_req = request.get("signage_point_index")
+        farmer_template_mode = sp_index_req is not None
+
         gen = NewBlockGenerator()
+        maybe_gen: NewBlockGenerator | None = None
+        prev_b: BlockRecord | None = None
+        total_iters_sp: uint128 = uint128(0)
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
             peak: BlockRecord | None = self.service.blockchain.get_peak()
 
             if peak is None:
-                return {
+                result: EndpointResult = {
                     "generator": gen.program,
                     "refs": gen.block_refs,
                     "additions": gen.additions,
@@ -980,17 +1091,41 @@ class FullNodeRpcApi:
                     "sig": gen.signature,
                     "cost": gen.cost,
                 }
+                if farmer_template_mode:
+                    result["prev_block_header_hash"] = None
+                    result["peak_height"] = None
+                    result["tx_block_info"] = None
+                return result
 
-            # Finds the last transaction block before this one
-            curr_l_tb: BlockRecord = peak
-            while not curr_l_tb.is_transaction_block:
-                curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
+            if farmer_template_mode:
+                assert sp_index_req is not None
+                prev_b, total_iters_sp, resolve_err = self._resolve_signage_point_context(
+                    peak,
+                    uint8(sp_index_req),
+                    bytes32.from_hexstr(request["challenge_hash"]),
+                    bytes32.from_hexstr(request["challenge_chain_sp"]),
+                    bytes32.from_hexstr(request["reward_chain_sp"]),
+                )
+                if resolve_err is not None:
+                    raise ValueError(resolve_err)
+            else:
+                prev_b = peak
+
+            # Target for the transaction generator is the latest transaction block
+            tx_peak = self.service.blockchain.get_tx_peak()
+            if tx_peak is not None:
+                tx_base = tx_peak.header_hash
+            else:
+                curr_l_tb: BlockRecord = peak
+                while not curr_l_tb.is_transaction_block:
+                    curr_l_tb = self.service.blockchain.block_record(curr_l_tb.prev_hash)
+                tx_base = curr_l_tb.header_hash
 
             self.service.log.info("Beginning simulated block construction from mempool")
             start_time = time.monotonic()
 
             try:
-                maybe_gen = self.service.mempool_manager.create_block_generator2(curr_l_tb.header_hash, 2.0)
+                maybe_gen = self.service.mempool_manager.create_block_generator2(tx_base, 2.0)
                 if maybe_gen is None:
                     self.service.log.error(f"failed to create block generator, peak: {peak}")
                 else:
@@ -999,7 +1134,9 @@ class FullNodeRpcApi:
                 self.service.log.exception(f"Error creating block generator, peak: {peak}")
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
 
-            if maybe_gen is not None:
+            # The run_block_generator2 self-check re-executes the generator (expensive CLVM run) and only
+            # logs; skip it in farmer template mode so per-signage-point fetches stay cheap.
+            if not farmer_template_mode and maybe_gen is not None:
                 # this also validates the signature
                 err, err_msg, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
@@ -1025,14 +1162,51 @@ class FullNodeRpcApi:
                         )
                     # TODO: maybe validate additions and removals too
 
-        return {
-            "generator": gen.program,
-            "refs": gen.block_refs,
-            "additions": gen.additions,
-            "removals": gen.removals,
-            "sig": gen.signature,
-            "cost": gen.cost,
-        }
+            result = {
+                "generator": gen.program,
+                "refs": gen.block_refs,
+                "additions": gen.additions,
+                "removals": gen.removals,
+                "sig": gen.signature,
+                "cost": gen.cost,
+            }
+
+            if farmer_template_mode:
+                result["prev_block_header_hash"] = None if prev_b is None else prev_b.header_hash
+                result["peak_height"] = peak.height
+                tx_info = create_transaction_block_info(
+                    self.service.constants,
+                    maybe_gen,
+                    prev_b,
+                    self.service.blockchain,
+                    total_iters_sp,
+                    uint64(0),
+                )
+                if tx_info is None:
+                    result["tx_block_info"] = {"is_transaction_block": False}
+                else:
+                    foliage_tx_block, transactions_info = tx_info
+                    prev_tx_block = None
+                    if prev_b is not None:
+                        _is_tb, prev_tx_block = get_prev_transaction_block(
+                            prev_b, self.service.blockchain, total_iters_sp
+                        )
+                    result["tx_block_info"] = {
+                        "is_transaction_block": True,
+                        "prev_transaction_block_hash": foliage_tx_block.prev_transaction_block_hash,
+                        "prev_transaction_block_timestamp": (
+                            None if prev_tx_block is None else prev_tx_block.timestamp
+                        ),
+                        "filter_hash": foliage_tx_block.filter_hash,
+                        "additions_root": foliage_tx_block.additions_root,
+                        "removals_root": foliage_tx_block.removals_root,
+                        "transactions_info": transactions_info,
+                        "transactions_info_hash": foliage_tx_block.transactions_info_hash,
+                        "fees": transactions_info.fees,
+                        "reward_claims_incorporated": transactions_info.reward_claims_incorporated,
+                    }
+
+        return result
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
