@@ -1546,7 +1546,7 @@ class WalletStateManager:
     ) -> int:
         rollback_wallets = None
         try:
-            async with self.db_wrapper.writer(), self.new_sync_scope() as sync_scope:
+            async with self.new_sync_scope() as sync_scope, self.db_wrapper.writer():
                 rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
                 # This only succeeds if we don't raise out of the transaction
                 await self.retry_store.remove_state(coin_state)
