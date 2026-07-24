@@ -21,6 +21,7 @@ ProtocolMessageTypeToNodeType: dict[ProtocolMessageTypes, set[NodeType]] = {
     ProtocolMessageTypes.respond_plots: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_start: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_loaded: {NodeType.HARVESTER},
+    ProtocolMessageTypes.plot_sync_loaded_v2: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_removed: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_invalid: {NodeType.HARVESTER},
     ProtocolMessageTypes.plot_sync_keys_missing: {NodeType.HARVESTER},

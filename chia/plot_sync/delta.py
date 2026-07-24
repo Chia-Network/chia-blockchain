@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from chia.protocols.harvester_protocol import Plot
+from chia.plot_sync.plot_record import PlotRecord
 
 
 @dataclass
 class DeltaType:
-    additions: dict[str, Plot] | list[str]
+    additions: dict[str, PlotRecord] | list[str]
     removals: list[str]
 
     def __str__(self) -> str:
@@ -23,7 +23,7 @@ class DeltaType:
 
 @dataclass
 class PlotListDelta(DeltaType):
-    additions: dict[str, Plot] = field(default_factory=dict)
+    additions: dict[str, PlotRecord] = field(default_factory=dict)
     removals: list[str] = field(default_factory=list)
 
 
