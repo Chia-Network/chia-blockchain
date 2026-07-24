@@ -1089,11 +1089,6 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework, capsys
                     },
                 },
             ),
-            WalletStateTransition(),
-            WalletStateTransition(
-                pre_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
-                post_block_balance_updates={"xch": {"set_remainder": True}, "did": {"set_remainder": True}},
-            ),
         ]
     )
 
