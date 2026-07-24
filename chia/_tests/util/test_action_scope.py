@@ -14,13 +14,6 @@ from chia.util.action_scope import ActionScope, StateInterface
 class TestSideEffects:
     buf: bytes = b""
 
-    def __bytes__(self) -> bytes:
-        return self.buf
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> TestSideEffects:
-        return cls(blob)
-
 
 @final
 @dataclass
@@ -44,7 +37,7 @@ def test_set_callback() -> None:
 
 @pytest.fixture(name="action_scope")
 async def action_scope_fixture() -> AsyncIterator[ActionScope[TestSideEffects, TestConfig]]:
-    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as scope:
+    async with ActionScope.new_scope(TestSideEffects(), TestConfig()) as scope:
         assert scope.config == TestConfig(test_foo="test_foo")
         yield scope
 
@@ -83,7 +76,7 @@ async def test_transactionality(action_scope: ActionScope[TestSideEffects, TestC
 
 @pytest.mark.anyio
 async def test_callbacks() -> None:
-    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
+    async with ActionScope.new_scope(TestSideEffects(), TestConfig()) as action_scope:
         async with action_scope.use() as interface:
 
             async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -100,7 +93,7 @@ async def test_callbacks() -> None:
 @pytest.mark.anyio
 async def test_callback_in_callback_error() -> None:
     with pytest.raises(RuntimeError, match="Callback"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects(), TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -112,7 +105,7 @@ async def test_callback_in_callback_error() -> None:
 @pytest.mark.anyio
 async def test_no_callbacks_if_error() -> None:
     with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects(), TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -124,7 +117,7 @@ async def test_no_callbacks_if_error() -> None:
                 raise RuntimeError("This should prevent the callbacks from being called")
 
     with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects(), TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback2(interface: StateInterface[TestSideEffects]) -> None:

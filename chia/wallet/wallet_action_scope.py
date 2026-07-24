@@ -20,7 +20,7 @@ from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia.wallet.wsm_apis import GetUnusedDerivationRecordResult, StreambleGetUnusedDerivationRecordResult
+from chia.wallet.wsm_apis import GetUnusedDerivationRecordResult
 
 if TYPE_CHECKING:
     # Avoid a circular import here
@@ -53,7 +53,7 @@ class PlotNFTTargetStateInfo(Streamable):
             or self.next_pool_memoization is None
         ):
             raise ValueError("Error initializing next PlotNFT target state, not all options for join were specified")
-        return super().__post_init__()
+        super().__post_init__()
 
     @property
     def pool_url_and_config(self) -> tuple[str, PoolConfig] | None:
@@ -71,18 +71,6 @@ class PlotNFTTargetStateInfo(Streamable):
         )
 
 
-@streamable
-@dataclass(frozen=True)
-class _StreamableWalletSideEffects(Streamable):
-    transactions: list[TransactionRecord]
-    signing_responses: list[SigningResponse]
-    extra_spends: list[WalletSpendBundle]
-    selected_coins: list[Coin]
-    singleton_records: list[SingletonRecord]
-    plotnft_exiting_info: PlotNFTTargetStateInfo | None
-    get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None
-
-
 @dataclass
 class WalletSideEffects:
     transactions: list[TransactionRecord] = field(default_factory=list)
@@ -91,14 +79,7 @@ class WalletSideEffects:
     selected_coins: list[Coin] = field(default_factory=list)
     singleton_records: list[SingletonRecord] = field(default_factory=list)
     plotnft_exiting_info: PlotNFTTargetStateInfo | None = None
-    get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None = None
-
-    def __bytes__(self) -> bytes:
-        return bytes(_StreamableWalletSideEffects(**self.__dict__))
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> WalletSideEffects:
-        return cls(**_StreamableWalletSideEffects.from_bytes(blob).__dict__)
+    get_unused_derivation_record_result: GetUnusedDerivationRecordResult | None = None
 
 
 @final
@@ -129,13 +110,11 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
         async with self.use() as interface:
             result = await wallet_state_manager._get_unused_derivation_record(
                 wallet_state_manager.main_wallet.id(),
-                previous_result=interface.side_effects.get_unused_derivation_record_result.to_standard()
+                previous_result=interface.side_effects.get_unused_derivation_record_result
                 if interface.side_effects.get_unused_derivation_record_result is not None
                 else None,
             )
-            interface.side_effects.get_unused_derivation_record_result = (
-                StreambleGetUnusedDerivationRecordResult.from_standard(result)
-            )
+            interface.side_effects.get_unused_derivation_record_result = result
         return result
 
     async def _get_new_puzzle(self, wallet_state_manager: WalletStateManager) -> Program:
@@ -192,7 +171,7 @@ async def new_wallet_action_scope(
         puzzle_for_pk = wallet_state_manager.main_wallet.puzzle_for_pk
     assert puzzle_for_pk is not None
     async with WalletActionScope.new_scope(
-        WalletSideEffects,
+        WalletSideEffects(),
         WalletActionConfig(
             push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, puzzle_for_pk
         ),
@@ -216,4 +195,4 @@ async def new_wallet_action_scope(
             plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
         )
     if push and self.side_effects.get_unused_derivation_record_result is not None:
-        await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)
+        await self.side_effects.get_unused_derivation_record_result.commit(wallet_state_manager)
