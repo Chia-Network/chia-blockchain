@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import sqlite3
 import sys
 import time
@@ -2436,6 +2437,267 @@ async def test_unsubscribe_removes_files(
 
         filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
+
+
+async def _build_synced_store(
+    data_layer: DataLayer,
+    data_rpc_api: DataLayerRpcApi,
+    full_node_api: FullNodeSimulator,
+    ph: bytes32,
+    wallet_rpc_api: WalletRpcApi,
+    manage_data_interval: int,
+    update_count: int = 5,
+) -> bytes32:
+    res = await data_rpc_api.create_data_store({})
+    assert res is not None
+    store_id = bytes32.from_hexstr(res["id"])
+    await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+    await data_rpc_api.subscribe(request={"id": store_id.hex(), "urls": ["http://127.0.0.1/8000"]})
+    for batch_count in range(update_count):
+        key = batch_count.to_bytes(2, "big")
+        value = batch_count.to_bytes(2, "big")
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        await farm_block_with_spend(full_node_api, ph, res["tx_id"], wallet_rpc_api)
+        await asyncio.sleep(manage_data_interval * 2)
+    return store_id
+
+
+async def _keys_values_count(data_rpc_api: DataLayerRpcApi, store_id: bytes32) -> int:
+    res = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+    return len(res["keys_values"])
+
+
+@pytest.mark.parametrize("delete_mode", ["file", "store_dir"])
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_heals_missing_blob(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    delete_mode: str,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        assert await _keys_values_count(data_rpc_api, store_id) > 0
+
+        store = data_layer.data_store
+        root = await store.get_tree_root(store_id)
+        assert root.node_hash is not None
+        synced_generation = root.generation
+
+        if delete_mode == "file":
+            store.get_merkle_path(store_id=store_id, root_hash=root.node_hash).unlink()
+        else:
+            shutil.rmtree(store.get_merkle_path(store_id=store_id, root_hash=None))
+        store.recent_merkle_blobs.clear()
+        assert store.merkle_blob_available(store_id, root.node_hash) is False
+
+        await data_layer.fetch_and_validate(store_id)
+
+        healed_root = await store.get_tree_root(store_id)
+        assert healed_root.node_hash == root.node_hash
+        assert healed_root.generation == synced_generation
+        assert store.merkle_blob_available(store_id, healed_root.node_hash) is True
+        store.recent_merkle_blobs.clear()
+        assert await _keys_values_count(data_rpc_api, store_id) > 0
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_heals_when_chain_advanced(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        store = data_layer.data_store
+        chain_generation = (await store.get_tree_root(store_id)).generation
+        assert chain_generation > 1
+
+        target_generation = chain_generation - 2
+        await store.rollback_to_generation(store_id, target_generation)
+        rolled_back_root = await store.get_tree_root(store_id)
+        assert rolled_back_root.generation == target_generation
+        assert rolled_back_root.node_hash is not None
+        shutil.rmtree(store.get_merkle_path(store_id=store_id, root_hash=None))
+        store.recent_merkle_blobs.clear()
+
+        await data_layer.fetch_and_validate(store_id)
+
+        healed_root = await store.get_tree_root(store_id)
+        assert healed_root.generation == chain_generation
+        assert store.merkle_blob_available(store_id, healed_root.node_hash) is True
+        store.recent_merkle_blobs.clear()
+        assert await _keys_values_count(data_rpc_api, store_id) > 0
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_resets_when_no_local_root(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        store = data_layer.data_store
+        chain_generation = (await store.get_tree_root(store_id)).generation
+
+        await store.clear_store_roots(store_id)
+        assert await store.store_id_exists(store_id) is False
+        store.recent_merkle_blobs.clear()
+
+        await data_layer.fetch_and_validate(store_id)
+
+        assert await store.store_id_exists(store_id) is True
+        assert (await store.get_tree_root(store_id)).generation == chain_generation
+        store.recent_merkle_blobs.clear()
+        assert await _keys_values_count(data_rpc_api, store_id) > 0
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_skips_heal_when_local_ahead(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        store = data_layer.data_store
+        root = await store.get_tree_root(store_id)
+        assert root.node_hash is not None
+
+        await store.remove_subscriptions(store_id, ["http://127.0.0.1/8000"])
+        assert await store.get_available_servers_for_store(store_id, int(time.time())) == []
+
+        await store.shift_root_generations(store_id, shift_size=1)
+        ahead_root = await store.get_tree_root(store_id)
+        assert ahead_root.generation == root.generation + 1
+        store.get_merkle_path(store_id=store_id, root_hash=ahead_root.node_hash).unlink()
+        store.recent_merkle_blobs.clear()
+        assert store.merkle_blob_available(store_id, ahead_root.node_hash) is False
+
+        await data_layer.fetch_and_validate(store_id)
+
+        unchanged_root = await store.get_tree_root(store_id)
+        assert unchanged_root.generation == ahead_root.generation
+        assert unchanged_root.node_hash == ahead_root.node_hash
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_skips_heal_on_global_dir_loss(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        store = data_layer.data_store
+        root = await store.get_tree_root(store_id)
+        assert root.node_hash is not None
+        synced_generation = root.generation
+
+        shutil.rmtree(store.merkle_blobs_path)
+        store.recent_merkle_blobs.clear()
+        assert store.merkle_blobs_path.is_dir() is False
+
+        await data_layer.fetch_and_validate(store_id)
+
+        skipped_root = await store.get_tree_root(store_id)
+        assert skipped_root.generation == synced_generation
+        assert skipped_root.node_hash == root.node_hash
+        assert store.merkle_blobs_path.is_dir() is False
+        assert store.merkle_blob_available(store_id, root.node_hash) is False
+
+        store.merkle_blobs_path.mkdir(parents=True, exist_ok=True)
+        store.recent_merkle_blobs.clear()
+        await data_layer.fetch_and_validate(store_id)
+        healed_root = await store.get_tree_root(store_id)
+        assert healed_root.generation == synced_generation
+        assert store.merkle_blob_available(store_id, healed_root.node_hash) is True
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_fetch_and_validate_heals_with_zero_servers_leaves_empty_gen0(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        store_id = await _build_synced_store(
+            data_layer, data_rpc_api, full_node_api, ph, wallet_rpc_api, manage_data_interval
+        )
+        store = data_layer.data_store
+        root = await store.get_tree_root(store_id)
+        assert root.node_hash is not None
+
+        await store.remove_subscriptions(store_id, ["http://127.0.0.1/8000"])
+        assert await store.get_available_servers_for_store(store_id, int(time.time())) == []
+        store.get_merkle_path(store_id=store_id, root_hash=root.node_hash).unlink()
+        store.recent_merkle_blobs.clear()
+
+        await data_layer.fetch_and_validate(store_id)
+
+        reset_root = await store.get_tree_root(store_id)
+        assert reset_root.generation == 0
+        assert reset_root.node_hash is None
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
