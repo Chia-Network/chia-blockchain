@@ -15,9 +15,8 @@ from chia.util.errors import Err
 
 async def check_block_store_invariant(bc: Blockchain) -> None:
     # this checks sqlite-level invariants, so it needs the concrete store
-    block_store = bc.block_store
-    assert isinstance(block_store, BlockStore)
-    db_wrapper = block_store.db_wrapper
+    assert isinstance(bc.block_store, BlockStore)
+    db_wrapper = bc.block_store.db_wrapper
 
     if db_wrapper.db_version == 1:
         return
