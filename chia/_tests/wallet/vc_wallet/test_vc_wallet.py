@@ -35,6 +35,7 @@ from chia.wallet.wallet_request_types import (
     CATSpend,
     CRCATApprovePending,
     CreateSignedTransaction,
+    GetCoinRecords,
     GetTransactions,
     GetWallets,
     VCAddProofs,
@@ -386,6 +387,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         == (await client_0.get_wallets(GetWallets(type=uint16(cr_cat_wallet_0.type())))).wallets[0]
     )
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
+    assert (await env_0.rpc_client.get_coin_records(GetCoinRecords(wallet_id=cr_cat_wallet_0.id()))).coin_records[
+        0
+    ].cr_cat_metadata is not None
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
