@@ -128,7 +128,10 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     )
 
     # (check an error)
-    with pytest.raises(ValueError, match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT"),
+    ):
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             await plotnft_wallet.leave_pool(action_scope=action_scope)
 
@@ -136,7 +139,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     NUM_REWARDS_FARMED = 2
     REWARDS_GAINED = POOL_REWARD_AMOUNT * NUM_REWARDS_FARMED
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=NUM_REWARDS_FARMED, farm_to=plotnft_wallet.p2_singleton_puzzle_hash, guarantee_transaction_blocks=True
+        count=NUM_REWARDS_FARMED,
+        farm_to=plotnft_wallet.p2_singleton_puzzle_hash,
+        guarantee_transaction_blocks=True,
     )
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1)
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -175,7 +180,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     )
     await env.check_balances()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=NUM_REWARDS_FARMED, farm_to=plotnft_wallet.p2_singleton_puzzle_hash, guarantee_transaction_blocks=True
+        count=NUM_REWARDS_FARMED,
+        farm_to=plotnft_wallet.p2_singleton_puzzle_hash,
+        guarantee_transaction_blocks=True,
     )
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1)
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -293,7 +300,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await plotnft_wallet.join_pool(
             pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
             pool_url="https://daurl.com",
             action_scope=action_scope,
@@ -409,7 +418,10 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         coin_spends += new_coin_spends
         singleton_coin_spend = next(iter(spend for spend in new_coin_spends if spend.coin.amount == 1))
         plotnft = PlotNFT.get_next_from_coin_spend(
-            coin_spend=singleton_coin_spend, genesis_challenge=None, pre_uncurry=None, previous_plotnft_puzzle=plotnft
+            coin_spend=singleton_coin_spend,
+            genesis_challenge=None,
+            pre_uncurry=None,
+            previous_plotnft_puzzle=plotnft,
         )
 
     NUM_CLAIMED = len(pool_rewards) - 1
@@ -441,7 +453,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             finish_leaving_fee=finish_leaving_fee,
             pool_url="https://daurl2.com",
             pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
         )
 
@@ -465,7 +479,10 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     )
 
     # (check an error)
-    with pytest.raises(ValueError, match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("`leave_pool` called on a non-pooling or exiting PlotNFT"),
+    ):
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             await plotnft_wallet.leave_pool(action_scope=action_scope)
 
@@ -499,7 +516,8 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # FINISH LEAVING (to new pool)
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.guaranteed_pool_config.heightlock + 2,
+        guarantee_transaction_blocks=True,
     )
 
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -540,7 +558,11 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         leave_fee = uint64(1_000_000)
         finish_leaving_fee = uint64(1_000_000_000)
-        await plotnft_wallet.leave_pool(action_scope=action_scope, fee=leave_fee, finish_leaving_fee=finish_leaving_fee)
+        await plotnft_wallet.leave_pool(
+            action_scope=action_scope,
+            fee=leave_fee,
+            finish_leaving_fee=finish_leaving_fee,
+        )
 
     await wallet_environments.process_pending_states(
         [
@@ -648,7 +670,8 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # FINISH LEAVING
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.guaranteed_pool_config.heightlock + 2,
+        guarantee_transaction_blocks=True,
     )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
 
@@ -733,7 +756,8 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     # use second node to start the same wallet, reusing config
     await env.node._start()
     await env.peer_server.start_client(
-        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()),
+        None,
     )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
     await wallet_environments.process_pending_states([WalletStateTransition(), WalletStateTransition()])
@@ -747,7 +771,8 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     await env.node._await_closed()
     await env.node._start()
     await env.peer_server.start_client(
-        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()),
+        None,
     )
     env.node.config["selected_network"] = "simulator"
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -794,7 +819,9 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
                 action_scope=action_scope,
                 fee=uint64(0),
                 pool_config=PoolConfig(
-                    pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                    pool_puzzle_hash=bytes32.zeros,
+                    heightlock=uint32(5),
+                    pool_memoization=Program.to(None),
                 ),
                 pool_url=None,
             )
@@ -807,7 +834,9 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             action_scope=action_scope,
             fee=uint64(0),
             pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
             pool_url="https://daurl.com",
         )
@@ -835,22 +864,33 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         await env.wallet_state_manager.plotnft2_store.get_plotnft_created_height(coin_id=bytes32.zeros)
 
     # check an RPC error
-    with pytest.raises(ResponseFailureError, match=re.escape("`pw_self_pool` called on a non-pooling wallet")):
+    with pytest.raises(
+        ResponseFailureError,
+        match=re.escape("`pw_self_pool` called on a non-pooling wallet"),
+    ):
         await env.rpc_client.pw_self_pool(
             request=PWSelfPool(wallet_id=uint32(1)),
             tx_config=wallet_environments.tx_config,
         )
 
     # some `leave_pool` argument checks
-    with pytest.raises(ValueError, match="Both new_pool_url or new_pool_config must be provided together"):
+    with pytest.raises(
+        ValueError,
+        match="Both new_pool_url or new_pool_config must be provided together",
+    ):
         await plotnft_wallet.leave_pool(
             action_scope=action_scope,
             new_pool_url=None,
             new_pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
         )
-    with pytest.raises(ValueError, match="Both new_pool_url or new_pool_config must be provided together"):
+    with pytest.raises(
+        ValueError,
+        match="Both new_pool_url or new_pool_config must be provided together",
+    ):
         await plotnft_wallet.leave_pool(
             action_scope=action_scope,
             new_pool_url="https://daurl2.com",
@@ -866,7 +906,9 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             finish_leaving_fee=finish_leaving_fee,
             new_pool_url="https://daurl2.com",
             new_pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
         )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -874,15 +916,24 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={"xch": {"set_remainder": True}, "plotnft": {"set_remainder": True}},
-                post_block_balance_updates={"xch": {"set_remainder": True}, "plotnft": {"set_remainder": True}},
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "plotnft": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "plotnft": {"set_remainder": True},
+                },
             )
         ]
     )
 
     # deleting the finish_exiting_info so the wallet has to adapt and try just leave with no fee
     async with env.wallet_state_manager.plotnft2_store.db_wrapper.writer_maybe_transaction() as conn:
-        await conn.execute("DELETE FROM finish_exiting_info WHERE wallet_id = ?", (plotnft_wallet.id(),))
+        await conn.execute(
+            "DELETE FROM finish_exiting_info WHERE wallet_id = ?",
+            (plotnft_wallet.id(),),
+        )
 
     # also adding an unconfirmed transaction to test that completion is not attempted when state is uncertain
     await env.wallet_state_manager.add_transaction(
@@ -901,7 +952,8 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
     # farm to where completion should happen
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
+        count=plotnft.guaranteed_pool_config.heightlock + 2,
+        guarantee_transaction_blocks=True,
     )
 
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
@@ -945,11 +997,16 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
     )
 
     # check a `join_pool` argument check
-    with pytest.raises(ValueError, match="A fee to finish leaving was specified but PlotNFT does not need to leave"):
+    with pytest.raises(
+        ValueError,
+        match="A fee to finish leaving was specified but PlotNFT does not need to leave",
+    ):
         await plotnft_wallet.join_pool(
             action_scope=action_scope,
             pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
+                pool_puzzle_hash=bytes32.zeros,
+                heightlock=uint32(5),
+                pool_memoization=Program.to(None),
             ),
             pool_url="https://daurl.com",
             finish_leaving_fee=uint64(1),
@@ -983,9 +1040,15 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         next_heightlock=uint32(0),
         next_pool_memoization=Program.to(None),
     )
-    for field_name in ("next_pool_url", "next_pool_puzzle_hash", "next_heightlock", "next_pool_memoization"):
+    for field_name in (
+        "next_pool_url",
+        "next_pool_puzzle_hash",
+        "next_heightlock",
+        "next_pool_memoization",
+    ):
         with pytest.raises(
-            ValueError, match="Error initializing next PlotNFT target state, not all options for join were specified"
+            ValueError,
+            match="Error initializing next PlotNFT target state, not all options for join were specified",
         ):
             dataclasses.replace(target_state, **{field_name: None})  # type: ignore[arg-type]
 
@@ -1001,7 +1064,10 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             tx_config=wallet_environments.tx_config,
         )
 
-    with pytest.raises(ResponseFailureError, match=re.escape("`pw_join_pool` called on a non-pooling wallet")):
+    with pytest.raises(
+        ResponseFailureError,
+        match=re.escape("`pw_join_pool` called on a non-pooling wallet"),
+    ):
         await env.rpc_client.pw_join_pool(
             request=PWJoinPool(
                 wallet_id=uint32(1),
@@ -1013,10 +1079,17 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
             tx_config=wallet_environments.tx_config,
         )
 
-    with pytest.raises(ResponseFailureError, match=re.escape("`pw_absorb_rewards` called on a non-pooling wallet")):
+    with pytest.raises(
+        ResponseFailureError,
+        match=re.escape("`pw_absorb_rewards` called on a non-pooling wallet"),
+    ):
         await env.rpc_client.pw_absorb_rewards(
-            request=PWAbsorbRewards(wallet_id=uint32(1)), tx_config=wallet_environments.tx_config
+            request=PWAbsorbRewards(wallet_id=uint32(1)),
+            tx_config=wallet_environments.tx_config,
         )
 
-    with pytest.raises(ResponseFailureError, match=re.escape("`pw_status` called on a non-pooling wallet")):
+    with pytest.raises(
+        ResponseFailureError,
+        match=re.escape("`pw_status` called on a non-pooling wallet"),
+    ):
         await env.rpc_client.pw_status(request=PWStatus(wallet_id=uint32(1)))

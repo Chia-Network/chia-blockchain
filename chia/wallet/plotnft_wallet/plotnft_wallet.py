@@ -10,14 +10,29 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
-from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
+from chia.pools.plotnft_drivers import (
+    PlotNFT,
+    PoolConfig,
+    PoolReward,
+    RewardPuzzle,
+    SingletonStruct,
+    UserConfig,
+)
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    Remark,
+)
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    puzzle_hash_for_synthetic_public_key,
+)
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
@@ -45,7 +60,11 @@ class PlotNFT2Wallet:
 
     @classmethod
     async def create(
-        cls, *, wallet_state_manager: WalletStateManager, xch_wallet: Wallet, wallet_info: WalletInfo
+        cls,
+        *,
+        wallet_state_manager: WalletStateManager,
+        xch_wallet: Wallet,
+        wallet_info: WalletInfo,
     ) -> Self:
         self = cls(
             wallet_state_manager=wallet_state_manager,
@@ -54,7 +73,8 @@ class PlotNFT2Wallet:
             wallet_info=wallet_info,
         )
         await wallet_state_manager.add_interested_puzzle_hashes(
-            puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint], wallet_ids=[self.id(), self.id()]
+            puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint],
+            wallet_ids=[self.id(), self.id()],
         )
         if await wallet_state_manager.user_store.get_wallet_by_id(wallet_info.id) is None:
             await wallet_state_manager.user_store.create_wallet(
@@ -80,7 +100,8 @@ class PlotNFT2Wallet:
     @property
     def rewards_claim_puzhash(self) -> bytes32:
         with PoolingShareState.acquire(
-            root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
+            root_path=self.wallet_state_manager.root_path,
+            p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
         ) as pool_config:
             return bytes32.from_hexstr(pool_config.payout_instructions)
 
@@ -175,7 +196,8 @@ class PlotNFT2Wallet:
                             1,
                             [
                                 AssertCoinAnnouncement(
-                                    asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b""
+                                    asserted_id=rewards_to_claim[0].coin.name(),
+                                    asserted_msg=b"",
                                 ).to_program()
                             ],
                         )
@@ -408,7 +430,13 @@ class PlotNFT2Wallet:
             )
 
     # Syncing
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self,
+        coin: Coin,
+        height: uint32,
+        peer: WSChiaConnection,
+        coin_data: object | None,
+    ) -> None:
         if isinstance(coin_data, PlotNFT):
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(coin_data.user_config.synthetic_pubkey)
@@ -456,7 +484,8 @@ class PlotNFT2Wallet:
 
             if coin_data.exiting:
                 await self.wallet_state_manager.plotnft2_store.add_exiting_height(
-                    wallet_id=self.id(), height=uint32(height + coin_data.guaranteed_pool_config.heightlock)
+                    wallet_id=self.id(),
+                    height=uint32(height + coin_data.guaranteed_pool_config.heightlock),
                 )
             else:
                 finish_height = await self.wallet_state_manager.plotnft2_store.get_exiting_height(wallet_id=self.id())
@@ -478,7 +507,10 @@ class PlotNFT2Wallet:
                 return None
             finish_info = await self.wallet_state_manager.plotnft2_store.get_exiting_info(wallet_id=self.id())
             async with self.wallet_state_manager.new_action_scope(
-                self.wallet_state_manager.tx_config, push=True, sign=True, merge_spends=True
+                self.wallet_state_manager.tx_config,
+                push=True,
+                sign=True,
+                merge_spends=True,
             ) as action_scope:
                 await self._finish_leaving_pool(action_scope=action_scope, exiting_info=finish_info)
 
