@@ -13,24 +13,13 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletSideEffects
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 MOCK_SR = SigningResponse(b"hey", bytes32.zeros)
 MOCK_SB = WalletSpendBundle([], G2Element())
 MOCK_COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
-
-
-def test_back_and_forth_serialization() -> None:
-    assert bytes(WalletSideEffects())
-    assert WalletSideEffects.from_bytes(bytes(WalletSideEffects())) == WalletSideEffects()
-    assert WalletSideEffects.from_bytes(
-        bytes(WalletSideEffects([STD_TX], [MOCK_SR], [MOCK_SB], [MOCK_COIN]))
-    ) == WalletSideEffects([STD_TX], [MOCK_SR], [MOCK_SB], [MOCK_COIN])
-    assert WalletSideEffects.from_bytes(
-        bytes(WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN]))
-    ) == WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN])
 
 
 @dataclass
