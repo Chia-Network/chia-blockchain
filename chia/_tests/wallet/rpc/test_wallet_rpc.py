@@ -46,8 +46,10 @@ from chia._tests.wallet.test_wallet_coin_store import (
     record_8,
     record_9,
 )
+from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
+from chia.cmds.wallet import DidGetDidCMD, DidSetWalletNameCMD
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
@@ -124,7 +126,6 @@ from chia.wallet.wallet_request_types import (
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
-    DIDGetDID,
     DIDGetMetadata,
     DIDGetPubkey,
     DIDGetWalletName,
@@ -2133,7 +2134,7 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
+async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
@@ -2180,15 +2181,51 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
 
     # Set wallet name
     new_wallet_name = "test name"
-    await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_id=did_wallet_id_0, name=new_wallet_name))
+    await DidSetWalletNameCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=42,
+        name=new_wallet_name,
+    ).run()
+    assert "Failed to set DID wallet name" in capsys.readouterr().out
+    await DidSetWalletNameCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=did_wallet_id_0,
+        name=new_wallet_name,
+    ).run()
+
     get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(wallet_id=did_wallet_id_0))
     assert get_name_res.name == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_id=wallet_1_id, name=new_wallet_name))
 
     # Check DID ID
-    did_id_res = await wallet_1_rpc.get_did_id(DIDGetDID(wallet_id=did_wallet_id_0))
-    assert did_id_0 == did_id_res.my_did
+    await DidGetDidCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=42,
+    ).run()
+    assert "Failed to get DID" in capsys.readouterr().out
+    await DidGetDidCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=did_wallet_id_0,
+    ).run()
+    assert did_id_0 is not None
+    assert did_id_0 in capsys.readouterr().out
     # Create backup file
     await wallet_1_rpc.create_did_backup_file(DIDCreateBackupFile(wallet_id=did_wallet_id_0))
 
