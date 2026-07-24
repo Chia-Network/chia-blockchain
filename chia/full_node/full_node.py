@@ -3268,8 +3268,8 @@ class FullNode:
             return True
         except BaseException as e:
             self.log.error(
-                f"_replace_proof error while adding block {block.header_hash} height {block.height},"
-                f" rolling back: {e} {traceback.format_exc()}"
+                f"_replace_proof error replacing proof for block {block.header_hash} height {block.height}:"
+                f" {e} {traceback.format_exc()}"
             )
             raise
 
