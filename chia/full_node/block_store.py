@@ -5,13 +5,13 @@ import logging
 import sqlite3
 from contextlib import AbstractAsyncContextManager
 
-import aiosqlite
 import typing_extensions
 import zstd
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia._vendored import aiosqlite
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone

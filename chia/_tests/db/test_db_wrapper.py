@@ -6,7 +6,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import aiosqlite
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -14,6 +13,7 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
+from chia._vendored import aiosqlite
 from chia.util.db_wrapper import DBWrapper2, ForeignKeyError, InternalError, NestedForeignKeyDelayedRequestError
 from chia.util.task_referencer import create_referenced_task
 

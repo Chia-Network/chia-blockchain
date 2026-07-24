@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-import aiosqlite
 from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._vendored import aiosqlite
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondPeers

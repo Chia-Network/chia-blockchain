@@ -14,7 +14,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, BinaryIO
 
-import aiosqlite
 import anyio.to_thread
 import chia_rs.datalayer
 import zstd
@@ -31,6 +30,7 @@ from chia_rs.datalayer import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int64
 
+from chia._vendored import aiosqlite
 from chia.data_layer.data_layer_errors import (
     KeyNotFoundError,
     MaxDeltaFileSizeExceededError,

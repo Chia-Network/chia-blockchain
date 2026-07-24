@@ -4,11 +4,11 @@ import dataclasses
 import logging
 import time
 
-import aiosqlite
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 from typing_extensions import Any
 
+from chia._vendored import aiosqlite
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2

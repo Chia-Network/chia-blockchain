@@ -10,7 +10,6 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import aiosqlite
 import pytest
 from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -46,6 +45,7 @@ from chia._tests.wallet.test_wallet_coin_store import (
     record_8,
     record_9,
 )
+from chia._vendored import aiosqlite
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
