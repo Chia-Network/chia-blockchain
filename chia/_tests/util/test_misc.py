@@ -95,7 +95,7 @@ def test_empty_lists() -> None:
         next(to_batches(empty, 1))
 
 
-@pytest.mark.parametrize("collection_type", [list, set])
+@pytest.mark.parametrize("collection_type", [list, set, tuple, frozenset])
 def test_valid(collection_type: type) -> None:
     for k in range(1, 10):
         test_collection = collection_type([x for x in range(k)])
@@ -122,11 +122,6 @@ def test_invalid_batch_sizes() -> None:
 
     with pytest.raises(ValueError):
         next(to_batches([], -1))
-
-
-def test_invalid_input_type() -> None:
-    with pytest.raises(ValueError, match="Unsupported type"):
-        next(to_batches(dict({1: 2}), 1))
 
 
 @contextlib.contextmanager
