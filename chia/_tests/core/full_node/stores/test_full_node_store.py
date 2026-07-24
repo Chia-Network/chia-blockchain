@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+import time
 from collections.abc import AsyncIterator
 
 import pytest
@@ -17,7 +18,7 @@ from chia_rs import (
     VDFInfo,
     VDFProof,
 )
-from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
@@ -1549,6 +1550,152 @@ async def test_new_finished_sub_slot_eos_per_key_drop() -> None:
     )
     assert result is None
     assert store.future_eos_cache.total_entries == FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY
+
+
+def _add_subslot(
+    store: FullNodeStore, prev_challenge: bytes32, vdf_output_seed: int = 0
+) -> tuple[bytes32, list[SignagePoint | None]]:
+    """Add a sub-slot with a distinguishable VDF output and return (new_challenge, sp_list)."""
+    cc_vdf_output = ClassgroupElement(bytes100(bytes([vdf_output_seed]) * 100))
+    cc = ChallengeChainSubSlot(VDFInfo(prev_challenge, uint64(1), cc_vdf_output), None, None, None, None)
+    rc = RewardChainSubSlot(
+        VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros)), bytes32.zeros, None, uint8(0)
+    )
+    dummy_proof = VDFProof(uint8(0), b"\x00" * 100, False)
+    proofs = SubSlotProofs(dummy_proof, None, dummy_proof)
+    eos = EndOfSubSlotBundle(cc, None, rc, proofs)
+    num_sps = DEFAULT_CONSTANTS.NUM_SPS_SUB_SLOT
+    new_sps: list[SignagePoint | None] = [None] * num_sps
+    store.finished_sub_slots.append((eos, new_sps, uint128(len(store.finished_sub_slots) * 1000)))
+    return eos.challenge_chain.get_hash(), new_sps
+
+
+class TestGetFilterChallenge:
+    """Tests for sub-slot-based filter_challenge.
+
+    - Window [0-15]:  uses SS(n-2) — penultimate sub-slot
+    - Windows [16-63]: use SS(n-1) — last completed sub-slot
+    filter_challenge = cc end-of-slot VDF output hash of the referenced sub-slot.
+    """
+
+    def test_genesis_returns_none(self) -> None:
+        """At genesis (only 1 slot), all windows return None."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+
+        assert store.get_filter_challenge(genesis, uint8(0)) is None
+        assert store.get_filter_challenge(genesis, uint8(20)) is None
+
+    def test_second_slot_window_16_uses_genesis(self) -> None:
+        """In second slot, SS(n-1) is genesis — returns GENESIS_CHALLENGE."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+
+        assert store.get_filter_challenge(ch1, uint8(5)) is None  # window 0 needs SS(n-2), only 2 entries
+        assert store.get_filter_challenge(ch1, uint8(20)) == genesis
+
+    def test_third_slot_windows_16_to_63_use_ss_n1(self) -> None:
+        """In third slot, windows [16-63] use SS(n-1) challenge hash = ch1."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        for sp_idx in [16, 20, 32, 35, 48, 50, 63]:
+            result = store.get_filter_challenge(ch2, uint8(sp_idx))
+            assert result == ch1, f"SP {sp_idx} should use SS(n-1) challenge hash"
+
+    def test_third_slot_window_0_uses_genesis(self) -> None:
+        """In third slot, window [0-15] uses SS(n-2) = genesis."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        assert store.get_filter_challenge(ch2, uint8(5)) == genesis
+
+    def test_fourth_slot_window_0_uses_ss_n2(self) -> None:
+        """In fourth slot, window [0-15] uses SS(n-2) challenge hash = ch1."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        for sp_idx in range(16):
+            result = store.get_filter_challenge(ch3, uint8(sp_idx))
+            assert result == ch1, f"SP {sp_idx} in window 0 should use SS(n-2) challenge hash"
+
+    def test_window_0_uses_recent_eos_after_active_slot_trim(self) -> None:
+        """new_peak keeps only active slots, but window 0 still needs SS(n-2)."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        for sub_slot, _, _ in store.finished_sub_slots:
+            if sub_slot is not None:
+                store.recent_eos.put(sub_slot.challenge_chain.get_hash(), (sub_slot, time.time()))
+
+        store.finished_sub_slots = store.finished_sub_slots[-1:]
+
+        assert store.get_filter_challenge(ch3, uint8(0)) == ch1
+        assert store.get_filter_challenge(ch3, uint8(20)) == ch2
+
+    def test_window_0_differs_from_windows_16_to_63(self) -> None:
+        """Window [0-15] uses SS(n-2) while windows [16-63] use SS(n-1)."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+        ch3, _ = _add_subslot(store, ch2, vdf_output_seed=3)
+
+        r_w0 = store.get_filter_challenge(ch3, uint8(5))
+        r_w1 = store.get_filter_challenge(ch3, uint8(20))
+        assert r_w0 is not None and r_w1 is not None
+        assert r_w0 != r_w1, "Window 0 (SS(n-2)) and window 1 (SS(n-1)) should differ"
+
+    def test_windows_16_to_63_share_filter_challenge(self) -> None:
+        """Windows [16-31], [32-47], [48-63] all use the same sub-slot."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        r1 = store.get_filter_challenge(ch2, uint8(20))
+        r2 = store.get_filter_challenge(ch2, uint8(35))
+        r3 = store.get_filter_challenge(ch2, uint8(50))
+        assert r1 is not None
+        assert r1 == r2 == r3, "Windows 1-3 should share the same filter_challenge"
+
+    def test_same_window_same_result(self) -> None:
+        """All SPs within a single window get the same filter_challenge."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+        genesis = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        ch1, _ = _add_subslot(store, genesis, vdf_output_seed=1)
+        ch2, _ = _add_subslot(store, ch1, vdf_output_seed=2)
+
+        results = [store.get_filter_challenge(ch2, uint8(sp)) for sp in range(16, 32)]
+        assert all(r is not None for r in results)
+        assert len(set(results)) == 1
+
+    def test_unknown_challenge(self, seeded_random: random.Random) -> None:
+        """Returns None when challenge hash isn't in any sub-slot."""
+        store = FullNodeStore(DEFAULT_CONSTANTS)
+        store.initialize_genesis_sub_slot()
+
+        assert store.get_filter_challenge(bytes32.random(seeded_random), uint8(20)) is None
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

@@ -8,6 +8,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -175,6 +176,55 @@ def pre_sp_tx_block_height(
     if latest_tx_block is None:
         return uint32(0)
     return latest_tx_block.height
+
+
+def get_filter_challenge_from_chain(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    header_block: UnfinishedHeaderBlock | HeaderBlock | FullBlock,
+    current_challenge: bytes32,
+    signage_point_index: int,
+) -> bytes32 | None:
+    """Derive filter_challenge for V2 plot filter from chain data.
+
+    Returns the cc sub-slot challenge hash of a previously completed sub-slot
+    """
+    sub_slots_back = 2 if signage_point_index < FILTER_WINDOW_SIZE else 1
+
+    # Collect sub-slot challenge hashes newest-first
+    reversed_challenges: list[bytes32] = []
+
+    for fss in reversed(header_block.finished_sub_slots):
+        reversed_challenges.append(fss.challenge_chain.get_hash())
+
+    reached_genesis = header_block.prev_header_hash == constants.GENESIS_CHALLENGE
+    if not reached_genesis:
+        curr = blocks.block_record(header_block.prev_header_hash)
+        while True:
+            if curr.first_in_sub_slot:
+                assert curr.finished_challenge_slot_hashes is not None
+                for ch in reversed(curr.finished_challenge_slot_hashes):
+                    reversed_challenges.append(ch)
+            if curr.height == 0:
+                reached_genesis = True
+                break
+            if len(reversed_challenges) > sub_slots_back + 3:
+                break
+            curr = blocks.block_record(curr.prev_hash)
+
+    if reached_genesis and constants.GENESIS_CHALLENGE not in reversed_challenges:
+        reversed_challenges.append(constants.GENESIS_CHALLENGE)
+
+    try:
+        idx = reversed_challenges.index(current_challenge)
+    except ValueError:
+        return None
+
+    target_idx = idx + sub_slots_back
+    if target_idx >= len(reversed_challenges):
+        return None
+
+    return reversed_challenges[target_idx]
 
 
 def post_hard_fork2(

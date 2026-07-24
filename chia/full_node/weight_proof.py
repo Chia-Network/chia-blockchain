@@ -41,6 +41,7 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.proof_of_space import is_v2_plot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
@@ -1304,6 +1305,7 @@ def validate_recent_blocks(
                     expected_vs,
                     check_sub_epoch_summary=ses_blocks > 2,
                     skip_commitment_validation=True,
+                    height_agnostic=is_v2_plot(block.reward_chain_block.proof_of_space),
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")

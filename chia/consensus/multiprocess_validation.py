@@ -25,7 +25,11 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import (
+    get_block_challenge,
+    get_filter_challenge_from_chain,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
@@ -209,7 +213,10 @@ async def pre_validate_block(
     async def return_error(error_code: Err) -> PreValidationResult:
         return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
-    if block.height > 0:
+    if block.height == 0:
+        if block.prev_header_hash != constants.GENESIS_CHALLENGE:
+            return return_error(Err.INVALID_PREV_BLOCK_HASH)
+    else:
         curr = blockchain.try_block_record(block.prev_header_hash)
         if curr is None:
             return return_error(Err.INVALID_PREV_BLOCK_HASH)
@@ -231,6 +238,16 @@ async def pre_validate_block(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
+    filter_challenge = None
+    if block.reward_chain_block.proof_of_space.version == 1:
+        filter_challenge = get_filter_challenge_from_chain(
+            constants,
+            blockchain,
+            block,
+            challenge,
+            block.reward_chain_block.signage_point_index,
+        )
+
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         block.reward_chain_block.proof_of_space,
@@ -245,6 +262,8 @@ async def pre_validate_block(
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
         ),
+        filter_challenge=filter_challenge,
+        signage_point_index=block.reward_chain_block.signage_point_index,
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)

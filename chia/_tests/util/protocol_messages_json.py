@@ -14,6 +14,7 @@ new_signage_point_json: dict[str, Any] = {
     "peak_height": 1,
     "last_tx_height": 0,
     "sp_source_data": None,
+    "filter_challenge": None,
 }
 
 declare_proof_of_space_json: dict[str, Any] = {

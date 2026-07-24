@@ -57,6 +57,8 @@ class NewSignagePoint(Streamable):
     peak_height: uint32
     last_tx_height: uint32
     sp_source_data: SignagePointSourceData | None = None
+    # V2 filter challenge from completed sub-slot history
+    filter_challenge: bytes32 | None = None
 
 
 @streamable
