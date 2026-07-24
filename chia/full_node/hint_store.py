@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections.abc import Collection
 
 import typing_extensions
 from chia_rs.sized_bytes import bytes32
@@ -54,6 +55,27 @@ class HintStore:
                 await cursor.close()
                 if len(coin_ids) >= max_items:
                     break
+
+        return coin_ids
+
+    async def get_coin_ids_by_hints(self, hints: Collection[bytes]) -> set[bytes32]:
+        coin_ids: set[bytes32] = set()
+        if len(hints) == 0:
+            return coin_ids
+
+        # use a single read transaction so all batches see a consistent view
+        async with self.db_wrapper.reader() as conn:
+            # to_batches only supports list and set at runtime; hints may be any Collection
+            for batch in to_batches(list(hints), SQLITE_MAX_VARIABLE_NUMBER):
+                hints_db: tuple[bytes, ...] = tuple(batch.entries)
+                cursor = await conn.execute(
+                    f"SELECT coin_id from hints INDEXED BY hint_index "
+                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
+                    hints_db,
+                )
+                for row in await cursor.fetchall():
+                    coin_ids.add(bytes32(row[0]))
+                await cursor.close()
 
         return coin_ids
 
