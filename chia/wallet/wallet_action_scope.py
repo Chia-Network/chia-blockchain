@@ -53,6 +53,7 @@ class PlotNFTTargetStateInfo(Streamable):
             or self.next_pool_memoization is None
         ):
             raise ValueError("Error initializing next PlotNFT target state, not all options for join were specified")
+        super().__post_init__()
 
     @property
     def pool_url_and_config(self) -> tuple[str, PoolConfig] | None:
