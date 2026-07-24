@@ -938,6 +938,8 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
         **{
             **wallet_environments.cmd_tx_endpoint_args(env),
             "wallet_id": 42,
+            "coin_announcements": "0abc",
+            "puzzle_announcements": "0def",
         }
     ).run()
     assert "Failed to create DID message spend" in capsys.readouterr().out
