@@ -60,10 +60,13 @@ class HintStore:
 
     async def get_coin_ids_by_hints(self, hints: Collection[bytes]) -> set[bytes32]:
         coin_ids: set[bytes32] = set()
+        if len(hints) == 0:
+            return coin_ids
 
         # use a single read transaction so all batches see a consistent view
         async with self.db_wrapper.reader() as conn:
-            for batch in to_batches(hints, SQLITE_MAX_VARIABLE_NUMBER):
+            # to_batches only supports list and set at runtime; hints may be any Collection
+            for batch in to_batches(list(hints), SQLITE_MAX_VARIABLE_NUMBER):
                 hints_db: tuple[bytes, ...] = tuple(batch.entries)
                 cursor = await conn.execute(
                     f"SELECT coin_id from hints INDEXED BY hint_index "
