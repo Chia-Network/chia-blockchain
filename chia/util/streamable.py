@@ -249,7 +249,7 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Callable[[object, type[object]], Streamable] | None = None
+    f_type: type[Any], json_parser: Callable[[str | dict[str, Any], type[_T_Streamable]], Streamable] | None = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)

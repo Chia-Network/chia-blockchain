@@ -92,7 +92,7 @@ class GenesisById(LimitationsProgram):
     async def generate_issuance_bundle(
         cls,
         wallet: CATWallet,
-        _: dict[str, Any],
+        cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),

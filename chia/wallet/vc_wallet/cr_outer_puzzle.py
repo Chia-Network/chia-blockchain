@@ -79,26 +79,28 @@ class CROuterPuzzle:
         coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
         coin_name: str = coin.name().hex()
         if "vc_authorizations" in solver.info:
-            vc_info = solver["vc_authorizations"][coin_name]
+            vc_info: tuple[Program, Program, bytes32, bytes32 | None, bytes32 | None] = tuple(
+                solver["vc_authorizations"][coin_name]
+            )
         else:
-            vc_info = [
+            vc_info = (
                 # TODO: This is something of a hack here, doesn't really work for proofs checkers generally.
                 # The problem is that the CAT driver above us is running its inner puzzle (us) in order to get the
                 # conditions that are output. This is bad practice on the CAT driver's part, the protocol should support
                 # asking inner drivers for what conditions they return. Alas, since this is not supported, we have to
                 # do a hack that we know will work for the one known proof checker we currently have.
                 uncurry_puzzle(constructor["proofs_checker"]).args.at("f"),
-                None,
+                Program.NIL,
                 constructor["authorized_providers"][0],  # Hack for similar reasons as above, we need a valid provider
                 None,
                 None,
-            ]
+            )
 
         also = constructor.also()
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
 
-        return solve_cr_layer(  # type: ignore[call-arg]
+        return solve_cr_layer(
             *vc_info,
             coin.name(),
             inner_solution,
