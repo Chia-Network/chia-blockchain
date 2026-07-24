@@ -59,7 +59,7 @@ class WalletSyncScope(ActionScope[SyncSideEffects, WalletSyncConfig]):
 
 @contextlib.asynccontextmanager
 async def new_wallet_sync_scope(wallet_state_manager: WalletStateManager) -> AsyncIterator[WalletSyncScope]:
-    async with WalletSyncScope.new_scope(SyncSideEffects, WalletSyncConfig()) as self:
+    async with WalletSyncScope.new_scope(SyncSideEffects(), WalletSyncConfig()) as self:
         self = cast(WalletSyncScope, self)
         try:
             yield self
