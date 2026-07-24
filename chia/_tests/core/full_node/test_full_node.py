@@ -52,6 +52,7 @@ from chia._tests.util.setup_nodes import (
     setup_simulators_and_wallets,
 )
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from chia.full_node.compact_vdf_cache import CompactVDFCache
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
@@ -2814,6 +2815,7 @@ async def test_compact_protocol(
     assert cc_eos_count == 3 and icc_eos_count == 3
     for compact_proof in timelord_protocol_finished:
         await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+    await full_node_1.full_node.flush_compact_vdf_cache()
     stored_blocks = await full_node_1.get_all_full_blocks()
     cc_eos_compact_count = 0
     icc_eos_compact_count = 0
@@ -2842,6 +2844,170 @@ async def test_compact_protocol(
         peak = full_node_2.full_node.blockchain.get_peak()
         assert peak is not None
         assert peak.height == height
+
+
+@pytest.mark.anyio
+async def test_compact_vdf_cache_read_through(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1 = nodes[0]
+    blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
+    block = blocks[0]
+    for b in blocks:
+        await full_node_1.full_node.add_block(b)
+
+    full_node_1.full_node.compact_vdf_cache = CompactVDFCache(100)
+
+    vdf_info, vdf_proof = get_vdf_info_and_proof(
+        bt.constants,
+        ClassgroupElement.get_default_element(),
+        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        True,
+    )
+    compact_proof = timelord_protocol.RespondCompactProofOfTime(
+        vdf_info,
+        vdf_proof,
+        block.header_hash,
+        block.height,
+        uint8(CompressibleVDFField.CC_IP_VDF),
+    )
+    await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+    assert len(full_node_1.full_node.compact_vdf_cache) == 1
+
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+
+    request = fnp.RequestCompactVDF(block.height, block.header_hash, uint8(CompressibleVDFField.CC_IP_VDF), vdf_info)
+    returned = await full_node_1.full_node.request_compact_vdf(request, bytes32.zeros)
+    assert returned == vdf_proof
+
+    header_block = await full_node_1.full_node._get_header_block_with_cached_proofs(block.height, block.header_hash)
+    assert header_block is not None
+    assert not await full_node_1.full_node._needs_compact_proof(vdf_info, header_block, CompressibleVDFField.CC_IP_VDF)
+
+    # _get_block_with_cached_proofs should refresh block_cache for later get_full_block callers
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+    await full_node_1.full_node._get_block_with_cached_proofs(block.header_hash)
+    reloaded = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert reloaded is not None
+    assert reloaded.challenge_chain_ip_proof.normalized_to_identity
+
+    if block.finished_sub_slots:
+        sub_slot = block.finished_sub_slots[0]
+        eos_vdf_info, eos_vdf_proof = get_vdf_info_and_proof(
+            bt.constants,
+            ClassgroupElement.get_default_element(),
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
+            True,
+        )
+        db_block = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+        assert db_block is not None
+        original_proof = db_block.finished_sub_slots[0].proofs.challenge_chain_slot_proof
+        full_node_1.full_node._apply_proof_to_block(
+            db_block, eos_vdf_proof, CompressibleVDFField.CC_EOS_VDF, 0
+        )
+        assert db_block.finished_sub_slots[0].proofs.challenge_chain_slot_proof == original_proof
+
+        full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+        cached_block = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+        assert cached_block is not None
+        assert not cached_block.challenge_chain_ip_proof.normalized_to_identity
+        assert full_node_1.full_node.compact_vdf_cache.has_block(block.header_hash)
+
+
+@pytest.mark.anyio
+async def test_compact_vdf_cache_flush_applies_pending_proofs(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1 = nodes[0]
+    blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
+    block = blocks[0]
+    for b in blocks:
+        await full_node_1.full_node.add_block(b)
+
+    full_node_1.full_node.compact_vdf_cache = CompactVDFCache(100)
+
+    vdf_info, vdf_proof = get_vdf_info_and_proof(
+        bt.constants,
+        ClassgroupElement.get_default_element(),
+        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        True,
+    )
+    compact_proof = timelord_protocol.RespondCompactProofOfTime(
+        vdf_info,
+        vdf_proof,
+        block.header_hash,
+        block.height,
+        uint8(CompressibleVDFField.CC_IP_VDF),
+    )
+    await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+    assert len(full_node_1.full_node.compact_vdf_cache) == 1
+
+    # Repopulate block_cache from DB with the still-uncompact block.
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+    stale_cached = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert stale_cached is not None
+    assert not stale_cached.challenge_chain_ip_proof.normalized_to_identity
+
+    await full_node_1.full_node.flush_compact_vdf_cache()
+    assert len(full_node_1.full_node.compact_vdf_cache) == 0
+
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+    persisted = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert persisted is not None
+    assert persisted.challenge_chain_ip_proof.normalized_to_identity
+
+
+@pytest.mark.anyio
+async def test_request_block_serves_cached_compact_proofs(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1 = nodes[0]
+    blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
+    block = blocks[0]
+    for b in blocks:
+        await full_node_1.full_node.add_block(b)
+
+    full_node_1.full_node.compact_vdf_cache = CompactVDFCache(100)
+
+    vdf_info, vdf_proof = get_vdf_info_and_proof(
+        bt.constants,
+        ClassgroupElement.get_default_element(),
+        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        True,
+    )
+    compact_proof = timelord_protocol.RespondCompactProofOfTime(
+        vdf_info,
+        vdf_proof,
+        block.header_hash,
+        block.height,
+        uint8(CompressibleVDFField.CC_IP_VDF),
+    )
+    await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+
+    full_node_1.full_node.block_store.block_cache.remove(block.header_hash)
+    stale_cached = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert stale_cached is not None
+    assert not stale_cached.challenge_chain_ip_proof.normalized_to_identity
+
+    response = await full_node_1.request_block(fnp.RequestBlock(block.height, True))
+    assert response is not None
+    served = fnp.RespondBlock.from_bytes(response.data)
+    assert served.block.challenge_chain_ip_proof.normalized_to_identity
+
+    response = await full_node_1.request_blocks(
+        fnp.RequestBlocks(block.height, block.height, include_transaction_block=True)
+    )
+    assert response is not None
+    served_blocks = fnp.RespondBlocks.from_bytes(response.data)
+    assert len(served_blocks.blocks) == 1
+    assert served_blocks.blocks[0].challenge_chain_ip_proof.normalized_to_identity
 
 
 @pytest.mark.anyio
@@ -3160,6 +3326,7 @@ async def test_respond_compact_proof_message_limit(
         *[coro(full_node_1, respond_compact_proof) for respond_compact_proof in finished_compact_proofs]
     )
     await tasks
+    await full_node_1.full_node.flush_compact_vdf_cache()
     stored_blocks = await full_node_1.get_all_full_blocks()
     compactified = 0
     for block in stored_blocks:
@@ -3170,6 +3337,7 @@ async def test_respond_compact_proof_message_limit(
     # The other full node receives the compact messages one at a time.
     for respond_compact_proof in finished_compact_proofs:
         await full_node_2.full_node.add_compact_proof_of_time(respond_compact_proof)
+    await full_node_2.full_node.flush_compact_vdf_cache()
     stored_blocks = await full_node_2.get_all_full_blocks()
     compactified = 0
     for block in stored_blocks:
