@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import contextlib
-import pickle  # noqa: S403
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast, final
 
 from chia_rs.sized_ints import uint32
-from typing_extensions import Self
 
 from chia.util.action_scope import ActionScope
-from chia.wallet.transaction_record import TransactionRecord
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -26,25 +23,6 @@ class WebSocketEvent:
 @dataclass
 class SyncSideEffects:
     websocket_events: list[WebSocketEvent] = field(default_factory=list)
-
-    def __bytes__(self) -> bytes:
-        serializable_websocket_events = []
-        for event in self.websocket_events:
-            copied_event = WebSocketEvent(name=event.name, wallet_id=event.wallet_id, data=event.data)
-            if copied_event.data is not None and "transaction" in copied_event.data:
-                copied_event.data["transaction"] = bytes(copied_event.data["transaction"])
-            serializable_websocket_events.append(copied_event)
-        return pickle.dumps(serializable_websocket_events)
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> Self:
-        loaded_websocket_events = pickle.loads(blob)  # noqa: S301
-        deserialized_websocket_events = []
-        for event in loaded_websocket_events:
-            if event.data is not None and "transaction" in event.data:
-                event.data["transaction"] = TransactionRecord.from_bytes(event.data["transaction"])
-            deserialized_websocket_events.append(event)
-        return cls(websocket_events=deserialized_websocket_events)
 
 
 @final
