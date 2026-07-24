@@ -15,6 +15,9 @@ class UnresolvedPeerInfo:
     port: uint16
 
 
+ipv6_2002_int = int(ipaddress.IPv6Address("2002::"))
+
+
 # TODO, Replace unsafe_hash with frozen and drop the __init__ as soon as all PeerInfo call sites pass in an IPAddress.
 @dataclass(unsafe_hash=True)
 class PeerInfo:
@@ -42,10 +45,12 @@ class PeerInfo:
     # Functions related to peer bucketing in new/tried tables.
     def get_key(self) -> bytes:
         if self.ip.is_v4:
-            key = ipaddress.IPv6Address(int(ipaddress.IPv6Address("2002::")) | (int(self.ip) << 80)).packed
+            # key = ipaddress.IPv6Address(ipv6_2002_int | (int(self.ip) << 80)).packed
+            # below is a micro-optimization of above.  it avoids one creation of an ip address object.
+            key = (ipv6_2002_int | (int(self.ip) << 80)).to_bytes(16, byteorder="big")
         else:
             key = self.ip.packed
-        key += bytes([self.port // 0x100, self.port & 0x0FF])
+        key += bytes((self.port // 0x100, self.port & 0x0FF))
         return key
 
     def get_group(self) -> bytes:
