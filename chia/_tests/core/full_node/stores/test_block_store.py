@@ -410,6 +410,34 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
+async def test_replace_proof_failure_leaves_cache_unchanged(
+    bt: BlockTools, tmp_dir: Path, db_version: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    blocks = bt.get_consecutive_blocks(1)
+    block = blocks[0]
+
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, use_cache=True)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, InlineExecutor())
+        await _validate_and_add_block(bc, block)
+
+        def failing_writer() -> None:
+            raise RuntimeError("injected failure")
+
+        monkeypatch.setattr(block_store.db_wrapper, "writer", failing_writer)
+
+        new_block = block.replace(challenge_chain_ip_proof=VDFProof(uint8(1), random.randbytes(32), False))
+        with pytest.raises(RuntimeError, match="injected failure"):
+            await block_store.replace_proof(block.header_hash, new_block)
+
+        # the failed write must not have updated the cache
+        assert block_store.get_block_from_cache(block.header_hash) == block
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
 async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
