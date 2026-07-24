@@ -15,6 +15,7 @@ import pytest
 from chia_rs import (
     AugSchemeMPL,
     BlockRecord,
+    CoinRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
     FullBlock,
@@ -54,6 +55,7 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.vdf_prover import get_vdf_info_and_proof
@@ -84,6 +86,14 @@ def _is_macos_intel() -> bool:
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.create(b"\x00")
+
+
+async def get_coin_record(b: Blockchain, coin_id: bytes32) -> CoinRecord | None:
+    # single-record lookup is not part of the consensus coin store protocol,
+    # but tests know the concrete store
+    coin_store = b.coin_store
+    assert isinstance(coin_store, CoinStore)
+    return await coin_store.get_coin_record(coin_id)
 
 
 @asynccontextmanager
@@ -2166,7 +2176,7 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
-                c = await b.coin_store.get_coin_record(coin.name())
+                c = await get_coin_record(b, coin.name())
                 assert c is not None and c.spent
 
     @pytest.mark.anyio
@@ -2372,10 +2382,10 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
-                c = await b.coin_store.get_coin_record(coin1.name())
+                c = await get_coin_record(b, coin1.name())
                 assert c is not None and c.spent
                 # ensure coin2 was NOT spent
-                c = await b.coin_store.get_coin_record(coin2.name())
+                c = await get_coin_record(b, coin2.name())
                 assert c is not None and not c.spent
 
     @pytest.mark.anyio
@@ -3182,9 +3192,9 @@ class TestBodyValidation:
             )
 
         # ephemeral coin is spent
-        first_coin = await b.coin_store.get_coin_record(new_coin.name())
+        first_coin = await get_coin_record(b, new_coin.name())
         assert first_coin is not None and first_coin.spent
-        second_coin = await b.coin_store.get_coin_record(tx_2.additions()[0].name())
+        second_coin = await get_coin_record(b, tx_2.additions()[0].name())
         assert second_coin is not None and not second_coin.spent
 
         farmer_coin = create_farmer_coin(
@@ -3200,7 +3210,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks_reorg[-1])
 
-        farmer_coin_record = await b.coin_store.get_coin_record(farmer_coin.name())
+        farmer_coin_record = await get_coin_record(b, farmer_coin.name())
         assert farmer_coin_record is not None and farmer_coin_record.spent
 
     @pytest.mark.anyio
@@ -4059,11 +4069,11 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
-    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+    print(f"{await get_coin_record(b, spend_bundle.coin_spends[0].coin.name())}")
     print(spend_bundle.coin_spends[0].coin.name())
     # await b.coin_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
     await b.coin_store.rollback_to_block(2)
-    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+    print(f"{await get_coin_record(b, spend_bundle.coin_spends[0].coin.name())}")
 
     fork_block = blocks_reorg_chain[10 - 1]
     # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
