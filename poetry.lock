@@ -1473,19 +1473,19 @@ files = [
 
 [[package]]
 name = "chialisp"
-version = "0.4.5"
+version = "0.4.6"
 description = ""
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "chialisp-0.4.5-cp310-abi3-macosx_15_0_arm64.whl", hash = "sha256:99dbf31492d9b8284a81794e506dd3db6857ca63d7f7a01df91498f648060a41"},
-    {file = "chialisp-0.4.5-cp310-abi3-macosx_15_0_x86_64.whl", hash = "sha256:7d177817d8038e1d34b1bef2413906bf2d19c382ee34b04e760535c1afdcaa9e"},
-    {file = "chialisp-0.4.5-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:a5781b9673a1cc09951729bb4c09d576f9c08f1933345abbadf157c239f4a935"},
-    {file = "chialisp-0.4.5-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:b20e77fc4e410dda0b845b89cb3ae13bb093cdfb2029e11a2576448a5ec66ae7"},
-    {file = "chialisp-0.4.5-cp310-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:41814df17849aa834920655325804bc1e035afc99ba8c7d6d6cee7a6ad3078f5"},
-    {file = "chialisp-0.4.5-cp310-abi3-win_amd64.whl", hash = "sha256:1b59e085d50e3c980c924718d39b504fef7f1d9a03cb1d58da3d4fce67b43240"},
-    {file = "chialisp-0.4.5.tar.gz", hash = "sha256:3496be2ac4b9fa13d9c76a6f2395e82cc48e02b65504d821f4e52875a98cfc97"},
+    {file = "chialisp-0.4.6-cp310-abi3-macosx_15_0_arm64.whl", hash = "sha256:c608390f9676a127a160c052aa8638405fa7fd69591603d08a19095bbbd39cc4"},
+    {file = "chialisp-0.4.6-cp310-abi3-macosx_15_0_x86_64.whl", hash = "sha256:fc165b4a94fd1f24e275a0fdda1ceec724f03497ca0398125260ec4e855354e7"},
+    {file = "chialisp-0.4.6-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:42b82ea5f9ed4c6cc95ea1cac674c67db5a42a270da2cd02ef75b9eeecf9825c"},
+    {file = "chialisp-0.4.6-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:7a914c169e93a9f7a9b5692817bf7af47a207cc63f7cfdd5310a0489dd1dd91c"},
+    {file = "chialisp-0.4.6-cp310-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:fed8fb7e4cf5412eba235bfcb5f31db9963fa6c4f33b698b2dbc1b934f1442d1"},
+    {file = "chialisp-0.4.6-cp310-abi3-win_amd64.whl", hash = "sha256:53c1063de78773b12e7e517719b9f5fe78f7fbe1a08e47c6a44b5d8b17685796"},
+    {file = "chialisp-0.4.6.tar.gz", hash = "sha256:63d94485664c5df1d6df63201f6c0d37243bd1f01f0ede8e24603a2732ac847b"},
 ]
 
 [[package]]
@@ -5243,4 +5243,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "3fd36f257ddd69f7e5330dafa9a665e49e4a7783703255523b0b006dd23afd4c"
+content-hash = "794a8ae71b6f0620cb501758583b3b00a1fec8359e4314ca96db996d9d6a7ad6"
