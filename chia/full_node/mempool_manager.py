@@ -29,6 +29,7 @@ from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import can_fast_forward_singleton
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
@@ -687,6 +688,14 @@ class MempoolManager:
                 # spent_index will also fail this test, and such spends will
                 # fall back to be treated as non-FF spends.
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
+                if lineage_info is not None and not can_fast_forward_singleton(
+                    unspent_lineage_info=lineage_info, coin=coin_spend.coin
+                ):
+                    # The latest unspent version of this singleton has a
+                    # different amount than the coin we're spending, so this
+                    # spend can never be fast forwarded onto it. Fall back to
+                    # treating it as a normal spend.
+                    lineage_info = None
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
