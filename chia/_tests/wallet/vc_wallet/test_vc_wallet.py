@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Awaitable, Callable
+from decimal import Decimal
 from typing import Any, Literal
 
 import pytest
@@ -9,9 +10,26 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.conftest import ConsensusMode
-from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
+from chia._tests.environments.wallet import (
+    WalletEnvironment,
+    WalletStateTransition,
+    WalletTestFramework,
+)
 from chia._tests.util.time_out_assert import time_out_assert_not_none
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
+from chia.cmds.param_types import CliAddress, CliAmount
+from chia.cmds.wallet import (
+    AddProofRevealVCCMD,
+    ApproveRCATsVCCMD,
+    GetProofsForRootVCCMD,
+    GetVcsCMD,
+    MintVCCMD,
+    RevokeVCCMD,
+    UpdateProofsVCCMD,
+)
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -21,6 +39,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -28,22 +47,18 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
     Addition,
     CATSpend,
-    CRCATApprovePending,
     CreateSignedTransaction,
     GetTransactions,
     GetWallets,
-    VCAddProofs,
     VCGet,
-    VCGetList,
-    VCGetProofsForRoot,
     VCMint,
     VCRevoke,
-    VCSpend,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -145,7 +160,7 @@ async def mint_cr_cat(
 )
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
-async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
+async def test_vc_lifecycle(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     # Setup
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     env_0 = wallet_environments.environments[0]
@@ -156,6 +171,27 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     wallet_1 = wallet_environments.environments[1].xch_wallet
     client_0 = wallet_environments.environments[0].rpc_client
     client_1 = wallet_environments.environments[1].rpc_client
+    client_info_0 = WalletClientInfo(
+        env_0.rpc_client,
+        env_0.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env_0.wallet_state_manager.config,
+    )
+    client_info_1 = WalletClientInfo(
+        env_1.rpc_client,
+        env_1.wallet_state_manager.root_pubkey.get_fingerprint(),
+        env_1.wallet_state_manager.config,
+    )
+    tx_config_loader = NeedsTXConfig(
+        min_coin_amount=CliAmount(amount=wallet_environments.tx_config.min_coin_amount, mojos=True),
+        max_coin_amount=CliAmount(amount=wallet_environments.tx_config.max_coin_amount, mojos=True),
+        coins_to_exclude=wallet_environments.tx_config.excluded_coin_ids,
+        coins_to_include=wallet_environments.tx_config.included_coin_ids,
+        amounts_to_exclude=[
+            CliAmount(amount=amount, mojos=True) for amount in wallet_environments.tx_config.excluded_coin_amounts
+        ],
+        primary_coin=wallet_environments.tx_config.primary_coin,
+        reuse=wallet_environments.tx_config.reuse_puzhash,
+    )
 
     # Define wallet aliases
     env_0.wallet_aliases = {
@@ -184,17 +220,15 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Mint a VC
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
-    vc_record = (
-        await client_0.vc_mint(
-            VCMint(
-                did_id=encode_puzzle_hash(did_id, "did"),
-                target_address=encode_puzzle_hash(ph, "txch"),
-                fee=uint64(1_750_000_000_000),
-                push=True,
-            ),
-            wallet_environments.tx_config,
-        )
-    ).vc_record
+    await MintVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        did=CliAddress(did_id, encode_puzzle_hash(did_id, "did"), AddressType.DID),
+        target_address=CliAddress(ph, encode_puzzle_hash(ph, "txch"), AddressType.XCH),
+        fee=uint64(1_750_000_000_000),
+        push=True,
+    ).run()
 
     await wallet_environments.process_pending_states(
         [
@@ -242,21 +276,24 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
-    assert new_vc_record is not None
+    vc_wallet = env_0.wallet_state_manager.wallets[env_0.dealias_wallet_id("vc")]
+    assert isinstance(vc_wallet, VCWallet)
+    vc_record = (await vc_wallet.store.get_vc_record_list())[0]
+    assert vc_record is not None
 
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
     proof_root: bytes32 = proofs.root()
-    await client_0.vc_spend(
-        VCSpend(
-            vc_id=vc_record.vc.launcher_id,
-            new_proof_hash=proof_root,
-            fee=uint64(100),
-            push=True,
-        ),
-        wallet_environments.tx_config,
-    )
+    await UpdateProofsVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        vc_id=vc_record.vc.launcher_id,
+        new_puzhash=None,
+        new_proof_hash=proof_root.hex(),
+        fee=uint64(100),
+        push=True,
+    ).run()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -298,12 +335,21 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    vc_record_updated: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
+    vc_record_updated = await vc_wallet.store.get_vc_record(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    await client_0.vc_spend(VCSpend(vc_id=vc_record.vc.launcher_id, push=True), wallet_environments.tx_config)
+    await UpdateProofsVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        vc_id=vc_record.vc.launcher_id,
+        new_puzhash=None,
+        new_proof_hash=None,
+        fee=uint64(0),
+        push=True,
+    ).run()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -323,15 +369,48 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Add proofs to DB
-    await client_0.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
+    proof_flags = tuple(proofs.key_value_pairs.keys())
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=proof_flags,
+        root_only=False,
+    ).run()
     # Doing it again just to make sure it doesn't care
-    await client_0.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
-    assert (
-        await client_0.vc_get_proofs_for_root(VCGetProofsForRoot(root=proof_root))
-    ).to_vc_proofs().key_value_pairs == proofs.key_value_pairs
-    get_list_reponse = await client_0.vc_get_list(VCGetList())
-    assert len(get_list_reponse.vc_records) == 1
-    assert get_list_reponse.proof_dict[proof_root] == proofs.key_value_pairs
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=proof_flags,
+        root_only=False,
+    ).run()
+    # Test a potential error
+    capsys.readouterr()
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=tuple(),
+        root_only=False,
+    ).run()
+    assert "Must specify at least one proof" in capsys.readouterr().out
+    # Test only the root calculation
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=proof_flags,
+        root_only=True,
+    ).run()
+    assert proof_root.hex() in capsys.readouterr().out
+    # Test get_proofs_for_root
+    await GetProofsForRootVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof_hash=proof_root.hex(),
+    ).run()
+    proof_output = capsys.readouterr().out
+    for key in proofs.key_value_pairs:
+        assert key in proof_output
+    vc_wallet_0 = await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()
+    stored_proofs = await vc_wallet_0.store.get_proofs_for_root(proof_root)
+    assert stored_proofs is not None
+    assert stored_proofs.key_value_pairs == proofs.key_value_pairs
+    vc_records = await vc_wallet_0.store.get_vc_record_list(uint32(0), uint32(50))
+    assert len(vc_records) == 1
+    assert (await vc_wallet_0.store.get_proofs_for_root(proof_root)) is not None
 
     # Mint CR-CAT
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, wallet_environments.tx_config, [did_id])
@@ -482,10 +561,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Send the VC to wallet_1 to use for the CR-CATs
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
-    await client_0.vc_spend(
-        VCSpend(vc_id=vc_record.vc.launcher_id, new_puzhash=ph, push=True),
-        wallet_environments.tx_config,
-    )
+    await UpdateProofsVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        vc_id=vc_record.vc.launcher_id,
+        new_puzhash=ph,
+        new_proof_hash=None,
+        fee=uint64(0),
+        push=True,
+    ).run()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -508,15 +593,22 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             ),
         ]
     )
-    await client_1.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        proof=proof_flags,
+        root_only=False,
+    ).run()
 
     # Claim the pending approval to our wallet
-    await client_1.crcat_approve_pending(
-        CRCATApprovePending(
-            wallet_id=env_1.dealias_wallet_id("crcat"), min_amount_to_claim=uint64(90), fee=uint64(90), push=True
-        ),
-        wallet_environments.tx_config,
-    )
+    await ApproveRCATsVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        wallet_id=env_1.dealias_wallet_id("crcat"),
+        min_amount_to_claim=CliAmount(amount=uint64(90), mojos=True),
+        fee=uint64(90),
+        push=True,
+    ).run()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(),
@@ -639,14 +731,57 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             ),
         ]
     )
-    vc_record_updated = (await client_1.vc_get(VCGet(vc_id=vc_record_updated.vc.launcher_id))).vc_record
+    vc_wallet_1 = env_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("vc")]
+    assert isinstance(vc_wallet_1, VCWallet)
+    vc_record_updated = await vc_wallet_1.store.get_vc_record(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
 
     # Revoke VC
-    await client_0.vc_revoke(
-        VCRevoke(vc_parent_id=vc_record_updated.vc.coin.parent_coin_info, fee=uint64(1), push=True),
-        wallet_environments.tx_config,
-    )
+    # Test with netiher
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=None,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert "Must specify either --parent-coin-id or --vc-id" in capsys.readouterr().out
+    # Try one that doesn't exist
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=bytes32.zeros,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert f"Cannot find a VC with ID {bytes32.zeros.hex()}" in capsys.readouterr().out
+    # Test with the VC ID
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=vc_record_updated.vc.launcher_id,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert "Relevant TX records" in capsys.readouterr().out
+    # Test with the parent coin ID
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=vc_record_updated.vc.coin.parent_coin_info,
+        vc_id=None,
+        fee=uint64(1),
+        push=True,
+    ).run()
+    assert "Relevant TX records" in capsys.readouterr().out
+
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -885,3 +1020,181 @@ async def test_cat_wallet_conversion(
 
     client_0.close()
     await client_0.await_closed()
+
+
+def test_vc_command_parsing() -> None:
+    bare_rpc = NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None)
+    did_puzzle_hash = bytes32([1] * 32)
+    did_address = encode_puzzle_hash(did_puzzle_hash, "did:chia:")
+    target_puzzle_hash = bytes32([2] * 32)
+    target_address = encode_puzzle_hash(target_puzzle_hash, "txch")
+    vc_id = bytes32([3] * 32)
+    parent_coin_id = bytes32([4] * 32)
+    new_puzhash = bytes32([5] * 32)
+    new_proof_hash = bytes32([6] * 32)
+    proof_root = bytes32([7] * 32)
+
+    check_click_parsing(
+        MintVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            did=CliAddress(did_puzzle_hash, did_address, AddressType.DID),
+            target_address=CliAddress(target_puzzle_hash, target_address, AddressType.XCH),
+            fee=uint64(500000000000),
+        ),
+        "-d",
+        did_address,
+        "-t",
+        target_address,
+        "-m",
+        "0.5",
+        context=ChiaCliContext(expected_prefix="txch"),
+    )
+
+    check_click_parsing(
+        GetVcsCMD(
+            rpc_info=bare_rpc,
+            start=0,
+            count=50,
+        ),
+    )
+
+    check_click_parsing(
+        GetVcsCMD(
+            rpc_info=bare_rpc,
+            start=10,
+            count=10,
+        ),
+        "-s",
+        "10",
+        "-c",
+        "10",
+    )
+
+    check_click_parsing(
+        UpdateProofsVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            vc_id=vc_id,
+            new_puzhash=new_puzhash,
+            new_proof_hash=new_proof_hash.hex(),
+            fee=uint64(500000000000),
+        ),
+        "--vc-id",
+        vc_id.hex(),
+        "-t",
+        new_puzhash.hex(),
+        "-p",
+        new_proof_hash.hex(),
+        "-m",
+        "0.5",
+    )
+
+    check_click_parsing(
+        UpdateProofsVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            vc_id=vc_id,
+            new_puzhash=None,
+            new_proof_hash=None,
+            fee=uint64(500000000000),
+        ),
+        "--vc-id",
+        vc_id.hex(),
+        "-m",
+        "0.5",
+    )
+
+    check_click_parsing(
+        AddProofRevealVCCMD(
+            rpc_info=bare_rpc,
+            proof=tuple(),
+            root_only=False,
+        ),
+    )
+
+    check_click_parsing(
+        AddProofRevealVCCMD(
+            rpc_info=bare_rpc,
+            proof=("test_proof", "test_proof2"),
+            root_only=True,
+        ),
+        "-p",
+        "test_proof",
+        "-p",
+        "test_proof2",
+        "-r",
+    )
+
+    check_click_parsing(
+        GetProofsForRootVCCMD(
+            rpc_info=bare_rpc,
+            proof_hash=proof_root.hex(),
+        ),
+        "-r",
+        proof_root.hex(),
+    )
+
+    check_click_parsing(
+        RevokeVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            parent_coin_id=parent_coin_id,
+            vc_id=None,
+            fee=uint64(500000000000),
+        ),
+        "-p",
+        parent_coin_id.hex(),
+        "-m",
+        "0.5",
+    )
+
+    check_click_parsing(
+        RevokeVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            parent_coin_id=None,
+            vc_id=vc_id,
+            fee=uint64(500000000000),
+        ),
+        "--vc-id",
+        vc_id.hex(),
+        "-m",
+        "0.5",
+    )
+
+    check_click_parsing(
+        ApproveRCATsVCCMD(
+            rpc_info=bare_rpc,
+            tx_config_loader=NeedsTXConfig(
+                coins_to_exclude=tuple(), coins_to_include=tuple(), amounts_to_exclude=tuple()
+            ),
+            transaction_writer=TransactionsOut(transaction_file_out=None),
+            wallet_id=2,
+            min_amount_to_claim=CliAmount(amount=Decimal("0.001"), mojos=False),
+            fee=uint64(500000000000),
+        ),
+        "-i",
+        "2",
+        "-a",
+        "1",
+        "-m",
+        "0.5",
+        "--min-amount-to-claim",
+        "0.001",
+    )
