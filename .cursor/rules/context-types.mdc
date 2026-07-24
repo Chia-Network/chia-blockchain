@@ -1,0 +1,11 @@
+---
+description: Auto-attach curated context for shared types and serialization boundary
+globs:
+  - chia/types/**
+---
+
+# Types Context Available
+
+Curated context for this subsystem exists at `.cursor/context/types.md`.
+
+Read it before broad source exploration. For CLVM execution paths and resource limits, also read `.cursor/context/clvm-execution.md`. If the change crosses subsystem boundaries, also read `.cursor/context/INDEX.md` and the coupled modules listed there.

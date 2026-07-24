@@ -1,280 +1,198 @@
-# Consensus Layer — Deep Context
+# chia-consensus
 
-> Attach when touching `chia/consensus/`, block acceptance, reorgs, difficulty,
-> or VDF iteration logic.
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
-## File map
+Scope: `chia/consensus/`. This is distilled architectural context for future audit or implementation agents. It intentionally omits file inventory and obvious helper summaries.
 
-| File                            | Lines | Role                                                                                  |
-| ------------------------------- | ----- | ------------------------------------------------------------------------------------- |
-| `blockchain.py`                 | ~1090 | `Blockchain` class: chain state, `add_block()`, `_reconsider_peak()`                  |
-| `blockchain_interface.py`       | ~54   | Protocol definitions: `BlockRecordsProtocol`, `BlocksProtocol`, `BlockchainInterface` |
-| `augmented_chain.py`            | ~169  | `AugmentedBlockchain`: in-memory overlay for parallel validation                      |
-| `block_header_validation.py`    | ~1060 | `validate_unfinished_header_block()`: all header checks                               |
-| `block_body_validation.py`      | ~580  | `validate_block_body()`: transaction/coin checks, `ForkInfo`                          |
-| `block_creation.py`             | ~650  | `create_unfinished_block()`, `unfinished_block_to_full_block()`                       |
-| `difficulty_adjustment.py`      | ~410  | Difficulty & sub-slot-iters recalculation per epoch                                   |
-| `pot_iterations.py`             | ~101  | SP/IP iteration math, quality → required_iters                                        |
-| `pos_quality.py`                | ~29   | Expected plot size calculation                                                        |
-| `block_rewards.py`              | ~54   | Pool/farmer reward schedule (halving)                                                 |
-| `coinbase.py`                   | ~25   | Pool/farmer coin creation from block height                                           |
-| `full_block_to_block_record.py` | ~170  | `block_to_block_record()`                                                             |
-| `find_fork_point.py`            | ~109  | Fork point search between two chains                                                  |
-| `get_block_challenge.py`        | ~170  | Challenge computation per block                                                       |
-| `make_sub_epoch_summary.py`     | ~250  | Sub-epoch summary creation                                                            |
-| `deficit.py`                    | ~55   | Deficit calculation for sub-epoch boundaries                                          |
-| `multiprocess_validation.py`    | ~300  | `PreValidationResult`, parallel block validation                                      |
-| `condition_tools.py`            | ~200  | `pkm_pairs()` for AGG_SIG conditions                                                  |
-| `signage_point.py`              | ~10   | `SignagePoint` dataclass                                                              |
-| `vdf_info_computation.py`       | ~180  | VDF info reconstruction from block records                                            |
-| `default_constants.py`          | ~119  | All consensus constant values                                                         |
-| `constants.py`                  | ~50   | `replace_str_to_bytes()` for config overrides                                         |
+## When To Read This
 
----
+Read this for block validation, fork choice, reorg coin-state replay, difficulty/sub-slot logic, reward validation, VDF/POS validation, and hard-fork commitment behavior. If the task is peer sync, mempool admission, wallet state, or RPC shape, start with that module's context and return here only for consensus authority.
 
-## `Blockchain.add_block()` — Core block acceptance
+## Landmarks
 
-**Location**: `consensus/blockchain.py:294`
+| file                                        | owns                                          |
+| ------------------------------------------- | --------------------------------------------- |
+| `chia/consensus/blockchain.py`              | add_block() commit authority, peak/fork state |
+| `chia/consensus/block_body_validation.py`   | coin/tx state transition checks, ForkInfo use |
+| `chia/consensus/block_header_validation.py` | proof/timing/slot/header checks               |
+| `chia/consensus/augmented_chain.py`         | speculative overlay for batch validation      |
+| `chia/consensus/blockchain_mmr.py`          | post-HF2 header MMR state                     |
+| `chia/consensus/pot_iterations.py`          | iteration/difficulty math                     |
+| `chia/consensus/default_constants.py`       | consensus constants                           |
 
-### Purpose
+## Implementation Authority
 
-Single entry point for adding a validated block. Determines if a block
-becomes the new peak, an orphan, or is rejected.
+`chia.consensus` is the local authority for deciding whether a block is valid and whether it becomes the canonical peak. It does not own networking, sync orchestration, or wallet notifications; those live in full-node modules. It does own the consensus-facing view of chain state: block records, height-to-hash mapping, fork-local additions/removals, difficulty and sub-slot iteration transitions, VDF/POS validation, reward/fee/body checks, and post-HF2 header commitments.
 
-### Inputs & assumptions
+Most public paths split validation into two stages:
 
-- `block: FullBlock` — the full block to add
-- `pre_validation_result: PreValidationResult` — must have valid
-  `required_iters` and no error (pre-validation already ran in parallel)
-- `sub_slot_iters: uint64` — pre-computed for this block's epoch
-- `fork_info: ForkInfo` — must correctly describe the fork context
-- **Caller holds the blockchain lock** (`priority_mutex`)
-- Header validation already passed via `validate_unfinished_header_block()`
+- Pre-validation computes `required_iters`, runs generator/signature work, validates finished headers, and builds an in-memory `BlockRecord`.
+- `Blockchain.add_block()` revalidates body state under the blockchain lock, writes durable stores, applies fork choice, updates height map and MMR, then advances `_peak_height`.
 
-### Return
+That split is a core safety boundary. Pre-validation is allowed to be parallel and speculative. `add_block()` is the sequential commit point.
 
-`(AddBlockResult, Err | None, StateChangeSummary | None)`
+## Consensus State And Ownership
 
-### Block-by-block logic
+`Blockchain` coordinates four state stores that must agree after a committed peak change:
 
-1. **Genesis check** (L326): `height == 0` requires `prev_header_hash ==
-GENESIS_CHALLENGE`.
+- `BlockStore`: full block bytes, block records, `in_main_chain`, peak pointer, sub-epoch challenge segments.
+- `CoinStore`: UTXO state for the current canonical peak only.
+- `BlockHeightMap`: dense canonical height -> hash cache plus canonical sub-epoch summaries.
+- `BlockchainMMRManager`: post-HF2 header-MMR state over finalized canonical block hashes.
 
-2. **Extending main chain?** (L331): Fast path when `prev_header_hash ==
-peak.header_hash`.
+The update ordering in `Blockchain.add_block()` is deliberate:
 
-3. **Disconnected block** (L337-343): If prev block not in cache →
-   `DISCONNECTED_BLOCK`. Invariant: we only accept blocks connected to known
-   chain.
+- full block and peak-related DB writes happen inside `block_store.transaction()`;
+- in-memory block record cache is updated after async DB work inside that transaction;
+- `height_map` and MMR are updated only after the DB transaction commits;
+- `_peak_height` is assigned last, after dependent stores can answer lookups for the new peak.
 
-4. **Pre-validation error** (L345-348): Reject immediately on any error.
+If this ordering changes, readers can observe a peak whose block, height map entry, MMR state, or coin records are not yet available.
 
-5. **ForkInfo assertions** (L354-366): Multiple assertions verify fork_info
-   consistency. Incorrect fork_info → assertion failure (crash, not silent
-   corruption).
+## Fork Choice And Reorg Contract
 
-6. **Already-have-block** (L372-380): Even known blocks update fork_info
-   (important for parallel batch validation).
+Fork choice is purely:
 
-7. **Body validation** (L392-403): `validate_block_body()` checks coins,
-   merkle roots, rewards, timelocks.
+- greater weight wins;
+- equal weight with lower `total_iters` wins;
+- otherwise current peak remains.
 
-8. **Block record creation** (L415-423): `block_to_block_record()` computes
-   lightweight record.
+`ForkInfo` is the bridge between validation and reorg application. It is not just metadata. It must contain every addition/removal/reward coin across the candidate fork range, with `block_hashes` ordered by height. `_reconsider_peak()` replays coin-store state from this object when a fork becomes peak. If `ForkInfo` is incomplete, the reorg can validate but apply the wrong coin set.
 
-9. **Atomic DB transaction** (L432-476):
-   - `add_full_block()` → `_reconsider_peak()` → `add_block_record()`
-   - On success: update `_peak_height` and height map
-   - On failure: rollback in-memory state, fork_info, block store cache
+Important sequencing rules:
 
-### Invariants
+- `fork_info.peak_height` must line up with the candidate block's parent height before body validation.
+- Genesis and non-genesis candidates have different previous-hash expectations before body validation.
+- `fork_info.block_hashes` must cover the expected post-fork range exactly.
+- For main-chain extension, `fork_info.reset(...)` clears fork history before validating the new block.
+- For known/orphan/fork blocks, `advance_fork_info()` may replay intermediate full blocks from `BlockStore` to rebuild additions/removals before the current block is handled.
 
-- `fork_info.peak_height == block.height - 1` before body validation
-- `block.height == 0 or fork_info.peak_hash == block.prev_header_hash`
-- Database transaction atomicity: no partial state updates
-- `_peak_height` only updated after commit
+The code uses assertions for many of these contracts. Treat assertion failures here as consensus-state corruption or caller misuse, not as normal invalid-block handling.
 
----
+## Validation Layering
 
-## `_reconsider_peak()` — Fork choice rule
+Header validation answers “is the block’s proof/timing/slot/header structure valid?” Body validation answers “does this block correctly transform transaction and coin state?”
 
-**Location**: `consensus/blockchain.py:486`
+Header validation depends on `ValidationState` (`ssi`, difficulty, previous SES block). `pre_validate_block()` mutates the caller-provided `ValidationState` while queuing batch validation, then passes a copy into the worker. Full node batch sync relies on this: the mutable `ValidationState` speculatively advances `ssi`/`difficulty` from raw `new_*` fields for scheduling, while `add_block()` later receives the preserved state needed for commit. Safety comes from `validate_finished_header_block()` rejecting those raw fields unless a valid `subepoch_summary_hash` accompanies them.
 
-### Fork choice criteria (in order)
+Difficulty and SSI transitions must flow through a validated sub-epoch summary. `validate_finished_header_block()` rejects raw `new_difficulty` or `new_sub_slot_iters` fields unless the finished sub-slot also carries a valid `subepoch_summary_hash`. `block_to_block_record()` converts that validated hash into `block_rec.sub_epoch_summary_included`, and that computed block-record field is the authoritative source for committed `ValidationState` advancement; do not treat peer-provided `block.finished_sub_slots[0].challenge_chain.new_*` fields as trusted state on their own.
 
-1. Higher weight wins
-2. On equal weight: lower `total_iters` wins
-3. Otherwise: no change (current peak stays)
+Body validation relies on header validation already being complete. It checks:
 
-### Reorg handling
+- transaction-block vs non-transaction-block field presence;
+- reward claim exactness for skipped non-transaction blocks since the previous transaction block;
+- generator root/ref roots, ref count limits, and post-SF9 generator-ref ban;
+- CLVM cost and canonical generator encoding after SF9;
+- addition/removal Merkle roots and BIP158 transaction filter;
+- duplicate additions/removals within the block;
+- coin existence and double-spend rules across DB state plus `ForkInfo`;
+- value conservation, reserve fee, farmer reward overflow bound, and declared fee equality;
+- puzzle hash consistency for removals;
+- Rust time-lock evaluation using previous transaction block height/timestamp;
+- presence of an aggregate signature after pre-validation has already verified it.
 
-- `coin_store.rollback_to_block(fork_info.fork_height)` removes coins above
-  fork point
-- Replays all additions/removals from `fork_info` for the new chain
-- `block_store.rollback()` clears sub-epoch summaries above fork point
-- `block_store.set_in_chain()` marks new chain blocks
-- `block_store.set_peak()` updates stored peak
+The subtle part is coin lookup on forks. A removal may be:
 
-### Assumption
+- ephemeral, created earlier in the same block;
+- from canonical DB state at or before the fork point;
+- created inside `fork_info.additions_since_fork`;
+- invalid because it only exists on the old canonical branch after the fork.
 
-`fork_info.additions_since_fork` and `fork_info.removals_since_fork` contain
-ALL coin operations from `fork_height + 1` to the new peak. Incomplete data →
-inconsistent coin store.
+Do not simplify this into “query coin store and check spent”. That loses fork semantics.
 
----
+## Parallel Validation Overlay
 
-## `ForkInfo` — Fork tracking state
+`AugmentedBlockchain` lets batch validation see blocks that are not committed yet. It is a chain overlay, not a passive cache:
 
-**Location**: `consensus/block_body_validation.py:62`
+- extra blocks must be added contiguously;
+- height-to-hash lookups prefer the overlay;
+- fork ancestry is populated when the batch starts on a non-canonical branch;
+- generator references first walk overlay blocks, then delegate to the underlying chain;
+- the MMR manager is deep-copied so speculative MMR roots do not mutate canonical MMR state;
+- worker jobs receive `read_only_snapshot()` to prevent mutation from the executor path.
 
-### Fields
+After a block successfully commits, full-node batch code removes it from the overlay. If the overlay and canonical chain disagree about height mapping, pre-validation can validate against a different ancestor path than `add_block()` later commits.
 
-- `fork_height: int` — last block shared by fork and main chain
-- `peak_height: int` — height of the fork tip (-1 for genesis validation)
-- `peak_hash: bytes32`
-- `additions_since_fork: dict[bytes32, ForkAdd]` — all coin additions since fork
-- `removals_since_fork: dict[bytes32, ForkRem]` — all coin removals since fork
-- `block_hashes: list[bytes32]` — ordered header hashes from fork_height+1
+## Difficulty, Slots, And Time Coupling
 
-### Critical methods
+Difficulty and sub-slot iterations are recomputed only at eligible epoch boundaries. Both use transaction-block timestamps around previous/current epoch reference points, are clamped by `DIFFICULTY_CHANGE_MAX_FACTOR`, then truncated to `SIGNIFICANT_BITS`; SSI is additionally rounded down to a multiple of `NUM_SPS_SUB_SLOT`.
 
-- `reset()` — clear all fork state (used when extending main chain)
-- `update_fork_peak()` — advance peak, append header hash
-- `include_spends()` — record additions/removals from `SpendBundleConditions`
-- `include_reward_coins()` — record coinbase additions
-- `rollback()` — undo to a previous height
+Epoch/sub-epoch completion depends on:
 
-### Invariant
+- sufficient height;
+- zero deficit;
+- whether a sub-epoch summary was already included;
+- whether the next height can be first in an epoch;
+- lookback through previous records, sometimes through fork paths rather than canonical height lookups.
 
-`len(block_hashes) == peak_height - fork_height` — always.
+Overflow block handling changes both challenge selection and the “previous transaction block at signage point” calculation. Several hard-fork gates use `pre_sp_tx_block_height(...)`, not candidate height. This matters especially near HF2/SF9 boundaries.
 
----
+## Hard Fork Commitments
 
-## `validate_block_body()` — Block body validation
+The hard-fork commitment rules introduce two commitments in this module:
 
-**Location**: `consensus/block_body_validation.py:190`
+- sub-epoch summary `challenge_root` via `make_sub_epoch_summary(..., make_challenge_root=True)`;
+- `reward_chain_block.header_mmr_root`, validated in finished-header validation.
 
-### Checks performed
+Both are gated by pre-signage-point transaction height. `block_creation.unfinished_block_to_full_block_with_mmr()` and `validate_finished_header_block()` must compute the same MMR root for the same candidate context, including overflow/new-slot behavior.
 
-1. Non-tx blocks: foliage_transaction_block, transactions_info, generator all None
-2. Tx blocks: foliage_transaction_block and transactions_info must exist
-3. `transactions_info_hash` matches foliage commitment
-4. `foliage_transaction_block_hash` matches foliage commitment
-5. Reward claims valid (pool + farmer coins for all blocks since last tx block)
-6. Previous transaction block reference is correct
-7. Timestamp: `> prev_tx_block_timestamp` and `< max_future_time`
-8. Transaction filter matches additions/removals
-9. Generator cost ≤ `MAX_BLOCK_COST_CLVM`
-10. Generator ref list size ≤ `MAX_GENERATOR_REF_LIST_SIZE` (512)
-11. Merkle roots (additions and removals) match
-12. `check_time_locks()` (Rust) validates absolute/relative height/seconds
-13. Fees = `sum(removals) - sum(additions)` matches declared fees
-14. Coins not double-spent (checked against fork_info and coin store)
-15. Additions don't collide with existing coins
+MMR root semantics:
 
----
+- genesis has no MMR root;
+- at a new slot, all blocks through previous block are finalized;
+- within a slot, only prior blocks with earlier signage point, or blocks before the crossed slot boundary, are included;
+- fork validation may rebuild an MMR root by rolling back to a fork height and walking the candidate branch.
 
-## Difficulty adjustment
+`BlockchainMMRManager.add_block_to_mmr()` requires sequential canonical insertion. Reorgs must roll the manager back before appending new canonical records. The current MMR implementation is in-memory and rebuilt on startup from canonical `height_map` starting at `HARD_FORK2_HEIGHT`.
 
-**Location**: `consensus/difficulty_adjustment.py`
+## Block Creation Mirrors Validation
 
-### Key function: `get_next_sub_slot_iters_and_difficulty()`
+Block creation constructs commitments that body/header validation later recomputes:
 
-Called at epoch boundaries (every `EPOCH_BLOCKS = 4608` blocks).
+- reward claims include pool/farmer coins for the previous transaction block and intervening non-transaction blocks;
+- transaction filter includes puzzle hashes for additions/rewards and coin IDs for removals;
+- addition root groups by puzzle hash and hashes coin IDs per puzzle hash;
+- non-transaction blocks have transaction foliage, generator, and generator refs stripped at infusion;
+- `calculate_infusion_point_total_iters()` adds an extra sub-slot when SP iters exceed IP iters.
 
-### Algorithm
+Creation APIs accept callbacks for signatures and fee computation. Consensus validity still comes from the deterministic commitments and later validation; callback behavior must not be trusted as validation.
 
-1. Find second-to-last transaction block in previous epoch
-2. Compute elapsed time between reference points
-3. New difficulty = `old_difficulty × target_time / actual_time`
-4. Clamp to `[old / DIFFICULTY_CHANGE_MAX_FACTOR, old × DIFFICULTY_CHANGE_MAX_FACTOR]`
-   (factor = 3)
-5. Truncate to `SIGNIFICANT_BITS` (8)
+## Trust Boundaries
 
-### Same logic applies to sub-slot iterations (SSI)
+Inputs from peers/farmers are untrusted until they pass validation. The highest-risk external calls are:
 
-### Invariant
+- Rust CLVM generator execution and `SpendBundleConditions` production;
+- Rust BLS/signature validation as part of generator execution;
+- Rust `check_time_locks()`;
+- VDF proof validation;
+- SQLite-backed `BlockStore`/`CoinStore` reads during fork reconstruction;
+- BIP158 filter construction/serialization.
 
-Difficulty and SSI can change at most 3× per epoch.
+Failure mode expectations:
 
----
+- generator or VDF failure should return an invalid-block error, not partially mutate state;
+- DB lookup inconsistency often asserts because consensus code expects local stores to be internally coherent;
+- `PreValidationResult.error` must be checked before trusting `required_iters` or `conds`;
+- `conds.validated_signature` is required for blocks with generators before body validation accepts them.
 
-## VDF iteration math
+## Persistence And Cache Gotchas
 
-**Location**: `consensus/pot_iterations.py`
+`BlockHeightMap` is a canonical-chain cache, not a source of orphan/fork truth. It is reconciled from the DB at startup by walking backward from the stored peak and stops early only when both block hash and sub-epoch summary match. Reorg rollback truncates height-to-hash and deletes SES entries above the fork height.
 
-### `calculate_iterations_quality(quality_string, size, difficulty, cc_sp_output_hash)`
+`try_block_record()` only checks the in-memory cache. Code paths that need orphan records or records outside the cache use `get_block_record_from_db()` or `block_store`. Mixing these up changes whether a valid fork appears disconnected.
 
-```
-sp_quality = hash(quality_string + cc_sp_output_hash)
-iters = difficulty × DIFFICULTY_CONSTANT_FACTOR × sp_quality_int / (2^256 × expected_plot_size)
-return max(iters, 1)
-```
+`lookup_block_generators()` is fork-aware: generator refs may resolve on a fork branch first, then the canonical chain. After SF9 refs are banned, but legacy paths still matter for historical blocks and tests.
 
-### `calculate_ip_iters(sub_slot_iters, signage_point_index, required_iters)`
+## Audit Focus Areas
 
-```
-ip_iters = (sp_iters + NUM_SP_INTERVALS_EXTRA × sp_interval_iters + required_iters) % sub_slot_iters
-```
+- Any change that touches `ForkInfo`, `advance_fork_info()`, `include_spends()`, or `_reconsider_peak()` can corrupt reorg coin-state replay.
+- Any change that moves `_peak_height` earlier, flushes height map/MMR before DB commit, or catches commit exceptions differently can expose inconsistent peak state.
+- Any change to `pre_sp_tx_block_height()`, overflow detection, or finished-sub-slot counting can shift hard-fork gates, generator flags, challenge roots, and MMR roots.
+- Any change to `AugmentedBlockchain` height mapping, read-only snapshots, or MMR copying can make sync batch validation disagree with sequential commit validation.
+- Any change to body validation that treats DB coin records as canonical without considering `fork_info` can reject valid fork spends or accept invalid branch spends.
+- Any change to MMR bagging, pop logic, finalized-block cutoff, or fork rebuild must be checked against block creation and validation together.
+- Any change to sub-epoch summary generation must preserve the relationship between `prev_ses_block`, challenge root gating, and difficulty/SSI boundary computation.
 
-### `is_overflow_block(signage_point_index)`
+## Source Pointers
 
-```
-overflow = signage_point_index >= NUM_SPS_SUB_SLOT - NUM_SP_INTERVALS_EXTRA
-```
-
-i.e., the last 3 signage points of a sub-slot are overflow blocks.
-
-### Constraints
-
-- `required_iters ∈ (0, sp_interval_iters)`
-- `signage_point_index < NUM_SPS_SUB_SLOT` (64)
-- `sub_slot_iters % NUM_SPS_SUB_SLOT == 0`
-
----
-
-## Block rewards
-
-**Location**: `consensus/block_rewards.py`
-
-### Schedule (pool = 7/8, farmer = 1/8 + fees)
-
-| Period              | Per-block reward |
-| ------------------- | ---------------- |
-| Height 0 (pre-farm) | 21 000 000 XCH   |
-| Years 0–3           | 2 XCH            |
-| Years 3–6           | 1 XCH            |
-| Years 6–9           | 0.5 XCH          |
-| Years 9–12          | 0.25 XCH         |
-| Year 12+            | 0.125 XCH        |
-
-`_blocks_per_year = 1 681 920` (32 × 6 × 24 × 365)
-
-### Coinbase parent IDs
-
-- Pool: `genesis_challenge[:16] + height.to_bytes(16)`
-- Farmer: `genesis_challenge[16:] + height.to_bytes(16)`
-
-These are deterministic, not hashed.
-
----
-
-## `AugmentedBlockchain` — Parallel validation overlay
-
-**Location**: `consensus/augmented_chain.py`
-
-### Purpose
-
-Wraps a `BlocksProtocol` with an in-memory cache of extra blocks. Used during
-parallel batch validation: blocks in the batch aren't committed to the DB until
-all pass, but subsequent blocks in the batch need to reference earlier ones.
-
-### Key invariant
-
-Extra blocks must form a contiguous chain. `add_extra_block()` validates that
-each new block's `prev_hash` matches the last added block.
-
-### Generator ref resolution
-
-`lookup_block_generators()` first checks extra blocks (walking backward via
-`prev_header_hash`), then falls through to the underlying blockchain.
+For files in the Landmarks table above, read the source in `chia/consensus/` directly. In-module but not landmarked: `chia/consensus/block_rewards.py` (reward/fee amount math). Cross-module authority: `chia/full_node/mempool_manager.py`. For regression coverage, start with `chia/_tests/blockchain/test_blockchain.py`, `chia/_tests/blockchain/test_augmented_chain.py`, `chia/_tests/blockchain/test_block_commitments.py`, and `chia/_tests/core/consensus/test_mmr.py`.

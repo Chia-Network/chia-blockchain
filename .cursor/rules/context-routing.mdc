@@ -1,8 +1,3 @@
----
-description: Route agents to pre-built context before code exploration
-alwaysApply: true
----
-
 # Deep Context — Read Before You Grep
 
 Pre-built deep context exists in `.cursor/context/`. **Before running broad
@@ -15,15 +10,37 @@ questions instantly.
 Match the files or intent to the right context doc:
 
 | If you're touching… | Read first |
-|----------------------|------------|
+|----|---|
 | `chia/consensus/**` or block validation / reorg / difficulty | `.cursor/context/consensus.md` |
 | `chia/full_node/mempool*.py`, `eligible_coin_spends.py`, fee logic | `.cursor/context/mempool.md` |
 | `chia/full_node/full_node.py`, `full_node_api.py`, `full_node_store.py`, sync | `.cursor/context/full-node.md` |
-| `chia/server/**`, `chia/protocols/**`, connections, rate limits | `.cursor/context/networking.md` |
+| `chia/server/**`, connections, rate limits | `.cursor/context/server.md` |
+| `chia/protocols/**`, wire messages | `.cursor/context/protocols.md` |
+| `chia/apis/**`, API stub metadata | `.cursor/context/apis.md` |
+| `chia/types/**`, shared types, serialization boundary | `.cursor/context/types.md` |
 | `chia/wallet/**` | `.cursor/context/wallet.md` |
-| CLVM, puzzles, conditions, generators, `chia/types/blockchain_format/**` | `.cursor/context/clvm-execution.md` |
+| CLVM execution, generators, puzzles, conditions | `.cursor/context/clvm-execution.md` |
+| `chia/farmer/**` | `.cursor/context/farmer.md` |
+| `chia/harvester/**` | `.cursor/context/harvester.md` |
+| `chia/timelord/**` | `.cursor/context/timelord.md` |
+| `chia/plotting/**` | `.cursor/context/plotting.md` |
+| `chia/plot_sync/**` | `.cursor/context/plot-sync.md` |
+| `chia/pools/**` | `.cursor/context/pools.md` |
+| `chia/daemon/**` | `.cursor/context/daemon.md` |
+| `chia/data_layer/**` | `.cursor/context/data-layer.md` |
+| `chia/rpc/**` | `.cursor/context/rpc.md` |
+| `chia/ssl/**` | `.cursor/context/ssl.md` |
+| `chia/simulator/**` | `.cursor/context/simulator.md` |
+| `chia/solver/**` | `.cursor/context/solver.md` |
+| `chia/seeder/**` | `.cursor/context/seeder.md` |
+| `chia/introducer/**` | `.cursor/context/introducer.md` |
+| `chia/cmds/**` | `.cursor/context/cmds.md` |
+| `chia/util/**` | `.cursor/context/util.md` |
+| `benchmarks/**` | `.cursor/context/benchmarks.md` |
+| Root config, build scripts, workflows, tooling | `.cursor/context/repo-tooling.md` |
 | Cross-cutting / security review / unsure | `.cursor/context/global-invariants.md` |
 | First time / orientation / unfamiliar area | `.cursor/context/architecture-overview.md` |
+| Tests (`chia/_tests/**`) | See `.cursor/rules/testing-guide.mdc` |
 
 ## Protocol
 
