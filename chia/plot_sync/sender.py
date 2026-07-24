@@ -337,7 +337,8 @@ class Sender:
                     if self._stop_requested:
                         return
                     await asyncio.sleep(0.1)
-                while not self._stop_requested and self.sync_active():
+                # _stop_requested may be set concurrently by stop() during the awaits below
+                while not self._stop_requested and self.sync_active():  # type: ignore[redundant-expr]
                     if self._next_message_id >= len(self._messages):
                         await asyncio.sleep(0.1)
                         continue

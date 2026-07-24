@@ -125,13 +125,7 @@ def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> tupl
 
 
 def validate_cwa(cwa: ConditionWithArgs) -> None:
-    if (
-        len(cwa.vars) != 2
-        or len(cwa.vars[0]) != 48
-        or len(cwa.vars[1]) > 1024
-        or cwa.vars[0] is None
-        or cwa.vars[1] is None
-    ):
+    if len(cwa.vars) != 2 or len(cwa.vars[0]) != 48 or len(cwa.vars[1]) > 1024 or cwa.vars[1] is None:
         raise ConsensusError(Err.INVALID_CONDITION)
 
 

@@ -96,7 +96,7 @@ def byte_deserialize_clvm_streamable(
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
 def is_clvm_streamable_type(v: type[object]) -> bool:
-    return isinstance(v, type) and issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
+    return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's

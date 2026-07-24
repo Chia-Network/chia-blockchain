@@ -1509,11 +1509,7 @@ class WalletStateManager:
             launcher_parent: list[CoinState] = await self.wallet_node.get_coin_state(
                 [launcher_coin.parent_coin_info], peer=peer
             )
-            assert (
-                launcher_parent is not None
-                and len(launcher_parent) == 1
-                and launcher_parent[0].spent_height is not None
-            )
+            assert len(launcher_parent) == 1 and launcher_parent[0].spent_height is not None
             # NFTs minted out of coinbase coins would not have minter DIDs
             if self.constants.GENESIS_CHALLENGE[:16] in bytes(
                 launcher_parent[0].coin.parent_coin_info
@@ -1522,7 +1518,7 @@ class WalletStateManager:
             did_coin: list[CoinState] = await self.wallet_node.get_coin_state(
                 [launcher_parent[0].coin.parent_coin_info], peer=peer
             )
-            assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
+            assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
             uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -1912,7 +1908,7 @@ class WalletStateManager:
                         # TODO: we need to potentially roll back the pool wallet here
                         pass
                     # if the new coin has not been spent (i.e not ephemeral)
-                    elif coin_state.created_height is not None and coin_state.spent_height is None:
+                    elif coin_state.spent_height is None:
                         if local_record is None:
                             await self.coin_added(
                                 coin_state.coin,
@@ -1927,7 +1923,7 @@ class WalletStateManager:
                             await self.add_interested_coin_ids([coin_name])
 
                     # if the coin has been spent
-                    elif coin_state.created_height is not None and coin_state.spent_height is not None:
+                    elif coin_state.spent_height is not None:
                         self.log.debug("Coin spent: %s", coin_state)
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
@@ -2101,7 +2097,7 @@ class WalletStateManager:
                                     )
 
                         if record.wallet_type is WalletType.POOLING_WALLET:
-                            if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
+                            if coin_state.coin.amount == uint64(1):
                                 singleton_wallet: PoolWallet = self.get_wallet(
                                     id=uint32(record.wallet_id), required_type=PoolWallet
                                 )
@@ -2535,7 +2531,7 @@ class WalletStateManager:
                     for removed_coin in coins_removed:
                         trades_by_coin = await self.trade_manager.get_trades_by_coin(removed_coin)
                         for trade in trades_by_coin:
-                            if trade is not None and trade.status in {
+                            if trade.status in {
                                 TradeStatus.PENDING_CONFIRM.value,
                                 TradeStatus.PENDING_ACCEPT.value,
                                 TradeStatus.PENDING_CANCEL.value,
@@ -3208,7 +3204,7 @@ class WalletStateManager:
         self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
     ) -> tuple[CoinSpend, CoinState]:
         coin_state_list: list[CoinState] = await self.wallet_node.get_coin_state([coin_id], peer=peer)
-        if coin_state_list is None or len(coin_state_list) < 1:
+        if len(coin_state_list) < 1:
             raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
         coin_state: CoinState = coin_state_list[0]
         if latest:
@@ -3228,7 +3224,7 @@ class WalletStateManager:
         parent_coin_state_list: list[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
         )
-        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
+        if len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
@@ -3299,7 +3295,7 @@ class WalletStateManager:
         launcher_coin: list[CoinState] = await self.wallet_node.get_coin_state(
             [uncurried_nft.singleton_launcher_id], peer=peer
         )
-        if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
+        if len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
             raise ValueError(f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found")
         minter_did = await self.get_minter_did(launcher_coin[0].coin, peer)
 

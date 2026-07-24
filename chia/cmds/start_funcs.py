@@ -97,7 +97,7 @@ async def async_start(
                 continue
         print(f"{service}: ", end="", flush=True)
         msg = await daemon.start_service(service_name=service)
-        success = msg and msg["data"]["success"]
+        success = msg["data"]["success"]
 
         if success is True:
             print("started")
