@@ -16,15 +16,18 @@ from chia_rs import (
     CoinSpend,
     ConsensusConstants,
     G2Element,
+    InternedBlockBuilder,
     SpendBundle,
-    get_flags_for_height_and_constants,
     run_block_generator2,
+    solution_generator_2026,
     solution_generator_backrefs,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.flags import INTERNED_GENERATOR
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.full_node.eligible_coin_spends import (
     DedupCoinSpend,
     IdenticalSpendDedup,
@@ -533,12 +536,13 @@ class Mempool:
         removals = spend_bundle.removals()
         log.info(f"Add rem: {len(additions)} {len(removals)}")
 
-        # since the hard fork has activated, block generators are
-        # allowed to be serialized with CLVM back-references. We can do that
-        # unconditionally.
         start_time = monotonic()
         spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
-        block_program = solution_generator_backrefs(spends)
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants)
+        if flags & INTERNED_GENERATOR:
+            block_program = solution_generator_2026(spends)
+        else:
+            block_program = solution_generator_backrefs(spends)
 
         duration = monotonic() - start_time
         log.log(
@@ -547,7 +551,7 @@ class Mempool:
             f"spends: {len(removals)} additions: {len(additions)}",
         )
 
-        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+        flags |= DONT_VALIDATE_SIGNATURE
 
         err, err_msg, conds = run_block_generator2(
             block_program,
@@ -571,8 +575,9 @@ class Mempool:
         assert conds is not None
         assert conds.cost > 0
 
+        wrap = SerializedProgram.from_program_bytes if (flags & INTERNED_GENERATOR) else SerializedProgram.from_bytes
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            wrap(block_program),
             [],
             [],
             spend_bundle.aggregated_signature,
@@ -865,6 +870,120 @@ class Mempool:
 
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
+            [],
+            [],
+            signature,
+            additions,
+            removals,
+            uint64(cost),
+        )
+
+    def create_block_generator_2026(
+        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
+    ) -> NewBlockGenerator | None:
+        """Build a block using InternedBlockBuilder with serde_2026 generator
+        serialization (post-HF2).
+
+        Adds mempool candidates to the builder (resolving dedup/FF in priority
+        order) until the block is full or the timeout expires.
+        """
+        dedup_coin_spends = IdenticalSpendDedup()
+        singleton_ff = SingletonFastForward()
+        # Fast forward and dedup state committed so far from accepted items,
+        # used to rollback when an item is skipped.
+        committed_ff = singleton_ff.copy()
+        committed_dedup = dedup_coin_spends.copy()
+
+        log.info(f"Starting to make block (2026), max cost: {self.mempool_info.max_block_clvm_cost}")
+        generator_creation_start = monotonic()
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
+
+        builder = InternedBlockBuilder(constants, serde_2026=True)
+
+        additions: list[Coin] = []
+        removals: list[Coin] = []
+
+        fee_sum = 0
+        num_spends = 0
+
+        for row in cursor:
+            current_time = monotonic()
+            if current_time - generator_creation_start >= timeout:
+                log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
+                break
+
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
+
+            try:
+                assert item.conds is not None
+                irreducible_cost = item.conds.condition_cost + item.conds.execution_cost
+
+                # This `ff_state_update` is only committed later on via
+                # `update_fast_forward_spends` if the item gets added.
+                bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
+                    mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
+                )
+                # This `dedup_state_update` is only committed later on via
+                # `update_deduplication_spends` if the item gets added.
+                unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
+                    dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
+                )
+
+                new_fee_sum = fee_sum + fee
+                if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
+                    # Such a fee is very unlikely to happen but we're defensively
+                    # accounting for it
+                    break  # pragma: no cover
+
+                new_spend_count = num_spends + len(unique_coin_spends)
+                if new_spend_count > MAX_SPENDS_PER_BLOCK:
+                    continue
+
+                bundle = SpendBundle(unique_coin_spends, item.aggregated_signature)
+                added, done = builder.add_spend_bundles([bundle], uint64(max(0, irreducible_cost - cost_saving)))
+
+                if added:
+                    singleton_ff.update_fast_forward_spends(ff_state_update)
+                    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
+                    committed_ff = singleton_ff.copy()
+                    committed_dedup = dedup_coin_spends.copy()
+
+                    additions.extend(unique_additions)
+                    removals.extend([cs.coin for cs in unique_coin_spends])
+
+                    fee_sum = new_fee_sum
+                    num_spends = new_spend_count
+
+                if done:
+                    break
+
+            except SkipDedup as e:
+                log.info(f"{e}")
+                singleton_ff = committed_ff.copy()
+                dedup_coin_spends = committed_dedup.copy()
+                continue
+            except Exception as e:  # pragma: no cover
+                log.info(f"Exception while processing mempool item for 2026 block: {e}")
+                singleton_ff = committed_ff.copy()
+                dedup_coin_spends = committed_dedup.copy()
+                continue
+
+        if not removals:
+            return None
+
+        block_program, signature, cost = builder.finalize()
+
+        duration = monotonic() - generator_creation_start
+        log.log(
+            logging.INFO if duration < 2 else logging.WARNING,
+            f"create_block_generator_2026() took {duration:0.4f} seconds. "
+            f"block cost: {cost} spends: {len(removals)} additions: {len(additions)}",
+        )
+
+        return NewBlockGenerator(
+            SerializedProgram.from_program_bytes(block_program),
             [],
             [],
             signature,

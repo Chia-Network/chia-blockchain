@@ -32,7 +32,6 @@ from chia_rs import (
     UnfinishedBlock,
     VDFInfo,
     additions_and_removals,
-    get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -54,8 +53,10 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_creation import generator_root
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -1125,6 +1126,7 @@ async def test_new_transaction_and_mempool(
     ],
     self_hostname: str,
     seeded_random: random.Random,
+    consensus_mode: ConsensusMode,
 ) -> None:
     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     wallet_ph = wallet_a.get_new_puzzlehash()
@@ -1247,8 +1249,13 @@ async def test_new_transaction_and_mempool(
     # these numbers reflect the capacity of the mempool. In these
     # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
     # and MAX_BLOCK_COST_CLVM
-    assert included_tx == 20
-    assert not_included_tx == 7
+    # INTERNED_GENERATOR changes the cost model so more transactions fit
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert included_tx == 22
+        assert not_included_tx == 5
+    else:
+        assert included_tx == 20
+        assert not_included_tx == 7
     assert seen_bigger_transaction_has_high_fee
 
     # Mempool is full
@@ -1960,7 +1967,7 @@ async def test_unfinished_block_with_replaced_generator(
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            std_hash(bytes(replaced_generator)),
+            generator_root(bytes(replaced_generator), block.height, bt.constants),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
@@ -2080,6 +2087,8 @@ async def test_unfinished_block_with_replaced_generator(
         transactions_info,
         replaced_generator,
         generator_refs,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -4053,6 +4062,8 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
         block.transactions_info,
         block.transactions_generator,
         block.transactions_generator_ref_list,
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     return unfinished_block_expected

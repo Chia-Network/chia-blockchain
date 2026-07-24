@@ -25,6 +25,7 @@ from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
+from chia.consensus.block_creation import generator_root
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -205,6 +206,8 @@ def finish_block(
         unfinished_block.transactions_info,
         unfinished_block.transactions_generator,
         [],
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     block_record = block_to_block_record(
@@ -285,7 +288,7 @@ def get_full_block_and_block_record(
 
     generator_hash = bytes32.zeros
     if block_generator is not None:
-        generator_hash = std_hash(block_generator.program)
+        generator_hash = generator_root(bytes(block_generator.program), height, constants)
 
     foliage_data = FoliageBlockData(
         bytes32.zeros,
@@ -340,6 +343,8 @@ def get_full_block_and_block_record(
         transactions_info,
         block_generator.program if block_generator else None,
         [],
+        None,  # transactions_generator_buffer
+        uint8(0),  # version
     )
 
     full_block, block_record = finish_block(constants, unfinished_block, prev_block, blocks)

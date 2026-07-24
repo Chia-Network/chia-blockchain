@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.simulator.block_tools import BlockTools
 
 # These test targets are used to trigger a build of the test chains.
@@ -200,8 +202,13 @@ def test_validate_default_10000_compact(bt: BlockTools, default_10000_blocks_com
 
 
 def test_validate_long_reorg_blocks(
-    bt: BlockTools, test_long_reorg_blocks: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_blocks: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    consensus_mode: ConsensusMode,
 ) -> None:
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        pytest.xfail("cached test blocks need regeneration for tree_hash generator_root")
     validate_chain(
         bt,
         test_long_reorg_blocks,
@@ -214,8 +221,13 @@ def test_validate_long_reorg_blocks(
 
 
 def test_validate_long_reorg_blocks_light(
-    bt: BlockTools, test_long_reorg_blocks_light: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_blocks_light: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    consensus_mode: ConsensusMode,
 ) -> None:
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        pytest.xfail("cached test blocks need regeneration for tree_hash generator_root")
     validate_chain(
         bt,
         test_long_reorg_blocks_light,
@@ -227,8 +239,13 @@ def test_validate_long_reorg_blocks_light(
 
 
 def test_validate_long_reorg_1500_blocks(
-    bt: BlockTools, test_long_reorg_1500_blocks: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_1500_blocks: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    consensus_mode: ConsensusMode,
 ) -> None:
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        pytest.xfail("cached test blocks need regeneration for tree_hash generator_root")
     validate_chain(
         bt,
         test_long_reorg_1500_blocks,
@@ -241,8 +258,13 @@ def test_validate_long_reorg_1500_blocks(
 
 
 def test_validate_long_reorg_1500_blocks_light(
-    bt: BlockTools, test_long_reorg_1500_blocks_light: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_1500_blocks_light: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    consensus_mode: ConsensusMode,
 ) -> None:
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        pytest.xfail("cached test blocks need regeneration for tree_hash generator_root")
     validate_chain(
         bt,
         test_long_reorg_1500_blocks_light,

@@ -195,7 +195,9 @@ async def run_add_block_benchmark(version: int) -> None:
                 foliage_transaction_block,
                 transactions_info,
                 SerializedProgram.from_bytes(clvm_generator) if is_transaction else None,  # transactions_generator
-                [],  # transactions_generator_ref_list
+                [],  # transactions_generator_ref_list,
+                None,  # transactions_generator_buffer
+                uint8(0),  # version
             )
 
             header_hash = full_block.header_hash

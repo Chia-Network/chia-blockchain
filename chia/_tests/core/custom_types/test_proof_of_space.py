@@ -287,16 +287,20 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
 @pytest.mark.parametrize(
     argnames=["height", "expected"],
     argvalues=[
-        (0, 5),
-        (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 4),
-        (0xFFFFFFFC, 3),
-        (0xFFFFFFFD, 2),
-        (0xFFFFFFFF, 2),
+        (0, 5),  # before the fork
+        (1_000_000, 5),  # at the fork, no reductions yet
+        (1_000_000 + 10_101_000 - 1, 5),
+        (1_000_000 + 10_101_000, 4),  # first reduction
+        (1_000_000 + 15_146_000, 3),
+        (1_000_000 + 50_494_000, 0),  # fully reduced (clamped at 0)
+        (0xFFFFFFFF, 0),
     ],
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
-    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
+    # v2 plots follow the base filter reduction schedule, relative to
+    # HARD_FORK2_HEIGHT (see calculate_base_plot_filter_bits)
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    assert calculate_prefix_bits(constants, uint32(height), PlotParam.make_v2(0, 0, 28)) == expected
 
 
 def test_base_filter_relative_to_fork_height() -> None:
