@@ -172,11 +172,8 @@ class SyncStatus(IntEnum):
 
 
 class WalletStateManager:
-    # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
-    # When this is a dataclass, these errors should go away
-    interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
-    interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    interested_coin_cache: dict[bytes32, list[int]]
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -236,6 +233,7 @@ class WalletStateManager:
     ) -> WalletStateManager:
         self = WalletStateManager()
 
+        self.interested_coin_cache = {}
         self.config = config
         self.constants = constants
         self.server = server
