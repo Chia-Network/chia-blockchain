@@ -120,7 +120,8 @@ class BlockStore:
 
         self.block_cache.put(header_hash, block)
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
+        # this method owns its write transaction, callers don't need to open one
+        async with self.db_wrapper.writer() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
                 (
