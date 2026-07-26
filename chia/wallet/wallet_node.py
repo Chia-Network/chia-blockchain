@@ -827,8 +827,8 @@ class WalletNode:
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         # this is to start a write transaction
         async with (
-            self.wallet_state_manager.db_wrapper.writer(),
             self.wallet_state_manager.new_sync_scope() as sync_scope,
+            self.wallet_state_manager.db_wrapper.writer(),
         ):
             try:
                 removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height, sync_scope)
