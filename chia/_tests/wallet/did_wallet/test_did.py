@@ -740,7 +740,8 @@ async def test_did_auto_transfer_limit(
     assert len(did_wallets) == 9
 
     # Try and find lost coin
-    await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
+    assert did_wallet_9.did_info.origin_coin is not None
+    await api_1.did_find_lost_did({"coin_id": did_wallet_9.did_info.origin_coin.name().hex()})
     did_wallets = list(
         filter(
             lambda w: w.type == WalletType.DECENTRALIZED_ID,
