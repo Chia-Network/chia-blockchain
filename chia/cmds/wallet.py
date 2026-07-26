@@ -1679,13 +1679,12 @@ class GetVcsCMD:
     async def run(self) -> None:  # pragma: no cover
         from chia.cmds.wallet_funcs import get_vcs
 
-        await get_vcs(
-            self.rpc_info.context.root_path,
-            self.rpc_info.wallet_rpc_port,
-            self.rpc_info.fingerprint,
-            self.start,
-            self.count,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_vcs(
+                wallet_info,
+                self.start,
+                self.count,
+            )
 
 
 @chia_command(

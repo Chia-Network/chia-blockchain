@@ -1794,27 +1794,26 @@ async def mint_vc(
     return res.transactions
 
 
-async def get_vcs(root_path: pathlib.Path, wallet_rpc_port: int | None, fp: int | None, start: int, count: int) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, config):
-        get_list_response = await wallet_client.vc_get_list(VCGetList(start=uint32(start), end=uint32(count)))
-        print("Proofs:")
-        for hash, proof_dict in get_list_response.proof_dict.items():
-            if proof_dict is not None:
-                print(f"- {hash}")
-                for proof in proof_dict:
-                    print(f"  - {proof}")
-        for record in get_list_response.vc_records:
-            print("")
-            print(f"Launcher ID: {record.vc.launcher_id.hex()}")
-            print(f"Coin ID: {record.vc.coin.name().hex()}")
-            print(
-                f"Inner Address:"
-                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(config))}"
-            )
-            if record.vc.proof_hash is None:
-                pass
-            else:
-                print(f"Proof Hash: {record.vc.proof_hash.hex()}")
+async def get_vcs(wallet_info: WalletClientInfo, start: int, count: int) -> None:
+    get_list_response = await wallet_info.client.vc_get_list(VCGetList(start=uint32(start), end=uint32(count)))
+    print("Proofs:")
+    for hash, proof_dict in get_list_response.proof_dict.items():
+        if proof_dict is not None:
+            print(f"- {hash}")
+            for proof in proof_dict:
+                print(f"  - {proof}")
+    for record in get_list_response.vc_records:
+        print("")
+        print(f"Launcher ID: {record.vc.launcher_id.hex()}")
+        print(f"Coin ID: {record.vc.coin.name().hex()}")
+        print(
+            "Inner Address: "
+            f"{encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(wallet_info.config))}"
+        )
+        if record.vc.proof_hash is None:
+            pass
+        else:
+            print(f"Proof Hash: {record.vc.proof_hash.hex()}")
 
 
 async def spend_vc(
@@ -1843,7 +1842,7 @@ async def spend_vc(
     ).transactions
 
     if push:
-        print("Proofs successfully updated!")
+        print("VC successfully spent!")
     print("Relevant TX records:")
     print("")
     for tx in txs:
