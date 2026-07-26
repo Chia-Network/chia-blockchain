@@ -7,6 +7,7 @@ from chia_rs.sized_ints import uint32
 
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord, StreamableDerivationRecord
+from chia.wallet.wallet_sync_scope import WebSocketEvent
 
 if TYPE_CHECKING:
     # avoiding a circular import
@@ -61,7 +62,9 @@ class CreateMorePuzzleHashesResult:
                 ]
             )
         if self.new_unhardened_keys:
-            wallet_state_manager.state_changed("new_derivation_index", data_object={"index": self.last_index - 1})
+            wallet_state_manager._dispatch_websocket_event(
+                WebSocketEvent(name="new_derivation_index", data={"index": self.last_index - 1})
+            )
         # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
         if self.mark_existing_as_used and self.unused > 0 and self.new_unhardened_keys:
             wallet_state_manager.log.info(f"Updating last used derivation index: {self.unused - 1}")

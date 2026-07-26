@@ -57,6 +57,7 @@ from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -205,7 +206,9 @@ class CRCATWallet(CATWallet):
     async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CR-CAT wallet has been notified that {coin.name().hex()} was added")
         try:

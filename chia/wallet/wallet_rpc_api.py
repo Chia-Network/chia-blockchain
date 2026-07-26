@@ -322,6 +322,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import SyncStatus
+from chia.wallet.wallet_sync_scope import WebSocketEvent
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -532,7 +533,7 @@ def tx_endpoint(
                     await self.service.wallet_state_manager.trade_manager.trade_store.delete_trade_record(
                         old_trade_record.trade_id
                     )
-                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer)
+                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer, action_scope)
                 for tx in await self.service.wallet_state_manager.tx_store.get_transactions_by_trade_id(
                     old_trade_record.trade_id
                 ):
@@ -2456,12 +2457,14 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(request.coin_id)
 
-        await self.service.wallet_state_manager.find_lost_did(
-            coin_id=coin_id,
-            override_recovery_list_hash=request.recovery_list_hash,
-            override_num_verification=request.num_verification,
-            override_metadata=request.metadata,
-        )
+        async with self.service.wallet_state_manager.new_sync_scope() as sync_scope:
+            await self.service.wallet_state_manager.find_lost_did(
+                coin_id=coin_id,
+                sync_scope=sync_scope,
+                override_recovery_list_hash=request.recovery_list_hash,
+                override_num_verification=request.num_verification,
+                override_metadata=request.metadata,
+            )
 
         return DIDFindLostDIDResponse(latest_coin_id=coin_id)
 
@@ -2757,8 +2760,11 @@ class WalletRpcApi:
 
         for id in coin_ids:
             await nft_wallet.update_coin_status(id, True)
+
         for wallet_id in nft_dict.keys():
-            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            action_scope.dispatch_websocket_event(
+                self.service.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=wallet_id)
+            )
 
         async with action_scope.use() as interface:
             return NFTSetDIDBulkResponse(
@@ -2824,7 +2830,9 @@ class WalletRpcApi:
         for id in coin_ids:
             await nft_wallet.update_coin_status(id, True)
         for wallet_id in nft_dict.keys():
-            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            action_scope.dispatch_websocket_event(
+                self.service.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=wallet_id)
+            )
         async with action_scope.use() as interface:
             return NFTTransferBulkResponse(
                 unsigned_transactions=[],

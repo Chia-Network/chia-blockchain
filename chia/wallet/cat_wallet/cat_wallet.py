@@ -62,6 +62,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -360,7 +361,9 @@ class CATWallet:
     def get_asset_id(self) -> bytes32:
         return self.cat_info.limitations_program_hash
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
         if coin_data is not None:
@@ -421,6 +424,7 @@ class CATWallet:
     async def identify(
         cls,
         wallet_state_manager: WalletStateManager,
+        sync_scope: WalletSyncScope,
         parent_data: CATCoinData,
         parent_coin_state: CoinState,
         coin_state: CoinState,
@@ -513,7 +517,10 @@ class CATWallet:
                                 crcat.authorized_providers,
                                 ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
                             )
-                            wallet_state_manager.state_changed("converted cat wallet to cr", wallet_info.id)
+                            async with sync_scope.use() as interface:
+                                interface.side_effects.websocket_events.append(
+                                    WebSocketEvent(name="converted cat wallet to cr", wallet_id=wallet_info.id)
+                                )
                             return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
                         elif wallet_type is RCATWallet:
                             success = await RCATWallet.convert_to_revocable(
@@ -522,7 +529,12 @@ class CATWallet:
                                 hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
                             )
                             if success:
-                                wallet_state_manager.state_changed("converted cat wallet to revocable", wallet_info.id)
+                                async with sync_scope.use() as interface:
+                                    interface.side_effects.websocket_events.append(
+                                        WebSocketEvent(
+                                            name="converted cat wallet to revocable", wallet_id=wallet_info.id
+                                        )
+                                    )
                                 return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
                             else:
                                 return None
@@ -568,7 +580,8 @@ class CATWallet:
                     coin_state,
                     fork_height,
                 )
-                wallet_state_manager.state_changed("added_stray_cat")
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(WebSocketEvent(name="added_stray_cat"))
                 return None
 
     def require_derivation_paths(self) -> bool:
