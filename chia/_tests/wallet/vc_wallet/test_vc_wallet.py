@@ -408,8 +408,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework, capsys: py
     stored_proofs = await vc_wallet_0.store.get_proofs_for_root(proof_root)
     assert stored_proofs is not None
     assert stored_proofs.key_value_pairs == proofs.key_value_pairs
-    vc_records = await vc_wallet_0.store.get_vc_record_list(uint32(0), uint32(50))
-    assert len(vc_records) == 1
+    await GetVcsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_0)).run()
+    get_output = capsys.readouterr().out
+    assert get_output.count("Launcher ID") == 1
     assert (await vc_wallet_0.store.get_proofs_for_root(proof_root)) is not None
 
     # Mint CR-CAT
