@@ -6,7 +6,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint128
 
-from chia.full_node.sync_store import SyncStore
+from chia.full_node.sync_store import Peak, SyncStore
 from chia.util.hash import std_hash
 
 
@@ -170,6 +170,42 @@ async def test_get_heaviest_peak_returns_none_when_peaks_evicted() -> None:
 
 
 @pytest.mark.anyio
+async def test_peer_peak_change_removes_old_peak_membership() -> None:
+    """A peer that moves from one peak to another must be removed from the old peak's membership set.
+
+    Before the fix, peak_to_peer[old_hash] retained the peer indefinitely, letting sync
+    code treat the peer as a valid holder of the old target peak even after it had moved away.
+    """
+    store = SyncStore()
+    peer_id = std_hash(b"peer")
+    hash_a = std_hash(b"block_a")
+    hash_b = std_hash(b"block_b")
+
+    store.peer_has_block(hash_a, peer_id, uint128(100), uint32(10), True)
+    assert peer_id in store.get_peers_that_have_peak([hash_a])
+
+    # Peer moves to a different peak.
+    store.peer_has_block(hash_b, peer_id, uint128(200), uint32(20), True)
+
+    assert peer_id in store.get_peers_that_have_peak([hash_b])
+    assert peer_id not in store.get_peers_that_have_peak([hash_a])
+
+
+@pytest.mark.anyio
+async def test_peer_peak_change_same_hash_preserves_membership() -> None:
+    """Re-advertising the same peak hash does not remove the peer from its membership set."""
+    store = SyncStore()
+    peer_id = std_hash(b"peer")
+    hash_a = std_hash(b"block_a")
+
+    store.peer_has_block(hash_a, peer_id, uint128(100), uint32(10), True)
+    store.peer_has_block(hash_a, peer_id, uint128(100), uint32(10), True)
+
+    assert peer_id in store.get_peers_that_have_peak([hash_a])
+    assert store.peer_to_peak[peer_id].header_hash == hash_a
+
+
+@pytest.mark.anyio
 async def test_peer_disconnected_cleans_empty_peak_to_peer_entries() -> None:
     """peer_disconnected() removes peak_to_peer entries that have no remaining peers."""
     store = SyncStore()
@@ -189,3 +225,38 @@ async def test_peer_disconnected_cleans_empty_peak_to_peer_entries() -> None:
     store.peer_disconnected(peer_b)
     # After both peers disconnect, the empty entry should be cleaned up
     assert block_hash not in store.peak_to_peer
+
+
+@pytest.mark.anyio
+async def test_get_advertisers_of_peak_exact_match() -> None:
+    """get_advertisers_of_peak() returns exactly the peers whose advertised peak matches."""
+    store = SyncStore()
+    peer_a = std_hash(b"peer_a")
+    peer_b = std_hash(b"peer_b")
+    peer_c = std_hash(b"peer_c")
+    peer_d = std_hash(b"peer_d")
+    block_hash = std_hash(b"block")
+    other_hash = std_hash(b"other_block")
+
+    target = Peak(block_hash, uint32(10), uint128(500))
+
+    # Empty store: no advertisers.
+    assert store.get_advertisers_of_peak(target) == set()
+
+    # Two peers advertise the exact target peak.
+    store.peer_has_block(block_hash, peer_a, uint128(500), uint32(10), True)
+    store.peer_has_block(block_hash, peer_b, uint128(500), uint32(10), True)
+    # Same header_hash, different weight — not a match.
+    store.peer_has_block(block_hash, peer_c, uint128(400), uint32(10), True)
+    # Same weight, different header_hash — not a match.
+    store.peer_has_block(other_hash, peer_d, uint128(500), uint32(10), True)
+
+    assert store.get_advertisers_of_peak(target) == {peer_a, peer_b}
+
+    # A peer that subsequently overwrites its entry with a different peak is
+    # no longer reported — but a snapshot taken earlier is unaffected. This
+    # is the property the fix relies on at peak-selection time.
+    snapshot = store.get_advertisers_of_peak(target)
+    store.peer_has_block(other_hash, peer_a, uint128(999), uint32(11), True)
+    assert store.get_advertisers_of_peak(target) == {peer_b}
+    assert snapshot == {peer_a, peer_b}

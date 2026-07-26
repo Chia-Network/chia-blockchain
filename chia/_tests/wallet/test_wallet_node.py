@@ -8,10 +8,10 @@ import time
 import types
 from pathlib import Path
 from typing import Any, cast
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
-from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
+from chia_rs import CoinState, FullBlock, G1Element, HeaderBlock, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -539,6 +539,299 @@ async def test_get_timestamp_for_height_from_peer_backtracks_to_tx_block_determi
     cache = wallet_node.get_cache_for_peer(peer)
     assert cache.get_block(uint32(1)) is block_at_height_1
     assert cache.get_height_timestamp(uint32(0)) == uint64(123456789)
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_limits_backtrack(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    start_height = 10_000
+    max_backtrack = int(wallet_node.constants.MAX_SUB_SLOT_BLOCKS) * wallet_node.TIMESTAMP_BACKTRACK_SUB_SLOT_MULTIPLIER
+    last_allowed_height = start_height - max_backtrack + 1
+    requested_heights: list[int] = []
+
+    class CacheWithNonTransactionBlocks:
+        def get_height_timestamp(self, height: uint32) -> None:
+            return None
+
+        def get_block(self, height: uint32) -> object:
+            requested_heights.append(int(height))
+            return types.SimpleNamespace(foliage_transaction_block=None)
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: CacheWithNonTransactionBlocks())
+
+    timestamp = await wallet_node.get_timestamp_for_height_from_peer(
+        uint32(start_height), cast(WSChiaConnection, object())
+    )
+
+    assert timestamp is None
+    assert requested_heights == list(range(start_height, start_height - max_backtrack, -1))
+
+    requested_heights.clear()
+    timestamp_at_limit = uint64(12_345)
+
+    class CacheWithTransactionBlockAtLimit:
+        def get_height_timestamp(self, height: uint32) -> None:
+            return None
+
+        def get_block(self, height: uint32) -> object:
+            requested_heights.append(int(height))
+            foliage_transaction_block = (
+                types.SimpleNamespace(timestamp=timestamp_at_limit) if height == last_allowed_height else None
+            )
+            return types.SimpleNamespace(foliage_transaction_block=foliage_transaction_block)
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: CacheWithTransactionBlockAtLimit())
+
+    assert (
+        await wallet_node.get_timestamp_for_height_from_peer(uint32(start_height), cast(WSChiaConnection, object()))
+        == timestamp_at_limit
+    )
+    assert requested_heights == list(range(start_height, start_height - max_backtrack, -1))
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_rejects_wrong_response_height(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    expected_hash = bytes32(b"\x01" * 32)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+
+    async def wrong_height_response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object]:
+        return [
+            types.SimpleNamespace(
+                height=uint32(int(start_height) - 1),
+                header_hash=expected_hash,
+                prev_header_hash=bytes32(b"\x02" * 32),
+                foliage_transaction_block=types.SimpleNamespace(timestamp=uint64(12_345)),
+            )
+        ]
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", wrong_height_response)
+
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, expected_hash) is None
+    add_to_blocks.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_rejects_multiple_response_blocks(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    expected_hash = bytes32(b"\x01" * 32)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+
+    async def multiple_block_response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object]:
+        return [
+            types.SimpleNamespace(
+                height=uint32(start_height),
+                header_hash=expected_hash,
+                prev_header_hash=bytes32(b"\x02" * 32),
+                foliage_transaction_block=None,
+            ),
+            types.SimpleNamespace(
+                height=uint32(start_height),
+                header_hash=expected_hash,
+                prev_header_hash=bytes32(b"\x03" * 32),
+                foliage_transaction_block=types.SimpleNamespace(timestamp=uint64(12_345)),
+            ),
+        ]
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", multiple_block_response)
+
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, expected_hash) is None
+    add_to_blocks.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_validates_backtrack_chain(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    top_hash = bytes32(b"\x01" * 32)
+    parent_hash = bytes32(b"\x02" * 32)
+    timestamp = uint64(12_345)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    ns = types.SimpleNamespace
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=uint64(99_999)),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+    top_block = ns(
+        height=uint32(100), header_hash=top_hash, prev_header_hash=parent_hash, foliage_transaction_block=None
+    )
+    tx_foliage = types.SimpleNamespace(timestamp=timestamp)
+    parent_block = ns(
+        height=uint32(99), header_hash=parent_hash, foliage_transaction_block=tx_foliage
+    )  # pragma: no cover
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    request_header_blocks_mock = AsyncMock(side_effect=[[top_block], [parent_block]])
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", request_header_blocks_mock)
+
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, top_hash) == timestamp
+    assert add_to_blocks.call_count == 2
+    add_to_blocks.assert_called()
+
+    add_to_blocks.reset_mock()
+    wrong_parent_hash = bytes32(b"\x04" * 32)
+    wrong_parent_block = ns(  # pragma: no cover
+        height=uint32(99), header_hash=wrong_parent_hash, foliage_transaction_block=tx_foliage
+    )
+    request_header_blocks_mock.reset_mock(side_effect=True)
+    request_header_blocks_mock.side_effect = [[top_block], [wrong_parent_block]]
+
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, top_hash) is None
+    assert add_to_blocks.call_count == 1
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_refetches_stale_cached_block(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    top_hash = bytes32(b"\x01" * 32)
+    parent_hash = bytes32(b"\x02" * 32)
+    stale_hash = bytes32(b"\x03" * 32)
+    timestamp = uint64(12_345)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    ns = types.SimpleNamespace
+    add_to_blocks = Mock()
+    stale_block = ns(
+        height=uint32(100),
+        header_hash=stale_hash,
+        prev_header_hash=bytes32(b"\x04" * 32),
+        foliage_transaction_block=ns(timestamp=uint64(99_999)),
+    )
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(side_effect=[stale_block, None]),
+        add_to_blocks=add_to_blocks,
+    )
+    top_block = ns(  # pragma: no cover
+        height=uint32(100), header_hash=top_hash, prev_header_hash=parent_hash, foliage_transaction_block=None
+    )
+    parent_block = ns(height=uint32(99), header_hash=parent_hash, foliage_transaction_block=ns(timestamp=timestamp))
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr(
+        "chia.wallet.wallet_node.request_header_blocks", AsyncMock(side_effect=[[top_block], [parent_block]])
+    )
+
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, top_hash) == timestamp
+    assert add_to_blocks.call_count == 2
+
+
+def test_peer_request_cache_replaces_height_timestamp() -> None:
+    cache = PeerRequestCache()
+    stale_timestamp = uint64(99_999)
+    replacement_timestamp = uint64(12_345)
+
+    stale_transaction_block = cast(
+        HeaderBlock,
+        types.SimpleNamespace(
+            height=uint32(100),
+            is_transaction_block=True,
+            foliage_transaction_block=types.SimpleNamespace(timestamp=stale_timestamp),
+        ),
+    )
+    replacement_non_transaction_block = cast(
+        HeaderBlock,
+        types.SimpleNamespace(height=uint32(100), is_transaction_block=False, foliage_transaction_block=None),
+    )
+    replacement_transaction_block = cast(
+        HeaderBlock,
+        types.SimpleNamespace(
+            height=uint32(100),
+            is_transaction_block=True,
+            foliage_transaction_block=types.SimpleNamespace(timestamp=replacement_timestamp),
+        ),
+    )
+
+    cache.add_to_blocks(stale_transaction_block)
+    assert cache.get_height_timestamp(uint32(100)) == stale_timestamp
+
+    cache.add_to_blocks(replacement_non_transaction_block)
+    assert cache.get_height_timestamp(uint32(100)) is None
+
+    cache.add_to_blocks(replacement_transaction_block)
+    assert cache.get_height_timestamp(uint32(100)) == replacement_timestamp
+
+
+@pytest.mark.anyio
+async def test_new_peak_wallet_anchors_timestamp_lookup_to_peak_hash(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    peak_hash = bytes32(b"\x01" * 32)
+
+    class Blockchain:
+        async def get_peak_block(self) -> None:
+            return None
+
+    class Peer:
+        closed = False
+        peer_node_id = bytes32(b"\x02" * 32)
+        close_time: int | None = None
+
+        async def call_api(self, api: object, request: object) -> wallet_protocol.RespondBlockHeader:
+            return cast(
+                wallet_protocol.RespondBlockHeader,
+                types.SimpleNamespace(
+                    header_block=types.SimpleNamespace(
+                        header_hash=peak_hash,
+                        weight=uint128(100),
+                        height=uint32(100),
+                    )
+                ),
+            )
+
+        async def close(self, ban_time: int) -> None:
+            self.closed = True
+            self.close_time = ban_time
+
+        def get_peer_info(self) -> str:
+            return "peer"
+
+    wallet_node._wallet_state_manager = cast(Any, types.SimpleNamespace(blockchain=Blockchain()))
+    timestamp_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(wallet_node, "get_timestamp_for_height_from_peer", timestamp_mock)
+    monkeypatch.setattr(wallet_node, "is_trusted", lambda peer: False)
+
+    peer = Peer()
+    await wallet_node.new_peak_wallet(
+        wallet_protocol.NewPeakWallet(peak_hash, uint32(100), uint128(100), uint32(99)),
+        cast(WSChiaConnection, peer),
+    )
+
+    assert timestamp_mock.await_args is not None
+    assert timestamp_mock.await_args.args[2] == peak_hash  # pragma: no cover
+    assert peer.closed  # pragma: no cover
+    assert peer.close_time == 120  # pragma: no cover
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -1161,6 +1454,138 @@ async def test_add_states_from_peer_untrusted_shutdown(
             coin_states, next(iter(wallet_server.all_connections.values()))
         )
         assert "Terminating receipt and validation due to shut down request" in caplog.text
+
+
+async def _setup_untrusted_validate_and_add(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    add_coin_states_side_effect: list[bool],
+) -> tuple[WalletNode, WSChiaConnection, AsyncMock]:
+    """Connect an untrusted wallet to a simulator full node and stub
+    `validate_received_state_from_peer` (always True) and `add_coin_states`
+    (returns successive booleans from the supplied list)."""
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
+    assert not wallet_node.is_trusted(full_node_peer)
+
+    async def always_valid(*_: Any) -> bool:
+        return True
+
+    monkeypatch.setattr(
+        wallet_node,
+        "validate_received_state_from_peer",
+        types.MethodType(always_valid, wallet_node),
+    )
+
+    failing_add_coin_states = AsyncMock(side_effect=add_coin_states_side_effect)
+    monkeypatch.setattr(
+        wallet_node.wallet_state_manager,
+        "add_coin_states",
+        failing_add_coin_states,
+    )
+    return wallet_node, full_node_peer, failing_add_coin_states
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_add_states_from_peer_untrusted_returns_false_when_add_coin_states_fails(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Pins the untrusted-path contract: a False return from `add_coin_states`
+    # must propagate to `add_states_from_peer`'s return value.
+    wallet_node, full_node_peer, failing_add_coin_states = await _setup_untrusted_validate_and_add(
+        simulator_and_wallet, self_hostname, monkeypatch, add_coin_states_side_effect=[False]
+    )
+
+    coin_generator = CoinGenerator()
+    # One batch at the untrusted chunk size (10); `created_height` set so we hit
+    # the parallel `validate_and_add` path, not the reorged-states fast path.
+    coin_states = [CoinState(coin_generator.get().coin, uint32(i + 1), uint32(i + 1)) for i in range(10)]
+
+    with caplog.at_level(logging.ERROR):
+        assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
+
+    assert failing_add_coin_states.await_count == 1
+    assert "add_coin_states returned False for chunk" in caplog.text
+    assert "1 chunk(s) failed to apply" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_add_states_from_peer_untrusted_returns_false_when_one_of_many_chunks_fails(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Three parallel chunks (30 states / chunk size 10) with only the middle one
+    # failing: pins that one failed chunk among successes still returns False.
+    wallet_node, full_node_peer, failing_add_coin_states = await _setup_untrusted_validate_and_add(
+        simulator_and_wallet,
+        self_hostname,
+        monkeypatch,
+        add_coin_states_side_effect=[True, False, True],
+    )
+
+    coin_generator = CoinGenerator()
+    coin_states = [CoinState(coin_generator.get().coin, uint32(i + 1), uint32(i + 1)) for i in range(30)]
+
+    with caplog.at_level(logging.ERROR):
+        assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
+
+    assert failing_add_coin_states.await_count == 3
+    assert "1 chunk(s) failed to apply" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_add_states_from_peer_untrusted_returns_false_when_validate_and_add_raises(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Pins the symmetry of the `except Exception` arm: a raised exception in a
+    # parallel `validate_and_add` task must propagate to the False return.
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
+    assert not wallet_node.is_trusted(full_node_peer)
+
+    async def always_valid(*_: Any) -> bool:
+        return True
+
+    monkeypatch.setattr(
+        wallet_node,
+        "validate_received_state_from_peer",
+        types.MethodType(always_valid, wallet_node),
+    )
+
+    raising_add_coin_states = AsyncMock(side_effect=RuntimeError("simulated writer commit failure"))
+    monkeypatch.setattr(
+        wallet_node.wallet_state_manager,
+        "add_coin_states",
+        raising_add_coin_states,
+    )
+
+    coin_generator = CoinGenerator()
+    coin_states = [CoinState(coin_generator.get().coin, uint32(i + 1), uint32(i + 1)) for i in range(10)]
+
+    with caplog.at_level(logging.ERROR):
+        assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
+
+    assert raising_add_coin_states.await_count == 1
+    assert "validate_and_add failed - exception" in caplog.text
+    assert "1 chunk(s) failed to apply" in caplog.text
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")

@@ -601,6 +601,12 @@ wallet:
   # if an unknown DID is sent to us, a wallet will be automatically created
   did_auto_add_limit: 10
 
+  # if an NFT is received whose ownership transfer encodes a DID we do not yet
+  # have a per-DID NFT wallet for, a wallet will be automatically created.
+  # This cap bounds the number of DID-scoped NFT wallets to prevent an inbound
+  # NFT spammer from forcing unbounded wallet creation.
+  nft_auto_add_limit: 100
+
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
 
