@@ -525,7 +525,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @metadata.request()
+    @metadata.request(peer_required=True)
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
