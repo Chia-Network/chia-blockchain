@@ -2075,7 +2075,9 @@ def get_filter_challenge(
     sub_slots_back = 2 if window_start == 0 else 1
 
     reversed_challenges = [sub_slot.challenge_chain.get_hash() for sub_slot in reversed(finished_sub_slots)]
-    if prev_header_hash is not None:
+    if prev_header_hash is None:
+        reversed_challenges.append(constants.GENESIS_CHALLENGE)
+    else:
         curr = blocks[prev_header_hash]
         while True:
             if curr.first_in_sub_slot:
@@ -2087,7 +2089,6 @@ def get_filter_challenge(
                 break
             curr = blocks[curr.prev_hash]
 
-    reversed_challenges.append(constants.GENESIS_CHALLENGE)
     try:
         challenge_index = reversed_challenges.index(current_challenge)
     except ValueError:
