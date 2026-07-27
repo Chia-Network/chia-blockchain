@@ -9,7 +9,6 @@ import pytest
 from chia_rs import AugSchemeMPL
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm_tools.binutils import disassemble
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.conftest import ConsensusMode
@@ -21,7 +20,7 @@ from chia._tests.environments.wallet import (
 )
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmd_classes import ChiaCliContext
-from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet import (
     AddUriToNftCMD,
@@ -942,7 +941,9 @@ async def test_sign_message_by_nft_id(
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_wallet_rpc_update_metadata(
+    wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]
+) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -978,26 +979,29 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
         ]
     )
 
-    coins: list[NFTInfo] = (
-        await env.rpc_client.list_nfts(NFTGetNFTs(wallet_id=nft_wallet.id(), start_index=uint32(0), num=uint32(1)))
-    ).nft_list
-    coin = coins[0]
-    assert coin.mint_height > 0
-    assert coin.data_hash == bytes32.from_hexstr("0xd4584ad463139fa8c0d9f68f4b59f185d4584ad463139fa8c0d9f68f4b59f185")
-    assert coin.chain_info == disassemble(
-        Program.to(
-            [
-                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185")),
-                ("mu", []),
-                ("lu", []),
-                ("sn", uint64(1)),
-                ("st", uint64(1)),
-            ]
-        )
+    capsys.readouterr()
+    await ListNftsCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                client=env.rpc_client,
+                fingerprint=env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                config=env.wallet_state_manager.config,
+            )
+        ),
+        wallet_id=nft_wallet.id(),
+        start_index=0,
+        num=1,
+    ).run()
+    output = capsys.readouterr().out
+    assert "NFT content hash:          d4584ad463139fa8c0d9f68f4b59f185d4584ad463139fa8c0d9f68f4b59f18" in output
+    assert (
+        'On-chain data/info:        ((117 "https://www.chia.net/img/branding/chia-logo.svg") '
+        "(104 . 0xd4584ad463139fa8c0d9f68f4b59f185d4584ad463139fa8c0d9f68f4b59f185) "
+        "(28021) (27765) (29550 . 1) (29556 . 1))" in output
     )
 
-    nft_coin_id = encode_puzzle_hash(coin.nft_coin_id, AddressType.NFT.hrp(env.node.config))
+    current_nft_coin_id = output.split("Current NFT coin ID:")[1].strip().split("\n")[0]
+    nft_coin_id = encode_puzzle_hash(bytes32.from_hexstr(current_nft_coin_id), AddressType.NFT.hrp(env.node.config))
     await add_uri_to_nft_via_cli(
         wallet_environments,
         env,
@@ -1079,7 +1083,9 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_with_did_wallet_creation(
+    wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]
+) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
     wallet = env.xch_wallet
@@ -1162,6 +1168,19 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     # Create a NFT with DID
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         nft_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+    await mint_nft_via_cli(
+        wallet_environments,
+        env,
+        wallet_id=nft_wallet.id(),
+        target_address=CliAddress(nft_ph, encode_puzzle_hash(nft_ph, "txch"), AddressType.XCH),
+        hash="0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185",
+        uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        no_did_ownership=True,
+    )
+    assert (
+        "Failed to mint NFT: Disabling DID ownership is not supported for this NFT wallet, it does have a DID"
+        in capsys.readouterr().out
+    )
     await mint_nft_via_cli(
         wallet_environments,
         env,
@@ -1762,7 +1781,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
         wallet_id=env.wallet_aliases["nft"],
         hash="0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185",
         uris=["https://www.chia.net/img/branding/chia-logo.svg"],
-        metadata_uris="https://www.chia.net/img/branding/chia-logo.svg",
+        metadata_uris="http://metadata",
     )
 
     await wallet_environments.process_pending_states(
@@ -1824,7 +1843,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
         env,
         wallet_id=env.wallet_aliases["nft"],
         nft_coin_id=nft_coin_id.hex(),
-        metadata_uri="http://metadata",
+        license_uri="http://license",
         fee=uint64(fee),
     )
 
@@ -1878,9 +1897,10 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     uris = coins[0].data_uris
     assert len(uris) == 1
     assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
-    assert len(coins[0].metadata_uris) == 2
+    assert len(coins[0].metadata_uris) == 1
     assert "http://metadata" == coins[0].metadata_uris[0]
-    assert len(coins[0].license_uris) == 0
+    assert len(coins[0].license_uris) == 1
+    assert "http://license" == coins[0].license_uris[0]
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
@@ -2506,7 +2526,7 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_set_did(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     wallet = env.xch_wallet
 
@@ -2682,8 +2702,20 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework) -> None:
     assert coin.owner_did.hex() == hex_did_id
     nft_coin_id = coin.nft_coin_id
 
-    nft_get_info_res = await env.rpc_client.get_nft_info(NFTGetInfo(coin_id=nft_coin_id.hex(), latest=True))
-    assert coins[0] == nft_get_info_res.nft_info
+    capsys.readouterr()
+    await GetNftInfoCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                client=env.rpc_client,
+                fingerprint=env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                config=env.wallet_state_manager.config,
+            )
+        ),
+        nft_coin_id=nft_coin_id.hex(),
+    ).run()
+    output = capsys.readouterr().out
+    current_nft_coin_id = output.split("Current NFT coin ID:")[1].strip().split("\n")[0]
+    assert current_nft_coin_id == nft_coin_id.hex()
 
     # Test set DID1 -> DID2
     hex_did_id2 = did_wallet2.get_my_DID()
@@ -3003,6 +3035,96 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
         bytes.fromhex(message),
         sign_by_id_res.signature,
     )
+
+
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_nft_command_errors(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
+    env = wallet_environments.environments[0]
+    capsys.readouterr()
+
+    await create_nft_wallet_via_cli(
+        wallet_environments,
+        env,
+        did_id=CliAddress(
+            bytes32.zeros,
+            "not a real address",
+            AddressType.DID,
+        ),
+        name="NFT WALLET 1",
+    )
+    assert "Failed to create NFT wallet" in capsys.readouterr().out
+
+    await add_uri_to_nft_via_cli(
+        wallet_environments,
+        env,
+        wallet_id=0,
+        nft_coin_id=bytes32.zeros.hex(),
+        metadata_uri="http://metadata",
+        license_uri="http://license",
+    )
+    assert "Failed to add URI to NFT: You must provide only one of the URI flags" in capsys.readouterr().out
+
+    await add_uri_to_nft_via_cli(
+        wallet_environments,
+        env,
+        wallet_id=0,
+        nft_coin_id=bytes32.zeros.hex(),
+    )
+    assert "Failed to add URI to NFT: You must provide at least one of the URI flags" in capsys.readouterr().out
+
+    await transfer_nft_via_cli(
+        wallet_environments,
+        env,
+        wallet_id=0,
+        nft_coin_id=bytes32.zeros.hex(),
+        target_address=CliAddress(
+            bytes32.zeros,
+            "not an address",
+            AddressType.XCH,
+        ),
+    )
+    assert "Failed to transfer NFT" in capsys.readouterr().out
+
+    await ListNftsCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                client=env.rpc_client,
+                fingerprint=env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                config=env.wallet_state_manager.config,
+            )
+        ),
+        wallet_id=0,
+        start_index=0,
+        num=1,
+    ).run()
+    assert "Failed to list NFTs" in capsys.readouterr().out
+
+    await set_nft_did_via_cli(
+        wallet_environments,
+        env,
+        wallet_id=0,
+        did_id="",
+        nft_coin_id=bytes32.zeros.hex(),
+    )
+    assert "Failed to set DID on NFT" in capsys.readouterr().out
+
+    await GetNftInfoCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                client=env.rpc_client,
+                fingerprint=env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                config=env.wallet_state_manager.config,
+            )
+        ),
+        nft_coin_id=bytes32.zeros.hex(),
+    ).run()
+    assert "Failed to get NFT info" in capsys.readouterr().out
 
 
 def test_nft_command_parsing() -> None:
