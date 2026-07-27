@@ -304,9 +304,13 @@ async def get_transactions(
                     break
                 coin_record: dict[str, Any] | None = None
                 if txs[i + j + skipped].type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                    coin_records = await wallet_client.get_coin_records(
-                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()]))
-                    )
+                    coin_records = (
+                        await wallet_client.get_coin_records(
+                            GetCoinRecords(
+                                coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()])
+                            )
+                        )
+                    ).to_json_dict()
                     if len(coin_records["coin_records"]) > 0:
                         coin_record = coin_records["coin_records"][0]
                     else:

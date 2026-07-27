@@ -3047,13 +3047,11 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
     for i in range(int(max_coins / WalletRpcApi.max_get_coin_records_limit)):
         offset = uint32(WalletRpcApi.max_get_coin_records_limit * i)
         response = await client.get_coin_records(GetCoinRecords(limit=limit, offset=offset, include_total_count=True))
-        response_records.extend(list(response["coin_records"]))
+        response_records.extend(list(response.coin_records))
 
     assert len(response_records) == max_coins
     # Make sure we got all expected records
-    expected_records = GetCoinRecordsResponse(
-        coin_records=[wallet_coin_record_with_metadata(coin) for coin in coin_records], total_count=uint32(0)
-    ).to_json_dict()["coin_records"]
+    expected_records = [wallet_coin_record_with_metadata(coin) for coin in coin_records]
     for expected_record in expected_records:
         assert expected_record in response_records
 
@@ -3076,10 +3074,8 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
             amount_filter=amount_filter,
         ),
     ]:
-        response = await client.get_coin_records(request)
-        expected_records = GetCoinRecordsResponse(
-            coin_records=[wallet_coin_record_with_metadata(coin) for coin in coin_records], total_count=uint32(0)
-        ).to_json_dict()["coin_records"]
+        response_records = (await client.get_coin_records(request)).coin_records
+        expected_records = [wallet_coin_record_with_metadata(coin) for coin in filter_records]
         for expected_record in expected_records:
             assert expected_record in response_records
 

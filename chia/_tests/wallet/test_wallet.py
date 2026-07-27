@@ -1126,8 +1126,8 @@ class TestWalletSimulator:
         [tx] = send_response.transactions
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         resp = await env.rpc_client.get_coin_records(GetCoinRecords(wallet_id=uint32(1), coin_type=uint8(1)))
-        assert len(resp["coin_records"]) == 1
-        assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
+        assert len(resp.coin_records) == 1
+        assert resp.coin_records[0].id == merkle_coin.name()
 
     @pytest.mark.parametrize(
         "wallet_environments",
