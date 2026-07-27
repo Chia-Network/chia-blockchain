@@ -3081,6 +3081,35 @@ async def test_compact_protocol_invalid_messages(
         assert not block.challenge_chain_ip_proof.normalized_to_identity
 
 
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_replace_proof_failure_logs_and_reraises(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    full_node_api, _server, _bt = one_node_one_block
+    full_node = full_node_api.full_node
+    peak_block = await full_node.blockchain.get_full_peak()
+    assert peak_block is not None
+
+    async def failing_replace_proof(header_hash: bytes32, block: FullBlock) -> None:
+        raise RuntimeError("injected failure")
+
+    monkeypatch.setattr(full_node.block_store, "replace_proof", failing_replace_proof)
+
+    # the block's own vdf_info matches, so we reach the replace_proof call
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="injected failure"):
+            await full_node._replace_proof(
+                peak_block.reward_chain_block.challenge_chain_ip_vdf,
+                peak_block.challenge_chain_ip_proof,
+                peak_block.header_hash,
+                CompressibleVDFField.CC_IP_VDF,
+            )
+    assert "error replacing proof" in caplog.text
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("trusted", [True, False])
 async def test_unsolicited_compact_vdf(

@@ -118,9 +118,8 @@ class BlockStore:
 
         block_bytes: bytes = compress(block)
 
-        self.block_cache.put(header_hash, block)
-
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
+        # this method owns its write transaction, callers don't need to open one
+        async with self.db_wrapper.writer() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
                 (
@@ -129,6 +128,10 @@ class BlockStore:
                     header_hash,
                 ),
             )
+
+        # update the cache only after the transaction committed, so a failed
+        # write can't leave the cache diverged from the DB
+        self.block_cache.put(header_hash, block)
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
