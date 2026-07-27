@@ -13,6 +13,7 @@ from chia_rs import (
     SpendBundleConditions,
     SubEpochSummary,
     get_flags_for_height_and_constants,
+    is_canonical_serialization,
     run_block_generator,
     run_block_generator2,
 )
@@ -39,6 +40,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.priority_thread_pool_executor import Executor, _SupportsLessThan
 from chia.util.streamable import Streamable, streamable
 
@@ -123,6 +125,35 @@ def _pre_validate_block(
                     uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, None, uint32(validation_time * 1000)
                 )
 
+            # Fast-fail: prove the generator is the committed one before
+            # executing it. A peer can keep all farmed/signed header fields
+            # intact and swap only transactions_generator; these cheap hash
+            # checks reject that before the expensive CLVM run.
+            if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                validation_time = time.monotonic() - validation_start
+                return PreValidationResult(
+                    uint16(Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value),
+                    None,
+                    None,
+                    None,
+                    uint32(validation_time * 1000),
+                )
+            if block.foliage_transaction_block is not None:
+                if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+                if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.INVALID_FOLIAGE_BLOCK_HASH.value), None, None, None, uint32(validation_time * 1000)
+                    )
+
             prev_tx_height = pre_sp_tx_block_height(
                 constants=constants,
                 blocks=blockchain,
@@ -130,6 +161,73 @@ def _pre_validate_block(
                 sp_index=block.reward_chain_block.signage_point_index,
                 finished_sub_slots=len(block.finished_sub_slots),
             )
+
+            # More CLVM-independent gates (see validate_block_body). These need
+            # only prev_tx_height and the block itself, so they can run before
+            # the generator is executed.
+            if block.transactions_generator_ref_list == []:
+                if block.transactions_info.generator_refs_root != bytes([1] * 32):
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+            else:
+                # With hard fork 2 we ban transactions_generator_ref_list.
+                if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.TOO_MANY_GENERATOR_REFS.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+                generator_refs_hash = std_hash(
+                    b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list])
+                )
+                if block.transactions_info.generator_refs_root != generator_refs_hash:
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+                if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.TOO_MANY_GENERATOR_REFS.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+                if any([index >= block.height for index in block.transactions_generator_ref_list]):
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.FUTURE_GENERATOR_REFS.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+
+            if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
+                if not is_canonical_serialization(bytes(block.transactions_generator)):
+                    validation_time = time.monotonic() - validation_start
+                    return PreValidationResult(
+                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING.value),
+                        None,
+                        None,
+                        None,
+                        uint32(validation_time * 1000),
+                    )
+
             err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
             assert (err is None) != (conds is None)

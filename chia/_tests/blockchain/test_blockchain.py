@@ -2616,6 +2616,65 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
     @pytest.mark.anyio
+    async def test_prevalidation_fast_fail_mutated_generator(
+        self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Adversarial fast-fail: a peer can take a valid block, keep all
+        # farmed/signed header fields and commitments intact, and swap only
+        # transactions_generator for malicious CLVM. Prevalidation must reject
+        # this with the cheap generator_root hash check
+        # (INVALID_TRANSACTIONS_GENERATOR_HASH) BEFORE executing the generator,
+        # so the expensive CLVM run is never performed for the bad block. This
+        # mirrors the unfinished-block path, which already gates CLVM on these
+        # commitments.
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        await _validate_and_add_block(b, blocks[0])
+        await _validate_and_add_block(b, blocks[1])
+        blocks = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+        )
+        await _validate_and_add_block(b, blocks[2])
+        await _validate_and_add_block(b, blocks[3])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        coin = find_reward_coin(blocks[-1], bt.pool_ph)
+        tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        block: FullBlock = blocks[-1]
+        assert block.transactions_generator is not None
+
+        # Swap only the generator bytes; leave transactions_info.generator_root
+        # and all foliage/signatures pointing at the original generator. This
+        # is the attack: commitments unchanged, generator replaced (the peer
+        # cannot re-sign without the plot key).
+        malicious_generator = SerializedProgram.fromhex("80")
+        mutated = recursive_replace(block, "transactions_generator", malicious_generator)
+        # Sanity: the swap actually breaks the commitment.
+        assert std_hash(bytes(mutated.transactions_generator)) != mutated.transactions_info.generator_root
+
+        # Trap _run_block: if the generator is executed, raise. _pre_validate_block's
+        # outer try/except would convert that into UNKNOWN, so observing
+        # INVALID_TRANSACTIONS_GENERATOR_HASH instead proves CLVM did not run.
+        clvm_calls = 0
+
+        def _trap_run_block(*args: object, **kwargs: object) -> None:
+            nonlocal clvm_calls
+            clvm_calls += 1
+            raise AssertionError("CLVM generator execution must not run for a mutated generator")
+
+        monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", _trap_run_block)
+
+        await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
+
+        assert clvm_calls == 0
+
+    @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(
         self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
