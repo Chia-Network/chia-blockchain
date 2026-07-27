@@ -2783,7 +2783,9 @@ async def test_manage_kv_files(
 
 @pytest.mark.anyio
 async def test_merkle_blob_cache_isolation_across_stores(tmp_path: Path) -> None:
-    """SEC-470: Verify two stores with identical content don't share cached MerkleBlobs."""
+    """
+    Verify two stores with identical content don't share cached MerkleBlobs
+    """
     merkle_blobs_path = tmp_path / "merkle"
     merkle_blobs_path.mkdir()
     kv_blobs_path = tmp_path / "kv"

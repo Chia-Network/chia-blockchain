@@ -3078,10 +3078,10 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
             amount_filter=amount_filter,
         ),
     ]:
-        response = await client.get_coin_records(request)
+        response_records = (await client.get_coin_records(request)).coin_records
         expected_records = [wallet_coin_record_with_metadata(coin) for coin in filter_records]
         for expected_record in expected_records:
-            assert expected_record in response.coin_records
+            assert expected_record in response_records
 
 
 @pytest.mark.parametrize(
