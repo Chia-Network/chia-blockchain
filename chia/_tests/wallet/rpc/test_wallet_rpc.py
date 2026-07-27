@@ -2630,7 +2630,7 @@ async def test_get_height_info_response_variants(
     api_self = SimpleNamespace(
         service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
     )
-    response = await WalletRpcApi.get_height_info(api_self, GetHeightInfo())
+    response = GetHeightInfoResponse.from_json_dict(await WalletRpcApi.get_height_info(api_self, {}))
     assert isinstance(response, GetHeightInfoResponse)
     assert response.height == sync_height
     assert response.is_transaction_block == expected_is_tx
