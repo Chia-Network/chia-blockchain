@@ -709,8 +709,9 @@ class TestWeightProof:
     async def test_weight_proof_validation_challenge_at_segment_start(
         self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
-        """SEC-614: validation must not crash when a segment's challenge block
-        is the first sub-slot entry (first_idx == 0).
+        """
+        Validation must not crash when a segment's challenge block is the first
+        sub-slot entry (first_idx == 0).
 
         In legitimately-constructed proofs, segment creation always places at
         least one slot-end entry before the challenge block (first_idx >= 1).
@@ -762,8 +763,10 @@ class TestWeightProof:
     async def test_weight_proof_validation_no_challenge_block_in_segment(
         self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
-        """SEC-614: validation returns False when a segment has no challenge
-        block (every sub-slot has cc_slot_end set)."""
+        """
+        Validation returns False when a segment has no challenge block (every
+        sub-slot has cc_slot_end set).
+        """
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
@@ -802,8 +805,9 @@ class TestWeightProof:
     async def test_weight_proof_validation_missing_rc_slot_end_info(
         self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
-        """SEC-614: validation returns False when a segment is missing
-        rc_slot_end_info."""
+        """
+        Validation returns False when a segment is missing rc_slot_end_info
+        """
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants

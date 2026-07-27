@@ -117,11 +117,17 @@ class IdenticalSpendDedup:
 
     def get_deduplication_info(
         self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
-    ) -> tuple[list[CoinSpend], uint64, list[Coin]]:
+    ) -> tuple[list[CoinSpend], uint64, list[Coin], dict[bytes32, DedupCoinSpend]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
         provides the caller with the necessary information that allows it to perform
-        identical spend aggregation on that mempool item if possible
+        identical spend aggregation on that mempool item if possible.
+
+        This does not mutate the deduplication state. The returned state update
+        must be explicitly committed by the caller via
+        `update_deduplication_spends()` once the item is confirmed to be included,
+        so that items which are processed but ultimately dropped don't leave stale
+        deduplication entries behind.
 
         Args:
             bundle_coin_spends: the mempool item's coin spends data
@@ -130,6 +136,9 @@ class IdenticalSpendDedup:
             list[CoinSpend]: list of unique coin spends in this mempool item
             uint64: the cost we're saving by deduplicating eligible coins
             list[Coin]: list of unique additions in this mempool item
+            dict[bytes32, DedupCoinSpend]: the deduplication state update to
+                commit via `update_deduplication_spends()` if the item ends up
+                included
 
         Raises:
             ValueError to skip the mempool item we're currently in, if it's
@@ -162,9 +171,13 @@ class IdenticalSpendDedup:
                 # different solutions are rejected in check_removals().
                 raise SkipDedup("Solution is different from what we're deduplicating on")
             cost_saving += dedup_coin_spend.cost
-        # Update the eligible coin spends data
+        return unique_coin_spends, uint64(cost_saving), unique_additions, new_dedup_spends
+
+    def update_deduplication_spends(self, new_dedup_spends: dict[bytes32, DedupCoinSpend]) -> None:
         self.deduplication_spends.update(new_dedup_spends)
-        return unique_coin_spends, uint64(cost_saving), unique_additions
+
+    def copy(self) -> IdenticalSpendDedup:
+        return IdenticalSpendDedup(deduplication_spends=dict(self.deduplication_spends))
 
 
 @dataclasses.dataclass(frozen=True)
