@@ -30,10 +30,10 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_request_types import (
     ClawbackPuzzleDecoratorOverride,
+    GetCoinRecords,
     GetTransactionMemo,
     GetTransactions,
     SendTransaction,
