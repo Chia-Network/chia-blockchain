@@ -83,7 +83,7 @@ def not_ephemeral_additions(sp: WalletSpendBundle) -> list[Coin]:
 
 class CATWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol[CATCoinData]] = cast("CATWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("CATWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -356,11 +356,11 @@ class CATWallet:
     def get_asset_id(self) -> bytes32:
         return self.cat_info.limitations_program_hash
 
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: CATCoinData | None
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
+        if coin_data is not None:
+            assert isinstance(coin_data, CATCoinData)
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))

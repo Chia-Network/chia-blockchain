@@ -14,7 +14,7 @@ import aiosqlite
 import pytest
 from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -249,7 +249,7 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
-async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol[Any]) -> None:
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
     expected_balance = await wallet_node.get_balance(wallet.id())
     expected_balance_dict = expected_balance.to_json_dict()
     expected_balance_dict.setdefault("pending_approval_balance", None)
@@ -4929,6 +4929,20 @@ def test_create_new_wallet_post_init() -> None:
         match=re.escape('"initial_target_state" is required for new pool wallets'),
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.POOL_WALLET)
+
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.POOL_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+            plotnft_version=uint8(0),
+        )
+
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.POOL_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+            plotnft_version=uint8(3),
+        )
 
     with pytest.raises(
         ValueError,

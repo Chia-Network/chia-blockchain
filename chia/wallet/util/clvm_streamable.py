@@ -21,8 +21,8 @@ from chia.util.streamable import (
 _T_Streamable = TypeVar("_T_Streamable", bound=Streamable)
 
 
-def clvm_streamable(cls: type[Streamable]) -> type[Streamable]:
-    wrapped_cls: type[Streamable] = streamable(cls)
+def clvm_streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
+    wrapped_cls = streamable(cls)
     setattr(wrapped_cls, "_clvm_streamable", True)
 
     hints = get_type_hints(cls)

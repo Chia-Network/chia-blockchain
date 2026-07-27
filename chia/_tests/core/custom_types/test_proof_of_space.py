@@ -357,6 +357,12 @@ def test_effective_bits_relative_to_min_strength() -> None:
     assert calculate_plot_filter_bits(uint32(1_000_000), constants, 3) == 10
 
 
+def test_calculate_plot_filter_bits_rejects_below_min_strength() -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000), MIN_PLOT_STRENGTH=uint8(2))
+    with pytest.raises(ValueError, match=r"Plot strength \(1\) is lower than the minimum \(2\)"):
+        calculate_plot_filter_bits(uint32(1_000_000), constants, 1)
+
+
 class TestV2PlotFilter:
     def test_passes_plot_filter_v2_deterministic(self) -> None:
         plot_group_id = bytes32.from_hexstr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
@@ -372,7 +378,7 @@ class TestV2PlotFilter:
         strength = 3
 
         assert compute_plot_group_id(strength, plot_public_key, pool_ph) == std_hash(
-            bytes([strength]) + bytes(plot_public_key) + bytes(pool_ph)
+            strength.to_bytes(1, "big") + bytes(plot_public_key) + bytes(pool_ph)
         )
 
 

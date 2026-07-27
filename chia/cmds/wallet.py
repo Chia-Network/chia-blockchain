@@ -10,7 +10,8 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
-from chia.cmds.cmd_classes import ChiaCliContext, get_chia_command_metadata
+from chia.cmds.cmd_classes import ChiaCliContext, chia_command, get_chia_command_metadata, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionEndpoint, transaction_endpoint_runner
 from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
@@ -22,6 +23,8 @@ from chia.cmds.param_types import (
     cli_amount_none,
 )
 from chia.cmds.signer import PushTransactionsCMD, signer_cmd
+from chia.cmds.units import units
+from chia.cmds.wallet_funcs import delete_notifications, get_notifications, send_notification
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -1480,115 +1483,136 @@ def nft_get_info_cmd(
 wallet_cmd.add_command(coins_cmd)
 
 
-@wallet_cmd.group("notifications", help="Send/Manage notifications")
-def notification_cmd() -> None:
+@click.group("notifications", help="Send/Manage notifications")
+@click.pass_context
+def notification_cmd(ctx: click.Context) -> None:
     pass
 
 
-@notification_cmd.command("send", help="Send a notification to the owner of an address")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=notification_cmd,
+    name="send",
+    short_help="Send a notification to the owner of an address",
+    help="Send a notification to the owner of an address",
 )
-@options.create_fingerprint()
-@click.option(
-    "-t", "--to-address", help="The address to send the notification to", type=AddressParamType(), required=True
-)
-@click.option(
-    "-a",
-    "--amount",
-    help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
-    type=AmountParamType(),
-    default=CliAmount(mojos=True, amount=uint64(10000000)),
-    required=True,
-    show_default=True,
-)
-@click.option("-n", "--message", help="The message of the notification", type=str)
-@options.create_fee()
-@tx_out_cmd()
-@click.pass_context
-def send_notification_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    to_address: CliAddress,
-    amount: CliAmount,
-    message: str,
-    fee: uint64,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import send_notification
-
-    message_bytes: bytes = bytes(message, "utf8")
-    return asyncio.run(
-        send_notification(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            fee,
-            to_address,
-            message_bytes,
-            amount,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+class SendNotificationCMD(TransactionEndpoint):
+    to_address: CliAddress = option(
+        "-t",
+        "--to-address",
+        help="The address to send the notification to",
+        type=AddressParamType(),
+        required=True,
+    )
+    amount: CliAmount = option(
+        "-a",
+        "--amount",
+        help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
+        type=AmountParamType(),
+        default=CliAmount(mojos=True, amount=uint64(10000000)),
+        required=True,
+        show_default=True,
+    )
+    message: str = option(
+        "-n",
+        "--message",
+        help="The message of the notification",
+        type=str,
+        required=True,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
 
-@notification_cmd.command("get", help="Get notification(s) that are in your wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        message_bytes: bytes = bytes(self.message, "utf8")
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await send_notification(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                address=self.to_address,
+                message=message_bytes,
+                cli_amount=self.amount,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=notification_cmd,
+    name="get",
+    short_help="Get notification(s) that are in your wallet",
+    help="Get notification(s) that are in your wallet",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="The specific notification ID to show", type=Bytes32ParamType(), multiple=True)
-@click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
-@click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
-@click.pass_context
-def get_notifications_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: Sequence[bytes32],
-    start: int | None,
-    end: int | None,
-) -> None:
-    from chia.cmds.wallet_funcs import get_notifications
-
-    asyncio.run(
-        get_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, start, end)
+class GetNotificationsCMD:
+    rpc_info: NeedsWalletRPC
+    ids: Sequence[bytes32] = option(
+        "-i",
+        "--id",
+        help="The specific notification ID to show",
+        type=Bytes32ParamType(),
+        multiple=True,
+        required=False,
+    )
+    start: int | None = option(
+        "-s",
+        "--start",
+        help="The number of notifications to skip",
+        type=int,
+        default=None,
+    )
+    end: int | None = option(
+        "-e",
+        "--end",
+        help="The number of notifications to stop at",
+        type=int,
+        default=None,
     )
 
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_notifications(
+                wallet_info,
+                self.ids,
+                self.start,
+                self.end,
+            )
 
-@notification_cmd.command("delete", help="Delete notification(s) that are in your wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+
+@chia_command(
+    group=notification_cmd,
+    name="delete",
+    short_help="Delete notification(s) that are in your wallet",
+    help="Delete notification(s) that are in your wallet",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="A specific notification ID to delete", type=Bytes32ParamType(), multiple=True)
-@click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
-@click.pass_context
-def delete_notifications_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: Sequence[bytes32],
-    all: bool,
-) -> None:
-    from chia.cmds.wallet_funcs import delete_notifications
+class DeleteNotificationsCMD:
+    rpc_info: NeedsWalletRPC
+    ids: Sequence[bytes32] = option(
+        "-i",
+        "--id",
+        help="A specific notification ID to delete",
+        type=Bytes32ParamType(),
+        multiple=True,
+        required=False,
+    )
+    delete_all: bool = option(
+        "--all",
+        help="All notifications can be deleted (they will be recovered during resync)",
+        is_flag=True,
+        default=False,
+    )
 
-    asyncio.run(delete_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, all))
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await delete_notifications(
+                wallet_info,
+                self.ids,
+                self.delete_all,
+            )
+
+
+wallet_cmd.add_command(notification_cmd)
 
 
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")

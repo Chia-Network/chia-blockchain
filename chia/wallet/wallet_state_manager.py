@@ -142,7 +142,12 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import (
+    IsCoinSpendableWallet,
+    MatchPuzzleInfoWallet,
+    MaxSendQuantityWallet,
+    WalletProtocol,
+)
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -150,7 +155,7 @@ from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.wallet.wsm_apis import CreateMorePuzzleHashesResult, GetUnusedDerivationRecordResult
 
-TWalletType = TypeVar("TWalletType", bound=WalletProtocol[Any])
+TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_node import WalletNode
@@ -195,7 +200,7 @@ class WalletStateManager:
     db_wrapper: DBWrapper2
 
     main_wallet: Wallet
-    wallets: dict[uint32, WalletProtocol[Any]]
+    wallets: dict[uint32, WalletProtocol]
     private_key: PrivateKey | None
     root_pubkey: G1Element
 
@@ -308,7 +313,7 @@ class WalletStateManager:
 
         pool_config.perform_migration_from_old_config(root_path=self.root_path)
 
-        wallet: WalletProtocol[Any] | None = None
+        wallet: WalletProtocol | None = None
         for wallet_info in await self.get_all_wallet_info_entries():
             wallet_type = WalletType(wallet_info.type)
             if wallet_type == WalletType.STANDARD_WALLET:
@@ -1255,6 +1260,7 @@ class WalletStateManager:
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             wallet_type: type[CATWallet] = CATWallet
+            crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
                 uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
@@ -1274,7 +1280,7 @@ class WalletStateManager:
 
                     wallet_type = CRCATWallet
             if wallet_type is CRCATWallet:
-                assert crcat  # mypy doesn't get the semantics
+                assert crcat is not None  # mypy doesn't get the semantics
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
@@ -1326,6 +1332,7 @@ class WalletStateManager:
                 "automatically_add_unknown_cats", False
             ):
                 if wallet_type is CRCATWallet:
+                    assert crcat is not None
                     cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
@@ -1613,6 +1620,22 @@ class WalletStateManager:
 
         if wallet_identifier is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
+            # Bound the number of auto-created DID-scoped NFT wallets. `new_did_id`
+            # is parsed from attacker-controllable NFT transfer data; without a cap a
+            # peer that spams inbound NFTs with unique foreign DIDs can force
+            # unbounded wallet creation. Mirrors `did_auto_add_limit`.
+            # Counter excludes the canonical did_id=None wallet so attacker-driven
+            # fanout cannot displace a user's legitimate no-DID NFT receives.
+            nft_wallet_count = sum(
+                1 for w in self.wallets.values() if isinstance(w, NFTWallet) and w.nft_wallet_info.did_id is not None
+            )
+            nft_limit = self.config.get("nft_auto_add_limit", 100)
+            if new_did_id is not None and nft_wallet_count >= nft_limit:
+                self.log.warning(
+                    f"You are at the max configured limit of {nft_limit} NFT wallets. "
+                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                )
+                return None
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
@@ -2566,7 +2589,7 @@ class WalletStateManager:
         result = await self.coin_store.get_coin_records(**kwargs)
         return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
-    async def get_wallet_for_coin(self, coin_id: bytes32) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_coin(self, coin_id: bytes32) -> WalletProtocol | None:
         coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
             return None
@@ -2622,7 +2645,7 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
-    async def get_wallet_for_asset_id(self, asset_id: bytes32) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_asset_id(self, asset_id: bytes32) -> WalletProtocol | None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
@@ -2639,11 +2662,10 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> WalletProtocol | None:
         for wallet in self.wallets.values():
-            match_function = getattr(wallet, "match_puzzle_info", None)
-            if match_function is not None and callable(match_function):
-                if await match_function(puzzle_driver):
+            if isinstance(wallet, MatchPuzzleInfoWallet):
+                if await wallet.match_puzzle_info(puzzle_driver):
                     return wallet
         return None
 
@@ -2660,7 +2682,7 @@ class WalletStateManager:
                 },
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol[Any]) -> None:
+    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
         self.wallets[wallet.id()] = wallet
         result = await self.create_more_puzzle_hashes()
         await result.commit(self)
@@ -2711,11 +2733,11 @@ class WalletStateManager:
         for record in records:
             if record.coin.name() in {*offer_locked_coins.keys(), *pending_removals}:
                 continue
-            if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
+            if isinstance(wallet, IsCoinSpendableWallet) and not await wallet.is_coin_spendable(record):
                 continue
             filtered.add(record)
 
-        if hasattr(wallet, "max_send_quantity") and in_one_block:
+        if isinstance(wallet, MaxSendQuantityWallet) and in_one_block:
             filtered_as_list = list(filtered)
             filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
             return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])

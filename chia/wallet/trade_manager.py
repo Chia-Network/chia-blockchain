@@ -825,7 +825,7 @@ class TradeManager:
 
         for asset_id, amount in arbitrage.items():
             if asset_id is None:
-                wallet: WalletProtocol[Any] | None = self.wallet_state_manager.main_wallet
+                wallet: WalletProtocol | None = self.wallet_state_manager.main_wallet
                 assert wallet is not None
                 key: bytes32 | int = int(wallet.id())
             else:
