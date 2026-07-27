@@ -3,15 +3,17 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from contextlib import AbstractAsyncContextManager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, ClassVar, cast
 
-import aiosqlite
 import typing_extensions
 import zstd
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -38,6 +40,9 @@ def decompress_blob(block_bytes: bytes) -> bytes:
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[BlockStoreProtocol] = cast("BlockStore", None)
+
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
@@ -191,8 +196,12 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
-        return self.db_wrapper.writer()
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator[None]:
+        # the database connection is deliberately not exposed: callers only
+        # get an atomic scope, not access to the underlying database
+        async with self.db_wrapper.writer():
+            yield
 
     def get_block_from_cache(self, header_hash: bytes32) -> FullBlock | None:
         return self.block_cache.get(header_hash)
