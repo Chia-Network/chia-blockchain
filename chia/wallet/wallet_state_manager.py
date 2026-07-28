@@ -1254,6 +1254,7 @@ class WalletStateManager:
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             wallet_type: type[CATWallet] = CATWallet
+            crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
                 uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
@@ -1273,7 +1274,7 @@ class WalletStateManager:
 
                     wallet_type = CRCATWallet
             if wallet_type is CRCATWallet:
-                assert crcat  # mypy doesn't get the semantics
+                assert crcat is not None  # mypy doesn't get the semantics
                 # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
@@ -1325,6 +1326,7 @@ class WalletStateManager:
                 "automatically_add_unknown_cats", False
             ):
                 if wallet_type is CRCATWallet:
+                    assert crcat is not None
                     cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
@@ -1612,6 +1614,22 @@ class WalletStateManager:
 
         if wallet_identifier is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
+            # Bound the number of auto-created DID-scoped NFT wallets. `new_did_id`
+            # is parsed from attacker-controllable NFT transfer data; without a cap a
+            # peer that spams inbound NFTs with unique foreign DIDs can force
+            # unbounded wallet creation. Mirrors `did_auto_add_limit`.
+            # Counter excludes the canonical did_id=None wallet so attacker-driven
+            # fanout cannot displace a user's legitimate no-DID NFT receives.
+            nft_wallet_count = sum(
+                1 for w in self.wallets.values() if isinstance(w, NFTWallet) and w.nft_wallet_info.did_id is not None
+            )
+            nft_limit = self.config.get("nft_auto_add_limit", 100)
+            if new_did_id is not None and nft_wallet_count >= nft_limit:
+                self.log.warning(
+                    f"You are at the max configured limit of {nft_limit} NFT wallets. "
+                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                )
+                return None
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
