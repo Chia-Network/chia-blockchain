@@ -355,6 +355,12 @@ class FarmerAPI:
                     self.farmer.log.error(
                         f"Not logged into pool while trying to POST partial: {pool_state_dict['pool_config'].pool_url}"
                     )
+                    increment_pool_stats(
+                        self.farmer.pool_state,
+                        p2_singleton_puzzle_hash,
+                        "missing_partials",
+                        time.time(),
+                    )
                     return
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, current_auth_token, agg_sig)
                 self.farmer.log.info(

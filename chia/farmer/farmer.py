@@ -511,10 +511,7 @@ class Farmer:
     ) -> pool_protocol.GetFarmerResponse | pool_protocol.ErrorResponse | None:
         authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
         if not isinstance(authentication_token, str):
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash,
-                f"Failed to authenticate to pool before aquiring farmer details: {pool_config.pool_url}",
-            )
+            self.log.error(f"Failed to authenticate to pool before aquiring farmer details: {pool_config.pool_url}")
             return authentication_token
         if pool_config.version == 1:
             message: bytes32 = std_hash(
