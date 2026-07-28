@@ -20,8 +20,13 @@ from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.types.blockchain_format.coin import Coin
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
+from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 
@@ -234,7 +239,7 @@ async def test_short_sync_batch_returns_false_on_disconnected_first_block(
     blocks = bt.get_consecutive_blocks(2)
     disconnected_block = blocks[-1]  # height > 0 and its parent is not in node's database
 
-    class _FakePeer:
+    class DummyPeer:
         peer_node_id = bytes32(b"\x01" * 32)
 
         def get_peer_logging(self) -> PeerInfo:
@@ -245,10 +250,82 @@ async def test_short_sync_batch_returns_false_on_disconnected_first_block(
         ) -> full_node_protocol.RespondBlocks:
             return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [disconnected_block])
 
-    peer = cast(WSChiaConnection, _FakePeer())
+    peer = cast(WSChiaConnection, DummyPeer())
     # start_height == 0 skips the fork-point probe, exercising the batch loop's parent check directly.
     result = await node.short_sync_batch(peer, uint32(0), uint32(1))
     assert result is False
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_post_processes_committed_prefix_before_failure(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A RespondBlocks batch with a valid hinted TX block followed by an invalid
+    # successor must still persist hints for the committed prefix before raising.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await node.add_block(block)
+
+    wt = bt.get_pool_wallet_tool()
+    puzzle_hash = bytes32(32 * b"\0")
+    hint = bytes32(32 * b"\5")
+    amount = int_to_bytes(1)
+    coin_spent = next(c for c in blocks[-1].get_included_reward_coins() if c.puzzle_hash == bt.pool_ph)
+    tx = wt.generate_signed_transaction(
+        uint64(10),
+        wt.get_new_puzzlehash(),
+        coin_spent,
+        condition_dic={
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        },
+    )
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    tx_block = blocks[-1]
+    hinted_coin_id = Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x02" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(tx_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [tx_block, bad_block])
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    assert await node.hint_store.get_coin_ids(hint) == []
+
+    with pytest.raises(ValueError, match="failed to validate blocks after height"):
+        await node.short_sync_batch(peer, tx_block.height, bad_block.height)
+
+    assert await node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == tx_block.header_hash
     assert peer.peer_node_id not in node.sync_store.batch_syncing
 
 

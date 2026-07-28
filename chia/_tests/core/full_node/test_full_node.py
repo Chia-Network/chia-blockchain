@@ -3375,6 +3375,81 @@ async def test_sync_from_fork_point_logs_validate_stage_exception(
     assert peer.closed
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_sync_from_fork_point_adds_hints_for_committed_prefix(
+    one_node: SimulatorsAndWalletsServices,
+    monkeypatch: pytest.MonkeyPatch,
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A long-sync batch with a valid hinted TX block followed by an invalid successor
+    # must still persist hints for the committed prefix before aborting.
+    [full_node_service], _, bt = one_node
+    full_node = full_node_service._node
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    wt = bt.get_pool_wallet_tool()
+    puzzle_hash = bytes32(32 * b"\0")
+    hint = bytes32(32 * b"\5")
+    amount = int_to_bytes(1)
+    coin_spent = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(
+        uint64(10),
+        wt.get_new_puzzlehash(),
+        coin_spent,
+        condition_dic={
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        },
+    )
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    tx_block = blocks[-1]
+    hinted_coin_id = Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+    peer_blocks = [*blocks[:-1], bad_block]
+
+    class DummyPeer:
+        def __init__(self, chain: list[FullBlock]) -> None:
+            self.closed = False
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self._blocks = chain
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            request = args[1]
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            batch = [b for b in self._blocks if request.start_height <= b.height <= request.end_height]
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, batch)
+
+        async def close(self, *args: object, **kwargs: object) -> None:
+            self.closed = True
+
+    peer = DummyPeer(peer_blocks)
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+
+    assert await full_node.hint_store.get_coin_ids(hint) == []
+    await asyncio.wait_for(
+        full_node.sync_from_fork_point(uint32(0), bad_block.height, bad_block.header_hash, []),
+        timeout=60,
+    )
+
+    assert await full_node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    peak = full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == tx_block.header_hash
+    assert peer.closed
+
+
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure_before_receiving_update_logs_error(
     caplog: pytest.LogCaptureFixture,

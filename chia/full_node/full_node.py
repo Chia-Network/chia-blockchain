@@ -694,8 +694,6 @@ class FullNode:
                     success, state_change_summary = await self.add_block_batch(
                         response.blocks, peer_info, fork_info, vs, blockchain
                     )
-                    if not success:
-                        raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
                         try:
                             peak_fb: FullBlock | None = await self.blockchain.get_full_peak()
@@ -712,10 +710,18 @@ class FullNode:
                             await self.peak_post_processing(peak_fb, state_change_summary, peer)
                             raise
                         finally:
-                            self.log.info(f"Added blocks {height}-{end_height}")
+                            # Log the committed prefix only; a failed suffix is not ingested.
+                            self.log.info(f"Added blocks {height}-{state_change_summary.peak.height}")
                 if state_change_summary is not None and peak_fb is not None:
                     # Call outside of priority_mutex to encourage concurrency
                     await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
+                if not success:
+                    if state_change_summary is not None:
+                        raise ValueError(
+                            f"Error short batch syncing, failed to validate blocks after height "
+                            f"{state_change_summary.peak.height} (batch {height}-{end_height})"
+                        )
+                    raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
         finally:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
@@ -1454,8 +1460,29 @@ class FullNode:
                 peer.peer_info,
                 vs,
             )
+            peak: BlockRecord | None = self.blockchain.get_peak()
+            if state_change_summary is not None:
+                assert peak is not None
+                # Hints must be added to the DB. The other post-processing tasks are not required when syncing.
+                # A failed batch can still have committed a valid prefix, whose hints must not be dropped.
+                hints_to_add, _ = get_hints_and_subscription_coin_ids(
+                    state_change_summary,
+                    self.subscriptions.has_coin_subscription,
+                    self.subscriptions.has_puzzle_subscription,
+                )
+                await self.hint_store.add_hints(hints_to_add)
             if err is not None:
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                if state_change_summary is not None:
+                    committed_end = state_change_summary.peak.height
+                    self.log.info(
+                        f"Added blocks {start_height} to {committed_end} "
+                        f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
+                    )
+                    raise ValueError(
+                        f"Failed to validate block batch after height {committed_end} "
+                        f"(batch {start_height}-{end_height}): {err}"
+                    )
                 raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
             if end_height - block_rate_height > 100:
                 now = time.monotonic()
@@ -1463,19 +1490,11 @@ class FullNode:
                 block_rate_time = now
                 block_rate_height = end_height
 
+            committed_end = state_change_summary.peak.height if state_change_summary is not None else end_height
             self.log.info(
-                f"Added blocks {start_height} to {end_height} ({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
+                f"Added blocks {start_height} to {committed_end} "
+                f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
             )
-            peak: BlockRecord | None = self.blockchain.get_peak()
-            if state_change_summary is not None:
-                assert peak is not None
-                # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                hints_to_add, _ = get_hints_and_subscription_coin_ids(
-                    state_change_summary,
-                    self.subscriptions.has_coin_subscription,
-                    self.subscriptions.has_puzzle_subscription,
-                )
-                await self.hint_store.add_hints(hints_to_add)
             # Note that end_height is not necessarily the peak at this
             # point. In case of a re-org, it may even be significantly
             # higher than _peak_height, and still not be the peak.
