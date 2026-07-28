@@ -24,53 +24,53 @@ class NewPeakItem:
     item_type: NewPeakQueueTypes
     data: Any
 
-    def __lt__(self, other):
+    def __lt__(self, other: NewPeakItem) -> bool:
         if self.item_type != other.item_type:
             return self.item_type < other.item_type
         if self.item_type in {NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION}:
             return False  # All subscriptions are equal
-        return self.data[0].height < other.data[0].height
+        return bool(self.data[0].height < other.data[0].height)
 
-    def __le__(self, other):
+    def __le__(self, other: NewPeakItem) -> bool:
         if self.item_type != other.item_type:
             return self.item_type < other.item_type
         if self.item_type in {NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION}:
             return True  # All subscriptions are equal
-        return self.data[0].height <= other.data[0].height
+        return bool(self.data[0].height <= other.data[0].height)
 
-    def __gt__(self, other):
+    def __gt__(self, other: NewPeakItem) -> bool:
         if self.item_type != other.item_type:
             return self.item_type > other.item_type
         if self.item_type in {NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION}:
             return False  # All subscriptions are equal
-        return self.data[0].height > other.data[0].height
+        return bool(self.data[0].height > other.data[0].height)
 
-    def __ge__(self, other):
+    def __ge__(self, other: NewPeakItem) -> bool:
         if self.item_type != other.item_type:
             return self.item_type > other.item_type
         if self.item_type in {NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION}:
             return True  # All subscriptions are equal
-        return self.data[0].height >= other.data[0].height
+        return bool(self.data[0].height >= other.data[0].height)
 
 
 class NewPeakQueue:
-    def __init__(self, inner_queue: asyncio.PriorityQueue):
-        self._inner_queue: asyncio.PriorityQueue = inner_queue
+    def __init__(self, inner_queue: asyncio.PriorityQueue[NewPeakItem]) -> None:
+        self._inner_queue: asyncio.PriorityQueue[NewPeakItem] = inner_queue
         self._pending_data_process_items: int = 0
 
-    async def subscribe_to_coin_ids(self, coin_ids: list[bytes32]):
+    async def subscribe_to_coin_ids(self, coin_ids: list[bytes32]) -> None:
         self._pending_data_process_items += 1
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, coin_ids))
 
-    async def subscribe_to_puzzle_hashes(self, puzzle_hashes: list[bytes32]):
+    async def subscribe_to_puzzle_hashes(self, puzzle_hashes: list[bytes32]) -> None:
         self._pending_data_process_items += 1
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION, puzzle_hashes))
 
-    async def full_node_state_updated(self, coin_state_update: CoinStateUpdate, peer: WSChiaConnection):
+    async def full_node_state_updated(self, coin_state_update: CoinStateUpdate, peer: WSChiaConnection) -> None:
         self._pending_data_process_items += 1
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.FULL_NODE_STATE_UPDATED, (coin_state_update, peer)))
 
-    async def new_peak_wallet(self, new_peak: NewPeakWallet, peer: WSChiaConnection):
+    async def new_peak_wallet(self, new_peak: NewPeakWallet, peer: WSChiaConnection) -> None:
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.NEW_PEAK_WALLET, (new_peak, peer)))
 
     async def get(self) -> NewPeakItem:
