@@ -378,7 +378,7 @@ class WalletTestFramework:
         pending_txs: list[list[LightTransactionRecord]] = []
         balances_pre_block_updates: list[dict[uint32, WalletState]] = []
         # Check balances after block (and reorg)
-        for reorg_status in ("before",) if reorg_exempt or self.reorg_exempt else ("before", "during"):
+        for reorg_status in ("no",) if reorg_exempt or self.reorg_exempt else ("before", "during"):
             if reorg_status == "during":
                 for bundle in bundles_to_repush:
                     await self.full_node_rpc_client.push_tx(bundle)
@@ -399,12 +399,12 @@ class WalletTestFramework:
                 for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
                     try:
                         async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
-                            if reorg_status == "before":
-                                await env.change_balances(transition.pre_block_balance_updates)
-                                balances_pre_block_updates.append(env.wallet_states)
-                            else:
+                            if reorg_status == "during":
                                 env.wallet_states = balances_pre_block_updates[i]
                                 await env.change_balances(post_reorg_balance_differences[i].pre_block_balance_updates)
+                            else:
+                                await env.change_balances(transition.pre_block_balance_updates)
+                                balances_pre_block_updates.append(env.wallet_states)
                             await env.check_balances(transition.pre_block_additional_balance_info)
                     except Exception:
                         raise ValueError(f"Error with env index {i} - {reorg_status} reorg check")
