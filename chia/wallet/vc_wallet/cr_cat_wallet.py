@@ -472,7 +472,7 @@ class CRCATWallet(CATWallet):
         vc_announcements_to_make: list[bytes] = []
         inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
         first = True
-        announcement: CreateCoinAnnouncement
+        announcement: CreateCoinAnnouncement | None = None
         coin_ids: list[bytes32] = [coin.name() for coin in cat_coins]
         coin_records: list[WalletCoinRecord] = (
             await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
@@ -535,6 +535,7 @@ class CRCATWallet(CATWallet):
                         conditions=(*extra_conditions, announcement),
                     )
             else:
+                assert announcement is not None
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
                     conditions=(announcement.corresponding_assertion(),),
@@ -577,6 +578,7 @@ class CRCATWallet(CATWallet):
             vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
         )
         if add_authorizations_to_cr_cats:
+            assert announcement is not None
             await vc_wallet.generate_signed_transaction(
                 [uint64(1)],
                 [await action_scope.get_puzzle_hash(self.wallet_state_manager)],

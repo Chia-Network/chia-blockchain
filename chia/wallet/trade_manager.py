@@ -552,7 +552,7 @@ class TradeManager:
                             action_scope=action_scope,
                         )
                     # Note: if we use check_for_special_offer_making, this is not used.
-                elif amount == 0:
+                else:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
                 offer_dict_no_ints[asset_id] = amount
