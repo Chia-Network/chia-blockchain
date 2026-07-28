@@ -19,6 +19,7 @@ from chia.rpc.rpc_server import RpcServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.wallet.transaction_record import LightTransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -28,6 +29,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_request_types import GetWalletBalance
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
@@ -309,6 +311,7 @@ class WalletTestFramework:
     trusted_full_node: bool
     environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
+    reorg_exempt: bool = False
 
     def cmd_tx_endpoint_args(self, env: WalletEnvironment) -> dict[str, Any]:
         return {
@@ -343,7 +346,12 @@ class WalletTestFramework:
             yield
 
     async def process_pending_states(
-        self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []
+        self,
+        state_transitions: list[WalletStateTransition],
+        invalid_transactions: list[bytes32] = [],
+        post_reorg_balance_differences: list[WalletStateTransition] = [],
+        bundles_to_repush: list[WalletSpendBundle] = [],
+        reorg_exempt: bool = False,
     ) -> None:
         """
         This is the main entry point for processing state in wallet tests. It does the following things:
@@ -356,6 +364,8 @@ class WalletTestFramework:
         6) Checks that if `reuse_puzhash` was set, no new derivations were created
         7) Ensures the wallet is in a synced state before progressing to the rest of the test
         """
+        if len(post_reorg_balance_differences) == 0:
+            post_reorg_balance_differences = [WalletStateTransition()] * len(self.environments)
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         if self.tx_config.reuse_puzhash:
             puzzle_hash_indexes: list[dict[uint32, int]] = []
@@ -366,66 +376,91 @@ class WalletTestFramework:
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: list[list[LightTransactionRecord]] = []
-        peak = self.full_node.full_node.blockchain.get_peak_height()
-        assert peak is not None
-        # Check balances prior to block
-        try:
-            for i, env in enumerate(self.environments):
-                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20, peak_height=peak)
-                try:
-                    pending_txs.append(
-                        await env.wait_for_transactions_to_settle(
-                            self.full_node, _exclude_from_mempool_check=invalid_transactions
-                        )
-                    )
-                except TimeoutError:  # pragma: no cover
-                    raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
-            for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
-                try:
-                    async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
-                        await env.change_balances(transition.pre_block_balance_updates)
-                        await env.check_balances(transition.pre_block_additional_balance_info)
-                except Exception:
-                    raise ValueError(f"Error with env index {i}")
-        except Exception as e:
-            raise ValueError(f"Error before block was farmed: {e}") from e
-
-        # Farm block
-        await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-
-        # Check balances after block
-        try:
-            for i, (env, local_pending_txs) in enumerate(zip(self.environments, pending_txs)):
-                await self.full_node.wait_for_wallet_synced(
-                    wallet_node=env.node, timeout=20, peak_height=uint32(peak + 1)
-                )
-                try:
-                    await env.wait_for_transactions_to_settle(
-                        self.full_node,
-                        _exclude_from_mempool_check=invalid_transactions + [tx.name for tx in local_pending_txs],
-                    )
-                except TimeoutError:  # pragma: no cover
-                    raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
-            for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
-                try:
-                    async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
-                        await env.change_balances(transition.post_block_balance_updates)
-                        await env.check_balances(transition.post_block_additional_balance_info)
-                except Exception:
-                    raise ValueError(f"Error with env {i}")
-        except Exception as e:
-            raise ValueError(f"Error after block was farmed: {e}") from e
-
-        # Make sure all pending txs from before the block are now confirmed
-        for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
+        balances_pre_block_updates: list[dict[uint32, WalletState]] = []
+        # Check balances after block (and reorg)
+        for reorg_status in ("before",) if reorg_exempt or self.reorg_exempt else ("before", "during"):
+            if reorg_status == "during":
+                for bundle in bundles_to_repush:
+                    await self.full_node_rpc_client.push_tx(bundle)
+            peak = self.full_node.full_node.blockchain.get_peak_height()
+            assert peak is not None
+            # Check balances prior to block
             try:
-                await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
-            except TimeoutError:  # pragma: no cover
-                unconfirmed: list[
-                    LightTransactionRecord
-                ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
-                raise TimeoutError(
-                    f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
+                for i, env in enumerate(self.environments):
+                    await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20, peak_height=peak)
+                    try:
+                        pending_txs.append(
+                            await env.wait_for_transactions_to_settle(
+                                self.full_node, _exclude_from_mempool_check=invalid_transactions
+                            )
+                        )
+                    except TimeoutError:  # pragma: no cover
+                        raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
+                for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
+                    try:
+                        async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
+                            if reorg_status == "before":
+                                await env.change_balances(transition.pre_block_balance_updates)
+                                balances_pre_block_updates.append(env.wallet_states)
+                            else:
+                                env.wallet_states = balances_pre_block_updates[i]
+                                await env.change_balances(post_reorg_balance_differences[i].pre_block_balance_updates)
+                            await env.check_balances(transition.pre_block_additional_balance_info)
+                    except Exception:
+                        raise ValueError(f"Error with env index {i} - {reorg_status} reorg check")
+            except Exception as e:
+                raise ValueError(f"Error before block was farmed: {e}") from e
+
+            # Farm block
+            await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+
+            try:
+                for i, (env, local_pending_txs) in enumerate(zip(self.environments, pending_txs)):
+                    await self.full_node.wait_for_wallet_synced(
+                        wallet_node=env.node, timeout=20, peak_height=uint32(peak + 1)
+                    )
+                    try:
+                        await env.wait_for_transactions_to_settle(
+                            self.full_node,
+                            _exclude_from_mempool_check=invalid_transactions + [tx.name for tx in local_pending_txs],
+                        )
+                    except TimeoutError:  # pragma: no cover
+                        raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
+                for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
+                    try:
+                        async with env.wallet_state_manager.db_wrapper.reader_no_transaction():
+                            await env.change_balances(transition.post_block_balance_updates)
+                            if reorg_status == "during":
+                                await env.change_balances(post_reorg_balance_differences[i].post_block_balance_updates)
+                            await env.check_balances(transition.post_block_additional_balance_info)
+                            if reorg_status == "before":
+                                for id, balance_updates in transition.post_block_balance_updates.items():
+                                    if "init" in balance_updates:
+                                        balances_pre_block_updates[i][env.dealias_wallet_id(id)] = WalletState(
+                                            balance=Balance()
+                                        )
+                    except Exception:
+                        raise ValueError(f"Error with env {i} - {reorg_status} reorg check")
+            except Exception as e:
+                raise ValueError(f"Error after block was farmed: {e}") from e
+
+            # Make sure all pending txs from before the block are now confirmed
+            for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
+                try:
+                    await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
+                except TimeoutError:  # pragma: no cover
+                    unconfirmed: list[
+                        LightTransactionRecord
+                    ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                    raise TimeoutError(
+                        f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
+                    )
+
+            if reorg_status == "before":
+                height = self.full_node.full_node.blockchain.get_peak_height()
+                assert height is not None
+                await self.full_node.reorg_from_index_to_new_index(
+                    ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
                 )
 
         # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
