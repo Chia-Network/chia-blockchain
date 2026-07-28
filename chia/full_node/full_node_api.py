@@ -49,7 +49,7 @@ from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS, RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
@@ -71,8 +71,6 @@ from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
@@ -209,7 +207,18 @@ class FullNodeAPI:
         we can ask for it.
         """
         # this semaphore limits the number of tasks that can call new_peak() at
-        # the same time, since it can be expensive
+        # the same time, since it can be expensive.
+        # When all active slots are busy and we have at least one outbound
+        # full-node peer, drop additional inbound NewPeak requests.
+        # Without an outbound peer, let inbound peers use the bounded queue.
+        if (
+            not peer.is_outbound
+            and self.full_node.new_peak_sem.locked()
+            and len(self.full_node.server.get_connections(NodeType.FULL_NODE, outbound=True)) > 0
+        ):
+            self.log.debug("Dropping inbound NewPeak, active slots busy: %s %s", peer.get_peer_logging(), request)
+            return None
+
         try:
             async with self.full_node.new_peak_sem.acquire():
                 await self.full_node.new_peak(request, peer)
@@ -954,6 +963,10 @@ class FullNodeAPI:
                 else:
                     height = peak.height
                     tx_height = tx_peak.height
+                filter_challenge = self.full_node.full_node_store.get_filter_challenge(
+                    cc_challenge_hash,
+                    request.signage_point_index,
+                )
                 quality_string: bytes32 | None = verify_and_get_quality_string(
                     request.proof_of_space,
                     self.full_node.constants,
@@ -961,6 +974,8 @@ class FullNodeAPI:
                     request.challenge_chain_sp,
                     height=height,
                     prev_transaction_block_height=tx_height,
+                    filter_challenge=filter_challenge,
+                    signage_point_index=request.signage_point_index,
                 )
                 if quality_string is None:
                     self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
@@ -2181,25 +2196,13 @@ class FullNodeAPI:
 
         start_time = time.monotonic()
 
-        async with self.full_node.db_wrapper.reader() as conn:
-            transaction_ids = set(
-                self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
-            )
+        transaction_ids = set(
+            self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
+        )
 
-            hinted_coin_ids: set[bytes32] = set()
+        hinted_coin_ids = await self.full_node.hint_store.get_coin_ids_by_hints(puzzle_hashes)
 
-            for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
-                hints_db: tuple[bytes, ...] = tuple(batch.entries)
-                cursor = await conn.execute(
-                    f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
-                    hints_db,
-                )
-                for row in await cursor.fetchall():
-                    hinted_coin_ids.add(bytes32(row[0]))
-                await cursor.close()
-
-            transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
+        transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))

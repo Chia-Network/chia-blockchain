@@ -13,7 +13,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_action_scope import WalletSideEffects
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletSideEffects
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -44,6 +44,7 @@ class MockWalletStateManager:
             list[SigningResponse],
             list[WalletSpendBundle],
             list[SingletonRecord],
+            PlotNFTTargetStateInfo | None,
         ]
         | None
     ) = None
@@ -57,6 +58,7 @@ class MockWalletStateManager:
         additional_signing_responses: list[SigningResponse],
         extra_spends: list[WalletSpendBundle],
         singleton_records: list[SingletonRecord],
+        plotnft_exiting_info: PlotNFTTargetStateInfo | None,
     ) -> list[TransactionRecord]:
         self.most_recent_call = (
             txs,
@@ -66,6 +68,7 @@ class MockWalletStateManager:
             additional_signing_responses,
             extra_spends,
             singleton_records,
+            plotnft_exiting_info,
         )
         return txs
 
@@ -92,7 +95,7 @@ async def test_wallet_action_scope() -> None:
             action_scope.side_effects
 
     assert action_scope.side_effects.transactions == [STD_TX]
-    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [])
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
         DEFAULT_TX_CONFIG,
@@ -107,4 +110,5 @@ async def test_wallet_action_scope() -> None:
             interface.side_effects.transactions = []
 
     assert action_scope.side_effects.transactions == []
-    assert wsm.most_recent_call == ([], False, True, True, [], [], [])
+    # same as above because the lack of transactions prevents the add_pending_transactions call
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)

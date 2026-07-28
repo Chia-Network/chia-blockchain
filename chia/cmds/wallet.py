@@ -10,7 +10,13 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
-from chia.cmds.cmd_classes import ChiaCliContext, get_chia_command_metadata
+from chia.cmds.cmd_classes import ChiaCliContext, chia_command, get_chia_command_metadata, option
+from chia.cmds.cmd_helpers import (
+    NeedsWalletRPC,
+    TransactionEndpoint,
+    TransactionEndpointWithTimelocks,
+    transaction_endpoint_runner,
+)
 from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
@@ -22,6 +28,8 @@ from chia.cmds.param_types import (
     cli_amount_none,
 )
 from chia.cmds.signer import PushTransactionsCMD, signer_cmd
+from chia.cmds.units import units
+from chia.cmds.wallet_funcs import delete_notifications, get_notifications, send_notification
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -1480,115 +1488,136 @@ def nft_get_info_cmd(
 wallet_cmd.add_command(coins_cmd)
 
 
-@wallet_cmd.group("notifications", help="Send/Manage notifications")
-def notification_cmd() -> None:
+@click.group("notifications", help="Send/Manage notifications")
+@click.pass_context
+def notification_cmd(ctx: click.Context) -> None:
     pass
 
 
-@notification_cmd.command("send", help="Send a notification to the owner of an address")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=notification_cmd,
+    name="send",
+    short_help="Send a notification to the owner of an address",
+    help="Send a notification to the owner of an address",
 )
-@options.create_fingerprint()
-@click.option(
-    "-t", "--to-address", help="The address to send the notification to", type=AddressParamType(), required=True
-)
-@click.option(
-    "-a",
-    "--amount",
-    help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
-    type=AmountParamType(),
-    default=CliAmount(mojos=True, amount=uint64(10000000)),
-    required=True,
-    show_default=True,
-)
-@click.option("-n", "--message", help="The message of the notification", type=str)
-@options.create_fee()
-@tx_out_cmd()
-@click.pass_context
-def send_notification_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    to_address: CliAddress,
-    amount: CliAmount,
-    message: str,
-    fee: uint64,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import send_notification
-
-    message_bytes: bytes = bytes(message, "utf8")
-    return asyncio.run(
-        send_notification(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            fee,
-            to_address,
-            message_bytes,
-            amount,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+class SendNotificationCMD(TransactionEndpoint):
+    to_address: CliAddress = option(
+        "-t",
+        "--to-address",
+        help="The address to send the notification to",
+        type=AddressParamType(),
+        required=True,
+    )
+    amount: CliAmount = option(
+        "-a",
+        "--amount",
+        help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
+        type=AmountParamType(),
+        default=CliAmount(mojos=True, amount=uint64(10000000)),
+        required=True,
+        show_default=True,
+    )
+    message: str = option(
+        "-n",
+        "--message",
+        help="The message of the notification",
+        type=str,
+        required=True,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
 
-@notification_cmd.command("get", help="Get notification(s) that are in your wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        message_bytes: bytes = bytes(self.message, "utf8")
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await send_notification(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                address=self.to_address,
+                message=message_bytes,
+                cli_amount=self.amount,
+                push=self.push,
+                condition_valid_times=self.load_condition_valid_times(),
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+            )
+
+
+@chia_command(
+    group=notification_cmd,
+    name="get",
+    short_help="Get notification(s) that are in your wallet",
+    help="Get notification(s) that are in your wallet",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="The specific notification ID to show", type=Bytes32ParamType(), multiple=True)
-@click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
-@click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
-@click.pass_context
-def get_notifications_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: Sequence[bytes32],
-    start: int | None,
-    end: int | None,
-) -> None:
-    from chia.cmds.wallet_funcs import get_notifications
-
-    asyncio.run(
-        get_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, start, end)
+class GetNotificationsCMD:
+    rpc_info: NeedsWalletRPC
+    ids: Sequence[bytes32] = option(
+        "-i",
+        "--id",
+        help="The specific notification ID to show",
+        type=Bytes32ParamType(),
+        multiple=True,
+        required=False,
+    )
+    start: int | None = option(
+        "-s",
+        "--start",
+        help="The number of notifications to skip",
+        type=int,
+        default=None,
+    )
+    end: int | None = option(
+        "-e",
+        "--end",
+        help="The number of notifications to stop at",
+        type=int,
+        default=None,
     )
 
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_notifications(
+                wallet_info,
+                self.ids,
+                self.start,
+                self.end,
+            )
 
-@notification_cmd.command("delete", help="Delete notification(s) that are in your wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+
+@chia_command(
+    group=notification_cmd,
+    name="delete",
+    short_help="Delete notification(s) that are in your wallet",
+    help="Delete notification(s) that are in your wallet",
 )
-@options.create_fingerprint()
-@click.option("-i", "--id", help="A specific notification ID to delete", type=Bytes32ParamType(), multiple=True)
-@click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
-@click.pass_context
-def delete_notifications_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: Sequence[bytes32],
-    all: bool,
-) -> None:
-    from chia.cmds.wallet_funcs import delete_notifications
+class DeleteNotificationsCMD:
+    rpc_info: NeedsWalletRPC
+    ids: Sequence[bytes32] = option(
+        "-i",
+        "--id",
+        help="A specific notification ID to delete",
+        type=Bytes32ParamType(),
+        multiple=True,
+        required=False,
+    )
+    delete_all: bool = option(
+        "--all",
+        help="All notifications can be deleted (they will be recovered during resync)",
+        is_flag=True,
+        default=False,
+    )
 
-    asyncio.run(delete_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, all))
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await delete_notifications(
+                wallet_info,
+                self.ids,
+                self.delete_all,
+            )
+
+
+wallet_cmd.add_command(notification_cmd)
 
 
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
@@ -1596,320 +1625,223 @@ def vcs_cmd() -> None:  # pragma: no cover
     pass
 
 
-@vcs_cmd.command("mint", short_help="Mint a VC")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=vcs_cmd,
+    name="mint",
+    short_help="Mint a VC",
+    help="Mint a VC",
 )
-@options.create_fingerprint()
-@click.option("-d", "--did", help="The DID of the VC's proof provider", type=AddressParamType(), required=True)
-@click.option(
-    "-t",
-    "--target-address",
-    help="The address to send the VC to once it's minted",
-    type=AddressParamType(),
-    required=False,
-)
-@options.create_fee("Blockchain fee for mint transaction, in XCH")
-@tx_out_cmd()
-@click.pass_context
-def mint_vc_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    did: CliAddress,
-    target_address: CliAddress | None,
-    fee: uint64,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import mint_vc
-
-    return asyncio.run(
-        mint_vc(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            did,
-            fee,
-            target_address,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+class MintVCCMD(TransactionEndpointWithTimelocks):
+    did: CliAddress = option(
+        "-d", "--did", help="The DID of the VC's proof provider", type=AddressParamType(), required=True
+    )
+    target_address: CliAddress | None = option(
+        "-t",
+        "--target-address",
+        help="The address to send the VC to once it's minted",
+        type=AddressParamType(),
+        required=False,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import mint_vc
 
-@vcs_cmd.command("get", short_help="Get a list of existing VCs")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option(
-    "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
-)
-@click.option(
-    "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
-)
-@click.pass_context
-def get_vcs_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    start: int,
-    count: int,
-) -> None:  # pragma: no cover
-    from chia.cmds.wallet_funcs import get_vcs
-
-    asyncio.run(get_vcs(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, start, count))
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await mint_vc(
+                wallet_info,
+                self.did,
+                self.fee,
+                self.target_address,
+                self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+                condition_valid_times=self.load_condition_valid_times(),
+            )
 
 
-@vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+@chia_command(
+    group=vcs_cmd,
+    name="get",
+    short_help="Get a list of existing VCs",
+    help="Get a list of existing VCs",
 )
-@options.create_fingerprint()
-@click.option(
-    "-l",
-    "--vc-id",
-    help="The launcher ID of the VC whose proofs should be updated",
-    type=Bytes32ParamType(),
-    required=True,
-)
-@click.option(
-    "-t",
-    "--new-puzhash",
-    help="The address to send the VC after the proofs have been updated",
-    type=Bytes32ParamType(),
-    required=False,
-)
-@click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
-@options.create_fee("Blockchain fee for update transaction, in XCH")
-@click.option(
-    "--reuse-puzhash/--generate-new-puzhash",
-    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
-    default=False,
-    show_default=True,
-)
-@tx_out_cmd()
-@click.pass_context
-def spend_vc_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    vc_id: bytes32,
-    new_puzhash: bytes32 | None,
-    new_proof_hash: str,
-    fee: uint64,
-    reuse_puzhash: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import spend_vc
-
-    return asyncio.run(
-        spend_vc(
-            root_path=ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port=wallet_rpc_port,
-            fp=fingerprint,
-            vc_id=vc_id,
-            fee=fee,
-            new_puzhash=new_puzhash,
-            new_proof_hash=new_proof_hash,
-            reuse_puzhash=reuse_puzhash,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
+class GetVcsCMD:
+    rpc_info: NeedsWalletRPC
+    start: int = option(
+        "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
+    )
+    count: int = option(
+        "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
     )
 
+    async def run(self) -> None:  # pragma: no cover
+        from chia.cmds.wallet_funcs import get_vcs
 
-@vcs_cmd.command("add_proof_reveal", short_help="Add a series of proofs that will combine to a single proof hash")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_vcs(
+                wallet_info,
+                self.start,
+                self.count,
+            )
+
+
+@chia_command(
+    group=vcs_cmd,
+    name="update_proofs",
+    short_help="Update a VC's proofs if you have the provider DID",
+    help="Update a VC's proofs if you have the provider DID",
 )
-@options.create_fingerprint()
-@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
-@click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
-@click.pass_context
-def add_proof_reveal_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    proof: Sequence[str],
-    root_only: bool,
-) -> None:  # pragma: no cover
-    from chia.cmds.wallet_funcs import add_proof_reveal
-
-    asyncio.run(
-        add_proof_reveal(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof, root_only)
+class UpdateProofsVCCMD(TransactionEndpointWithTimelocks):
+    vc_id: bytes32 = option(
+        "--vc-id",
+        help="The launcher ID of the VC whose proofs should be updated",
+        type=Bytes32ParamType(),
+        required=True,
+    )
+    new_puzhash: bytes32 | None = option(
+        "-t",
+        "--new-puzhash",
+        help="The address to send the VC after the proofs have been updated",
+        type=Bytes32ParamType(),
+        required=False,
+    )
+    new_proof_hash: str | None = option(
+        "-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=False, default=None
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import spend_vc
 
-@vcs_cmd.command("get_proofs_for_root", short_help="Get the stored proof flags for a given proof hash")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await spend_vc(
+                wallet_info=wallet_info,
+                vc_id=self.vc_id,
+                fee=self.fee,
+                new_puzhash=self.new_puzhash,
+                new_proof_hash=self.new_proof_hash,
+                push=self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
+                ),
+                condition_valid_times=self.load_condition_valid_times(),
+            )
+
+
+@chia_command(
+    group=vcs_cmd,
+    name="add_proof_reveal",
+    short_help="Add a series of proofs that will combine to a single proof hash",
+    help="Add a series of proofs that will combine to a single proof hash",
 )
-@options.create_fingerprint()
-@click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
-@click.pass_context
-def get_proofs_for_root_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    proof_hash: str,
-) -> None:  # pragma: no cover
-    from chia.cmds.wallet_funcs import get_proofs_for_root
-
-    asyncio.run(
-        get_proofs_for_root(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof_hash)
+class AddProofRevealVCCMD:
+    rpc_info: NeedsWalletRPC
+    proof: Sequence[str] = option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
+    root_only: bool = option(
+        "-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True
     )
 
+    async def run(self) -> None:  # pragma: no cover
+        from chia.cmds.wallet_funcs import add_proof_reveal
 
-@vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option(
-    "-p",
-    "--parent-coin-id",
-    help="The ID of the parent coin of the VC (optional if VC ID is used)",
-    type=Bytes32ParamType(),
-    required=False,
-)
-@click.option(
-    "-l",
-    "--vc-id",
-    help="The launcher ID of the VC to revoke (must be tracked by wallet) (optional if Parent ID is used)",
-    type=Bytes32ParamType(),
-    required=False,
-)
-@options.create_fee("Blockchain fee for revocation transaction, in XCH")
-@click.option(
-    "--reuse-puzhash/--generate-new-puzhash",
-    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
-    default=False,
-    show_default=True,
-)
-@tx_out_cmd()
-@click.pass_context
-def revoke_vc_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    parent_coin_id: bytes32 | None,
-    vc_id: bytes32 | None,
-    fee: uint64,
-    reuse_puzhash: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import revoke_vc
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await add_proof_reveal(
+                wallet_info,
+                self.proof,
+                self.root_only,
+            )
 
-    return asyncio.run(
-        revoke_vc(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            parent_coin_id,
-            vc_id,
-            fee,
-            reuse_puzhash,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(
+    group=vcs_cmd,
+    name="get_proofs_for_root",
+    short_help="Get the stored proof flags for a given proof hash",
+    help="Get the stored proof flags for a given proof hash",
+)
+class GetProofsForRootVCCMD:
+    rpc_info: NeedsWalletRPC
+    proof_hash: str = option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
+
+    async def run(self) -> None:  # pragma: no cover
+        from chia.cmds.wallet_funcs import get_proofs_for_root
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_proofs_for_root(
+                wallet_info,
+                self.proof_hash,
+            )
+
+
+@chia_command(
+    group=vcs_cmd,
+    name="revoke",
+    short_help="Revoke any VC if you have the proper DID and the VCs parent coin",
+    help="Revoke any VC if you have the proper DID and the VCs parent coin",
+)
+class RevokeVCCMD(TransactionEndpointWithTimelocks):
+    parent_coin_id: bytes32 | None = option(
+        "-p",
+        "--parent-coin-id",
+        help="The ID of the parent coin of the VC (optional if VC ID is used)",
+        type=Bytes32ParamType(),
+        required=False,
+    )
+    vc_id: bytes32 | None = option(
+        "--vc-id",
+        help="The launcher ID of the VC to revoke (must be tracked by wallet) (optional if Parent ID is used)",
+        type=Bytes32ParamType(),
+        required=False,
     )
 
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import revoke_vc
 
-@vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet with the pending approval balance", type=int, required=True)
-@click.option(
-    "-a",
-    "--min-amount-to-claim",
-    help="The minimum amount (in CAT units) to approve to move into the wallet",
-    type=AmountParamType(),
-    required=True,
-)
-@options.create_fee("Blockchain fee for approval transaction, in XCH")
-@click.option(
-    "-ma",
-    "--min-coin-amount",
-    type=AmountParamType(),
-    default=cli_amount_none,
-    help="The minimum coin amount (in CAT units) to select",
-)
-@click.option(
-    "-l",
-    "--max-coin-amount",
-    type=AmountParamType(),
-    default=cli_amount_none,
-    help="The maximum coin amount (in CAT units) to select",
-)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-@tx_out_cmd()
-@click.pass_context
-def approve_r_cats_cmd(
-    ctx: click.Context,
-    wallet_rpc_port: int | None,
-    fingerprint: int,
-    id: int,
-    min_amount_to_claim: CliAmount,
-    fee: uint64,
-    min_coin_amount: CliAmount,
-    max_coin_amount: CliAmount,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> list[TransactionRecord]:
-    from chia.cmds.wallet_funcs import approve_r_cats
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await revoke_vc(
+                wallet_info,
+                self.parent_coin_id,
+                self.vc_id,
+                self.fee,
+                self.push,
+                self.tx_config_loader.load_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+                condition_valid_times=self.load_condition_valid_times(),
+            )
 
-    return asyncio.run(
-        approve_r_cats(
-            ChiaCliContext.set_default(ctx).root_path,
-            wallet_rpc_port,
-            fingerprint,
-            uint32(id),
-            min_amount_to_claim,
-            fee,
-            min_coin_amount,
-            max_coin_amount,
-            reuse,
-            push,
-            condition_valid_times=condition_valid_times,
-        )
+
+@chia_command(
+    group=vcs_cmd,
+    name="approve_r_cats",
+    short_help="Claim any R-CATs that are currently pending VC approval",
+    help="Claim any R-CATs that are currently pending VC approval",
+)
+class ApproveRCATsVCCMD(TransactionEndpointWithTimelocks):
+    wallet_id: int = option(
+        "-i", "--id", help="Id of the wallet with the pending approval balance", type=int, required=True
     )
+    min_amount_to_claim: CliAmount = option(
+        "-a",
+        "--min-amount-to-claim",
+        help="The minimum amount (in CAT units) to approve to move into the wallet",
+        type=AmountParamType(),
+        required=True,
+    )
+
+    @transaction_endpoint_runner
+    async def run(self) -> list[TransactionRecord]:
+        from chia.cmds.wallet_funcs import approve_r_cats
+
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            return await approve_r_cats(
+                wallet_info,
+                uint32(self.wallet_id),
+                self.min_amount_to_claim,
+                self.fee,
+                self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["cat"], wallet_info.config, wallet_info.fingerprint
+                ),
+                condition_valid_times=self.load_condition_valid_times(),
+            )
