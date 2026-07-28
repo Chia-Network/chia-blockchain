@@ -1735,16 +1735,24 @@ class DataStore:
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
+            # Clear roots too, otherwise re-subscribe can see a stale committed root
+            # while the on-disk blobs below are gone.
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
             await writer.execute(
                 "DELETE FROM nodes WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+        self.unconfirmed_keys_values.pop(store_id, None)
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:

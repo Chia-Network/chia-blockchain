@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATCoinData, RCATInfo
+from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     CAT_MOD_HASH,
@@ -56,7 +56,7 @@ class RCATMetadata(Streamable):
 
 class RCATWallet(CATWallet):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol[CATCoinData]] = cast("RCATWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("RCATWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger

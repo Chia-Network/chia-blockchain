@@ -766,6 +766,7 @@ jobs:
           fi
 
       - name: Run Cursor analysis
+        if: github.repository_owner == 'Chia-Network'
         timeout-minutes: 10
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}

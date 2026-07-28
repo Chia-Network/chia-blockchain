@@ -80,9 +80,16 @@ def perform_the_fast_forward(
     singleton_amount = spend_data.coin_spend.coin.amount
     new_coin = Coin(unspent_lineage_info.parent_id, singleton_ph, singleton_amount)
     new_parent = Coin(unspent_lineage_info.parent_parent_id, singleton_ph, singleton_amount)
-    # These hold because puzzle hash is not expected to change
-    assert new_coin.name() == unspent_lineage_info.coin_id
-    assert new_parent.name() == unspent_lineage_info.parent_id
+    # The fast forward rebases the spend onto the latest unspent version by
+    # keeping the spent coin's puzzle hash and amount. That only produces a
+    # valid spend if both the latest unspent coin and its parent actually have
+    # that same amount (their coin IDs are derived from it). This is guarded at
+    # admission by can_fast_forward_singleton, but the latest unspent version
+    # can advance further between admission and block building onto a version
+    # whose (parent's) amount differs, so we reject here too rather than
+    # asserting on reachable input.
+    if new_coin.name() != unspent_lineage_info.coin_id or new_parent.name() != unspent_lineage_info.parent_id:
+        raise ValueError("Cannot fast forward singleton onto a version with a different amount")
     new_solution = SerializedProgram.from_bytes(
         fast_forward_singleton(spend=spend_data.coin_spend, new_coin=new_coin, new_parent=new_parent)
     )
@@ -106,6 +113,27 @@ def perform_the_fast_forward(
     return new_coin_spend, patched_additions
 
 
+def can_fast_forward_singleton(*, unspent_lineage_info: UnspentLineageInfo, coin: Coin) -> bool:
+    """
+    A singleton fast forward rebases a spend onto the latest unspent version of
+    the singleton, keeping the spent coin's puzzle hash and amount (see
+    perform_the_fast_forward). That's only possible if both the latest unspent
+    version and its parent actually have the same amount as the coin we're
+    spending, since their coin IDs are derived from that amount. If the
+    singleton's amount changed between the version we're spending and the latest
+    unspent one (or its parent), the fast forward can't be performed.
+
+    This is the regular (non-assert) check that must be done before admitting a
+    fast forward spend, so that the reject in perform_the_fast_forward isn't
+    reached for spends we could have rejected earlier.
+    """
+    rebased_coin = Coin(unspent_lineage_info.parent_id, coin.puzzle_hash, coin.amount)
+    rebased_parent = Coin(unspent_lineage_info.parent_parent_id, coin.puzzle_hash, coin.amount)
+    return (
+        rebased_coin.name() == unspent_lineage_info.coin_id and rebased_parent.name() == unspent_lineage_info.parent_id
+    )
+
+
 @dataclasses.dataclass
 class SkipDedup(BaseException):
     msg: str
@@ -117,11 +145,17 @@ class IdenticalSpendDedup:
 
     def get_deduplication_info(
         self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
-    ) -> tuple[list[CoinSpend], uint64, list[Coin]]:
+    ) -> tuple[list[CoinSpend], uint64, list[Coin], dict[bytes32, DedupCoinSpend]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
         provides the caller with the necessary information that allows it to perform
-        identical spend aggregation on that mempool item if possible
+        identical spend aggregation on that mempool item if possible.
+
+        This does not mutate the deduplication state. The returned state update
+        must be explicitly committed by the caller via
+        `update_deduplication_spends()` once the item is confirmed to be included,
+        so that items which are processed but ultimately dropped don't leave stale
+        deduplication entries behind.
 
         Args:
             bundle_coin_spends: the mempool item's coin spends data
@@ -130,6 +164,9 @@ class IdenticalSpendDedup:
             list[CoinSpend]: list of unique coin spends in this mempool item
             uint64: the cost we're saving by deduplicating eligible coins
             list[Coin]: list of unique additions in this mempool item
+            dict[bytes32, DedupCoinSpend]: the deduplication state update to
+                commit via `update_deduplication_spends()` if the item ends up
+                included
 
         Raises:
             ValueError to skip the mempool item we're currently in, if it's
@@ -162,9 +199,13 @@ class IdenticalSpendDedup:
                 # different solutions are rejected in check_removals().
                 raise SkipDedup("Solution is different from what we're deduplicating on")
             cost_saving += dedup_coin_spend.cost
-        # Update the eligible coin spends data
+        return unique_coin_spends, uint64(cost_saving), unique_additions, new_dedup_spends
+
+    def update_deduplication_spends(self, new_dedup_spends: dict[bytes32, DedupCoinSpend]) -> None:
         self.deduplication_spends.update(new_dedup_spends)
-        return unique_coin_spends, uint64(cost_saving), unique_additions
+
+    def copy(self) -> IdenticalSpendDedup:
+        return IdenticalSpendDedup(deduplication_spends=dict(self.deduplication_spends))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -189,11 +230,14 @@ class SingletonFastForward:
 
         Returns:
             A tuple of: map of coin IDs to coin spends and metadata after fast
-            forwarding, and the the fast forward state update to commit if the
-            item end up included.
+            forwarding, and the fast forward state update to commit if the item
+            ends up included.
 
         Raises:
-            If a fast forward cannot proceed, to prevent potential double spends
+            ValueError if a fast forward cannot proceed (to prevent potential
+            double spends), or if fast forwarding changed the item's cost (see
+            below), so the item is skipped rather than included with a stale
+            cost.
         """
 
         new_coin_spends = []
@@ -270,14 +314,23 @@ class SingletonFastForward:
             new_coin_spends.append(new_coin_spend)
             fast_forwarded_spends += 1
         if fast_forwarded_spends == 0:
+            # Nothing was fast forwarded, so the cost is unchanged.
             return new_bundle_coin_spends, ff_state_update
-        # Update the mempool item after validating the new spend bundle
+        # Re-run the new spend bundle to make sure it remains valid, and to
+        # check that its cost didn't change. Fast forwarding rewrites the
+        # lineage proof's parent amount to the singleton's own amount, which can
+        # have a different serialized length than the amount that was in the
+        # original spend (this happens when the singleton's amount changed in an
+        # earlier generation), and that changes the CLVM cost. We account for
+        # this item using the cost we computed at admission, so rather than
+        # tracking a changed cost through block building we simply reject the
+        # fast forward when the cost changed. Such a spend won't be included; a
+        # fresh spend against the current singleton can be submitted instead.
         new_sb = SpendBundle(coin_spends=new_coin_spends, aggregated_signature=mempool_item.aggregated_signature)
-        assert mempool_item.conds is not None
         try:
-            # Run the new spend bundle to make sure it remains valid. What we
-            # care about here is whether this call throws or not.
-            get_conditions_from_spendbundle(new_sb, mempool_item.conds.cost, constants, prev_tx_height)
+            new_conds = get_conditions_from_spendbundle(
+                new_sb, uint64(constants.MAX_BLOCK_COST_CLVM), constants, prev_tx_height
+            )
         # get_conditions_from_spendbundle raises a ValueError with an error code
         except ValueError as e:
             # Convert that to a ValidationError
@@ -288,6 +341,11 @@ class SingletonFastForward:
                 raise ValueError(
                     "Mempool item became invalid after singleton fast forward with an unspecified error."
                 )  # pragma: no cover
+        if new_conds.cost != mempool_item.conds.cost:
+            raise ValueError(
+                "Singleton fast forward changed the spend's cost "
+                f"({mempool_item.conds.cost} -> {new_conds.cost}), rejecting the fast forward"
+            )
         return new_bundle_coin_spends, ff_state_update
 
     def update_fast_forward_spends(self, ff_state_update: dict[bytes32, UnspentLineageInfo]) -> None:

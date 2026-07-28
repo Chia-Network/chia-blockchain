@@ -601,7 +601,7 @@ class VCWallet:
         """The VC wallet doesn't really have a balance."""
         return uint128(0)  # pragma: no cover
 
-    async def get_unconfirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         """The VC wallet doesn't really have a balance."""
         return uint128(0)  # pragma: no cover
 
@@ -630,4 +630,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol[VerifiedCredential] = VCWallet()  # pragma: no cover
+    _dummy: WalletProtocol = VCWallet()  # pragma: no cover

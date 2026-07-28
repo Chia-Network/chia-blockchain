@@ -160,7 +160,7 @@ async def mint_cr_cat(
 )
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
-async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
+async def test_vc_lifecycle(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     # Setup
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     env_0 = wallet_environments.environments[0]
@@ -381,12 +381,36 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         proof=proof_flags,
         root_only=False,
     ).run()
+    # Test a potential error
+    capsys.readouterr()
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=tuple(),
+        root_only=False,
+    ).run()
+    assert "Must specify at least one proof" in capsys.readouterr().out
+    # Test only the root calculation
+    await AddProofRevealVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof=proof_flags,
+        root_only=True,
+    ).run()
+    assert proof_root.hex() in capsys.readouterr().out
+    # Test get_proofs_for_root
+    await GetProofsForRootVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_0),
+        proof_hash=proof_root.hex(),
+    ).run()
+    proof_output = capsys.readouterr().out
+    for key in proofs.key_value_pairs:
+        assert key in proof_output
     vc_wallet_0 = await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()
     stored_proofs = await vc_wallet_0.store.get_proofs_for_root(proof_root)
     assert stored_proofs is not None
     assert stored_proofs.key_value_pairs == proofs.key_value_pairs
-    vc_records = await vc_wallet_0.store.get_vc_record_list(uint32(0), uint32(50))
-    assert len(vc_records) == 1
+    await GetVcsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_0)).run()
+    get_output = capsys.readouterr().out
+    assert get_output.count("Launcher ID") == 1
     assert (await vc_wallet_0.store.get_proofs_for_root(proof_root)) is not None
 
     # Mint CR-CAT
@@ -714,6 +738,40 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated is not None
 
     # Revoke VC
+    # Test with netiher
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=None,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert "Must specify either --parent-coin-id or --vc-id" in capsys.readouterr().out
+    # Try one that doesn't exist
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=bytes32.zeros,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert f"Cannot find a VC with ID {bytes32.zeros.hex()}" in capsys.readouterr().out
+    # Test with the VC ID
+    await RevokeVCCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info_1),
+        tx_config_loader=tx_config_loader,
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        parent_coin_id=None,
+        vc_id=vc_record_updated.vc.launcher_id,
+        fee=uint64(1),
+        push=False,
+    ).run()
+    assert "Relevant TX records" in capsys.readouterr().out
+    # Test with the parent coin ID
     await RevokeVCCMD(
         rpc_info=NeedsWalletRPC(client_info=client_info_0),
         tx_config_loader=tx_config_loader,
@@ -723,6 +781,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         fee=uint64(1),
         push=True,
     ).run()
+    assert "Relevant TX records" in capsys.readouterr().out
+
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
