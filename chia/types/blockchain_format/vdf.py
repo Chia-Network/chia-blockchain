@@ -16,6 +16,12 @@ log = logging.getLogger(__name__)
 
 __all__ = ["VDFInfo", "VDFProof"]
 
+# A VDF witness contains one serialized classgroup element followed by one
+# segment for each level of recursion. Each segment contains an iteration
+# count (8 bytes), a 264-bit prime (33 bytes), and another classgroup element.
+_VDF_FORM_SIZE = ClassgroupElement.get_size()
+_VDF_WITNESS_SEGMENT_SIZE = 8 + 33 + _VDF_FORM_SIZE
+
 
 @lru_cache(maxsize=200)
 def get_discriminant(challenge: bytes32, size_bites: int) -> int:
@@ -60,6 +66,9 @@ def validate_vdf(
         log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
         return False
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
+        return False
+    expected_witness_size = _VDF_FORM_SIZE + proof.witness_type * _VDF_WITNESS_SEGMENT_SIZE
+    if len(proof.witness) != expected_witness_size:
         return False
     if len(input_el.data) != 100:
         log.error(f"Invalid ClassgroupElement size: {len(input_el.data)} (expected 100)")
