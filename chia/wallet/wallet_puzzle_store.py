@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sqlite3
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -24,13 +25,13 @@ class WalletPuzzleStore:
 
     lock: asyncio.Lock
     db_wrapper: DBWrapper2
-    wallet_identifier_cache: LRUCache
+    wallet_identifier_cache: LRUCache[bytes32, WalletIdentifier]
     # maps wallet_id -> last_derivation_index
     last_wallet_derivation_index: dict[uint32, uint32]
     last_derivation_index: uint32 | None
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2) -> WalletPuzzleStore:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -170,7 +171,7 @@ class WalletPuzzleStore:
 
         return row is not None
 
-    def row_to_record(self, row) -> DerivationRecord:
+    def row_to_record(self, row: sqlite3.Row) -> DerivationRecord:
         return DerivationRecord(
             uint32(row[0]),
             bytes32.fromhex(row[2]),
