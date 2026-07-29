@@ -63,42 +63,94 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
     "wallet_environments,credential_restricted,active_softfork_height",
     [
         (
-            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            {
+                "num_environments": 2,
+                "trusted": True,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": True,
+                "reorg_exempt": True,
+            },
             True,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            {
+                "num_environments": 2,
+                "trusted": True,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": True,
+                "reorg_exempt": True,
+            },
             False,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            {
+                "num_environments": 2,
+                "trusted": True,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": False,
+                "reorg_exempt": True,
+            },
             True,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            {
+                "num_environments": 2,
+                "trusted": False,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": True,
+                "reorg_exempt": True,
+            },
             True,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            {
+                "num_environments": 2,
+                "trusted": False,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": False,
+                "reorg_exempt": True,
+            },
             False,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            {
+                "num_environments": 2,
+                "trusted": False,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": True,
+                "reorg_exempt": True,
+            },
             False,
             SOFTFORK_HEIGHTS[0],
         ),
         (
-            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            {
+                "num_environments": 2,
+                "trusted": False,
+                "blocks_needed": [1, 1],
+                "reuse_puzhash": False,
+                "reorg_exempt": True,
+            },
             True,
             SOFTFORK_HEIGHTS[0],
         ),
         *(
-            ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": False}, False, height)
+            (
+                {
+                    "num_environments": 2,
+                    "trusted": True,
+                    "blocks_needed": [1, 1],
+                    "reuse_puzhash": False,
+                    "reorg_exempt": True,
+                },
+                False,
+                height,
+            )
             for height in SOFTFORK_HEIGHTS
         ),
     ],
@@ -1625,6 +1677,7 @@ async def test_cat_trades(
         {
             "num_environments": 2,
             "blocks_needed": [2, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -1937,6 +1990,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
         {
             "num_environments": 3,
             "blocks_needed": [2, 1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -2134,6 +2188,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -2260,6 +2315,7 @@ async def test_trade_bad_spend(
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -2405,6 +2461,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework, wallet_t
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,

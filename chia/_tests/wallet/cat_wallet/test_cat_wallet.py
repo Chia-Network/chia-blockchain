@@ -1324,7 +1324,25 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
                     }
                 ),
             ),
-        ]
+        ],
+        post_reorg_balance_differences=[
+            WalletStateTransition(),
+            WalletStateTransition()
+            if autodiscovery
+            # after the reorg we'll already have discovered that these CATs belong to us
+            else WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": 60,
+                        "unconfirmed_wallet_balance": 60,
+                        "spendable_balance": 60,
+                        "max_send_amount": 60,
+                        "unspent_coin_count": 1,
+                    }
+                },
+                post_block_balance_updates={},  # the "init" means the balances will be overidden
+            ),
+        ],
     )
 
     cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[uint32(2)]
@@ -1526,7 +1544,21 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                     }
                 },
             )
-        ]
+        ],
+        bundles_to_repush=[eve_spend],
+        # We're going to remember we received the CAT through the reorg
+        post_reorg_balance_differences=[
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": 5,
+                        "pending_change": 5,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={},  # the "init" means the balances will be overidden
+            )
+        ],
     )
 
     assert not full_node_api.full_node.subscriptions.has_puzzle_subscription(puzzlehash_unhardened)
@@ -1642,7 +1674,8 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     },
                 },
             )
-        ]
+        ],
+        bundles_to_repush=[spend_to_wallet],
     )
 
     cat_wallet = env.wallet_state_manager.wallets[uint32(2)]
@@ -1692,7 +1725,8 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         },
                     },
                 )
-            ]
+            ],
+            bundles_to_repush=[signed_spend],
         )
 
 
