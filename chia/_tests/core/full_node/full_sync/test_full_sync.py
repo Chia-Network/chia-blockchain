@@ -329,6 +329,55 @@ async def test_short_sync_batch_post_processes_committed_prefix_before_failure(
     assert peer.peer_node_id not in node.sync_store.batch_syncing
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_raises_when_no_blocks_committed(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A batch whose first block is invalid commits nothing. short_sync_batch must
+    # still raise (without the "after height" prefix-failure wording) and leave the peak alone.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+    peak_before = node.blockchain.get_peak()
+    assert peak_before is not None
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x03" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(bad_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [bad_block])
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    # target must be > start so the batch loop runs; end_height becomes start+1.
+    with pytest.raises(ValueError, match=rf"failed to validate blocks {bad_block.height}-{bad_block.height + 1}$"):
+        await node.short_sync_batch(peer, bad_block.height, uint32(bad_block.height + 1))
+
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == peak_before.header_hash
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
 @pytest.mark.anyio
 async def test_backtrack_sync_1(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
