@@ -150,11 +150,7 @@ async def new_transaction_not_requested(incoming: asyncio.Queue[Message], new_sp
     await asyncio.sleep(3)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return False
@@ -165,11 +161,7 @@ async def new_transaction_requested(incoming: asyncio.Queue[Message], new_spend:
     await asyncio.sleep(1)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return True
@@ -634,7 +626,7 @@ async def test_request_peers(
         msg_bytes = await full_node_peers.request_peers(PeerInfo("::1", server_2._port))
         assert msg_bytes is not None
         msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
-        if msg is not None and not (len(msg.peer_list) == 1):
+        if not (len(msg.peer_list) == 1):
             return False
         peer = msg.peer_list[0]
         return (peer.host in {self_hostname, "127.0.0.1"}) and peer.port == 1000
@@ -1782,7 +1774,7 @@ async def test_new_unfinished_block(
     else:
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        assert res is not None and res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        assert res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
 
     # when we receive a new unfinished block, we advertise it to our peers.
     # We send new_unfinished_blocks to old peers (0.0.35 and earlier) and we
@@ -2080,6 +2072,8 @@ async def test_unfinished_block_with_replaced_generator(
         transactions_info,
         replaced_generator,
         generator_refs,
+        None,
+        uint8(0),
     )
 
     _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -3081,6 +3075,35 @@ async def test_compact_protocol_invalid_messages(
         assert not block.challenge_chain_ip_proof.normalized_to_identity
 
 
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_replace_proof_failure_logs_and_reraises(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    full_node_api, _server, _bt = one_node_one_block
+    full_node = full_node_api.full_node
+    peak_block = await full_node.blockchain.get_full_peak()
+    assert peak_block is not None
+
+    async def failing_replace_proof(header_hash: bytes32, block: FullBlock) -> None:
+        raise RuntimeError("injected failure")
+
+    monkeypatch.setattr(full_node.block_store, "replace_proof", failing_replace_proof)
+
+    # the block's own vdf_info matches, so we reach the replace_proof call
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="injected failure"):
+            await full_node._replace_proof(
+                peak_block.reward_chain_block.challenge_chain_ip_vdf,
+                peak_block.challenge_chain_ip_proof,
+                peak_block.header_hash,
+                CompressibleVDFField.CC_IP_VDF,
+            )
+    assert "error replacing proof" in caplog.text
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("trusted", [True, False])
 async def test_unsolicited_compact_vdf(
@@ -4053,6 +4076,8 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
         block.transactions_info,
         block.transactions_generator,
         block.transactions_generator_ref_list,
+        block.transactions_generator_buffer,
+        block.version,
     )
 
     return unfinished_block_expected
@@ -4102,7 +4127,7 @@ async def declare_pos_unfinished_block_pos_request(
             eos,
             blockchain,
             peak,
-            ssi if ssi is not None else None,
+            ssi,
             diff,
             full_peak,
         )

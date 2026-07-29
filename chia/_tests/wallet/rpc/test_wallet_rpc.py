@@ -765,8 +765,8 @@ async def test_create_signed_transaction(
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
-                            ">=#pending_change": 1 if is_cat else 0,
-                            "pending_coin_removal_count": 1 if is_cat else 0,
+                            ">=#pending_change": 1,
+                            "pending_coin_removal_count": 1,
                         }
                     }
                     if is_cat
@@ -786,10 +786,10 @@ async def test_create_signed_transaction(
                     {
                         "cat": {
                             "confirmed_wallet_balance": -cat_delta,
-                            ">=#spendable_balance": 1 if is_cat else 0,
-                            ">=#max_send_amount": 1 if is_cat else 0,
-                            "<=#pending_change": -1 if is_cat else 0,
-                            "pending_coin_removal_count": -1 if is_cat else 0,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": -1,
+                            "pending_coin_removal_count": -1,
                         }
                     }
                     if is_cat
@@ -3051,7 +3051,7 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
     for i in range(int(max_coins / WalletRpcApi.max_get_coin_records_limit)):
         offset = uint32(WalletRpcApi.max_get_coin_records_limit * i)
         response = await client.get_coin_records(GetCoinRecords(limit=limit, offset=offset, include_total_count=True))
-        response_records.extend(response.coin_records)
+        response_records.extend(list(response.coin_records))
 
     assert len(response_records) == max_coins
     # Make sure we got all expected records

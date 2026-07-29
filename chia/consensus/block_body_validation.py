@@ -215,6 +215,17 @@ async def validate_block_body(
     prev_transaction_block_height: uint32 = uint32(0)
     prev_transaction_block_timestamp: uint64 = uint64(0)
 
+    # 0. Validate block version. Version 1 (which omits transaction_generator_ref_list
+    # and encodes the generator as a plain buffer) is only valid after the 3.0 hard fork.
+    # TODO: allow version 1 after the hard fork activates
+    #   if block.version == 1:
+    #       if height < constants.HARD_FORK2_HEIGHT:
+    #           return Err.INVALID_BLOCK_VERSION
+    #   elif block.version != 0:
+    #       return Err.INVALID_BLOCK_VERSION
+    if block.version != 0:
+        return Err.INVALID_BLOCK_VERSION
+
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
     # None
@@ -223,6 +234,7 @@ async def validate_block_body(
             block.foliage_transaction_block is not None
             or block.transactions_info is not None
             or block.transactions_generator is not None
+            or block.transactions_generator_buffer is not None
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
 

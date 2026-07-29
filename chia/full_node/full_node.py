@@ -502,7 +502,7 @@ class FullNode:
         else:
             peak_store = None
         for con in connections:
-            if peak_store is not None and con.peer_node_id in peak_store:
+            if con.peer_node_id in peak_store:
                 peak = peak_store[con.peer_node_id]
                 peak_height = peak.height
                 peak_hash = peak.header_hash
@@ -829,7 +829,7 @@ class FullNode:
                 peak_peers: set[bytes32] = self.sync_store.get_peers_that_have_peak([target_peak.header_hash])
                 # Don't ask if we already know this peer has the peak
                 if peer.peer_node_id not in peak_peers:
-                    target_peak_response: RespondBlock | None = await peer.call_api(
+                    target_peak_response = await peer.call_api(
                         FullNodeAPI.request_block,
                         full_node_protocol.RequestBlock(target_peak.height, False),
                         timeout=10,
@@ -2012,7 +2012,7 @@ class FullNode:
         )
 
         signage_points: list[tuple[RespondSignagePoint, WSChiaConnection, EndOfSubSlotBundle | None]] = []
-        if fns_peak_result.new_signage_points is not None and peer is not None:
+        if peer is not None:
             for index, sp in fns_peak_result.new_signage_points:
                 assert (
                     sp.cc_vdf is not None
@@ -3276,16 +3276,15 @@ class FullNode:
                 new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.writer():
-            try:
-                await self.block_store.replace_proof(header_hash, new_block)
-                return True
-            except BaseException as e:
-                self.log.error(
-                    f"_replace_proof error while adding block {block.header_hash} height {block.height},"
-                    f" rolling back: {e} {traceback.format_exc()}"
-                )
-                raise
+        try:
+            await self.block_store.replace_proof(header_hash, new_block)
+            return True
+        except BaseException as e:
+            self.log.error(
+                f"_replace_proof error replacing proof for block {block.header_hash} height {block.height}:"
+                f" {e} {traceback.format_exc()}"
+            )
+            raise
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         peak = self.blockchain.get_peak()
