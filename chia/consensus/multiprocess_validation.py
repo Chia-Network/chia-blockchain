@@ -92,6 +92,7 @@ def _pre_validate_block(
     block: FullBlock,
     prev_generators: list[bytes] | None,
     conds: SpendBundleConditions | None,
+    prev_tx_height: uint32,
     expected_vs: ValidationState,
     *,
     skip_commitment_validation: bool = False,
@@ -103,14 +104,20 @@ def _pre_validate_block(
         block:
         prev_generators:
         conds:
+        prev_tx_height:
         expected_vs: The validation state that we calculate for the next block
             if it's validated.
         skip_commitment_validation: If True, skips validation of MMR roots (for weight proofs without full history).
             Challenge merkle tree validation is gated by HARD_FORK2_HEIGHT, not this flag.
     """
 
+    validation_start = time.monotonic()
+
+    def error_result(error_code: int, error_msg: str | None = None) -> PreValidationResult:
+        validation_time = time.monotonic() - validation_start
+        return PreValidationResult(uint16(error_code), error_msg, None, None, uint32(validation_time * 1000))
+
     try:
-        validation_start = time.monotonic()
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
         if conds is not None:
             assert conds.validated_signature is True
@@ -121,73 +128,30 @@ def _pre_validate_block(
             assert block.transactions_info is not None
 
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(
-                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, None, uint32(validation_time * 1000)
-                )
+                return error_result(Err.BLOCK_COST_EXCEEDS_MAX.value)
 
             # Fast-fail: prove the generator is the committed one before
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(
-                    uint16(Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value),
-                    None,
-                    None,
-                    None,
-                    uint32(validation_time * 1000),
-                )
+                return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value)
             if block.foliage_transaction_block is None:
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(
-                    uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
-                    None,
-                    None,
-                    None,
-                    uint32(validation_time * 1000),
-                )
+                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
             if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(
-                    uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
-                    None,
-                    None,
-                    None,
-                    uint32(validation_time * 1000),
-                )
+                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
             if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(
-                    uint16(Err.INVALID_FOLIAGE_BLOCK_HASH.value), None, None, None, uint32(validation_time * 1000)
-                )
-
-            prev_tx_height = pre_sp_tx_block_height(
-                constants=constants,
-                blocks=blockchain,
-                prev_b_hash=block.prev_header_hash,
-                sp_index=block.reward_chain_block.signage_point_index,
-                finished_sub_slots=len(block.finished_sub_slots),
-            )
+                return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH.value)
 
             if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
                 if not is_canonical_serialization(bytes(block.transactions_generator)):
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
+                    return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING.value)
 
             err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
             assert (err is None) != (conds is None)
             if err is not None:
-                validation_time = time.monotonic() - validation_start
-                return PreValidationResult(uint16(err), err_msg, None, None, uint32(validation_time * 1000))
+                return error_result(err, err_msg)
             assert conds is not None
             assert conds.validated_signature is True
             removals_and_additions = tx_removals_and_additions(conds)
@@ -204,9 +168,7 @@ def _pre_validate_block(
             expected_vs,
             skip_commitment_validation=skip_commitment_validation,
         )
-        error_int: uint16 | None = None
-        if error is not None:
-            error_int = uint16(error.code.value)
+        error_int = None if error is None else uint16(error.code.value)
 
         validation_time = time.monotonic() - validation_start
         return PreValidationResult(
@@ -219,8 +181,7 @@ def _pre_validate_block(
     except Exception:
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
-        validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, None, uint32(validation_time * 1000))
+        return error_result(Err.UNKNOWN.value)
 
 
 async def pre_validate_block(
@@ -367,6 +328,7 @@ async def pre_validate_block(
         block,
         previous_generators,
         conds,
+        prev_tx_height,
         expected_vs,
         skip_commitment_validation=skip_commitment_validation,
         nice=nice,
