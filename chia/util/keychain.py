@@ -427,7 +427,7 @@ class Keychain:
         for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets=include_secrets)
-                if key_data is None or (skip_public_only and key_data.secrets is None):
+                if skip_public_only and key_data.secrets is None:
                     continue
                 yield key_data
             except KeychainUserNotFound:
@@ -506,7 +506,7 @@ class Keychain:
         for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets=False)
-                if key_data is not None and key_data.fingerprint == fingerprint:
+                if key_data.fingerprint == fingerprint:
                     try:
                         self.keyring_wrapper.keyring.delete_label(key_data.fingerprint)
                     except (KeychainException, NotImplementedError):

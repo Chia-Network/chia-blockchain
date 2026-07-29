@@ -441,6 +441,8 @@ full_block = FullBlock(
         )
     ),
     [uint32(2456207540)],
+    None,
+    uint8(0),
 )
 
 respond_blocks = full_node_protocol.RespondBlocks(uint32(1000), uint32(4201431299), [full_block, full_block])
@@ -486,6 +488,8 @@ unfinished_block = UnfinishedBlock(
         )
     ),
     [uint32(1862532955)],
+    None,
+    uint8(0),
 )
 
 respond_unfinished_block = full_node_protocol.RespondUnfinishedBlock(unfinished_block)

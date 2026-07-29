@@ -330,6 +330,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -364,6 +366,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -459,6 +463,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
+                    None,
+                    uint8(0),
                 )
                 conds = None
                 # if this assert fires, remove it along with the pragma for the block
@@ -2869,11 +2875,7 @@ class TestBodyValidation:
 
         assert block_2.transactions_generator is not None
         block_generator = BlockGenerator(block_2.transactions_generator, [])
-        max_cost = (
-            min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
-            if block.transactions_info is not None
-            else b.constants.MAX_BLOCK_COST_CLVM * 1000
-        )
+        max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
         npc_result = get_name_puzzle_conditions(
             block_generator,
             max_cost,

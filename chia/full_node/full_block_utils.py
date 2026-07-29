@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
@@ -253,6 +253,8 @@ class GeneratorBlockInfo:
     prev_header_hash: bytes32
     transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
+    transactions_generator_buffer: list[uint8] | None = None
+    version: uint8 = uint8(0)
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:

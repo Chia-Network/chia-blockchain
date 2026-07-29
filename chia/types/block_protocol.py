@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from typing_extensions import Protocol
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -16,3 +16,9 @@ class BlockInfo(Protocol):
 
     @property
     def transactions_generator_ref_list(self) -> list[uint32]: ...
+
+    @property
+    def transactions_generator_buffer(self) -> list[uint8] | None: ...
+
+    @property
+    def version(self) -> uint8: ...

@@ -40,6 +40,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
+    GetHeightInfo,
     GetTransaction,
     GetWalletBalance,
     GetWallets,
@@ -218,7 +219,7 @@ async def pprint_all_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
-    print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+    print(f"Wallet height: {(await wallet_client.get_height_info(GetHeightInfo())).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
         pool_wallet_id = wallet_info.id

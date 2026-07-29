@@ -103,6 +103,7 @@ from chia.wallet.wallet_request_types import (
     GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
+    GetCoinRecordsResponse,
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
@@ -276,7 +277,7 @@ class WalletRpcClient(RpcClient):
     async def get_sync_status(self) -> GetSyncStatusResponse:
         return GetSyncStatusResponse.from_json_dict(await self.fetch("get_sync_status", {}))
 
-    async def get_height_info(self, request: GetHeightInfo = GetHeightInfo()) -> GetHeightInfoResponse:
+    async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         return GetHeightInfoResponse.from_json_dict(await self.fetch("get_height_info", request.to_json_dict()))
 
     async def get_fee_estimate(self) -> GetFeeEstimateResponse:
@@ -427,8 +428,8 @@ class WalletRpcClient(RpcClient):
     async def select_coins(self, request: SelectCoins) -> SelectCoinsResponse:
         return SelectCoinsResponse.from_json_dict(await self.fetch("select_coins", request.to_json_dict()))
 
-    async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
-        return await self.fetch("get_coin_records", request.to_json_dict())
+    async def get_coin_records(self, request: GetCoinRecords) -> GetCoinRecordsResponse:
+        return GetCoinRecordsResponse.from_json_dict(await self.fetch("get_coin_records", request.to_json_dict()))
 
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         return GetSpendableCoinsResponse.from_json_dict(await self.fetch("get_spendable_coins", request.to_json_dict()))
