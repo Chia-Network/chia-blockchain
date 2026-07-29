@@ -1413,8 +1413,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/Chia-Network/chia_rs.git"
-reference = "c22ae9be14ed8aa3f2447d73dcaac8b7453e4791"
-resolved_reference = "c22ae9be14ed8aa3f2447d73dcaac8b7453e4791"
+reference = "4972b1b8b6903a0d3a69c87b8eedc41e16a15db1"
+resolved_reference = "4972b1b8b6903a0d3a69c87b8eedc41e16a15db1"
 subdirectory = "wheel"
 
 [[package]]
@@ -5225,4 +5225,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "17b02ded561f397b84195dbc054723f766ae9cbb5cdb2c87cd85ab1d8e6932c4"
+content-hash = "f1f6388e681c814ecdd500e34807905fb83a84425cb007d890afb11e7796f99a"
