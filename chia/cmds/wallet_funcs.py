@@ -44,7 +44,6 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CancelOffer,
     CATAssetIDToName,
@@ -71,6 +70,8 @@ from chia.wallet.wallet_request_types import (
     ExtendDerivationIndex,
     FungibleAsset,
     GetAllOffers,
+    GetCoinRecords,
+    GetHeightInfo,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -303,9 +304,13 @@ async def get_transactions(
                     break
                 coin_record: dict[str, Any] | None = None
                 if txs[i + j + skipped].type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                    coin_records = await wallet_client.get_coin_records(
-                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()]))
-                    )
+                    coin_records = (
+                        await wallet_client.get_coin_records(
+                            GetCoinRecords(
+                                coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()])
+                            )
+                        )
+                    ).to_json_dict()
                     if len(coin_records["coin_records"]) > 0:
                         coin_record = coin_records["coin_records"][0]
                     else:
@@ -1004,7 +1009,7 @@ async def print_balances(
 
         sync_response = await wallet_client.get_sync_status()
 
-        print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+        print(f"Wallet height: {(await wallet_client.get_height_info(GetHeightInfo())).height}")
         if sync_response.syncing:
             print("Sync status: Syncing...")
         elif sync_response.synced:
