@@ -68,10 +68,6 @@ rate_limits_v3: dict[ProtocolMessageTypes, RLSettingsV3] = {
     ProtocolMessageTypes.request_puzzle_solution: RLSettingsV3(window_size=2),
     ProtocolMessageTypes.respond_puzzle_solution: RLSettingsV3(window_size=None),
     ProtocolMessageTypes.reject_puzzle_solution: RLSettingsV3(window_size=None),
-    # V2 plot serialization protocol (0.0.38). These messages only exist on the
-    # new protocol path
-    ProtocolMessageTypes.respond_plots2: RLSettingsV3(window_size=None),
-    ProtocolMessageTypes.plot_sync_loaded2: RLSettingsV3(window_size=None),
 }
 
 # Maximum number of window sizes we allow to be set by the
