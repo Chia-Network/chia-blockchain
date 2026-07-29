@@ -21,12 +21,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
-from chia.consensus.block_body_validation import validate_generator_ref_list
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
+from chia.consensus.generator_validation import validate_generator_ref_list
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
