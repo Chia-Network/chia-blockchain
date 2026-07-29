@@ -32,7 +32,6 @@ from chia.pools.pool_puzzles import get_most_recent_singleton_coin_from_coin_spe
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -172,11 +171,8 @@ class SyncStatus(IntEnum):
 
 
 class WalletStateManager:
-    # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
-    # When this is a dataclass, these errors should go away
-    interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
-    interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    interested_coin_cache: dict[bytes32, list[int]]
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -213,7 +209,6 @@ class WalletStateManager:
     retry_store: WalletRetryStore
     plotnft2_store: PlotNFTStore
     multiprocessing_context: multiprocessing.context.BaseContext
-    server: ChiaServer
     root_path: Path
     wallet_node: WalletNode
     pool_store: WalletPoolStore
@@ -229,16 +224,15 @@ class WalletStateManager:
         config: dict[str, Any],
         db_path: Path,
         constants: ConsensusConstants,
-        server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
         root_pubkey: G1Element | None = None,
     ) -> WalletStateManager:
         self = WalletStateManager()
 
+        self.interested_coin_cache = {}
         self.config = config
         self.constants = constants
-        self.server = server
         self.root_path = root_path
         self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
@@ -732,7 +726,7 @@ class WalletStateManager:
     async def synced(self, block_is_current_at: int | None = None) -> bool:
         if block_is_current_at is None:
             block_is_current_at = int(time.time() - 60 * 5)
-        if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
+        if len(self.wallet_node.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
         latest = await self.blockchain.get_peak_block()
@@ -757,7 +751,7 @@ class WalletStateManager:
         if peak is not None and "simulator" in self.config.get("selected_network", ""):
             return SyncStatus.SYNCED
 
-        if peak is None or len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
+        if peak is None or len(self.wallet_node.server.get_connections(NodeType.FULL_NODE)) == 0:
             return SyncStatus.DISCONNECTED
 
         height_gap = peak.height - await self.blockchain.get_finished_sync_up_to()
