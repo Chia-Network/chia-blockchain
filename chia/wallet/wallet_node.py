@@ -564,7 +564,8 @@ class WalletNode:
             return None
 
         for msg, sent_peers in await self._messages_to_resend():
-            if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            # these may change concurrently during the await above (e.g. on shutdown)
+            if self._shut_down or self._server is None or self._wallet_state_manager is None:  # type: ignore[redundant-expr]
                 return None
             full_nodes = self.server.get_connections(NodeType.FULL_NODE)
             for peer in full_nodes:

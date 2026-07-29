@@ -239,7 +239,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
-            if self.websocket is None or self.websocket.closed:
+            # websocket may be closed/cleared concurrently across the awaits in this loop
+            if self.websocket is None or self.websocket.closed:  # type: ignore[redundant-expr]
                 return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))

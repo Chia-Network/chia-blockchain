@@ -456,8 +456,7 @@ class TestNewPeak:
                 await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
 
                 assert (
-                    timelord_api.timelord.last_state.peak is not None
-                    and timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
+                    timelord_api.timelord.last_state.peak.reward_chain_block.get_hash()
                     == next_peak.reward_chain_block.get_hash()
                 )
 
@@ -619,7 +618,7 @@ class TestNewPeak:
                 await _validate_and_add_block(b1, block)
 
             peak = timelord_peak_from_block(b1, blocks[-1])
-            assert peak is not None and timelord_api.timelord.new_peak is None
+            assert timelord_api.timelord.new_peak is None
             await timelord_api.new_peak_timelord(peak)
             assert timelord_api.timelord.new_peak is not None
             await time_out_assert(60, tl_new_peak_is_none, True, timelord_api)
@@ -712,7 +711,7 @@ async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
         assert full_blk is not None
         sub_slot = None
         for s in full_blk.finished_sub_slots:
-            if s is not None and s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
+            if s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
                 sub_slot = s
         if sub_slot is None:
             assert block.reward_chain_block.pos_ss_cc_challenge_hash == blockchain.constants.GENESIS_CHALLENGE
