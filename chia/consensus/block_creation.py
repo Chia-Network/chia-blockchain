@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 from collections.abc import Callable, Sequence
-from typing import Optional
 
 import chia_rs
 from chia_rs import (
@@ -58,7 +57,7 @@ def validate_generator_encoding(
     height: int,
     prev_transaction_block_height: int,
     constants: ConsensusConstants,
-) -> Optional[Err]:
+) -> Err | None:
     """Reject generators whose wire-format encoding is not allowed at this height.
 
     Two height-gated rules:

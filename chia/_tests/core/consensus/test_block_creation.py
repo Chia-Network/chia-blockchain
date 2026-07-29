@@ -108,9 +108,7 @@ CLASSIC_OVERLONG_NIL = b"\x81\x00"  # overlong encoding of nil — flagged by SO
 
 
 def test_validate_generator_encoding_rejects_serde_2026_pre_hf2() -> None:
-    constants = DEFAULT_CONSTANTS.replace(
-        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
-    )
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500))
     # any height < HARD_FORK2_HEIGHT must reject, regardless of prev_tx_height
     blob = SERDE_2026_MAGIC_PREFIX + b"\x01\x01\x01\x80\x80"  # plausible-looking serde_2026 body
     assert validate_generator_encoding(blob, 0, 0, constants) == Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
@@ -118,18 +116,14 @@ def test_validate_generator_encoding_rejects_serde_2026_pre_hf2() -> None:
 
 
 def test_validate_generator_encoding_accepts_serde_2026_at_and_after_hf2() -> None:
-    constants = DEFAULT_CONSTANTS.replace(
-        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
-    )
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500))
     blob = SERDE_2026_MAGIC_PREFIX + b"\x01\x01\x01\x80\x80"
     assert validate_generator_encoding(blob, 1000, 999, constants) is None
     assert validate_generator_encoding(blob, 9999, 9998, constants) is None
 
 
 def test_validate_generator_encoding_accepts_classic_canonical_any_height() -> None:
-    constants = DEFAULT_CONSTANTS.replace(
-        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
-    )
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500))
     assert validate_generator_encoding(CLASSIC_NIL, 0, 0, constants) is None
     assert validate_generator_encoding(CLASSIC_NIL, 499, 498, constants) is None
     assert validate_generator_encoding(CLASSIC_NIL, 500, 499, constants) is None
@@ -142,9 +136,7 @@ def test_validate_generator_encoding_classic_overlong_gated_by_prev_tx_height() 
     # first transaction block after SOFT_FORK9_HEIGHT). We pin that here
     # explicitly so a future refactor can't quietly shift activation by one
     # block.
-    constants = DEFAULT_CONSTANTS.replace(
-        HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500)
-    )
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1000), SOFT_FORK9_HEIGHT=uint32(500))
 
     # prev_tx_height < SOFT_FORK9: rule inactive, overlong tolerated
     assert validate_generator_encoding(CLASSIC_OVERLONG_NIL, 600, 499, constants) is None
