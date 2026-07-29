@@ -361,6 +361,10 @@ class FarmerAPI:
                         "missing_partials",
                         time.time(),
                     )
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, current_auth_token, agg_sig)
                 self.farmer.log.info(
