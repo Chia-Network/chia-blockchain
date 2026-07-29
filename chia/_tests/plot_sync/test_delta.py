@@ -8,6 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from chia.plot_sync.delta import Delta, DeltaType, PathListDelta, PlotListDelta
+from chia.plot_sync.plot_record import PlotRecord
 from chia.protocols.harvester_protocol import Plot
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def test_list_delta(delta: DeltaType) -> None:
     if type(delta) is PathListDelta:
         delta.additions.append("0")
     elif type(delta) is PlotListDelta:
-        delta.additions["0"] = dummy_plot("0")
+        delta.additions["0"] = PlotRecord.from_plot(dummy_plot("0"))
     else:
         assert False, "Invalid delta type"
     assert not delta.empty()
@@ -87,7 +88,7 @@ def test_delta_empty() -> None:
     all_deltas: list[DeltaType] = [delta.valid, delta.invalid, delta.keys_missing, delta.duplicates]
     assert delta.empty()
     for d1 in all_deltas:
-        delta.valid.additions["0"] = dummy_plot("0")
+        delta.valid.additions["0"] = PlotRecord.from_plot(dummy_plot("0"))
         delta.invalid.additions.append("0")
         delta.keys_missing.additions.append("0")
         delta.duplicates.additions.append("0")

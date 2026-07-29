@@ -21,6 +21,7 @@ from chia.plot_sync.exceptions import (
     PlotSyncException,
     SyncIdsMatchError,
 )
+from chia.plot_sync.plot_record import PlotRecord
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
@@ -30,6 +31,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
 )
@@ -84,7 +86,7 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: dict[str, Plot]
+    _plots: dict[str, PlotRecord]
     _invalid: list[str]
     _keys_missing: list[str]
     _duplicates: list[str]
@@ -144,6 +146,9 @@ class Receiver:
         return self._last_sync.sync_id == 0
 
     def plots(self) -> dict[str, Plot]:
+        return {filename: record.to_plot() for filename, record in self._plots.items()}
+
+    def plot_records(self) -> dict[str, PlotRecord]:
         return self._plots
 
     def invalid(self) -> list[str]:
@@ -230,7 +235,7 @@ class Receiver:
         for plot_info in plot_infos.data:
             if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
                 raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
-            self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
+            self._current_sync.delta.valid.additions[plot_info.filename] = PlotRecord.from_plot(plot_info)
             self._current_sync.bump_plots_processed()
 
         # Let the callback receiver know about the sync progress updates
@@ -241,8 +246,27 @@ class Receiver:
 
         self._current_sync.bump_next_message_id()
 
+    async def _process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
+        self._validate_identifier(plot_infos.identifier)
+
+        for plot_info in plot_infos.data:
+            if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
+                raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
+            self._current_sync.delta.valid.additions[plot_info.filename] = PlotRecord.from_sync_plot(plot_info)
+            self._current_sync.bump_plots_processed()
+
+        await self.trigger_callback()
+
+        if plot_infos.final:
+            self._current_sync.state = State.removed
+
+        self._current_sync.bump_next_message_id()
+
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
+
+    async def process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
+        await self._process(self._process_loaded_v2, ProtocolMessageTypes.plot_sync_loaded_v2, plot_infos)
 
     async def process_path_list(
         self,
@@ -355,8 +379,8 @@ class Receiver:
 
         self._total_effective_plot_size = int(
             sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), self._constants)
-                for plot in self._plots.values()
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(record.param(), self._constants)
+                for record in self._plots.values()
             )
         )
         # Save current sync as last sync and create a new current sync
@@ -382,7 +406,7 @@ class Receiver:
                 "host": self._connection.peer_info.host,
                 "port": self._connection.peer_info.port,
             },
-            "plots": get_list_or_len(list(self._plots.values()), counts_only),
+            "plots": get_list_or_len([record.to_plot() for record in self._plots.values()], counts_only),
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),

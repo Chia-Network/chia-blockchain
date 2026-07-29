@@ -10,6 +10,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncStart,
     RespondPlots,
     RespondSignatures,
@@ -74,6 +75,11 @@ class FarmerApiStub(ApiProtocol, Protocol):
     @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         """Handle plot sync loaded."""
+        ...
+
+    @metadata.request(peer_required=True)
+    async def plot_sync_loaded_v2(self, message: PlotSyncPlotListV2, peer: WSChiaConnection) -> None:
+        """Handle plot sync loaded with full v2 metadata."""
         ...
 
     @metadata.request(peer_required=True)

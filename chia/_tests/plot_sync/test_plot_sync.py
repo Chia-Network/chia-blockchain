@@ -24,6 +24,7 @@ from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
+from chia.plot_sync.plot_record import PlotRecord
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants, State
@@ -64,21 +65,25 @@ class ExpectedResult:
     callback_passed: bool = False
 
     def add_valid(self, list_plots: list[MockPlotInfo]) -> None:
-        def create_mock_plot(info: MockPlotInfo) -> Plot:
-            return Plot(
-                info.prover.get_filename(),
-                uint8(0),
-                bytes32.zeros,
-                None,
-                None,
-                G1Element(),
-                uint64(0),
-                uint64(0),
-                uint8(0),
-            )
-
         self.valid_count += len(list_plots)
-        self.valid_delta.additions.update({x.prover.get_filename(): create_mock_plot(x) for x in list_plots})
+        self.valid_delta.additions.update(
+            {
+                x.prover.get_filename(): PlotRecord.from_plot(
+                    Plot(
+                        x.prover.get_filename(),
+                        uint8(0),
+                        bytes32.zeros,
+                        None,
+                        None,
+                        G1Element(),
+                        uint64(0),
+                        uint64(0),
+                        uint8(0),
+                    )
+                )
+                for x in list_plots
+            }
+        )
 
     def remove_valid(self, list_paths: list[Path]) -> None:
         self.valid_count -= len(list_paths)
@@ -110,7 +115,12 @@ class ExpectedResult:
 
 
 def equal_param(a: PlotParam, b: PlotParam) -> bool:
-    return a.size_v1 == b.size_v1 and a.strength_v2 == b.strength_v2
+    return (
+        a.size_v1 == b.size_v1
+        and a.strength_v2 == b.strength_v2
+        and a.plot_index == b.plot_index
+        and a.meta_group == b.meta_group
+    )
 
 
 @dataclass

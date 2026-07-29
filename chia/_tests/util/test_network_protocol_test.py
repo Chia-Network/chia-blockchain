@@ -183,6 +183,8 @@ def test_missing_messages() -> None:
         "PlotSyncIdentifier",
         "PlotSyncPathList",
         "PlotSyncPlotList",
+        "PlotSyncPlotListV2",
+        "PlotV2",
         "PlotSyncResponse",
         "PlotSyncStart",
         "PoolDifficulty",
