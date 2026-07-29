@@ -8,6 +8,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ def get_block_challenge(
     return challenge
 
 
-# Returns the previous transaction block up to the blocks signage point
+# Returns the latest transaction block infused before the provided signage point index.
 # we use this for block validation since when the block is farmed we do not know the latest transaction block
 # since a new one might be infused by the time the block is infused
 def pre_sp_tx_block(
@@ -116,21 +117,45 @@ def pre_sp_tx_block(
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return None
     curr = blocks.block_record(prev_b_hash)
-    # For overflow blocks, the SP is in the previous sub-slot, so we need to cross
-    # one extra slot boundary before we're past the SP's slot
     overflow = is_overflow_block(constants, sp_index)
     slots_crossed = finished_sub_slots
     while curr.height > 0:
-        if not overflow:
-            before_sp = curr.signage_point_index < sp_index or slots_crossed > 0
-        else:
-            before_sp = slots_crossed >= 2 or (slots_crossed == 1 and curr.signage_point_index < sp_index)
-        if curr.is_transaction_block and before_sp:
+        if curr.is_transaction_block and is_infused_before_sp(
+            constants,
+            curr.signage_point_index,
+            sp_index,
+            slots_crossed,
+            overflow,
+        ):
             break
         if curr.first_in_sub_slot:
             slots_crossed += 1
         curr = blocks.block_record(curr.prev_hash)
     return curr
+
+
+def is_infused_before_sp(
+    constants: ConsensusConstants,
+    candidate_sp_index: uint8,
+    sp_index: uint8,
+    slots_crossed_at_ip: int,
+    overflow: bool,
+) -> bool:
+    candidate_overflow = is_overflow_block(constants, candidate_sp_index)
+    # The walker counts whole slots between infusion points. This comparison is against the checked SP, so
+    # overflow blocks need one-slot adjustments because their SP is in the slot before their IP.
+    actual_slots_crossed_at_ip = slots_crossed_at_ip
+    if candidate_overflow:
+        actual_slots_crossed_at_ip += 1
+    if overflow:
+        actual_slots_crossed_at_ip -= 1
+
+    # Distance in SP intervals. If slots were crossed, a smaller checked SP index can still be after a larger
+    # candidate SP index, so add a full slot width for each crossed slot.
+    sp_intervals_until_current_sp = (
+        sp_index - candidate_sp_index + actual_slots_crossed_at_ip * constants.NUM_SPS_SUB_SLOT
+    )
+    return sp_intervals_until_current_sp > constants.NUM_SP_INTERVALS_EXTRA
 
 
 def pre_sp_tx_block_height(
@@ -151,6 +176,55 @@ def pre_sp_tx_block_height(
     if latest_tx_block is None:
         return uint32(0)
     return latest_tx_block.height
+
+
+def get_filter_challenge_from_chain(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    header_block: UnfinishedHeaderBlock | HeaderBlock | FullBlock,
+    current_challenge: bytes32,
+    signage_point_index: int,
+) -> bytes32 | None:
+    """Derive filter_challenge for V2 plot filter from chain data.
+
+    Returns the cc sub-slot challenge hash of a previously completed sub-slot
+    """
+    sub_slots_back = 2 if signage_point_index < FILTER_WINDOW_SIZE else 1
+
+    # Collect sub-slot challenge hashes newest-first
+    reversed_challenges: list[bytes32] = []
+
+    for fss in reversed(header_block.finished_sub_slots):
+        reversed_challenges.append(fss.challenge_chain.get_hash())
+
+    reached_genesis = header_block.prev_header_hash == constants.GENESIS_CHALLENGE
+    if not reached_genesis:
+        curr = blocks.block_record(header_block.prev_header_hash)
+        while True:
+            if curr.first_in_sub_slot:
+                assert curr.finished_challenge_slot_hashes is not None
+                for ch in reversed(curr.finished_challenge_slot_hashes):
+                    reversed_challenges.append(ch)
+            if curr.height == 0:
+                reached_genesis = True
+                break
+            if len(reversed_challenges) > sub_slots_back + 3:
+                break
+            curr = blocks.block_record(curr.prev_hash)
+
+    if reached_genesis and constants.GENESIS_CHALLENGE not in reversed_challenges:
+        reversed_challenges.append(constants.GENESIS_CHALLENGE)
+
+    try:
+        idx = reversed_challenges.index(current_challenge)
+    except ValueError:
+        return None
+
+    target_idx = idx + sub_slots_back
+    if target_idx >= len(reversed_challenges):
+        return None
+
+    return reversed_challenges[target_idx]
 
 
 def post_hard_fork2(

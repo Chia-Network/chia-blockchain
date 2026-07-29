@@ -14,7 +14,8 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
-from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecordsResult, WalletCoinStore
+from chia.wallet.wallet_request_types import GetCoinRecords
 
 clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
 
@@ -200,15 +201,14 @@ async def test_set_spent() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
         await store.add_coin_record(record_1)
-
-        cr = await store.get_coin_record(coin_1.name())
-        assert cr is not None
-        assert not cr.spent
+        coin_record = await store.get_coin_record(coin_1.name())
+        assert coin_record is not None
+        assert not coin_record.spent
         await store.set_spent(coin_1.name(), uint32(12))
-        cr = await store.get_coin_record(coin_1.name())
-        assert cr is not None
-        assert cr.spent
-        assert cr.spent_block_height == 12
+        coin_record = await store.get_coin_record(coin_1.name())
+        assert coin_record is not None
+        assert coin_record.spent
+        assert coin_record.spent_block_height == 12
 
 
 @pytest.mark.anyio

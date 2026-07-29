@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import field
 
 import click
@@ -94,6 +95,15 @@ class CreatePlotNFTCMD:
         required=True,
     )
     dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
+    version: str = option(
+        "-v",
+        "--version",
+        help="Version of Plot NFT: 1 or 2",
+        type=click.Choice(["1", "2"]),
+        default="1",
+        show_default=True,
+        required=True,
+    )
 
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import create
@@ -104,6 +114,10 @@ class CreatePlotNFTCMD:
         if self.pool_url in {None, ""} and self.state == "pool":
             raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
 
+        if os.environ.get("CHIA_PLOTNFT_V2_ENABLED", "FALSE").lower() == "false" and self.version == "2":
+            print("Version 2 PlotNFTs not currently supported")
+            return
+
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await create(
                 wallet_info=wallet_info,
@@ -111,6 +125,7 @@ class CreatePlotNFTCMD:
                 state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
                 fee=self.fee,
                 prompt=not self.dont_prompt,
+                version=int(self.version),
             )
 
 

@@ -260,6 +260,42 @@ async def test_multi_batch_limit(db_version: int, monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.anyio
+async def test_get_coin_ids_by_hints(db_version: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    # small batch size, so the query below spans multiple batches
+    monkeypatch.setattr("chia.full_node.hint_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
+
+    async with DBConnection(db_version) as db_wrapper:
+        hint_store = await HintStore.create(db_wrapper)
+
+        # empty input returns an empty set without opening a transaction
+        assert await hint_store.get_coin_ids_by_hints(set()) == set()
+
+        num_hints = 20
+        all_hints = [h.to_bytes(1, "big") + (31 * b"\x00") for h in range(num_hints)]
+        coin_ids = [bytes32(h.to_bytes(2, "big") + (30 * b"\x00")) for h in range(num_hints)]
+        # every hint also maps to a shared coin id, to exercise set dedup
+        shared_coin_id = bytes32(32 * b"\x42")
+        hints_list = [(coin_id, hint) for coin_id, hint in zip(coin_ids, all_hints)]
+        hints_list.extend((shared_coin_id, hint) for hint in all_hints)
+
+        await hint_store.add_hints(hints_list)
+
+        # all hints at once spans multiple batches; the shared coin id shows up once
+        result = await hint_store.get_coin_ids_by_hints(all_hints)
+        assert result == {*coin_ids, shared_coin_id}
+
+        # any Collection is accepted, e.g. a tuple
+        assert await hint_store.get_coin_ids_by_hints(tuple(all_hints[:2])) == {
+            coin_ids[0],
+            coin_ids[1],
+            shared_coin_id,
+        }
+
+        # unknown hint yields nothing
+        assert await hint_store.get_coin_ids_by_hints([32 * b"\xff"]) == set()
+
+
+@pytest.mark.anyio
 async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="HintStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:

@@ -100,7 +100,7 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
 
 
 def test_message_error_conditions() -> None:
-    with pytest.raises(ValueError, match="Must specify at least one committment"):
+    with pytest.raises(ValueError, match="Must specify at least one commitment"):
         MessageParticipant()
 
     test_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
@@ -124,7 +124,7 @@ def test_message_error_conditions() -> None:
                 amount_committed=test_coin.amount if (not mode & 0b001) or (mode == 0b111) else None,
             )
 
-    with pytest.raises(ValueError, match="without committment information"):
+    with pytest.raises(ValueError, match="without commitment information"):
         MessageParticipant(
             mode_integer=uint8(0b111),
         ).necessary_args

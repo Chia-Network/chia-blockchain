@@ -20,7 +20,7 @@
     "icon": "src/assets/img/chia.ico",
     "executableName": "Chia",
     "signtoolOptions": {
-      "timeStampServer": "http://timestamp.comodoca.com"
+      "sign": null
     }
   },
   "nsis": {
