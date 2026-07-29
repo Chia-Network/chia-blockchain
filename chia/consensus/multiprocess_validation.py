@@ -138,21 +138,29 @@ def _pre_validate_block(
                     None,
                     uint32(validation_time * 1000),
                 )
-            if block.foliage_transaction_block is not None:
-                if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-                if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.INVALID_FOLIAGE_BLOCK_HASH.value), None, None, None, uint32(validation_time * 1000)
-                    )
+            if block.foliage_transaction_block is None:
+                validation_time = time.monotonic() - validation_start
+                return PreValidationResult(
+                    uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
+                    None,
+                    None,
+                    None,
+                    uint32(validation_time * 1000),
+                )
+            if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
+                validation_time = time.monotonic() - validation_start
+                return PreValidationResult(
+                    uint16(Err.INVALID_TRANSACTIONS_INFO_HASH.value),
+                    None,
+                    None,
+                    None,
+                    uint32(validation_time * 1000),
+                )
+            if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
+                validation_time = time.monotonic() - validation_start
+                return PreValidationResult(
+                    uint16(Err.INVALID_FOLIAGE_BLOCK_HASH.value), None, None, None, uint32(validation_time * 1000)
+                )
 
             prev_tx_height = pre_sp_tx_block_height(
                 constants=constants,

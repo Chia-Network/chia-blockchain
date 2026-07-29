@@ -2674,6 +2674,18 @@ class TestBodyValidation:
 
         assert clvm_calls == 0
 
+        # Removing the foliage transaction block must not bypass the
+        # transactions-info commitment. Make the replacement generator and its
+        # direct root self-consistent; the missing signed link must still reject
+        # the block before CLVM execution.
+        mutated = recursive_replace(block, "transactions_generator", malicious_generator)
+        mutated = recursive_replace(mutated, "transactions_info.generator_root", std_hash(bytes(malicious_generator)))
+        mutated = recursive_replace(mutated, "foliage_transaction_block", None)
+
+        await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_INFO_HASH)
+
+        assert clvm_calls == 0
+
     @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(
         self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
