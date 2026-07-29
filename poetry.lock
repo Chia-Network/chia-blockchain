@@ -222,7 +222,7 @@ description = "Python graph (network) package"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "python_version < \"3.14\" and extra == \"dev\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "altgraph-0.17.5-py2.py3-none-any.whl", hash = "sha256:f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597"},
     {file = "altgraph-0.17.5.tar.gz", hash = "sha256:c87b395dd12fabde9c99573a9749d67da8d29ef9de0125c7f536699b4a9bc9e7"},
@@ -1412,8 +1412,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/Chia-Network/chia_rs.git"
-reference = "c22ae9be14ed8aa3f2447d73dcaac8b7453e4791"
-resolved_reference = "c22ae9be14ed8aa3f2447d73dcaac8b7453e4791"
+reference = "4972b1b8b6903a0d3a69c87b8eedc41e16a15db1"
+resolved_reference = "4972b1b8b6903a0d3a69c87b8eedc41e16a15db1"
 subdirectory = "wheel"
 
 [[package]]
@@ -2727,7 +2727,7 @@ description = "Mach-O header analysis and editing"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version < \"3.14\""
+markers = "extra == \"dev\" and python_version < \"3.14\" and sys_platform == \"darwin\""
 files = [
     {file = "macholib-1.16.4-py2.py3-none-any.whl", hash = "sha256:da1a3fa8266e30f0ce7e97c6a54eefaae8edd1e5f86f3eb8b95457cae90265ea"},
     {file = "macholib-1.16.4.tar.gz", hash = "sha256:f408c93ab2e995cd2c46e34fe328b130404be143469e41bc366c807448979362"},
@@ -3383,7 +3383,7 @@ description = "Python PE parsing module"
 optional = true
 python-versions = ">=3.6.0"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version < \"3.14\""
+markers = "extra == \"dev\" and python_version < \"3.14\" and sys_platform == \"win32\""
 files = [
     {file = "pefile-2024.8.26-py3-none-any.whl", hash = "sha256:76f8b485dcd3b1bb8166f1128d395fa3d87af26360c2358fb75b80019b957c6f"},
     {file = "pefile-2024.8.26.tar.gz", hash = "sha256:3ff6c5d8b43e8c37bb6e6dd5085658d658a7a0bdcd20b6a07b1fcfc1c4e9d632"},
@@ -3784,7 +3784,7 @@ description = "PyInstaller bundles a Python application and all its dependencies
 optional = true
 python-versions = "<3.16,>=3.8"
 groups = ["main"]
-markers = "python_version < \"3.14\" and extra == \"dev\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller-6.21.0-py3-none-macosx_10_13_universal2.whl", hash = "sha256:327d132389f37912609e01be62810cf96b5aa95b613903e4b8692e0d12fb0eda"},
     {file = "pyinstaller-6.21.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:7071d4b094d5b40deeef5fa3d3b98a1b846087f7562b49209663d5f9281fe251"},
@@ -3820,7 +3820,7 @@ description = "Community maintained hooks for PyInstaller"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "python_version < \"3.14\" and extra == \"dev\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller_hooks_contrib-2026.6-py3-none-any.whl", hash = "sha256:fd13b8ac126b35361175edacd41a0d97080b75dd5f4b594ecefefff969509dd3"},
     {file = "pyinstaller_hooks_contrib-2026.6.tar.gz", hash = "sha256:bef5002c32f4f50bd55b005da12cff64eca8783e7eaf86a06a62410164bab725"},
@@ -5044,11 +5044,64 @@ type = ["pytest-mypy"]
 
 [[package]]
 name = "zstd"
+version = "1.5.7.2"
+description = "ZSTD Bindings for Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+markers = "python_version >= \"3.12\""
+files = [
+    {file = "zstd-1.5.7.2-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:c8f0a02e611a826719dc31579982eaaeee87d4df07af156070ab5e3312f4a4a1"},
+    {file = "zstd-1.5.7.2-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:3220feea1fcf23a7bde176ffca428afdf0283d6344b1fcf7a6f8912fee0248e9"},
+    {file = "zstd-1.5.7.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:07b6f70d55813a75d8ccc23d94b2d024803fdcad8274c6da94b66f02a1f0a927"},
+    {file = "zstd-1.5.7.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:caf438418c0ed380c6b511b3213945de2861ddf04ea8a00ec10da375853ce3f6"},
+    {file = "zstd-1.5.7.2-cp310-cp310-win_amd64.whl", hash = "sha256:f6941485d3df4b6e6043dce2f2657cff8e567747be1cb93c99bdc56b389de818"},
+    {file = "zstd-1.5.7.2-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:eeec7f87986920c1a1134473b9dae76b01e6fcc860b6eb9fcf6569aabd16dc39"},
+    {file = "zstd-1.5.7.2-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:bafff2b15a06b4a604cbe2ff9e43891aebca90dbc061028671696ec0270eb3b8"},
+    {file = "zstd-1.5.7.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2b2d13b820b91776e175c3019902a967576bd9658e28126a01ab6de8e2a0094e"},
+    {file = "zstd-1.5.7.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:48d494cfbf5adb887ff025c0cf2b59987db08d1e19afdfcb567f10f0499d61ed"},
+    {file = "zstd-1.5.7.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d827d22dff84cbb47e57d3770bd9bc1ef27339708d0cc5c08cde366913106ce9"},
+    {file = "zstd-1.5.7.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1d3dccc0657c85f011421e90d1c1f06f3364da41da866e215524ad53a9c81b36"},
+    {file = "zstd-1.5.7.2-cp311-cp311-win_amd64.whl", hash = "sha256:22cd2903622eeb603d3f49be7487fe9603e89a71ab89ad92ec7544b56d0be963"},
+    {file = "zstd-1.5.7.2-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:e99585350976a70a96fc0da3d825130aa91ee05efaa210325efc5365ba6b782d"},
+    {file = "zstd-1.5.7.2-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:ae9c1ec5031ea8629abaf4c14488b4ea34a0e4b72920360c28817441c90e93b0"},
+    {file = "zstd-1.5.7.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d177056c588288923f21d4e4f9d6df6fdbbf3200f130c3c947bda6c120f5c400"},
+    {file = "zstd-1.5.7.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:05ea63d9f0f76eaaf67a7ed5df700b28340323f2cfcc9f74c1e7583416d54986"},
+    {file = "zstd-1.5.7.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:758831cbed6b4e1f9db501ba1443536cb2bd8d54c82f477b565ee7e1e9849e2d"},
+    {file = "zstd-1.5.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4c7d36f725db3ded994c76962695c5a200aee9e6b7832c5755ca31100e4ef9e3"},
+    {file = "zstd-1.5.7.2-cp312-cp312-win_amd64.whl", hash = "sha256:1885ebeb5189c520fa8ebf8e07ab9d90a6a0c41bf43be5dea9128c651205a96a"},
+    {file = "zstd-1.5.7.2-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:67a25ab4c525fe292ca4bac8d041a8ee2bbd214d669fd0a92d0915d544e1af9b"},
+    {file = "zstd-1.5.7.2-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:7fd93e2d0831230c441ce55ed5d290756df3d81944b044db34cf01a420bf82dd"},
+    {file = "zstd-1.5.7.2-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fec8c3daad4a1a01fe49215109ae253a82e45ea4b8465aa2102e6b6d2b868be4"},
+    {file = "zstd-1.5.7.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:11f27ab02b0639a465b3cd3007d4d114bd57e023af4c848580a442fac9451cbc"},
+    {file = "zstd-1.5.7.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:93e769a7413d5983b6964369a7c35e7519b35aedfe457f31655db294400eb26e"},
+    {file = "zstd-1.5.7.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6c1501c820085ae2dfd0cf30ecceb2ea08bdca358e101a2c0563230741841e43"},
+    {file = "zstd-1.5.7.2-cp313-cp313-win_amd64.whl", hash = "sha256:6f648d7cac349f1c69b59836817517809840921a4a82bb8075c4b1aa7e747d73"},
+    {file = "zstd-1.5.7.2-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:6a8b2a25de7c42dcc3ad78a52a6100afd5b5e3c57188b21eb1b2f9ece65d9b57"},
+    {file = "zstd-1.5.7.2-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:40a603814bf6123a1a85f945a02a0a346486335b47d1124747f42339c94def58"},
+    {file = "zstd-1.5.7.2-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d21d0780b9898d8e619d43f6756bac6b0def0becbc8828015ba1d7c130d6a8b1"},
+    {file = "zstd-1.5.7.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:554276e267bbe25e3eb9d88a7655d1a746525661910772bb7fe5a5114e2316ff"},
+    {file = "zstd-1.5.7.2-cp314-cp314-win_amd64.whl", hash = "sha256:0707e30d4ffef30949e78619cd3d296bd26fc3e820347b23d4d04970d8736521"},
+    {file = "zstd-1.5.7.2-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:14fd43f08d88ff138063d3326be2df196089a12632229a1177d345c8ff8d9c4e"},
+    {file = "zstd-1.5.7.2-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:8ca715b93ab2467ad45ad7aa9b72d3639535c68ef8245a7ddc6214cf673e3127"},
+    {file = "zstd-1.5.7.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:bf3e940a690d12df3212be3158dd96621f643ab3ea12cd152d2bf415ec3fde6c"},
+    {file = "zstd-1.5.7.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d9ff689bbaea81371bdcd5fe3c0d622a1e9e2a36dc24066f5990f973d6923825"},
+    {file = "zstd-1.5.7.2-cp39-cp39-win_amd64.whl", hash = "sha256:37738c5ce38f4267b70f107bd5ea170b267bf571ac8d203dca0304f146f29878"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.chia.net/simple"
+reference = "chia"
+
+[[package]]
+name = "zstd"
 version = "1.5.7.3"
 description = "ZSTD Bindings for Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
+markers = "python_version < \"3.12\""
 files = [
     {file = "zstd-1.5.7.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:e72b353870286648a63261437b75f297e2967a26f210da4dfa4c08949935de7a"},
     {file = "zstd-1.5.7.3-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:26aff5f24caeffde35f1b757499e935bc60a8e0d9e1ea8bde05dcf7d53df9325"},
@@ -5224,4 +5277,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "e1935c02b5ded0af7dd6c98da6df024f59fd78ea9fe15353bebde71583daecaf"
+content-hash = "ecf50b89791fd498b0c740089b5ddf5efb4ac3e1e1de16b044e96069badf8924"
