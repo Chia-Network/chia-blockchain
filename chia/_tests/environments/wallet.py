@@ -375,10 +375,10 @@ class WalletTestFramework:
                     ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_used_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: list[list[LightTransactionRecord]] = []
         balances_pre_block_updates: list[dict[uint32, WalletState]] = []
         # Check balances after block (and reorg)
         for reorg_status in ("no",) if reorg_exempt or self.reorg_exempt else ("before", "during"):
+            pending_txs: list[list[LightTransactionRecord]] = []
             if reorg_status == "during":
                 for bundle in bundles_to_repush:
                     await self.full_node_rpc_client.push_tx(bundle)
