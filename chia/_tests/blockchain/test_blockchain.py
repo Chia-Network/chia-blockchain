@@ -2617,7 +2617,11 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     async def test_prevalidation_fast_fail_mutated_generator(
-        self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        monkeypatch: pytest.MonkeyPatch,
+        consensus_mode: ConsensusMode,
     ) -> None:
         # Adversarial fast-fail: a peer can take a valid block, keep all
         # farmed/signed header fields and commitments intact, and swap only
@@ -2674,6 +2678,16 @@ class TestBodyValidation:
 
         assert clvm_calls == 0
 
+        mutated = recursive_replace(
+            block, "foliage_transaction_block.transactions_info_hash", std_hash(b"invalid transactions info")
+        )
+        await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_INFO_HASH)
+
+        mutated = recursive_replace(
+            block, "foliage.foliage_transaction_block_hash", std_hash(b"invalid foliage transaction block")
+        )
+        await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_FOLIAGE_BLOCK_HASH)
+
         # Removing the foliage transaction block must not bypass the
         # transactions-info commitment. Make the replacement generator and its
         # direct root self-consistent; the missing signed link must still reject
@@ -2684,6 +2698,58 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_INFO_HASH)
 
+        assert clvm_calls == 0
+
+        mutated = recursive_replace(block, "transactions_info.generator_refs_root", bytes([0] * 32))
+        await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT)
+
+        future_ref = block.height
+        mutated = recursive_replace(block, "transactions_generator_ref_list", [future_ref])
+        mutated = recursive_replace(
+            mutated, "transactions_info.generator_refs_root", std_hash(future_ref.stream_to_bytes())
+        )
+        expected_ref_error = (
+            Err.FUTURE_GENERATOR_REFS if consensus_mode < ConsensusMode.SOFT_FORK_2_7 else Err.TOO_MANY_GENERATOR_REFS
+        )
+        await _validate_and_add_block(b, mutated, expected_error=expected_ref_error)
+
+        if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+            noncanonical_generator = SerializedProgram.fromhex("c00101")
+            mutated = recursive_replace(block, "transactions_generator", noncanonical_generator)
+            mutated = recursive_replace(
+                mutated, "transactions_info.generator_root", std_hash(bytes(noncanonical_generator))
+            )
+            mutated = recursive_replace(
+                mutated,
+                "foliage_transaction_block.transactions_info_hash",
+                std_hash(bytes(mutated.transactions_info)),
+            )
+            mutated = recursive_replace(
+                mutated,
+                "foliage.foliage_transaction_block_hash",
+                std_hash(bytes(mutated.foliage_transaction_block)),
+            )
+            await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
+
+        # Reject structurally invalid reference lists before attempting any
+        # generator lookup.
+        generator_lookups = 0
+
+        async def _trap_generator_lookup(*args: object, **kwargs: object) -> None:
+            nonlocal generator_lookups
+            generator_lookups += 1
+            raise AssertionError("generator lookup must not run for too many references")
+
+        monkeypatch.setattr(AugmentedBlockchain, "lookup_block_generators", _trap_generator_lookup)
+        mutated = recursive_replace(
+            block,
+            "transactions_generator_ref_list",
+            [uint32(0)] * (b.constants.MAX_GENERATOR_REF_LIST_SIZE + 1),
+        )
+
+        await _validate_and_add_block(b, mutated, expected_error=Err.TOO_MANY_GENERATOR_REFS)
+
+        assert generator_lookups == 0
         assert clvm_calls == 0
 
     @pytest.mark.anyio

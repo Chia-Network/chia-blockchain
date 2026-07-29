@@ -21,6 +21,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_body_validation import validate_generator_ref_list
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -170,61 +171,6 @@ def _pre_validate_block(
                 finished_sub_slots=len(block.finished_sub_slots),
             )
 
-            # More CLVM-independent gates (see validate_block_body). These need
-            # only prev_tx_height and the block itself, so they can run before
-            # the generator is executed.
-            if block.transactions_generator_ref_list == []:
-                if block.transactions_info.generator_refs_root != bytes([1] * 32):
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-            else:
-                # With hard fork 2 we ban transactions_generator_ref_list.
-                if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.TOO_MANY_GENERATOR_REFS.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-                generator_refs_hash = std_hash(
-                    b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list])
-                )
-                if block.transactions_info.generator_refs_root != generator_refs_hash:
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-                if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.TOO_MANY_GENERATOR_REFS.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-                if any([index >= block.height for index in block.transactions_generator_ref_list]):
-                    validation_time = time.monotonic() - validation_start
-                    return PreValidationResult(
-                        uint16(Err.FUTURE_GENERATOR_REFS.value),
-                        None,
-                        None,
-                        None,
-                        uint32(validation_time * 1000),
-                    )
-
             if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
                 if not is_canonical_serialization(bytes(block.transactions_generator)):
                     validation_time = time.monotonic() - validation_start
@@ -354,6 +300,13 @@ async def pre_validate_block(
             block.reward_chain_block.signage_point_index,
         )
 
+    prev_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blockchain,
+        prev_b_hash=block.prev_header_hash,
+        sp_index=block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(block.finished_sub_slots),
+    )
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         block.reward_chain_block.proof_of_space,
@@ -361,18 +314,18 @@ async def pre_validate_block(
         cc_sp_hash,
         block.height,
         expected_vs.difficulty,
-        pre_sp_tx_block_height(
-            constants=constants,
-            blocks=blockchain,
-            prev_b_hash=block.prev_header_hash,
-            sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(block.finished_sub_slots),
-        ),
+        prev_tx_height,
         filter_challenge=filter_challenge,
         signage_point_index=block.reward_chain_block.signage_point_index,
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)
+
+    if block.transactions_generator is not None:
+        assert block.transactions_info is not None
+        generator_ref_error = validate_generator_ref_list(constants, block, block.height, prev_tx_height)
+        if generator_ref_error is not None:
+            return return_error(generator_ref_error)
 
     try:
         block_rec = block_to_block_record(
