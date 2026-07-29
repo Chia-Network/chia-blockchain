@@ -15,7 +15,6 @@ chia.types.blockchain_format.program
 chia.wallet.puzzles.load_clvm
 chia.wallet.util.debug_spend_bundle
 chia.wallet.util.new_peak_queue
-chia.wallet.wallet_coin_store
 chia.wallet.wallet_interested_store
 chia.wallet.wallet_puzzle_store
 chia.wallet.wallet_transaction_store
@@ -36,4 +35,3 @@ chia._tests.plotting.test_plot_manager
 chia._tests.pools.test_pool_puzzles_lifecycle
 chia._tests.simulation.test_simulation
 chia._tests.util.test_misc
-chia._tests.wallet.did_wallet.test_did

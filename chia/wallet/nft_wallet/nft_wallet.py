@@ -354,8 +354,6 @@ class NFTWallet:
         if percentage > MAX_ROYALTY_BASIS_POINTS:
             raise ValueError(f"Royalty percentage {percentage} exceeds 100% ({MAX_ROYALTY_BASIS_POINTS} basis points)")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
-        if coins is None:
-            return None
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()
