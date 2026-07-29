@@ -418,6 +418,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         flags = get_flags_for_height_and_constants(block.height, bt.constants)
         err, _err_msg, conds = run_block_generator2(
@@ -471,6 +473,8 @@ class TestBlockHeaderValidation:
             block_2.transactions_info,
             block_2.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         validate_res = await blockchain.validate_unfinished_block(unf, None, False)
         assert validate_res.error == Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value
