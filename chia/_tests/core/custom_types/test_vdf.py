@@ -39,18 +39,12 @@ def test_expected_witness_sizes_reach_verifier(
     assert verifier_calls == 1
 
 
-def test_oversized_witness_rejected_before_cached_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
-    cached_verifier = vdf.verify_vdf
-    cache_info_before = cached_verifier.cache_info()
-
-    def fail_if_called(*args: object) -> bool:
-        pytest.fail("oversized VDF witness reached the cached verifier")
-
-    monkeypatch.setattr(vdf, "verify_vdf", fail_if_called)
+def test_oversized_witness_rejected_before_cached_verifier() -> None:
+    cache_info_before = vdf.verify_vdf.cache_info()
 
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     proof = VDFProof(uint8(0), bytes(2_000_000), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
-    assert cached_verifier.cache_info() == cache_info_before
+    assert vdf.verify_vdf.cache_info() == cache_info_before
