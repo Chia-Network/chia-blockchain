@@ -237,8 +237,15 @@ async def test_short_sync_batch_returns_false_on_disconnected_first_block(
     # docstring promises) rather than raising.
     _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
     node = full_node_2.full_node
-    blocks = bt.get_consecutive_blocks(2)
-    disconnected_block = blocks[-1]  # height > 0 and its parent is not in node's database
+    blocks = bt.get_consecutive_blocks(4)
+    for block in blocks[:3]:
+        await node.add_block(block)
+
+    # A fork diverging at height 2, so its height-3 block has a parent we never stored.
+    fork = bt.get_consecutive_blocks(3, block_list_input=blocks[:2], seed=b"fork")
+    assert fork[2].header_hash != blocks[2].header_hash
+    disconnected_blocks = fork[-2:]
+    assert [block.height for block in disconnected_blocks] == [3, 4]
 
     class DummyPeer:
         peer_node_id = bytes32(b"\x01" * 32)
@@ -247,13 +254,17 @@ async def test_short_sync_batch_returns_false_on_disconnected_first_block(
             return PeerInfo("127.0.0.1", uint16(0))
 
         async def call_api(
-            self, api_function: Any, request: full_node_protocol.RequestBlocks
-        ) -> full_node_protocol.RespondBlocks:
-            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [disconnected_block])
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            # The fork-point probe gets a connected block, so the batch loop is reached;
+            # the batch itself then arrives on a fork we cannot connect.
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(blocks[3])
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, disconnected_blocks)
 
     peer = cast(WSChiaConnection, DummyPeer())
-    # start_height == 0 skips the fork-point probe, exercising the batch loop's parent check directly.
-    result = await node.short_sync_batch(peer, uint32(0), uint32(1))
+    result = await node.short_sync_batch(peer, uint32(3), uint32(4))
     assert result is False
     assert peer.peer_node_id not in node.sync_store.batch_syncing
 
