@@ -1790,6 +1790,8 @@ async def test_new_unfinished_block(
     peer.protocol_version = Version(peer_version)
 
     await full_node_1.full_node.add_block(blocks[-2])
+    for sub_slot in block.finished_sub_slots:
+        await full_node_1.full_node.add_end_of_sub_slot(sub_slot, peer)
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
     _, _, msg = peer.outgoing_queue.get_nowait()
