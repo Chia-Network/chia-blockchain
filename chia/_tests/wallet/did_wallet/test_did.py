@@ -101,7 +101,7 @@ async def create_did_via_cli(
             "fee": fee,
             "name": name,
             "push": True,
-            "metadata": [f"{key}:{value}" for key, value in metadata.items()] if metadata is not None else None,
+            "metadata": [f"{key}:{value}" for key, value in metadata.items()],
         }
     ).run()
     await env.change_balances({"nft": {"init": True}})
