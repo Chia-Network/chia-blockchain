@@ -1363,6 +1363,23 @@ class FullNode:
                         self.log.info(f"peer timed out after {end - start:.1f} s")
                         await peer.close()
                     elif isinstance(response, RespondBlocks):
+                        # Honest nodes return the full inclusive range or RejectBlocks.
+                        # A well-formed but incomplete/mismatched RespondBlocks cannot
+                        # advance this sync step, so ban the peer and ask another one
+                        # for the same range.
+                        expected_heights = list(range(start_height, end_height + 1))
+                        if (
+                            response.start_height != start_height
+                            or response.end_height != end_height
+                            or [block.height for block in response.blocks] != expected_heights
+                        ):
+                            self.log.warning(
+                                f"peer {peer.peer_info.host} responded to request_blocks "
+                                f"{start_height}-{end_height} with {response.start_height}-"
+                                f"{response.end_height} ({len(response.blocks)} blocks), banning"
+                            )
+                            await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                            continue
                         if end - start > 5:
                             self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
                             # this isn't a great peer, reduce its priority
