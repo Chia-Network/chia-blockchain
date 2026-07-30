@@ -16,6 +16,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol
+from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -352,6 +353,11 @@ async def test_short_sync_batch_raises_when_no_blocks_committed(
         "reward_chain_block.proof_of_space.proof",
         bytes([0] * 32),
     )
+    # short_sync_batch requests an inclusive range of at least two heights; keep
+    # the response length honest so this exercises validation failure, not the
+    # incomplete-RespondBlocks guard.
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    trailing_block = blocks[-1]
 
     class DummyPeer:
         peer_node_id = bytes32(b"\x03" * 32)
@@ -365,13 +371,82 @@ async def test_short_sync_batch_raises_when_no_blocks_committed(
             if isinstance(request, full_node_protocol.RequestBlock):
                 return full_node_protocol.RespondBlock(bad_block)
             assert isinstance(request, full_node_protocol.RequestBlocks)
-            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [bad_block])
+            return full_node_protocol.RespondBlocks(
+                request.start_height, request.end_height, [bad_block, trailing_block]
+            )
 
     peer = cast(WSChiaConnection, DummyPeer())
     # target must be > start so the batch loop runs; end_height becomes start+1.
     with pytest.raises(ValueError, match=rf"failed to validate blocks {bad_block.height}-{bad_block.height + 1}$"):
         await node.short_sync_batch(peer, bad_block.height, uint32(bad_block.height + 1))
 
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == peak_before.header_hash
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.parametrize("payload", ["empty", "short", "reordered", "wrong_range"])
+@pytest.mark.anyio
+async def test_short_sync_batch_bans_peer_answering_wrong_block_range(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+    payload: str,
+) -> None:
+    # A protocol-valid RespondBlocks that does not cover the requested range cannot
+    # advance short sync, so the peer is banned rather than credited with a fetch.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+    peak_before = node.blockchain.get_peak()
+    assert peak_before is not None
+
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+    start_block, end_block = blocks[-2], blocks[-1]
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x04" * 32)
+
+        def __init__(self) -> None:
+            self.closed = False
+            self.ban_seconds: int | None = None
+            self.peer_info = PeerInfo("127.0.0.1", uint16(0))
+
+        def get_peer_logging(self) -> PeerInfo:
+            return self.peer_info
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(start_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            if payload == "empty":
+                return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
+            if payload == "short":
+                return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [start_block])
+            if payload == "reordered":
+                return full_node_protocol.RespondBlocks(
+                    request.start_height, request.end_height, [end_block, start_block]
+                )
+            return full_node_protocol.RespondBlocks(
+                request.start_height, uint32(request.end_height + 1), [start_block, end_block]
+            )
+
+        async def close(self, ban_seconds: int = 0, *args: object, **kwargs: object) -> None:
+            self.closed = True
+            self.ban_seconds = ban_seconds
+
+    peer = DummyPeer()
+    with pytest.raises(ValueError, match="incomplete/mismatched blocks"):
+        await node.short_sync_batch(cast(WSChiaConnection, peer), start_block.height, end_block.height)
+
+    assert peer.closed
+    assert peer.ban_seconds == CONSENSUS_ERROR_BAN_SECONDS
     peak = node.blockchain.get_peak()
     assert peak is not None
     assert peak.header_hash == peak_before.header_hash

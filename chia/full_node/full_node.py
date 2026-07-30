@@ -676,8 +676,27 @@ class FullNode:
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
-                if not response:
+                if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
+                # Honest nodes return the full inclusive range or RejectBlocks.
+                # A well-formed but incomplete/mismatched RespondBlocks cannot
+                # advance this sync step, so ban the peer rather than treating
+                # the range as fetched.
+                expected_heights = list(range(height, end_height + 1))
+                if (
+                    response.start_height != height
+                    or response.end_height != end_height
+                    or [block.height for block in response.blocks] != expected_heights
+                ):
+                    self.log.warning(
+                        f"peer {peer.peer_info.host} responded to request_blocks "
+                        f"{height}-{end_height} with {response.start_height}-"
+                        f"{response.end_height} ({len(response.blocks)} blocks), banning"
+                    )
+                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                    raise ValueError(
+                        f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                    )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: StateChangeSummary | None
                     prev_b = None
