@@ -6,6 +6,7 @@ from enum import IntEnum
 from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64
+from packaging.version import Version
 
 from chia.util.streamable import Streamable, streamable
 
@@ -13,6 +14,12 @@ from chia.util.streamable import Streamable, streamable
 Protocol between harvester and farmer.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
+
+NEW_PLOT_SERIALIZATION_VERSION = Version("0.0.38")
+
+
+def supports_new_plot_serialization(version: Version) -> bool:
+    return version >= NEW_PLOT_SERIALIZATION_VERSION
 
 
 @streamable
@@ -43,7 +50,8 @@ class NewSignagePointHarvester(Streamable):
 
 
 # this message has the same message ID as NewSignagePointHarvester, but this
-# message format is used if the protocol version is 0.0.37 or higher
+# message format is used if the protocol version is 0.0.38 or higher.
+# 0.0.37 harvesters are intentionally not supported by the new filter-challenge path.
 @streamable
 @dataclass(frozen=True)
 class NewSignagePointHarvester2(Streamable):
@@ -55,6 +63,9 @@ class NewSignagePointHarvester2(Streamable):
     pool_difficulties: list[PoolDifficulty]
     peak_height: uint32
     last_tx_height: uint32
+    # V2 filter challenge from completed sub-slot history:
+    # SPs [0-15] use SS(n-2); SPs [16-63] use SS(n-1).
+    filter_challenge: bytes32 | None = None
 
 
 @streamable
@@ -158,11 +169,31 @@ class Plot(Streamable):
     compression_level: uint8 | None
 
     def param(self) -> PlotParam:
-        # TODO: todo_v2_plots we need plot_index and meta_group here. Maybe we
-        # just need a version 2 of this message. We still need the existing
-        # version for backwards compatibility with existing harvesters
         if (self.size & 0x80) != 0:
             return PlotParam.make_v2(0, 0, self.size & 0x7F)
+        else:
+            return PlotParam.make_v1(self.size)
+
+
+@streamable
+@dataclass(frozen=True)
+class Plot2(Streamable):
+    filename: str
+    # k-size for v1 plots; strength with the top bit set for v2 plots.
+    size: uint8
+    plot_id: bytes32
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
+    plot_public_key: G1Element
+    file_size: uint64
+    time_modified: uint64
+    compression_level: uint8 | None
+    plot_index: uint16
+    meta_group: uint8
+
+    def param(self) -> PlotParam:
+        if (self.size & 0x80) != 0:
+            return PlotParam.make_v2(self.plot_index, self.meta_group, self.size & 0x7F)
         else:
             return PlotParam.make_v1(self.size)
 
@@ -177,6 +208,14 @@ class RequestPlots(Streamable):
 @dataclass(frozen=True)
 class RespondPlots(Streamable):
     plots: list[Plot]
+    failed_to_open_filenames: list[str]
+    no_key_filenames: list[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondPlots2(Streamable):
+    plots: list[Plot2]
     failed_to_open_filenames: list[str]
     no_key_filenames: list[str]
 
@@ -226,6 +265,17 @@ class PlotSyncPlotList(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncPlotList: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+
+
+@streamable
+@dataclass(frozen=True)
+class PlotSyncPlotList2(Streamable):
+    identifier: PlotSyncIdentifier
+    data: list[Plot2]
+    final: bool
+
+    def __str__(self) -> str:
+        return f"PlotSyncPlotList2: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
 @streamable
