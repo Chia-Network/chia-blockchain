@@ -1516,13 +1516,12 @@ class GetVcsCMD:
     async def run(self) -> None:  # pragma: no cover
         from chia.cmds.wallet_funcs import get_vcs
 
-        await get_vcs(
-            self.rpc_info.context.root_path,
-            self.rpc_info.wallet_rpc_port,
-            self.rpc_info.fingerprint,
-            self.start,
-            self.count,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_vcs(
+                wallet_info,
+                self.start,
+                self.count,
+            )
 
 
 @chia_command(
@@ -1644,9 +1643,7 @@ class RevokeVCCMD(TransactionEndpointWithTimelocks):
                 self.vc_id,
                 self.fee,
                 self.push,
-                tx_config=self.tx_config_loader.load_tx_config(
-                    units["chia"], wallet_info.config, wallet_info.fingerprint
-                ),
+                self.tx_config_loader.load_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 
