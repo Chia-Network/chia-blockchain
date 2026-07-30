@@ -885,7 +885,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         await conn.execute("DELETE FROM finish_exiting_info WHERE wallet_id = ?", (plotnft_wallet.id(),))
 
     # also adding an unconfirmed transaction to test that completion is not attempted when state is uncertain
-    await env.wallet_state_manager.add_transaction(
+    await env.wallet_state_manager.tx_store.add_transaction_record(
         env.wallet_state_manager.new_outgoing_transaction(
             wallet_id=plotnft_wallet.id(),
             puzzle_hash=bytes32.zeros,
