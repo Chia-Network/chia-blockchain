@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import logging
 import time
 import traceback
@@ -23,9 +22,14 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import (
+    get_block_challenge,
+    get_filter_challenge_from_chain,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
@@ -209,18 +213,24 @@ async def pre_validate_block(
     async def return_error(error_code: Err) -> PreValidationResult:
         return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
 
-    if block.height > 0:
+    if block.height == 0:
+        if block.prev_header_hash != constants.GENESIS_CHALLENGE:
+            return return_error(Err.INVALID_PREV_BLOCK_HASH)
+    else:
         curr = blockchain.try_block_record(block.prev_header_hash)
         if curr is None:
             return return_error(Err.INVALID_PREV_BLOCK_HASH)
         prev_b = curr
 
     assert isinstance(block, FullBlock)
-    if len(block.finished_sub_slots) > 0:
-        if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-            vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
-        if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-            vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+    if len(block.finished_sub_slots) > 0 and (
+        block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
+        or block.finished_sub_slots[0].challenge_chain.new_difficulty is not None
+    ):
+        expected_ssi, expected_difficulty = get_next_sub_slot_iters_and_difficulty(constants, True, prev_b, blockchain)
+        expected_vs = ValidationState(expected_ssi, expected_difficulty, vs.prev_ses_block)
+    else:
+        expected_vs = ValidationState(vs.ssi, vs.difficulty, vs.prev_ses_block)
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -228,13 +238,23 @@ async def pre_validate_block(
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
+    filter_challenge = None
+    if block.reward_chain_block.proof_of_space.version == 1:
+        filter_challenge = get_filter_challenge_from_chain(
+            constants,
+            blockchain,
+            block,
+            challenge,
+            block.reward_chain_block.signage_point_index,
+        )
+
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         block.reward_chain_block.proof_of_space,
         challenge,
         cc_sp_hash,
         block.height,
-        vs.difficulty,
+        expected_vs.difficulty,
         pre_sp_tx_block_height(
             constants=constants,
             blocks=blockchain,
@@ -242,6 +262,8 @@ async def pre_validate_block(
             sp_index=block.reward_chain_block.signage_point_index,
             finished_sub_slots=len(block.finished_sub_slots),
         ),
+        filter_challenge=filter_challenge,
+        signage_point_index=block.reward_chain_block.signage_point_index,
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)
@@ -252,8 +274,8 @@ async def pre_validate_block(
             blockchain,
             required_iters,
             block,
-            sub_slot_iters=vs.ssi,
-            prev_ses_block=vs.prev_ses_block,
+            sub_slot_iters=expected_vs.ssi,
+            prev_ses_block=expected_vs.prev_ses_block,
         )
     except ValueError:
         log.exception("block_to_block_record()")
@@ -286,7 +308,7 @@ async def pre_validate_block(
         block,
         previous_generators,
         conds,
-        copy.copy(vs),
+        expected_vs,
         skip_commitment_validation=skip_commitment_validation,
         nice=nice,
         dedicated=dedicated,
@@ -294,5 +316,9 @@ async def pre_validate_block(
 
     if block_rec.sub_epoch_summary_included is not None:
         vs.prev_ses_block = block_rec
+        if block_rec.sub_epoch_summary_included.new_difficulty is not None:
+            vs.difficulty = block_rec.sub_epoch_summary_included.new_difficulty
+        if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
+            vs.ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
 
     return future

@@ -18,6 +18,7 @@ from chia.types.blockchain_format.proof_of_space import (
     check_plot_param,
     compute_plot_group_id,
     is_v1_phased_out,
+    is_v2_plot,
     make_pos,
     num_phase_out_epochs,
     passes_plot_filter,
@@ -46,6 +47,23 @@ def g1(key: str) -> G1Element:
 
 def b32(key: str) -> bytes32:
     return bytes32.from_hexstr(key)
+
+
+@pytest.mark.parametrize(
+    "plot_param,expected",
+    [(PlotParam.make_v1(32), False), (PlotParam.make_v2(0, 0, 28), True)],
+)
+def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
+    pos = make_pos(
+        bytes32(b"1" * 32),
+        G1Element(),
+        None,
+        G1Element(),
+        plot_param,
+        b"proof",
+    )
+
+    assert is_v2_plot(pos) is expected
 
 
 # TODO: todo_v2_plots more test cases, cover plot_index and group_id
@@ -282,21 +300,6 @@ def test_calculate_prefix_bits_clamp_zero_v1(height: uint32, expected: int) -> N
 )
 def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v1(32)) == expected
-
-
-@pytest.mark.parametrize(
-    argnames=["height", "expected"],
-    argvalues=[
-        (0, 5),
-        (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 4),
-        (0xFFFFFFFC, 3),
-        (0xFFFFFFFD, 2),
-        (0xFFFFFFFF, 2),
-    ],
-)
-def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
-    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotParam.make_v2(0, 0, 28)) == expected
 
 
 def test_base_filter_relative_to_fork_height() -> None:

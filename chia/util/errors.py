@@ -200,6 +200,7 @@ class Err(Enum):
     # block or spendbundle had too many spends
     TOO_MANY_SPENDS = 149
     INVALID_HEADER_MMR_ROOT = 150
+    INVALID_BLOCK_VERSION = 151
 
 
 class ValidationError(Exception):

@@ -5,10 +5,14 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
+from chia.timelord import iters_from_block as iters_from_block_module
 from chia.timelord import timelord as timelord_module
+from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_service import TimelordService
 from chia.timelord.types import Chain
@@ -19,6 +23,38 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 async def test_timelord_has_no_server(timelord_service: TimelordService) -> None:
     timelord_server = timelord_service._node.server
     assert timelord_server.webserver is None
+
+
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+    reason="needs a fixture containing V2 proofs",
+)
+def test_iters_from_block_validates_v2_pospace_height_agnostically(
+    default_400_blocks: list[FullBlock],
+    blockchain_constants: ConsensusConstants,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target_block = next(
+        block for block in default_400_blocks if block.reward_chain_block.proof_of_space.version == 1
+    ).reward_chain_block
+    captured_kwargs: dict[str, object] = {}
+
+    def capture_validate_pospace(*args: object, **kwargs: object) -> uint64:
+        captured_kwargs.update(kwargs)
+        return uint64(1)
+
+    monkeypatch.setattr(iters_from_block_module, "validate_pospace_and_get_required_iters", capture_validate_pospace)
+
+    iters_from_block(
+        blockchain_constants,
+        target_block,
+        blockchain_constants.SUB_SLOT_ITERS_STARTING,
+        blockchain_constants.DIFFICULTY_STARTING,
+        target_block.height,
+        uint32(0),
+    )
+
+    assert captured_kwargs["height_agnostic"] is True
 
 
 class _NullTransport(asyncio.Transport):
