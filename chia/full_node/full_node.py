@@ -616,6 +616,36 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
+    async def _respond_blocks_or_ban(
+        self,
+        peer: WSChiaConnection,
+        response: RespondBlocks,
+        start_height: int,
+        end_height: int,
+    ) -> bool:
+        """
+        Return True if response covers the inclusive requested height range.
+        Otherwise ban the peer and return False.
+
+        Honest nodes return the full inclusive range or RejectBlocks. A
+        well-formed but incomplete/mismatched RespondBlocks cannot advance
+        sync, so the peer is banned rather than credited with a fetch.
+        """
+        expected_heights = list(range(start_height, end_height + 1))
+        if (
+            response.start_height == start_height
+            and response.end_height == end_height
+            and [block.height for block in response.blocks] == expected_heights
+        ):
+            return True
+        self.log.warning(
+            f"peer {peer.peer_info.host} responded to request_blocks "
+            f"{start_height}-{end_height} with {response.start_height}-"
+            f"{response.end_height} ({len(response.blocks)} blocks), banning"
+        )
+        await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+        return False
+
     async def short_sync_batch(self, peer: WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
         Tries to sync to a chain which is not too far in the future, by downloading batches of blocks. If the first
@@ -678,22 +708,7 @@ class FullNode:
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
                 if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
-                # Honest nodes return the full inclusive range or RejectBlocks.
-                # A well-formed but incomplete/mismatched RespondBlocks cannot
-                # advance this sync step, so ban the peer rather than treating
-                # the range as fetched.
-                expected_heights = list(range(height, end_height + 1))
-                if (
-                    response.start_height != height
-                    or response.end_height != end_height
-                    or [block.height for block in response.blocks] != expected_heights
-                ):
-                    self.log.warning(
-                        f"peer {peer.peer_info.host} responded to request_blocks "
-                        f"{height}-{end_height} with {response.start_height}-"
-                        f"{response.end_height} ({len(response.blocks)} blocks), banning"
-                    )
-                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                if not await self._respond_blocks_or_ban(peer, response, height, end_height):
                     raise ValueError(
                         f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
                     )
@@ -1382,22 +1397,7 @@ class FullNode:
                         self.log.info(f"peer timed out after {end - start:.1f} s")
                         await peer.close()
                     elif isinstance(response, RespondBlocks):
-                        # Honest nodes return the full inclusive range or RejectBlocks.
-                        # A well-formed but incomplete/mismatched RespondBlocks cannot
-                        # advance this sync step, so ban the peer and ask another one
-                        # for the same range.
-                        expected_heights = list(range(start_height, end_height + 1))
-                        if (
-                            response.start_height != start_height
-                            or response.end_height != end_height
-                            or [block.height for block in response.blocks] != expected_heights
-                        ):
-                            self.log.warning(
-                                f"peer {peer.peer_info.host} responded to request_blocks "
-                                f"{start_height}-{end_height} with {response.start_height}-"
-                                f"{response.end_height} ({len(response.blocks)} blocks), banning"
-                            )
-                            await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                        if not await self._respond_blocks_or_ban(peer, response, start_height, end_height):
                             continue
                         if end - start > 5:
                             self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
