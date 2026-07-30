@@ -108,7 +108,7 @@ class DataLayerSummary(Streamable):
 class DataLayerWallet:
     if TYPE_CHECKING:
         # TODO Create DataLayer coin data model if necessary
-        _protocol_check: ClassVar[WalletProtocol[object]] = cast("DataLayerWallet", None)
+        _protocol_check: ClassVar[WalletProtocol] = cast("DataLayerWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -955,7 +955,7 @@ class DataLayerWallet:
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
     async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
@@ -964,7 +964,7 @@ class DataLayerWallet:
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)
 
     def get_name(self) -> str:
@@ -1012,6 +1012,19 @@ class DataLayerWallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Offer:
+        for asset_id in offer_dict:
+            if asset_id is None:
+                raise ValueError("DataLayer update offers cannot include an XCH leg")
+            driver = driver_dict.get(asset_id)
+            if driver is None or not (
+                driver.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
+                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                raise ValueError(
+                    f"DataLayer update offers only support DL singleton legs; "
+                    f"asset {asset_id.hex()} is not a DataLayer singleton"
+                )
+
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:

@@ -1,10 +1,6 @@
----
-description: Data layer test patterns — DataStore logic, wallet-backed RPC flows, singleton lifecycle
-globs:
-  - chia/_tests/core/data_layer/**
----
-
 # Data Layer Tests
+
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 ## Scope
 

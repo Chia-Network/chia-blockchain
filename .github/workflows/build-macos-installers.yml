@@ -72,7 +72,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -178,7 +178,7 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Setup Node per .nvmrc in GUI
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
@@ -192,7 +192,7 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: cache-gui
         with:
           path: ./chia-blockchain-gui

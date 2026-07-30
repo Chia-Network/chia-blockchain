@@ -1656,7 +1656,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
         env_1,
         wallet_id=env_1.wallet_aliases["nft"],
         did_id=hmr_did_id,
-        nft_coin_id=nft_coin_id.hex() if isinstance(nft_coin_id, bytes32) else str(nft_coin_id),
+        nft_coin_id=nft_coin_id.hex(),
         fee=uint64(fee),
     )
 
@@ -2655,7 +2655,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework, capsys: pyt
         env,
         wallet_id=env.wallet_aliases["nft_no_did"],
         did_id=hmr_did_id,
-        nft_coin_id=nft_coin_id.hex() if isinstance(nft_coin_id, bytes32) else nft_coin_id,
+        nft_coin_id=nft_coin_id.hex(),
         fee=uint64(0),
     )
 
@@ -2725,7 +2725,7 @@ async def test_nft_set_did(wallet_environments: WalletTestFramework, capsys: pyt
         env,
         wallet_id=env.wallet_aliases["nft_w_did1"],
         did_id=hmr_did_id2,
-        nft_coin_id=nft_coin_id.hex() if isinstance(nft_coin_id, bytes32) else nft_coin_id,
+        nft_coin_id=nft_coin_id.hex(),
         fee=uint64(0),
     )
 

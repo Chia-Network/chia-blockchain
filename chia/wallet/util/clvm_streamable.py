@@ -4,8 +4,9 @@ import dataclasses
 import functools
 from collections.abc import Callable
 from types import MappingProxyType
-from typing import Any, Generic, TypeGuard, TypeVar, get_type_hints
+from typing import Any, Generic, TypeGuard, TypeVar, cast, get_type_hints
 
+from clvm_rs import Program as CLVMRSProgram  # type: ignore[import-untyped]
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 
 from chia.types.blockchain_format.program import Program
@@ -21,8 +22,8 @@ from chia.util.streamable import (
 _T_Streamable = TypeVar("_T_Streamable", bound=Streamable)
 
 
-def clvm_streamable(cls: type[Streamable]) -> type[Streamable]:
-    wrapped_cls: type[Streamable] = streamable(cls)
+def clvm_streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
+    wrapped_cls = streamable(cls)
     setattr(wrapped_cls, "_clvm_streamable", True)
 
     hints = get_type_hints(cls)
@@ -76,13 +77,11 @@ def program_deserialize_clvm_streamable(
     if translation_layer is not None:
         mapping = translation_layer.get_mapping(clvm_streamable_type)
         if mapping is not None:
-            type_to_deserialize_from = mapping.to_type
-    as_instance = from_program_for_type(type_to_deserialize_from)(program)
-    if translation_layer is not None and mapping is not None:
-        return translation_layer.deserialize_from_translation(as_instance, mapping)
-    else:
-        # Underlying hinting problem with clvm_serde
-        return as_instance  # type: ignore[no-any-return]
+            as_instance = from_program_for_type(mapping.to_type)(CLVMRSProgram.to(program))
+            return translation_layer.deserialize_from_translation(as_instance, mapping)
+    # TODO: Fix underlying hinting problem with clvm_serde
+    result = from_program_for_type(type_to_deserialize_from)(CLVMRSProgram.to(program))
+    return cast(_T_Streamable, result)
 
 
 def byte_deserialize_clvm_streamable(
@@ -96,7 +95,7 @@ def byte_deserialize_clvm_streamable(
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
 def is_clvm_streamable_type(v: type[object]) -> bool:
-    return isinstance(v, type) and issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
+    return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's

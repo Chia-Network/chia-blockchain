@@ -1,10 +1,6 @@
----
-description: Server/network test patterns — connection lifecycle, API errors, DoS/ban behavior, rate limiting
-globs:
-  - chia/_tests/core/server/**
----
-
 # Server Tests
+
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 ## Scope
 
