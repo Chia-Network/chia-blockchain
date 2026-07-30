@@ -710,8 +710,11 @@ class FullNode:
                 if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 if not await respond_blocks_or_ban(peer, response, height, end_height, self.log):
-                    raise ValueError(
-                        f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                    raise ConsensusError(
+                        Err.INVALID_PROTOCOL_MESSAGE,
+                        error_msg=(
+                            f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                        ),
                     )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: StateChangeSummary | None

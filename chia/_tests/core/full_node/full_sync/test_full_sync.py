@@ -26,6 +26,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
 from chia.util.casts import int_to_bytes
+from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 
@@ -441,7 +442,7 @@ async def test_short_sync_batch_bans_peer_answering_wrong_block_range(
             self.ban_seconds = ban_seconds
 
     peer = DummyPeer()
-    with pytest.raises(ValueError, match="incomplete/mismatched blocks"):
+    with pytest.raises(ConsensusError, match="incomplete/mismatched blocks"):
         await node.short_sync_batch(cast(WSChiaConnection, peer), start_block.height, end_block.height)
 
     assert peer.closed
