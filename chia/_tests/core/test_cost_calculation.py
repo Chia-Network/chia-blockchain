@@ -4,7 +4,7 @@ import logging
 import pathlib
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, solution_generator_2026
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -16,7 +16,7 @@ from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
-from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_2026
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, run_with_cost
@@ -71,7 +71,12 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
         coinbase,
     )
     assert spend_bundle is not None
-    program: BlockGenerator = simple_solution_generator(spend_bundle)
+    if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        # post-HF2 consensus (INTERNED_GENERATOR) requires the serde_2026
+        # generator format
+        program: BlockGenerator = simple_solution_generator_2026(spend_bundle)
+    else:
+        program = simple_solution_generator(spend_bundle)
 
     npc_result: NPCResult = get_name_puzzle_conditions(
         program,
@@ -82,7 +87,8 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     )
 
     assert npc_result.error is None
-    assert len(bytes(program.program)) == 433
+    if softfork_height < bt.constants.HARD_FORK2_HEIGHT:
+        assert len(bytes(program.program)) == 433
 
     coin_spend = spend_bundle.coin_spends[0]
     assert npc_result.conds is not None
@@ -142,12 +148,27 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
     disassembly = binutils.disassemble(puzzle)
     unknown_opcode = "15"
-    program = SerializedProgram.from_bytes(
-        binutils.assemble(
-            f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
-            f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
-        ).as_bin()
-    )
+    solution_text = f"(() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ())"
+    if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        # post-HF2 consensus (INTERNED_GENERATOR) requires the serde_2026
+        # generator format; build the same single-spend generator with the
+        # serde_2026 emitter
+        spend_coin = Coin(
+            bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
+            puzzle.get_tree_hash(),
+            uint64(300),
+        )
+        solution_bytes = bytes(binutils.assemble(solution_text).as_bin())
+        program = SerializedProgram.from_program_bytes(
+            solution_generator_2026([(spend_coin, bytes(puzzle.to_serialized()), solution_bytes)])
+        )
+    else:
+        program = SerializedProgram.from_bytes(
+            binutils.assemble(
+                f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
+                f"  {solution_text})))"
+            ).as_bin()
+        )
     generator = BlockGenerator(program, [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,

@@ -716,6 +716,12 @@ class Mempool:
     def create_block_generator2(
         self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
     ) -> NewBlockGenerator | None:
+        if get_flags_for_height_and_constants(prev_tx_height, constants) & INTERNED_GENERATOR:
+            # BlockBuilder emits the classic back-ref generator format, which
+            # post-HF2 consensus (INTERNED_GENERATOR) rejects. Build with the
+            # serde_2026 builder instead.
+            return self.create_block_generator_2026(constants, prev_tx_height, timeout)
+
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
         removals: list[Coin] = []
