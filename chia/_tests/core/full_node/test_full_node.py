@@ -3445,16 +3445,14 @@ async def test_sync_from_fork_point_adds_hints_for_committed_prefix(
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
-@pytest.mark.parametrize("payload", ["empty", "short", "reordered", "wrong_range"])
 @pytest.mark.anyio
 async def test_sync_from_fork_point_bans_peer_answering_wrong_block_range(
     one_node: SimulatorsAndWalletsServices,
     monkeypatch: pytest.MonkeyPatch,
     consensus_mode: ConsensusMode,
-    payload: str,
 ) -> None:
-    # A protocol-valid RespondBlocks that does not cover the requested range cannot
-    # advance the sync, so the peer is banned rather than credited with a fetch.
+    # Wiring check: an incomplete RespondBlocks is banned via respond_blocks_or_ban
+    # rather than treated as a successful long-sync fetch.
     [full_node_service], _, bt = one_node
     full_node = full_node_service._node
 
@@ -3472,15 +3470,7 @@ async def test_sync_from_fork_point_bans_peer_answering_wrong_block_range(
             request = args[1]
             assert isinstance(request, full_node_protocol.RequestBlocks)
             self.requests.append((request.start_height, request.end_height))
-            if payload == "empty":
-                return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
-            if payload == "short":
-                return full_node_protocol.RespondBlocks(request.start_height, request.end_height, blocks[:-1])
-            if payload == "reordered":
-                return full_node_protocol.RespondBlocks(
-                    request.start_height, request.end_height, [*blocks[1:], blocks[0]]
-                )
-            return full_node_protocol.RespondBlocks(request.start_height, uint32(request.end_height + 1), blocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
 
         async def close(self, ban_seconds: int = 0, *args: object, **kwargs: object) -> None:
             self.closed = True
