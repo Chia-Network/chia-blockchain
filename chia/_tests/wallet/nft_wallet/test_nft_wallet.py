@@ -955,6 +955,19 @@ async def test_nft_wallet_rpc_update_metadata(
 
     nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node.wallet_state_manager, wallet, name="NFT WALLET 1")
 
+    await ListNftsCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                client=env.rpc_client,
+                fingerprint=env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                config=env.wallet_state_manager.config,
+            )
+        ),
+        wallet_id=nft_wallet.id(),
+    ).run()
+    output = capsys.readouterr().out
+    assert "No NFTs found for wallet" in output
+
     await mint_nft_via_cli(
         wallet_environments,
         env,
@@ -979,7 +992,6 @@ async def test_nft_wallet_rpc_update_metadata(
         ]
     )
 
-    capsys.readouterr()
     await ListNftsCMD(
         rpc_info=NeedsWalletRPC(
             client_info=WalletClientInfo(
