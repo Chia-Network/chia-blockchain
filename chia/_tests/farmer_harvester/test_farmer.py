@@ -1534,34 +1534,36 @@ async def test_farmer_to_pool_protocol(
         root_path=farmer_service.root_path,
         p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
     ) as pool_config:
-        assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10)) == PostFarmerResponse(
-            welcome_message="welcome to the pool"
-        )
-        assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10)) == PutFarmerResponse(
-            authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
-        )
-        assert isinstance(await farmer_service._node._pool_get_farmer(pool_config, uint8(10)), GetFarmerResponse)
+        pass
 
-        # Test some errors and especially with getting authentication
-        if pool_protocol_version == 2:
-            farmer_service._node.authentication_tokens = {}
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
-            with caplog.at_level(logging.WARNING):
-                assert isinstance(
-                    await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)), ErrorResponse
-                )
-                assert "GET /auth response: " in caplog.text
+    assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10)) == PostFarmerResponse(
+        welcome_message="welcome to the pool"
+    )
+    assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10)) == PutFarmerResponse(
+        authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
+    )
+    assert isinstance(await farmer_service._node._pool_get_farmer(pool_config, uint8(10)), GetFarmerResponse)
 
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error_not_ok)
-            with caplog.at_level(logging.ERROR):
-                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
-                assert "Error in GET /auth http://doesntmatter.com, 404" in caplog.text
+    # Test some errors and especially with getting authentication
+    if pool_protocol_version == 2:
+        farmer_service._node.authentication_tokens = {}
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
+        with caplog.at_level(logging.WARNING):
+            assert isinstance(
+                await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)), ErrorResponse
+            )
+            assert "GET /auth response: " in caplog.text
 
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_exception)
-            with caplog.at_level(logging.ERROR):
-                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
-                assert "Exception in GET /auth http://doesntmatter.com, foo bar" in caplog.text
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error_not_ok)
+        with caplog.at_level(logging.ERROR):
+            assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+            assert "Error in GET /auth http://doesntmatter.com, 404" in caplog.text
 
-            pool_config.version = 1337
-            with pytest.raises(ValueError, match=r"Unknown pool protocol version specified in pooling config"):
-                await farmer_service._node._get_current_authentication_token(pool_config, uint8(10))
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_exception)
+        with caplog.at_level(logging.ERROR):
+            assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+            assert "Exception in GET /auth http://doesntmatter.com, foo bar" in caplog.text
+
+        pool_config.version = 1337
+        with pytest.raises(ValueError, match=r"Unknown pool protocol version specified in pooling config"):
+            await farmer_service._node._get_current_authentication_token(pool_config, uint8(10))
