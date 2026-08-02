@@ -1535,6 +1535,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
