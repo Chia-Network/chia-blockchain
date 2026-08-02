@@ -92,7 +92,7 @@ async def create_did_via_cli(
     amount: int,
     fee: uint64 = uint64(0),
     name: str | None = None,
-    metadata: dict[str, str] | None = None,
+    metadata: dict[str, str] = dict(),
 ) -> DIDWallet:
     await CreateDidWalletCMD(
         **{
