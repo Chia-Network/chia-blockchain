@@ -67,7 +67,7 @@ class PreValidationResult(Streamable):
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
     block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-) -> tuple[int | None, str | None, SpendBundleConditions | None]:
+) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
     flags = get_flags_for_height_and_constants(prev_tx_height, constants)
@@ -75,7 +75,7 @@ def _run_block(
         run_block = run_block_generator2
     else:
         run_block = run_block_generator
-    return run_block(
+    error, error_msg, conds = run_block(
         bytes(block.transactions_generator),
         prev_generators,
         block.transactions_info.cost,
@@ -84,6 +84,7 @@ def _run_block(
         None,
         constants,
     )
+    return None if error is None else Err(error), error_msg, conds
 
 
 def _pre_validate_block(
@@ -113,9 +114,9 @@ def _pre_validate_block(
 
     validation_start = time.monotonic()
 
-    def error_result(error_code: int, error_msg: str | None = None) -> PreValidationResult:
+    def error_result(error: Err, error_msg: str | None = None) -> PreValidationResult:
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(error_code), error_msg, None, None, uint32(validation_time * 1000))
+        return PreValidationResult(uint16(error.value), error_msg, None, None, uint32(validation_time * 1000))
 
     try:
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
@@ -128,25 +129,25 @@ def _pre_validate_block(
             assert block.transactions_info is not None
 
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
-                return error_result(Err.BLOCK_COST_EXCEEDS_MAX.value)
+                return error_result(Err.BLOCK_COST_EXCEEDS_MAX)
 
             if block.foliage_transaction_block is None:
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
+                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
 
             # Fast-fail: prove the generator is the committed one before
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
-                return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value)
+                return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
             if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
+                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
             if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
-                return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH.value)
+                return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
             if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
                 if not is_canonical_serialization(bytes(block.transactions_generator)):
-                    return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING.value)
+                    return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
 
             err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
@@ -182,7 +183,7 @@ def _pre_validate_block(
     except Exception:
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
-        return error_result(Err.UNKNOWN.value)
+        return error_result(Err.UNKNOWN)
 
 
 async def pre_validate_block(

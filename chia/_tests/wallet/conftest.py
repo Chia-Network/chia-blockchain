@@ -25,6 +25,7 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
+from chia.util.errors import Err
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -84,7 +85,7 @@ async def ignore_block_validation(
 
     def run_block(
         block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-    ) -> tuple[int | None, str | None, SpendBundleConditions | None]:
+    ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
@@ -104,7 +105,7 @@ async def ignore_block_validation(
         # pretend that the signatures are OK
         if conds is not None:
             conds = conds.replace(validated_signature=True)
-        return err, err_msg, conds
+        return None if err is None else Err(err), err_msg, conds
 
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
