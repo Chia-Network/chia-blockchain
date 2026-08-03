@@ -2,6 +2,7 @@
 files = benchmarks,build_scripts,chia,tools,*.py
 show_error_codes = True
 warn_unused_ignores = True
+enable_error_code = redundant-expr
 
 disallow_any_generics = True
 disallow_subclassing_any = True

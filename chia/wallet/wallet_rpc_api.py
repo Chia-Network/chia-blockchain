@@ -62,7 +62,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
@@ -81,7 +81,7 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
@@ -190,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
+    GetCoinRecordsResponse,
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
@@ -317,6 +318,7 @@ from chia.wallet.wallet_request_types import (
     VCSpendResponse,
     VerifySignature,
     VerifySignatureResponse,
+    WalletCoinRecordWithMetadata,
     WalletCreationMode,
     WalletInfoResponse,
 )
@@ -3078,17 +3080,17 @@ class WalletRpcApi:
         await remote_wallet.register_remote_coins(request.coin_ids)
         return Empty()
 
-    async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:
-        parsed_request = GetCoinRecords.from_json_dict(request)
+    @marshal
+    async def get_coin_records(self, request: GetCoinRecords) -> GetCoinRecordsResponse:
 
-        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
-            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
+        if request.limit != uint32.MAXIMUM and request.limit > self.max_get_coin_records_limit:
+            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {request.limit}")
 
         for filter_name, filter in {
-            "coin_id_filter": parsed_request.coin_id_filter,
-            "puzzle_hash_filter": parsed_request.puzzle_hash_filter,
-            "parent_coin_id_filter": parsed_request.parent_coin_id_filter,
-            "amount_filter": parsed_request.amount_filter,
+            "coin_id_filter": request.coin_id_filter,
+            "puzzle_hash_filter": request.puzzle_hash_filter,
+            "parent_coin_id_filter": request.parent_coin_id_filter,
+            "amount_filter": request.amount_filter,
         }.items():
             if filter is None:
                 continue
@@ -3098,27 +3100,47 @@ class WalletRpcApi:
                 )
 
         result = await self.service.wallet_state_manager.coin_store.get_coin_records(
-            offset=parsed_request.offset,
-            limit=parsed_request.limit,
-            wallet_id=parsed_request.wallet_id,
-            wallet_type=None if parsed_request.wallet_type is None else WalletType(parsed_request.wallet_type),
-            coin_type=None if parsed_request.coin_type is None else CoinType(parsed_request.coin_type),
-            coin_id_filter=parsed_request.coin_id_filter,
-            puzzle_hash_filter=parsed_request.puzzle_hash_filter,
-            parent_coin_id_filter=parsed_request.parent_coin_id_filter,
-            amount_filter=parsed_request.amount_filter,
-            amount_range=parsed_request.amount_range,
-            confirmed_range=parsed_request.confirmed_range,
-            spent_range=parsed_request.spent_range,
-            order=CoinRecordOrder(parsed_request.order),
-            reverse=parsed_request.reverse,
-            include_total_count=parsed_request.include_total_count,
+            offset=request.offset,
+            limit=request.limit,
+            wallet_id=request.wallet_id,
+            wallet_type=None if request.wallet_type is None else WalletType(request.wallet_type),
+            coin_type=None if request.coin_type is None else CoinType(request.coin_type),
+            coin_id_filter=request.coin_id_filter,
+            puzzle_hash_filter=request.puzzle_hash_filter,
+            parent_coin_id_filter=request.parent_coin_id_filter,
+            amount_filter=request.amount_filter,
+            amount_range=request.amount_range,
+            confirmed_range=request.confirmed_range,
+            spent_range=request.spent_range,
+            order=CoinRecordOrder(request.order),
+            reverse=request.reverse,
+            include_total_count=request.include_total_count,
         )
 
-        return {
-            "coin_records": [coin_record.to_json_dict_parsed_metadata() for coin_record in result.records],
-            "total_count": result.total_count,
-        }
+        return GetCoinRecordsResponse(
+            coin_records=[
+                WalletCoinRecordWithMetadata(
+                    parent_coin_info=coin_record.coin.parent_coin_info,
+                    puzzle_hash=coin_record.coin.puzzle_hash,
+                    amount=coin_record.coin.amount,
+                    id=coin_record.coin.name(),
+                    type=uint16(coin_record.coin_type.value),
+                    wallet_identifier=coin_record.wallet_identifier(),
+                    clawback_metadata=metadata
+                    if coin_record.metadata is not None and isinstance(metadata, ClawbackMetadata)
+                    else None,
+                    cr_cat_metadata=metadata
+                    if coin_record.metadata is not None and isinstance(metadata, CRCATMetadata)
+                    else None,
+                    confirmed_height=coin_record.confirmed_block_height,
+                    spent_height=coin_record.spent_block_height,
+                    coinbase=coin_record.coinbase,
+                )
+                for coin_record in result.records
+                for metadata in ([coin_record.parsed_metadata()] if coin_record.metadata is not None else [None])
+            ],
+            total_count=result.total_count,
+        )
 
     @marshal
     async def get_farmed_amount(self, request: GetFarmedAmount) -> GetFarmedAmountResponse:

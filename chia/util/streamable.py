@@ -371,7 +371,7 @@ def recurse_jsonify(
 
 def parse_bool(f: BinaryIO) -> bool:
     bool_byte = f.read(1)
-    assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
+    assert len(bool_byte) == 1  # Checks for EOF
     if bool_byte == bytes([0]):
         return False
     elif bool_byte == bytes([1]):
@@ -382,7 +382,7 @@ def parse_bool(f: BinaryIO) -> bool:
 
 def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> uint32:
     size_bytes = f.read(4)
-    assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
+    assert len(size_bytes) == 4  # Checks for EOF
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
@@ -392,7 +392,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
 
 def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> object | None:
     is_present_bytes = f.read(1)
-    assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
+    assert len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
         return None
     elif is_present_bytes == bytes([1]):
@@ -412,7 +412,7 @@ def parse_rust(f: BinaryIO, f_type: type[Any]) -> Any:
 def parse_bytes(f: BinaryIO) -> bytes:
     list_size = parse_uint32(f)
     bytes_read = f.read(list_size)
-    assert bytes_read is not None and len(bytes_read) == list_size
+    assert len(bytes_read) == list_size
     return bytes_read
 
 
@@ -470,7 +470,7 @@ def parse_dict(
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
-    assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
+    assert len(str_read_bytes) == str_size  # Checks for EOF
     return bytes.decode(str_read_bytes, "utf-8")
 
 

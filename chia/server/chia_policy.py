@@ -157,7 +157,7 @@ class PausableServer(BaseEventsServer):
         logging.getLogger(__name__).debug(f"Connection lost. Total connections: {active_connections}")
         if (
             active_connections > 0
-            and self._sockets is not None
+            and self._sockets is not None  # type: ignore[redundant-expr]  # asyncio sets Server._sockets to None on close
             and self._paused
             and active_connections < self.max_concurrent_connections
         ):
