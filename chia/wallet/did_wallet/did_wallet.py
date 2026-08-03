@@ -1036,10 +1036,9 @@ class DIDWallet:
 
     async def add_parent(self, name: bytes32, parent: LineageProof | None) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
-        current_list = self.did_info.parent_info.copy()
-        if name not in {n for n, _ in current_list}:
-            # coping for not being a dict - thanks streamable!
-            current_list.append((name, parent))
+        # coping for not being a dict - thanks streamable!
+        current_list = [(n, p) for n, p in self.did_info.parent_info if n != name]
+        current_list.append((name, parent))
         did_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
             backup_ids=self.did_info.backup_ids,
