@@ -37,6 +37,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
@@ -948,65 +949,18 @@ class FullNodeAPI:
             # 2. In the same sub-slot as the peak
             # 3. In a future sub-slot that we already know of
 
-            # Grab best transactions from Mempool for given tip target
-            new_block_gen: NewBlockGenerator | None
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: BlockRecord | None = self.full_node.blockchain.get_peak()
-                tx_peak: BlockRecord | None = self.full_node.blockchain.get_tx_peak()
 
-                # Checks that the proof of space is valid
                 height: uint32
-                tx_height: uint32
-                if peak is None or tx_peak is None:
+                if peak is None:
                     height = uint32(0)
-                    tx_height = uint32(0)
                 else:
                     height = peak.height
-                    tx_height = tx_peak.height
                 filter_challenge = self.full_node.full_node_store.get_filter_challenge(
                     cc_challenge_hash,
                     request.signage_point_index,
                 )
-                quality_string: bytes32 | None = verify_and_get_quality_string(
-                    request.proof_of_space,
-                    self.full_node.constants,
-                    cc_challenge_hash,
-                    request.challenge_chain_sp,
-                    height=height,
-                    prev_transaction_block_height=tx_height,
-                    filter_challenge=filter_challenge,
-                    signage_point_index=request.signage_point_index,
-                )
-                if quality_string is None:
-                    self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
-                    return None
-
-                if peak is not None:
-                    try:
-                        block_version = self.full_node.config.get("block_creation", 1)
-                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
-                        if block_version == 0:
-                            create_block = self.full_node.mempool_manager.create_block_generator
-                        elif block_version == 1:
-                            create_block = self.full_node.mempool_manager.create_block_generator2
-                        else:
-                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
-                            create_block = self.full_node.mempool_manager.create_block_generator
-
-                        assert tx_peak is not None
-                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
-
-                        if (
-                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
-                        ):  # pragma: no cover
-                            self.log.error("Cannot farm blocks pre-hard fork")
-
-                    except Exception as e:
-                        self.log.error(f"Traceback: {traceback.format_exc()}")
-                        self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
-                        new_block_gen = None
-                else:
-                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1074,6 +1028,59 @@ class FullNodeAPI:
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
                 return None
+
+            tx_height = pre_sp_tx_block_height(
+                constants=self.full_node.constants,
+                blocks=self.full_node.blockchain,
+                prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
+                sp_index=request.signage_point_index,
+                finished_sub_slots=len(finished_sub_slots),
+            )
+            quality_string: bytes32 | None = verify_and_get_quality_string(
+                request.proof_of_space,
+                self.full_node.constants,
+                cc_challenge_hash,
+                request.challenge_chain_sp,
+                height=height,
+                prev_transaction_block_height=tx_height,
+                filter_challenge=filter_challenge,
+                signage_point_index=request.signage_point_index,
+            )
+            if quality_string is None:
+                self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
+                return None
+
+            # Grab best transactions from Mempool for given tip target only after
+            # rejecting invalid proofs.
+            new_block_gen: NewBlockGenerator | None = None
+            tx_peak: BlockRecord | None = None
+            if peak is not None:
+                async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    tx_peak = self.full_node.blockchain.get_tx_peak()
+                    try:
+                        block_version = self.full_node.config.get("block_creation", 1)
+                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
+                        if block_version == 0:
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        elif block_version == 1:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+                        else:
+                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
+                            create_block = self.full_node.mempool_manager.create_block_generator
+
+                        assert tx_peak is not None
+                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
+
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
+                            self.log.error("Cannot farm blocks pre-hard fork")
+
+                    except Exception as e:
+                        self.log.error(f"Traceback: {traceback.format_exc()}")
+                        self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        new_block_gen = None
+
             if prev_b is None:
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
@@ -1106,6 +1113,7 @@ class FullNodeAPI:
                 request.proof_of_space.param(),
                 difficulty,
                 request.challenge_chain_sp,
+                height=tx_height,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
