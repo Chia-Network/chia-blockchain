@@ -435,7 +435,7 @@ class WalletTestFramework:
                             await env.check_balances(transition.post_block_additional_balance_info)
                             if reorg_status == "before":
                                 for id, balance_updates in transition.post_block_balance_updates.items():
-                                    if "init" in balance_updates:
+                                    if balance_updates.get("init", False):
                                         balances_pre_block_updates[i][env.dealias_wallet_id(id)] = WalletState(
                                             balance=Balance()
                                         )
