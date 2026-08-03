@@ -138,6 +138,14 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         height=uint32(5496000),
     ),
     ProofOfSpaceCase(
+        id="v2 plot lower than minimum strength",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotParam.make_v2(0, 0, 1),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=G1Element(),
+        expected_error="Plot strength (1) is lower than the minimum (2)",
+    ),
+    ProofOfSpaceCase(
         id="v2 plot min strength challenge mismatch",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 2),
