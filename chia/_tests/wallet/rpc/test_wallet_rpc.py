@@ -7,7 +7,7 @@ import logging
 import re
 from operator import attrgetter
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
@@ -65,6 +65,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -180,6 +181,8 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
+    TransactionEndpointRequest,
+    TransactionEndpointResponse,
     VCSpend,
     VerifySignature,
     VerifySignatureResponse,
@@ -188,6 +191,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_rpc_metadata import WalletRpcMetadata
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import SyncStatus
 
@@ -2667,7 +2671,7 @@ async def test_get_height_info_response_variants(
     api_self = SimpleNamespace(
         service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
     )
-    response = GetHeightInfoResponse.from_json_dict(await WalletRpcApi.get_height_info(api_self, {}))
+    response = await WalletRpcApi.get_height_info(cast(WalletRpcApi, api_self), GetHeightInfo())
     assert isinstance(response, GetHeightInfoResponse)
     assert response.height == sync_height
     assert response.is_transaction_block == expected_is_tx
@@ -5134,4 +5138,30 @@ def test_miscellaneous_wallet_rpc_errors() -> None:
             confirmed_height=uint32(0),
             spent_height=uint32(0),
             coinbase=False,
+        )
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXRequest(Streamable):
+        pass
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXResponse(Streamable):
+        pass
+
+    class YesATXRequest(TransactionEndpointRequest):
+        pass
+
+    class YesATXResponse(TransactionEndpointResponse):
+        pass
+
+    with pytest.raises(TypeError, match="tx_endpoint request type must subclass TransactionEndpointRequest"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=NotATXRequest, response_type=YesATXResponse
+        )
+
+    with pytest.raises(TypeError, match="tx_endpoint response type must subclass TransactionEndpointResponse"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=YesATXRequest, response_type=NotATXResponse
         )

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, G1Element, G2Element
+from chia_rs import AugSchemeMPL, Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -37,6 +37,7 @@ from chia.wallet.wallet_request_types import (
     GetTransactionMemo,
     GetTransactions,
     SendTransaction,
+    SignMessageByAddress,
     SpendClawbackCoins,
 )
 
@@ -2153,59 +2154,61 @@ class TestWalletSimulator:
 
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
-        response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
+        response = await api_0.sign_message_by_address(
+            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message)
+        )
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test hex string
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True}
+            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"}
+            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True, safe_mode=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test BLS sign string
         message = "Hello World"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False}
+            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=False, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             bytes(message, "utf-8"),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False}
+            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             hexstr_to_bytes(message),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
 
     @pytest.mark.parametrize(
