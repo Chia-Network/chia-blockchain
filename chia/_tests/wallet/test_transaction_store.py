@@ -111,21 +111,25 @@ async def test_increment_sent() -> None:
 
         await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 0
         assert tr.sent_to == []
 
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.PENDING, None) is True
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 1
         assert tr.sent_to == [("peer1", uint8(2), None)]
 
         assert await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 1
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None)]
 
         assert await store.increment_sent(tr1.name, "peer2", MempoolInclusionStatus.SUCCESS, None) is True
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
@@ -137,11 +141,13 @@ async def test_increment_sent_error() -> None:
 
         await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 0
         assert tr.sent_to == []
 
         await store.increment_sent(tr1.name, "peer1", MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED)
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 1
         assert tr.sent_to == [("peer1", uint8(3), "MEMPOOL_NOT_INITIALIZED")]
 
@@ -168,11 +174,13 @@ async def test_tx_reorged_update() -> None:
         tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
         await store.add_transaction_record(tr)
         tr = await store.get_transaction_record(tr.name)
+        assert tr is not None
         assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
         await store.tx_reorged(tr)
         tr = await store.get_transaction_record(tr1.name)
+        assert tr is not None
         assert tr.sent == 0
         assert tr.sent_to == []
 
@@ -184,9 +192,10 @@ async def test_tx_reorged_add() -> None:
 
         tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
 
-        await store.get_transaction_record(tr.name) is None
+        assert await store.get_transaction_record(tr.name) is None
         await store.tx_reorged(tr)
         tr = await store.get_transaction_record(tr.name)
+        assert tr is not None
         assert tr.sent == 0
         assert tr.sent_to == []
 
@@ -422,6 +431,11 @@ async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
         tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
         tr4 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
+
+        assert tr1.trade_id is not None
+        assert tr2.trade_id is not None
+        assert tr3.trade_id is not None
+        assert tr4.trade_id is not None
 
         assert await store.get_transactions_by_trade_id(tr1.trade_id) == []
         await store.add_transaction_record(tr1)
@@ -901,6 +915,7 @@ async def test_large_tx_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
         tx_records_to_insert = []
+        name = None
         for _ in range(db_wrapper.host_parameter_limit + 1):
             name = bytes32.random()
             record = TransactionRecordOld(

@@ -123,7 +123,7 @@ class DummyWalletCoinRecords:
     def generate(self, wallet_id: int, count: int) -> None:
         records = self.records_per_wallet.setdefault(uint32(wallet_id), [])
         for _ in range(count):
-            records.append(get_dummy_record(wallet_id, seeded_random=self.seeded_random))
+            records.append(get_dummy_record(uint32(wallet_id), seeded_random=self.seeded_random))
 
 
 @pytest.mark.parametrize(
