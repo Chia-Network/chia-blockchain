@@ -2616,7 +2616,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
     @pytest.mark.anyio
-    async def test_prevalidation_fast_fail_mutated_generator(
+    async def test_prevalidation_fast_fail(
         self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # Adversarial fast-fail: a peer can take a valid block, keep all
@@ -2661,26 +2661,18 @@ class TestBodyValidation:
         # Trap _run_block: if the generator is executed, raise. _pre_validate_block's
         # outer try/except would convert that into UNKNOWN, so observing
         # INVALID_TRANSACTIONS_GENERATOR_HASH instead proves CLVM did not run.
-        clvm_calls = 0
-
         def _trap_run_block(*args: object, **kwargs: object) -> None:
-            nonlocal clvm_calls
-            clvm_calls += 1
             raise AssertionError("CLVM generator execution must not run for a mutated generator")
 
         monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", _trap_run_block)
 
         await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
-        assert clvm_calls == 0
-
         # Missing transactions_info must be reported as an invalid block rather
         # than escaping prevalidation as an AssertionError.
         mutated = recursive_replace(block, "transactions_info", None)
 
         await _validate_and_add_block(b, mutated, expected_error=Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA)
-
-        assert clvm_calls == 0
 
         # Removing the foliage transaction block must not bypass the
         # transactions-info commitment. Make the replacement generator and its
@@ -2692,15 +2684,9 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, mutated, expected_error=Err.INVALID_TRANSACTIONS_INFO_HASH)
 
-        assert clvm_calls == 0
-
         # Reject structurally invalid reference lists before attempting any
         # generator lookup.
-        generator_lookups = 0
-
         async def _trap_generator_lookup(*args: object, **kwargs: object) -> None:
-            nonlocal generator_lookups
-            generator_lookups += 1
             raise AssertionError("generator lookup must not run for too many references")
 
         monkeypatch.setattr(AugmentedBlockchain, "lookup_block_generators", _trap_generator_lookup)
@@ -2712,8 +2698,24 @@ class TestBodyValidation:
 
         await _validate_and_add_block(b, mutated, expected_error=Err.TOO_MANY_GENERATOR_REFS)
 
-        assert generator_lookups == 0
-        assert clvm_calls == 0
+        # A failed generator resolution must not leave the candidate block in
+        # the speculative chain.
+        augmented_blockchain = AugmentedBlockchain(b)
+
+        async def _fail_generator_resolution(*args: object, **kwargs: object) -> None:
+            assert augmented_blockchain.try_block_record(block.header_hash) is None
+            raise ValueError("generator reference is unavailable")
+
+        monkeypatch.setattr("chia.consensus.multiprocess_validation.get_block_generator", _fail_generator_resolution)
+
+        await _validate_and_add_block(
+            b,
+            block,
+            expected_error=Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING,
+            augmented_blockchain=augmented_blockchain,
+        )
+
+        assert augmented_blockchain.try_block_record(block.header_hash) is None
 
     @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(

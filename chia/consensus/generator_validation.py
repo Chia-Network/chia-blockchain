@@ -15,7 +15,8 @@ def validate_generator_ref_list(
 ) -> Err | None:
     assert block.transactions_info is not None
 
-    if block.transactions_generator_ref_list == []:
+    generator_refs = block.transactions_generator_ref_list
+    if not generator_refs:
         if block.transactions_info.generator_refs_root != bytes([1] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
         return None
@@ -24,12 +25,12 @@ def validate_generator_ref_list(
         return Err.TOO_MANY_GENERATOR_REFS
     if block.transactions_generator is None:
         return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-    if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
+    if len(generator_refs) > constants.MAX_GENERATOR_REF_LIST_SIZE:
         return Err.TOO_MANY_GENERATOR_REFS
-    generator_refs_hash = std_hash(b"".join(i.stream_to_bytes() for i in block.transactions_generator_ref_list))
+    generator_refs_hash = std_hash(b"".join(i.stream_to_bytes() for i in generator_refs))
     if block.transactions_info.generator_refs_root != generator_refs_hash:
         return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-    if any(index >= height for index in block.transactions_generator_ref_list):
+    if any(index >= height for index in generator_refs):
         return Err.FUTURE_GENERATOR_REFS
 
     return None

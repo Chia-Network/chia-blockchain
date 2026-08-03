@@ -130,14 +130,15 @@ def _pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 return error_result(Err.BLOCK_COST_EXCEEDS_MAX.value)
 
+            if block.foliage_transaction_block is None:
+                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
+
             # Fast-fail: prove the generator is the committed one before
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
                 return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH.value)
-            if block.foliage_transaction_block is None:
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
             if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
                 return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH.value)
             if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
@@ -314,8 +315,6 @@ async def pre_validate_block(
             log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
             return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
 
-    blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
-
     previous_generators: list[bytes] | None = None
 
     try:
@@ -325,6 +324,7 @@ async def pre_validate_block(
     except ValueError:
         return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
 
+    blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
     readonly_blockchain = blockchain.read_only_snapshot()
 
     future = pool.run_in_loop(
