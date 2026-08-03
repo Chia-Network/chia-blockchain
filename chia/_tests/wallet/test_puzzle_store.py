@@ -91,7 +91,7 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert await db.get_unused_derivation_path() == 0
         assert await db.get_derivation_record(uint32(0), uint32(2), False) == derivation_recs[1]
 
-        # Indeces up to 250
+        # Indices up to 250
         await db.set_used_up_to(uint32(249))
 
         assert await db.get_unused_derivation_path() == 250
