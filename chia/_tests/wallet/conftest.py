@@ -109,6 +109,7 @@ async def ignore_block_validation(
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
     monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
+    monkeypatch.setattr("chia.consensus.multiprocess_validation.validate_generator_ref_list", lambda *_, **__: None)
     monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", run_block)
     monkeypatch.setattr(
         "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)
