@@ -2674,6 +2674,14 @@ class TestBodyValidation:
 
         assert clvm_calls == 0
 
+        # Missing transactions_info must be reported as an invalid block rather
+        # than escaping prevalidation as an AssertionError.
+        mutated = recursive_replace(block, "transactions_info", None)
+
+        await _validate_and_add_block(b, mutated, expected_error=Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA)
+
+        assert clvm_calls == 0
+
         # Removing the foliage transaction block must not bypass the
         # transactions-info commitment. Make the replacement generator and its
         # direct root self-consistent; the missing signed link must still reject
@@ -2747,7 +2755,7 @@ class TestBodyValidation:
             # after the hard fork activation, we no longer allow block references
             expected_error = Err.TOO_MANY_GENERATOR_REFS
 
-        await _validate_and_add_block(b, block_2, expected_error=expected_error, skip_prevalidation=True)
+        await _validate_and_add_block(b, block_2, expected_error=expected_error)
 
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])

@@ -282,8 +282,15 @@ async def pre_validate_block(
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)
 
-    if block.transactions_generator is not None:
-        assert block.transactions_info is not None
+    if block.transactions_info is None:
+        if block.transactions_generator is not None or block.transactions_generator_ref_list:
+            error = (
+                Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA
+                if block.foliage.foliage_transaction_block_hash is not None
+                else Err.NOT_BLOCK_BUT_HAS_DATA
+            )
+            return return_error(error)
+    else:
         generator_ref_error = validate_generator_ref_list(constants, block, block.height, prev_tx_height)
         if generator_ref_error is not None:
             return return_error(generator_ref_error)
@@ -308,7 +315,6 @@ async def pre_validate_block(
             return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
 
     blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
-    prev_b = block_rec
 
     previous_generators: list[bytes] | None = None
 
