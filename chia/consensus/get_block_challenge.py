@@ -197,8 +197,9 @@ def get_filter_challenge_from_chain(
     for fss in reversed(header_block.finished_sub_slots):
         reversed_challenges.append(fss.challenge_chain.get_hash())
 
-    reached_genesis = header_block.prev_header_hash == constants.GENESIS_CHALLENGE
-    if not reached_genesis:
+    if header_block.prev_header_hash == constants.GENESIS_CHALLENGE:
+        reversed_challenges.append(constants.GENESIS_CHALLENGE)
+    else:
         curr = blocks.block_record(header_block.prev_header_hash)
         while True:
             if curr.first_in_sub_slot:
@@ -206,14 +207,10 @@ def get_filter_challenge_from_chain(
                 for ch in reversed(curr.finished_challenge_slot_hashes):
                     reversed_challenges.append(ch)
             if curr.height == 0:
-                reached_genesis = True
                 break
             if len(reversed_challenges) > sub_slots_back + 3:
                 break
             curr = blocks.block_record(curr.prev_hash)
-
-    if reached_genesis and constants.GENESIS_CHALLENGE not in reversed_challenges:
-        reversed_challenges.append(constants.GENESIS_CHALLENGE)
 
     try:
         idx = reversed_challenges.index(current_challenge)
