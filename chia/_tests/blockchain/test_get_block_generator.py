@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia.consensus.get_block_generator import get_block_generator
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -17,6 +17,8 @@ class BR:
     prev_header_hash: bytes32
     transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
+    transactions_generator_buffer: list[uint8] | None = None
+    version: uint8 = uint8(0)
 
 
 @dataclass(frozen=True)
