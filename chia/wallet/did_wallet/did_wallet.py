@@ -364,12 +364,12 @@ class DIDWallet:
             uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             assert did_curried_args is not None
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+            p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
                 recovery_list_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 num_verification=uint16(num_verification.as_int()),
-                singleton_struct=singleton_struct,
+                singleton_struct=uncurried.args.at("f"),
                 metadata=metadata,
                 inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,
