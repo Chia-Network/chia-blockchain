@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest
-from aiosqlite import Error as AIOSqliteError
 from chia_rs import (
     BlockRecord,
     Coin,
@@ -40,6 +39,7 @@ from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+from chia._vendored.aiosqlite import Error as AIOSqliteError
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
