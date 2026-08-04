@@ -7,14 +7,14 @@ import logging
 import re
 from operator import attrgetter
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
 from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -46,20 +46,26 @@ from chia._tests.wallet.test_wallet_coin_store import (
     record_8,
     record_9,
 )
+from chia.cmds.cmd_helpers import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
+from chia.cmds.wallet import DidGetDidCMD, DidSetWalletNameCMD
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
+from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.types.fee_rate import FeeRate
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -74,8 +80,10 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
@@ -91,10 +99,11 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
-from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
+from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
@@ -114,14 +123,12 @@ from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
     CreateOfferForIDs,
-    CreateOfferForIDsResponse,
     CreateSignedTransaction,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
-    DIDGetDID,
     DIDGetMetadata,
     DIDGetPubkey,
     DIDGetWalletName,
@@ -132,9 +139,14 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     FungibleAsset,
     GetAllOffers,
+    GetCoinRecords,
     GetCoinRecordsByNames,
+    GetCoinRecordsResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
+    GetFullNodePeerCountResponse,
+    GetHeightInfo,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNotifications,
@@ -169,16 +181,38 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
+    TransactionEndpointRequest,
+    TransactionEndpointResponse,
     VCSpend,
     VerifySignature,
     VerifySignatureResponse,
+    WalletCoinRecordWithMetadata,
     WalletCreationMode,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_rpc_metadata import WalletRpcMetadata
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import SyncStatus
 
 log = logging.getLogger(__name__)
+
+
+def wallet_coin_record_with_metadata(coin_record: WalletCoinRecord) -> WalletCoinRecordWithMetadata:
+    metadata = None if coin_record.metadata is None else coin_record.parsed_metadata()
+    return WalletCoinRecordWithMetadata(
+        parent_coin_info=coin_record.coin.parent_coin_info,
+        puzzle_hash=coin_record.coin.puzzle_hash,
+        amount=coin_record.coin.amount,
+        id=coin_record.coin.name(),
+        type=uint16(coin_record.coin_type.value),
+        wallet_identifier=coin_record.wallet_identifier(),
+        clawback_metadata=metadata if isinstance(metadata, ClawbackMetadata) else None,
+        cr_cat_metadata=metadata if isinstance(metadata, CRCATMetadata) else None,
+        confirmed_height=coin_record.confirmed_block_height,
+        spent_height=coin_record.spent_block_height,
+        coinbase=coin_record.coinbase,
+    )
 
 
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode) -> None:
@@ -243,7 +277,7 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
-async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol[Any]) -> None:
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
     expected_balance = await wallet_node.get_balance(wallet.id())
     expected_balance_dict = expected_balance.to_json_dict()
     expected_balance_dict.setdefault("pending_approval_balance", None)
@@ -540,6 +574,58 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
 
 @pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+
+    # Success path
+    result: GetFeeEstimateResponse = await client.get_fee_estimate()
+    assert int(result.fee_per_cost) >= 0
+
+    # Failure path: no connected full node peer
+    with patch.object(env.node, "get_full_node_peer", side_effect=ValueError("No peer connected")):
+        with pytest.raises(ResponseFailureError, match="Wallet is not currently connected to any full node peers"):
+            await client.get_fee_estimate()
+
+    # Failure path: full node peer request fails (e.g. empty/invalid protocol response).
+    # PeerRequestException is raised in WalletNode.request_fee_estimates when call_api returns None.
+    with patch.object(
+        env.node,
+        "request_fee_estimates",
+        side_effect=PeerRequestException("Failed to get fee estimates from full node"),
+    ):
+        with pytest.raises(ResponseFailureError, match="Failed to get fee estimates from full node"):
+            await client.get_fee_estimate()
+
+    # Failure path: per-estimate error from full node (e.g. insufficient data).
+    estimate_err = FeeEstimateGroup(
+        error=None,
+        estimates=[FeeEstimate(error="not enough data", time_target=uint64(0), estimated_fee_rate=FeeRate(uint64(0)))],
+    )
+    with patch.object(env.node, "request_fee_estimates", return_value=estimate_err):
+        with pytest.raises(ResponseFailureError, match="not enough data"):
+            await client.get_fee_estimate()
+
+    # Failure path: group-level error from full node.
+    group_err = FeeEstimateGroup(error="fee estimator unavailable", estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=group_err):
+        with pytest.raises(ResponseFailureError, match="fee estimator unavailable"):
+            await client.get_fee_estimate()
+
+    # Failure path: empty estimates list from full node.
+    empty_estimates = FeeEstimateGroup(error=None, estimates=[])
+    with patch.object(env.node, "request_fee_estimates", return_value=empty_estimates):
+        with pytest.raises(ResponseFailureError, match="No fee estimates returned from full node"):
+            await client.get_fee_estimate()
+
+
+@pytest.mark.parametrize(
     "output_args, fee, select_coin, is_cat",
     [
         ([(348026, None)], 0, False, False),
@@ -680,8 +766,8 @@ async def test_create_signed_transaction(
                             "unconfirmed_wallet_balance": -cat_delta,
                             "<=#spendable_balance": -cat_delta,
                             "<=#max_send_amount": -cat_delta,
-                            ">=#pending_change": 1 if is_cat else 0,
-                            "pending_coin_removal_count": 1 if is_cat else 0,
+                            ">=#pending_change": 1,
+                            "pending_coin_removal_count": 1,
                         }
                     }
                     if is_cat
@@ -701,10 +787,10 @@ async def test_create_signed_transaction(
                     {
                         "cat": {
                             "confirmed_wallet_balance": -cat_delta,
-                            ">=#spendable_balance": 1 if is_cat else 0,
-                            ">=#max_send_amount": 1 if is_cat else 0,
-                            "<=#pending_change": -1 if is_cat else 0,
-                            "pending_coin_removal_count": -1 if is_cat else 0,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": -1,
+                            "pending_coin_removal_count": -1,
                         }
                     }
                     if is_cat
@@ -1508,7 +1594,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         "cat",
     )
     cat_wallet_id = cat_wallet.id()
-    cat_asset_id = cat_wallet.cat_info.limitations_program_hash
+    cat_asset_id = cat_wallet.tail_hash
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_new_wallet(
@@ -1598,8 +1684,14 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert offer_only_res.offer is not None
-    assert not hasattr(offer_only_res, "trade_record")
-    assert offer_only_res.to_json_dict() == {"offer": offer_only_res.offer.to_bech32()}
+    assert offer_only_res.to_json_dict() == {
+        "offer": offer_only_res.offer.to_bech32(),
+        "transactions": [],
+        "unsigned_transactions": [],
+        "trade_record": None,
+    }
+    with pytest.raises(ValueError, match=re.escape("Attempting to access trade_record on `offer_only` request")):
+        offer_only_res.trade_record
 
     driver_dict = {
         cat_asset_id: PuzzleInfo(
@@ -1689,7 +1781,6 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
         tx_config=wallet_environments.tx_config,
     )
-    assert isinstance(create_res, CreateOfferForIDsResponse)
     all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 2
     offer_count = await env_1.rpc_client.get_offers_count()
@@ -2052,6 +2143,16 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
     with pytest.raises(ValueError, match="not found"):
         await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
 
+    # 9. Sync-status guard: when not fully synced, requests are rejected unless
+    # allow_unsynced=True. The simulator's get_sync_status short-circuits to
+    # SYNCED so we patch the state manager directly to drive the unsynced path.
+    wsm = wallet_node.wallet_state_manager
+    with patch.object(wsm, "get_sync_status", AsyncMock(return_value=SyncStatus.SLIGHTLY_BEHIND)):
+        with pytest.raises(ValueError, match="fully synced"):
+            await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids))
+        rpc_result = await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, allow_unsynced=True))
+        assert {record.coin for record in rpc_result.coin_records} == coins
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
@@ -2060,7 +2161,7 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
+async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
@@ -2107,15 +2208,51 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
 
     # Set wallet name
     new_wallet_name = "test name"
-    await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_id=did_wallet_id_0, name=new_wallet_name))
+    await DidSetWalletNameCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=42,
+        name=new_wallet_name,
+    ).run()
+    assert "Failed to set DID wallet name" in capsys.readouterr().out
+    await DidSetWalletNameCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=did_wallet_id_0,
+        name=new_wallet_name,
+    ).run()
+
     get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(wallet_id=did_wallet_id_0))
     assert get_name_res.name == new_wallet_name
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.did_set_wallet_name(DIDSetWalletName(wallet_id=wallet_1_id, name=new_wallet_name))
 
     # Check DID ID
-    did_id_res = await wallet_1_rpc.get_did_id(DIDGetDID(wallet_id=did_wallet_id_0))
-    assert did_id_0 == did_id_res.my_did
+    await DidGetDidCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=42,
+    ).run()
+    assert "Failed to get DID" in capsys.readouterr().out
+    await DidGetDidCMD(
+        rpc_info=NeedsWalletRPC(
+            client_info=WalletClientInfo(
+                wallet_1_rpc, env.wallet_state_manager.root_pubkey.get_fingerprint(), env.wallet_state_manager.config
+            )
+        ),
+        wallet_id=did_wallet_id_0,
+    ).run()
+    assert did_id_0 is not None
+    assert did_id_0 in capsys.readouterr().out
     # Create backup file
     await wallet_1_rpc.create_did_backup_file(DIDCreateBackupFile(wallet_id=did_wallet_id_0))
 
@@ -2534,13 +2671,34 @@ async def test_get_height_info_response_variants(
     api_self = SimpleNamespace(
         service=SimpleNamespace(wallet_state_manager=SimpleNamespace(blockchain=mock_blockchain))
     )
-    raw = await WalletRpcApi.get_height_info(api_self, {})
-    response = GetHeightInfoResponse.from_json_dict(raw)
+    response = await WalletRpcApi.get_height_info(cast(WalletRpcApi, api_self), GetHeightInfo())
     assert isinstance(response, GetHeightInfoResponse)
     assert response.height == sync_height
     assert response.is_transaction_block == expected_is_tx
     assert response.prev_transaction_block_height == expected_prev
     mock_blockchain.height_to_block_record.assert_called_once_with(sync_height)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_full_node_peer_count(wallet_environments: WalletTestFramework) -> None:
+    """Verifies get_full_node_peer_count reflects live wallet -> full node connections."""
+    env = wallet_environments.environments[0]
+    client = env.rpc_client
+
+    response = await client.get_full_node_peer_count()
+    assert isinstance(response, GetFullNodePeerCountResponse)
+    assert response.peer_count == 1
+
+    await env.node.server.close_all_connections()
+    await time_out_assert(5, lambda: len(env.node.server.get_connections(NodeType.FULL_NODE)), 0)
+
+    assert (await client.get_full_node_peer_count()).peer_count == 0
 
 
 @pytest.mark.parametrize(
@@ -2563,7 +2721,7 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    height_info = await client.get_height_info()
+    height_info = await client.get_height_info(GetHeightInfo())
     assert height_info.height > 0
     assert (height_info.is_transaction_block is None) == (height_info.prev_transaction_block_height is None)
 
@@ -2684,7 +2842,7 @@ async def test_select_coins_rpc(wallet_environments: WalletTestFramework) -> Non
             wallet_environments.tx_config, push=True
         ) as action_scope:
             addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
-    coin_300: list[Coin]
+    coin_300 = []
     tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
         funds -= tx_amount
@@ -2860,8 +3018,9 @@ async def test_get_coin_records_rpc(wallet_environments: WalletTestFramework) ->
         test_records: list[WalletCoinRecord],
     ) -> None:
         response = await client.get_coin_records(test_request)
-        assert response["coin_records"] == [coin.to_json_dict_parsed_metadata() for coin in test_records], test_case
-        assert response["total_count"] == test_total_count, test_case
+        assert isinstance(response, GetCoinRecordsResponse)
+        assert response.coin_records == [wallet_coin_record_with_metadata(coin) for coin in test_records], test_case
+        assert response.total_count == test_total_count, test_case
 
     for name, tests in {
         "offset_limit": get_coin_records_offset_limit_tests,
@@ -2929,12 +3088,12 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
     for i in range(int(max_coins / WalletRpcApi.max_get_coin_records_limit)):
         offset = uint32(WalletRpcApi.max_get_coin_records_limit * i)
         response = await client.get_coin_records(GetCoinRecords(limit=limit, offset=offset, include_total_count=True))
-        response_records.extend(list(response["coin_records"]))
+        response_records.extend(list(response.coin_records))
 
     assert len(response_records) == max_coins
     # Make sure we got all expected records
-    parsed_records = [coin.to_json_dict_parsed_metadata() for coin in coin_records]
-    for expected_record in parsed_records:
+    expected_records = [wallet_coin_record_with_metadata(coin) for coin in coin_records]
+    for expected_record in expected_records:
         assert expected_record in response_records
 
     # Request coins with the max number of filter items
@@ -2956,10 +3115,10 @@ async def test_get_coin_records_rpc_limits(wallet_environments: WalletTestFramew
             amount_filter=amount_filter,
         ),
     ]:
-        response = await client.get_coin_records(request)
-        parsed_records = [coin.to_json_dict_parsed_metadata() for coin in filter_records]
-        for expected_record in parsed_records:
-            assert expected_record in response["coin_records"]
+        response_records = (await client.get_coin_records(request)).coin_records
+        expected_records = [wallet_coin_record_with_metadata(coin) for coin in filter_records]
+        for expected_record in expected_records:
+            assert expected_record in response_records
 
 
 @pytest.mark.parametrize(
@@ -4835,6 +4994,20 @@ def test_create_new_wallet_post_init() -> None:
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.POOL_WALLET)
 
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.POOL_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+            plotnft_version=uint8(0),
+        )
+
+    with pytest.raises(ValueError, match=re.escape('Invalid "plotnft_version" specified')):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.POOL_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+            plotnft_version=uint8(3),
+        )
+
     with pytest.raises(
         ValueError,
         match=re.escape('"initial_target_state" is only a valid argument for pool wallets'),
@@ -4945,3 +5118,50 @@ def test_create_new_wallet_post_init() -> None:
 
     # Creating a Remote wallet via create_new_wallet() should require no extra fields.
     CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)
+
+
+def test_miscellaneous_wallet_rpc_errors() -> None:
+    with pytest.raises(ValueError, match="clawback_metadata and cr_cat_metadata are mutually exclusive"):
+        WalletCoinRecordWithMetadata(
+            parent_coin_info=bytes32.zeros,
+            puzzle_hash=bytes32.zeros,
+            amount=uint64(0),
+            id=bytes32.zeros,
+            type=uint16(0),
+            wallet_identifier=StreamableWalletIdentifier(id=uint32(0), type=uint8(0)),
+            clawback_metadata=ClawbackMetadata(
+                time_lock=uint64(0), sender_puzzle_hash=bytes32.zeros, recipient_puzzle_hash=bytes32.zeros
+            ),
+            cr_cat_metadata=CRCATMetadata(
+                lineage_proof=LineageProof(None, None, None), inner_puzzle_hash=bytes32.zeros
+            ),
+            confirmed_height=uint32(0),
+            spent_height=uint32(0),
+            coinbase=False,
+        )
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXRequest(Streamable):
+        pass
+
+    @streamable
+    @dataclasses.dataclass(frozen=True)
+    class NotATXResponse(Streamable):
+        pass
+
+    class YesATXRequest(TransactionEndpointRequest):
+        pass
+
+    class YesATXResponse(TransactionEndpointResponse):
+        pass
+
+    with pytest.raises(TypeError, match="tx_endpoint request type must subclass TransactionEndpointRequest"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=NotATXRequest, response_type=YesATXResponse
+        )
+
+    with pytest.raises(TypeError, match="tx_endpoint response type must subclass TransactionEndpointResponse"):
+        WalletRpcMetadata(
+            endpoint_name="foo", tx_endpoint=True, request_type=YesATXRequest, response_type=NotATXResponse
+        )

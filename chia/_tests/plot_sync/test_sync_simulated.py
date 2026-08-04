@@ -78,7 +78,7 @@ class TestData:
         self.keys_missing = keys_missing
         self.duplicates = duplicates
 
-        removed_paths: list[Path] = [Path(p.prover.get_filename()) for p in removed] if removed is not None else []
+        removed_paths: list[Path] = [Path(p.prover.get_filename()) for p in removed]
         invalid_dict: dict[Path, int] = {Path(p.prover.get_filename()): 0 for p in self.invalid}
         keys_missing_set: set[Path] = {Path(p.prover.get_filename()) for p in self.keys_missing}
         duplicates_set: set[str] = {p.prover.get_filename() for p in self.duplicates}

@@ -33,6 +33,13 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
 def check_click_parsing(cmd: ChiaCommand, *args: str, context: ChiaCliContext | None = None) -> None:
+    """
+    Helper function to test that the framework correctly parses a commandline string to a command object.
+
+    The first argument is the expected result of parsing, and the rest of the arguments are strings that would
+    be passed to the commandline.
+    """
+
     @click.group()
     def _cmd() -> None:
         pass

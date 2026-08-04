@@ -71,7 +71,7 @@ class NotarizedPayment(CreateCoin):
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
         p = CreateCoin.from_program(with_opcode)
-        return cls(p.puzzle_hash, p.amount, p.memos, nonce)
+        return cls(p.puzzle_hash, p.amount, p.memos, nonce=nonce)
 
     def name(self) -> bytes32:
         return self.to_program().get_tree_hash()
@@ -123,7 +123,7 @@ class Offer:
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
-                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce=nonce))
 
         return notarized_payments
 

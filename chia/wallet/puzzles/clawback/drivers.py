@@ -37,7 +37,7 @@ from chia.wallet.util.wallet_types import RemarkDataType
 
 P2_1_OF_N = Program.from_bytes(P2_1_OF_N_BYTES)
 P2_CURRIED_PUZZLE_MOD = Program.from_bytes(P2_PUZZLE_HASH)
-P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_PUZZLE_HASH_HASH)
+P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(bytes32(P2_PUZZLE_HASH_HASH))
 AUGMENTED_CONDITION = Program.from_bytes(AUGMENTED_CONDITION_BYTES)
 AUGMENTED_CONDITION_HASH = bytes32(AUGMENTED_CONDITION_HASH_BYTES)
 log = logging.getLogger(__name__)

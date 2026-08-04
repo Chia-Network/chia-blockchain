@@ -414,7 +414,7 @@ class WSChiaConnection:
                 self.incoming_message_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
-            if self.ws is not None and self.ws.closed is False:
+            if self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
@@ -843,7 +843,7 @@ class WSChiaConnection:
                 assert message.id is not None
                 rl_window = self.rate_limit_windows[message_type]
                 # Drop and retry this message if sending it exceeds the window
-                if peer_subject_to_rl and window_size is not None and rl_window.in_flight >= window_size:
+                if peer_subject_to_rl and rl_window.in_flight >= window_size:
                     create_referenced_task(self._wait_and_retry(message, priority=priority), known_unreferenced=True)
                     details = ", ".join(
                         [

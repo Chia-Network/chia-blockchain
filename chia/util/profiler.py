@@ -192,5 +192,7 @@ async def enable_profiler(profile: bool) -> AsyncIterator[cProfile.Profile | Non
     # itself. It's exercised manually when investigating performance issues
     with cProfile.Profile() as pr:  # pragma: no cover
         pr.enable()
-        yield pr
-        pr.disable()
+        try:
+            yield pr
+        finally:
+            pr.disable()

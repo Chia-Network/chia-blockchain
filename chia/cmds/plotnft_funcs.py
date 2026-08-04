@@ -12,7 +12,7 @@ from typing import Any
 import aiohttp
 import click
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
@@ -30,6 +30,7 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
+from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
@@ -39,6 +40,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
+    GetHeightInfo,
     GetTransaction,
     GetWalletBalance,
     GetWallets,
@@ -83,6 +85,7 @@ async def create(
     fee: uint64,
     *,
     prompt: bool,
+    version: int,
 ) -> None:
     target_puzzle_hash: bytes32 | None
     # Could use initial_pool_state_from_dict to simplify
@@ -90,6 +93,7 @@ async def create(
         pool_url = None
         relative_lock_height = None
         target_puzzle_hash = None  # wallet will fill this in
+        pool_memoization = Program.to(None)
     elif state == "FARMING_TO_POOL":
         enforce_https = wallet_info.config["selected_network"] == "mainnet"
         assert pool_url is not None
@@ -98,6 +102,7 @@ async def create(
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
         target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
+        pool_memoization = Program.fromhex(json_dict.get("pool_memoization", "80"))
     else:
         raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
 
@@ -115,7 +120,9 @@ async def create(
                     state=state,
                     pool_url=pool_url,
                     relative_lock_height=relative_lock_height,
+                    pool_memoization=pool_memoization,
                 ),
+                plotnft_version=uint8(version),
                 mode=WalletCreationMode.NEW,
                 fee=fee,
                 push=True,
@@ -212,12 +219,12 @@ async def pprint_all_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
-    print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+    print(f"Wallet height: {(await wallet_client.get_height_info(GetHeightInfo())).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
         pool_wallet_id = wallet_info.id
         typ = WalletType(int(wallet_info.type))
-        if typ == WalletType.POOLING_WALLET:
+        if typ in {WalletType.POOLING_WALLET, WalletType.PLOTNFT_2}:
             pool_wallet_info = (await wallet_client.pw_status(PWStatus(wallet_id=uint32(pool_wallet_id)))).state
             await pprint_pool_wallet_state(
                 wallet_client,
@@ -315,6 +322,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 
     # absent network errors, this should not fail with an error
     pool_wallets = (await wallet_client.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))).wallets
+    pool_wallets.extend((await wallet_client.get_wallets(GetWallets(type=uint16(WalletType.PLOTNFT_2)))).wallets)
 
     if wallet_id is None:
         if len(pool_wallets) == 0:
@@ -385,6 +393,7 @@ async def join_pool(
             target_puzzlehash=bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url=pool_url,
             relative_lock_height=json_dict["relative_lock_height"],
+            pool_memoization=Program.fromhex(json_dict.get("pool_memoization", "80")),
             fee=fee,
             push=True,
         ),

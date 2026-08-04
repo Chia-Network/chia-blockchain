@@ -129,8 +129,20 @@ async def test_cat_trades(
     # The taker is "making" offers that it is approving with a VC which multiple actual makers would never do
     # This is really a test of CATOuterPuzzle anyways and is not correlated with any of our params
     test_aggregation = not credential_restricted and not wallet_environments.tx_config.reuse_puzhash and trusted
+    first_offer = None
+    second_offer = None
+    third_offer = None
+    fourth_offer = None
+    fifth_offer = None
 
     # Create two new CATs, one in each wallet
+    proofs_maker = None
+    proofs_taker = None
+    proof_root_maker = None
+    proof_root_taker = None
+    authorized_providers = None
+    proofs_checker_maker = None
+    proofs_checker_taker = None
     if credential_restricted:
         # Aliasing
         env_maker.wallet_aliases = {
@@ -175,7 +187,7 @@ async def test_cat_trades(
         tail_taker = Program.to([3, (1, "taker"), None, None])
         proofs_checker_maker = ProofsChecker(["foo", "bar"])
         proofs_checker_taker = ProofsChecker(["bar", "zap"])
-        authorized_providers: list[bytes32] = [did_id_maker, did_id_taker]
+        authorized_providers = [did_id_maker, did_id_taker]
         cat_wallet_maker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
@@ -303,7 +315,7 @@ async def test_cat_trades(
         )
 
         proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
-        proof_root_maker: bytes32 = proofs_maker.root()
+        proof_root_maker = proofs_maker.root()
         await client_maker.vc_spend(
             VCSpend(
                 vc_id=vc_record_maker.vc.launcher_id,
@@ -314,7 +326,7 @@ async def test_cat_trades(
         )
 
         proofs_taker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
-        proof_root_taker: bytes32 = proofs_taker.root()
+        proof_root_taker = proofs_taker.root()
         await client_taker.vc_spend(
             VCSpend(
                 vc_id=vc_record_taker.vc.launcher_id,
@@ -370,6 +382,10 @@ async def test_cat_trades(
         )
 
     if credential_restricted:
+        assert proofs_maker is not None
+        assert proofs_taker is not None
+        assert proof_root_maker is not None
+        assert proof_root_taker is not None
         await client_maker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_maker))
         assert (
             await client_maker.vc_get_proofs_for_root(VCGetProofsForRoot(root=proof_root_maker))
@@ -388,6 +404,8 @@ async def test_cat_trades(
 
     # Add the taker's CAT to the maker's wallet
     if credential_restricted:
+        assert authorized_providers is not None
+        assert proofs_checker_taker is not None
         new_cat_wallet_maker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
@@ -457,6 +475,9 @@ async def test_cat_trades(
             "tail": "0x" + asset_id.hex(),
         }
         if credential_restricted:
+            assert authorized_providers is not None
+            assert proofs_checker_maker is not None
+            assert proofs_checker_taker is not None
             driver_item["also"] = {
                 "type": AssetType.CR.value,
                 "authorized_providers": ["0x" + provider.hex() for provider in authorized_providers],
@@ -493,7 +514,7 @@ async def test_cat_trades(
     assert trade_make is not None
 
     peer = wallet_node_taker.get_full_node_peer()
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -710,7 +731,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -839,7 +860,7 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1040,7 +1061,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1297,7 +1318,7 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1430,7 +1451,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1611,6 +1632,11 @@ async def test_cat_trades(
     if test_aggregation:
         # This tests an edge case where aggregated offers the include > 2 of the same kind of CAT
         # (and therefore are solved as a complete ring)
+        assert first_offer is not None
+        assert second_offer is not None
+        assert third_offer is not None
+        assert fourth_offer is not None
+        assert fifth_offer is not None
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
         result: NPCResult = get_name_puzzle_conditions(
@@ -1707,7 +1733,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
     # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.
     # Uncomment this when/if it does
 
-    # [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    # [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
     #   [Offer.from_bytes(trade_make.offer)]
     # )
     # trade_take = await trade_manager_taker.respond_to_offer(
@@ -2011,7 +2037,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
     assert trade_make is not None
     peer = env_taker.node.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers([offer])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
@@ -2029,7 +2055,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
             await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers([offer])
     async with trade_manager_trader.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
@@ -2326,7 +2352,9 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework, wallet_t
     assert success is True
     assert trade_make is not None
     peer = env_taker.node.get_full_node_peer()
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     fee = uint64(1_000_000_000_000)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
@@ -2489,10 +2517,10 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework, 
     assert success is True
     assert trade_make_2 is not None
 
-    [offer_1], signing_response_1 = await env_maker.node.wallet_state_manager.sign_offers(
+    [offer_1], signing_response_1 = await env_maker.node.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make_1.offer)]
     )
-    [offer_2], signing_response_2 = await env_maker.node.wallet_state_manager.sign_offers(
+    [offer_2], signing_response_2 = await env_maker.node.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make_2.offer)]
     )
     agg_offer = Offer.aggregate([offer_1, offer_2])

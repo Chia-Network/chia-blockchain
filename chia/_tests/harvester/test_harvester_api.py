@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
+from packaging.version import Version
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
@@ -50,6 +52,29 @@ async def harvester_environment(
     plot_manager.stop_refreshing()
 
 
+@pytest.mark.parametrize(
+    "protocol_version,expected_message_type",
+    [
+        (Version("0.0.37"), ProtocolMessageTypes.respond_plots),
+        (Version("0.0.38"), ProtocolMessageTypes.respond_plots2),
+    ],
+)
+@pytest.mark.anyio
+async def test_request_plots_uses_plot_serialization_for_farmer_protocol(
+    harvester_environment: HarvesterTestEnvironment,
+    seeded_random: random.Random,
+    protocol_version: Version,
+    expected_message_type: ProtocolMessageTypes,
+) -> None:
+    peer = MagicMock(spec=WSChiaConnection)
+    peer.protocol_version = protocol_version
+    peer.peer_node_id = bytes32.random(seeded_random)
+
+    response = await harvester_environment.harvester_api.request_plots(harvester_protocol.RequestPlots(), peer)
+
+    assert response.type == expected_message_type.value
+
+
 def signage_point_from_block(
     block: FullBlock, constants: ConsensusConstants
 ) -> harvester_protocol.NewSignagePointHarvester2:
@@ -69,6 +94,7 @@ def signage_point_from_block(
         pool_difficulties=[],
         peak_height=block.height,
         last_tx_height=block.height,
+        filter_challenge=challenge_hash,  # Use challenge_hash as fallback for tests
     )
 
 
@@ -143,6 +169,7 @@ async def test_new_signage_point_harvester_pool_difficulty(
         pool_difficulties=[pool_difficulty],  # add pool difficulty
         peak_height=new_challenge.peak_height,
         last_tx_height=new_challenge.last_tx_height,
+        filter_challenge=new_challenge.filter_challenge,
     )
 
     with mock_successful_proof(env.plot_info):
