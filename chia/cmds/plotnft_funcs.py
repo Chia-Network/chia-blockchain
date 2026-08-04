@@ -26,7 +26,6 @@ from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolSingletonState, PoolWalletInfo
-from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -68,8 +67,8 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
     if json_dict["relative_lock_height"] > 1000:
         raise ValueError("Relative lock height too high for this pool, cannot join")
-    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-        raise ValueError(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
+    if json_dict["protocol_version"] not in {1, 2}:
+        raise ValueError(f"Incorrect version: {json_dict['protocol_version']}, should be 1 or 2")
 
     header_msg = f"\n---- Pool parameters fetched from {pool_url} ----"
     print(header_msg)
