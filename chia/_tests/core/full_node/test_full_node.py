@@ -1782,6 +1782,8 @@ async def test_new_unfinished_block(
     peer.protocol_version = Version(peer_version)
 
     await full_node_1.full_node.add_block(blocks[-2])
+    for sub_slot in block.finished_sub_slots:
+        await full_node_1.full_node.add_end_of_sub_slot(sub_slot, peer)
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
     _, _, msg = peer.outgoing_queue.get_nowait()
@@ -1917,7 +1919,7 @@ async def test_new_unfinished_block2_forward_limit(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "commitment,expected",
+    "committment,expected",
     [
         (0, Err.INVALID_TRANSACTIONS_GENERATOR_HASH),
         (1, Err.INVALID_TRANSACTIONS_INFO_HASH),
@@ -1934,7 +1936,7 @@ async def test_unfinished_block_with_replaced_generator(
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
     self_hostname: str,
-    commitment: int,
+    committment: int,
     expected: Err,
 ) -> None:
     full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
@@ -1948,7 +1950,7 @@ async def test_unfinished_block_with_replaced_generator(
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")
 
-    if commitment > 0:
+    if committment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
@@ -1963,7 +1965,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.transactions_info is not None
         transactions_info = block.transactions_info
 
-    if commitment > 1:
+    if committment > 1:
         tb = block.foliage_transaction_block
         assert tb is not None
         transaction_block = FoliageTransactionBlock(
@@ -1978,7 +1980,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.foliage_transaction_block is not None
         transaction_block = block.foliage_transaction_block
 
-    if commitment > 2:
+    if committment > 2:
         fl = block.foliage
         foliage = Foliage(
             fl.prev_block_hash,
@@ -1991,7 +1993,7 @@ async def test_unfinished_block_with_replaced_generator(
     else:
         foliage = block.foliage
 
-    if commitment > 3:
+    if committment > 3:
         fl = block.foliage
 
         secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
@@ -2007,10 +2009,10 @@ async def test_unfinished_block_with_replaced_generator(
             signature,
         )
 
-        if commitment > 4:
+        if committment > 4:
             pos = block.reward_chain_block.proof_of_space
 
-            if commitment > 5:
+            if committment > 5:
                 if pos.pool_public_key is None:
                     assert pos.pool_contract_puzzle_hash is not None
                     plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
@@ -2059,7 +2061,7 @@ async def test_unfinished_block_with_replaced_generator(
         reward_chain_block = block.reward_chain_block.get_unfinished()
 
     generator_refs: list[uint32] = []
-    if commitment > 6:
+    if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
     unf = UnfinishedBlock(
@@ -2770,36 +2772,38 @@ async def test_compact_protocol(
                     uint8(CompressibleVDFField.ICC_EOS_VDF),
                 )
             )
-    assert block.reward_chain_block.challenge_chain_sp_vdf is not None
+    sp_block = next(b for b in blocks_2[-10:] if b.reward_chain_block.challenge_chain_sp_vdf is not None)
+    cc_sp_vdf = sp_block.reward_chain_block.challenge_chain_sp_vdf
+    assert cc_sp_vdf is not None
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_sp_vdf.challenge,
-        block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+        cc_sp_vdf.challenge,
+        cc_sp_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_SP_VDF),
         )
     )
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_IP_VDF),
         )
     )

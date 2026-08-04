@@ -16,7 +16,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
@@ -78,7 +78,6 @@ from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.trading.offer import Offer as TradingOffer
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
@@ -88,6 +87,9 @@ from chia.wallet.wallet_request_types import (
     DLOwnedSingletonsResponse,
     DLStopTracking,
     DLTrackNew,
+    Empty,
+    GetTransaction,
+    LogIn,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_service import WalletService
@@ -202,11 +204,11 @@ async def farm_block_check_singleton(
 
 async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
     try:
-        val = await api.get_transaction({"transaction_id": tx_id.hex()})
+        val = await api.get_transaction(GetTransaction(transaction_id=tx_id))
     except ValueError:  # pragma: no cover
         return False
 
-    return True if TransactionRecord.from_json_dict(val["transaction"]).confirmed else False  # mypy
+    return val.transaction.confirmed
 
 
 async def check_mempool_spend_count_or_fail(
@@ -214,9 +216,8 @@ async def check_mempool_spend_count_or_fail(
 ) -> bool:
     """Poll mempool count but raise immediately if the transaction was rejected."""
     try:
-        val = await wallet_rpc_api.get_transaction({"transaction_id": tx_id.hex()})
-        tx_record = TransactionRecord.from_json_dict(val["transaction"])
-        for _, status, error in tx_record.sent_to:
+        val = await wallet_rpc_api.get_transaction(GetTransaction(transaction_id=tx_id))
+        for _, status, error in val.transaction.sent_to:
             if status == MempoolInclusionStatus.FAILED.value:
                 raise RuntimeError(f"Transaction {tx_id} rejected by mempool: {error}")  # pragma: no cover
     except ValueError:  # pragma: no cover
@@ -2449,16 +2450,17 @@ async def test_wallet_log_in_changes_active_fingerprint(
     wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+    primary_fingerprint = (await wallet_rpc_api.get_logged_in_fingerprint(Empty())).fingerprint
+    assert primary_fingerprint is not None
 
     mnemonic = create_mnemonic()
     assert wallet_rpc_api.service.local_keychain is not None
     private_key = wallet_rpc_api.service.local_keychain.add_key(mnemonic_or_pk=mnemonic)
     secondary_fingerprint: int = private_key.get_g1().get_fingerprint()
 
-    await wallet_rpc_api.log_in(request={"fingerprint": primary_fingerprint})
+    await wallet_rpc_api.log_in(LogIn(fingerprint=primary_fingerprint))
 
-    active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+    active_fingerprint = (await wallet_rpc_api.get_logged_in_fingerprint(Empty())).fingerprint
     assert active_fingerprint == primary_fingerprint
 
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt) as data_layer_service:
@@ -2496,7 +2498,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
-        active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+        active_fingerprint = (await wallet_rpc_api.get_logged_in_fingerprint(Empty())).fingerprint
         assert active_fingerprint == secondary_fingerprint
 
 

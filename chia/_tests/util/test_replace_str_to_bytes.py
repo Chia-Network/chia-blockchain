@@ -68,7 +68,7 @@ test_constants = ConsensusConstants(
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     MIN_PLOT_STRENGTH=uint8(2),
-    MAX_PLOT_STRENGTH=uint8(32),
+    MAX_PLOT_STRENGTH=uint8(17),
     PLOT_FILTER_V2_RELATIVE_HEIGHT=[
         uint32(50_494_000),
         uint32(45_444_000),

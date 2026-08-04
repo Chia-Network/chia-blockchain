@@ -136,7 +136,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = env_1.node.get_full_node_peer()
@@ -235,7 +235,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -622,7 +622,7 @@ async def test_nft_offer_with_metadata_update(wallet_environments: WalletTestFra
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = env_1.node.get_full_node_peer()
@@ -850,7 +850,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = env_1.node.get_full_node_peer()
@@ -980,7 +980,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1259,7 +1259,7 @@ async def test_nft_offer_nft_for_nft(wallet_environments: WalletTestFramework) -
 
     taker_fee = uint64(1)
 
-    [_maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = env_1.node.get_full_node_peer()
@@ -1490,7 +1490,9 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert error is None
     assert trade_make is not None
 
-    [maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
 
     taker_fee = uint64(1)
 
@@ -1619,7 +1621,9 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     assert error is None
     assert trade_make is not None
 
-    [maker_offer], signing_response = await env_0.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [maker_offer], signing_response = await env_0.wallet_state_manager.signer.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
 
     taker_fee = uint64(1)
 

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from itertools import count
 from pathlib import Path
+from types import MethodType
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
@@ -28,7 +29,7 @@ from chia.pools.pool_wallet_info import (
 )
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServiceProtocol, default_get_connections
-from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
+from chia.rpc.util import ALL_TRANSLATION_LAYERS, MarshallableRpcEndpoint, RpcEndpoint, marshal
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
@@ -88,7 +89,7 @@ from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
-from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
+from chia.wallet.wallet_coin_store import CoinRecordOrder, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_request_types import (
@@ -188,6 +189,7 @@ from chia.wallet.wallet_request_types import (
     GetAllOffers,
     GetAllOffersResponse,
     GetCATListResponse,
+    GetCoinRecords,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCoinRecordsResponse,
@@ -322,6 +324,7 @@ from chia.wallet.wallet_request_types import (
     WalletCreationMode,
     WalletInfoResponse,
 )
+from chia.wallet.wallet_rpc_metadata import WALLET_RPC_ENDPOINT_METADATA, WalletRpcMetadata
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import SyncStatus
 
@@ -427,7 +430,7 @@ def tx_endpoint(
                 # deferring to parent action scope
                 return response
 
-            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
+            unsigned_txs = await self.service.wallet_state_manager.signer.gather_signing_info_for_txs(
                 action_scope.side_effects.transactions
             )
 
@@ -587,143 +590,17 @@ class WalletRpcApi:
         self.service_name = "chia_wallet"
 
     def get_routes(self) -> dict[str, Endpoint]:
+        def apply_wrappers(endpoint_func: MarshallableRpcEndpoint, endpoint: WalletRpcMetadata) -> Endpoint:
+            marshalled_func = marshal(endpoint_func)
+            if endpoint.tx_endpoint:
+                marshalled_func = tx_endpoint(push=endpoint.auto_push, merge_spends=endpoint.auto_merge_spends)(
+                    marshalled_func
+                )
+            return MethodType(marshalled_func, self)
+
         return {
-            # Key management
-            "/log_in": self.log_in,
-            "/get_logged_in_fingerprint": self.get_logged_in_fingerprint,
-            "/get_public_keys": self.get_public_keys,
-            "/get_private_key": self.get_private_key,
-            "/generate_mnemonic": self.generate_mnemonic,
-            "/add_key": self.add_key,
-            "/delete_key": self.delete_key,
-            "/check_delete_key": self.check_delete_key,
-            "/delete_all_keys": self.delete_all_keys,
-            # Wallet node
-            "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
-            "/get_sync_status": self.get_sync_status,
-            "/get_full_node_peer_count": self.get_full_node_peer_count,
-            "/get_height_info": self.get_height_info,
-            "/push_tx": self.push_tx,
-            "/push_transactions": self.push_transactions,
-            "/get_timestamp_for_height": self.get_timestamp_for_height,
-            "/get_fee_estimate": self.get_fee_estimate,
-            "/set_auto_claim": self.set_auto_claim,
-            "/get_auto_claim": self.get_auto_claim,
-            # Wallet management
-            "/get_wallets": self.get_wallets,
-            "/create_new_wallet": self.create_new_wallet,
-            # Wallet
-            "/get_wallet_balance": self.get_wallet_balance,
-            "/get_wallet_balances": self.get_wallet_balances,
-            "/get_transaction": self.get_transaction,
-            "/get_transactions": self.get_transactions,
-            "/get_transaction_count": self.get_transaction_count,
-            "/get_next_address": self.get_next_address,
-            "/send_transaction": self.send_transaction,
-            "/send_transaction_multi": self.send_transaction_multi,
-            "/spend_clawback_coins": self.spend_clawback_coins,
-            "/get_coin_records": self.get_coin_records,
-            "/get_farmed_amount": self.get_farmed_amount,
-            "/create_signed_transaction": self.create_signed_transaction,
-            "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
-            "/select_coins": self.select_coins,
-            "/get_spendable_coins": self.get_spendable_coins,
-            "/get_coin_records_by_names": self.get_coin_records_by_names,
-            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
-            "/get_current_derivation_index": self.get_current_derivation_index,
-            "/extend_derivation_index": self.extend_derivation_index,
-            "/get_notifications": self.get_notifications,
-            "/delete_notifications": self.delete_notifications,
-            "/send_notification": self.send_notification,
-            "/sign_message_by_address": self.sign_message_by_address,
-            "/sign_message_by_id": self.sign_message_by_id,
-            "/verify_signature": self.verify_signature,
-            "/get_transaction_memo": self.get_transaction_memo,
-            "/split_coins": self.split_coins,
-            "/combine_coins": self.combine_coins,
-            # CATs and trading
-            "/cat_set_name": self.cat_set_name,
-            "/cat_asset_id_to_name": self.cat_asset_id_to_name,
-            "/cat_get_name": self.cat_get_name,
-            "/get_stray_cats": self.get_stray_cats,
-            "/cat_spend": self.cat_spend,
-            "/cat_get_asset_id": self.cat_get_asset_id,
-            "/create_offer_for_ids": self.create_offer_for_ids,
-            "/get_offer_summary": self.get_offer_summary,
-            "/check_offer_validity": self.check_offer_validity,
-            "/take_offer": self.take_offer,
-            "/get_offer": self.get_offer,
-            "/get_all_offers": self.get_all_offers,
-            "/get_offers_count": self.get_offers_count,
-            "/cancel_offer": self.cancel_offer,
-            "/cancel_offers": self.cancel_offers,
-            "/get_cat_list": self.get_cat_list,
-            # DID Wallet
-            "/did_set_wallet_name": self.did_set_wallet_name,
-            "/did_get_wallet_name": self.did_get_wallet_name,
-            "/did_update_metadata": self.did_update_metadata,
-            "/did_get_pubkey": self.did_get_pubkey,
-            "/did_get_did": self.did_get_did,
-            "/did_get_metadata": self.did_get_metadata,
-            "/did_get_current_coin_info": self.did_get_current_coin_info,
-            "/did_create_backup_file": self.did_create_backup_file,
-            "/did_transfer_did": self.did_transfer_did,
-            "/did_message_spend": self.did_message_spend,
-            "/did_get_info": self.did_get_info,
-            "/did_find_lost_did": self.did_find_lost_did,
-            # NFT Wallet
-            "/nft_mint_nft": self.nft_mint_nft,
-            "/nft_count_nfts": self.nft_count_nfts,
-            "/nft_get_nfts": self.nft_get_nfts,
-            "/nft_get_by_did": self.nft_get_by_did,
-            "/nft_set_nft_did": self.nft_set_nft_did,
-            "/nft_set_nft_status": self.nft_set_nft_status,
-            "/nft_get_wallet_did": self.nft_get_wallet_did,
-            "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
-            "/nft_get_info": self.nft_get_info,
-            "/nft_transfer_nft": self.nft_transfer_nft,
-            "/nft_add_uri": self.nft_add_uri,
-            "/nft_calculate_royalties": self.nft_calculate_royalties,
-            "/nft_mint_bulk": self.nft_mint_bulk,
-            "/nft_set_did_bulk": self.nft_set_did_bulk,
-            "/nft_transfer_bulk": self.nft_transfer_bulk,
-            # Remote Wallet
-            "/register_remote_coins": self.register_remote_coins,
-            # Pool Wallet
-            "/pw_join_pool": self.pw_join_pool,
-            "/pw_self_pool": self.pw_self_pool,
-            "/pw_absorb_rewards": self.pw_absorb_rewards,
-            "/pw_status": self.pw_status,
-            # DL Wallet
-            "/create_new_dl": self.create_new_dl,
-            "/dl_track_new": self.dl_track_new,
-            "/dl_stop_tracking": self.dl_stop_tracking,
-            "/dl_latest_singleton": self.dl_latest_singleton,
-            "/dl_singletons_by_root": self.dl_singletons_by_root,
-            "/dl_update_root": self.dl_update_root,
-            "/dl_update_multiple": self.dl_update_multiple,
-            "/dl_history": self.dl_history,
-            "/dl_owned_singletons": self.dl_owned_singletons,
-            "/dl_get_mirrors": self.dl_get_mirrors,
-            "/dl_new_mirror": self.dl_new_mirror,
-            "/dl_delete_mirror": self.dl_delete_mirror,
-            "/dl_verify_proof": self.dl_verify_proof,
-            # Verified Credential
-            "/vc_mint": self.vc_mint,
-            "/vc_get": self.vc_get,
-            "/vc_get_list": self.vc_get_list,
-            "/vc_spend": self.vc_spend,
-            "/vc_add_proofs": self.vc_add_proofs,
-            "/vc_get_proofs_for_root": self.vc_get_proofs_for_root,
-            "/vc_revoke": self.vc_revoke,
-            # CR-CATs
-            "/crcat_approve_pending": self.crcat_approve_pending,
-            # Signer Protocol
-            "/gather_signing_info": self.gather_signing_info,
-            "/apply_signatures": self.apply_signatures,
-            "/submit_transactions": self.submit_transactions,
-            # Not technically Signer Protocol but related
-            "/execute_signing_instructions": self.execute_signing_instructions,
+            "/" + endpoint.endpoint_name: apply_wrappers(getattr(WalletRpcApi, endpoint.endpoint_name), endpoint)
+            for endpoint in WALLET_RPC_ENDPOINT_METADATA
         }
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
@@ -764,7 +641,6 @@ class WalletRpcApi:
     # Key management
     ##########################################################################################
 
-    @marshal
     async def log_in(self, request: LogIn) -> LogInResponse:
         """
         Logs in the wallet with a specific key.
@@ -780,11 +656,9 @@ class WalletRpcApi:
 
         raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
-    @marshal
     async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
         return GetLoggedInFingerprintResponse(fingerprint=uint32.construct_optional(self.service.logged_in_fingerprint))
 
-    @marshal
     async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
             fingerprints = [key_data.fingerprint for key_data in await self.service.keychain_proxy.get_keys()]
@@ -808,7 +682,6 @@ class WalletRpcApi:
             log.error(f"Failed to get private key by fingerprint: {e}")
         return None, None
 
-    @marshal
     async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
         sk, seed = await self._get_private_key(request.fingerprint)
         if sk is not None:
@@ -826,11 +699,9 @@ class WalletRpcApi:
 
         raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
-    @marshal
     async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
         return GenerateMnemonicResponse(mnemonic=generate_mnemonic().split(" "))
 
-    @marshal
     async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
         try:
@@ -852,7 +723,6 @@ class WalletRpcApi:
             return AddKeyResponse(fingerprint=fingerprint)
         raise ValueError("Failed to start")
 
-    @marshal
     async def delete_key(self, request: DeleteKey) -> Empty:
         await self._stop_wallet()
         try:
@@ -910,7 +780,6 @@ class WalletRpcApi:
 
         return found_farmer, found_pool
 
-    @marshal
     async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
         """Check the key use prior to possible deletion
         checks whether key is used for either farm or pool rewards
@@ -948,7 +817,6 @@ class WalletRpcApi:
             wallet_balance=wallet_balance,
         )
 
-    @marshal
     async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
         all_key_datas = await self.service.keychain_proxy.get_keys()
@@ -970,7 +838,6 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
-    @marshal
     async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> Empty:
         """
         Resync the current logged in wallet. The transaction and offer records will be kept.
@@ -981,7 +848,6 @@ class WalletRpcApi:
         self.service.set_resync_on_startup(self.service.logged_in_fingerprint, request.enable)
         return Empty()
 
-    @marshal
     async def get_sync_status(self, request: Empty) -> GetSyncStatusResponse:
         sync_mode = self.service.wallet_state_manager.sync_mode
         has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
@@ -989,13 +855,11 @@ class WalletRpcApi:
         synced = await self.service.wallet_state_manager.synced()
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
-    @marshal
     async def get_full_node_peer_count(self, request: Empty) -> GetFullNodePeerCountResponse:
         return GetFullNodePeerCountResponse(
             peer_count=uint64(len(self.service.wallet_state_manager.wallet_node.get_full_node_peers_in_order()))
         )
 
-    @marshal
     async def get_height_info(self, request: GetHeightInfo) -> GetHeightInfoResponse:
         """
         Returns height info for the current wallet.
@@ -1032,7 +896,6 @@ class WalletRpcApi:
             prev_transaction_block_height=prev_transaction_block_height,
         )
 
-    @marshal
     async def push_tx(self, request: PushTX) -> Empty:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
@@ -1042,8 +905,6 @@ class WalletRpcApi:
 
         return Empty()
 
-    @tx_endpoint(push=True)
-    @marshal
     async def push_transactions(
         self,
         request: PushTransactions,
@@ -1070,11 +931,9 @@ class WalletRpcApi:
 
         return PushTransactionsResponse(unsigned_transactions=[], transactions=[])  # tx_endpoint takes care of this
 
-    @marshal
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse(timestamp=await self.service.get_timestamp_for_height(request.height))
 
-    @marshal
     async def get_fee_estimate(self, request: Empty) -> GetFeeEstimateResponse:
         """
         Fetch fee estimates from a connected full node peer via the wallet <-> full node protocol.
@@ -1102,7 +961,6 @@ class WalletRpcApi:
         fee_per_cost = estimate.estimated_fee_rate.mojos_per_clvm_cost
         return GetFeeEstimateResponse(fee_per_cost=fee_per_cost)
 
-    @marshal
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
         """
         Set auto claim merkle coins config
@@ -1111,7 +969,6 @@ class WalletRpcApi:
         """
         return AutoClaimSettings.from_json_dict(self.service.set_auto_claim(request))
 
-    @marshal
     async def get_auto_claim(self, request: Empty) -> AutoClaimSettings:
         """
         Get auto claim merkle coins config
@@ -1124,7 +981,6 @@ class WalletRpcApi:
     # Wallet Management
     ##########################################################################################
 
-    @marshal
     async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
         wallet_type: WalletType | None = None
         if request.type is not None:
@@ -1161,8 +1017,6 @@ class WalletRpcApi:
             wallets=wallet_infos, fingerprint=uint32.construct_optional(self.service.logged_in_fingerprint)
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def create_new_wallet(
         self,
         request: CreateNewWallet,
@@ -1403,11 +1257,9 @@ class WalletRpcApi:
 
         return BalanceResponse.from_json_dict(wallet_balance)
 
-    @marshal
     async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
         return GetWalletBalanceResponse(wallet_balance=await self._get_wallet_balance(request.wallet_id))
 
-    @marshal
     async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
         if request.wallet_ids is not None:
             wallet_ids = request.wallet_ids
@@ -1417,7 +1269,6 @@ class WalletRpcApi:
             wallet_balances={wallet_id: await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids}
         )
 
-    @marshal
     async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
         tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(request.transaction_id)
         if tr is None:
@@ -1428,7 +1279,6 @@ class WalletRpcApi:
             transaction_id=tr.name,
         )
 
-    @marshal
     async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
         transaction_id: bytes32 = request.transaction_id
         tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(transaction_id)
@@ -1451,8 +1301,6 @@ class WalletRpcApi:
             spend_bundle = tr.spend_bundle
         return GetTransactionMemoResponse(transaction_memos={transaction_id: compute_memos(spend_bundle)})
 
-    @tx_endpoint(push=False)
-    @marshal
     async def split_coins(
         self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> SplitCoinsResponse:
@@ -1469,8 +1317,6 @@ class WalletRpcApi:
         # tx_endpoint will take care to fill this out
         return SplitCoinsResponse(unsigned_transactions=[], transactions=[])
 
-    @tx_endpoint(push=False)
-    @marshal
     async def combine_coins(
         self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> CombineCoinsResponse:
@@ -1488,7 +1334,6 @@ class WalletRpcApi:
         # tx_endpoint will take care to fill this out
         return CombineCoinsResponse(unsigned_transactions=[], transactions=[])
 
-    @marshal
     async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
         to_puzzle_hash: bytes32 | None = None
         if request.to_address is not None:
@@ -1530,7 +1375,6 @@ class WalletRpcApi:
             wallet_id=request.wallet_id,
         )
 
-    @marshal
     async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
         return GetTransactionCountResponse(
             wallet_id=request.wallet_id,
@@ -1541,7 +1385,6 @@ class WalletRpcApi:
             ),
         )
 
-    @marshal
     async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
         """
         Returns a new address
@@ -1563,8 +1406,6 @@ class WalletRpcApi:
             address=address,
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def send_transaction(
         self,
         request: SendTransaction,
@@ -1589,9 +1430,10 @@ class WalletRpcApi:
                 wallet_id=request.wallet_id,
                 fee=request.fee,
                 puzzle_decorator=request.puzzle_decorator,
-            ).json_serialize_for_transport(action_scope.config.tx_config, extra_conditions, ConditionValidTimes()),
+            ),
+            action_scope=action_scope,
+            extra_conditions=extra_conditions,
             hold_lock=False,
-            action_scope_override=action_scope,
         )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
@@ -1603,8 +1445,6 @@ class WalletRpcApi:
             transaction_id=bytes32.zeros,
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def send_transaction_multi(
         self,
         request: SendTransactionMulti,
@@ -1616,19 +1456,17 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             if issubclass(type(wallet), CATWallet):
                 await self.cat_spend(
-                    request.convert_to_proxy(CATSpend).json_serialize_for_transport(
-                        action_scope.config.tx_config, extra_conditions, ConditionValidTimes()
-                    ),
+                    request.convert_to_proxy(CATSpend),
+                    action_scope=action_scope,
+                    extra_conditions=extra_conditions,
                     hold_lock=False,
-                    action_scope_override=action_scope,
                 )
             else:
                 await self.create_signed_transaction(
-                    request.convert_to_proxy(CreateSignedTransaction).json_serialize_for_transport(
-                        action_scope.config.tx_config, extra_conditions, ConditionValidTimes()
-                    ),
+                    request.convert_to_proxy(CreateSignedTransaction),
+                    action_scope=action_scope,
+                    extra_conditions=extra_conditions,
                     hold_lock=False,
-                    action_scope_override=action_scope,
                 )
 
         # tx_endpoint will take care of these values
@@ -1639,8 +1477,6 @@ class WalletRpcApi:
             transaction_id=bytes32.zeros,
         )
 
-    @tx_endpoint(push=True, merge_spends=False)
-    @marshal
     async def spend_clawback_coins(
         self,
         request: SpendClawbackCoins,
@@ -1687,7 +1523,6 @@ class WalletRpcApi:
         # tx_endpoint will fill in the default values here
         return SpendClawbackCoinsResponse(unsigned_transactions=[], transactions=[], transaction_ids=[])
 
-    @marshal
     async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> Empty:
         if request.wallet_id not in self.service.wallet_state_manager.wallets:
             raise ValueError(f"Wallet id {request.wallet_id} does not exist")
@@ -1702,7 +1537,6 @@ class WalletRpcApi:
                 wallet.target_state = None
             return Empty()
 
-    @marshal
     async def select_coins(
         self,
         request: SelectCoins,
@@ -1742,7 +1576,6 @@ class WalletRpcApi:
 
         return SelectCoinsResponse(coins=list(selected_coins))
 
-    @marshal
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         sync_status = await self.service.wallet_state_manager.get_sync_status()
         if sync_status == SyncStatus.DISCONNECTED:
@@ -1790,7 +1623,6 @@ class WalletRpcApi:
             unconfirmed_additions=list(unconfirmed_additions),
         )
 
-    @marshal
     async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
         sync_status = await self.service.wallet_state_manager.get_sync_status()
         if sync_status == SyncStatus.DISCONNECTED:
@@ -1831,7 +1663,6 @@ class WalletRpcApi:
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
 
-    @marshal
     async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
         coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)
         if coin_record is None or not coin_record.spent:
@@ -1843,7 +1674,6 @@ class WalletRpcApi:
             solution=bytes(coin_spend.solution).hex(),
         )
 
-    @marshal
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
         assert self.service.wallet_state_manager is not None
 
@@ -1851,7 +1681,6 @@ class WalletRpcApi:
 
         return GetCurrentDerivationIndexResponse(index=index)
 
-    @marshal
     async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
         assert self.service.wallet_state_manager is not None
 
@@ -1888,7 +1717,6 @@ class WalletRpcApi:
 
         return ExtendDerivationIndexResponse(index=updated_index)
 
-    @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         return GetNotificationsResponse(
             notifications=(
@@ -1898,7 +1726,6 @@ class WalletRpcApi:
             )
         )
 
-    @marshal
     async def delete_notifications(self, request: DeleteNotifications) -> Empty:
         await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
             coin_ids=request.ids
@@ -1906,8 +1733,6 @@ class WalletRpcApi:
 
         return Empty()
 
-    @tx_endpoint(push=True)
-    @marshal
     async def send_notification(
         self,
         request: SendNotification,
@@ -1926,7 +1751,6 @@ class WalletRpcApi:
         # tx_endpoint will take care of these default values
         return SendNotificationResponse(unsigned_transactions=[], transactions=[], tx=REPLACEABLE_TRANSACTION_RECORD)
 
-    @marshal
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
         return verify_signature(
             signing_mode=request.signing_mode_enum,
@@ -1936,7 +1760,6 @@ class WalletRpcApi:
             address=request.address,
         )
 
-    @marshal
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         """
         Given a derived P2 address, sign the message by its private key.
@@ -1957,7 +1780,6 @@ class WalletRpcApi:
             signing_mode=request.signing_mode_enum.value,
         )
 
-    @marshal
     async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
         """
         Given a NFT/DID ID, sign the message by the P2 private key.
@@ -2030,27 +1852,23 @@ class WalletRpcApi:
     # CATs and Trading
     ##########################################################################################
 
-    @marshal
     async def get_cat_list(self, request: Empty) -> GetCATListResponse:
         return GetCATListResponse(
             cat_list=[DefaultCAT.from_json_dict(default_cat) for default_cat in DEFAULT_CATS.values()]
         )
 
-    @marshal
     async def cat_set_name(self, request: CATSetName) -> CATSetNameResponse:
         await self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet).set_name(
             request.name
         )
         return CATSetNameResponse(wallet_id=request.wallet_id)
 
-    @marshal
     async def cat_get_name(self, request: CATGetName) -> CATGetNameResponse:
         return CATGetNameResponse(
             wallet_id=request.wallet_id,
             name=self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet).get_name(),
         )
 
-    @marshal
     async def get_stray_cats(self, request: Empty) -> GetStrayCATsResponse:
         """
         Get a list of all unacknowledged CATs
@@ -2064,8 +1882,6 @@ class WalletRpcApi:
             ]
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def cat_spend(
         self,
         request: CATSpend,
@@ -2099,9 +1915,10 @@ class WalletRpcApi:
                 extra_delta=request.extra_delta,
                 tail_reveal=request.tail_reveal,
                 tail_solution=request.tail_solution,
-            ).json_serialize_for_transport(action_scope.config.tx_config, extra_conditions, ConditionValidTimes()),
+            ),
+            action_scope=action_scope,
+            extra_conditions=extra_conditions,
             hold_lock=hold_lock,
-            action_scope_override=action_scope,
         )
 
         # tx_endpoint will fill in these default values
@@ -2112,7 +1929,6 @@ class WalletRpcApi:
             transaction_id=bytes32.zeros,
         )
 
-    @marshal
     async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
         return CATGetAssetIDResponse(
             asset_id=self.service.wallet_state_manager.get_wallet(
@@ -2121,7 +1937,6 @@ class WalletRpcApi:
             wallet_id=request.wallet_id,
         )
 
-    @marshal
     async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
         wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id)
         if wallet is None:
@@ -2132,8 +1947,6 @@ class WalletRpcApi:
         else:
             return CATAssetIDToNameResponse(wallet_id=wallet.id(), name=wallet.get_name())
 
-    @tx_endpoint(push=False)
-    @marshal
     async def create_offer_for_ids(
         self,
         request: CreateOfferForIDs,
@@ -2170,7 +1983,6 @@ class WalletRpcApi:
             _trade_record=result[1],
         )
 
-    @marshal
     async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
         dl_summary = None
         if not request.advanced:
@@ -2226,7 +2038,6 @@ class WalletRpcApi:
             else None,
         )
 
-    @marshal
     async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
         offer = Offer.from_bech32(request.offer)
         peer = self.service.get_full_node_peer()
@@ -2235,8 +2046,6 @@ class WalletRpcApi:
             id=offer.name(),
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def take_offer(
         self,
         request: TakeOffer,
@@ -2266,7 +2075,6 @@ class WalletRpcApi:
             _trade_record=trade_record,
         )
 
-    @marshal
     async def get_offer(self, request: GetOffer) -> GetOfferResponse:
         trade_record: TradeRecord | None = await self.service.wallet_state_manager.trade_manager.get_trade_by_id(
             request.trade_id
@@ -2281,7 +2089,6 @@ class WalletRpcApi:
             trade_record=trade_record,
         )
 
-    @marshal
     async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
         all_trades = await self.service.wallet_state_manager.trade_manager.trade_store.get_trades_between(
             request.start,
@@ -2306,7 +2113,6 @@ class WalletRpcApi:
             offers=offer_values,
         )
 
-    @marshal
     async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:
         (
             total,
@@ -2318,8 +2124,6 @@ class WalletRpcApi:
             total=uint32(total), my_offers_count=uint32(my_offers_count), taken_offers_count=uint32(taken_offers_count)
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def cancel_offer(
         self,
         request: CancelOffer,
@@ -2338,8 +2142,6 @@ class WalletRpcApi:
         # tx_endpoint will fill in default values here
         return CancelOfferResponse(unsigned_transactions=[], transactions=[])
 
-    @tx_endpoint(push=True, merge_spends=False)
-    @marshal
     async def cancel_offers(
         self,
         request: CancelOffers,
@@ -2386,22 +2188,18 @@ class WalletRpcApi:
     # Distributed Identities
     ##########################################################################################
 
-    @marshal
     async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
         await self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet).set_name(
             request.name
         )
         return DIDSetWalletNameResponse(wallet_id=request.wallet_id)
 
-    @marshal
     async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
         return DIDGetWalletNameResponse(
             wallet_id=request.wallet_id,
             name=self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet).get_name(),
         )
 
-    @tx_endpoint(push=False)
-    @marshal
     async def did_message_spend(
         self,
         request: DIDMessageSpend,
@@ -2424,7 +2222,6 @@ class WalletRpcApi:
             unsigned_transactions=[], transactions=[], spend_bundle=WalletSpendBundle([], G2Element())
         )
 
-    @marshal
     async def did_get_info(self, request: DIDGetInfo) -> DIDGetInfoResponse:
         if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(request.coin_id)
@@ -2447,7 +2244,6 @@ class WalletRpcApi:
             hints=search_results.hints,
         )
 
-    @marshal
     async def did_find_lost_did(self, request: DIDFindLostDID) -> DIDFindLostDIDResponse:
         """
         Recover a missing or unspendable DID wallet by a coin id of the DID
@@ -2470,8 +2266,6 @@ class WalletRpcApi:
 
         return DIDFindLostDIDResponse(latest_coin_id=coin_id)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def did_update_metadata(
         self,
         request: DIDUpdateMetadata,
@@ -2491,7 +2285,6 @@ class WalletRpcApi:
                 spend_bundle=WalletSpendBundle([], G2Element()),
             )
 
-    @marshal
     async def did_get_did(self, request: DIDGetDID) -> DIDGetDIDResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
@@ -2502,7 +2295,6 @@ class WalletRpcApi:
             except RuntimeError:
                 return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did)
 
-    @marshal
     async def did_get_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
@@ -2511,7 +2303,6 @@ class WalletRpcApi:
             metadata=metadata,
         )
 
-    @marshal
     async def did_get_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
         # opportunity to raise
         self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
@@ -2519,7 +2310,6 @@ class WalletRpcApi:
             pubkey=(await self.service.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
         )
 
-    @marshal
     async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
         did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
@@ -2537,7 +2327,6 @@ class WalletRpcApi:
             did_amount=parent_coin.amount,
         )
 
-    @marshal
     async def did_create_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
         return DIDCreateBackupFileResponse(
             wallet_id=request.wallet_id,
@@ -2546,8 +2335,6 @@ class WalletRpcApi:
             ).create_backup(),
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def did_transfer_did(
         self,
         request: DIDTransferDID,
@@ -2576,8 +2363,6 @@ class WalletRpcApi:
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_mint_nft(
         self,
         request: NFTMintNFTRequest,
@@ -2637,7 +2422,6 @@ class WalletRpcApi:
             nft_id=nft_id_bech32,
         )
 
-    @marshal
     async def nft_count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
         count = 0
         if request.wallet_id is not None:
@@ -2648,7 +2432,6 @@ class WalletRpcApi:
             count = await self.service.wallet_state_manager.nft_store.count()
         return NFTCountNFTsResponse(wallet_id=request.wallet_id, count=uint64(count))
 
-    @marshal
     async def nft_get_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
         nfts: list[NFTCoinInfo] = []
         if request.wallet_id is not None:
@@ -2667,8 +2450,6 @@ class WalletRpcApi:
             nft_info_list.append(nft_info)
         return NFTGetNFTsResponse(wallet_id=request.wallet_id, nft_list=nft_info_list)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_set_nft_did(
         self,
         request: NFTSetNFTDID,
@@ -2701,8 +2482,6 @@ class WalletRpcApi:
             spend_bundle=WalletSpendBundle([], G2Element()),
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_set_did_bulk(
         self,
         request: NFTSetDIDBulk,
@@ -2773,8 +2552,6 @@ class WalletRpcApi:
                 tx_num=uint32(len(interface.side_effects.transactions)),
             )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_transfer_bulk(
         self,
         request: NFTTransferBulk,
@@ -2838,7 +2615,6 @@ class WalletRpcApi:
                 tx_num=uint32(len(interface.side_effects.transactions)),
             )
 
-    @marshal
     async def nft_get_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
         did_id: bytes32 | None = None
         if request.did_id is not None:
@@ -2848,7 +2624,6 @@ class WalletRpcApi:
                 return NFTGetByDIDResponse(wallet_id=uint32(wallet.wallet_id))
         raise ValueError(f"Cannot find a NFT wallet DID = {did_id}")
 
-    @marshal
     async def nft_get_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         did_bytes: bytes32 | None = nft_wallet.get_did()
@@ -2857,7 +2632,6 @@ class WalletRpcApi:
             did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
         return NFTGetWalletDIDResponse(did_id=None if len(did_id) == 0 else did_id)
 
-    @marshal
     async def nft_get_wallets_with_dids(self, request: Empty) -> NFTGetWalletsWithDIDsResponse:
         all_wallets = self.service.wallet_state_manager.wallets.values()
         did_wallets_by_did_id: dict[bytes32, uint32] = {}
@@ -2886,15 +2660,12 @@ class WalletRpcApi:
                         )
         return NFTGetWalletsWithDIDsResponse(nft_wallets=did_nft_wallets)
 
-    @marshal
     async def nft_set_nft_status(self, request: NFTSetNFTStatus) -> Empty:
         assert self.service.wallet_state_manager is not None
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         await nft_wallet.update_coin_status(request.coin_id, request.in_transaction)
         return Empty()
 
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_transfer_nft(
         self,
         request: NFTTransferNFT,
@@ -2929,7 +2700,6 @@ class WalletRpcApi:
             spend_bundle=WalletSpendBundle([], G2Element()),
         )
 
-    @marshal
     async def nft_get_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
         if request.coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(request.coin_id)
@@ -2942,8 +2712,6 @@ class WalletRpcApi:
         nft_info = dataclasses.replace(search_results.nft_info, p2_address=search_results.next_p2_puzzle_hash)
         return NFTGetInfoResponse(nft_info=nft_info)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def nft_add_uri(
         self,
         request: NFTAddURI,
@@ -2970,7 +2738,6 @@ class WalletRpcApi:
             spend_bundle=WalletSpendBundle([], G2Element()),
         )
 
-    @marshal
     async def nft_calculate_royalties(self, request: NFTCalculateRoyalties) -> NFTCalculateRoyaltiesResponse:
         return NFTCalculateRoyaltiesResponse.from_json_dict(
             NFTWallet.royalty_calculation(
@@ -2982,8 +2749,6 @@ class WalletRpcApi:
             )
         )
 
-    @tx_endpoint(push=False)
-    @marshal
     async def nft_mint_bulk(
         self,
         request: NFTMintBulk,
@@ -3074,13 +2839,11 @@ class WalletRpcApi:
             nft_id_list=nft_id_list,
         )
 
-    @marshal
     async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
         remote_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=RemoteWallet)
         await remote_wallet.register_remote_coins(request.coin_ids)
         return Empty()
 
-    @marshal
     async def get_coin_records(self, request: GetCoinRecords) -> GetCoinRecordsResponse:
 
         if request.limit != uint32.MAXIMUM and request.limit > self.max_get_coin_records_limit:
@@ -3142,7 +2905,6 @@ class WalletRpcApi:
             total_count=result.total_count,
         )
 
-    @marshal
     async def get_farmed_amount(self, request: GetFarmedAmount) -> GetFarmedAmountResponse:
         tx_records: list[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
@@ -3191,8 +2953,6 @@ class WalletRpcApi:
             blocks_won=uint32(blocks_won),
         )
 
-    @tx_endpoint(push=False)
-    @marshal
     async def create_signed_transaction(
         self,
         request: CreateSignedTransaction,
@@ -3261,8 +3021,6 @@ class WalletRpcApi:
     ##########################################################################################
     # Pool Wallet
     ##########################################################################################
-    @tx_endpoint(push=True)
-    @marshal
     async def pw_join_pool(
         self,
         request: PWJoinPool,
@@ -3314,8 +3072,6 @@ class WalletRpcApi:
             fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def pw_self_pool(
         self,
         request: PWSelfPool,
@@ -3350,8 +3106,6 @@ class WalletRpcApi:
             fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def pw_absorb_rewards(
         self,
         request: PWAbsorbRewards,
@@ -3379,7 +3133,6 @@ class WalletRpcApi:
             fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
         )
 
-    @marshal
     async def pw_status(self, request: PWStatus) -> PWStatusResponse:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
@@ -3399,8 +3152,6 @@ class WalletRpcApi:
     ##########################################################################################
     # DataLayer Wallet
     ##########################################################################################
-    @tx_endpoint(push=True)
-    @marshal
     async def create_new_dl(
         self,
         request: CreateNewDL,
@@ -3424,7 +3175,6 @@ class WalletRpcApi:
         # tx_endpoint will take care of these default values
         return CreateNewDLResponse(unsigned_transactions=[], transactions=[], launcher_id=launcher_id)
 
-    @marshal
     async def dl_track_new(self, request: DLTrackNew) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
@@ -3436,7 +3186,6 @@ class WalletRpcApi:
 
         return Empty()
 
-    @marshal
     async def dl_stop_tracking(self, request: DLStopTracking) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
@@ -3446,7 +3195,6 @@ class WalletRpcApi:
         await dl_wallet.stop_tracking_singleton(request.launcher_id)
         return Empty()
 
-    @marshal
     async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
@@ -3456,7 +3204,6 @@ class WalletRpcApi:
         record = await wallet.get_latest_singleton(request.launcher_id, request.only_confirmed)
         return DLLatestSingletonResponse(singleton=record)
 
-    @marshal
     async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
@@ -3466,8 +3213,6 @@ class WalletRpcApi:
         records = await wallet.get_singletons_by_root(request.launcher_id, request.root)
         return DLSingletonsByRootResponse(singletons=records)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def dl_update_root(
         self,
         request: DLUpdateRoot,
@@ -3491,8 +3236,6 @@ class WalletRpcApi:
         # tx_endpoint will take care of default values here
         return DLUpdateRootResponse(unsigned_transactions=[], transactions=[], tx_record=REPLACEABLE_TRANSACTION_RECORD)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def dl_update_multiple(
         self,
         request: DLUpdateMultiple,
@@ -3521,7 +3264,6 @@ class WalletRpcApi:
             # tx_endpoint will take care of default values here
             return DLUpdateMultipleResponse(unsigned_transactions=[], transactions=[])
 
-    @marshal
     async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
@@ -3540,7 +3282,6 @@ class WalletRpcApi:
         history = await wallet.get_history(request.launcher_id, **additional_kwargs)
         return DLHistoryResponse(history=history, count=uint32(len(history)))
 
-    @marshal
     async def dl_owned_singletons(self, request: Empty) -> DLOwnedSingletonsResponse:
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
@@ -3551,7 +3292,6 @@ class WalletRpcApi:
 
         return DLOwnedSingletonsResponse(singletons=singletons, count=uint32(len(singletons)))
 
-    @marshal
     async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
         """Get all of the mirrors for a specific singleton"""
         if self.service.wallet_state_manager is None:
@@ -3560,8 +3300,6 @@ class WalletRpcApi:
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         return DLGetMirrorsResponse(mirrors=await wallet.get_mirrors_for_launcher(request.launcher_id))
 
-    @tx_endpoint(push=True)
-    @marshal
     async def dl_new_mirror(
         self,
         request: DLNewMirror,
@@ -3586,8 +3324,6 @@ class WalletRpcApi:
         # tx_endpoint will take care of default values here
         return DLNewMirrorResponse(unsigned_transactions=[], transactions=[])
 
-    @tx_endpoint(push=True)
-    @marshal
     async def dl_delete_mirror(
         self,
         request: DLDeleteMirror,
@@ -3611,7 +3347,6 @@ class WalletRpcApi:
         # tx_endpoint will take care of default values here
         return DLDeleteMirrorResponse(unsigned_transactions=[], transactions=[])
 
-    @marshal
     async def dl_verify_proof(
         self,
         request: DLProof,
@@ -3628,8 +3363,6 @@ class WalletRpcApi:
     ##########################################################################################
     # Verified Credential
     ##########################################################################################
-    @tx_endpoint(push=True)
-    @marshal
     async def vc_mint(
         self,
         request: VCMint,
@@ -3654,7 +3387,6 @@ class WalletRpcApi:
         )
         return VCMintResponse(unsigned_transactions=[], transactions=[], vc_record=vc_record)
 
-    @marshal
     async def vc_get(self, request: VCGet) -> VCGetResponse:
         """
         Given a launcher ID get the verified credential
@@ -3664,7 +3396,6 @@ class WalletRpcApi:
         vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request.vc_id)
         return VCGetResponse(vc_record=vc_record)
 
-    @marshal
     async def vc_get_list(self, request: VCGetList) -> VCGetListResponse:
         """
         Get a list of verified credentials
@@ -3688,8 +3419,6 @@ class WalletRpcApi:
             ],
         )
 
-    @tx_endpoint(push=True)
-    @marshal
     async def vc_spend(
         self,
         request: VCSpend,
@@ -3723,7 +3452,6 @@ class WalletRpcApi:
 
         return VCSpendResponse(unsigned_transactions=[], transactions=[])  # tx_endpoint takes care of filling this out
 
-    @marshal
     async def vc_add_proofs(self, request: VCAddProofs) -> Empty:
         """
         Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
@@ -3737,7 +3465,6 @@ class WalletRpcApi:
 
         return Empty()
 
-    @marshal
     async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
         """
         Given a specified vc root, get any proofs associated with that root.
@@ -3752,8 +3479,6 @@ class WalletRpcApi:
             raise ValueError("no proofs found for specified root")  # pragma: no cover
         return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
 
-    @tx_endpoint(push=True)
-    @marshal
     async def vc_revoke(
         self,
         request: VCRevoke,
@@ -3778,8 +3503,6 @@ class WalletRpcApi:
 
         return VCRevokeResponse(unsigned_transactions=[], transactions=[])  # tx_endpoint takes care of filling this out
 
-    @tx_endpoint(push=True)
-    @marshal
     async def crcat_approve_pending(
         self,
         request: CRCATApprovePending,
@@ -3807,42 +3530,40 @@ class WalletRpcApi:
         # tx_endpoint will take care of default values here
         return CRCATApprovePendingResponse(unsigned_transactions=[], transactions=[])
 
-    @marshal
     async def gather_signing_info(
         self,
         request: GatherSigningInfo,
     ) -> GatherSigningInfoResponse:
         return GatherSigningInfoResponse(
-            signing_instructions=await self.service.wallet_state_manager.gather_signing_info(request.spends)
+            signing_instructions=await self.service.wallet_state_manager.signer.gather_signing_info(request.spends)
         )
 
-    @marshal
     async def apply_signatures(
         self,
         request: ApplySignatures,
     ) -> ApplySignaturesResponse:
         return ApplySignaturesResponse(
             signed_transactions=[
-                await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses)
+                await self.service.wallet_state_manager.signer.apply_signatures(
+                    request.spends, request.signing_responses
+                )
             ]
         )
 
-    @marshal
     async def submit_transactions(
         self,
         request: SubmitTransactions,
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
-            mempool_ids=await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+            mempool_ids=await self.service.wallet_state_manager.signer.submit_transactions(request.signed_transactions)
         )
 
-    @marshal
     async def execute_signing_instructions(
         self,
         request: ExecuteSigningInstructions,
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse(
-            signing_responses=await self.service.wallet_state_manager.execute_signing_instructions(
+            signing_responses=await self.service.wallet_state_manager.signer.execute_signing_instructions(
                 request.signing_instructions, request.partial_allowed
             )
         )

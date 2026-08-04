@@ -1454,7 +1454,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
-    eve_spend, _ = await wsm.sign_bundle(
+    eve_spend, _ = await wsm.signer.sign_bundle(
         [
             make_spend(
                 cat_coin,
@@ -1543,7 +1543,7 @@ async def test_unacknowledged_cat_table() -> None:
                 return CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(i)), None, None)
 
             await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
+            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), uint32(100))
             assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
             await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
             assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
@@ -1670,7 +1670,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                 )
             ],
         )
-        signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
+        signed_spend, _ = await env.wallet_state_manager.signer.sign_bundle(new_spend.coin_spends)
         await env.rpc_client.push_tx(PushTX(spend_bundle=signed_spend))
         await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
 
