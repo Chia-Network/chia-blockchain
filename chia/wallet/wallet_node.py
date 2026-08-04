@@ -1113,8 +1113,20 @@ class WalletNode:
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
-        for coin in request.items:
-            self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
+        max_items = int(self.config.get("max_coin_state_update_items", 100_000))
+        item_count = len(request.items)
+        if item_count > max_items:
+            self.log.error(
+                f"Peer {peer.peer_info.host} sent coin state update with {item_count} items, "
+                f"exceeding limit of {max_items}"
+            )
+            await peer.close(9999)
+            return
+
+        self.log.info(
+            f"Received coin state update from {peer.peer_info.host}: "
+            f"{item_count} items at height {request.height} fork_height {request.fork_height}"
+        )
 
         async with self.wallet_state_manager.lock:
             await self.add_states_from_peer(
