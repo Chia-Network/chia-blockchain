@@ -642,14 +642,14 @@ class FullNode:
                 if first is None or not isinstance(first, full_node_protocol.RespondBlock):
                     self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
                     return False
-                first_prev_hash = (
-                    self.blockchain.height_to_hash(uint32(first.block.height - 1)) if first.block.height > 0 else None
-                )
-                if first_prev_hash is None:
-                    self.log.info(
-                        f"Batch syncing stopped, block at height {first.block.height} does not connect to our chain"
+                if first.block.height != start_height:
+                    raise ValueError(
+                        f"Error short batch syncing, peer returned block at height {first.block.height} "
+                        f"instead of requested height {start_height}"
                     )
-                    return False
+                # start_height - 1 is below our peak, so it is always in our main chain
+                first_prev_hash = self.blockchain.height_to_hash(uint32(start_height - 1))
+                assert first_prev_hash is not None
                 if first_prev_hash != first.block.prev_header_hash:
                     self.log.info("Batch syncing stopped, this is a deep chain")
                     # First block is not connected to our blockchain; do a long sync instead

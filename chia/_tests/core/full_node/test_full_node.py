@@ -1325,7 +1325,7 @@ def make_short_sync_respond_block(height: uint32, prev_header_hash: bytes32) -> 
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("bad_first_block", ["height_zero", "height_above_peak", "hash_mismatch", "none"])
+@pytest.mark.parametrize("bad_first_block", ["hash_mismatch", "none"])
 async def test_short_sync_batch_cleans_up_batch_syncing_on_unconnected_first_block(
     bad_first_block: str,
 ) -> None:
@@ -1333,11 +1333,7 @@ async def test_short_sync_batch_cleans_up_batch_syncing_on_unconnected_first_blo
     fn = make_short_sync_batch_test_node(prev_hash=parent_hash)
 
     response: fnp.RespondBlock | None
-    if bad_first_block == "height_zero":
-        response = make_short_sync_respond_block(uint32(0), parent_hash)
-    elif bad_first_block == "height_above_peak":
-        response = make_short_sync_respond_block(uint32(2), parent_hash)
-    elif bad_first_block == "hash_mismatch":
+    if bad_first_block == "hash_mismatch":
         response = make_short_sync_respond_block(uint32(1), bytes32(b"\x02" * 32))
     else:
         response = None
@@ -1356,6 +1352,33 @@ async def test_short_sync_batch_cleans_up_batch_syncing_on_unconnected_first_blo
     result = await fn.short_sync_batch(peer, uint32(1), uint32(2))
 
     assert result is False
+    assert node_id not in fn.sync_store.batch_syncing
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("wrong_height", [uint32(0), uint32(2)])
+async def test_short_sync_batch_raises_on_wrong_height_first_block(wrong_height: uint32) -> None:
+    # A first block at a height other than the requested one is an invalid peer
+    # response; it must raise (disconnecting the peer) rather than return False,
+    # which would trigger a long sync.
+    parent_hash = bytes32(b"\x01" * 32)
+    fn = make_short_sync_batch_test_node(prev_hash=parent_hash)
+    response = make_short_sync_respond_block(wrong_height, parent_hash)
+
+    node_id = bytes32(b"\x07" * 32)
+
+    class _StubPeer:
+        peer_node_id = node_id
+
+        async def call_api(self, request_method: Any, message: Any, **kwargs: Any) -> fnp.RespondBlock:
+            return response
+
+    peer = cast(WSChiaConnection, _StubPeer())
+    assert node_id not in fn.sync_store.batch_syncing
+
+    with pytest.raises(ValueError, match=f"peer returned block at height {wrong_height}"):
+        await fn.short_sync_batch(peer, uint32(1), uint32(2))
+
     assert node_id not in fn.sync_store.batch_syncing
 
 
