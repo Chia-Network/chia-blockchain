@@ -148,10 +148,10 @@ async def make_pool_protocol_request(
                         f"{method} /{endpoint_name} response: {json_response}",
                     )
                     if "error_code" in json_response:
-                        return (
-                            pool_protocol.ErrorResponse.from_json_dict(json_response),
-                            resp,
-                        )
+                        error_response = pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        if error_response.error_code == pool_protocol.PoolErrorCode.INVALID_AUTHENTICATION_TOKEN.value:
+                            self.authentication_tokens.pop(pool_config.launcher_id)
+                        return (error_response, resp)
                     else:
                         return (response_type.from_json_dict(json_response), resp)
                 else:
