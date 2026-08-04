@@ -514,7 +514,7 @@ async def test_cat_trades(
     assert trade_make is not None
 
     peer = wallet_node_taker.get_full_node_peer()
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -731,7 +731,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -860,7 +860,7 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1061,7 +1061,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1318,7 +1318,7 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1451,7 +1451,7 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1733,7 +1733,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
     # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.
     # Uncomment this when/if it does
 
-    # [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    # [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.signer.sign_offers(
     #   [Offer.from_bytes(trade_make.offer)]
     # )
     # trade_take = await trade_manager_taker.respond_to_offer(
@@ -2037,7 +2037,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
     assert trade_make is not None
     peer = env_taker.node.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers([offer])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
@@ -2055,7 +2055,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
             await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers([offer])
     async with trade_manager_trader.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
@@ -2352,7 +2352,9 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework, wallet_t
     assert success is True
     assert trade_make is not None
     peer = env_taker.node.get_full_node_peer()
-    [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     fee = uint64(1_000_000_000_000)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
@@ -2515,10 +2517,10 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework, 
     assert success is True
     assert trade_make_2 is not None
 
-    [offer_1], signing_response_1 = await env_maker.node.wallet_state_manager.sign_offers(
+    [offer_1], signing_response_1 = await env_maker.node.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make_1.offer)]
     )
-    [offer_2], signing_response_2 = await env_maker.node.wallet_state_manager.sign_offers(
+    [offer_2], signing_response_2 = await env_maker.node.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make_2.offer)]
     )
     agg_offer = Offer.aggregate([offer_1, offer_2])

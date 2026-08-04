@@ -430,7 +430,7 @@ def tx_endpoint(
                 # deferring to parent action scope
                 return response
 
-            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
+            unsigned_txs = await self.service.wallet_state_manager.signer.gather_signing_info_for_txs(
                 action_scope.side_effects.transactions
             )
 
@@ -3535,7 +3535,7 @@ class WalletRpcApi:
         request: GatherSigningInfo,
     ) -> GatherSigningInfoResponse:
         return GatherSigningInfoResponse(
-            signing_instructions=await self.service.wallet_state_manager.gather_signing_info(request.spends)
+            signing_instructions=await self.service.wallet_state_manager.signer.gather_signing_info(request.spends)
         )
 
     async def apply_signatures(
@@ -3544,7 +3544,9 @@ class WalletRpcApi:
     ) -> ApplySignaturesResponse:
         return ApplySignaturesResponse(
             signed_transactions=[
-                await self.service.wallet_state_manager.apply_signatures(request.spends, request.signing_responses)
+                await self.service.wallet_state_manager.signer.apply_signatures(
+                    request.spends, request.signing_responses
+                )
             ]
         )
 
@@ -3553,7 +3555,7 @@ class WalletRpcApi:
         request: SubmitTransactions,
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
-            mempool_ids=await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+            mempool_ids=await self.service.wallet_state_manager.signer.submit_transactions(request.signed_transactions)
         )
 
     async def execute_signing_instructions(
@@ -3561,7 +3563,7 @@ class WalletRpcApi:
         request: ExecuteSigningInstructions,
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse(
-            signing_responses=await self.service.wallet_state_manager.execute_signing_instructions(
+            signing_responses=await self.service.wallet_state_manager.signer.execute_signing_instructions(
                 request.signing_instructions, request.partial_allowed
             )
         )
