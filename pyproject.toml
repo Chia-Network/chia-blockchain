@@ -60,7 +60,7 @@ clvm = ">=0.9.14"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 chialisp = ">=0.4.1"  # Rust implementation of ChiaLisp compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
-colorlog = ">=6.9.0"  # Adds color to logs
+colorlog = ">=6.12.0"  # Adds color to logs
 concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs
 cryptography = ">=48.0.0"  # Python cryptography library for TLS - keyring conflict
 dnslib = ">=0.9.25"  # dns lib
