@@ -35,6 +35,10 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+)
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
@@ -453,8 +457,8 @@ class FullNodeAPI:
 
         block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            if not request.include_transaction_block and block.transactions_generator is not None:
-                block = block.replace(transactions_generator=None)
+            if not request.include_transaction_block and block_has_transactions_generator(block):
+                block = block.replace(transactions_generator=None, transactions_generator_buffer=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
@@ -488,7 +492,7 @@ class FullNodeAPI:
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block = block.replace(transactions_generator=None)
+                block = block.replace(transactions_generator=None, transactions_generator_buffer=None)
                 blocks.append(block)
             msg = make_msg(
                 ProtocolMessageTypes.respond_blocks,
@@ -1208,6 +1212,7 @@ class FullNodeAPI:
                 sp_vdfs,
                 timestamp,
                 self.full_node.blockchain,
+                tx_height,
                 b"",
                 new_block_gen,
                 prev_b,
@@ -1247,7 +1252,7 @@ class FullNodeAPI:
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
             # Adds backup in case the first one fails
-            if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
+            if unfinished_block.is_transaction_block() and block_has_transactions_generator(unfinished_block):
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
@@ -1263,6 +1268,7 @@ class FullNodeAPI:
                     sp_vdfs,
                     timestamp,
                     self.full_node.blockchain,
+                    tx_height,
                     b"",
                     None,
                     prev_b,
@@ -1404,7 +1410,7 @@ class FullNodeAPI:
 
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
 
-        if block.transactions_generator is not None:
+        if block_has_transactions_generator(block):
             block_generator: BlockGenerator | None = await get_block_generator(
                 self.full_node.blockchain.lookup_block_generators, block
             )
@@ -1417,9 +1423,11 @@ class FullNodeAPI:
             # trusted peers use dedicated threads at high priority;
             # untrusted peers are deprioritized
             trusted = self.is_trusted(peer)
+            generator_bytes = get_transactions_generator_bytes(block)
+            assert generator_bytes is not None
             additions, removals = await self.full_node.pool.run_in_loop(
                 additions_and_removals,
-                bytes(block.transactions_generator),
+                generator_bytes,
                 block_generator.generator_refs,
                 flags,
                 self.full_node.constants,
@@ -1567,7 +1575,7 @@ class FullNodeAPI:
                 proofs_map: list[tuple[bytes32, bytes]] = []
 
                 # If there are no transactions, respond with empty lists
-                if block.transactions_generator is None:
+                if not block_has_transactions_generator(block):
                     proofs: list[tuple[bytes32, bytes]] | None
                     if request.coin_names is None:
                         proofs = None
@@ -1579,7 +1587,7 @@ class FullNodeAPI:
                         coins_map.append((removed_name, removed_coin))
                     response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
                 else:
-                    assert block.transactions_generator
+                    assert block_has_transactions_generator(block)
                     leafs: list[bytes32] = []
                     for removed_name, removed_coin in all_removals_dict.items():
                         leafs.append(removed_name)
@@ -1657,7 +1665,7 @@ class FullNodeAPI:
 
         block: BlockInfo | None = await self.full_node.block_store.get_block_info(header_hash)
 
-        if block is None or block.transactions_generator is None:
+        if block is None or not block_has_transactions_generator(block):
             return reject_msg
 
         block_generator: BlockGenerator | None = await get_block_generator(

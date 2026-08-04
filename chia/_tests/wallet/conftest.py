@@ -22,6 +22,7 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
@@ -86,7 +87,8 @@ async def ignore_block_validation(
     def run_block(
         block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
     ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
-        assert block.transactions_generator is not None
+        generator_bytes = get_transactions_generator_bytes(block)
+        assert generator_bytes is not None
         assert block.transactions_info is not None
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
         if block.height >= constants.HARD_FORK_HEIGHT:
@@ -94,7 +96,7 @@ async def ignore_block_validation(
         else:
             run_block = run_block_generator
         err, err_msg, conds = run_block(
-            bytes(block.transactions_generator),
+            generator_bytes,
             prev_generators,
             block.transactions_info.cost,
             flags,

@@ -245,13 +245,26 @@ def generator_from_block(buf: memoryview) -> bytes | None:
     buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
     buf = skip_optional(buf, skip_transactions_info)  # transactions_info
 
-    # this is the transactions_generator optional
-    if buf[0] == 0:
-        return None
-
+    # transactions_generator is versioned:
+    # bit 0 = present, bit 1 = version 1 (plain buffer). Version 0 uses CLVM
+    # serialization; version 1 uses a 4-byte length prefix and omits the ref list.
+    discriminant = buf[0]
     buf = buf[1:]
-    length = serialized_length(buf)
-    return bytes(buf[:length])
+    if (discriminant & 1) == 0:
+        return None
+    version = discriminant >> 1
+    if version == 0:
+        length = serialized_length(buf)
+        return bytes(buf[:length])
+    if version == 1:
+        if len(buf) < 4:
+            raise ValueError(f"generator_buffer length prefix requires 4 bytes, remaining buffer {len(buf)}")
+        length = uint32.from_bytes(buf[:4])
+        buf = buf[4:]
+        if length > len(buf):
+            raise ValueError(f"generator_buffer length: {length}, exceeds remaining buffer {len(buf)}")
+        return bytes(buf[:length])
+    raise ValueError(f"invalid FullBlock generator version: {version}")
 
 
 # this implements the BlockInfo protocol
@@ -276,29 +289,43 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
     buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
     buf = skip_optional(buf, skip_transactions_info)  # transactions_info
 
-    # this is the transactions_generator optional
-    generator = None
-    if buf[0] != 0:
-        buf = buf[1:]
-        length = serialized_length(buf)
-        generator = SerializedProgram.from_bytes(bytes(buf[:length]))
-        buf = buf[length:]
-    else:
-        buf = buf[1:]
+    # transactions_generator is versioned (see generator_from_block)
+    discriminant = buf[0]
+    buf = buf[1:]
+    version = uint8(discriminant >> 1)
+    generator: SerializedProgram | None = None
+    generator_buffer: bytes | None = None
+    if (discriminant & 1) != 0:
+        if version == 0:
+            length = serialized_length(buf)
+            generator = SerializedProgram.from_bytes(bytes(buf[:length]))
+            buf = buf[length:]
 
-    if len(buf) < 4:
-        raise ValueError(f"refs count prefix requires 4 bytes, remaining buffer {len(buf)}")
-    refs_length = uint32.from_bytes(buf[:4])
-    buf = buf[4:]
-    if refs_length * 4 > len(buf):
-        raise ValueError(f"refs count {refs_length} exceeds remaining buffer {len(buf)}")
+        elif version == 1:
+            if len(buf) < 4:
+                raise ValueError(f"generator_buffer length prefix requires 4 bytes, remaining buffer {len(buf)}")
+            length = uint32.from_bytes(buf[:4])
+            buf = buf[4:]
+            if length > len(buf):
+                raise ValueError(f"generator_buffer length: {length}, exceeds remaining buffer {len(buf)}")
+            generator_buffer = bytes(buf[:length])
+            buf = buf[length:]
+        else:
+            raise ValueError(f"invalid FullBlock generator version: {version}")
 
-    refs = []
-    for i in range(refs_length):
-        refs.append(uint32.from_bytes(buf[:4]))
+    refs: list[uint32] = []
+    if version == 0:
+        if len(buf) < 4:
+            raise ValueError(f"refs count prefix requires 4 bytes, remaining buffer {len(buf)}")
+        refs_length = uint32.from_bytes(buf[:4])
         buf = buf[4:]
+        if refs_length * 4 > len(buf):
+            raise ValueError(f"refs count {refs_length} exceeds remaining buffer {len(buf)}")
+        for _ in range(refs_length):
+            refs.append(uint32.from_bytes(buf[:4]))
+            buf = buf[4:]
 
-    return GeneratorBlockInfo(prev_hash, generator, refs)
+    return GeneratorBlockInfo(prev_hash, generator, refs, generator_buffer, version)
 
 
 def header_block_from_block(

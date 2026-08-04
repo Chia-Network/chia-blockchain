@@ -20,10 +20,15 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+)
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.generator_validation import validate_generator_ref_list
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -214,17 +219,14 @@ async def validate_block_body(
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
     prev_transaction_block_timestamp: uint64 = uint64(0)
-
-    # 0. Validate block version. Version 1 (which omits transaction_generator_ref_list
-    # and encodes the generator as a plain buffer) is only valid after the 3.0 hard fork.
-    # TODO: allow version 1 after the hard fork activates
-    #   if block.version == 1:
-    #       if height < constants.HARD_FORK2_HEIGHT:
-    #           return Err.INVALID_BLOCK_VERSION
-    #   elif block.version != 0:
-    #       return Err.INVALID_BLOCK_VERSION
-    if block.version != 0:
-        return Err.INVALID_BLOCK_VERSION
+    # Version is an SP-time gate (matches unfinished-header validation).
+    pre_sp_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=records,
+        prev_b_hash=block.prev_header_hash,
+        sp_index=block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(block.finished_sub_slots),
+    )
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
@@ -233,8 +235,7 @@ async def validate_block_body(
         if (
             block.foliage_transaction_block is not None
             or block.transactions_info is not None
-            or block.transactions_generator is not None
-            or block.transactions_generator_buffer is not None
+            or block_has_transactions_generator(block)
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
 
@@ -250,6 +251,18 @@ async def validate_block_body(
         assert fork_info.peak_height == height - 1
 
         assert conds is None
+
+        # Version is still validated for non-transaction blocks (keyed on
+        # pre_sp_tx_block_height), matching unfinished-header validation.
+        if block.version == 1:
+            if pre_sp_tx_height < constants.HARD_FORK2_HEIGHT:
+                return Err.INVALID_BLOCK_VERSION
+        elif block.version == 0:
+            if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+                return Err.INVALID_BLOCK_VERSION
+        else:
+            return Err.INVALID_BLOCK_VERSION
+
         # This means the block is valid
         return None
 
@@ -271,7 +284,8 @@ async def validate_block_body(
         return Err.INVALID_FOLIAGE_BLOCK_HASH
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees
-    # If height == 0, expected_reward_coins will be left empty
+    # If height == 0, expected_reward_coins will be left empty and prev_transaction_block_height
+    # stays 0 (no previous transaction block).
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = records.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
@@ -280,6 +294,7 @@ async def validate_block_body(
         assert prev_transaction_block.timestamp
         prev_transaction_block_timestamp = prev_transaction_block.timestamp
         assert prev_transaction_block.fees is not None
+
         pool_coin = create_pool_coin(
             prev_transaction_block_height,
             prev_transaction_block.pool_puzzle_hash,
@@ -320,6 +335,18 @@ async def validate_block_body(
                 curr_b = records.block_record(curr_b.prev_hash)
                 assert curr_b is not None
 
+    # Validate block version. Version 1 (plain generator buffer, no ref list) is required
+    # after the 3.0 hard fork, and version 0 is required before it. Activation is based on
+    # pre_sp_tx_block_height (0 for genesis), matching unfinished-header validation.
+    if block.version == 1:
+        if pre_sp_tx_height < constants.HARD_FORK2_HEIGHT:
+            return Err.INVALID_BLOCK_VERSION
+    elif block.version == 0:
+        if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+            return Err.INVALID_BLOCK_VERSION
+    else:
+        return Err.INVALID_BLOCK_VERSION
+
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
 
@@ -342,8 +369,9 @@ async def validate_block_body(
 
     # 7a. The generator root must be the hash of the serialized bytes of
     #     the generator for this block (or zeroes if no generator)
-    if block.transactions_generator is not None:
-        if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+    generator_bytes = get_transactions_generator_bytes(block)
+    if generator_bytes is not None:
+        if std_hash(generator_bytes) != block.transactions_info.generator_root:
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
     elif block.transactions_info.generator_root != bytes([0] * 32):
         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -356,7 +384,7 @@ async def validate_block_body(
     if generator_ref_error is not None:
         return generator_ref_error
 
-    if block.transactions_generator is not None:
+    if generator_bytes is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         cost = uint64(0 if conds is None else conds.cost)
@@ -374,7 +402,7 @@ async def validate_block_body(
         assert conds.validated_signature
 
         if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
-            if not is_canonical_serialization(bytes(block.transactions_generator)):
+            if not is_canonical_serialization(generator_bytes):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 
         for spend in conds.spends:

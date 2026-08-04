@@ -3,6 +3,7 @@ from __future__ import annotations
 from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 
@@ -16,14 +17,14 @@ def validate_generator_ref_list(
     assert block.transactions_info is not None
 
     generator_refs = block.transactions_generator_ref_list
-    if not generator_refs:
+    if generator_refs == []:
         if block.transactions_info.generator_refs_root != bytes([1] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
         return None
 
     if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
         return Err.TOO_MANY_GENERATOR_REFS
-    if block.transactions_generator is None:
+    if not block_has_transactions_generator(block):
         return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
     if len(generator_refs) > constants.MAX_GENERATOR_REF_LIST_SIZE:
         return Err.TOO_MANY_GENERATOR_REFS

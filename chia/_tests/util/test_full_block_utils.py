@@ -309,22 +309,27 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
                                 for finished_sub_slots in get_finished_sub_slots():
                                     for refs_list in get_ref_list():
                                         for gen in [None, generator]:
-                                            yield FullBlock(
-                                                finished_sub_slots,
-                                                reward_chain_block,
-                                                challenge_chain_sp_proof,
-                                                vdf_proof(),  # challenge_chain_ip_proof
-                                                reward_chain_sp_proof,
-                                                vdf_proof(),  # reward_chain_ip_proof
-                                                infused_challenge_chain_ip_proof,
-                                                foliage,
-                                                foliage_transaction_block,
-                                                transactions_info,
-                                                gen,  # transactions_generator
-                                                refs_list,  # transactions_generator_ref_list
-                                                None,
-                                                uint8(0),
-                                            )
+                                            for version in [0, 1]:
+                                                yield FullBlock(
+                                                    finished_sub_slots,
+                                                    reward_chain_block,
+                                                    challenge_chain_sp_proof,
+                                                    vdf_proof(),  # challenge_chain_ip_proof
+                                                    reward_chain_sp_proof,
+                                                    vdf_proof(),  # reward_chain_ip_proof
+                                                    infused_challenge_chain_ip_proof,
+                                                    foliage,
+                                                    foliage_transaction_block,
+                                                    transactions_info,
+                                                    gen if version == 0 and gen else None,  # transactions_generator
+                                                    refs_list
+                                                    if version == 0
+                                                    else [],  # transactions_generator_ref_list
+                                                    bytes(gen)
+                                                    if version == 1 and gen
+                                                    else None,  # transactions_generator_buffer
+                                                    uint8(version),
+                                                )
 
 
 def test_block_info_from_block_rejects_refs_count_exceeding_remaining_buffer() -> None:
@@ -378,21 +383,37 @@ async def test_parser(shard: int) -> None:
         gen = generator_from_block(block_bytes)
         if gen is None:
             assert block.transactions_generator is None
-        else:
+            assert block.transactions_generator_buffer is None
+        elif block.version == 0:
             assert block.transactions_generator is not None
             assert Program.from_bytes(gen) == block.transactions_generator
+        else:
+            assert block.version == 1
+            assert block.transactions_generator_buffer is not None
+            assert gen == block.transactions_generator_buffer
         bi = block_info_from_block(block_bytes)
         if block.transactions_generator is None:
             assert bi.transactions_generator is None
         else:
             assert block.transactions_generator == bi.transactions_generator
+        if block.transactions_generator_buffer is None:
+            assert bi.transactions_generator_buffer is None
+        else:
+            assert block.transactions_generator_buffer == bi.transactions_generator_buffer
         assert block.prev_header_hash == bi.prev_header_hash
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
         # this doubles the run-time of this test, with questionable utility
+        round_trip = FullBlock.from_bytes(block_bytes)
         if gen is None:
-            assert FullBlock.from_bytes(block_bytes).transactions_generator is None
+            assert round_trip.transactions_generator is None
+            assert round_trip.transactions_generator_buffer is None
+        elif round_trip.version == 0:
+            assert round_trip.transactions_generator_buffer is None
+            assert Program.from_bytes(gen) == round_trip.transactions_generator
         else:
-            assert Program.from_bytes(gen) == FullBlock.from_bytes(block_bytes).transactions_generator
+            assert round_trip.version == 1
+            assert round_trip.transactions_generator is None
+            assert gen == round_trip.transactions_generator_buffer
 
 
 @pytest.mark.anyio
