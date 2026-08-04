@@ -1023,12 +1023,6 @@ class WalletStateManager:
 
         return None, None
 
-    def get_wallet_id_for_plotnft_id(self, *, plotnft_id: bytes32) -> uint32 | None:
-        for id, wallet in self.wallets.items():
-            if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == plotnft_id:
-                return id
-        return None
-
     @property
     def tx_config(self) -> TXConfig:
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(self.config.get("auto_claim", {}))

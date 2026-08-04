@@ -23,7 +23,12 @@ from chia import __version__
 from chia._tests.conftest import FarmerOneHarvester, HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer import (
+    UPDATE_POOL_FARMER_INFO_INTERVAL,
+    Farmer,
+    increment_pool_stats,
+    strip_old_entries,
+)
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolingShareState
@@ -1300,6 +1305,110 @@ async def test_farmer_pool_info_config_update(
         + r"&authentication_token=\d+&signature=[0-9a-f]+"
     )
     assert re.fullmatch(expected, login_link) is not None
+
+
+@dataclass
+class DummyGetFarmerResponse:
+    ok: bool
+    status: int
+    current_difficulty: int
+    current_points: int
+
+    async def json(self, **kwargs: object) -> dict[str, Any]:
+        return {
+            "current_difficulty": self.current_difficulty,
+            "current_points": self.current_points,
+            "authentication_public_key": bytes(G1Element()).hex(),
+            "payout_instructions": "",
+        }
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
+
+@pytest.mark.parametrize("pool_protocol_version", [1, 2])
+@pytest.mark.anyio
+async def test_farmer_info_update(
+    mocker: MockerFixture,
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
+    pool_protocol_version: int,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
+    launcher_id = bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa")
+    auth_sk = calculate_synthetic_secret_key(
+        master_sk_to_wallet_sk_unhardened(farmer_service._node.all_root_sks[0], uint32(0)),
+        DEFAULT_HIDDEN_PUZZLE_HASH,
+    )
+    farmer_service._node.authentication_keys = {p2_singleton_puzzle_hash: auth_sk}
+    farmer_service._node.authentication_tokens = {launcher_id: ("", uint64(time() + 3600))}
+    pool_state_overrides: dict[str, Any] = {
+        "next_pool_info_update": uint64.MAXIMUM,
+        "authentication_token_timeout": uint64.MAXIMUM,
+    }
+    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
+        p2_singleton_puzzle_hash,
+        overrides=pool_state_overrides,
+    )
+    PoolingShareState(
+        owner_public_key=auth_sk.get_g1(),
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        pool_url="https://dapool.com",
+        launcher_id=launcher_id,
+        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+        key_derivation_index=0,
+        version=pool_protocol_version,
+    ).add(root_path=farmer_service.root_path)
+    EXPECTED_CURRENT_DIFFICULTY = 1234
+    EXPECTED_CURRENT_POINTS = 5678
+    mocker.patch(
+        "aiohttp.ClientSession.request",
+        return_value=DummyGetFarmerResponse(
+            ok=True,
+            status=200,
+            current_difficulty=EXPECTED_CURRENT_DIFFICULTY,
+            current_points=EXPECTED_CURRENT_POINTS,
+        ),
+    )
+
+    await farmer_service._node.update_pool_state()
+    assert (
+        farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == EXPECTED_CURRENT_DIFFICULTY
+    )
+    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_points"] == EXPECTED_CURRENT_POINTS
+
+    mocker.patch(
+        "aiohttp.ClientSession.request",
+        return_value=DummyGetFarmerResponse(
+            ok=False,
+            status=404,
+            current_difficulty=EXPECTED_CURRENT_DIFFICULTY,
+            current_points=EXPECTED_CURRENT_POINTS,
+        ),
+    )
+
+    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
+        p2_singleton_puzzle_hash,
+        overrides={
+            "next_farmer_update": 0,
+            "current_difficulty": EXPECTED_CURRENT_DIFFICULTY,
+            "current_points": EXPECTED_CURRENT_POINTS,
+        },
+    )
+    await farmer_service._node.update_pool_state()
+    assert (
+        farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == EXPECTED_CURRENT_DIFFICULTY
+    )
+    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_points"] == EXPECTED_CURRENT_POINTS
 
 
 @pytest.mark.anyio
