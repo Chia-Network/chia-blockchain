@@ -2190,7 +2190,12 @@ class WalletStateManager:
                                     and inner_puzhash is not None
                                     and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                                 ):
-                                    dl_wallet = await self.get_dl_wallet(create_if_not_found=True)
+                                    # Cannot use get_dl_wallet(create_if_not_found=True) here: it
+                                    # acquires self.lock, which the sync path already holds.
+                                    try:
+                                        dl_wallet = await self.get_dl_wallet()
+                                    except ValueError:
+                                        dl_wallet = await DataLayerWallet.create_new_dl_wallet(self)
                                     await dl_wallet.track_new_launcher_id(
                                         child.coin.name(),
                                         peer,
