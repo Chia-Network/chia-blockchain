@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pickle  # noqa: S403
+import pickle  # ruff: ignore[suspicious-pickle-import]
 from pathlib import Path
 from unittest.mock import MagicMock
 

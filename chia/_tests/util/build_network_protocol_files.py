@@ -1,4 +1,4 @@
-# ruff: noqa: F405
+# ruff: file-ignore[undefined-local-with-import-star-usage]
 from __future__ import annotations
 
 import os
@@ -10,7 +10,7 @@ from typing import Any
 
 from chia_rs.sized_ints import uint32
 
-from chia._tests.util.network_protocol_data import *  # noqa: F403
+from chia._tests.util.network_protocol_data import *  # ruff: ignore[undefined-local-with-import-star]
 
 version = "1.0"
 
