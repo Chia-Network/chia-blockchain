@@ -1012,6 +1012,19 @@ class DataLayerWallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Offer:
+        for asset_id in offer_dict:
+            if asset_id is None:
+                raise ValueError("DataLayer update offers cannot include an XCH leg")
+            driver = driver_dict.get(asset_id)
+            if driver is None or not (
+                driver.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
+                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                raise ValueError(
+                    f"DataLayer update offers only support DL singleton legs; "
+                    f"asset {asset_id.hex()} is not a DataLayer singleton"
+                )
+
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:

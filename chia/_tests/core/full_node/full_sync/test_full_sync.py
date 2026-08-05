@@ -8,19 +8,27 @@ from typing import Any, cast
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol
+from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.types.blockchain_format.coin import Coin
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
+from chia.util.casts import int_to_bytes
+from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
+from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 
@@ -230,24 +238,218 @@ async def test_short_sync_batch_returns_false_on_disconnected_first_block(
     # docstring promises) rather than raising.
     _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
     node = full_node_2.full_node
-    blocks = bt.get_consecutive_blocks(2)
-    disconnected_block = blocks[-1]  # height > 0 and its parent is not in node's database
+    blocks = bt.get_consecutive_blocks(4)
+    for block in blocks[:3]:
+        await node.add_block(block)
 
-    class _FakePeer:
+    # A fork diverging at height 2, so its height-3 block has a parent we never stored.
+    fork = bt.get_consecutive_blocks(3, block_list_input=blocks[:2], seed=b"fork")
+    assert fork[2].header_hash != blocks[2].header_hash
+    disconnected_blocks = fork[-2:]
+    assert [block.height for block in disconnected_blocks] == [3, 4]
+
+    class DummyPeer:
         peer_node_id = bytes32(b"\x01" * 32)
 
         def get_peer_logging(self) -> PeerInfo:
             return PeerInfo("127.0.0.1", uint16(0))
 
         async def call_api(
-            self, api_function: Any, request: full_node_protocol.RequestBlocks
-        ) -> full_node_protocol.RespondBlocks:
-            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [disconnected_block])
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            # The fork-point probe gets a connected block, so the batch loop is reached;
+            # the batch itself then arrives on a fork we cannot connect.
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(blocks[3])
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, disconnected_blocks)
 
-    peer = cast(WSChiaConnection, _FakePeer())
-    # start_height == 0 skips the fork-point probe, exercising the batch loop's parent check directly.
-    result = await node.short_sync_batch(peer, uint32(0), uint32(1))
+    peer = cast(WSChiaConnection, DummyPeer())
+    result = await node.short_sync_batch(peer, uint32(3), uint32(4))
     assert result is False
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_post_processes_committed_prefix_before_failure(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A RespondBlocks batch with a valid hinted TX block followed by an invalid
+    # successor must still persist hints for the committed prefix before raising.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await node.add_block(block)
+
+    wt = bt.get_pool_wallet_tool()
+    puzzle_hash = bytes32(32 * b"\0")
+    hint = bytes32(32 * b"\5")
+    amount = int_to_bytes(1)
+    coin_spent = next(c for c in blocks[-1].get_included_reward_coins() if c.puzzle_hash == bt.pool_ph)
+    tx = wt.generate_signed_transaction(
+        uint64(10),
+        wt.get_new_puzzlehash(),
+        coin_spent,
+        condition_dic={
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        },
+    )
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    tx_block = blocks[-1]
+    hinted_coin_id = Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x02" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(tx_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [tx_block, bad_block])
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    assert await node.hint_store.get_coin_ids(hint) == []
+
+    with pytest.raises(ValueError, match="failed to validate blocks after height"):
+        await node.short_sync_batch(peer, tx_block.height, bad_block.height)
+
+    assert await node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == tx_block.header_hash
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_raises_when_no_blocks_committed(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A batch whose first block is invalid commits nothing. short_sync_batch must
+    # still raise (without the "after height" prefix-failure wording) and leave the peak alone.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+    peak_before = node.blockchain.get_peak()
+    assert peak_before is not None
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+    # short_sync_batch requests an inclusive range of at least two heights; keep
+    # the response length honest so this exercises validation failure, not the
+    # incomplete-RespondBlocks guard.
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    trailing_block = blocks[-1]
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x03" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(bad_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(
+                request.start_height, request.end_height, [bad_block, trailing_block]
+            )
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    # target must be > start so the batch loop runs; end_height becomes start+1.
+    with pytest.raises(ValueError, match=rf"failed to validate blocks {bad_block.height}-{bad_block.height + 1}$"):
+        await node.short_sync_batch(peer, bad_block.height, uint32(bad_block.height + 1))
+
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == peak_before.header_hash
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_bans_peer_answering_wrong_block_range(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # Wiring check: an incomplete RespondBlocks is banned via respond_blocks_or_ban
+    # rather than treated as a successful short-sync fetch.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+    peak_before = node.blockchain.get_peak()
+    assert peak_before is not None
+
+    blocks = bt.get_consecutive_blocks(2, block_list_input=blocks)
+    start_block, end_block = blocks[-2], blocks[-1]
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x04" * 32)
+
+        def __init__(self) -> None:
+            self.closed = False
+            self.ban_seconds: int | None = None
+            self.peer_info = PeerInfo("127.0.0.1", uint16(0))
+
+        def get_peer_logging(self) -> PeerInfo:
+            return self.peer_info
+
+        async def call_api(
+            self, api_function: Any, request: object
+        ) -> full_node_protocol.RespondBlock | full_node_protocol.RespondBlocks:
+            if isinstance(request, full_node_protocol.RequestBlock):
+                return full_node_protocol.RespondBlock(start_block)
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
+
+        async def close(self, ban_seconds: int = 0, *args: object, **kwargs: object) -> None:
+            self.closed = True
+            self.ban_seconds = ban_seconds
+
+    peer = DummyPeer()
+    with pytest.raises(ConsensusError, match="incomplete/mismatched blocks"):
+        await node.short_sync_batch(cast(WSChiaConnection, peer), start_block.height, end_block.height)
+
+    assert peer.closed
+    assert peer.ban_seconds == CONSENSUS_ERROR_BAN_SECONDS
+    peak = node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == peak_before.header_hash
     assert peer.peer_node_id not in node.sync_store.batch_syncing
 
 
@@ -515,3 +717,250 @@ async def test_bad_peak_cache_invalidation(
     block = blocks[-1]
     full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
     assert len(full_node_1.full_node.bad_peak_cache) == 1
+
+
+# Tests below cover the inflated-peak-weight regression: detection of peers
+# that advertise an inflated peak weight via NewPeak. The defense lives in
+# `_sync()`'s peer-confirmation gather loop: if the actual block weight
+# returned via RequestBlock differs from the advertised peak weight, every
+# peer that advertised that exact peak via NewPeak is banned. Two defining
+# properties of the fix:
+#
+# 1. Banning happens *before* `request_validate_wp()` runs, so the two
+#    negative tests below monkeypatch `request_validate_wp` to a sentinel and
+#    assert it was never reached. On unpatched code, control still reaches
+#    `request_validate_wp` and the eventual ban happens via the weight-proof
+#    timeout / mismatch path, so this assertion distinguishes patched from
+#    unpatched behavior.
+#
+# 2. The set of peers to ban is snapshotted at peak-selection time (via
+#    `SyncStore.get_advertisers_of_peak`). A peer that overwrites its
+#    `peer_to_peak` entry with a fresh `NewPeak` during the peer-confirmation
+#    round-trip cannot escape banning. See
+#    `test_long_sync_advertiser_overwriting_peer_to_peak_is_still_banned`.
+
+
+async def _connect_with_quiet_node_2(
+    server_1: ChiaServer,
+    server_2: ChiaServer,
+    full_node_2: FullNodeAPI,
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Connect node_2 to node_1 and silence node_2's NewPeak handler so the
+    auto-broadcast from node_1 cannot overwrite the peak entries the test
+    injects directly into node_2's sync_store."""
+
+    async def noop_new_peak(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(full_node_2.full_node, "new_peak", noop_new_peak)
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+
+    async def connected() -> bool:
+        return server_1.node_id in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, connected)
+
+
+@pytest.mark.anyio
+async def test_long_sync_advertised_weight_lie_bans_advertiser(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_1000_blocks: list[FullBlock],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+
+    for block in default_1000_blocks[:200]:
+        await full_node_1.full_node.add_block(block)
+    real_peak = full_node_1.full_node.blockchain.get_peak()
+    assert real_peak is not None
+
+    await _connect_with_quiet_node_2(server_1, server_2, full_node_2, self_hostname, monkeypatch)
+    full_node_2.full_node.config["max_sync_wait"] = 0
+
+    # Frame node_1: claim it advertised the real header_hash with a wildly
+    # inflated weight via NewPeak. Also stage two stale entries so we can verify
+    # the helper bans only peers whose (header_hash, weight) actually match.
+    inflated_weight = uint128(real_peak.weight + 10**12)
+    full_node_2.full_node.sync_store.peer_has_block(
+        real_peak.header_hash, server_1.node_id, inflated_weight, real_peak.height, True
+    )
+    disconnected_liar = bytes32(b"\x11" * 32)
+    full_node_2.full_node.sync_store.peer_has_block(
+        real_peak.header_hash, disconnected_liar, inflated_weight, real_peak.height, True
+    )
+    bystander = bytes32(b"\x22" * 32)
+    full_node_2.full_node.sync_store.peer_has_block(
+        real_peak.header_hash, bystander, real_peak.weight, real_peak.height, True
+    )
+
+    # Fail loudly if control ever reaches the weight-proof request. On unpatched
+    # code, the ban happens via that path (after the WP response/timeout); the
+    # fix's defining property is that we bail at peer-confirmation instead.
+    reached_wp_validation = False
+
+    async def fail_if_wp_called(*_args: object, **_kwargs: object) -> None:
+        nonlocal reached_wp_validation  # pragma: no cover  (sentinel; only fires on unpatched code)
+        reached_wp_validation = True  # pragma: no cover
+        raise AssertionError(  # pragma: no cover
+            "request_validate_wp must not be reached when a weight lie is detected"
+        )
+
+    monkeypatch.setattr(full_node_2.full_node, "request_validate_wp", fail_if_wp_called)
+
+    await full_node_2.full_node._sync()
+
+    # node_1 confirmed the block with its real (smaller) weight, exposing the
+    # injected lie. node_1 must be banned; the bystander entry advertising the
+    # honest weight must remain untouched.
+    async def liar_disconnected() -> bool:
+        return server_1.node_id not in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, liar_disconnected)
+    assert not reached_wp_validation
+    assert full_node_2.full_node.blockchain.get_peak() is None
+    assert bystander in full_node_2.full_node.sync_store.peer_to_peak
+    assert full_node_2.full_node.sync_store.peer_to_peak[bystander].weight == real_peak.weight
+
+
+@pytest.mark.anyio
+async def test_long_sync_no_peer_confirms_peak_bans_advertiser(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_1000_blocks: list[FullBlock],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+
+    for block in default_1000_blocks[:200]:
+        await full_node_1.full_node.add_block(block)
+
+    await _connect_with_quiet_node_2(server_1, server_2, full_node_2, self_hostname, monkeypatch)
+    full_node_2.full_node.config["max_sync_wait"] = 0
+
+    # node_1 claims a peak that does not exist on the network, so no peer can
+    # return a matching block via RequestBlock.
+    fabricated_hash = std_hash(b"inflated-peak-no-confirm")
+    fabricated_height = uint32(50_000)
+    fabricated_weight = uint128(10**15)
+    full_node_2.full_node.sync_store.peer_has_block(
+        fabricated_hash, server_1.node_id, fabricated_weight, fabricated_height, True
+    )
+
+    # Fail loudly if control ever reaches the weight-proof request. On
+    # unpatched code, the ban happens via that path (after the WP timeout);
+    # the fix bails at peer-confirmation when no peer can serve the block.
+    reached_wp_validation = False
+
+    async def fail_if_wp_called(*_args: object, **_kwargs: object) -> None:
+        nonlocal reached_wp_validation  # pragma: no cover  (sentinel; only fires on unpatched code)
+        reached_wp_validation = True  # pragma: no cover
+        raise AssertionError(  # pragma: no cover
+            "request_validate_wp must not be reached when no peer confirms the peak"
+        )
+
+    monkeypatch.setattr(full_node_2.full_node, "request_validate_wp", fail_if_wp_called)
+
+    await full_node_2.full_node._sync()
+
+    async def liar_disconnected() -> bool:
+        return server_1.node_id not in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, liar_disconnected)
+    assert not reached_wp_validation
+    assert full_node_2.full_node.blockchain.get_peak() is None
+
+
+@pytest.mark.anyio
+async def test_long_sync_honest_advertiser_not_banned(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_1000_blocks: list[FullBlock],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+
+    for block in default_1000_blocks[:200]:
+        await full_node_1.full_node.add_block(block)
+    real_peak = full_node_1.full_node.blockchain.get_peak()
+    assert real_peak is not None
+
+    await _connect_with_quiet_node_2(server_1, server_2, full_node_2, self_hostname, monkeypatch)
+    full_node_2.full_node.config["max_sync_wait"] = 0
+
+    # Stop _sync once it reaches weight-proof validation; everything beyond
+    # that point (WP fetch + chain download) is out of scope for this test.
+    # Reaching it proves peer-confirmation passed without raising.
+    reached_wp_validation = False
+
+    async def stop_after_peer_confirmation(*_args: object, **_kwargs: object) -> None:
+        nonlocal reached_wp_validation
+        reached_wp_validation = True
+        raise RuntimeError("test: stop after peer confirmation")
+
+    monkeypatch.setattr(full_node_2.full_node, "request_validate_wp", stop_after_peer_confirmation)
+
+    full_node_2.full_node.sync_store.peer_has_block(
+        real_peak.header_hash, server_1.node_id, real_peak.weight, real_peak.height, True
+    )
+
+    await full_node_2.full_node._sync()
+
+    assert reached_wp_validation
+    assert server_1.node_id in full_node_2.full_node.server.all_connections
+
+
+@pytest.mark.anyio
+async def test_ban_uses_snapshot_after_peer_to_peak_mutation(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_ban_peak_weight_liars` uses the snapshot it was given at
+    peak-selection time, not the current `peer_to_peak` state. A peer that
+    overwrites its `peer_to_peak` entry with a fresh `NewPeak` between
+    `_sync()` picking the target peak and the ban firing is still banned.
+
+    On the previous `(header_hash, weight)` lookup the mutated entry would no
+    longer match and the attacker would escape the ban; on the snapshot fix
+    the attacker is locked in at peak-selection time.
+    """
+    _full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+
+    await _connect_with_quiet_node_2(server_1, server_2, full_node_2, self_hostname, monkeypatch)
+    sync_store = full_node_2.full_node.sync_store
+
+    real_header_hash = std_hash(b"real-peak")
+    inflated_weight = uint128(10**18)
+    height = uint32(200)
+    sync_store.peer_has_block(real_header_hash, server_1.node_id, inflated_weight, height, True)
+
+    # Production code path: snapshot the advertisers exactly as `_sync()` does,
+    # synchronously, right after picking the target peak.
+    target_peak = Peak(real_header_hash, height, inflated_weight)
+    weight_liars = sync_store.get_advertisers_of_peak(target_peak)
+    assert weight_liars == {server_1.node_id}
+
+    # Simulate the attacker sending a fresh `NewPeak` after the snapshot is
+    # captured (e.g. during the `asyncio.gather` await in `_sync()`).
+    sync_store.peer_has_block(
+        std_hash(b"attacker-fresh-peak"),
+        server_1.node_id,
+        uint128(1),
+        uint32(0),
+        True,
+    )
+    # The lookup that `_sync()` used to perform at ban time would no longer
+    # find the attacker; the snapshot still does. This is the property the fix
+    # relies on.
+    assert sync_store.get_advertisers_of_peak(target_peak) == set()
+    assert server_1.node_id in weight_liars
+
+    await full_node_2.full_node._ban_peak_weight_liars(weight_liars)
+
+    async def liar_disconnected() -> bool:
+        return server_1.node_id not in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, liar_disconnected)

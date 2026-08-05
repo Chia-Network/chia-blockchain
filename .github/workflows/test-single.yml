@@ -52,7 +52,7 @@ defaults:
     shell: bash
 
 env:
-  BLOCKS_AND_PLOTS_VERSION: 0.45.21
+  BLOCKS_AND_PLOTS_VERSION: 0.45.29
 
 jobs:
   # Download the test blocks and plots exactly once per runner OS and store them
@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Cache test blocks and plots
         if: 'contains(inputs.configuration, ''"checkout_blocks_and_plots": true'')'
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         id: test-blocks-plots
@@ -195,7 +195,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           fetch-tags: false

@@ -209,10 +209,14 @@ def test_protocol_json() -> None:
     assert type(respond_signatures).from_json_dict(respond_signatures_json) == respond_signatures
     assert str(plot_json) == str(plot.to_json_dict())
     assert type(plot).from_json_dict(plot_json) == plot
+    assert str(plot2_json) == str(plot2.to_json_dict())
+    assert type(plot2).from_json_dict(plot2_json) == plot2
     assert str(request_plots_json) == str(request_plots.to_json_dict())
     assert type(request_plots).from_json_dict(request_plots_json) == request_plots
     assert str(respond_plots_json) == str(respond_plots.to_json_dict())
     assert type(respond_plots).from_json_dict(respond_plots_json) == respond_plots
+    assert str(respond_plots2_json) == str(respond_plots2.to_json_dict())
+    assert type(respond_plots2).from_json_dict(respond_plots2_json) == respond_plots2
     assert str(request_peers_introducer_json) == str(request_peers_introducer.to_json_dict())
     assert type(request_peers_introducer).from_json_dict(request_peers_introducer_json) == request_peers_introducer
     assert str(respond_peers_introducer_json) == str(respond_peers_introducer.to_json_dict())
