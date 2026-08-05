@@ -2236,7 +2236,11 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
+        post_reorg_balance_differences=[
+            WalletStateTransition({"did": {"set_remainder": True}}),
+            WalletStateTransition(),
+        ],
     )
 
     # Transfer DID
