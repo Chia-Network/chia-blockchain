@@ -595,7 +595,7 @@ async def test_plotnft_cli_join(
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
-    pool_response_dict["protocol_version"] = 2
+    pool_response_dict["protocol_version"] = 1 if version == 2 else 2
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
     with pytest.raises(CliRpcConnectionError, match="Incorrect version"):
@@ -609,7 +609,7 @@ async def test_plotnft_cli_join(
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
-    pool_response_dict["protocol_version"] = 1
+    pool_response_dict["protocol_version"] = 1 if version == 1 else 2
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
     if prompt:
