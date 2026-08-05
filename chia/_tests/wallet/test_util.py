@@ -69,38 +69,27 @@ def test_offer_rejects_spend_exceeding_max_cost() -> None:
         Offer({}, WalletSpendBundle([expensive_spend], G2Element()), {})
 
 
-def test_offer_passes_remaining_max_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_offer_conditions_raises_on_clvm_cost_exceeded(monkeypatch: pytest.MonkeyPatch) -> None:
     from chia_rs import G2Element
 
     import chia.wallet.trading.offer as offer_module
+    from chia.util.errors import Err
     from chia.wallet.trading.offer import Offer
     from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-    coin_generator = CoinGenerator()
-    spends = []
-    for _ in range(2):
-        parent = coin_generator.get()
-        spends.append(
-            make_spend(
-                parent.coin,
-                Program.to(1),
-                Program.to([[51, bytes32.zeros, 1]]),
-            )
-        )
+    parent = CoinGenerator().get()
+    spend = make_spend(parent.coin, Program.to(1), Program.to([[51, bytes32.zeros, 1]]))
+    offer = Offer({}, WalletSpendBundle([spend], G2Element()), {})
 
-    max_costs: list[int] = []
-    real = compute_spend_hints_and_additions
-
-    def spy(cs: Any, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> Any:
-        max_costs.append(max_cost)
-        return real(cs, max_cost=max_cost)
-
-    monkeypatch.setattr(offer_module, "compute_spend_hints_and_additions", spy)
-    Offer({}, WalletSpendBundle(spends, G2Element()), {})
-
-    assert len(max_costs) == 2
-    assert max_costs[0] == int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
-    assert max_costs[1] < max_costs[0]
+    # Construction used the normal budget; shrink it so conditions() hits the CLVM cost limit.
+    monkeypatch.setattr(
+        offer_module,
+        "DEFAULT_CONSTANTS",
+        DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(1)),
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        offer.conditions()
+    assert exc_info.value.code == Err.BLOCK_COST_EXCEEDS_MAX
 
 
 def test_cs_config() -> None:
