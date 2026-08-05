@@ -194,12 +194,6 @@ class Offer:
                     cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
-                except ValidationError:
-                    raise
-                except ValueError as e:
-                    if e.args and e.args[0] == "cost exceeded or below zero":
-                        raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend") from e
-                    continue
                 except Exception:  # pragma: no cover
                     continue
                 if max_cost < 0:  # pragma: no cover
