@@ -1122,7 +1122,7 @@ class WalletNode:
         if item_count > max_items:
             self.log.error(
                 f"Peer {peer.peer_info.host} sent coin state update with too many items, "
-                f": list truncated to limit of {max_items}"
+                f": list truncated to limit of {max_items + 1}"
             )
 
         self.log.info(
