@@ -3448,6 +3448,53 @@ async def test_sync_from_fork_point_adds_hints_for_committed_prefix(
     assert peer.closed
 
 
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_sync_from_fork_point_bans_peer_answering_wrong_block_range(
+    one_node: SimulatorsAndWalletsServices,
+    monkeypatch: pytest.MonkeyPatch,
+    consensus_mode: ConsensusMode,
+) -> None:
+    # Wiring check: an incomplete RespondBlocks is banned via respond_blocks_or_ban
+    # rather than treated as a successful long-sync fetch.
+    [full_node_service], _, bt = one_node
+    full_node = full_node_service._node
+
+    blocks = bt.get_consecutive_blocks(5)
+    target = blocks[-1]
+
+    class DummyPeer:
+        def __init__(self) -> None:
+            self.closed = False
+            self.ban_seconds: int | None = None
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self.requests: list[tuple[uint32, uint32]] = []
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            request = args[1]
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            self.requests.append((request.start_height, request.end_height))
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
+
+        async def close(self, ban_seconds: int = 0, *args: object, **kwargs: object) -> None:
+            self.closed = True
+            self.ban_seconds = ban_seconds
+
+    peer = DummyPeer()
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+
+    await asyncio.wait_for(
+        full_node.sync_from_fork_point(uint32(0), target.height, target.header_hash, []),
+        timeout=60,
+    )
+
+    assert peer.closed
+    assert peer.ban_seconds == CONSENSUS_ERROR_BAN_SECONDS
+    # the range is requested once from this peer, which is then dropped rather than retried
+    assert peer.requests == [(uint32(0), target.height)]
+    assert full_node.blockchain.get_peak() is None
+
+
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure_before_receiving_update_logs_error(
     caplog: pytest.LogCaptureFixture,
