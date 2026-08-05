@@ -1198,6 +1198,11 @@ class FullNode:
         if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
+        if len(response.wp.recent_chain_data) == 0:
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            raise RuntimeError(
+                f"Weight proof has empty recent_chain_data from peer: {weight_proof_peer.peer_info.host}"
+            )
         if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")

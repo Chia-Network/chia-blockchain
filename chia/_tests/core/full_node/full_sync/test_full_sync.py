@@ -12,11 +12,15 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
+from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol
+from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
+from chia.server.api_protocol import Self
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
@@ -24,6 +28,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
+from chia.types.weight_proof import WeightProof
 from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
@@ -889,3 +894,40 @@ async def test_ban_uses_snapshot_after_peer_to_peak_mutation(
         return server_1.node_id not in full_node_2.full_node.server.all_connections
 
     await time_out_assert(10, liar_disconnected)
+
+
+@pytest.mark.anyio
+async def test_request_validate_wp_empty_recent_chain_data_bans_peer(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """Empty recent_chain_data must ban the peer instead of IndexErroring past the ban."""
+    _full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+    peak_header_hash = std_hash(b"empty-wp-peak")
+    peak_height = uint32(100)
+    peak_weight = uint128(1000)
+
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+
+    async def connected() -> bool:
+        return server_1.node_id in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, connected)
+
+    full_node_2.full_node.sync_store.peer_has_block(peak_header_hash, server_1.node_id, peak_weight, peak_height, True)
+
+    async def request_proof_of_weight(self: Self, request: full_node_protocol.RequestProofOfWeight) -> Message | None:
+        empty_wp = WeightProof([], [], [])
+        return make_msg(
+            ProtocolMessageTypes.respond_proof_of_weight,
+            full_node_protocol.RespondProofOfWeight(empty_wp, request.tip),
+        )
+
+    with patch_request_handler(api=server_1.api, handler=request_proof_of_weight):
+        with pytest.raises(RuntimeError, match="empty recent_chain_data"):
+            await full_node_2.full_node.request_validate_wp(peak_header_hash, peak_height, peak_weight)
+
+    async def peer_disconnected() -> bool:
+        return server_1.node_id not in full_node_2.full_node.server.all_connections
+
+    await time_out_assert(10, peer_disconnected)
