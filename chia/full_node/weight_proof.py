@@ -1236,7 +1236,13 @@ def validate_recent_blocks(
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     summaries = summaries_from_bytes(summaries_bytes)
     sub_blocks = BlockCache({}, mmr_manager=StubMMRManager())
+    if len(recent_chain.recent_chain_data) <= int(constants.SUB_EPOCH_BLOCKS):
+        log.info("recent chain is too short")
+        return False, []
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
+    if len(summaries) < len(first_ses_idx):
+        log.info("recent chain has more sub-epoch summaries than weight proof")
+        return False, []
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
     diff: uint64 = constants.DIFFICULTY_STARTING
@@ -1338,11 +1344,11 @@ def validate_recent_blocks(
             log.info(f"cancelling block {block.header_hash} validation, shutdown requested")
             return False, []
 
-    if len(summaries) > 2 and prev_challenge is None:
+    if prev_challenge is None:
         log.info("did not find two challenges in recent chain")
         return False, []
 
-    if len(summaries) > 2 and validated_block_count < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
+    if validated_block_count < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
         log.info("did not validate enough blocks in recent chain part")
         return False, []
 
