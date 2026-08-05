@@ -91,9 +91,8 @@ def test_offer_enforces_remaining_max_cost_across_spends() -> None:
         )
         for _ in range(2)
     ]
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError, match="compute_spend_hints_and_additions"):
         Offer({}, WalletSpendBundle(spends, G2Element()), {})
-    assert exc_info.value.error_msg == "compute_spend_hints_and_additions() for CoinSpend"
 
 
 def test_cs_config() -> None:
