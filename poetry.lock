@@ -4742,15 +4742,15 @@ files = [
 
 [[package]]
 name = "types-zstd"
-version = "1.5.7.3.20260408"
+version = "1.5.7.3.20260722"
 description = "Typing stubs for zstd"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "types_zstd-1.5.7.3.20260408-py3-none-any.whl", hash = "sha256:2c7fe246ec70619761b998c36d8faf092429c086cb6a849af3e9a948f51b7cb8"},
-    {file = "types_zstd-1.5.7.3.20260408.tar.gz", hash = "sha256:dc819087d8c7204333b18fcd26b3cb07b02c1a0831c11f0a056dc68a7a27d9f7"},
+    {file = "types_zstd-1.5.7.3.20260722-py3-none-any.whl", hash = "sha256:afe531df6cf6bb59399b91845adadca179aed4c0671ab25e2a14e2f7478de1bb"},
+    {file = "types_zstd-1.5.7.3.20260722.tar.gz", hash = "sha256:bb5dd0ccaade080826f2a86926edb50b3a7bb6ee0ddf009c532488972257502e"},
 ]
 
 [[package]]
@@ -5243,4 +5243,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "eced213a988f3eb2dfeec4353519e42ef319e9f3872013ead2f425abf68da805"
+content-hash = "247c4147d4602014c8d988d81b426168151038ad9a0049d8bd55513d4184fbcd"
