@@ -204,8 +204,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from chia._tests.util.build_network_protocol_files import get_network_protocol_filename
-from chia._tests.util.network_protocol_data import *  # noqa: F403
-from chia._tests.util.protocol_messages_json import *  # noqa: F403
+from chia._tests.util.network_protocol_data import *  # ruff: ignore[undefined-local-with-import-star]
+from chia._tests.util.protocol_messages_json import *  # ruff: ignore[undefined-local-with-import-star]
 
 
 def parse_blob(input_bytes: bytes) -> tuple[bytes, bytes]:
@@ -271,8 +271,8 @@ def build_json_test() -> str:
 
 from __future__ import annotations
 
-from chia._tests.util.network_protocol_data import *  # noqa: F403
-from chia._tests.util.protocol_messages_json import *  # noqa: F403
+from chia._tests.util.network_protocol_data import *  # ruff: ignore[undefined-local-with-import-star]
+from chia._tests.util.protocol_messages_json import *  # ruff: ignore[undefined-local-with-import-star]
 
 
 def test_protocol_json() -> None:
