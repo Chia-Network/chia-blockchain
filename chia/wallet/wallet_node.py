@@ -1116,17 +1116,14 @@ class WalletNode:
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
-        # Wire-path deserialization also applies list_limits at max+1 (see WalletNodeAPI.coin_state_update) so we
-        # can detect oversized updates and ban without materializing unbounded item lists.
+        # Wire-path deserialization also applies list_limits at max+1 (see WalletNodeAPI.coin_state_update).
         max_items = self.max_coin_state_update_items()
         item_count = len(request.items)
         if item_count > max_items:
             self.log.error(
-                f"Peer {peer.peer_info.host} sent coin state update with {item_count} items, "
-                f"exceeding limit of {max_items}"
+                f"Peer {peer.peer_info.host} sent coin state update with too many items, "
+                f": list truncated to limit of {max_items}"
             )
-            await peer.close(9999)
-            return
 
         self.log.info(
             f"Received coin state update from {peer.peer_info.host}: "
