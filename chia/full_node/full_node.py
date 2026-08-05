@@ -107,6 +107,37 @@ from chia.util.task_referencer import create_referenced_task
 SHORT_SYNC_BACKTRACK_BLOCK_REQUEST_TIMEOUT_SEC: int = 15
 
 
+async def respond_blocks_or_ban(
+    peer: WSChiaConnection,
+    response: RespondBlocks,
+    start_height: int,
+    end_height: int,
+    log: logging.Logger,
+) -> bool:
+    """
+    Return True if response covers the inclusive requested height range.
+    Otherwise ban the peer and return False.
+
+    Honest nodes return the full inclusive range or RejectBlocks. A
+    well-formed but incomplete/mismatched RespondBlocks cannot advance
+    sync, so the peer is banned rather than credited with a fetch.
+    """
+    expected_heights = list(range(start_height, end_height + 1))
+    if (
+        response.start_height == start_height
+        and response.end_height == end_height
+        and [block.height for block in response.blocks] == expected_heights
+    ):
+        return True
+    log.warning(
+        f"peer {peer.peer_info.host} responded to request_blocks "
+        f"{start_height}-{end_height} with {response.start_height}-"
+        f"{response.end_height} ({len(response.blocks)} blocks), banning"
+    )
+    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+    return False
+
+
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
@@ -676,8 +707,15 @@ class FullNode:
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
-                if not response:
+                if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
+                if not await respond_blocks_or_ban(peer, response, height, end_height, self.log):
+                    raise ConsensusError(
+                        Err.INVALID_PROTOCOL_MESSAGE,
+                        error_msg=(
+                            f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                        ),
+                    )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: StateChangeSummary | None
                     prev_b = None
@@ -1368,6 +1406,8 @@ class FullNode:
                         self.log.info(f"peer timed out after {end - start:.1f} s")
                         await peer.close()
                     elif isinstance(response, RespondBlocks):
+                        if not await respond_blocks_or_ban(peer, response, start_height, end_height, self.log):
+                            continue
                         if end - start > 5:
                             self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
                             # this isn't a great peer, reduce its priority
