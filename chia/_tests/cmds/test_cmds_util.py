@@ -95,3 +95,30 @@ async def test_failure_output_no_consumption(
     assert exception_info.value.response == expected_response
 
     assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.anyio
+async def test_get_any_service_client_rejects_unknown_client_without_port(
+    root_path_populated_with_config: Path,
+) -> None:
+    with pytest.raises(ValueError, match="Invalid client type requested: RpcClient"):
+        await get_any_service_client(RpcClient, root_path_populated_with_config).__aenter__()
+
+
+@pytest.mark.anyio
+async def test_get_any_service_client_consumes_unexpected_errors(
+    root_path_populated_with_config: Path,
+    recording_web_server: RecordingWebServer,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    async with get_any_service_client(
+        client_type=RpcClient,
+        rpc_port=recording_web_server.web_server.listen_port,
+        root_path=root_path_populated_with_config,
+        use_ssl=False,
+    ) as (_, _):
+        raise RuntimeError("unexpected failure")
+
+    out, _err = capsys.readouterr()
+    assert "Exception from 'RpcClient'" in out
+    assert "unexpected failure" in out

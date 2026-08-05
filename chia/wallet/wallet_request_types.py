@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field, fields
 from enum import Enum
 from functools import cached_property
@@ -19,6 +20,7 @@ from chia.types.signing_mode import SigningMode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable, streamable_enum
+from chia.wallet import wallet_coin_store
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -29,6 +31,7 @@ from chia.wallet.conditions import (
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -48,7 +51,8 @@ from chia.wallet.util.tx_config import (
     CoinSelectionConfigLoader,
     TXConfig,
 )
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import StreamableWalletIdentifier, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
@@ -175,6 +179,12 @@ class GetSyncStatusResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetFullNodePeerCountResponse(Streamable):
+    peer_count: uint64
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfo(Streamable):
     use_peak_height: bool = False
 
@@ -186,6 +196,12 @@ class GetHeightInfoResponse(Streamable):
     latest_timestamp: uint64
     is_transaction_block: bool | None = None
     prev_transaction_block_height: uint32 | None = None
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetFeeEstimateResponse(Streamable):
+    fee_per_cost: uint64
 
 
 @streamable
@@ -606,6 +622,69 @@ class GetCoinRecordsByNames(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetCoinRecords(wallet_coin_store.GetCoinRecords):
+    pass
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class WalletCoinRecordWithMetadata(Streamable):
+    parent_coin_info: bytes32
+    puzzle_hash: bytes32
+    amount: uint64
+    id: bytes32
+    type: uint16
+    wallet_identifier: StreamableWalletIdentifier
+    confirmed_height: uint32
+    spent_height: uint32
+    coinbase: bool
+    clawback_metadata: ClawbackMetadata | None = None
+    cr_cat_metadata: CRCATMetadata | None = None
+
+    def __post_init__(self) -> None:
+        if self.clawback_metadata is not None and self.cr_cat_metadata is not None:
+            raise ValueError("clawback_metadata and cr_cat_metadata are mutually exclusive")
+        super().__post_init__()
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class GetCoinRecordsResponse(Streamable):
+    coin_records: list[WalletCoinRecordWithMetadata]
+    total_count: uint32 | None
+
+    def to_json_dict(self) -> dict[str, Any]:
+        serialized_json = super().to_json_dict()
+        new_coin_records = []
+        for coin_record in serialized_json["coin_records"]:
+            new_coin_record = coin_record.copy()
+            if new_coin_record["clawback_metadata"] is not None:
+                new_coin_record["metadata"] = new_coin_record["clawback_metadata"]
+            elif new_coin_record["cr_cat_metadata"] is not None:
+                new_coin_record["metadata"] = new_coin_record["cr_cat_metadata"]
+            else:
+                new_coin_record["metadata"] = None
+            del new_coin_record["clawback_metadata"]
+            del new_coin_record["cr_cat_metadata"]
+            new_coin_records.append(new_coin_record)
+        serialized_json["coin_records"] = new_coin_records
+        return serialized_json
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        dict_copy = deepcopy(json_dict)
+        for coin_record in dict_copy["coin_records"]:
+            if coin_record["metadata"] is not None:
+                if "time_lock" in coin_record["metadata"]:
+                    coin_record["clawback_metadata"] = coin_record["metadata"]
+                else:
+                    coin_record["cr_cat_metadata"] = coin_record["metadata"]
+            del coin_record["metadata"]
+        return super().from_json_dict(dict_copy)
 
 
 @streamable
@@ -2156,7 +2235,13 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 @dataclass(kw_only=True, frozen=True)
 class _OfferEndpointResponse(TransactionEndpointResponse):
     offer: Offer  # gotta figure out how to ignore this in streamable
-    trade_record: TradeRecord
+    _trade_record: TradeRecord | None
+
+    @property
+    def trade_record(self) -> TradeRecord:
+        if self._trade_record is None:
+            raise ValueError("Attempting to access trade_record on `offer_only` request")
+        return self._trade_record
 
     def to_json_dict(self) -> dict[str, Any]:
         old_offer_override = getattr(self.offer, "json_serialization_override", None)
@@ -2164,8 +2249,9 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         try:
             response = {
                 **super().to_json_dict(),
-                "trade_record": self.trade_record.to_json_dict_convenience(),
+                "trade_record": self.trade_record.to_json_dict_convenience() if self._trade_record else None,
             }
+            response.pop("_trade_record")
         except Exception:
             object.__setattr__(self.offer, "json_serialization_override", old_offer_override)
             raise
@@ -2181,7 +2267,9 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         return cls(
             **tx_endpoint.__dict__,
             offer=offer,
-            trade_record=TradeRecord.from_json_dict_convenience(json_dict["trade_record"], bytes(offer).hex()),
+            _trade_record=TradeRecord.from_json_dict_convenience(json_dict["trade_record"], bytes(offer).hex())
+            if json_dict["trade_record"] is not None
+            else None,
         )
 
 
@@ -2193,6 +2281,7 @@ class CreateOfferForIDs(TransactionEndpointRequest):
     driver_dict: dict[bytes32, PuzzleInfo] | None = None
     solver: Solver | None = None
     validate_only: bool = False
+    offer_only: bool = False
 
     @property
     def offer_spec(self) -> dict[int | bytes32, int]:

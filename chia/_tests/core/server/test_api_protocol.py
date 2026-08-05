@@ -4,10 +4,12 @@ from dataclasses import dataclass
 
 import pytest
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.protocols.full_node_protocol import RequestTransaction
 from chia.protocols.protocol_message_type_to_node_type import ProtocolMessageTypeToNodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.wallet_protocol import RespondToPhUpdates
 from chia.server.api_protocol import ApiMetadata
 from chia.util.streamable import Streamable, streamable
 
@@ -57,3 +59,29 @@ async def test_list_limits_without_peer() -> None:
     assert len(captured) == 1
     assert len(captured[0].items) == 2
     assert captured[0].items == ids[:2]
+
+
+@pytest.mark.anyio
+async def test_list_limits_on_rust_type() -> None:
+    """Rust types don't accept list_limits in from_bytes. Verify the decorator
+    falls back to from_bytes() without list_limits, then applies truncation."""
+    captured: list[RespondToPhUpdates] = []
+
+    metadata = ApiMetadata()
+
+    @metadata.request(  # type: ignore[type-var]
+        request_type=ProtocolMessageTypes.new_peak,
+        list_limits=lambda self: {"puzzle_hashes": 3},
+    )
+    async def handler(self: object, request: RespondToPhUpdates) -> None:
+        captured.append(request)
+
+    phs = [bytes32(i.to_bytes(32, "big")) for i in range(10)]
+    blob = bytes(RespondToPhUpdates(phs, uint32(0), []))
+
+    await handler(None, blob)
+    assert len(captured) == 1
+    # Rust from_bytes is called without list_limits (would TypeError otherwise),
+    # followed by _apply_list_limits which calls truncate.
+    assert len(captured[0].puzzle_hashes) == 3
+    assert captured[0].puzzle_hashes == phs[:3]

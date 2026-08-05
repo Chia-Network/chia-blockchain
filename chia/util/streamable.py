@@ -8,6 +8,7 @@ import io
 import os
 import pprint
 import traceback
+import types
 from collections.abc import Callable, Collection
 from enum import Enum, EnumMeta
 from types import UnionType
@@ -248,7 +249,7 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Callable[[object, type[object]], Streamable] | None = None
+    f_type: type[Any], json_parser: Callable[[str | dict[str, Any], type[_T_Streamable]], Streamable] | None = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
@@ -370,7 +371,7 @@ def recurse_jsonify(
 
 def parse_bool(f: BinaryIO) -> bool:
     bool_byte = f.read(1)
-    assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
+    assert len(bool_byte) == 1  # Checks for EOF
     if bool_byte == bytes([0]):
         return False
     elif bool_byte == bytes([1]):
@@ -381,7 +382,7 @@ def parse_bool(f: BinaryIO) -> bool:
 
 def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> uint32:
     size_bytes = f.read(4)
-    assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
+    assert len(size_bytes) == 4  # Checks for EOF
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
@@ -391,7 +392,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
 
 def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> object | None:
     is_present_bytes = f.read(1)
-    assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
+    assert len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
         return None
     elif is_present_bytes == bytes([1]):
@@ -411,7 +412,7 @@ def parse_rust(f: BinaryIO, f_type: type[Any]) -> Any:
 def parse_bytes(f: BinaryIO) -> bytes:
     list_size = parse_uint32(f)
     bytes_read = f.read(list_size)
-    assert bytes_read is not None and len(bytes_read) == list_size
+    assert len(bytes_read) == list_size
     return bytes_read
 
 
@@ -469,7 +470,7 @@ def parse_dict(
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
-    assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
+    assert len(str_read_bytes) == str_size  # Checks for EOF
     return bytes.decode(str_read_bytes, "utf-8")
 
 
@@ -650,6 +651,29 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
     return cls
 
 
+def _apply_list_limits(obj: Any, list_limits: dict[str, int]) -> None:
+    """Truncate list fields on rust-typed objects and recurse into sub-objects."""
+    if len(list_limits) == 0:
+        return
+
+    if hasattr(obj, "truncate"):
+        for field_name, max_size in list_limits.items():
+            try:
+                obj.truncate(field_name, max_size)
+            except KeyError:
+                pass
+        for name, desc in vars(type(obj)).items():
+            if isinstance(desc, types.GetSetDescriptorType):
+                child = getattr(obj, name)
+                if hasattr(child, "truncate") or dataclasses.is_dataclass(child):
+                    _apply_list_limits(child, list_limits)
+    elif dataclasses.is_dataclass(obj):
+        for field in dataclasses.fields(obj):
+            child = getattr(obj, field.name)
+            if hasattr(child, "truncate") or dataclasses.is_dataclass(child):
+                _apply_list_limits(child, list_limits)
+
+
 class Streamable:
     """
     This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
@@ -716,7 +740,7 @@ class Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Self = object.__new__(cls)
         for field in cls.streamable_fields():
-            if list_limits and field.name in list_limits and field.list_inner_parse_function is not None:
+            if list_limits is not None and field.name in list_limits and field.list_inner_parse_function is not None:
                 value = parse_list_limited(
                     f,
                     field.list_inner_parse_function,
@@ -726,6 +750,8 @@ class Streamable:
             else:
                 value = field.parse_function(f)
             object.__setattr__(obj, field.name, value)
+        if list_limits is not None and len(list_limits) > 0:
+            _apply_list_limits(obj, list_limits)
         return obj
 
     def stream(self, f: BinaryIO) -> None:

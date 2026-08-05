@@ -37,18 +37,20 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
+from chia.full_node.full_node_store import SignagePointAddResult
 from chia.full_node.hard_fork_utils import get_flags
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS, RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
@@ -70,11 +72,10 @@ from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
+from chia.util.network import is_in_network, is_localhost
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
@@ -207,7 +208,18 @@ class FullNodeAPI:
         we can ask for it.
         """
         # this semaphore limits the number of tasks that can call new_peak() at
-        # the same time, since it can be expensive
+        # the same time, since it can be expensive.
+        # When all active slots are busy and we have at least one outbound
+        # full-node peer, drop additional inbound NewPeak requests.
+        # Without an outbound peer, let inbound peers use the bounded queue.
+        if (
+            not peer.is_outbound
+            and self.full_node.new_peak_sem.locked()
+            and len(self.full_node.server.get_connections(NodeType.FULL_NODE, outbound=True)) > 0
+        ):
+            self.log.debug("Dropping inbound NewPeak, active slots busy: %s %s", peer.get_peer_logging(), request)
+            return None
+
         try:
             async with self.full_node.new_peak_sem.acquire():
                 await self.full_node.new_peak(request, peer)
@@ -790,8 +802,6 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         async with self.full_node.timelord_lock:
-            # Already have signage point
-
             if self.full_node.full_node_store.have_newer_signage_point(
                 request.challenge_chain_vdf.challenge,
                 request.index_from_challenge,
@@ -804,6 +814,14 @@ class FullNodeAPI:
                 request.index_from_challenge,
             )
             if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
+                return None
+            signage_point = SignagePoint(
+                request.challenge_chain_vdf,
+                request.challenge_chain_proof,
+                request.reward_chain_vdf,
+                request.reward_chain_proof,
+            )
+            if self.full_node.full_node_store.in_future_sp_cache(signage_point, request.index_from_challenge):
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
@@ -818,29 +836,41 @@ class FullNodeAPI:
                 next_sub_slot_iters = sub_slot_iters
                 ip_sub_slot = None
 
-            added = self.full_node.full_node_store.new_signage_point(
+            result = self.full_node.full_node_store.new_signage_point(
                 request.index_from_challenge,
                 self.full_node.blockchain,
                 self.full_node.blockchain.get_peak(),
                 next_sub_slot_iters,
-                SignagePoint(
-                    request.challenge_chain_vdf,
-                    request.challenge_chain_proof,
-                    request.reward_chain_vdf,
-                    request.reward_chain_proof,
-                ),
+                signage_point,
             )
 
-            if added:
+            if result == SignagePointAddResult.ADDED:
                 await self.full_node.signage_point_post_processing(request, peer, ip_sub_slot)
-            else:
+                return None
+            if result != SignagePointAddResult.INVALID_VDF:
                 self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge.hex()}, "
                     f"RC challenge: {request.reward_chain_vdf.challenge.hex()}"
                 )
+                return None
 
-            return None
+        # INVALID_VDF: ban peer after releasing timelord_lock
+        server = self.full_node.server
+        peer_host = peer.peer_info.host
+        if is_localhost(peer_host):
+            self.log.debug(f"Not banning localhost peer for invalid signage point VDF proof: {peer_host}")
+        elif is_in_network(peer_host, server.exempt_peer_networks):
+            self.log.debug(f"Not banning exempt network peer for invalid signage point VDF proof: {peer_host}")
+        else:
+            self.log.warning(
+                f"Banning {peer.get_peer_logging()} for invalid signage point VDF proof. "
+                f"SP index: {request.index_from_challenge}, "
+                f"CC challenge: {request.challenge_chain_vdf.challenge.hex()}"
+            )
+            await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+
+        return None
 
     @metadata.request(peer_required=True)
     async def respond_end_of_sub_slot(
@@ -919,59 +949,18 @@ class FullNodeAPI:
             # 2. In the same sub-slot as the peak
             # 3. In a future sub-slot that we already know of
 
-            # Grab best transactions from Mempool for given tip target
-            new_block_gen: NewBlockGenerator | None
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: BlockRecord | None = self.full_node.blockchain.get_peak()
-                tx_peak: BlockRecord | None = self.full_node.blockchain.get_tx_peak()
 
-                # Checks that the proof of space is valid
                 height: uint32
-                tx_height: uint32
-                if peak is None or tx_peak is None:
+                if peak is None:
                     height = uint32(0)
-                    tx_height = uint32(0)
                 else:
                     height = peak.height
-                    tx_height = tx_peak.height
-                quality_string: bytes32 | None = verify_and_get_quality_string(
-                    request.proof_of_space,
-                    self.full_node.constants,
+                filter_challenge = self.full_node.full_node_store.get_filter_challenge(
                     cc_challenge_hash,
-                    request.challenge_chain_sp,
-                    height=height,
-                    prev_transaction_block_height=tx_height,
+                    request.signage_point_index,
                 )
-                if quality_string is None:
-                    self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
-                    return None
-
-                if peak is not None:
-                    try:
-                        block_version = self.full_node.config.get("block_creation", 1)
-                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
-                        if block_version == 0:
-                            create_block = self.full_node.mempool_manager.create_block_generator
-                        elif block_version == 1:
-                            create_block = self.full_node.mempool_manager.create_block_generator2
-                        else:
-                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
-                            create_block = self.full_node.mempool_manager.create_block_generator
-
-                        assert tx_peak is not None
-                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
-
-                        if (
-                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
-                        ):  # pragma: no cover
-                            self.log.error("Cannot farm blocks pre-hard fork")
-
-                    except Exception as e:
-                        self.log.error(f"Traceback: {traceback.format_exc()}")
-                        self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
-                        new_block_gen = None
-                else:
-                    new_block_gen = None
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1039,6 +1028,59 @@ class FullNodeAPI:
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
                 return None
+
+            tx_height = pre_sp_tx_block_height(
+                constants=self.full_node.constants,
+                blocks=self.full_node.blockchain,
+                prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
+                sp_index=request.signage_point_index,
+                finished_sub_slots=len(finished_sub_slots),
+            )
+            quality_string: bytes32 | None = verify_and_get_quality_string(
+                request.proof_of_space,
+                self.full_node.constants,
+                cc_challenge_hash,
+                request.challenge_chain_sp,
+                height=height,
+                prev_transaction_block_height=tx_height,
+                filter_challenge=filter_challenge,
+                signage_point_index=request.signage_point_index,
+            )
+            if quality_string is None:
+                self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
+                return None
+
+            # Grab best transactions from Mempool for given tip target only after
+            # rejecting invalid proofs.
+            new_block_gen: NewBlockGenerator | None = None
+            tx_peak: BlockRecord | None = None
+            if peak is not None:
+                async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    tx_peak = self.full_node.blockchain.get_tx_peak()
+                    try:
+                        block_version = self.full_node.config.get("block_creation", 1)
+                        block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
+                        if block_version == 0:
+                            create_block = self.full_node.mempool_manager.create_block_generator
+                        elif block_version == 1:
+                            create_block = self.full_node.mempool_manager.create_block_generator2
+                        else:
+                            self.log.warning(f"Unknown 'block_creation' config: {block_version}")
+                            create_block = self.full_node.mempool_manager.create_block_generator
+
+                        assert tx_peak is not None
+                        new_block_gen = create_block(tx_peak.header_hash, block_timeout)
+
+                        if (
+                            new_block_gen is not None and peak.height < self.full_node.constants.HARD_FORK_HEIGHT
+                        ):  # pragma: no cover
+                            self.log.error("Cannot farm blocks pre-hard fork")
+
+                    except Exception as e:
+                        self.log.error(f"Traceback: {traceback.format_exc()}")
+                        self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        new_block_gen = None
+
             if prev_b is None:
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
@@ -1071,6 +1113,7 @@ class FullNodeAPI:
                 request.proof_of_space.param(),
                 difficulty,
                 request.challenge_chain_sp,
+                height=tx_height,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
@@ -1473,7 +1516,7 @@ class FullNodeAPI:
                     msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
                     return msg
 
-                assert block is not None and block.foliage_transaction_block is not None
+                assert block.foliage_transaction_block is not None
 
                 all_removals: list[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(
                     block.height
@@ -2161,25 +2204,13 @@ class FullNodeAPI:
 
         start_time = time.monotonic()
 
-        async with self.full_node.db_wrapper.reader() as conn:
-            transaction_ids = set(
-                self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
-            )
+        transaction_ids = set(
+            self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
+        )
 
-            hinted_coin_ids: set[bytes32] = set()
+        hinted_coin_ids = await self.full_node.hint_store.get_coin_ids_by_hints(puzzle_hashes)
 
-            for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
-                hints_db: tuple[bytes, ...] = tuple(batch.entries)
-                cursor = await conn.execute(
-                    f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
-                    hints_db,
-                )
-                for row in await cursor.fetchall():
-                    hinted_coin_ids.add(bytes32(row[0]))
-                await cursor.close()
-
-            transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
+        transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))

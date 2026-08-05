@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import enum
 import logging
 import time
 
@@ -20,6 +21,7 @@ from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.util.lru_cache import LRUCache, LRUKeyedListCache, LRUSet
 from chia.util.streamable import Streamable, streamable
@@ -40,6 +42,12 @@ FUTURE_EOS_CACHE_MAX_ENTRIES_PER_KEY = 4
 
 FUTURE_IP_CACHE_MAX_KEYS = 128
 FUTURE_IP_CACHE_MAX_ENTRIES_PER_KEY = 8
+
+
+class SignagePointAddResult(enum.Enum):
+    ADDED = "added"
+    NOT_ADDED = "not_added"
+    INVALID_VDF = "invalid_vdf"
 
 
 @streamable
@@ -707,9 +715,14 @@ class FullNodeStore:
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation: bool = False,
-    ) -> bool:
+    ) -> SignagePointAddResult:
         """
-        Returns true if sp successfully added
+        Returns:
+            ADDED: SP was stored successfully.
+            NOT_ADDED: SP was rejected for structural reasons (wrong sub-slot, future SP,
+                info mismatch). May be cached for later retry via add_to_future_sp.
+            INVALID_VDF: Challenge hash and VDF info matched expectations but the
+                cryptographic proof failed verification. Caller should ban the peer.
         """
         assert len(self.finished_sub_slots) >= 1
 
@@ -718,9 +731,8 @@ class FullNodeStore:
         else:
             sub_slot_iters = peak.sub_slot_iters
 
-        # If we don't have this slot, return False
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
-            return False
+            return SignagePointAddResult.NOT_ADDED
         assert (
             signage_point.cc_vdf is not None
             and signage_point.cc_proof is not None
@@ -793,13 +805,15 @@ class FullNodeStore:
                     )
                 if not signage_point.cc_vdf == cc_vdf_info_expected.replace(number_of_iterations=delta_iters):
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
                 if check_from_start_of_ss:
                     start_ele = ClassgroupElement.get_default_element()
                 else:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
+                    # Non-normalized CC proofs are for a VDF segment. The SP's CC challenge/output can match while
+                    # an honest peer proves from a different previous in-slot block than our current start element.
                     if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
@@ -807,20 +821,18 @@ class FullNodeStore:
                         cc_vdf_info_expected,
                     ):
                         self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.NOT_ADDED
                     if signage_point.cc_proof.normalized_to_identity and not validate_vdf(
                         signage_point.cc_proof,
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.cc_vdf,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
-                if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
-                    # This signage point is probably outdated
+                if rc_vdf_info_expected != signage_point.rc_vdf:
                     self.add_to_future_sp(signage_point, index)
-                    return False
+                    return SignagePointAddResult.NOT_ADDED
 
                 if not skip_vdf_validation:
                     if not validate_vdf(
@@ -830,14 +842,13 @@ class FullNodeStore:
                         signage_point.rc_vdf,
                         rc_vdf_info_expected,
                     ):
-                        self.add_to_future_sp(signage_point, index)
-                        return False
+                        return SignagePointAddResult.INVALID_VDF
 
                 sp_arr[index] = signage_point
                 self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
-                return True
+                return SignagePointAddResult.ADDED
         self.add_to_future_sp(signage_point, index)
-        return False
+        return SignagePointAddResult.NOT_ADDED
 
     def get_signage_point(self, cc_signage_point: bytes32) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
@@ -852,6 +863,65 @@ class FullNodeStore:
                     assert sp.cc_vdf is not None
                     if sp.cc_vdf.output.get_hash() == cc_signage_point:
                         return sp
+        return None
+
+    def get_filter_challenge(self, challenge: bytes32, index: uint8) -> bytes32 | None:
+        """
+        Get the filter_challenge for V2 plot filter.
+
+        The filter_challenge is the cc sub-slot challenge hash of a previously
+        completed sub-slot.  All SPs in the same window share the same value.
+        """
+        assert len(self.finished_sub_slots) >= 1
+
+        def previous_sub_slot_challenge(sub_slot: EndOfSubSlotBundle) -> bytes32:
+            return sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+
+        def get_active_or_recent_sub_slot(slot_challenge: bytes32) -> EndOfSubSlotBundle | None:
+            for active_sub_slot, _, _ in self.finished_sub_slots:
+                if active_sub_slot is not None and active_sub_slot.challenge_chain.get_hash() == slot_challenge:
+                    return active_sub_slot
+
+            recent_eos = self.recent_eos.get(slot_challenge)
+            if recent_eos is None:
+                return None
+
+            return recent_eos[0]
+
+        window_start = (index // FILTER_WINDOW_SIZE) * FILTER_WINDOW_SIZE
+
+        for sub_slot, _, _ in self.finished_sub_slots:
+            slot_challenge = (
+                sub_slot.challenge_chain.get_hash() if sub_slot is not None else self.constants.GENESIS_CHALLENGE
+            )
+            if slot_challenge != challenge:
+                continue
+
+            if window_start == 0:
+                # Window [0-15]: use SS(n-2) challenge hash
+                if sub_slot is None:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+
+                previous_challenge = previous_sub_slot_challenge(sub_slot)
+                if previous_challenge == self.constants.GENESIS_CHALLENGE:
+                    log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
+                    return None
+
+                previous_sub_slot = get_active_or_recent_sub_slot(previous_challenge)
+                if previous_sub_slot is None:
+                    log.debug("filter_challenge unavailable: missing previous sub-slot for window 0")
+                    return None
+
+                return previous_sub_slot_challenge(previous_sub_slot)
+            else:
+                # Windows [16-31], [32-47], [48-63]: use SS(n-1) challenge hash
+                if sub_slot is None:
+                    log.debug("filter_challenge unavailable: no previous sub-slot")
+                    return None
+                return previous_sub_slot_challenge(sub_slot)
+
+        log.debug("filter_challenge unavailable: challenge %s not found", challenge.hex()[:16])
         return None
 
     def get_signage_point_by_index_and_cc_output(
@@ -1011,7 +1081,7 @@ class FullNodeStore:
         ).copy()
         for index, sp in future_sps:
             assert sp.cc_vdf is not None
-            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
+            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp) == SignagePointAddResult.ADDED:
                 new_sps.append((index, sp))
 
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):

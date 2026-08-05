@@ -156,7 +156,7 @@ def display_key_info(fingerprint: int, prefix: str) -> None:
     wallet_address: str = encode_puzzle_hash(puzzle_hash_for_pk(first_wallet_sk.get_g1()), prefix)
     print(f"First wallet address: {wallet_address}")
     assert seed is not None
-    print("Master private key (m):", bytes(sk).hex())
+    print("Master private key (m):", sk.as_hex_string())
     print("First wallet secret key (m/12381/8444/2/0):", master_sk_to_wallet_sk(sk, uint32(0)))
     mnemonic = bytes_to_mnemonic(seed)
     print("  Mnemonic seed (24 secret words):")

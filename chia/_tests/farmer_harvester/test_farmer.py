@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from time import time
 from types import TracebackType
 from typing import Any, cast
-from unittest.mock import ANY
+from unittest.mock import ANY, AsyncMock
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotParam, PrivateKey, ProofOfSpace
@@ -20,10 +20,15 @@ from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__
-from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.conftest import FarmerOneHarvester, HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer import (
+    UPDATE_POOL_FARMER_INFO_INTERVAL,
+    Farmer,
+    increment_pool_stats,
+    strip_old_entries,
+)
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolingShareState
@@ -694,8 +699,12 @@ class DummyPoolResponse:
     error_code: int | None = None
     error_message: str | None = None
     new_difficulty: int | None = None
+    raw_response: dict[str, Any] | None = None
 
     async def text(self) -> str:
+        if self.raw_response is not None:
+            return json.dumps(self.raw_response)
+
         json_dict: dict[str, Any] = dict()
         if self.error_code:
             json_dict["error_code"] = self.error_code
@@ -888,6 +897,19 @@ class PoolStateCase:
             }
         ),
     ),
+    PoolStateCase(
+        "malformed_new_difficulty",
+        DummyPoolResponse(True, 200, raw_response={"new_difficulty": -1}),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "current_difficulty": uint64(1),
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
+            }
+        ),
+    ),
 )
 @pytest.mark.anyio
 async def test_farmer_pool_response(
@@ -917,6 +939,11 @@ async def test_farmer_pool_response(
 
     pool_response = case.pool_response
     expected_pool_state = case.expected_pool_state
+
+    if "current_difficulty" in expected_pool_state:
+        farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] = expected_pool_state[
+            "current_difficulty"
+        ]
 
     mock_http_post = mocker.patch("aiohttp.ClientSession.post", return_value=pool_response)
 
@@ -955,6 +982,11 @@ async def test_farmer_pool_response(
     assert_stats_24h("stale_partials_24h")
     assert_stats_since_start("missing_partials_since_start")
     assert_stats_24h("missing_partials_24h")
+    if "current_difficulty" in expected_pool_state:
+        assert (
+            farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["current_difficulty"]
+            == expected_pool_state["current_difficulty"]
+        )
 
 
 def make_pool_info() -> dict[str, Any]:
@@ -1038,6 +1070,8 @@ class PoolInfoCase(DataCase):
     initial_pool_url_in_config: str
     pool_response: DummyPoolInfoResponse
     expected_pool_url_in_config: str
+    initial_current_difficulty: uint64 | None = None
+    expected_current_difficulty: uint64 | None = None
     marks: Marks = ()
 
     @property
@@ -1183,6 +1217,32 @@ class PoolInfoCase(DataCase):
         ),
         expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
     ),
+    PoolInfoCase(
+        "malformed_minimum_difficulty",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            pool_info={**make_pool_info(), "minimum_difficulty": -1},
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        initial_current_difficulty=uint64(42),
+        expected_current_difficulty=uint64(42),
+    ),
+    PoolInfoCase(
+        "error_code_in_response",
+        initial_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        pool_response=DummyPoolInfoResponse(
+            ok=True,
+            status=200,
+            url=URL("https://endpoint-1.pool-domain.tld/some-path"),
+            pool_info={**make_pool_info(), "error_code": 1, "error_message": "pool unavailable"},
+        ),
+        expected_pool_url_in_config="https://endpoint-1.pool-domain.tld/some-path",
+        initial_current_difficulty=uint64(42),
+        expected_current_difficulty=uint64(42),
+    ),
 )
 @pytest.mark.parametrize("pool_protocol_version", [1, 2])
 @pytest.mark.anyio
@@ -1195,14 +1255,19 @@ async def test_farmer_pool_info_config_update(
     _, farmer_service, _ = farmer_one_harvester
     p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
     auth_sk = calculate_synthetic_secret_key(
-        master_sk_to_wallet_sk_unhardened(farmer_service._node.all_root_sks[0], uint32(0)), DEFAULT_HIDDEN_PUZZLE_HASH
+        master_sk_to_wallet_sk_unhardened(farmer_service._node.all_root_sks[0], uint32(0)),
+        DEFAULT_HIDDEN_PUZZLE_HASH,
     )
     farmer_service._node.authentication_keys = {p2_singleton_puzzle_hash: auth_sk}
+    pool_state_overrides: dict[str, Any] = {
+        "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
+    }
+    if case.initial_current_difficulty is not None:
+        pool_state_overrides["current_difficulty"] = case.initial_current_difficulty
+        pool_state_overrides["authentication_token_timeout"] = 10
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
         p2_singleton_puzzle_hash,
-        overrides={
-            "next_farmer_update": time() + UPDATE_POOL_FARMER_INFO_INTERVAL,
-        },
+        overrides=pool_state_overrides,
     )
     PoolingShareState(
         owner_public_key=auth_sk.get_g1(),
@@ -1223,7 +1288,11 @@ async def test_farmer_pool_info_config_update(
         root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
     ) as pool_config:
         assert pool_config.pool_url == case.expected_pool_url_in_config
-
+    if case.expected_current_difficulty is not None:
+        assert (
+            farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"]
+            == case.expected_current_difficulty
+        )
     if not case.pool_response.ok:
         return
     login_link = await farmer_service._node.generate_login_link(pool_config.launcher_id)
@@ -1236,6 +1305,174 @@ async def test_farmer_pool_info_config_update(
         + r"&authentication_token=\d+&signature=[0-9a-f]+"
     )
     assert re.fullmatch(expected, login_link) is not None
+
+
+@dataclass
+class DummyGetFarmerResponse:
+    ok: bool
+    status: int
+    current_difficulty: int
+    current_points: int
+
+    async def json(self, **kwargs: object) -> dict[str, Any]:
+        return {
+            "current_difficulty": self.current_difficulty,
+            "current_points": self.current_points,
+            "authentication_public_key": bytes(G1Element()).hex(),
+            "payout_instructions": "",
+        }
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
+
+@pytest.mark.parametrize("pool_protocol_version", [1, 2])
+@pytest.mark.anyio
+async def test_farmer_info_update(
+    mocker: MockerFixture,
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
+    pool_protocol_version: int,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
+    launcher_id = bytes32.from_hexstr("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa")
+    auth_sk = calculate_synthetic_secret_key(
+        master_sk_to_wallet_sk_unhardened(farmer_service._node.all_root_sks[0], uint32(0)),
+        DEFAULT_HIDDEN_PUZZLE_HASH,
+    )
+    farmer_service._node.authentication_keys = {p2_singleton_puzzle_hash: auth_sk}
+    farmer_service._node.authentication_tokens = {launcher_id: ("", uint64(time() + 3600))}
+    pool_state_overrides: dict[str, Any] = {
+        "next_pool_info_update": uint64.MAXIMUM,
+        "authentication_token_timeout": uint64.MAXIMUM,
+    }
+    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
+        p2_singleton_puzzle_hash,
+        overrides=pool_state_overrides,
+    )
+    PoolingShareState(
+        owner_public_key=auth_sk.get_g1(),
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        pool_url="https://dapool.com",
+        launcher_id=launcher_id,
+        target_puzzle_hash=bytes32.from_hexstr("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+        key_derivation_index=0,
+        version=pool_protocol_version,
+    ).add(root_path=farmer_service.root_path)
+    EXPECTED_CURRENT_DIFFICULTY = 1234
+    EXPECTED_CURRENT_POINTS = 5678
+    mocker.patch(
+        "aiohttp.ClientSession.request",
+        return_value=DummyGetFarmerResponse(
+            ok=True,
+            status=200,
+            current_difficulty=EXPECTED_CURRENT_DIFFICULTY,
+            current_points=EXPECTED_CURRENT_POINTS,
+        ),
+    )
+
+    await farmer_service._node.update_pool_state()
+    assert (
+        farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == EXPECTED_CURRENT_DIFFICULTY
+    )
+    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_points"] == EXPECTED_CURRENT_POINTS
+
+    mocker.patch(
+        "aiohttp.ClientSession.request",
+        return_value=DummyGetFarmerResponse(
+            ok=False,
+            status=404,
+            current_difficulty=EXPECTED_CURRENT_DIFFICULTY,
+            current_points=EXPECTED_CURRENT_POINTS,
+        ),
+    )
+
+    farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
+        p2_singleton_puzzle_hash,
+        overrides={
+            "next_farmer_update": 0,
+            "current_difficulty": EXPECTED_CURRENT_DIFFICULTY,
+            "current_points": EXPECTED_CURRENT_POINTS,
+        },
+    )
+    await farmer_service._node.update_pool_state()
+    assert (
+        farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] == EXPECTED_CURRENT_DIFFICULTY
+    )
+    assert farmer_service._node.pool_state[p2_singleton_puzzle_hash]["current_points"] == EXPECTED_CURRENT_POINTS
+
+
+@pytest.mark.anyio
+async def test_new_signage_point_skips_pool_with_invalid_difficulty(
+    mocker: MockerFixture,
+    farmer_one_harvester: FarmerOneHarvester,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    farmer_api = farmer_service._api
+    send_mock = mocker.patch.object(farmer_service._server, "send_to_all_if", new_callable=AsyncMock)
+
+    sp, _, _ = create_valid_pos(farmer_api.farmer)
+    farmer_api.farmer.sps = {}
+    valid_p2 = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
+    invalid_p2 = bytes32(std_hash(b"invalid_pool_difficulty"))
+    invalid_pool_config = PoolingShareState(
+        launcher_id=bytes32.fromhex("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        pool_url="https://bad-pool.example",
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        target_puzzle_hash=bytes32.fromhex("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+        p2_singleton_puzzle_hash=invalid_p2,
+        owner_public_key=G1Element.from_bytes(
+            bytes.fromhex(
+                "8348455278ecec68325b6754b1f3218cde1511ca9393197e7876d7ae04af1c4dd86b0c50601cf5daeb034e8f7c226537"
+            )
+        ),
+        key_derivation_index=-1,
+    )
+    farmer_api.farmer.pool_state[invalid_p2] = make_pool_state(
+        invalid_p2,
+        overrides={
+            "current_difficulty": -1,
+            "pool_config": invalid_pool_config,
+            "authentication_token_timeout": uint8(5),
+        },
+    )
+    self_pool_p2 = bytes32(std_hash(b"self_pool"))
+    self_pool_config = PoolingShareState(
+        launcher_id=bytes32.fromhex("1122334455667788990011223344556677889900112233445566778899001122"),
+        pool_url="",
+        payout_instructions="c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        target_puzzle_hash=bytes32.fromhex("344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58"),
+        p2_singleton_puzzle_hash=self_pool_p2,
+        owner_public_key=G1Element.from_bytes(
+            bytes.fromhex(
+                "8348455278ecec68325b6754b1f3218cde1511ca9393197e7876d7ae04af1c4dd86b0c50601cf5daeb034e8f7c226537"
+            )
+        ),
+        key_derivation_index=-1,
+    )
+    farmer_api.farmer.pool_state[self_pool_p2] = make_pool_state(
+        self_pool_p2,
+        overrides={
+            "pool_config": self_pool_config,
+        },
+    )
+
+    await farmer_api.new_signage_point(sp)
+
+    assert send_mock.await_count == 2
+    nsp = harvester_protocol.NewSignagePointHarvester.from_bytes(send_mock.await_args_list[0].args[0][0].data)
+    assert len(nsp.pool_difficulties) == 1
+    assert nsp.pool_difficulties[0].pool_contract_puzzle_hash == valid_p2
+    assert nsp.pool_difficulties[0].difficulty == uint64(1)
 
 
 @dataclass
@@ -1379,12 +1616,12 @@ async def test_farmer_to_pool_protocol(
         path = str(URL(url).path).rstrip("/")
         if path.endswith("/auth"):
             assert method == "GET"
-            yield DummyAuthResponse(ok=True)
+            yield DummyAuthResponse(ok=True)  # noqa: RUF075
         if path.endswith("/farmer"):
             if method == "POST":
-                yield DummyPostFarmerResponse(ok=True)
+                yield DummyPostFarmerResponse(ok=True)  # noqa: RUF075
             if method == "PUT":
-                yield DummyPutFarmerResponse(ok=True)
+                yield DummyPutFarmerResponse(ok=True)  # noqa: RUF075
             if method == "GET":
                 yield DummyGetFarmerResponse(ok=True)
 
@@ -1403,36 +1640,39 @@ async def test_farmer_to_pool_protocol(
 
     mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_request)
     with PoolingShareState.acquire(
-        root_path=farmer_service.root_path, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+        root_path=farmer_service.root_path,
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
     ) as pool_config:
-        assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10)) == PostFarmerResponse(
-            welcome_message="welcome to the pool"
-        )
-        assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10)) == PutFarmerResponse(
-            authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
-        )
-        assert isinstance(await farmer_service._node._pool_get_farmer(pool_config, uint8(10)), GetFarmerResponse)
+        pass
 
-        # Test some errors and especially with getting authentication
-        if pool_protocol_version == 2:
-            farmer_service._node.authentication_tokens = {}
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
-            with caplog.at_level(logging.WARNING):
-                assert isinstance(
-                    await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)), ErrorResponse
-                )
-                assert "GET /auth response: " in caplog.text
+    assert await farmer_service._node._pool_post_farmer(pool_config, uint8(10)) == PostFarmerResponse(
+        welcome_message="welcome to the pool"
+    )
+    assert await farmer_service._node._pool_put_farmer(pool_config, uint8(10)) == PutFarmerResponse(
+        authentication_public_key=False, suggested_difficulty=False, payout_instructions=True
+    )
+    assert isinstance(await farmer_service._node._pool_get_farmer(pool_config, uint8(10)), GetFarmerResponse)
 
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error_not_ok)
-            with caplog.at_level(logging.ERROR):
-                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
-                assert "Error in GET /auth http://doesntmatter.com, 404" in caplog.text
+    # Test some errors and especially with getting authentication
+    if pool_protocol_version == 2:
+        farmer_service._node.authentication_tokens = {}
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error)
+        with caplog.at_level(logging.WARNING):
+            assert isinstance(
+                await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)), ErrorResponse
+            )
+            assert "GET /auth response: " in caplog.text
 
-            mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_exception)
-            with caplog.at_level(logging.ERROR):
-                assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
-                assert "Exception in GET /auth http://doesntmatter.com, foo bar" in caplog.text
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_error_not_ok)
+        with caplog.at_level(logging.ERROR):
+            assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+            assert "Error in GET /auth http://doesntmatter.com, 404" in caplog.text
 
-            pool_config.version = 1337
-            with pytest.raises(ValueError, match=r"Unknown pool protocol version specified in pooling config"):
-                await farmer_service._node._get_current_authentication_token(pool_config, uint8(10))
+        mocker.patch("aiohttp.ClientSession.request", side_effect=client_session_exception)
+        with caplog.at_level(logging.ERROR):
+            assert await farmer_service._node._get_current_authentication_token(pool_config, uint8(10)) is None
+            assert "Exception in GET /auth http://doesntmatter.com, foo bar" in caplog.text
+
+        pool_config.version = 1337
+        with pytest.raises(ValueError, match=r"Unknown pool protocol version specified in pooling config"):
+            await farmer_service._node._get_current_authentication_token(pool_config, uint8(10))

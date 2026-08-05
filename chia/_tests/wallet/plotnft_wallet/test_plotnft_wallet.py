@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
-import unittest
+from unittest import mock
 from unittest.mock import Mock
 
 import pytest
@@ -962,7 +962,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         await conn.execute("DELETE FROM finish_exiting_info WHERE wallet_id = ?", (plotnft_wallet.id(),))
 
     # also adding an unconfirmed transaction to test that completion is not attempted when state is uncertain
-    await env.wallet_state_manager.add_transaction(
+    await env.wallet_state_manager.tx_store.add_transaction_record(
         env.wallet_state_manager.new_outgoing_transaction(
             wallet_id=plotnft_wallet.id(),
             puzzle_hash=bytes32.zeros,
@@ -1034,7 +1034,7 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
 
     # check a `transfer_plotnft` safety guard
     with pytest.raises(RuntimeError, match="Error retrieving key for fingerprint 0"):
-        with unittest.mock.patch("chia.daemon.keychain_proxy.KeychainProxy.get_key_for_fingerprint", return_value=None):
+        with mock.patch("chia.daemon.keychain_proxy.KeychainProxy.get_key_for_fingerprint", return_value=None):
             await plotnft_wallet.transfer_plotnft(action_scope=action_scope, target_wallet_fingerprint=0)
 
     # check a `coin_added` type guard

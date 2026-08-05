@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 import aiohttp
+import anyio
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -260,13 +261,15 @@ class DataLayer:
                 if self._wallet_rpc is not None:
                     self.wallet_rpc.close()
 
-                if self.periodically_manage_data_task is not None:
+                with anyio.CancelScope(shield=True):
                     try:
-                        self.periodically_manage_data_task.cancel()
-                    except asyncio.CancelledError:
-                        pass
-                if self._wallet_rpc is not None:
-                    await self.wallet_rpc.await_closed()
+                        if self.periodically_manage_data_task is not None:
+                            self.periodically_manage_data_task.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await self.periodically_manage_data_task
+                    finally:
+                        if self._wallet_rpc is not None:
+                            await self.wallet_rpc.await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -729,6 +732,9 @@ class DataLayer:
         ).singleton
         if singleton_record is None:
             return
+        if singleton_record.generation == uint32(0):
+            # No data committed on chain yet, so there is no local tree to clean up.
+            return
         await self._update_confirmation_status(store_id=store_id)
 
         root = await self.data_store.get_tree_root(store_id=store_id)
@@ -750,13 +756,17 @@ class DataLayer:
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {store_id}.")
             return
+        if singleton_record.generation == uint32(0):
+            # No data committed on chain yet, so there is no local tree to publish.
+            self.log.info(f"No committed data for store {store_id}; skipping DataLayer file publishing.")
+            return
         await self._update_confirmation_status(store_id=store_id)
 
         root = await self.data_store.get_tree_root(store_id=store_id)
         latest_generation = root.generation
         # Don't store full tree files before this generation.
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        publish_generation = min(singleton_record.generation, root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
@@ -773,7 +783,7 @@ class DataLayer:
                 # this particular return only happens if the files already exist, no need to log anything
                 break
             try:
-                if uploaders is not None and len(uploaders) > 0:
+                if len(uploaders) > 0:
                     request_json = {
                         "store_id": store_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
@@ -820,7 +830,7 @@ class DataLayer:
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
-        max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        max_generation = min(singleton_record.generation, root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
         files = []
         for generation in range(1, max_generation + 1):
@@ -839,7 +849,7 @@ class DataLayer:
                 files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
-        if uploaders is not None and len(uploaders) > 0:
+        if len(uploaders) > 0:
             request_json = {
                 "store_id": store_id.hex(),
                 "files": json.dumps(files),
@@ -889,7 +899,8 @@ class DataLayer:
         # This function already acquired `subscriptions_lock`.
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
-            raise RuntimeError("No subscription found for the given store_id.")
+            # Already unsubscribed (e.g. the request was queued more than once); nothing to do.
+            return
         paths: list[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
@@ -975,29 +986,13 @@ class DataLayer:
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
         while not self._shut_down:
-            async with self.subscription_lock:
-                try:
-                    subscriptions = await self.data_store.get_subscriptions()
-                    for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
-                    break
-                except aiohttp.client_exceptions.ClientConnectorError:
-                    pass
-                except Exception as e:
-                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
-
-            self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
-
-            delay_until = time.monotonic() + 3
-            while time.monotonic() < delay_until:
-                if self._shut_down:
-                    break
-                await asyncio.sleep(0.1)
-
-        while not self._shut_down:
             # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
+
+            # Track each subscription individually so one bad subscription can't block the
+            # others or entry into the rest of the management cycle.
+            await self.track_subscriptions(subscriptions)
 
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
@@ -1055,10 +1050,34 @@ class DataLayer:
 
             # Do unsubscribes after the fetching of data is complete, to avoid races.
             async with self.subscription_lock:
+                still_pending: list[UnsubscribeData] = []
                 for unsubscribe_data in self.unsubscribe_data_queue:
-                    await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
-                self.unsubscribe_data_queue.clear()
+                    try:
+                        await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
+                    except Exception as e:
+                        # A single failing unsubscribe (e.g. the wallet is unreachable) must not
+                        # kill the loop or block the others; retry it on the next cycle.
+                        self.log.warning(
+                            f"Exception while processing queued unsubscribe for "
+                            f"{unsubscribe_data.store_id}: {type(e)} {e}"
+                        )
+                        still_pending.append(unsubscribe_data)
+                self.unsubscribe_data_queue[:] = still_pending
             await asyncio.sleep(manage_data_interval)
+
+    async def track_subscriptions(self, subscriptions: list[Subscription]) -> None:
+        for subscription in subscriptions:
+            try:
+                await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
+            except aiohttp.client_exceptions.ClientConnectorError as e:
+                # Wallet unreachable: retry the remaining subscriptions on the next cycle.
+                self.log.warning(f"Cannot connect to the wallet to track subscriptions ({e}). Retrying next cycle.")
+                return
+            except Exception as e:
+                # One subscription failing to track must not abort tracking of the others.
+                self.log.warning(
+                    f"Exception while requesting wallet track subscription {subscription.store_id}: {type(e)} {e}"
+                )
 
     async def update_subscription(
         self,

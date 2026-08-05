@@ -77,7 +77,7 @@ class ChiaCliContext:
         return {self.context_dict_key: self}
 
 
-class HexString(click.ParamType):
+class HexString(click.ParamType[bytes]):
     name = "hexstring"
 
     def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> bytes:
@@ -89,7 +89,7 @@ class HexString(click.ParamType):
             self.fail(f"not a valid hex string: {value!r} ({e})", param, ctx)
 
 
-class HexString32(click.ParamType):
+class HexString32(click.ParamType[bytes32]):
     name = "hexstring32"
 
     def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> bytes32:

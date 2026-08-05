@@ -96,7 +96,7 @@ def load_serialized_clvm(
     # "" or "0" to trigger automatic recompilation of the Chialisp on load.
     resources = importlib_resources.files(package_or_requirement)
     if recompile and not getattr(sys, "frozen", False):
-        full_path = resources.joinpath(clvm_filename)
+        full_path = pathlib.Path(str(resources.joinpath(clvm_filename)))
         if full_path.exists():
             # Establish whether the size is zero on entry
             output = full_path.parent / hex_filename

@@ -12,6 +12,7 @@ from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+import chia.cmds.peer_funcs
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
 from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
@@ -400,6 +401,7 @@ def create_service_and_wallet_client_generators(
         return None
 
     monkeypatch.setattr(chia.cmds.cmds_util, "get_any_service_client", test_get_any_service_client)
+    monkeypatch.setattr(chia.cmds.peer_funcs, "get_any_service_client", test_get_any_service_client)
     monkeypatch.setattr(chia.cmds.cmds_util, "get_wallet_client", test_get_wallet_client)
     monkeypatch.setattr(chia.cmds.wallet_funcs, "get_wallet_client", test_get_wallet_client)
     monkeypatch.setattr(chia.cmds.cmds_util, "cli_confirm", cli_confirm)

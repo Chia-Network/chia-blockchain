@@ -106,47 +106,24 @@ def validate_additions(
         if root != additions_root:
             return False
     else:
-        for i in range(len(coins)):
-            assert coins[i][0] == proofs[i][0]
-            coin_list_1: list[Coin] = coins[i][1]
-            puzzle_hash_proof: bytes | None = proofs[i][1]
-            coin_list_proof: bytes | None = proofs[i][2]
-            if len(coin_list_1) == 0:
+        if len(coins) != len(proofs):
+            return False
+        for (coin_ph, coin_list), (proof_ph, puzzle_hash_proof, coin_list_proof) in zip(coins, proofs):
+            if coin_ph != proof_ph:
+                return False
+            if len(coin_list) == 0:
                 # Verify exclusion proof for puzzle hash
-                assert puzzle_hash_proof is not None
-                not_included = confirm_not_included_already_hashed(
-                    root,
-                    coins[i][0],
-                    puzzle_hash_proof,
-                )
-                if not_included is False:
+                if not confirm_not_included_already_hashed(root, coin_ph, puzzle_hash_proof):
                     return False
-            else:
-                try:
-                    # Verify inclusion proof for coin list
-                    assert coin_list_proof is not None
-                    included = confirm_included_already_hashed(
-                        root,
-                        hash_coin_ids([c.name() for c in coin_list_1]),
-                        coin_list_proof,
-                    )
-                    if included is False:
-                        return False
-                except AssertionError:
-                    return False
-                try:
-                    # Verify inclusion proof for puzzle hash
-                    assert puzzle_hash_proof is not None
-                    included = confirm_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        puzzle_hash_proof,
-                    )
-                    if included is False:
-                        return False
-                except AssertionError:
-                    return False
-
+                continue
+            if coin_list_proof is None:
+                return False
+            # Verify inclusion proof for coin list
+            if not confirm_included_already_hashed(root, hash_coin_ids([c.name() for c in coin_list]), coin_list_proof):
+                return False
+            # Verify inclusion proof for puzzle hash
+            if not confirm_included_already_hashed(root, coin_ph, puzzle_hash_proof):
+                return False
     return True
 
 
@@ -362,8 +339,11 @@ async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -
     )
     if solution_response is None or not isinstance(solution_response, RespondPuzzleSolution):
         raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
-    assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-    assert solution_response.response.coin_name == coin.name()
+    coin_id = coin.name()
+    if solution_response.response.puzzle.get_tree_hash() != coin.puzzle_hash:
+        raise PeerRequestException(f"Peer returned wrong puzzle hash for coin {coin_id}")
+    if solution_response.response.coin_name != coin_id:
+        raise PeerRequestException(f"Peer returned wrong coin name in puzzle solution for coin {coin_id}")
 
     return make_spend(
         coin,

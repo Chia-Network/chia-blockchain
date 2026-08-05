@@ -14,7 +14,9 @@ async def test_store() -> None:
         await store.init_wallet()
         wallet = None
         for i in range(1, 5):
-            assert (await store.get_last_wallet()).id == i
+            last_wallet = await store.get_last_wallet()
+            assert last_wallet is not None
+            assert last_wallet.id == i
             wallet = await store.create_wallet("CAT_WALLET", WalletType.CAT, "abc")
             assert wallet.id == i + 1
         assert wallet is not None
@@ -23,10 +25,14 @@ async def test_store() -> None:
         for i in range(2, 6):
             await store.delete_wallet(i)
 
-        assert (await store.get_last_wallet()).id == 1
+        last_wallet = await store.get_last_wallet()
+        assert last_wallet is not None
+        assert last_wallet.id == 1
         wallet = await store.create_wallet("CAT_WALLET", WalletType.CAT, "abc")
         # Due to autoincrement, we don't reuse IDs
-        assert (await store.get_last_wallet()).id == 6
+        last_wallet = await store.get_last_wallet()
+        assert last_wallet is not None
+        assert last_wallet.id == 6
         assert wallet.id == 6
 
         assert (await store.get_wallet_by_id(7)) is None

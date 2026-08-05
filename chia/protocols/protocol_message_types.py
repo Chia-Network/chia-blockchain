@@ -143,5 +143,7 @@ class ProtocolMessageTypes(Enum):
 
     # solver protocol
     solve = 109
+    respond_plots2 = 113
+    plot_sync_loaded2 = 112
 
     error = 255

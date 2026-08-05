@@ -5,7 +5,7 @@ import json
 import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
 import pytest
@@ -38,6 +38,9 @@ from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+
+if TYPE_CHECKING:
+    from _typeshed import FileDescriptorOrPath
 
 chiapos_version = importlib.metadata.version("chiapos")
 
@@ -2114,7 +2117,8 @@ def test_run_plotter_bladebit(
     case.farmer_pk = bytes(bt.farmer_pk).hex()
     case.final_dir = str(bt.plot_dir)
 
-    def bladebit_exists(x: Path) -> bool:
+    def bladebit_exists(x: FileDescriptorOrPath) -> bool:
+        # os.path.exists is patched globally, so this also sees stdlib callers (e.g. gettext) with str paths.
         return True if isinstance(x, Path) and x.parent == root_path / "plotters" else mocker.DEFAULT
 
     def get_bladebit_version(_: Path) -> tuple[bool, list[str]]:

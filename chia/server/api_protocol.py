@@ -11,7 +11,7 @@ from typing_extensions import ParamSpec, Protocol
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, _apply_list_limits
 
 
 class ApiProtocol(Protocol):
@@ -86,7 +86,12 @@ class ApiMetadata:
                             resolved_limits = request.list_limits(self, args[0])
                         else:
                             resolved_limits = request.list_limits(self)
-                    arg = message_class.from_bytes(original, list_limits=resolved_limits)
+                    if issubclass(message_class, Streamable):
+                        arg = message_class.from_bytes(original, list_limits=resolved_limits)
+                    else:
+                        arg = message_class.from_bytes(original)
+                        if resolved_limits is not None and len(resolved_limits) > 0:
+                            _apply_list_limits(arg, resolved_limits)
                 else:
                     arg = original
                     if request.bytes_required:

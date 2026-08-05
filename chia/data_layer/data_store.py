@@ -372,7 +372,7 @@ class DataStore:
                     while len(chunk) < 4:
                         size_to_read = 4 - len(chunk)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             if size_to_read < 4:
                                 raise Exception("Incomplete read of length.")
                             break
@@ -385,7 +385,7 @@ class DataStore:
                     while len(serialize_nodes_bytes) < size:
                         size_to_read = size - len(serialize_nodes_bytes)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             raise Exception("Incomplete read of blob.")
                         serialize_nodes_bytes += cur_chunk
                     serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
@@ -612,9 +612,8 @@ class DataStore:
             return KeyOrValueId(row[0])
 
     def get_blob_from_file(self, blob_hash: bytes32, store_id: bytes32) -> bytes:
-        # TODO: seems that zstd needs hinting
         # TODO: consider file-system based locking of either the file or the store directory
-        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
+        return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())
 
     async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> bytes | None:
         async with self.db_wrapper.reader() as reader:
@@ -1281,7 +1280,7 @@ class DataStore:
 
     async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> TerminalNode | None:
         root = await self.get_tree_root(store_id=store_id)
-        if root is None or root.node_hash is None:
+        if root.node_hash is None:
             return None
 
         merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
@@ -1736,16 +1735,24 @@ class DataStore:
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
+            # Clear roots too, otherwise re-subscribe can see a stale committed root
+            # while the on-disk blobs below are gone.
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
             await writer.execute(
                 "DELETE FROM nodes WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+        self.unconfirmed_keys_values.pop(store_id, None)
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:

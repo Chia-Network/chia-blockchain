@@ -6,6 +6,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.7.2 Chia blockchain 2026-07-09
+
+## What's Changed
+
+### Added
+
+- Add Python 3.14 support
+- Add Weight Proof v2 (WPv2) with MMR-based block commitments and optimized sub-epoch challenge segment tracking
+- Add PlotNFT v2 drivers for pool launch, join/leave, and reward claim
+- Add `/get_constants` RPC to full node
+- Add `get_full_node_peer_count` RPC to wallet
+
+### Changed
+
+- Add `offer_only` option to `create_offer_for_ids`
+- Change how `offer_only` works on `create_offer_for_id`
+- Add `get_fee_estimate` wallet RPC that retrieves fee-per-cost estimates from a connected full node peer, allowing wallet clients to get fee guidance without calling the full node RPC directly
+- Use a separate config for pooling information
+- Use `SQLITE_MAX_VARIABLE_NUMBER` for chunking limit
+- Simplify `TransactionQueueEntry`
+- Speedup `test_ban_for_mismatched_tx_cost_fee`
+- Improve state block handling in `WalletNode`'s `validate_received_state_from_peer`
+- Annotate `timelord_api.py`
+- Annotate `timelord_launcher.py`
+- Annotate `test_transactions.py`
+- Support treating old consensus constant names as the new ones
+- Improve collection of valid coin states in `WalletNode`'s `add_states_from_peer`
+- Make it clear that `bytes100` is always exactly 100 bytes long
+- Annotate `server.py`
+- Avoid recomputing peak header block in `WalletNode`'s `wallet_short_sync_backtrack`
+- Improve `fetch_coin_spend`
+- Annotate `wallet_user_store.py`
+- Add explicit None check in `full_node`'s `short_sync_batch` instead of naked assert
+- Improve `validate_additions`
+- Use `bad_element` in `test_invalid_rc_sub_slot_vdf`
+- Do not require peer for some wallet node APIs
+- Improve macOS Intel CI timeout headroom
+- Add configuration option to advertise rate limits v3 support
+- Annotate `wallet_node_api.py`
+
+### Fixed
+
+- Pass unresolved name as server name in `ws_connect`
+- Remove duplicate code from DID wallet
+- Fix wallet sync wait after puzzle-hash derivation in `test_self_revoke`
+- Handle stale peers during connection garbage collection
+- Fix error handling in `chia plots check`
+- Fix stale overflow
+- Fix chia peer errors for invalid or missing services
+- Isolate per-subscription failures in the DataLayer management loop
+- Fix apparmor profile
+- Fix off by one in cleanup (Thanks roopd3v)
+- Skip DataLayer upload/cleanup for stores with no committed data
+- Fix 407 cases
+- Sanity check that PlotNFT memos match actual inner puzzle
+- Upgrade `aiohttp` to 3.14.0 to fix blockchain sync on slow connections (including Starlink Standby mode)
+- Fix Windows runner tag-lock failures with shallow checkout in `test-single`
+- Upgrade `chia_rs` to 0.45.0
+- Upgrade `chia_rs` to 0.45.1
+
+### Additional Notes
+
+When building the Electron GUI from source, if you use Node.js version 24.16 or greater, only the first file will be extracted. As a result, the GUI won't install correctly. This is an [issue with Node](https://github.com/electron/electron/issues/51623). We plan to fix this on our end in the next release. Meanwhile, for Chia 2.7.2, Node 24.15 is the newest supported version when installing the GUI from source.
+
+In 2.7.1, we fixed a bug that prevented the GUI from loading properly. However, the issue still exists for confirmation dialogs in the Linux GUI. As a result, when performing operations such as sending funds, creating offers, etc, a timeout will occur. This only affects Linux, and it affects both 2.7.1 and 2.7.2. As a workaround, Linux users can continue to use the CLI for the aforementioned operations.
+
 ## 2.7.1 Chia blockchain 2026-05-19
 
 ## What's Changed

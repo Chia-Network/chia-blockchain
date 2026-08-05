@@ -143,9 +143,18 @@ async def make_pool_protocol_request(
                             time.time(),
                             value=json_response,
                         )
-                    self.log.log(log_level, f"{method} /{endpoint_name} response: {json_response}")
+                    self.log.log(
+                        log_level,
+                        f"{method} /{endpoint_name} response: {json_response}",
+                    )
                     if "error_code" in json_response:
-                        return (pool_protocol.ErrorResponse.from_json_dict(json_response), resp)
+                        error_response = pool_protocol.ErrorResponse.from_json_dict(json_response)
+                        if (
+                            error_response.error_code == pool_protocol.PoolErrorCode.INVALID_AUTHENTICATION_TOKEN.value
+                            and pool_config.launcher_id in self.authentication_tokens
+                        ):
+                            self.authentication_tokens.pop(pool_config.launcher_id)
+                        return (error_response, resp)
                     else:
                         return (response_type.from_json_dict(json_response), resp)
                 else:
@@ -156,7 +165,8 @@ async def make_pool_protocol_request(
                     return None, resp
     except Exception as e:
         self.handle_failed_pool_response(
-            pool_config.p2_singleton_puzzle_hash, f"Exception in {method} /{endpoint_name} {pool_config.pool_url}, {e}"
+            pool_config.p2_singleton_puzzle_hash,
+            f"Exception in {method} /{endpoint_name} {pool_config.pool_url}, {e}",
         )
     return None, None
 
@@ -490,15 +500,15 @@ class Farmer:
     ) -> pool_protocol.GetFarmerResponse | pool_protocol.ErrorResponse | None:
         authentication_token = await self._get_current_authentication_token(pool_config, authentication_token_timeout)
         if not isinstance(authentication_token, str):
-            self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash,
-                f"Failed to authenticate to pool before aquiring farmer details: {pool_config.pool_url}",
-            )
+            self.log.error(f"Failed to authenticate to pool before aquiring farmer details: {pool_config.pool_url}")
             return authentication_token
         if pool_config.version == 1:
             message: bytes32 = std_hash(
                 pool_protocol.AuthenticationPayloadV1(
-                    "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, uint64(authentication_token)
+                    "get_farmer",
+                    pool_config.launcher_id,
+                    pool_config.target_puzzle_hash,
+                    uint64(authentication_token),
                 )
             )
             authentication_sk = self.get_authentication_sk(pool_config)
@@ -731,7 +741,7 @@ class Farmer:
                                     f"Welcome message from {pool_config.pool_url}: {post_response.welcome_message}"
                                 )
                                 # Now we should be able to update the local farmer info
-                                farmer_info, farmer_is_known = await update_pool_farmer_info()
+                                (farmer_info, farmer_is_known) = await update_pool_farmer_info()
                                 if farmer_info is None and not farmer_is_known:
                                     self.log.error("Failed to update farmer info after POST /farmer.")
 

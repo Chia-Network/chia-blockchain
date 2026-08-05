@@ -149,6 +149,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     """
 
     rpc_api: _T_RpcApiProtocol
+    rpc_api_routes: dict[str, Endpoint]
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
@@ -159,7 +160,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     daemon_heartbeat: int = 300
     daemon_connection_task: asyncio.Task[None] | None = None
     shut_down: bool = False
-    websocket: ClientWebSocketResponse | None = None
+    websocket: ClientWebSocketResponse[bool] | None = None
     client_session: ClientSession | None = None
     prefer_ipv6: bool = False
 
@@ -183,6 +184,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(
             rpc_api,
+            rpc_api.get_routes(),
             stop_cb,
             service_name,
             ssl_context,
@@ -239,7 +241,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
-            if self.websocket is None or self.websocket.closed:
+            # websocket may be closed/cleared concurrently across the awaits in this loop
+            if self.websocket is None or self.websocket.closed:  # type: ignore[redundant-expr]
                 return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
@@ -260,7 +263,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
     def _get_routes(self) -> dict[str, Endpoint]:
         return {
-            **self.rpc_api.get_routes(),
+            **self.rpc_api_routes,
             **{path: MethodType(handler, self) for path, handler in self._routes.items()},
         }
 
@@ -380,13 +383,13 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         f_internal: Endpoint | None = getattr(self, command, None)
         if f_internal is not None:
             return await f_internal(data)
-        f_rpc_api: Endpoint | None = getattr(self.rpc_api, command, None)
+        f_rpc_api: Endpoint | None = self.rpc_api_routes.get("/" + command)
         if f_rpc_api is not None:
             return await f_rpc_api(data)
 
         raise ValueError(f"unknown_command {command}")
 
-    async def safe_handle(self, websocket: ClientWebSocketResponse, payload: str) -> None:
+    async def safe_handle(self, websocket: ClientWebSocketResponse[bool], payload: str) -> None:
         message = None
         try:
             message = json.loads(payload)
@@ -409,7 +412,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 res = {"success": False, "error": error_message, "structuredError": structured}
                 await websocket.send_str(format_response(message, res))
 
-    async def connection(self, ws: ClientWebSocketResponse) -> None:
+    async def connection(self, ws: ClientWebSocketResponse[bool]) -> None:
         data = {"service": self.service_name}
         payload = create_payload("register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)

@@ -61,6 +61,9 @@ def validate_vdf(
         return False
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
         return False
+    if len(input_el.data) != 100:
+        log.error(f"Invalid ClassgroupElement size: {len(input_el.data)} (expected 100)")
+        return False
     try:
         disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)

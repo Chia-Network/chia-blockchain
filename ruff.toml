@@ -22,6 +22,7 @@ ignore = [
     "PLR0917", # too-many-positional-arguments
     "PLR0916", # too-many-boolean-expressions
     "PLR0911", # too-many-return-statements
+    "PLW0717", # too-many-statements-in-try-clause
     # Should probably fix these
     "PLR6301", # no-self-use
     "PLR2004", # magic-value-comparison
@@ -46,7 +47,7 @@ ignore = [
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
-    # Its purpose is to prevent accidenatally assigning mutable defaults. However, this is a bit overkill for that.
+    # Its purpose is to prevent accidentally assigning mutable defaults. However, this is a bit overkill for that.
     # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
     "RUF009", # function-call-in-dataclass-default-argument
     "RUF056", # falsy-dict-get-fallback

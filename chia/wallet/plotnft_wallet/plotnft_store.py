@@ -153,6 +153,7 @@ class PlotNFTStore:
             return _row_to_plotnft(next(iter(rows)), self.genesis_challenge)
 
     async def get_plotnft_created_height(self, *, coin_id: bytes32) -> uint32:
+        """Gets the height at which the specific interation of a plotnft was created"""
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall("SELECT created_height from plotnft2s where coin_id = ?", (coin_id,))
             if len(list(rows)) == 0:
@@ -201,7 +202,7 @@ class PlotNFTStore:
                 (
                     "SELECT * from pool_reward2s WHERE singleton_id = ?"
                     + (" AND spent_height IS NULL" if not include_spent else "")
-                    + " LIMIT ?"
+                    + " ORDER BY spent_height ASC LIMIT ?"
                 ),
                 (plotnft_id, max),
             )
@@ -286,5 +287,6 @@ class PlotNFTStore:
                 ("SELECT launcher_id, name FROM deleted_wallets WHERE height > ?"), (height,)
             )
             for row in rows:
-                yield (bytes32(row[0]), row[1])
+                # TODO: figure out the gotcha that ruff is trying to warn us of here
+                yield (bytes32(row[0]), row[1])  # ruff: ignore[ASYNC119]
             await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))

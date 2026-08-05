@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import field
 
 import click
@@ -112,6 +113,10 @@ class CreatePlotNFTCMD:
 
         if self.pool_url in {None, ""} and self.state == "pool":
             raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
+
+        if os.environ.get("CHIA_PLOTNFT_V2_ENABLED", "FALSE").lower() == "false" and self.version == "2":
+            print("Version 2 PlotNFTs not currently supported")
+            return
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await create(

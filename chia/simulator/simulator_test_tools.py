@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import sys
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -107,7 +108,8 @@ def create_config(
     return config
 
 
-async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
+@contextlib.asynccontextmanager
+async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncIterator[FullNodeSimulator]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
     service = started_simulator.service
@@ -116,12 +118,13 @@ async def start_simulator(chia_root: Path, automated_testing: bool = False) -> A
         yield service._api
 
 
+@contextlib.asynccontextmanager
 async def get_full_chia_simulator(
     chia_root: Path,
     keychain: Keychain | None = None,
     automated_testing: bool = False,
     config: dict[str, Any] | None = None,
-) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
+) -> AsyncIterator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain]]:
     """
     A chia root Path is required.
     The chia root Path can be a temporary directory (tempfile.TemporaryDirectory)
@@ -160,5 +163,5 @@ async def get_full_chia_simulator(
         async with SignalHandlers.manage() as signal_handlers:
             await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
             async with ws_server.run():
-                async for simulator in start_simulator(chia_root, automated_testing):
+                async with start_simulator(chia_root, automated_testing) as simulator:
                     yield simulator, chia_root, config, mnemonic, fingerprint, keychain

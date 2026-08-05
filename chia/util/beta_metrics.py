@@ -50,10 +50,9 @@ def log_disk_metrics(root_path: Path, plot_dirs: list[str]) -> None:
     log.debug(f"DISK partitions: {psutil.disk_partitions()}")
     for pot_dir in plot_dirs:
         try:
-            usage = psutil.disk_usage(pot_dir)
+            log.debug(f"DISK - usage {pot_dir}: {psutil.disk_usage(pot_dir)}")
         except FileNotFoundError:
-            usage = "Directory not found"
-        log.debug(f"DISK - usage {pot_dir}: {usage}")
+            log.debug(f"DISK - usage {pot_dir}: Directory not found")
     log.debug(f"DISK - usage root: {psutil.disk_usage(str(root_path))}")
     log.debug(f"DISK - io counters: {psutil.disk_io_counters(perdisk=True)}")
 

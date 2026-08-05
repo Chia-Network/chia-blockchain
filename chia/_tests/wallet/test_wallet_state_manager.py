@@ -1,29 +1,41 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from types import SimpleNamespace
+from typing import cast
 
+import anyio
 import pytest
 from chia_rs import CoinState, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from pytest_mock import MockerFixture
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
+from chia.util.timing import adjusted_timeout
+from chia.wallet import wallet_state_manager as wsm_mod
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
@@ -79,6 +91,69 @@ async def test_set_sync_mode_exception(simulator_and_wallet: OldSimulatorsAndWal
     _, [(wallet_node, _)], _ = simulator_and_wallet
     async with assert_sync_mode(wallet_node.wallet_state_manager, uint32(1)):
         raise Exception
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_create_dl_wallet_during_sync(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    mocker: MockerFixture,
+) -> None:
+    full_nodes, [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(
+        PeerInfo(self_hostname, full_nodes[0].full_node.server.get_port()),
+        None,
+    )
+    peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
+    wallet_state_manager = wallet_node.wallet_state_manager
+
+    parent_coin = Coin(bytes32.secret(), bytes32.secret(), uint64(1))
+    await wallet_state_manager.coin_store.add_coin_record(
+        WalletCoinRecord(
+            parent_coin,
+            uint32(1),
+            uint32(0),
+            False,
+            False,
+            WalletType.STANDARD_WALLET,
+            1,
+        )
+    )
+    launcher_coin = Coin(parent_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
+    launcher_state = CoinState(launcher_coin, uint32(2), uint32(2))
+    second_launcher_coin = Coin(parent_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(2))
+    second_launcher_state = CoinState(second_launcher_coin, uint32(2), uint32(2))
+    launcher_spend = make_spend(launcher_coin, Program.to(1), Program.to(1))
+    inner_puzzle_hash = bytes32.secret()
+
+    mocker.patch.object(wallet_node, "fetch_children", return_value=[launcher_state, second_launcher_state])
+    mocker.patch.object(wsm_mod, "fetch_coin_spend_for_coin_state", return_value=launcher_spend)
+    mocker.patch.object(wsm_mod, "solution_to_pool_state", side_effect=ValueError)
+    mocker.patch.object(DataLayerWallet, "match_dl_launcher", return_value=(True, inner_puzzle_hash))
+    mocker.patch.object(wallet_state_manager.puzzle_store, "puzzle_hash_exists", return_value=True)
+    track_new_launcher_id = mocker.patch.object(DataLayerWallet, "track_new_launcher_id")
+
+    coin_states = [CoinState(parent_coin, uint32(2), uint32(1))]
+
+    with anyio.fail_after(adjusted_timeout(10)):
+        async with assert_sync_mode(wallet_state_manager, uint32(2)):
+            assert await wallet_state_manager.add_coin_states(coin_states, peer, None)
+
+    assert len(await wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.DATA_LAYER)) == 1
+    track_new_launcher_id.assert_any_await(
+        launcher_coin.name(),
+        peer,
+        spend=launcher_spend,
+        height=uint32(2),
+    )
+    track_new_launcher_id.assert_any_await(
+        second_launcher_coin.name(),
+        peer,
+        spend=launcher_spend,
+        height=uint32(2),
+    )
+    assert track_new_launcher_id.await_count == 2
 
 
 @pytest.mark.parametrize("hardened", [True, False])
@@ -625,7 +700,7 @@ async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, se
 
     # DISCONNECTED (line 745) — disconnect from peer
     await wallet_server.close_all_connections()
-    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+    await time_out_assert(5, lambda: len(wsm.wallet_node.server.get_connections(NodeType.FULL_NODE)), 0)
     assert await wsm.get_sync_status() == SyncStatus.DISCONNECTED
 
 
@@ -685,7 +760,7 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
 
     # Disconnect from all full node peers
     await env.peer_server.close_all_connections()
-    await time_out_assert(5, lambda: len(wsm.server.get_connections(NodeType.FULL_NODE)), 0)
+    await time_out_assert(5, lambda: len(wsm.wallet_node.server.get_connections(NodeType.FULL_NODE)), 0)
 
     # tx_endpoint decorator DISCONNECTED check (line 341)
     with pytest.raises(ValueError, match="not connected"):
@@ -694,17 +769,26 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
             wallet_environments.tx_config,
         )
 
-    # select_coins DISCONNECTED check (line 1646)
+    # select_coins DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.select_coins(SelectCoins(wallet_id=uint32(1), amount=uint64(1)))
 
-    # get_spendable_coins DISCONNECTED check (line 1660)
+    # get_spendable_coins DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.get_spendable_coins(GetSpendableCoins(wallet_id=uint32(1)))
 
-    # get_coin_records_by_names DISCONNECTED check (line 1708)
+    # get_coin_records_by_names DISCONNECTED check
     with pytest.raises(ValueError, match="not connected"):
         await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
+
+    # Check the no-peers early exit.
+    original_network = wsm.config["selected_network"]
+    wsm.config["selected_network"] = "simulator0"
+    try:
+        with pytest.raises(ValueError, match="No full node peers connected"):
+            await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
+    finally:
+        wsm.config["selected_network"] = original_network
 
 
 @pytest.mark.parametrize(
@@ -728,3 +812,203 @@ async def test_get_height_info_with_block_record(wallet_environments: WalletTest
     )
     assert response.height == synced_height
     assert response.is_transaction_block is not None
+
+
+async def _seed_did_scoped_nft_wallets(wsm: WalletStateManager, did_ids: list[bytes32]) -> list[NFTWallet]:
+    """Create one DID-scoped NFT wallet per ``did_ids`` via the real auto-create path."""
+    created: list[NFTWallet] = []
+    for index, did_id in enumerate(did_ids):
+        wallet = await NFTWallet.create_new_nft_wallet(wsm, wsm.main_wallet, did_id=did_id, name=f"NFT {index}")
+        created.append(wallet)
+    return created
+
+
+def _build_fake_nft_data(
+    *,
+    old_p2_puzhash: bytes32,
+    singleton_launcher_id: bytes32,
+) -> NFTCoinData:
+    """Build a duck-typed NFTCoinData for ``handle_nft``.
+
+    ``handle_nft`` only accesses a small subset of fields and the helpers it
+    invokes (``get_metadata_and_phs`` and ``get_new_owner_did``) are patched in
+    the tests. Constructing real on-chain CoinSpend/UncurriedNFT objects would
+    require a full NFT mint, which is orthogonal to the cap behavior under test.
+    """
+    uncurried_nft = SimpleNamespace(
+        supports_did=True,
+        owner_did=None,
+        p2_puzzle=SimpleNamespace(get_tree_hash=lambda: old_p2_puzhash),
+        singleton_launcher_id=singleton_launcher_id,
+    )
+    parent_coin_spend = SimpleNamespace(
+        solution=bytes(Program.to([])),
+        coin=SimpleNamespace(),
+    )
+    parent_coin_state = SimpleNamespace(spent_height=None)
+    return cast(
+        NFTCoinData,
+        SimpleNamespace(
+            uncurried_nft=uncurried_nft,
+            parent_coin_spend=parent_coin_spend,
+            parent_coin_state=parent_coin_state,
+        ),
+    )
+
+
+@pytest.mark.limit_consensus_modes(reason="cap logic is consensus-independent")
+@pytest.mark.parametrize(
+    "case, configured_limit, preexisting_did_ids, seed_matching_wallet, expect_new_wallet, expect_warning",
+    [
+        pytest.param(
+            "at_limit_blocks_creation",
+            2,
+            [bytes32(b"\x01" * 32), bytes32(b"\x02" * 32)],
+            False,
+            False,
+            True,
+            id="at_limit_blocks_creation",
+        ),
+        pytest.param(
+            "below_limit_creates_wallet",
+            2,
+            [bytes32(b"\x01" * 32)],
+            False,
+            True,
+            False,
+            id="below_limit_creates_wallet",
+        ),
+        pytest.param(
+            "matching_wallet_skips_cap",
+            1,
+            [bytes32(b"\x01" * 32)],
+            True,
+            False,
+            False,
+            id="matching_wallet_skips_cap",
+        ),
+        pytest.param(
+            "yaml_default_governs",
+            None,
+            [],
+            False,
+            True,
+            False,
+            id="yaml_default_governs",
+        ),
+    ],
+)
+@pytest.mark.anyio
+async def test_handle_nft_auto_add_limit(
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    case: str,
+    configured_limit: int | None,
+    preexisting_did_ids: list[bytes32],
+    seed_matching_wallet: bool,
+    expect_new_wallet: bool,
+    expect_warning: bool,
+) -> None:
+    """Regression test for the NFT auto-add cap.
+
+    The inner-puzzle-parsed ``new_did_id`` in NFT transfer data is
+    attacker-controllable. Without a cap, ``handle_nft`` would create one
+    NFT wallet per unique foreign DID with no upper bound (in contrast to
+    the existing ``did_auto_add_limit`` for DID ingestion). This test
+    pins down four behaviors:
+
+    - at the configured limit, ``handle_nft`` returns ``None`` and emits a
+      warning (no new wallet is created);
+    - below the limit, ``handle_nft`` creates a new wallet;
+    - when an existing NFT wallet already matches ``new_did_id``, the cap
+      is not consulted at all (a regression that hoisted the cap above
+      the matching loop would break inbound NFT routing for users at the
+      cap);
+    - when ``nft_auto_add_limit`` is not present in the config, the
+      ``initial-config.yaml`` default of 100 governs — this catches both
+      a wrong default literal in the code and any drift between the YAML
+      key name and the code's ``config.get`` key.
+    """
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wsm = wallet_node.wallet_state_manager
+
+    if configured_limit is not None:
+        wsm.config["nft_auto_add_limit"] = configured_limit
+    else:
+        # The YAML-loaded default must reach the wsm.config dict under the exact
+        # key the handle_nft cap reads. Catches both a wrong default literal in
+        # initial-config.yaml and any drift between the YAML key and the
+        # `config.get("nft_auto_add_limit", ...)` call site in handle_nft.
+        assert wsm.config.get("nft_auto_add_limit") == 100
+
+    new_p2_puzhash = bytes32(b"\xaa" * 32)
+    old_p2_puzhash = bytes32(b"\xbb" * 32)
+    singleton_launcher_id = bytes32(b"\xcc" * 32)
+    foreign_did_id = bytes32(b"\xff" * 32)
+
+    sk = master_sk_to_wallet_sk_unhardened(wsm.get_master_private_key(), uint32(99999))
+    await wsm.puzzle_store.add_derivation_paths(
+        [
+            DerivationRecord(
+                uint32(99999),
+                new_p2_puzhash,
+                sk.get_g1(),
+                WalletType.STANDARD_WALLET,
+                uint32(1),
+                False,
+            )
+        ]
+    )
+
+    await _seed_did_scoped_nft_wallets(wsm, preexisting_did_ids)
+    if seed_matching_wallet:
+        await _seed_did_scoped_nft_wallets(wsm, [foreign_did_id])
+
+    def fake_get_metadata_and_phs(_unft: UncurriedNFT, _solution: bytes) -> tuple[Program, bytes32]:
+        return Program.to(0), new_p2_puzhash
+
+    def fake_get_new_owner_did(_unft: UncurriedNFT, _solution: Program) -> bytes32:
+        return foreign_did_id
+
+    monkeypatch.setattr(wsm_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
+    monkeypatch.setattr(wsm_mod, "get_new_owner_did", fake_get_new_owner_did)
+
+    nft_data = _build_fake_nft_data(
+        old_p2_puzhash=old_p2_puzhash,
+        singleton_launcher_id=singleton_launcher_id,
+    )
+
+    def nft_wallet_count() -> int:
+        return sum(1 for w in wsm.wallets.values() if isinstance(w, NFTWallet))
+
+    before = nft_wallet_count()
+    with caplog.at_level(logging.WARNING, logger=wsm.log.name):
+        result = await wsm.handle_nft(nft_data)
+    after = nft_wallet_count()
+
+    if seed_matching_wallet:
+        assert result is not None
+        existing_wallet = wsm.wallets[result.id]
+        assert isinstance(existing_wallet, NFTWallet)
+        assert existing_wallet.nft_wallet_info.did_id == foreign_did_id
+        assert after == before
+    elif expect_new_wallet:
+        assert result is not None
+        assert after == before + 1
+        new_wallet = wsm.wallets[result.id]
+        assert isinstance(new_wallet, NFTWallet)
+        assert new_wallet.nft_wallet_info.did_id == foreign_did_id
+    else:
+        assert result is None
+        assert after == before
+        assert not any(
+            isinstance(w, NFTWallet) and w.nft_wallet_info.did_id == foreign_did_id for w in wsm.wallets.values()
+        )
+
+    if expect_warning:
+        assert any("nft" in rec.message.lower() and "limit" in rec.message.lower() for rec in caplog.records), (
+            f"Expected a cap warning to be emitted; got: {[rec.message for rec in caplog.records]}"
+        )
+    else:
+        assert not any("limit" in rec.message.lower() for rec in caplog.records)

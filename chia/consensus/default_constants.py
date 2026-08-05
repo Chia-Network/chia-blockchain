@@ -30,8 +30,8 @@ DEFAULT_CONSTANTS = ConsensusConstants(
         9
     ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
-        5
-    ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
+        9
+    ),  # V2 predictable filter starts at this many base bits before scheduled reductions
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
     PLOT_SIZE_V2=uint8(28),
@@ -93,11 +93,20 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     MIN_PLOT_STRENGTH=uint8(2),
-    MAX_PLOT_STRENGTH=uint8(32),
-    # TODO: todo_v2_plots finalize plot filter schedule
-    PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
-    PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
-    PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
+    MAX_PLOT_STRENGTH=uint8(17),
+    PLOT_FILTER_V2_RELATIVE_HEIGHT=[
+        uint32(50_494_000),
+        uint32(45_444_000),
+        uint32(40_394_000),
+        uint32(35_343_000),
+        uint32(30_298_000),
+        uint32(25_247_000),
+        uint32(20_197_000),
+        uint32(15_146_000),
+        uint32(10_101_000),
+    ],
+    FILTER_WINDOW_SIZE=uint8(16),
+    MAX_EFFECTIVE_PLOT_FILTER_BITS=uint8(13),
     TESTNET=False,
 )
 
@@ -116,3 +125,5 @@ def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None
     if network_id == "testneta":
         if "HARD_FORK_HEIGHT" not in overrides:
             overrides["HARD_FORK_HEIGHT"] = 3693395
+        if "MIN_PLOT_SIZE_V1" not in overrides:
+            overrides["MIN_PLOT_SIZE_V1"] = 18
