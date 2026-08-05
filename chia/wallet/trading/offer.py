@@ -167,10 +167,16 @@ class Offer:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
-                hinted_coins, cost = compute_spend_hints_and_additions(cs)
+                hinted_coins, cost = compute_spend_hints_and_additions(cs, max_cost=max_cost)
                 max_cost -= cost
                 adds[cs.coin] = [hc.coin for hc in hinted_coins.values()]
                 hints = {**hints, **{id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None}}
+            except ValidationError:
+                raise
+            except ValueError as e:
+                if e.args and e.args[0] == "cost exceeded or below zero":
+                    raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend") from e
+                continue
             except Exception:
                 continue
             if max_cost < 0:
@@ -188,6 +194,12 @@ class Offer:
                     cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
+                except ValidationError:
+                    raise
+                except ValueError as e:
+                    if e.args and e.args[0] == "cost exceeded or below zero":
+                        raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend") from e
+                    continue
                 except Exception:  # pragma: no cover
                     continue
                 if max_cost < 0:  # pragma: no cover
