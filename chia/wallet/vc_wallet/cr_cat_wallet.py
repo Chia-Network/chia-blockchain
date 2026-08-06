@@ -791,7 +791,7 @@ class CRCATWallet(CATWallet):
                     wallet_id=self.id(),
                     sent_to=[],
                     trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
+                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=claim_bundle.name(),
                     memos=compute_memos(claim_bundle),
                     valid_times=parse_timelock_info(extra_conditions),

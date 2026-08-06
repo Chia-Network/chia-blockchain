@@ -1575,4 +1575,5 @@ async def wallet_environments(
                     for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
                 ],
                 tx_config,
+                request.param.get("reorg_exempt", False),
             )
