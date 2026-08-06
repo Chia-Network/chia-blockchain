@@ -32,7 +32,6 @@ try {
 
     $ErrorActionPreference = "SilentlyContinue"
     npm ci --loglevel=error
-    npm audit fix
     npm run build
     py ..\installhelper.py
 
