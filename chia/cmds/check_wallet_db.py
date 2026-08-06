@@ -207,7 +207,7 @@ def print_min_max_derivation_for_wallets(derivation_paths: list[DerivationPath])
 class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
     # TODO: make this a dataclass and make this an instance attribute instead of a mutable classvar
-    config = {"db_readers": 1}  # noqa: RUF012
+    config = {"db_readers": 1}  # ruff: ignore[mutable-class-default]
     sql_log_path: Path | None = None
     verbose = False
 

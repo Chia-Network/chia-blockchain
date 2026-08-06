@@ -64,7 +64,7 @@ def ssl_context_for_server(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))  # noqa: S323
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))  # ruff: ignore[suspicious-unverified-context-usage]
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
@@ -94,7 +94,7 @@ def ssl_context_for_client(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))  # noqa: S323
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))  # ruff: ignore[suspicious-unverified-context-usage]
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
