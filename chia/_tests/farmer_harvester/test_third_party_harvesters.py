@@ -478,7 +478,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
             )
         )
     pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-    assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
+    assert len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
         block = blocks[i]
         if block.height != 0 and len(block.finished_sub_slots) > 0:  # pragma: no cover

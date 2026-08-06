@@ -213,11 +213,7 @@ class NFTWallet:
         launcher_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id], peer=peer
         )
-        assert (
-            launcher_coin_states is not None
-            and len(launcher_coin_states) == 1
-            and launcher_coin_states[0].spent_height is not None
-        )
+        assert len(launcher_coin_states) == 1 and launcher_coin_states[0].spent_height is not None
         mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
         if uncurried_nft.supports_did:
@@ -462,8 +458,6 @@ class NFTWallet:
         if percentage > MAX_ROYALTY_BASIS_POINTS:
             raise ValueError(f"Royalty percentage {percentage} exceeds 100% ({MAX_ROYALTY_BASIS_POINTS} basis points)")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
-        if coins is None:
-            return None
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()

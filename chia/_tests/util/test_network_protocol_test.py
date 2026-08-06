@@ -178,11 +178,13 @@ def test_missing_messages() -> None:
         "NewSignagePointHarvester",
         "NewSignagePointHarvester2",
         "Plot",
+        "Plot2",
         "PlotSyncDone",
         "PlotSyncError",
         "PlotSyncIdentifier",
         "PlotSyncPathList",
         "PlotSyncPlotList",
+        "PlotSyncPlotList2",
         "PlotSyncResponse",
         "PlotSyncStart",
         "PoolDifficulty",
@@ -191,6 +193,7 @@ def test_missing_messages() -> None:
         "SignatureRequestSourceData",
         "RequestSignatures",
         "RespondPlots",
+        "RespondPlots2",
         "RespondSignatures",
         "PartialProofsData",
     }
@@ -198,7 +201,11 @@ def test_missing_messages() -> None:
     introducer_msgs = {"RequestPeersIntroducer", "RespondPeersIntroducer"}
 
     pool_msgs = {
-        "AuthenticationPayload",
+        "AuthenticationPayloadV1",
+        "GetAuthRequest",
+        "GetFarmerRequestV1",
+        "GetFarmerRequestV2",
+        "GetAuthResponse",
         "ErrorResponse",
         "GetFarmerResponse",
         "GetPoolInfoResponse",

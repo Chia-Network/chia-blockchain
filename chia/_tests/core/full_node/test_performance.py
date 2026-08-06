@@ -5,7 +5,7 @@ import random
 
 import pytest
 from chia_rs import BlockRecord, UnfinishedBlock
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint8, uint64
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
@@ -151,6 +151,8 @@ class TestPerformance:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
 
         with benchmark_runner.assert_runtime(seconds=0.1, label="unfinished"):

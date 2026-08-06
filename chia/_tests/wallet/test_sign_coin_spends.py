@@ -64,8 +64,7 @@ spend_u: CoinSpend = make_spend(
 )
 
 
-async def _noop_push(_bundle: WalletSpendBundle) -> None:
-    return None
+async def _noop_push(_bundle: WalletSpendBundle) -> None: ...
 
 
 @pytest.mark.anyio
@@ -74,6 +73,15 @@ async def test_wallet_signer() -> None:
         async with manage_connection("file:temp.db?mode=memory&cache=shared", uri=True, name="reader") as reader_conn:
             db = DBWrapper2(writer_conn)
             await db.add_connection(reader_conn)
+            with pytest.raises(ValueError, match=re.escape("root_private_key does not match self.root_pubkey")):
+                WalletSigner(
+                    root_pubkey=G1Element(),
+                    root_private_key=top_sk,
+                    puzzle_store=await WalletPuzzleStore.create(db),
+                    max_block_cost_clvm=DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                    agg_sig_me_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
+                    spend_bundle_push=_noop_push,
+                )
             signer = WalletSigner(
                 root_pubkey=top_sk.get_g1(),
                 root_private_key=top_sk,

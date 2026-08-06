@@ -520,7 +520,7 @@ class AddressManager:
 
     def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
-        if info is None or info.random_pos is None:
+        if info.random_pos is None:
             return None
         self.swap_random_(info.random_pos, len(self.random_pos) - 1)
         self.random_pos = self.random_pos[:-1]

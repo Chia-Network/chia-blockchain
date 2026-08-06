@@ -70,6 +70,17 @@ def test_rl_v3_roundtrip(settings: dict[ProtocolMessageTypes, RLSettingsV3] | No
             assert actual_map[msg_type.value] == setting.window_size
 
 
+@pytest.mark.parametrize(
+    "message_type",
+    [
+        ProtocolMessageTypes.respond_plots2,
+        ProtocolMessageTypes.plot_sync_loaded2,
+    ],
+)
+def test_plot_serialization_messages_use_time_based_rate_limits(message_type: ProtocolMessageTypes) -> None:
+    assert message_type not in rate_limits_v3
+
+
 def test_rl_settings_v3_from_configure_message() -> None:
     """
     Covers `rl_settings_v3_from_configure_message` to make sure partial

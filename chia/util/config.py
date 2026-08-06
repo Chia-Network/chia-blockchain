@@ -236,7 +236,7 @@ def traverse_dict(d: dict[str, Any], key_path: str) -> Any:
 
     # Extract one path component at a time
     components = key_path.split(":", maxsplit=1)
-    if components is None or len(components) == 0:
+    if len(components) == 0:
         raise KeyError(f"invalid config key path: {key_path}")
 
     key = components[0]
