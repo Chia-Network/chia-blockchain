@@ -62,7 +62,7 @@ from chia.util.keychain import Keychain
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, StreamableError, streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
@@ -691,11 +691,11 @@ class WalletNode:
                     coin_ids: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
-                            # Peer/RPC failures only: subscribe_to_* raises ValueError on None
-                            # responses; call_api may raise ProtocolError; transport may raise OSError.
-                            # Local apply errors should surface to the outer handler.
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
                             coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
-                        except (ValueError, ProtocolError, OSError) as e:
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
                                 "COIN_ID_SUBSCRIPTION failed for peer %s: %s",
@@ -718,11 +718,11 @@ class WalletNode:
                     puzzle_hashes: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
-                            # Peer/RPC failures only: subscribe_to_* raises ValueError on None
-                            # responses; call_api may raise ProtocolError; transport may raise OSError.
-                            # Local apply errors should surface to the outer handler.
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
                             coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
-                        except (ValueError, ProtocolError, OSError) as e:
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
                                 "PUZZLE_HASH_SUBSCRIPTION failed for peer %s: %s",
