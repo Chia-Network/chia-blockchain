@@ -1329,7 +1329,7 @@ class MintVCCMD(TransactionEndpointWithTimelocks):
                 self.target_address,
                 self.push,
                 tx_config=self.tx_config_loader.load_tx_config(
-                    units["xch"], wallet_info.config, wallet_info.fingerprint
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
                 ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
@@ -1398,7 +1398,7 @@ class UpdateProofsVCCMD(TransactionEndpointWithTimelocks):
                 new_proof_hash=self.new_proof_hash,
                 push=self.push,
                 tx_config=self.tx_config_loader.load_tx_config(
-                    units["xch"], wallet_info.config, wallet_info.fingerprint
+                    units["chia"], wallet_info.config, wallet_info.fingerprint
                 ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
@@ -1480,9 +1480,7 @@ class RevokeVCCMD(TransactionEndpointWithTimelocks):
                 self.vc_id,
                 self.fee,
                 self.push,
-                tx_config=self.tx_config_loader.load_tx_config(
-                    units["xch"], wallet_info.config, wallet_info.fingerprint
-                ),
+                self.tx_config_loader.load_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 
