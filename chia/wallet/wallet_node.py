@@ -683,10 +683,9 @@ class WalletNode:
                     coin_ids: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
+                            # Only catch peer/RPC failures here. Local apply errors should
+                            # surface to the outer handler so we do not ban every peer.
                             coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
-                            if len(coin_states) > 0:
-                                async with self.wallet_state_manager.lock:
-                                    await self.add_states_from_peer(coin_states, peer)
                         except Exception as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
@@ -694,16 +693,26 @@ class WalletNode:
                                 peer.peer_info.host,
                                 e,
                             )
-                            await peer.close(9999)
+                            try:
+                                await peer.close(9999)
+                            except Exception:
+                                self.log.warning(
+                                    "Failed closing peer %s after COIN_ID_SUBSCRIPTION error",
+                                    peer.peer_info.host,
+                                    exc_info=True,
+                                )
+                            continue
+                        if len(coin_states) > 0:
+                            async with self.wallet_state_manager.lock:
+                                await self.add_states_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
                     self.log.debug("Pulled from queue: %s %s", item.item_type.name, item.data)
                     puzzle_hashes: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
+                            # Only catch peer/RPC failures here. Local apply errors should
+                            # surface to the outer handler so we do not ban every peer.
                             coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
-                            if len(coin_states) > 0:
-                                async with self.wallet_state_manager.lock:
-                                    await self.add_states_from_peer(coin_states, peer)
                         except Exception as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
@@ -711,7 +720,18 @@ class WalletNode:
                                 peer.peer_info.host,
                                 e,
                             )
-                            await peer.close(9999)
+                            try:
+                                await peer.close(9999)
+                            except Exception:
+                                self.log.warning(
+                                    "Failed closing peer %s after PUZZLE_HASH_SUBSCRIPTION error",
+                                    peer.peer_info.host,
+                                    exc_info=True,
+                                )
+                            continue
+                        if len(coin_states) > 0:
+                            async with self.wallet_state_manager.lock:
+                                await self.add_states_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.FULL_NODE_STATE_UPDATED:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
