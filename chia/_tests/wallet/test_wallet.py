@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from chia_rs import AugSchemeMPL, Coin, CoinSpend
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -678,6 +678,20 @@ class TestWalletSimulator:
         assert txs_response.transactions[0].confirmed
         assert txs_response.transactions[1].confirmed
 
+        txs_response = await env_2.rpc_client.get_transactions(
+            GetTransactions(
+                wallet_id=env_2.xch_wallet.id(),
+                type_filter=TransactionTypeFilter(
+                    values=[
+                        uint8(TransactionType.INCOMING_CLAWBACK_RECEIVE.value),
+                        uint8(TransactionType.OUTGOING_CLAWBACK.value),
+                    ],
+                    mode=uint8(1),
+                ),
+            ),
+        )
+        assert len(txs_response.transactions) == 1
+        assert txs_response.transactions[0].confirmed
         txs_response = await env_2.rpc_client.get_transactions(
             GetTransactions(
                 wallet_id=env_2.xch_wallet.id(),
@@ -2196,7 +2210,9 @@ class TestWalletSimulator:
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_sign_message(self, wallet_environments: WalletTestFramework) -> None:
+    async def test_sign_message(
+        self, wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         env = wallet_environments.environments[0]
         api_0 = env.rpc_api
 
@@ -2205,20 +2221,31 @@ class TestWalletSimulator:
 
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
-        response = await api_0.sign_message_by_address(
-            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message)
-        )
+        address = encode_puzzle_hash(ph, "xch")
+        capsys.readouterr()
+        await SignMessageCMD(
+            rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
+            address=CliAddress(ph, address, AddressType.XCH),
+            hex_message=message,
+        ).run()
+        output = capsys.readouterr().out
+        assert f"Message: {message}" in output
+        assert "Public Key:" in output
+        assert "Signature:" in output
+
+        pubkey = G1Element.from_bytes(bytes.fromhex(output.split("Public Key:")[1].split("\n")[0].strip()))
+        signature = G2Element.from_bytes(bytes.fromhex(output.split("Signature:")[1].split("\n")[0].strip()))
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
-            response.pubkey,
+            pubkey,
             puzzle.get_tree_hash(),
-            response.signature,
+            signature,
         )
         # Test hex string
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True)
+            SignMessageByAddress(address=address, message=message, is_hex=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
@@ -2230,7 +2257,7 @@ class TestWalletSimulator:
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True, safe_mode=True)
+            SignMessageByAddress(address=address, message=message, is_hex=True, safe_mode=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
@@ -2242,7 +2269,7 @@ class TestWalletSimulator:
         # Test BLS sign string
         message = "Hello World"
         response = await api_0.sign_message_by_address(
-            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=False, safe_mode=False)
+            SignMessageByAddress(address=address, message=message, is_hex=False, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
@@ -2253,7 +2280,7 @@ class TestWalletSimulator:
         # Test BLS sign hex
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            SignMessageByAddress(address=encode_puzzle_hash(ph, "xch"), message=message, is_hex=True, safe_mode=False)
+            SignMessageByAddress(address=address, message=message, is_hex=True, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
