@@ -49,9 +49,17 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, manage_connection
-from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import (
+    Err,
+    KeychainIsEmpty,
+    KeychainIsLocked,
+    KeychainKeyNotFound,
+    KeychainProxyConnectionFailure,
+    ProtocolError,
+)
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
@@ -683,24 +691,24 @@ class WalletNode:
                     coin_ids: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
-                            # Only catch peer/RPC failures here. Local apply errors should
-                            # surface to the outer handler so we do not ban every peer.
+                            # Peer/RPC failures only: subscribe_to_* raises ValueError on None
+                            # responses; call_api may raise ProtocolError; transport may raise OSError.
+                            # Local apply errors should surface to the outer handler.
                             coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
-                        except Exception as e:
+                        except (ValueError, ProtocolError, OSError) as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
                                 "COIN_ID_SUBSCRIPTION failed for peer %s: %s",
                                 peer.peer_info.host,
                                 e,
                             )
-                            try:
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=f"Failed closing peer {peer.peer_info.host} after COIN_ID_SUBSCRIPTION error",
+                                level=logging.WARNING,
+                            ):
                                 await peer.close(9999)
-                            except Exception:
-                                self.log.warning(
-                                    "Failed closing peer %s after COIN_ID_SUBSCRIPTION error",
-                                    peer.peer_info.host,
-                                    exc_info=True,
-                                )
                             continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
@@ -710,24 +718,26 @@ class WalletNode:
                     puzzle_hashes: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         try:
-                            # Only catch peer/RPC failures here. Local apply errors should
-                            # surface to the outer handler so we do not ban every peer.
+                            # Peer/RPC failures only: subscribe_to_* raises ValueError on None
+                            # responses; call_api may raise ProtocolError; transport may raise OSError.
+                            # Local apply errors should surface to the outer handler.
                             coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
-                        except Exception as e:
+                        except (ValueError, ProtocolError, OSError) as e:
                             # Keep going so one bad peer cannot drop this batch for everyone else.
                             self.log.warning(
                                 "PUZZLE_HASH_SUBSCRIPTION failed for peer %s: %s",
                                 peer.peer_info.host,
                                 e,
                             )
-                            try:
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=(
+                                    f"Failed closing peer {peer.peer_info.host} after PUZZLE_HASH_SUBSCRIPTION error"
+                                ),
+                                level=logging.WARNING,
+                            ):
                                 await peer.close(9999)
-                            except Exception:
-                                self.log.warning(
-                                    "Failed closing peer %s after PUZZLE_HASH_SUBSCRIPTION error",
-                                    peer.peer_info.host,
-                                    exc_info=True,
-                                )
                             continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
