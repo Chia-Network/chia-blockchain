@@ -66,7 +66,7 @@ def argument(*param_decls: str, **kwargs: Any) -> Any:
 
 
 @final
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class ChiaCliContext:
     context_dict_key: ClassVar[str] = "_chia_cli_context"
 
@@ -77,11 +77,13 @@ class ChiaCliContext:
     keys_fingerprint: int | None = None
     keys_filename: str | None = None
     expected_address_prefix: str | None = None
+    original_click_context: click.Context | None = None
 
     @classmethod
     def set_default(cls, ctx: click.Context) -> ChiaCliContext:
         ctx.ensure_object(dict)
         self = ctx.obj.setdefault(cls.context_dict_key, cls())
+        self.original_click_context = ctx
         assert isinstance(self, cls)
         return self
 
