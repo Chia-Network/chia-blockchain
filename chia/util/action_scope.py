@@ -1,91 +1,41 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, TypeVar
 
-import aiosqlite
 from typing_extensions import Self
 
-from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-
-
-class ResourceManager(Protocol):
-    @classmethod
-    @contextlib.asynccontextmanager
-    async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:  # pragma: no cover
-        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
-        yield  # type: ignore[misc]
-
-    @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[None]:  # pragma: no cover
-        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
-        yield
-
-    async def get_resource(self, resource_type: type[_T_SideEffects]) -> _T_SideEffects: ...
-
-    async def save_resource(self, resource: SideEffects) -> None: ...
+_T_SideEffects = TypeVar("_T_SideEffects")
+_T_Config = TypeVar("_T_Config")
 
 
 @dataclass
-class SQLiteResourceManager:
-    _db: DBWrapper2
-    _active_writer: aiosqlite.Connection | None = field(init=False, default=None)
-
-    def get_active_writer(self) -> aiosqlite.Connection:
-        if self._active_writer is None:
-            raise RuntimeError("Can only access resources while under `use()` context manager")
-
-        return self._active_writer
+class ResourceManager(Generic[_T_SideEffects]):
+    _side_effects: _T_SideEffects
+    _active_writer: bool = False
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:
-        async with DBWrapper2.managed(":memory:", reader_count=0) as db:
-            self = cls(db)
-            async with self._db.writer() as conn:
-                await conn.execute("CREATE TABLE side_effects(total blob)")
-                await conn.execute(
-                    "INSERT INTO side_effects VALUES(?)",
-                    (bytes(initial_resource),),
-                )
-            yield self
+    async def managed(cls, initial_resource: _T_SideEffects) -> AsyncIterator[Self]:
+        yield cls(copy.deepcopy(initial_resource))
 
     @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[None]:
-        if self._active_writer is not None:
-            raise RuntimeError("SQLiteResourceManager cannot currently support nested transactions")
-        async with self._db.writer() as conn:
-            self._active_writer = conn
-            try:
-                yield
-            finally:
-                self._active_writer = None
-
-    async def get_resource(self, resource_type: type[_T_SideEffects]) -> _T_SideEffects:
-        row = await execute_fetchone(self.get_active_writer(), "SELECT total FROM side_effects")
-        assert row is not None
-        side_effects = resource_type.from_bytes(row[0])
-        return side_effects
-
-    async def save_resource(self, resource: SideEffects) -> None:
-        # This sets all rows (there's only one) to the new serialization
-        await self.get_active_writer().execute(
-            "UPDATE side_effects SET total=?",
-            (bytes(resource),),
-        )
-
-
-class SideEffects(Protocol):
-    def __bytes__(self) -> bytes: ...
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> Self: ...
-
-
-_T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
-_T_Config = TypeVar("_T_Config")
+    async def use(self) -> AsyncIterator[_T_SideEffects]:
+        if self._active_writer:
+            raise RuntimeError("ResourceManager cannot currently support nested transactions")
+        self._active_writer = True
+        side_effects_copy = copy.deepcopy(self._side_effects)
+        try:
+            yield side_effects_copy
+        except:
+            raise
+        else:
+            self._side_effects = copy.deepcopy(side_effects_copy)
+        finally:
+            self._active_writer = False
 
 
 @dataclass
@@ -99,8 +49,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     from interfering with each other.
     """
 
-    _resource_manager: ResourceManager
-    _side_effects_format: type[_T_SideEffects]
+    _resource_manager: ResourceManager[_T_SideEffects]
     _config: _T_Config  # An object not intended to be mutated during the lifetime of the scope
     _callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]] | None = None
     _final_side_effects: _T_SideEffects | None = field(init=False, default=None)
@@ -123,32 +72,35 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     @contextlib.asynccontextmanager
     async def new_scope(
         cls,
-        side_effects_format: type[_T_SideEffects],
+        initial_resource: _T_SideEffects,
         # I want a default here in case a use case doesn't want to take advantage of the config but no default seems to
         # satisfy the type hint _T_Config so we'll just ignore this.
         config: _T_Config = object(),  # type: ignore[assignment]
-        resource_manager_backend: type[ResourceManager] = SQLiteResourceManager,
     ) -> AsyncIterator[ActionScope[_T_SideEffects, _T_Config]]:
-        async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
-            self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format, _config=config)
+        async with ResourceManager.managed(initial_resource) as resource_manager:
+            self = cls(_resource_manager=resource_manager, _config=config)
 
-            yield self  # noqa: RUF075  # final callback runs only on successful scope exit
-
-            async with self.use(_callbacks_allowed=False) as interface:
-                if self._callback is not None:
-                    await self._callback(interface)
-                self._final_side_effects = interface.side_effects
+            try:
+                yield self
+            except:
+                raise
+            else:
+                async with self.use(_callbacks_allowed=False) as interface:
+                    if self._callback is not None:
+                        await self._callback(interface)
+                    self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
-        async with self._resource_manager.use():
-            side_effects = await self._resource_manager.get_resource(self._side_effects_format)
+        async with self._resource_manager.use() as side_effects:
             interface = StateInterface(side_effects, _callbacks_allowed, self._callback)
 
-            yield interface  # noqa: RUF075  # save side effects only on successful use() exit
-
-            await self._resource_manager.save_resource(interface.side_effects)
-            self._callback = interface.callback
+            try:
+                yield interface
+            except:
+                raise
+            else:
+                self._callback = interface.callback
 
 
 @dataclass

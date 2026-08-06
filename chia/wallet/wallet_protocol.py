@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, runtime_checkable
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -12,6 +12,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -24,14 +25,14 @@ if TYPE_CHECKING:
 T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class WalletProtocol(Protocol[T_contra]):
+class WalletProtocol(Protocol):
     @classmethod
     def type(cls) -> WalletType: ...
 
     def id(self) -> uint32: ...
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: T_contra | None
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None
     ) -> None: ...
 
     async def select_coins(
@@ -104,3 +105,19 @@ class GSTOptionalArgs(TypedDict):
     puzzle_decorator_override: NotRequired[list[dict[str, Any]] | None]
     reserve_fee: NotRequired[uint64 | None]
     preferred_change_puzzle_hash: NotRequired[bytes32 | None]
+
+
+@runtime_checkable
+class MatchPuzzleInfoWallet(Protocol):
+    async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool: ...
+
+
+@runtime_checkable
+class IsCoinSpendableWallet(Protocol):
+    async def is_coin_spendable(self, record: WalletCoinRecord) -> bool: ...
+
+
+@runtime_checkable
+class MaxSendQuantityWallet(Protocol):
+    @property
+    def max_send_quantity(self) -> int: ...

@@ -19,13 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download latest Mozilla CA cert.pem
         run: |
           curl --silent --show-error --location https://curl.se/ca/cacert.pem -o chia/ssl/cacert.pem
 
       - name: Set up commit signing
+        if: github.repository_owner == 'Chia-Network'
         uses: Chia-Network/actions/commit-sign/gpg@main
         with:
           gpg_private_key: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_KEY }}

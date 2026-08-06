@@ -15,6 +15,7 @@ import pytest
 from chia_rs import (
     AugSchemeMPL,
     BlockRecord,
+    CoinRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
     FullBlock,
@@ -54,6 +55,7 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.vdf_prover import get_vdf_info_and_proof
@@ -84,6 +86,14 @@ def _is_macos_intel() -> bool:
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.create(b"\x00")
+
+
+async def get_coin_record(b: Blockchain, coin_id: bytes32) -> CoinRecord | None:
+    # single-record lookup is not part of the consensus coin store protocol,
+    # but tests know the concrete store
+    coin_store = b.coin_store
+    assert isinstance(coin_store, CoinStore)
+    return await coin_store.get_coin_record(coin_id)
 
 
 @asynccontextmanager
@@ -320,6 +330,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -354,6 +366,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -449,6 +463,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
+                    None,
+                    uint8(0),
                 )
                 conds = None
                 # if this assert fires, remove it along with the pragma for the block
@@ -1288,7 +1304,14 @@ class TestBlockHeaderValidation:
             if blocks[-1].reward_chain_block.signage_point_index == 0:
                 case_1 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
-                await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
+                if blocks[-1].reward_chain_block.proof_of_space.param().strength_v2 is not None:
+                    # V2 plot filtering depends on the signage point index, so this mutation may fail
+                    # PoSpace validation before reaching the SP-index consistency check.
+                    await _validate_and_add_block_multi_error(
+                        empty_blockchain, block_bad, [Err.INVALID_SP_INDEX, Err.INVALID_POSPACE]
+                    )
+                else:
+                    await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
             elif not is_overflow_block(bt.constants, blocks[-1].reward_chain_block.signage_point_index):
                 case_2 = True
@@ -1471,12 +1494,6 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="It seams ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT fails to "
-        "find any proofs with pool keys in a timely manner",
-    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1503,11 +1520,16 @@ class TestBlockHeaderValidation:
             assert attempts < 300
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
-        "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_7,
+        ],
+        reason=(
+            "This test asserts INVALID_POOL_TARGET; HF3 V2 plots can fail filter/PoSpace validation before reaching "
+            "that pool-target check."
+        ),
     )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
@@ -2166,7 +2188,7 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
-                c = await b.coin_store.get_coin_record(coin.name())
+                c = await get_coin_record(b, coin.name())
                 assert c is not None and c.spent
 
     @pytest.mark.anyio
@@ -2372,10 +2394,10 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
-                c = await b.coin_store.get_coin_record(coin1.name())
+                c = await get_coin_record(b, coin1.name())
                 assert c is not None and c.spent
                 # ensure coin2 was NOT spent
-                c = await b.coin_store.get_coin_record(coin2.name())
+                c = await get_coin_record(b, coin2.name())
                 assert c is not None and not c.spent
 
     @pytest.mark.anyio
@@ -2859,11 +2881,7 @@ class TestBodyValidation:
 
         assert block_2.transactions_generator is not None
         block_generator = BlockGenerator(block_2.transactions_generator, [])
-        max_cost = (
-            min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
-            if block.transactions_info is not None
-            else b.constants.MAX_BLOCK_COST_CLVM * 1000
-        )
+        max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
         npc_result = get_name_puzzle_conditions(
             block_generator,
             max_cost,
@@ -3182,9 +3200,9 @@ class TestBodyValidation:
             )
 
         # ephemeral coin is spent
-        first_coin = await b.coin_store.get_coin_record(new_coin.name())
+        first_coin = await get_coin_record(b, new_coin.name())
         assert first_coin is not None and first_coin.spent
-        second_coin = await b.coin_store.get_coin_record(tx_2.additions()[0].name())
+        second_coin = await get_coin_record(b, tx_2.additions()[0].name())
         assert second_coin is not None and not second_coin.spent
 
         farmer_coin = create_farmer_coin(
@@ -3200,7 +3218,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks_reorg[-1])
 
-        farmer_coin_record = await b.coin_store.get_coin_record(farmer_coin.name())
+        farmer_coin_record = await get_coin_record(b, farmer_coin.name())
         assert farmer_coin_record is not None and farmer_coin_record.spent
 
     @pytest.mark.anyio
@@ -3382,7 +3400,9 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode not in {
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+            reorg_point = 14
+        elif consensus_mode not in {
             ConsensusMode.HARD_FORK_2_0,
             ConsensusMode.SOFT_FORK_2_7,
         }:
@@ -4059,11 +4079,11 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
-    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+    print(f"{await get_coin_record(b, spend_bundle.coin_spends[0].coin.name())}")
     print(spend_bundle.coin_spends[0].coin.name())
     # await b.coin_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
     await b.coin_store.rollback_to_block(2)
-    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+    print(f"{await get_coin_record(b, spend_bundle.coin_spends[0].coin.name())}")
 
     fork_block = blocks_reorg_chain[10 - 1]
     # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)

@@ -154,7 +154,7 @@ class WalletNodeAPI:
         if self.wallet_node.wallet_peers is not None:
             await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), False)
 
-        if peer is not None and peer.connection_type is NodeType.INTRODUCER:
+        if peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
 
     @metadata.request(peer_required=True)

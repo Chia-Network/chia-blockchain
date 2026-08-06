@@ -61,7 +61,7 @@ class WalletCoinStore:
     total_count_cache: LRUCache[bytes32, uint32]
 
     @classmethod
-    async def create(cls, wrapper: DBWrapper2):
+    async def create(cls, wrapper: DBWrapper2) -> WalletCoinStore:
         self = cls()
 
         self.db_wrapper = wrapper

@@ -1328,6 +1328,9 @@ class MintVCCMD(TransactionEndpointWithTimelocks):
                 self.fee,
                 self.target_address,
                 self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["xch"], wallet_info.config, wallet_info.fingerprint
+                ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 
@@ -1350,13 +1353,12 @@ class GetVcsCMD:
     async def run(self) -> None:  # pragma: no cover
         from chia.cmds.wallet_funcs import get_vcs
 
-        await get_vcs(
-            self.rpc_info.context.root_path,
-            self.rpc_info.wallet_rpc_port,
-            self.rpc_info.fingerprint,
-            self.start,
-            self.count,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await get_vcs(
+                wallet_info,
+                self.start,
+                self.count,
+            )
 
 
 @chia_command(
@@ -1387,7 +1389,6 @@ class UpdateProofsVCCMD(TransactionEndpointWithTimelocks):
     async def run(self) -> list[TransactionRecord]:
         from chia.cmds.wallet_funcs import spend_vc
 
-        reuse_puzhash = self.tx_config_loader.reuse if self.tx_config_loader.reuse is not None else False
         async with self.rpc_info.wallet_rpc() as wallet_info:
             return await spend_vc(
                 wallet_info=wallet_info,
@@ -1395,8 +1396,10 @@ class UpdateProofsVCCMD(TransactionEndpointWithTimelocks):
                 fee=self.fee,
                 new_puzhash=self.new_puzhash,
                 new_proof_hash=self.new_proof_hash,
-                reuse_puzhash=reuse_puzhash,
                 push=self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["xch"], wallet_info.config, wallet_info.fingerprint
+                ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 
@@ -1470,15 +1473,16 @@ class RevokeVCCMD(TransactionEndpointWithTimelocks):
     async def run(self) -> list[TransactionRecord]:
         from chia.cmds.wallet_funcs import revoke_vc
 
-        reuse_puzhash = self.tx_config_loader.reuse if self.tx_config_loader.reuse is not None else False
         async with self.rpc_info.wallet_rpc() as wallet_info:
             return await revoke_vc(
                 wallet_info,
                 self.parent_coin_id,
                 self.vc_id,
                 self.fee,
-                reuse_puzhash,
                 self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["xch"], wallet_info.config, wallet_info.fingerprint
+                ),
                 condition_valid_times=self.load_condition_valid_times(),
             )
 
@@ -1505,16 +1509,15 @@ class ApproveRCATsVCCMD(TransactionEndpointWithTimelocks):
     async def run(self) -> list[TransactionRecord]:
         from chia.cmds.wallet_funcs import approve_r_cats
 
-        reuse = self.tx_config_loader.reuse if self.tx_config_loader.reuse is not None else False
         async with self.rpc_info.wallet_rpc() as wallet_info:
             return await approve_r_cats(
                 wallet_info,
                 uint32(self.wallet_id),
                 self.min_amount_to_claim,
                 self.fee,
-                self.tx_config_loader.min_coin_amount,
-                self.tx_config_loader.max_coin_amount,
-                reuse,
                 self.push,
+                tx_config=self.tx_config_loader.load_tx_config(
+                    units["cat"], wallet_info.config, wallet_info.fingerprint
+                ),
                 condition_valid_times=self.load_condition_valid_times(),
             )

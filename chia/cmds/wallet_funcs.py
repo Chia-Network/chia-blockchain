@@ -45,7 +45,6 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CancelOffer,
     CATAssetIDToName,
@@ -72,6 +71,8 @@ from chia.wallet.wallet_request_types import (
     ExtendDerivationIndex,
     FungibleAsset,
     GetAllOffers,
+    GetCoinRecords,
+    GetHeightInfo,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -162,6 +163,7 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
+        WalletType.PLOTNFT_2,
         WalletType.DATA_LAYER,
         WalletType.VC,
     }:
@@ -196,6 +198,7 @@ async def get_unit_name_for_wallet_id(
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
+        WalletType.PLOTNFT_2,
         WalletType.DATA_LAYER,
         WalletType.VC,
     }:
@@ -302,9 +305,13 @@ async def get_transactions(
                     break
                 coin_record: dict[str, Any] | None = None
                 if txs[i + j + skipped].type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
-                    coin_records = await wallet_client.get_coin_records(
-                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()]))
-                    )
+                    coin_records = (
+                        await wallet_client.get_coin_records(
+                            GetCoinRecords(
+                                coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()])
+                            )
+                        )
+                    ).to_json_dict()
                     if len(coin_records["coin_records"]) > 0:
                         coin_record = coin_records["coin_records"][0]
                     else:
@@ -954,7 +961,7 @@ async def cancel_offer(
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> tuple[str, int]:
     if typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
         return "", units["cat"]
-    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG}:
+    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.PLOTNFT_2, WalletType.MULTI_SIG}:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
@@ -980,7 +987,7 @@ async def print_balances(wallet_info: WalletClientInfo, wallet_type: WalletType 
 
         sync_response = await wallet_client.get_sync_status()
 
-        print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+        print(f"Wallet height: {(await wallet_client.get_height_info(GetHeightInfo())).height}")
         if sync_response.syncing:
             print("Sync status: Syncing...")
         elif sync_response.synced:
@@ -1173,7 +1180,7 @@ async def did_message_spend(
         print(f"Message Spend Bundle: {json.dumps(response.spend_bundle.to_json_dict())}")
         return response.transactions
     except Exception as e:
-        print(f"Failed to update DID metadata: {e}")
+        print(f"Failed to create DID message spend: {e}")
         return []
 
 
@@ -1609,11 +1616,28 @@ async def delete_notifications(wallet_info: WalletClientInfo, ids: Sequence[byte
     if delete_all:
         await wallet_info.client.delete_notifications(DeleteNotifications())
     else:
-        await wallet_info.client.delete_notifications(DeleteNotifications(ids=list(ids) if ids is not None else None))
+        await wallet_info.client.delete_notifications(DeleteNotifications(ids=list(ids)))
     print("Success!")
 
 
-async def sign_message(
+async def sign_message(*, wallet_info: WalletClientInfo | None = None, **kwargs: Any) -> None:
+    if wallet_info is not None:
+        await _sign_message(wallet_info=wallet_info, **kwargs)
+    else:
+        async with get_wallet_client(kwargs["root_path"], kwargs.get("wallet_rpc_port"), kwargs.get("fp")) as (
+            wallet_client,
+            fp,
+            config,
+        ):
+            del kwargs["root_path"]
+            del kwargs["wallet_rpc_port"]
+            del kwargs["fp"]
+            await _sign_message(
+                wallet_info=WalletClientInfo(client=wallet_client, fingerprint=fp, config=config), **kwargs
+            )
+
+
+async def _sign_message(
     *,
     wallet_info: WalletClientInfo,
     addr_type: AddressType,
@@ -1623,28 +1647,25 @@ async def sign_message(
     nft_id: CliAddress | None = None,
 ) -> None:
     response: SignMessageByAddressResponse | SignMessageByIDResponse
+    # It's the responsiblity of our code to make sure the correct address/did/nft_id is provided for the address type
     if addr_type == AddressType.XCH:
-        if address is None:
-            print("Address is required for XCH address type.")
-            return
+        assert address is not None
         response = await wallet_info.client.sign_message_by_address(
             SignMessageByAddress(address=address.original_address, message=message)
         )
     elif addr_type == AddressType.DID:
-        if did_id is None:
-            print("DID id is required for DID address type.")
-            return
+        assert did_id is not None
         response = await wallet_info.client.sign_message_by_id(
             SignMessageByID(id=did_id.original_address, message=message)
         )
     elif addr_type == AddressType.NFT:
-        if nft_id is None:
-            print("NFT id is required for NFT address type.")
-            return
+        assert nft_id is not None
         response = await wallet_info.client.sign_message_by_id(
             SignMessageByID(id=nft_id.original_address, message=message)
         )
-    else:
+    # This should be impossible because all address types are in the if/else chain
+    # but just in case one is added in the future, we leave this in as a fallback
+    else:  # pragma: no cover
         print("Invalid wallet type.")
         return
 
@@ -1691,6 +1712,7 @@ async def mint_vc(
     fee: uint64,
     target_address: CliAddress | None,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     res = await wallet_info.client.vc_mint(
@@ -1700,7 +1722,7 @@ async def mint_vc(
             fee=fee,
             push=push,
         ),
-        CMDTXConfigLoader().to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+        tx_config=tx_config,
         timelock_info=condition_valid_times,
     )
 
@@ -1719,27 +1741,26 @@ async def mint_vc(
     return res.transactions
 
 
-async def get_vcs(root_path: pathlib.Path, wallet_rpc_port: int | None, fp: int | None, start: int, count: int) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, config):
-        get_list_response = await wallet_client.vc_get_list(VCGetList(start=uint32(start), end=uint32(count)))
-        print("Proofs:")
-        for hash, proof_dict in get_list_response.proof_dict.items():
-            if proof_dict is not None:
-                print(f"- {hash}")
-                for proof in proof_dict:
-                    print(f"  - {proof}")
-        for record in get_list_response.vc_records:
-            print("")
-            print(f"Launcher ID: {record.vc.launcher_id.hex()}")
-            print(f"Coin ID: {record.vc.coin.name().hex()}")
-            print(
-                f"Inner Address:"
-                f" {encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(config))}"
-            )
-            if record.vc.proof_hash is None:
-                pass
-            else:
-                print(f"Proof Hash: {record.vc.proof_hash.hex()}")
+async def get_vcs(wallet_info: WalletClientInfo, start: int, count: int) -> None:
+    get_list_response = await wallet_info.client.vc_get_list(VCGetList(start=uint32(start), end=uint32(count)))
+    print("Proofs:")
+    for hash, proof_dict in get_list_response.proof_dict.items():
+        if proof_dict is not None:
+            print(f"- {hash}")
+            for proof in proof_dict:
+                print(f"  - {proof}")
+    for record in get_list_response.vc_records:
+        print("")
+        print(f"Launcher ID: {record.vc.launcher_id.hex()}")
+        print(f"Coin ID: {record.vc.coin.name().hex()}")
+        print(
+            "Inner Address: "
+            f"{encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(wallet_info.config))}"
+        )
+        if record.vc.proof_hash is None:
+            pass
+        else:
+            print(f"Proof Hash: {record.vc.proof_hash.hex()}")
 
 
 async def spend_vc(
@@ -1749,8 +1770,8 @@ async def spend_vc(
     fee: uint64,
     new_puzhash: bytes32 | None,
     new_proof_hash: str | None,
-    reuse_puzhash: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     txs = (
@@ -1762,15 +1783,13 @@ async def spend_vc(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                reuse_puzhash=reuse_puzhash,
-            ).to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions
 
     if push:
-        print("Proofs successfully updated!")
+        print("VC successfully spent!")
     print("Relevant TX records:")
     print("")
     for tx in txs:
@@ -1815,8 +1834,8 @@ async def revoke_vc(
     parent_coin_id: bytes32 | None,
     vc_id: bytes32 | None,
     fee: uint64,
-    reuse_puzhash: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     if parent_coin_id is None:
@@ -1837,9 +1856,7 @@ async def revoke_vc(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                reuse_puzhash=reuse_puzhash,
-            ).to_tx_config(units["chia"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions
@@ -1864,10 +1881,8 @@ async def approve_r_cats(
     wallet_id: uint32,
     min_amount_to_claim: CliAmount,
     fee: uint64,
-    min_coin_amount: CliAmount,
-    max_coin_amount: CliAmount,
-    reuse: bool,
     push: bool,
+    tx_config: TXConfig,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     txs = (
@@ -1878,11 +1893,7 @@ async def approve_r_cats(
                 fee=fee,
                 push=push,
             ),
-            tx_config=CMDTXConfigLoader(
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], wallet_info.config, wallet_info.fingerprint),
+            tx_config=tx_config,
             timelock_info=condition_valid_times,
         )
     ).transactions

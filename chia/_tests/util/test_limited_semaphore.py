@@ -111,3 +111,30 @@ async def test_stuff() -> None:
     assert success_results == [None] * total_limit
 
     assert semaphore._available_count == total_limit
+
+
+@pytest.mark.anyio
+async def test_locked_reflects_active_slot_usage() -> None:
+    semaphore = LimitedSemaphore.create(active_limit=2, waiting_limit=4)
+    finish_event = asyncio.Event()
+
+    async def hold(entered: asyncio.Event) -> None:
+        async with semaphore.acquire():
+            entered.set()
+            await finish_event.wait()
+
+    assert not semaphore.locked()
+
+    entered_1 = asyncio.Event()
+    holder_1 = create_referenced_task(hold(entered_1))
+    await entered_1.wait()
+    assert not semaphore.locked()
+
+    entered_2 = asyncio.Event()
+    holder_2 = create_referenced_task(hold(entered_2))
+    await entered_2.wait()
+    assert semaphore.locked()
+
+    finish_event.set()
+    await asyncio.gather(holder_1, holder_2)
+    assert not semaphore.locked()

@@ -117,7 +117,9 @@ class TestPotIterations:
                         quality = std_hash(
                             slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
                         )
-                        required_iters = calculate_iterations_quality(constants, quality, k, difficulty, sp_hash)
+                        required_iters = calculate_iterations_quality(
+                            constants, quality, k, difficulty, sp_hash, height=constants.HARD_FORK2_HEIGHT
+                        )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1

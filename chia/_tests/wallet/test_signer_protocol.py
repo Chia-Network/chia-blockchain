@@ -221,9 +221,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     assert not_our_utx.signing_instructions.targets[1].message == bytes(not_our_message)
     not_our_signing_instructions: SigningInstructions = not_our_utx.signing_instructions
     with pytest.raises(ValueError, match=r"not found \(or path/sum hinted to\)"):
-        await wallet_state_manager.execute_signing_instructions(not_our_signing_instructions)
+        await wallet_state_manager.signer.execute_signing_instructions(not_our_signing_instructions)
     with pytest.raises(ValueError, match=r"No pubkey found \(or path hinted to\) for fingerprint"):
-        await wallet_state_manager.execute_signing_instructions(
+        await wallet_state_manager.signer.execute_signing_instructions(
             dataclasses.replace(
                 not_our_signing_instructions,
                 key_hints=dataclasses.replace(
@@ -236,7 +236,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             )
         )
     with pytest.raises(ValueError, match="No root pubkey for fingerprint"):
-        await wallet_state_manager.execute_signing_instructions(
+        await wallet_state_manager.signer.execute_signing_instructions(
             dataclasses.replace(
                 not_our_signing_instructions,
                 key_hints=dataclasses.replace(
@@ -248,7 +248,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                 ),
             )
         )
-    signing_responses_2 = await wallet_state_manager.execute_signing_instructions(
+    signing_responses_2 = await wallet_state_manager.signer.execute_signing_instructions(
         not_our_signing_instructions, partial_allowed=True
     )
     assert len(signing_responses_2) == 2
@@ -324,7 +324,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     # Test just a path hint
     test_name: bytes32 = std_hash(b"path hint only")
     child_sk: PrivateKey = _derive_path_unhardened(root_sk, [uint64(1), uint64(2), uint64(3), uint64(4)])
-    signing_responses: list[SigningResponse] = await wallet.execute_signing_instructions(
+    signing_responses: list[SigningResponse] = await wallet.wallet_state_manager.signer.execute_signing_instructions(
         SigningInstructions(
             KeyHints(
                 [],
@@ -347,7 +347,9 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         [SigningTarget(sum_pk.get_fingerprint().to_bytes(4, "big"), test_name, test_name)],
     )
     for partial_allowed in (True, False):
-        signing_responses = await wallet.execute_signing_instructions(signing_instructions, partial_allowed)
+        signing_responses = await wallet.wallet_state_manager.signer.execute_signing_instructions(
+            signing_instructions, partial_allowed
+        )
         assert signing_responses == [
             SigningResponse(
                 bytes(
@@ -369,7 +371,9 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
             SigningTarget(b"random fingerprint", test_name, test_name),
         ],
     )
-    signing_responses = await wallet.execute_signing_instructions(signing_instructions, partial_allowed=True)
+    signing_responses = await wallet.wallet_state_manager.signer.execute_signing_instructions(
+        signing_instructions, partial_allowed=True
+    )
     assert signing_responses == [
         SigningResponse(
             bytes(
@@ -398,7 +402,9 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         [SigningTarget(sum_pk.get_fingerprint().to_bytes(4, "big"), test_name, test_name)],
     )
     for partial_allowed in (True, False):
-        signing_responses = await wallet.execute_signing_instructions(signing_instructions, partial_allowed)
+        signing_responses = await wallet.wallet_state_manager.signer.execute_signing_instructions(
+            signing_instructions, partial_allowed
+        )
         assert signing_responses == [
             SigningResponse(
                 bytes(
@@ -423,7 +429,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     other_sk_2 = PrivateKey.from_bytes(test_name_2)
     sum_pk = child_sk.get_g1() + other_sk.get_g1()
     sum_pk_2 = child_sk_2.get_g1() + other_sk_2.get_g1()
-    signing_responses = await wallet.execute_signing_instructions(
+    signing_responses = await wallet.wallet_state_manager.signer.execute_signing_instructions(
         SigningInstructions(
             KeyHints(
                 [
@@ -482,18 +488,18 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         [SigningTarget(b"unknown fingerprint", b"", std_hash(b"some hook"))],
     )
     with pytest.raises(ValueError, match="No root pubkey for fingerprint"):
-        await wallet.execute_signing_instructions(unknown_path_hint)
+        await wallet.wallet_state_manager.signer.execute_signing_instructions(unknown_path_hint)
     with pytest.raises(ValueError, match="No pubkey found"):
-        await wallet.execute_signing_instructions(unknown_sum_hint)
+        await wallet.wallet_state_manager.signer.execute_signing_instructions(unknown_sum_hint)
     with pytest.raises(ValueError, match="not found"):
-        await wallet.execute_signing_instructions(unknown_target)
+        await wallet.wallet_state_manager.signer.execute_signing_instructions(unknown_target)
 
     # Test no private key partial sign sum hint
-    wallet.wallet_state_manager.private_key = None
+    wallet.wallet_state_manager.signer = dataclasses.replace(wallet.wallet_state_manager.signer, root_private_key=None)
     test_name = std_hash(b"sum hint partial no private key")
     other_sk = PrivateKey.from_bytes(test_name)
     sum_pk = other_sk.get_g1() + root_pk
-    signing_responses = await wallet.execute_signing_instructions(
+    signing_responses = await wallet.wallet_state_manager.signer.execute_signing_instructions(
         SigningInstructions(
             KeyHints(
                 [SumHint([root_fingerprint], test_name, bytes(sum_pk))],

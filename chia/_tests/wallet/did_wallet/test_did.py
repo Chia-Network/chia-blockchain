@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -58,26 +57,33 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
+    DIDFindLostDID,
     DIDGetCurrentCoinInfo,
     DIDGetInfo,
     DIDType,
+    SetWalletResyncOnStartup,
+    SignMessageByID,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-async def get_wallet_num(wallet_manager):
-    return len(await wallet_manager.get_all_wallet_info_entries())
+async def get_wallet_num(wallet_state_manager: WalletStateManager) -> int:
+    return len(await wallet_state_manager.get_all_wallet_info_entries())
 
 
-def get_parent_num(did_wallet: DIDWallet):
+def get_parent_num(did_wallet: DIDWallet) -> int:
     return len(did_wallet.did_info.parent_info)
 
 
-async def get_did_wallet(env) -> DIDWallet:
-    did_wallets = [
-        w for w in await env.wallet_state_manager.get_all_wallet_info_entries() if w.type == WalletType.DECENTRALIZED_ID
-    ]
+async def get_did_wallet(env: WalletEnvironment) -> DIDWallet:
+    did_wallets = list(
+        filter(
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
+            await env.wallet_state_manager.get_all_wallet_info_entries(),
+        )
+    )
     did_wallet = env.wallet_state_manager.wallets[did_wallets[-1].id]
     assert isinstance(did_wallet, DIDWallet)
     return did_wallet
@@ -98,7 +104,7 @@ async def create_did_via_cli(
             "fee": fee,
             "name": name,
             "push": True,
-            "metadata": [f"{key}:{value}" for key, value in metadata.items()] if metadata is not None else None,
+            "metadata": [f"{key}:{value}" for key, value in metadata.items()],
         }
     ).run()
     await env.change_balances({"nft": {"init": True}})
@@ -106,7 +112,7 @@ async def create_did_via_cli(
 
 
 async def make_did_wallet(
-    wallet_state_manager: Any,
+    wallet_state_manager: WalletStateManager,
     wallet: Wallet,
     amount: uint64,
     action_scope: WalletActionScope,
@@ -221,7 +227,7 @@ async def test_creation_from_coin_spend(
         )
 
     with pytest.raises(RuntimeError):
-        assert await did_wallet_0.get_coin() == set()
+        await did_wallet_0.get_coin()
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1])
@@ -401,6 +407,14 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     capsys.readouterr()
     await DidFindLostCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
+        coin_id=bytes32.zeros.hex(),
+        metadata=None,
+        recovery_list_hash=None,
+        num_verification=None,
+    ).run()
+    assert "Failed to find lost DID" in capsys.readouterr().out
+    await DidFindLostCMD(
+        rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
         coin_id=did_wallet_0.did_info.origin_coin.name().hex(),
         metadata=None,
         recovery_list_hash=None,
@@ -408,11 +422,12 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     ).run()
     assert "Successfully found lost DID" in capsys.readouterr().out
 
-    did_wallets = [
-        w
-        for w in await env_0.wallet_state_manager.get_all_wallet_info_entries()
-        if w.type == WalletType.DECENTRALIZED_ID
-    ]
+    did_wallets = list(
+        filter(
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
+            await env_0.wallet_state_manager.get_all_wallet_info_entries(),
+        )
+    )
     did_wallet = env_0.wallet_state_manager.wallets[did_wallets[0].id]
     assert isinstance(did_wallet, DIDWallet)
     env_0.wallet_aliases["did_found"] = did_wallets[0].id
@@ -484,7 +499,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
 @pytest.mark.anyio
-async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
+async def test_did_transfer(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env_0, env_1 = wallet_environments.environments
     env_0.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
     env_1.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
@@ -542,6 +557,14 @@ async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
     await DidTransferDidCMD(
         **{
             **wallet_environments.cmd_tx_endpoint_args(env_0),
+            "wallet_id": 42,
+            "target_address": target_address,
+        }
+    ).run()
+    assert "Failed to transfer DID" in capsys.readouterr().out
+    await DidTransferDidCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env_0),
             "wallet_id": env_0.wallet_aliases["did"],
             "target_address": target_address,
             "reset_recovery": False,
@@ -567,11 +590,12 @@ async def test_did_transfer(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
-    did_wallets = [
-        w
-        for w in await env_1.wallet_state_manager.get_all_wallet_info_entries()
-        if w.type == WalletType.DECENTRALIZED_ID
-    ]
+    did_wallets = list(
+        filter(
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
+            await env_1.wallet_state_manager.get_all_wallet_info_entries(),
+        )
+    )
     did_wallet_2 = env_1.wallet_state_manager.wallets[did_wallets[0].id]
     assert isinstance(did_wallet_2, DIDWallet)
     assert len(env_0.wallet_state_manager.wallets) == 2
@@ -636,7 +660,6 @@ async def test_did_auto_transfer_limit(
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         assert did_wallet_1.did_info.origin_coin is not None
-        origin_coin = did_wallet_1.did_info.origin_coin
         async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             new_puzhash = await action_scope.get_puzzle_hash(wallet2.wallet_state_manager)
         async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -652,7 +675,7 @@ async def test_did_auto_transfer_limit(
     # Get the new DID wallets
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -662,7 +685,6 @@ async def test_did_auto_transfer_limit(
     did_wallet_10 = wallet_node_2.wallet_state_manager.get_wallet(id=uint32(did_wallets[9].id), required_type=DIDWallet)
     # Delete the coin and change inner puzzle
     coin = await did_wallet_10.get_coin()
-    # origin_coin = did_wallet_10.did_info.origin_coin
     backup_data = did_wallet_10.create_backup()
     await wallet_node_2.wallet_state_manager.coin_store.delete_coin_record(coin.name())
     await time_out_assert(15, did_wallet_10.get_confirmed_balance, 0)
@@ -676,7 +698,7 @@ async def test_did_auto_transfer_limit(
             backup_data,
         )
     assert did_wallet_10.did_info.origin_coin is not None
-    await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
+    await api_1.did_find_lost_did(DIDFindLostDID(coin_id=did_wallet_10.did_info.origin_coin.name().hex()))
     await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
     await time_out_assert(15, did_wallet_10.get_unconfirmed_balance, 101)
 
@@ -691,17 +713,18 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
     assert len(did_wallets) == 9
 
     # Try and find lost coin
-    await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+    assert did_wallet_9.did_info.origin_coin is not None
+    await api_1.did_find_lost_did(DIDFindLostDID(coin_id=did_wallet_9.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -725,7 +748,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: w.type == WalletType.DECENTRALIZED_ID,
+            lambda w: w.type == WalletType.DECENTRALIZED_ID.value,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -903,6 +926,35 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
             **wallet_environments.cmd_tx_endpoint_args(env),
             "wallet_id": env.wallet_aliases["did"],
             "coin_announcements": "0abc",
+            "puzzle_announcements": "@",
+            "push": True,
+        }
+    ).run()
+    assert "Invalid puzzle announcement format, should be a list of hex strings." in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": env.wallet_aliases["did"],
+            "coin_announcements": "@",
+            "puzzle_announcements": "0abc",
+            "push": True,
+        }
+    ).run()
+    assert "Invalid coin announcement format, should be a list of hex strings." in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": 42,
+            "coin_announcements": "0abc",
+            "puzzle_announcements": "0def",
+        }
+    ).run()
+    assert "Failed to create DID message spend" in capsys.readouterr().out
+    await DidMessageSpendCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            "wallet_id": env.wallet_aliases["did"],
+            "coin_announcements": "0abc",
             "puzzle_announcements": "0def",
             "push": True,
         }
@@ -924,7 +976,7 @@ async def test_message_spend(wallet_environments: WalletTestFramework, capsys: p
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_update_metadata(wallet_environments: WalletTestFramework) -> None:
+async def test_update_metadata(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
     env = wallet_environments.environments[0]
     env.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
     fee = uint64(1000)
@@ -963,6 +1015,14 @@ async def test_update_metadata(wallet_environments: WalletTestFramework) -> None
     with pytest.raises(ValueError, match="Metadata key value pairs must be strings"):
         await did_wallet_1.update_metadata({"Twitter": {"url": "http://www.twitter.com"}})  # type: ignore[dict-item]
 
+    await DidUpdateMetadataCMD(
+        rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
+        transaction_writer=TransactionsOut(transaction_file_out=None),
+        tx_config_loader=wallet_environments.cmd_tx_endpoint_args(env)["tx_config_loader"],
+        wallet_id=42,
+        metadata="",
+    ).run()
+    assert "Failed to update DID metadata" in capsys.readouterr().out
     await DidUpdateMetadataCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
         transaction_writer=TransactionsOut(transaction_file_out=None),
@@ -1051,44 +1111,70 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework, capsys
     await DidSignMessageCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
         did_id=CliAddress(did_wallet_1.did_info.origin_coin.name(), did_id, AddressType.DID),
-        hex_message=message.encode().hex(),
+        hex_message=message,
     ).run()
     output = capsys.readouterr().out
-    assert f"Message: {message.encode().hex()}" in output
+    assert f"Message: {message}" in output
     assert "Public Key:" in output
     assert "Signature:" in output
 
-    response = await api_0.sign_message_by_id({"id": did_id, "message": message})
+    pubkey = G1Element.from_bytes(bytes.fromhex(output.split("Public Key:")[1].split("\n")[0].strip()))
+    signature = G2Element.from_bytes(bytes.fromhex(output.split("Signature:")[1].split("\n")[0].strip()))
+
     puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        signature,
     )
-
+    # Test hex string
     message = "0123456789ABCDEF"
-    response = await api_0.sign_message_by_id({"id": did_id, "message": message, "is_hex": True})
+    response = await api_0.sign_message_by_id(
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=True,
+        )
+    )
+    puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
 
     message = "Hello World"
-    response = await api_0.sign_message_by_id({"id": did_id, "message": message, "is_hex": False, "safe_mode": False})
-    assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
-        bytes(message, "utf-8"),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+    assert did_wallet_1.did_info.origin_coin is not None
+    response = await api_0.sign_message_by_id(
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=False,
+            safe_mode=False,
+        )
     )
 
-    message = "0123456789ABCDEF"
-    response = await api_0.sign_message_by_id({"id": did_id, "message": message, "is_hex": True, "safe_mode": False})
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+        response.pubkey,
+        bytes(message, "utf-8"),
+        response.signature,
+    )
+    # Test BLS sign hex
+    message = "0123456789ABCDEF"
+    assert did_wallet_1.did_info.origin_coin is not None
+    response = await api_0.sign_message_by_id(
+        SignMessageByID(
+            id=encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+            message=message,
+            is_hex=True,
+            safe_mode=False,
+        )
+    )
+    assert AugSchemeMPL.verify(
+        response.pubkey,
         hexstr_to_bytes(message),
-        G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+        response.signature,
     )
 
 
@@ -1362,9 +1448,9 @@ async def test_did_resync(
     did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
     did_info = did_wallet_2.did_info
     # set flag to reset wallet sync data on start
-    await wallet_api_1.set_wallet_resync_on_startup({"enable": True})
+    await wallet_api_1.set_wallet_resync_on_startup(SetWalletResyncOnStartup(enable=True))
     fingerprint_1 = wallet_node_1.logged_in_fingerprint
-    await wallet_api_2.set_wallet_resync_on_startup({"enable": True})
+    await wallet_api_2.set_wallet_resync_on_startup(SetWalletResyncOnStartup(enable=True))
     fingerprint_2 = wallet_node_2.logged_in_fingerprint
     # 2 reward coins
     assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
