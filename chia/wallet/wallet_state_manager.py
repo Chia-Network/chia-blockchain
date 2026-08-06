@@ -89,6 +89,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
@@ -1004,13 +1005,16 @@ class WalletStateManager:
                     pre_uncurry=uncurried,
                     previous_plotnft_puzzle=previous_plotnft,
                 )
-                for id, wallet in self.wallets.items():
-                    if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == next_plot_nft.launcher_id:
-                        matched_plotnft_wallet_id = id
-                        break
-                else:
-                    matched_plotnft_wallet_id = None
-                if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+                matched_plotnft_wallet_id = self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id)
+                user_key_is_owned = (
+                    await self.puzzle_store.index_for_puzzle_hash(
+                        puzzle_hash_for_synthetic_public_key(next_plot_nft.user_config.synthetic_pubkey)
+                    )
+                    is not None
+                )
+                if matched_plotnft_wallet_id is None and (
+                    coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id or user_key_is_owned
+                ):
                     matched_plotnft_wallet_id = uint32(max(self.wallets.keys()) + 1)
                     self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                         wallet_state_manager=self,
@@ -1022,20 +1026,38 @@ class WalletStateManager:
                             data=next_plot_nft.launcher_id.hex(),
                         ),
                     )
-                if matched_plotnft_wallet_id is None:  # pragma: no cover
-                    # TODO: add support for receiving plotnfts you don't know about
-                    raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
-                # the Streamable hint is in error so we need this type ignore
-                return WalletIdentifier(  # type: ignore[return-value]
-                    id=matched_plotnft_wallet_id,
-                    type=WalletType.PLOTNFT_2,
-                ), next_plot_nft
+                if matched_plotnft_wallet_id is None or not user_key_is_owned:
+                    self.log.warning(f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet")
+                    if matched_plotnft_wallet_id is not None:
+                        plotnft_wallet = self.wallets[matched_plotnft_wallet_id]
+                        assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                        current_plotnft = await plotnft_wallet.get_current_plotnft()
+                        current_plotnft_created_height = await self.plotnft2_store.get_plotnft_created_height(
+                            coin_id=current_plotnft.coin.name()
+                        )
+                        if (
+                            coin_state.created_height is not None
+                            and current_plotnft_created_height < coin_state.created_height
+                        ):
+                            await plotnft_wallet.delete_self(deleted_at_height=coin_state.created_height)
+                else:
+                    # the Streamable hint is in error so we need this type ignore
+                    return WalletIdentifier(  # type: ignore[return-value]
+                        id=matched_plotnft_wallet_id,
+                        type=WalletType.PLOTNFT_2,
+                    ), next_plot_nft
             except GetNextPlotNFTError:
                 pass
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
+
+    def get_wallet_id_for_plotnft_id(self, *, plotnft_id: bytes32) -> uint32 | None:
+        for id, wallet in self.wallets.items():
+            if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == plotnft_id:
+                return id
+        return None
 
     @property
     def tx_config(self) -> TXConfig:
@@ -2010,6 +2032,14 @@ class WalletStateManager:
                                 vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
                                 await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
                         elif record.wallet_type == WalletType.PLOTNFT_2:
+                            try:
+                                await self.plotnft2_store.get_plotnfts(coin_ids=[coin_name])
+                                if children == []:
+                                    plotnft_wallet = self.wallets[wallet_identifier.id]
+                                    assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                                    await plotnft_wallet.delete_self(coin_state.spent_height)
+                            except ValueError:
+                                pass
                             if isinstance(coin_data, PlotNFT):
                                 await self.coin_added(
                                     coin_state.coin,
@@ -2480,6 +2510,9 @@ class WalletStateManager:
         for wallet_id in remove_ids:
             await self.delete_wallet(wallet_id)
             self.state_changed("wallet_removed", wallet_id)
+
+        # Reinitialize deleted wallets
+        await PlotNFT2Wallet.potentially_reinitialize_deleted_wallets(wallet_state_manager=self, height=height)
 
         return remove_ids
 
