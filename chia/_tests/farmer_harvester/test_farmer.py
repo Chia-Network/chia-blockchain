@@ -1616,12 +1616,12 @@ async def test_farmer_to_pool_protocol(
         path = str(URL(url).path).rstrip("/")
         if path.endswith("/auth"):
             assert method == "GET"
-            yield DummyAuthResponse(ok=True)  # noqa: RUF075
+            yield DummyAuthResponse(ok=True)  # ruff: ignore[fallible-context-manager]
         if path.endswith("/farmer"):
             if method == "POST":
-                yield DummyPostFarmerResponse(ok=True)  # noqa: RUF075
+                yield DummyPostFarmerResponse(ok=True)  # ruff: ignore[fallible-context-manager]
             if method == "PUT":
-                yield DummyPutFarmerResponse(ok=True)  # noqa: RUF075
+                yield DummyPutFarmerResponse(ok=True)  # ruff: ignore[fallible-context-manager]
             if method == "GET":
                 yield DummyGetFarmerResponse(ok=True)
 

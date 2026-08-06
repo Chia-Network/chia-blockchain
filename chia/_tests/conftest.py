@@ -1,4 +1,4 @@
-# ruff: noqa: E402 # See imports after multiprocessing.set_start_method
+# ruff: file-ignore[module-import-not-at-top-of-file] # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
 import asyncio

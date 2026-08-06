@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import atexit
 import logging
-import pickle  # noqa: S403
+import pickle  # ruff: ignore[suspicious-pickle-import]
 from pathlib import Path
 from typing import Any
 
@@ -50,7 +50,7 @@ def _load_from_disk(path: Path) -> tuple[dict[Any, Any], dict[Any, Any], dict[An
     if not path.exists():
         return {}, {}, {}
     try:
-        data = pickle.loads(path.read_bytes())  # noqa: S301
+        data = pickle.loads(path.read_bytes())  # ruff: ignore[suspicious-pickle-usage]
         if isinstance(data, tuple) and len(data) == 3:
             return data[0], data[1], data[2]
     except Exception:

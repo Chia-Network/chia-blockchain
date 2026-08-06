@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
-import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
+import pickle  # ruff: ignore[suspicious-pickle-import]  # TODO: use explicit serialization instead of pickle
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -74,7 +74,7 @@ def persistent_blocks(
             try:
                 bytes_list = file_path.read_bytes()
                 # TODO: use explicit serialization instead of pickle
-                block_bytes_list: list[bytes] = pickle.loads(bytes_list)  # noqa: S301
+                block_bytes_list: list[bytes] = pickle.loads(bytes_list)  # ruff: ignore[suspicious-pickle-usage]
                 blocks: list[FullBlock] = []
                 for block_bytes in block_bytes_list:
                     blocks.append(FullBlock.from_bytes_unchecked(block_bytes))

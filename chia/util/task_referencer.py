@@ -39,7 +39,7 @@ class _TaskReferencer:
         name: str | None = None,
         known_unreferenced: bool = False,
     ) -> asyncio.Task[T]:
-        task = asyncio.create_task(coro=coroutine, name=name)  # noqa: TID251
+        task = asyncio.create_task(coro=coroutine, name=name)  # ruff: ignore[banned-api]
         task.add_done_callback(self._task_done)
 
         self.tasks[task] = _TaskInfo(task=task, known_unreferenced=known_unreferenced)

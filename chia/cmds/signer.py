@@ -34,7 +34,7 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 def _clear_screen() -> None:
     # Cross-platform screen clear
     # TODO: consider if not-nt anyways could avoid os.system()
-    os.system("cls" if os.name == "nt" else "clear")  # noqa: S605
+    os.system("cls" if os.name == "nt" else "clear")  # ruff: ignore[start-process-with-a-shell]
 
 
 @click.group("signer", help="Get information for an external signer")
