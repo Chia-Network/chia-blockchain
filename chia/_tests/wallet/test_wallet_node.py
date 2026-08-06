@@ -40,6 +40,8 @@ from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.util.task_referencer import create_referenced_task
+from chia.wallet.util.new_peak_queue import NewPeakQueue
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -2183,3 +2185,62 @@ async def test_collect_valid_states(
         )
     assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
     assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "subscription_kind",
+    ["puzzle_hash", "coin_id"],
+)
+async def test_process_new_subscriptions_continues_after_peer_error(
+    root_path_populated_with_config: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    subscription_kind: str,
+) -> None:
+    """One failing peer must not skip subscription registration on later peers."""
+    import chia.wallet.wallet_node as wallet_node_module
+
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    wallet_node._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
+    wallet_node._wallet_state_manager = MagicMock()
+    wallet_node._wallet_state_manager.lock = asyncio.Lock()
+
+    bad_peer = MagicMock()
+    bad_peer.peer_info.host = "bad-peer"
+    bad_peer.close = AsyncMock()
+    good_peer = MagicMock()
+    good_peer.peer_info.host = "good-peer"
+    good_peer.close = AsyncMock()
+
+    server = MagicMock()
+    server.get_connections = Mock(return_value=[bad_peer, good_peer])
+    wallet_node._server = server
+
+    subscribed_peers: list[object] = []
+    target = bytes32(b"\x11" * 32)
+
+    async def fake_subscribe(ids: list[bytes32], peer: object, min_height: int, priority: int = 0) -> list[CoinState]:
+        assert ids == [target]
+        if peer is bad_peer:
+            raise ValueError("simulated peer failure")
+        subscribed_peers.append(peer)
+        return []
+
+    if subscription_kind == "puzzle_hash":
+        monkeypatch.setattr(wallet_node_module, "subscribe_to_phs", fake_subscribe)
+        await wallet_node.new_peak_queue.subscribe_to_puzzle_hashes([target])
+    else:
+        monkeypatch.setattr(wallet_node_module, "subscribe_to_coin_updates", fake_subscribe)
+        await wallet_node.new_peak_queue.subscribe_to_coin_ids([target])
+
+    task = create_referenced_task(wallet_node._process_new_subscriptions())
+    try:
+        await time_out_assert(5, lambda: len(subscribed_peers) == 1)
+        assert subscribed_peers == [good_peer]
+        bad_peer.close.assert_awaited()
+        good_peer.close.assert_not_called()
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
