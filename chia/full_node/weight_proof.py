@@ -842,6 +842,10 @@ def handle_end_of_slot(
 
 
 # wp validation methods
+def _minimum_recent_chain_length(constants: ConsensusConstants) -> int:
+    return int(constants.SUB_EPOCH_BLOCKS) - int(constants.MAX_SUB_SLOT_BLOCKS) + 2
+
+
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
@@ -1236,10 +1240,13 @@ def validate_recent_blocks(
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     summaries = summaries_from_bytes(summaries_bytes)
     sub_blocks = BlockCache({}, mmr_manager=StubMMRManager())
-    if len(recent_chain.recent_chain_data) <= int(constants.SUB_EPOCH_BLOCKS):
+    if len(recent_chain.recent_chain_data) < _minimum_recent_chain_length(constants):
         log.info("recent chain is too short")
         return False, []
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
+    if len(first_ses_idx) != 2:
+        log.info("recent chain has an invalid number of sub-epoch summaries")
+        return False, []
     if len(summaries) < len(first_ses_idx):
         log.info("recent chain has more sub-epoch summaries than weight proof")
         return False, []
@@ -1261,6 +1268,14 @@ def validate_recent_blocks(
     adjusted = False
     validated_block_count = 0
     for idx, block in enumerate(recent_chain.recent_chain_data):
+        if prev_block_record is not None:
+            if int(block.height) != int(prev_block_record.height) + 1:
+                log.info("recent chain is not height-contiguous")
+                return False, []
+            if block.prev_header_hash != prev_block_record.header_hash:
+                log.info("recent chain is not hash-contiguous")
+                return False, []
+
         pos = block.reward_chain_block.proof_of_space
         if pos.version == 1 and pos.quality_string() is None:
             log.info(f"invalid proof of space in weight proof recent chain block {block.height}")
