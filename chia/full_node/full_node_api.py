@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import bisect
 import logging
 import time
 import traceback
@@ -1952,27 +1953,24 @@ class FullNodeAPI:
         ses_hash_heights = []
         ses_reward_hashes = []
 
-        for idx, ses_start_height in enumerate(ses_height):
-            if idx == len(ses_height) - 1:
-                break
-
-            next_ses_height = ses_height[idx + 1]
-            # start_ses_hash
-            if ses_start_height <= start_height < next_ses_height:
-                ses_hash_heights.append([ses_start_height, next_ses_height])
-                ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
-                ses_reward_hashes.append(ses.reward_chain_hash)
-                if ses_start_height < end_height < next_ses_height:
-                    break
-                else:
-                    if idx == len(ses_height) - 2:
-                        break
-                    # else add extra ses as request start <-> end spans two ses
-                    next_next_height = ses_height[idx + 2]
-                    ses_hash_heights.append([next_ses_height, next_next_height])
-                    nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
-                    ses_reward_hashes.append(nex_ses.reward_chain_hash)
-                    break
+        # Locate the SES interval containing start_height with bisect instead of a
+        # linear scan (mainnet has tens of thousands of SES heights).
+        if len(ses_height) >= 2:
+            idx = bisect.bisect_right(ses_height, start_height) - 1
+            if 0 <= idx < len(ses_height) - 1:
+                ses_start_height = ses_height[idx]
+                next_ses_height = ses_height[idx + 1]
+                # start_ses_hash
+                if ses_start_height <= start_height < next_ses_height:
+                    ses_hash_heights.append([ses_start_height, next_ses_height])
+                    ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
+                    ses_reward_hashes.append(ses.reward_chain_hash)
+                    if not (ses_start_height < end_height < next_ses_height) and idx < len(ses_height) - 2:
+                        # else add extra ses as request start <-> end spans two ses
+                        next_next_height = ses_height[idx + 2]
+                        ses_hash_heights.append([next_ses_height, next_next_height])
+                        nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
+                        ses_reward_hashes.append(nex_ses.reward_chain_hash)
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
