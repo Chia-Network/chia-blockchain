@@ -39,6 +39,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
     solution_generator,
     solve_proof,
 )
@@ -101,7 +102,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
+from chia.types.blockchain_format.program import INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_filter_bits,
     calculate_pos_challenge,
@@ -204,10 +205,11 @@ def compute_block_cost(
 
     condition_cost = 0
     clvm_cost = 0
+    flags = int(get_flags_for_height_and_constants(prev_tx_height, constants))
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, flags, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -216,7 +218,7 @@ def compute_block_cost(
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, flags, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(
                 result, charge_for_conditions=prev_tx_height >= constants.HARD_FORK2_HEIGHT
@@ -224,7 +226,7 @@ def compute_block_cost(
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, flags, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:

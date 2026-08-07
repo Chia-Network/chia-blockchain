@@ -99,8 +99,10 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
 
     condition_cost = ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value
     if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        # CREATE_COIN == NEW_CREATE_COIN + SPEND_COST after HF2
         condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
-        clvm_cost = 27360
+        # NEW_COST_MODEL (HF2) increases CLVM execution cost for this spend
+        clvm_cost = 54800
     elif softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
