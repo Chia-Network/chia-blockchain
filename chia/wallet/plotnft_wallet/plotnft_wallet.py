@@ -579,6 +579,10 @@ class PlotNFT2Wallet:
         self.wallet_state_manager.wallets.pop(self.id())
         self.log.info("Removed PlotNFT2 wallet with ID: %s", self.plotnft_id.hex())
         self.wallet_state_manager.state_changed("wallet_removed", wallet_id=self.id())
+        with PoolingShareState.acquire(
+            root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
+        ) as pool_config:
+            pool_config.remove()
 
     @classmethod
     async def potentially_reinitialize_deleted_wallets(
@@ -586,7 +590,7 @@ class PlotNFT2Wallet:
     ) -> None:
         async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
             wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
-            wallet_state_manager.wallets[wallet_id] = await cls.create(
+            new_wallet = await cls.create(
                 wallet_state_manager=wallet_state_manager,
                 xch_wallet=wallet_state_manager.main_wallet,
                 wallet_info=WalletInfo(
@@ -595,6 +599,18 @@ class PlotNFT2Wallet:
                     type=uint8(WalletType.PLOTNFT_2),
                     data=launcher_id.hex(),
                 ),
+            )
+            wallet_state_manager.wallets[wallet_id] = new_wallet
+            plotnft = await new_wallet.get_current_plotnft()
+            created_height = await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
+                coin_id=plotnft.coin.name()
+            )
+            await new_wallet.coin_added(
+                plotnft.coin,
+                created_height,
+                # this function happens to not use the peer so we can get away with this for now
+                peer=object(),  # type: ignore[arg-type]
+                coin_data=plotnft,
             )
 
     # State

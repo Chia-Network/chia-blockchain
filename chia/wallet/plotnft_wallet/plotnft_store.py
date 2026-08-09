@@ -286,7 +286,11 @@ class PlotNFTStore:
             rows = await conn.execute_fetchall(
                 ("SELECT launcher_id, name FROM deleted_wallets WHERE height > ?"), (height,)
             )
-            for row in rows:
-                # TODO: figure out the gotcha that ruff is trying to warn us of here
-                yield (bytes32(row[0]), row[1])  # ruff: ignore[yield-in-context-manager-in-async-generator]
-            await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))
+        for row in rows:
+            try:
+                yield (bytes32(row[0]), row[1])
+            except:
+                raise
+            else:
+                async with self.db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))
