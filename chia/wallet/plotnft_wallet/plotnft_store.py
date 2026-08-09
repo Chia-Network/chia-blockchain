@@ -288,5 +288,5 @@ class PlotNFTStore:
             )
             for row in rows:
                 # TODO: figure out the gotcha that ruff is trying to warn us of here
-                yield (bytes32(row[0]), row[1])  # ruff: ignore[ASYNC119]
+                yield (bytes32(row[0]), row[1])  # ruff: ignore[yield-in-context-manager-in-async-generator]
             await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))
