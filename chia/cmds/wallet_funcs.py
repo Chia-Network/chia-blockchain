@@ -316,7 +316,7 @@ async def get_transactions(
                     else:
                         # Ignoring this because it seems useful to the loop
                         # But we should probably consider a better loop
-                        j -= 1  # noqa: PLW2901
+                        j -= 1  # ruff: ignore[redefined-loop-name]
                         skipped += 1
                         continue
                 print_transaction(
@@ -664,7 +664,7 @@ async def make_offer(
                             )
                             total_amounts_requested[summary["asset"]] += summary["amount"]
                             print(
-                                f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                                f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # ruff: ignore[line-too-long]
                             )
 
                     print()
@@ -922,7 +922,7 @@ async def take_offer(
                         )
                         total_amounts_requested[summary["asset"]] += summary["amount"]
                         print(
-                            f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                            f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # ruff: ignore[line-too-long]
                         )
 
                 print()

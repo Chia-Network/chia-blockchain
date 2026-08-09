@@ -14,7 +14,7 @@ from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
-from chia._tests.wallet.conftest import *  # noqa
+from chia._tests.wallet.conftest import *  # ruff: ignore[undefined-local-with-import-star]
 from chia.cmds.cmd_classes import ChiaCliContext, ChiaCommand, chia_command, option
 from chia.cmds.cmd_helpers import (
     _TRANSACTION_ENDPOINT_DECORATOR_APPLIED,

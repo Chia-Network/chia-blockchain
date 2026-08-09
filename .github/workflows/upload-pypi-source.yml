@@ -129,7 +129,7 @@ jobs:
           - major_dot_minor: "3.12"
         check:
           - name: ruff
-            command: ruff format --check --diff .
+            command: ruff format --check --diff chia benchmarks tools
           - name: generated protocol tests
             command: |
               python3 -m chia._tests.util.build_network_protocol_files

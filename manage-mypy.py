@@ -42,7 +42,7 @@ def read_module_list(path: Path) -> list[str]:
 
 def build_exclusion_list(mypy_failures: list[str]) -> list[str]:
     # Create content for `mypy-exclusions.txt` from a list of mypy failures which look like:
-    #     # chia/cmds/wallet_funcs.py:1251: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment] # noqa
+    #     # chia/cmds/wallet_funcs.py:1251: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment] # ruff: ignore[line-too-long]
     return sorted({".".join(split_mypy_failure(line)) for line in mypy_failures[:-1]})
 
 
