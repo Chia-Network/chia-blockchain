@@ -2183,3 +2183,57 @@ async def test_collect_valid_states(
         )
     assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
     assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "subscription_kind",
+    ["puzzle_hash", "coin_id"],
+)
+async def test_process_new_subscriptions_continues_after_peer_error(
+    setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    subscription_kind: str,
+) -> None:
+    """One failing peer must not skip subscription registration on later peers."""
+    [bad_fn_api, good_fn_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
+    # Keep both peers; do not prefer a trusted peer that would disconnect the other.
+    wallet_node.config["trusted_peers"] = {}
+
+    assert await wallet_server.start_client(PeerInfo(self_hostname, bad_fn_api.server.get_port()), None)
+    assert await wallet_server.start_client(PeerInfo(self_hostname, good_fn_api.server.get_port()), None)
+    await time_out_assert(10, lambda: len(wallet_server.get_connections(NodeType.FULL_NODE)) == 2)
+
+    target = bytes32.random()
+
+    async def register_for_ph_updates(
+        self: object, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
+    ) -> None:
+        raise RuntimeError("simulated peer failure")
+
+    async def register_for_coin_updates(
+        self: object, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
+    ) -> None:
+        raise RuntimeError("simulated peer failure")
+
+    if subscription_kind == "puzzle_hash":
+        handler: Any = register_for_ph_updates
+
+        def good_peer_subscribed() -> bool:
+            return target in good_fn_api.full_node.subscriptions.puzzle_subscriptions(wallet_server.node_id)
+
+    else:
+        handler = register_for_coin_updates
+
+        def good_peer_subscribed() -> bool:
+            return target in good_fn_api.full_node.subscriptions.coin_subscriptions(wallet_server.node_id)
+
+    with patch_request_handler(api=bad_fn_api, handler=handler):
+        if subscription_kind == "puzzle_hash":
+            await wallet_node.new_peak_queue.subscribe_to_puzzle_hashes([target])
+        else:
+            await wallet_node.new_peak_queue.subscribe_to_coin_ids([target])
+        await time_out_assert(10, good_peer_subscribed)
+        await time_out_assert(10, lambda: bad_fn_api.server.node_id not in wallet_server.all_connections)
+
+    assert good_fn_api.server.node_id in wallet_server.all_connections

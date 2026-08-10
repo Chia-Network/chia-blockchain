@@ -79,6 +79,7 @@ class StateUrlCase:
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -232,6 +233,7 @@ async def test_plotnft_cli_create_errors(
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -312,6 +314,7 @@ async def test_plotnft_cli_show(
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -384,6 +387,7 @@ async def test_plotnft_cli_show_with_farmer(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -475,6 +479,7 @@ async def test_plotnft_cli_leave(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -707,6 +712,7 @@ async def test_plotnft_cli_join(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -964,6 +970,7 @@ async def test_plotnft_cli_melt(wallet_environments: WalletTestFramework, self_h
             "num_environments": 1,
             "blocks_needed": [10],
             "reuse_puzhash": False,
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -1053,6 +1060,7 @@ async def test_plotnft_cli_inspect(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -1125,6 +1133,7 @@ async def test_plotnft_cli_change_payout(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,

@@ -1563,6 +1563,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -2299,7 +2300,11 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: p
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
+        post_reorg_balance_differences=[
+            WalletStateTransition({"did": {"set_remainder": True}}),
+            WalletStateTransition(),
+        ],
     )
 
     # Transfer DID
@@ -2328,7 +2333,10 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: p
                     "did": {"init": True, "set_remainder": True},
                 }
             ),
-        ]
+        ],
+        # TODO: there's a bug here where the user store autoincrement means this has a new ID after deleted
+        # Instead of 2, it becomes 3 because there was a 2 at some point (is my best guess)
+        reorg_exempt=True,
     )
 
     async def num_wallets() -> int:

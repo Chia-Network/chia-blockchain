@@ -263,14 +263,11 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         )
     ).signed_transactions
     await wallet_rpc.submit_transactions(SubmitTransactions(signed_transactions=signed_txs))
-    await wallet_environments.full_node.wait_bundle_ids_in_mempool(
-        [
-            WalletSpendBundle(
-                [spend.as_coin_spend() for tx in signed_txs for spend in tx.transaction_info.spends],
-                G2Element.from_bytes(signing_responses[0].signature),
-            ).name()
-        ]
+    bundle = WalletSpendBundle(
+        [spend.as_coin_spend() for tx in signed_txs for spend in tx.transaction_info.spends],
+        G2Element.from_bytes(signing_responses[0].signature),
     )
+    await wallet_environments.full_node.wait_bundle_ids_in_mempool([bundle.name()])
 
     await wallet_environments.process_pending_states(
         [
@@ -287,7 +284,8 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
+        bundles_to_repush=[bundle],
     )
 
     # And test that we can get compressed versions if we want
