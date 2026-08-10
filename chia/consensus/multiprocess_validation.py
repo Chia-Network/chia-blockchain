@@ -140,9 +140,9 @@ def _pre_validate_block(
             # checks reject that before the expensive CLVM run.
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
                 return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
-            if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
+            if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
                 return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
-            if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
+            if block.foliage.foliage_transaction_block_hash != block.foliage_transaction_block.get_hash():
                 return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
             if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
