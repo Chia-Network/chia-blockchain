@@ -52,6 +52,81 @@ def test_compute_spend_hints_and_additions() -> None:
         )
 
 
+def test_offer_rejects_spend_exceeding_max_cost() -> None:
+    from chia_rs import G2Element
+
+    from chia.wallet.trading.offer import Offer
+    from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+    coin_generator = CoinGenerator()
+    parent_coin = coin_generator.get()
+    expensive_spend = make_spend(
+        parent_coin.coin,
+        Program.to(1),
+        Program.to([[51, bytes32.zeros, 0] for _ in range(10000)]),
+    )
+    with pytest.raises(ValidationError):
+        Offer({}, WalletSpendBundle([expensive_spend], G2Element()), {})
+
+
+def test_offer_enforces_remaining_max_cost_across_spends() -> None:
+    """Two spends each under the full block cost, but over when summed.
+
+    With max_cost= remaining passed through, the second spend fails inside
+    compute_spend_hints_and_additions. Without it, both succeed and Offer only
+    fails afterward on the residual max_cost < 0 check.
+    """
+    from chia_rs import G2Element
+
+    from chia.wallet.trading.offer import Offer
+    from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+    coin_generator = CoinGenerator()
+    # ~6.3e9 each; MAX_BLOCK_COST_CLVM is 11e9, so one fits and two do not.
+    spends = [
+        make_spend(
+            coin_generator.get().coin,
+            Program.to(1),
+            Program.to([[51, bytes32.zeros, 1] for _ in range(3500)]),
+        )
+        for _ in range(2)
+    ]
+    with pytest.raises(ValidationError, match="compute_spend_hints_and_additions"):
+        Offer({}, WalletSpendBundle(spends, G2Element()), {})
+
+
+def test_offer_maps_clvm_cost_exceeded_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """After prior spends leave almost no CLVM budget, run_with_cost raises ValueError.
+
+    Offer remaps that to ValidationError. Lower MAX_BLOCK_COST_CLVM so a cheap
+    first spend can deplete the budget without needing huge CREATE_COIN lists.
+    """
+    from chia_rs import G2Element
+    from chia_rs.sized_ints import uint64
+
+    import chia.wallet.trading.offer as offer_mod
+    from chia.wallet.trading.offer import Offer
+    from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+    coin_generator = CoinGenerator()
+    # Minimal first spend (~44 cost). Leave only 10 for the second so CLVM aborts
+    # inside run_with_cost with ValueError("cost exceeded or below zero").
+    first = make_spend(coin_generator.get().coin, Program.to(1), Program.to([]))
+    _, first_cost = compute_spend_hints_and_additions(first)
+    second = make_spend(
+        coin_generator.get().coin,
+        Program.to(1),
+        Program.to([[51, bytes32.zeros, 1]]),
+    )
+    monkeypatch.setattr(
+        offer_mod,
+        "DEFAULT_CONSTANTS",
+        DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(first_cost + 10)),
+    )
+    with pytest.raises(ValidationError, match="compute_additions for CoinSpend"):
+        Offer({}, WalletSpendBundle([first, second], G2Element()), {})
+
+
 def test_cs_config() -> None:
     default_cs_config = DEFAULT_COIN_SELECTION_CONFIG.to_json_dict()
     assert (
