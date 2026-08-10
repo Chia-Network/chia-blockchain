@@ -588,8 +588,8 @@ class PlotNFT2Wallet:
     async def potentially_reinitialize_deleted_wallets(
         cls, *, wallet_state_manager: WalletStateManager, height: int
     ) -> None:
-        async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
-            try:
+        try:
+            async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
                 wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
                 new_wallet = await cls.create(
                     wallet_state_manager=wallet_state_manager,
@@ -613,10 +613,8 @@ class PlotNFT2Wallet:
                     peer=object(),  # type: ignore[arg-type]
                     coin_data=plotnft,
                 )
-            except Exception as e:
-                wallet_state_manager.log.error(
-                    f"Error reintializing PlotNFT wallet with launcher id {launcher_id}: {e}"
-                )
+        except Exception as e:
+            wallet_state_manager.log.error(f"Error reintializing PlotNFT wallet with launcher id {launcher_id}: {e}")
 
     # State
     async def get_current_plotnft(self) -> PlotNFT:
