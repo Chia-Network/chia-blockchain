@@ -293,4 +293,4 @@ class PlotNFTStore:
                 raise
             else:
                 async with self.db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute("DELETE FROM deleted_wallets WHERE height > ?", (height,))
+                    await conn.execute("DELETE FROM deleted_wallets WHERE launcher_id = ?", (row[0],))

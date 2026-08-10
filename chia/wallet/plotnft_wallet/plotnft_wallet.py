@@ -589,29 +589,34 @@ class PlotNFT2Wallet:
         cls, *, wallet_state_manager: WalletStateManager, height: int
     ) -> None:
         async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
-            wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
-            new_wallet = await cls.create(
-                wallet_state_manager=wallet_state_manager,
-                xch_wallet=wallet_state_manager.main_wallet,
-                wallet_info=WalletInfo(
-                    id=wallet_id,
-                    name=name,
-                    type=uint8(WalletType.PLOTNFT_2),
-                    data=launcher_id.hex(),
-                ),
-            )
-            wallet_state_manager.wallets[wallet_id] = new_wallet
-            plotnft = await new_wallet.get_current_plotnft()
-            created_height = await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
-                coin_id=plotnft.coin.name()
-            )
-            await new_wallet.coin_added(
-                plotnft.coin,
-                created_height,
-                # this function happens to not use the peer so we can get away with this for now
-                peer=object(),  # type: ignore[arg-type]
-                coin_data=plotnft,
-            )
+            try:
+                wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
+                new_wallet = await cls.create(
+                    wallet_state_manager=wallet_state_manager,
+                    xch_wallet=wallet_state_manager.main_wallet,
+                    wallet_info=WalletInfo(
+                        id=wallet_id,
+                        name=name,
+                        type=uint8(WalletType.PLOTNFT_2),
+                        data=launcher_id.hex(),
+                    ),
+                )
+                wallet_state_manager.wallets[wallet_id] = new_wallet
+                plotnft = await new_wallet.get_current_plotnft()
+                created_height = await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
+                    coin_id=plotnft.coin.name()
+                )
+                await new_wallet.coin_added(
+                    plotnft.coin,
+                    created_height,
+                    # this function happens to not use the peer so we can get away with this for now
+                    peer=object(),  # type: ignore[arg-type]
+                    coin_data=plotnft,
+                )
+            except Exception as e:
+                wallet_state_manager.log.error(
+                    f"Error reintializing PlotNFT wallet with launcher id {launcher_id}: {e}"
+                )
 
     # State
     async def get_current_plotnft(self) -> PlotNFT:
