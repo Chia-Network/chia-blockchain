@@ -881,6 +881,11 @@ class WalletStateManager:
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
                     all_unspent_coins.add(addition)
 
+        for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as unconfirmed.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for removal in record.removals:
                 if (
                     await self.does_coin_belong_to_wallet(removal, wallet_id, record.hint_dict())
