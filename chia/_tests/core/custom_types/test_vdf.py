@@ -48,3 +48,63 @@ def test_oversized_witness_rejected_before_cached_verifier() -> None:
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
     assert vdf.verify_vdf.cache_info() == cache_info_before
+
+
+@pytest.mark.parametrize(
+    ("witness_type", "witness_size"),
+    [
+        # Empty / truncated / one-byte-long for witness_type 0 (expected 100).
+        (uint8(0), 0),
+        (uint8(0), 99),
+        (uint8(0), 101),
+        # Correct length for a different witness_type.
+        (uint8(1), 100),
+        (uint8(0), 241),
+        # Off-by-one around witness_type 1 (expected 241).
+        (uint8(1), 240),
+        (uint8(1), 242),
+        # Off-by-one around witness_type 63 (expected 8983).
+        (uint8(63), 8982),
+        (uint8(63), 8984),
+    ],
+    ids=[
+        "type0_empty",
+        "type0_one_short",
+        "type0_one_long",
+        "type1_with_type0_size",
+        "type0_with_type1_size",
+        "type1_one_short",
+        "type1_one_long",
+        "type63_one_short",
+        "type63_one_long",
+    ],
+)
+def test_invalid_witness_size_rejected_before_verifier(
+    monkeypatch: pytest.MonkeyPatch, witness_type: uint8, witness_size: int
+) -> None:
+    def fail_if_called(*args: object) -> bool:
+        raise AssertionError("verify_vdf should not be called for invalid witness size")
+
+    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
+    monkeypatch.setattr(vdf, "verify_vdf", fail_if_called)
+
+    classgroup_element = ClassgroupElement.get_default_element()
+    info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
+    proof = VDFProof(witness_type, bytes(witness_size), False)
+
+    assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
+
+
+def test_witness_type_above_max_rejected_before_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_if_called(*args: object) -> bool:
+        raise AssertionError("verify_vdf should not be called when witness_type exceeds MAX_VDF_WITNESS_SIZE")
+
+    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
+    monkeypatch.setattr(vdf, "verify_vdf", fail_if_called)
+
+    classgroup_element = ClassgroupElement.get_default_element()
+    info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
+    # MAX_VDF_WITNESS_SIZE is 64; witness_type + 1 must be <= 64, so 64 is rejected.
+    proof = VDFProof(uint8(64), bytes(100), False)
+
+    assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
