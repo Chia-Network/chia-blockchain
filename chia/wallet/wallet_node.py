@@ -49,12 +49,20 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, manage_connection
-from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import (
+    Err,
+    KeychainIsEmpty,
+    KeychainIsLocked,
+    KeychainKeyNotFound,
+    KeychainProxyConnectionFailure,
+    ProtocolError,
+)
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, StreamableError, streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
@@ -323,6 +331,12 @@ class WalletNode:
         if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
             # Update in memory config
             self.config["auto_claim"] = auto_claim_config_json
+            if self._wallet_state_manager is not None:
+                self.wallet_state_manager.clawback_manager = dataclasses.replace(
+                    self.wallet_state_manager.clawback_manager,
+                    auto_claim_tx_fee=auto_claim_config.tx_fee,
+                    auto_claim_batch_size=auto_claim_config.batch_size,
+                )
             # Update config file
             with lock_and_load_config(self.root_path, "config.yaml") as config:
                 config["wallet"]["auto_claim"] = self.config["auto_claim"]
@@ -465,7 +479,6 @@ class WalletNode:
             self.config,
             path,
             self.constants,
-            self.server,
             self.root_path,
             self,
             public_key,
@@ -565,7 +578,8 @@ class WalletNode:
             return None
 
         for msg, sent_peers in await self._messages_to_resend():
-            if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            # these may change concurrently during the await above (e.g. on shutdown)
+            if self._shut_down or self._server is None or self._wallet_state_manager is None:  # type: ignore[redundant-expr]
                 return None
             full_nodes = self.server.get_connections(NodeType.FULL_NODE)
             for peer in full_nodes:
@@ -676,7 +690,26 @@ class WalletNode:
                     # we might not be able to process some state.
                     coin_ids: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
+                        try:
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
+                            coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
+                            # Keep going so one bad peer cannot drop this batch for everyone else.
+                            self.log.warning(
+                                "COIN_ID_SUBSCRIPTION failed for peer %s: %s",
+                                peer.peer_info.host,
+                                e,
+                            )
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=f"Failed closing peer {peer.peer_info.host} after COIN_ID_SUBSCRIPTION error",
+                                level=logging.WARNING,
+                            ):
+                                await peer.close(9999)
+                            continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -684,8 +717,28 @@ class WalletNode:
                     self.log.debug("Pulled from queue: %s %s", item.item_type.name, item.data)
                     puzzle_hashes: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        # Puzzle hash subscription
-                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
+                        try:
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
+                            coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
+                            # Keep going so one bad peer cannot drop this batch for everyone else.
+                            self.log.warning(
+                                "PUZZLE_HASH_SUBSCRIPTION failed for peer %s: %s",
+                                peer.peer_info.host,
+                                e,
+                            )
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=(
+                                    f"Failed closing peer {peer.peer_info.host} after PUZZLE_HASH_SUBSCRIPTION error"
+                                ),
+                                level=logging.WARNING,
+                            ):
+                                await peer.close(9999)
+                            continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -1299,7 +1352,10 @@ class WalletNode:
 
             # Check if any coin needs auto spending
             if self.config.get("auto_claim", {}).get("enabled", False):
-                await self.wallet_state_manager.auto_claim_coins()
+                async with self.wallet_state_manager.new_action_scope(
+                    self.wallet_state_manager.tx_config, push=True
+                ) as action_scope:
+                    await self.wallet_state_manager.clawback_manager.auto_claim_coins(action_scope)
 
         if new_peak_hb.foliage_transaction_block is not None:
             await self._retry_fee_failed_transactions()

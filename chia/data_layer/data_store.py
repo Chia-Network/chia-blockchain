@@ -372,7 +372,7 @@ class DataStore:
                     while len(chunk) < 4:
                         size_to_read = 4 - len(chunk)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             if size_to_read < 4:
                                 raise Exception("Incomplete read of length.")
                             break
@@ -385,7 +385,7 @@ class DataStore:
                     while len(serialize_nodes_bytes) < size:
                         size_to_read = size - len(serialize_nodes_bytes)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             raise Exception("Incomplete read of blob.")
                         serialize_nodes_bytes += cur_chunk
                     serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
@@ -1280,7 +1280,7 @@ class DataStore:
 
     async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> TerminalNode | None:
         root = await self.get_tree_root(store_id=store_id)
-        if root is None or root.node_hash is None:
+        if root.node_hash is None:
             return None
 
         merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)

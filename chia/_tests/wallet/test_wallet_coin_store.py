@@ -14,7 +14,8 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
-from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecordsResult, WalletCoinStore
+from chia.wallet.wallet_request_types import GetCoinRecords
 
 clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
 
@@ -122,7 +123,7 @@ class DummyWalletCoinRecords:
     def generate(self, wallet_id: int, count: int) -> None:
         records = self.records_per_wallet.setdefault(uint32(wallet_id), [])
         for _ in range(count):
-            records.append(get_dummy_record(wallet_id, seeded_random=self.seeded_random))
+            records.append(get_dummy_record(uint32(wallet_id), seeded_random=self.seeded_random))
 
 
 @pytest.mark.parametrize(

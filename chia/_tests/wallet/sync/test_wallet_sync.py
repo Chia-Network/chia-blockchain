@@ -168,6 +168,7 @@ async def test_request_block_headers_transactions_filter(
     if rewards_only_tx_block:
         # Generate a transaction block without any spends
         sb = None
+        parent_coin = None
     else:
         # Generate a transaction block with our test spend
         coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
@@ -189,6 +190,7 @@ async def test_request_block_headers_transactions_filter(
         byte_array_tx = [bytearray(coin.puzzle_hash) for coin in new_block.get_included_reward_coins()]
     else:
         assert sb is not None
+        assert parent_coin is not None
         [test_spend] = sb.additions()
         byte_array_tx = (
             [bytearray(test_spend.puzzle_hash)]
@@ -554,7 +556,7 @@ async def test_wallet_reorg_sync(
     # Farm few more with reward
 
     wallet_node1, _ = wallets[0]
-    wallet1 = wallet_node.wallet_state_manager.main_wallet
+    wallet1 = wallet_node1.wallet_state_manager.main_wallet
     wallet_node2, _ = wallets[1]
     wallet2 = wallet_node2.wallet_state_manager.main_wallet
 

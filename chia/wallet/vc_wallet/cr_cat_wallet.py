@@ -69,7 +69,9 @@ class CRCATWallet(CATWallet):
     info: CRCATInfo
     standard_wallet: Wallet
     wallet_type: ClassVar[WalletType] = WalletType.CRCAT
-    wallet_info_type: ClassVar[type[CRCATInfo]] = CRCATInfo
+
+    # Legacy method - not available on CR-CAT wallets
+    puzzle_for_pk = None
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
@@ -119,11 +121,12 @@ class CRCATWallet(CATWallet):
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.info = cls.wallet_info_type(limitations_program_hash, None, authorized_providers, proofs_checker)
+        self.info = CRCATInfo(limitations_program_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
 
         await self.wallet_state_manager.add_new_wallet(self)
+        self.tail_hash = self.info.limitations_program_hash
         return self
 
     @classmethod
@@ -151,19 +154,21 @@ class CRCATWallet(CATWallet):
             ProofsChecker.from_program(uncurry_puzzle(cr_layer["proofs_checker"])),
         )
 
-    @staticmethod
+    @classmethod
     async def create(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
     ) -> CRCATWallet:
-        self = CRCATWallet()
+        self = cls()
 
         self.log = logging.getLogger(__name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.info = self.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.info = CRCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.tail_hash = self.info.limitations_program_hash
         return self
 
     @classmethod
@@ -178,7 +183,7 @@ class CRCATWallet(CATWallet):
         replace_self.log = logging.getLogger(cat_wallet.get_name())
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to CR-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
-        replace_self.info = cls.wallet_info_type(
+        replace_self.info = CRCATInfo(
             cat_wallet.cat_info.limitations_program_hash, None, authorized_providers, proofs_checker
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
@@ -189,6 +194,7 @@ class CRCATWallet(CATWallet):
         updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
         assert updated_wallet_info is not None
         replace_self.wallet_info = updated_wallet_info
+        replace_self.tail_hash = replace_self.info.limitations_program_hash
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
 
@@ -304,9 +310,6 @@ class CRCATWallet(CATWallet):
     def require_derivation_paths(self) -> bool:
         return False
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
-        raise NotImplementedError("puzzle_for_pk is a legacy method and is not available on CR-CAT wallets")
-
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise NotImplementedError("puzzle_hash_for_pk is a legacy method and is not available on CR-CAT wallets")
 
@@ -320,7 +323,7 @@ class CRCATWallet(CATWallet):
 
     async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
         crcat: CRCAT = self.coin_record_to_crcat(record)
-        if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+        if not crcat.lineage_proof.is_none():
             return True
         return False
 
@@ -332,7 +335,7 @@ class CRCATWallet(CATWallet):
         amount: uint128 = uint128(0)
         for record in record_list:
             crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            if not crcat.lineage_proof.is_none():
                 amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
@@ -346,7 +349,7 @@ class CRCATWallet(CATWallet):
         amount: uint128 = uint128(0)
         for record in record_list:
             crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            if not crcat.lineage_proof.is_none():
                 amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Pending approval balance for cat wallet {self.id()} is {amount}")
@@ -472,7 +475,7 @@ class CRCATWallet(CATWallet):
         vc_announcements_to_make: list[bytes] = []
         inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
         first = True
-        announcement: CreateCoinAnnouncement
+        announcement: CreateCoinAnnouncement | None = None
         coin_ids: list[bytes32] = [coin.name() for coin in cat_coins]
         coin_records: list[WalletCoinRecord] = (
             await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
@@ -535,6 +538,7 @@ class CRCATWallet(CATWallet):
                         conditions=(*extra_conditions, announcement),
                     )
             else:
+                assert announcement is not None
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
                     conditions=(announcement.corresponding_assertion(),),
@@ -577,6 +581,7 @@ class CRCATWallet(CATWallet):
             vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
         )
         if add_authorizations_to_cr_cats:
+            assert announcement is not None
             await vc_wallet.generate_signed_transaction(
                 [uint64(1)],
                 [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
@@ -786,7 +791,7 @@ class CRCATWallet(CATWallet):
                     wallet_id=self.id(),
                     sent_to=[],
                     trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
+                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=claim_bundle.name(),
                     memos=compute_memos(claim_bundle),
                     valid_times=parse_timelock_info(extra_conditions),

@@ -330,6 +330,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -364,6 +366,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
+            None,
+            uint8(0),
         )
         conds = None
         # if this assert fires, remove it along with the pragma for the block
@@ -459,6 +463,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
+                    None,
+                    uint8(0),
                 )
                 conds = None
                 # if this assert fires, remove it along with the pragma for the block
@@ -1298,7 +1304,14 @@ class TestBlockHeaderValidation:
             if blocks[-1].reward_chain_block.signage_point_index == 0:
                 case_1 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
-                await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
+                if blocks[-1].reward_chain_block.proof_of_space.param().strength_v2 is not None:
+                    # V2 plot filtering depends on the signage point index, so this mutation may fail
+                    # PoSpace validation before reaching the SP-index consistency check.
+                    await _validate_and_add_block_multi_error(
+                        empty_blockchain, block_bad, [Err.INVALID_SP_INDEX, Err.INVALID_POSPACE]
+                    )
+                else:
+                    await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
             elif not is_overflow_block(bt.constants, blocks[-1].reward_chain_block.signage_point_index):
                 case_2 = True
@@ -1481,12 +1494,6 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="It seams ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT fails to "
-        "find any proofs with pool keys in a timely manner",
-    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1513,11 +1520,16 @@ class TestBlockHeaderValidation:
             assert attempts < 300
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="HARD_FORK_3_0*doesn't work as we keep getting v2 PoS with pool keys, "
-        "we need to change the plot setup to increase the chance of getting PoS with pool contracts",
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_7,
+        ],
+        reason=(
+            "This test asserts INVALID_POOL_TARGET; HF3 V2 plots can fail filter/PoSpace validation before reaching "
+            "that pool-target check."
+        ),
     )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
@@ -2869,11 +2881,7 @@ class TestBodyValidation:
 
         assert block_2.transactions_generator is not None
         block_generator = BlockGenerator(block_2.transactions_generator, [])
-        max_cost = (
-            min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
-            if block.transactions_info is not None
-            else b.constants.MAX_BLOCK_COST_CLVM * 1000
-        )
+        max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
         npc_result = get_name_puzzle_conditions(
             block_generator,
             max_cost,
@@ -3392,7 +3400,9 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode not in {
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+            reorg_point = 14
+        elif consensus_mode not in {
             ConsensusMode.HARD_FORK_2_0,
             ConsensusMode.SOFT_FORK_2_7,
         }:

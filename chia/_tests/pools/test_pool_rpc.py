@@ -1171,6 +1171,7 @@ class TestPoolWalletRpc:
             {
                 "num_environments": 1,
                 "blocks_needed": [10],
+                "reorg_exempt": True,
             }
         ],
         indirect=True,
@@ -1359,6 +1360,7 @@ class TestPoolWalletRpc:
             {
                 "num_environments": 1,
                 "blocks_needed": [10],
+                "reorg_exempt": True,
             }
         ],
         indirect=True,
@@ -1401,6 +1403,7 @@ class TestPoolWalletRpc:
                 "blocks_needed": [10],
                 "trusted": True,
                 "reuse_puzhash": False,
+                "reorg_exempt": True,
             }
         ],
         indirect=True,

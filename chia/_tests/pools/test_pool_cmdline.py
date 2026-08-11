@@ -76,6 +76,7 @@ class StateUrlCase:
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -229,6 +230,7 @@ async def test_plotnft_cli_create_errors(
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -309,6 +311,7 @@ async def test_plotnft_cli_show(
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -381,6 +384,7 @@ async def test_plotnft_cli_show_with_farmer(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -472,6 +476,7 @@ async def test_plotnft_cli_leave(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -595,7 +600,7 @@ async def test_plotnft_cli_join(
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
-    pool_response_dict["protocol_version"] = 2
+    pool_response_dict["protocol_version"] = 1 if version == 2 else 2
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
     with pytest.raises(CliRpcConnectionError, match="Incorrect version"):
@@ -609,7 +614,7 @@ async def test_plotnft_cli_join(
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
-    pool_response_dict["protocol_version"] = 1
+    pool_response_dict["protocol_version"] = 1 if version == 1 else 2
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
     if prompt:
@@ -704,6 +709,7 @@ async def test_plotnft_cli_join(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -829,6 +835,7 @@ async def test_plotnft_cli_claim(wallet_environments: WalletTestFramework, versi
             "num_environments": 1,
             "blocks_needed": [10],
             "reuse_puzhash": False,
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -918,6 +925,7 @@ async def test_plotnft_cli_inspect(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,
@@ -990,6 +998,7 @@ async def test_plotnft_cli_change_payout(
         {
             "num_environments": 1,
             "blocks_needed": [10],
+            "reorg_exempt": True,
         }
     ],
     indirect=True,

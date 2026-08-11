@@ -166,7 +166,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
 
     logger.info(" ==== launching serve.py")
     # TODO: is there some reason not to use an async process here?
-    with subprocess.Popen(  # noqa: ASYNC220
+    with subprocess.Popen(  # ruff: ignore[create-subprocess-in-async-function]
         [sys.executable, "-m", "chia._tests.core.server.serve", os.fspath(serve_file)],
     ):
         logger.info(" ====           serve.py running")
@@ -175,7 +175,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
 
         logger.info(" ==== launching flood.py")
         # TODO: is there some reason not to use an async process here?
-        with subprocess.Popen(  # noqa: ASYNC220
+        with subprocess.Popen(  # ruff: ignore[create-subprocess-in-async-function]
             [sys.executable, "-m", "chia._tests.core.server.flood", os.fspath(flood_file)],
         ):
             logger.info(" ====           flood.py running")

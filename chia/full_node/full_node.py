@@ -63,7 +63,7 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
-from chia.full_node.weight_proof import WeightProofHandler
+from chia.full_node.weight_proof import WeightProofHandler, _minimum_recent_chain_length
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
@@ -105,6 +105,37 @@ from chia.util.task_referencer import create_referenced_task
 # Use 15s here instead of the default 60s call_api timeout to bound how
 # long short_sync_backtrack can occupy a new_peak slot.
 SHORT_SYNC_BACKTRACK_BLOCK_REQUEST_TIMEOUT_SEC: int = 15
+
+
+async def respond_blocks_or_ban(
+    peer: WSChiaConnection,
+    response: RespondBlocks,
+    start_height: int,
+    end_height: int,
+    log: logging.Logger,
+) -> bool:
+    """
+    Return True if response covers the inclusive requested height range.
+    Otherwise ban the peer and return False.
+
+    Honest nodes return the full inclusive range or RejectBlocks. A
+    well-formed but incomplete/mismatched RespondBlocks cannot advance
+    sync, so the peer is banned rather than credited with a fetch.
+    """
+    expected_heights = list(range(start_height, end_height + 1))
+    if (
+        response.start_height == start_height
+        and response.end_height == end_height
+        and [block.height for block in response.blocks] == expected_heights
+    ):
+        return True
+    log.warning(
+        f"peer {peer.peer_info.host} responded to request_blocks "
+        f"{start_height}-{end_height} with {response.start_height}-"
+        f"{response.end_height} ({len(response.blocks)} blocks), banning"
+    )
+    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+    return False
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -502,7 +533,7 @@ class FullNode:
         else:
             peak_store = None
         for con in connections:
-            if peak_store is not None and con.peer_node_id in peak_store:
+            if con.peer_node_id in peak_store:
                 peak = peak_store[con.peer_node_id]
                 peak_height = peak.height
                 peak_hash = peak.header_hash
@@ -676,8 +707,15 @@ class FullNode:
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
-                if not response:
+                if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
+                if not await respond_blocks_or_ban(peer, response, height, end_height, self.log):
+                    raise ConsensusError(
+                        Err.INVALID_PROTOCOL_MESSAGE,
+                        error_msg=(
+                            f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                        ),
+                    )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: StateChangeSummary | None
                     prev_b = None
@@ -694,8 +732,6 @@ class FullNode:
                     success, state_change_summary = await self.add_block_batch(
                         response.blocks, peer_info, fork_info, vs, blockchain
                     )
-                    if not success:
-                        raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
                         try:
                             peak_fb: FullBlock | None = await self.blockchain.get_full_peak()
@@ -712,10 +748,18 @@ class FullNode:
                             await self.peak_post_processing(peak_fb, state_change_summary, peer)
                             raise
                         finally:
-                            self.log.info(f"Added blocks {height}-{end_height}")
+                            # Log the committed prefix only; a failed suffix is not ingested.
+                            self.log.info(f"Added blocks {height}-{state_change_summary.peak.height}")
                 if state_change_summary is not None and peak_fb is not None:
                     # Call outside of priority_mutex to encourage concurrency
                     await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
+                if not success:
+                    if state_change_summary is not None:
+                        raise ValueError(
+                            f"Error short batch syncing, failed to validate blocks after height "
+                            f"{state_change_summary.peak.height} (batch {height}-{end_height})"
+                        )
+                    raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
         finally:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
@@ -829,7 +873,7 @@ class FullNode:
                 peak_peers: set[bytes32] = self.sync_store.get_peers_that_have_peak([target_peak.header_hash])
                 # Don't ask if we already know this peer has the peak
                 if peer.peer_node_id not in peak_peers:
-                    target_peak_response: RespondBlock | None = await peer.call_api(
+                    target_peak_response = await peer.call_api(
                         FullNodeAPI.request_block,
                         full_node_protocol.RequestBlock(target_peak.height, False),
                         timeout=10,
@@ -1192,6 +1236,9 @@ class FullNode:
         if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
+        if len(response.wp.recent_chain_data) < _minimum_recent_chain_length(self.constants):
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            raise RuntimeError(f"Weight proof recent chain was too short: {weight_proof_peer.peer_info.host}")
         if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
@@ -1357,6 +1404,8 @@ class FullNode:
                         self.log.info(f"peer timed out after {end - start:.1f} s")
                         await peer.close()
                     elif isinstance(response, RespondBlocks):
+                        if not await respond_blocks_or_ban(peer, response, start_height, end_height, self.log):
+                            continue
                         if end - start > 5:
                             self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
                             # this isn't a great peer, reduce its priority
@@ -1454,8 +1503,29 @@ class FullNode:
                 peer.peer_info,
                 vs,
             )
+            peak: BlockRecord | None = self.blockchain.get_peak()
+            if state_change_summary is not None:
+                assert peak is not None
+                # Hints must be added to the DB. The other post-processing tasks are not required when syncing.
+                # A failed batch can still have committed a valid prefix, whose hints must not be dropped.
+                hints_to_add, _ = get_hints_and_subscription_coin_ids(
+                    state_change_summary,
+                    self.subscriptions.has_coin_subscription,
+                    self.subscriptions.has_puzzle_subscription,
+                )
+                await self.hint_store.add_hints(hints_to_add)
             if err is not None:
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                if state_change_summary is not None:
+                    committed_end = state_change_summary.peak.height
+                    self.log.info(
+                        f"Added blocks {start_height} to {committed_end} "
+                        f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
+                    )
+                    raise ValueError(
+                        f"Failed to validate block batch after height {committed_end} "
+                        f"(batch {start_height}-{end_height}): {err}"
+                    )
                 raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
             if end_height - block_rate_height > 100:
                 now = time.monotonic()
@@ -1463,19 +1533,11 @@ class FullNode:
                 block_rate_time = now
                 block_rate_height = end_height
 
+            committed_end = state_change_summary.peak.height if state_change_summary is not None else end_height
             self.log.info(
-                f"Added blocks {start_height} to {end_height} ({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
+                f"Added blocks {start_height} to {committed_end} "
+                f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
             )
-            peak: BlockRecord | None = self.blockchain.get_peak()
-            if state_change_summary is not None:
-                assert peak is not None
-                # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                hints_to_add, _ = get_hints_and_subscription_coin_ids(
-                    state_change_summary,
-                    self.subscriptions.has_coin_subscription,
-                    self.subscriptions.has_puzzle_subscription,
-                )
-                await self.hint_store.add_hints(hints_to_add)
             # Note that end_height is not necessarily the peak at this
             # point. In case of a re-org, it may even be significantly
             # higher than _peak_height, and still not be the peak.
@@ -2012,7 +2074,7 @@ class FullNode:
         )
 
         signage_points: list[tuple[RespondSignagePoint, WSChiaConnection, EndOfSubSlotBundle | None]] = []
-        if fns_peak_result.new_signage_points is not None and peer is not None:
+        if peer is not None:
             for index, sp in fns_peak_result.new_signage_points:
                 assert (
                     sp.cc_vdf is not None

@@ -150,11 +150,7 @@ async def new_transaction_not_requested(incoming: asyncio.Queue[Message], new_sp
     await asyncio.sleep(3)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return False
@@ -165,11 +161,7 @@ async def new_transaction_requested(incoming: asyncio.Queue[Message], new_spend:
     await asyncio.sleep(1)
     while not incoming.empty():
         response = await incoming.get()
-        if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
-        ):
+        if response.type == ProtocolMessageTypes.request_transaction.value:
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
                 return True
@@ -634,7 +626,7 @@ async def test_request_peers(
         msg_bytes = await full_node_peers.request_peers(PeerInfo("::1", server_2._port))
         assert msg_bytes is not None
         msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
-        if msg is not None and not (len(msg.peer_list) == 1):
+        if not (len(msg.peer_list) == 1):
             return False
         peer = msg.peer_list[0]
         return (peer.host in {self_hostname, "127.0.0.1"}) and peer.port == 1000
@@ -1782,7 +1774,7 @@ async def test_new_unfinished_block(
     else:
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        assert res is not None and res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        assert res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
 
     # when we receive a new unfinished block, we advertise it to our peers.
     # We send new_unfinished_blocks to old peers (0.0.35 and earlier) and we
@@ -1790,6 +1782,8 @@ async def test_new_unfinished_block(
     peer.protocol_version = Version(peer_version)
 
     await full_node_1.full_node.add_block(blocks[-2])
+    for sub_slot in block.finished_sub_slots:
+        await full_node_1.full_node.add_end_of_sub_slot(sub_slot, peer)
     await full_node_1.full_node.add_unfinished_block(unf, None)
 
     _, _, msg = peer.outgoing_queue.get_nowait()
@@ -1925,7 +1919,7 @@ async def test_new_unfinished_block2_forward_limit(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "commitment,expected",
+    "committment,expected",
     [
         (0, Err.INVALID_TRANSACTIONS_GENERATOR_HASH),
         (1, Err.INVALID_TRANSACTIONS_INFO_HASH),
@@ -1942,7 +1936,7 @@ async def test_unfinished_block_with_replaced_generator(
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
     self_hostname: str,
-    commitment: int,
+    committment: int,
     expected: Err,
 ) -> None:
     full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
@@ -1956,7 +1950,7 @@ async def test_unfinished_block_with_replaced_generator(
 
     replaced_generator = SerializedProgram.from_bytes(b"\x80")
 
-    if commitment > 0:
+    if committment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
@@ -1971,7 +1965,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.transactions_info is not None
         transactions_info = block.transactions_info
 
-    if commitment > 1:
+    if committment > 1:
         tb = block.foliage_transaction_block
         assert tb is not None
         transaction_block = FoliageTransactionBlock(
@@ -1986,7 +1980,7 @@ async def test_unfinished_block_with_replaced_generator(
         assert block.foliage_transaction_block is not None
         transaction_block = block.foliage_transaction_block
 
-    if commitment > 2:
+    if committment > 2:
         fl = block.foliage
         foliage = Foliage(
             fl.prev_block_hash,
@@ -1999,7 +1993,7 @@ async def test_unfinished_block_with_replaced_generator(
     else:
         foliage = block.foliage
 
-    if commitment > 3:
+    if committment > 3:
         fl = block.foliage
 
         secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
@@ -2015,10 +2009,10 @@ async def test_unfinished_block_with_replaced_generator(
             signature,
         )
 
-        if commitment > 4:
+        if committment > 4:
             pos = block.reward_chain_block.proof_of_space
 
-            if commitment > 5:
+            if committment > 5:
                 if pos.pool_public_key is None:
                     assert pos.pool_contract_puzzle_hash is not None
                     plot_id = calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
@@ -2067,7 +2061,7 @@ async def test_unfinished_block_with_replaced_generator(
         reward_chain_block = block.reward_chain_block.get_unfinished()
 
     generator_refs: list[uint32] = []
-    if commitment > 6:
+    if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
     unf = UnfinishedBlock(
@@ -2080,6 +2074,8 @@ async def test_unfinished_block_with_replaced_generator(
         transactions_info,
         replaced_generator,
         generator_refs,
+        None,
+        uint8(0),
     )
 
     _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -2776,36 +2772,38 @@ async def test_compact_protocol(
                     uint8(CompressibleVDFField.ICC_EOS_VDF),
                 )
             )
-    assert block.reward_chain_block.challenge_chain_sp_vdf is not None
+    sp_block = next(b for b in blocks_2[-10:] if b.reward_chain_block.challenge_chain_sp_vdf is not None)
+    cc_sp_vdf = sp_block.reward_chain_block.challenge_chain_sp_vdf
+    assert cc_sp_vdf is not None
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_sp_vdf.challenge,
-        block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+        cc_sp_vdf.challenge,
+        cc_sp_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_SP_VDF),
         )
     )
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+        sp_block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
         True,
     )
     timelord_protocol_finished.append(
         timelord_protocol.RespondCompactProofOfTime(
             vdf_info,
             vdf_proof,
-            block.header_hash,
-            block.height,
+            sp_block.header_hash,
+            sp_block.height,
             uint8(CompressibleVDFField.CC_IP_VDF),
         )
     )
@@ -3373,6 +3371,128 @@ async def test_sync_from_fork_point_logs_validate_stage_exception(
     assert "sync from fork point failed" in caplog.text
     await peer.close()
     assert peer.closed
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_sync_from_fork_point_adds_hints_for_committed_prefix(
+    one_node: SimulatorsAndWalletsServices,
+    monkeypatch: pytest.MonkeyPatch,
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A long-sync batch with a valid hinted TX block followed by an invalid successor
+    # must still persist hints for the committed prefix before aborting.
+    [full_node_service], _, bt = one_node
+    full_node = full_node_service._node
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    wt = bt.get_pool_wallet_tool()
+    puzzle_hash = bytes32(32 * b"\0")
+    hint = bytes32(32 * b"\5")
+    amount = int_to_bytes(1)
+    coin_spent = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(
+        uint64(10),
+        wt.get_new_puzzlehash(),
+        coin_spent,
+        condition_dic={
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        },
+    )
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    tx_block = blocks[-1]
+    hinted_coin_id = Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
+
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+    bad_block = recursive_replace(
+        blocks[-1],
+        "reward_chain_block.proof_of_space.proof",
+        bytes([0] * 32),
+    )
+    peer_blocks = [*blocks[:-1], bad_block]
+
+    class DummyPeer:
+        def __init__(self, chain: list[FullBlock]) -> None:
+            self.closed = False
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self._blocks = chain
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            request = args[1]
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            batch = [b for b in self._blocks if request.start_height <= b.height <= request.end_height]
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, batch)
+
+        async def close(self, *args: object, **kwargs: object) -> None:
+            self.closed = True
+
+    peer = DummyPeer(peer_blocks)
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+
+    assert await full_node.hint_store.get_coin_ids(hint) == []
+    await asyncio.wait_for(
+        full_node.sync_from_fork_point(uint32(0), bad_block.height, bad_block.header_hash, []),
+        timeout=60,
+    )
+
+    assert await full_node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    peak = full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == tx_block.header_hash
+    assert peer.closed
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_sync_from_fork_point_bans_peer_answering_wrong_block_range(
+    one_node: SimulatorsAndWalletsServices,
+    monkeypatch: pytest.MonkeyPatch,
+    consensus_mode: ConsensusMode,
+) -> None:
+    # Wiring check: an incomplete RespondBlocks is banned via respond_blocks_or_ban
+    # rather than treated as a successful long-sync fetch.
+    [full_node_service], _, bt = one_node
+    full_node = full_node_service._node
+
+    blocks = bt.get_consecutive_blocks(5)
+    target = blocks[-1]
+
+    class DummyPeer:
+        def __init__(self) -> None:
+            self.closed = False
+            self.ban_seconds: int | None = None
+            self.peer_info = PeerInfo("127.0.0.1", uint16(8444))
+            self.requests: list[tuple[uint32, uint32]] = []
+
+        async def call_api(self, *args: object, **kwargs: object) -> full_node_protocol.RespondBlocks:
+            request = args[1]
+            assert isinstance(request, full_node_protocol.RequestBlocks)
+            self.requests.append((request.start_height, request.end_height))
+            return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [])
+
+        async def close(self, ban_seconds: int = 0, *args: object, **kwargs: object) -> None:
+            self.closed = True
+            self.ban_seconds = ban_seconds
+
+    peer = DummyPeer()
+    monkeypatch.setattr(full_node, "get_peers_with_peak", lambda _peak_hash: [peer])
+
+    await asyncio.wait_for(
+        full_node.sync_from_fork_point(uint32(0), target.height, target.header_hash, []),
+        timeout=60,
+    )
+
+    assert peer.closed
+    assert peer.ban_seconds == CONSENSUS_ERROR_BAN_SECONDS
+    # the range is requested once from this peer, which is then dropped rather than retried
+    assert peer.requests == [(uint32(0), target.height)]
+    assert full_node.blockchain.get_peak() is None
 
 
 @pytest.mark.anyio
@@ -4082,6 +4202,8 @@ def unfinished_from_full_block(block: FullBlock) -> UnfinishedBlock:
         block.transactions_info,
         block.transactions_generator,
         block.transactions_generator_ref_list,
+        block.transactions_generator_buffer,
+        block.version,
     )
 
     return unfinished_block_expected
@@ -4131,7 +4253,7 @@ async def declare_pos_unfinished_block_pos_request(
             eos,
             blockchain,
             peak,
-            ssi if ssi is not None else None,
+            ssi,
             diff,
             full_peak,
         )
