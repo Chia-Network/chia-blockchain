@@ -5,7 +5,7 @@ import bisect
 import logging
 import time
 import traceback
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -25,7 +25,6 @@ from chia_rs import (
     PoolTarget,
     RespondToPhUpdates,
     RewardChainBlockUnfinished,
-    SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
@@ -86,6 +85,36 @@ else:
 
 MAX_COIN_HASHES_PER_REQUEST = 50
 MAX_COINS_MAP_SIZE = 100
+
+
+def ses_intervals_for_range(
+    ses_heights: Sequence[uint32],
+    start_height: uint32,
+    end_height: uint32,
+) -> list[tuple[uint32, uint32]]:
+    """
+    Return 0-2 SES height intervals (start, next) covering [start_height, end_height].
+
+    Uses bisect instead of a linear scan (mainnet has tens of thousands of SES heights).
+    """
+    if len(ses_heights) < 2:
+        return []
+
+    idx = bisect.bisect_right(ses_heights, start_height) - 1
+    if not (0 <= idx < len(ses_heights) - 1):
+        return []
+
+    ses_start_height = ses_heights[idx]
+    next_ses_height = ses_heights[idx + 1]
+    if not (ses_start_height <= start_height < next_ses_height):
+        return []
+
+    intervals: list[tuple[uint32, uint32]] = [(ses_start_height, next_ses_height)]
+    if not (ses_start_height < end_height < next_ses_height) and idx < len(ses_heights) - 2:
+        # Request spans two SES intervals.
+        next_next_height = ses_heights[idx + 2]
+        intervals.append((next_ses_height, next_next_height))
+    return intervals
 
 
 async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
@@ -1948,29 +1977,9 @@ class FullNodeAPI:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
         ses_height = self.full_node.blockchain.get_ses_heights()
-        start_height = request.start_height
-        end_height = request.end_height
-        ses_hash_heights = []
-        ses_reward_hashes = []
-
-        # Locate the SES interval containing start_height with bisect instead of a
-        # linear scan (mainnet has tens of thousands of SES heights).
-        if len(ses_height) >= 2:
-            idx = bisect.bisect_right(ses_height, start_height) - 1
-            if 0 <= idx < len(ses_height) - 1:
-                ses_start_height = ses_height[idx]
-                next_ses_height = ses_height[idx + 1]
-                # start_ses_hash
-                if ses_start_height <= start_height < next_ses_height:
-                    ses_hash_heights.append([ses_start_height, next_ses_height])
-                    ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
-                    ses_reward_hashes.append(ses.reward_chain_hash)
-                    if not (ses_start_height < end_height < next_ses_height) and idx < len(ses_height) - 2:
-                        # else add extra ses as request start <-> end spans two ses
-                        next_next_height = ses_height[idx + 2]
-                        ses_hash_heights.append([next_ses_height, next_next_height])
-                        nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
-                        ses_reward_hashes.append(nex_ses.reward_chain_hash)
+        intervals = ses_intervals_for_range(ses_height, request.start_height, request.end_height)
+        ses_hash_heights = [[start, end] for start, end in intervals]
+        ses_reward_hashes = [self.full_node.blockchain.get_ses(start).reward_chain_hash for start, _end in intervals]
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
