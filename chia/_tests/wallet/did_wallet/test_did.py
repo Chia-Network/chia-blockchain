@@ -1191,6 +1191,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework, capsys
             safe_mode=False,
         )
     )
+
     assert AugSchemeMPL.verify(
         response.pubkey,
         hexstr_to_bytes(message),

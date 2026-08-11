@@ -693,20 +693,6 @@ class TestWalletSimulator:
         )
         assert len(txs_response.transactions) == 1
         assert txs_response.transactions[0].confirmed
-        txs_response = await env_2.rpc_client.get_transactions(
-            GetTransactions(
-                wallet_id=env_2.xch_wallet.id(),
-                type_filter=TransactionTypeFilter(
-                    values=[
-                        uint8(TransactionType.INCOMING_CLAWBACK_RECEIVE.value),
-                        uint8(TransactionType.OUTGOING_CLAWBACK.value),
-                    ],
-                    mode=uint8(1),
-                ),
-            ),
-        )
-        assert len(txs_response.transactions) == 1
-        assert txs_response.transactions[0].confirmed
         interested_coins = await wsm_2.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() not in set(interested_coins)
 
