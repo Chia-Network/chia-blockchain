@@ -5,7 +5,11 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.pos_quality import _expected_plot_size
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_base_plot_filter_bits,
+    calculate_plot_filter_bits,
+    verify_and_get_quality_string,
+)
 from chia.util.hash import std_hash
 
 
@@ -56,6 +60,8 @@ def validate_pospace_and_get_required_iters(
     difficulty: uint64,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
     height_agnostic: bool = False,
+    filter_challenge: bytes32 | None = None,
+    signage_point_index: int | None = None,
 ) -> uint64 | None:
     q_str: bytes32 | None = verify_and_get_quality_string(
         proof_of_space,
@@ -65,6 +71,8 @@ def validate_pospace_and_get_required_iters(
         height=height,
         prev_transaction_block_height=prev_transaction_block_height,
         height_agnostic=height_agnostic,
+        filter_challenge=filter_challenge,
+        signage_point_index=signage_point_index,
     )
     if q_str is None:
         return None
@@ -75,6 +83,7 @@ def validate_pospace_and_get_required_iters(
         proof_of_space.param(),
         difficulty,
         cc_sp_hash,
+        height=prev_transaction_block_height,
     )
 
 
@@ -84,6 +93,8 @@ def calculate_iterations_quality(
     size: PlotParam,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
+    *,
+    height: uint32,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
@@ -91,10 +102,21 @@ def calculate_iterations_quality(
     """
 
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
+    expected_size = _expected_plot_size(size, constants)
+    if size.strength_v2 is not None:
+        # V2 strength compensation: a plot that passes the filter less often (higher
+        # strength) must be proportionally more likely to be eligible, so all strengths
+        # win blocks at the same rate per physical byte. The factor mirrors the filter
+        # exactly: 2^(effective_filter_bits - base_filter_bits), which auto-caps at the
+        # 8192 cap (effective_filter_bits is capped at 13). With this, pass_probability
+        # x eligibility stays at 1/2^base for every strength.
+        base_bits = calculate_base_plot_filter_bits(height, constants)
+        effective_bits = calculate_plot_filter_bits(height, constants, size.strength_v2)
+        expected_size = uint64(int(expected_size) << (effective_bits - base_bits))
     iters = uint64(
         int(difficulty)
         * int(constants.DIFFICULTY_CONSTANT_FACTOR)
         * int.from_bytes(sp_quality_string, "big", signed=False)
-        // (int(pow(2, 256)) * int(_expected_plot_size(size, constants)))
+        // (int(pow(2, 256)) * int(expected_size))
     )
     return max(iters, uint64(1))

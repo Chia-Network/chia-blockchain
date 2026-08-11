@@ -401,7 +401,7 @@ class TestWalletRpc:
             wallet_service.config,
         ) as client:
             with pytest.raises(ValueError, match="No peer connected"):
-                await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr.to_json_dict())
+                await wallet_service.rpc_server.rpc_api.dl_verify_proof(fake_gpr)
 
             await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
             await validate_get_routes(client, wallet_service.rpc_server.rpc_api)

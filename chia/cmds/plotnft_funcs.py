@@ -26,7 +26,6 @@ from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolSingletonState, PoolWalletInfo
-from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -40,6 +39,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     CreateNewWallet,
     CreateNewWalletType,
+    GetHeightInfo,
     GetTransaction,
     GetWalletBalance,
     GetWallets,
@@ -67,8 +67,8 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
     if json_dict["relative_lock_height"] > 1000:
         raise ValueError("Relative lock height too high for this pool, cannot join")
-    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-        raise ValueError(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
+    if json_dict["protocol_version"] not in {1, 2}:
+        raise ValueError(f"Incorrect version: {json_dict['protocol_version']}, should be 1 or 2")
 
     header_msg = f"\n---- Pool parameters fetched from {pool_url} ----"
     print(header_msg)
@@ -218,7 +218,7 @@ async def pprint_all_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
-    print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+    print(f"Wallet height: {(await wallet_client.get_height_info(GetHeightInfo())).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
         pool_wallet_id = wallet_info.id
@@ -367,7 +367,10 @@ async def join_pool(
         raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}.")
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
+            async with session.get(
+                f"{pool_url}/{'v2/' if pool_wallet_info.current.version == 2 else ''}pool_info",
+                ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+            ) as response:
                 if response.ok:
                     json_dict = json.loads(await response.text())
                 else:
@@ -378,9 +381,9 @@ async def join_pool(
     if json_dict["relative_lock_height"] > 1000:
         raise CliRpcConnectionError("Relative lock height too high for this pool, cannot join")
 
-    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
+    if json_dict["protocol_version"] != pool_wallet_info.current.version:
         raise CliRpcConnectionError(
-            f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}"
+            f"Incorrect version: {json_dict['protocol_version']}, should be {pool_wallet_info.current.version}"
         )
 
     pprint(json_dict)

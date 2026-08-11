@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import AsyncIterator, Iterator
-from typing import TypeVar
+from typing import TypeVar, get_args, get_origin
 
 import aiohttp
 import anyio
@@ -11,7 +11,6 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.util.misc import RecordingWebServer
 from chia._tests.util.split_managers import SplitAsyncManager, SplitManager, split_async_manager, split_manager
-from chia._tests.wallet.test_singleton_lifecycle_fast import satisfies_hint
 from chia.cmds.cmds_util import format_bytes, format_minutes, validate_directory_writable
 from chia.full_node.tx_processing_queue import ValuedEvent
 from chia.types.blockchain_format.program import Program
@@ -20,6 +19,38 @@ from chia.util.errors import InvalidPathError
 from chia.util.timing import adjusted_timeout, backoff_times
 
 T = TypeVar("T")
+
+
+def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
+    """
+    Check if an object satisfies a type hint.
+    This is a simplified version of `isinstance` that also handles generic types.
+    """
+    # Start from the initial type hint
+    object_hint_pairs = [(obj, type_hint)]
+    while len(object_hint_pairs) > 0:
+        obj, type_hint = object_hint_pairs.pop()
+        origin = get_origin(type_hint)
+        args = get_args(type_hint)
+        if origin:
+            # Handle generic types
+            if not isinstance(obj, origin):
+                return False
+            if len(args) > 0:
+                # tuple[T, ...] gets handled just like list[T]
+                if origin is list or (origin is tuple and args[-1] is Ellipsis):
+                    object_hint_pairs.extend((item, args[0]) for item in obj)
+                elif origin is tuple:
+                    object_hint_pairs.extend((item, arg) for item, arg in zip(obj, args))
+                elif origin is dict:
+                    object_hint_pairs.extend((k, args[0]) for k in obj.keys())
+                    object_hint_pairs.extend((v, args[1]) for v in obj.values())
+                else:
+                    raise NotImplementedError(f"Type {origin} is not yet supported")
+        # Handle concrete types
+        elif type(obj) is not type_hint:
+            return False
+    return True
 
 
 class TestMisc:

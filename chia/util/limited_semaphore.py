@@ -28,6 +28,9 @@ class LimitedSemaphore:
             _available_count=active_limit + waiting_limit,
         )
 
+    def locked(self) -> bool:
+        return self._semaphore.locked()
+
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
         if self._available_count < 1:
