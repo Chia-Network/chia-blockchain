@@ -106,7 +106,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             outbound_rlp = 60
         capabilities_to_use: list[tuple[uint16, str]] = default_capabilities[node_type]
         if self.config.get("rate_limits", 2) >= 3:
-            capabilities_to_use = capabilities_to_use + _rate_limits_v3  # noqa: PLR6104 -- += would mutate the shared default_capabilities list
+            capabilities_to_use = capabilities_to_use + _rate_limits_v3  # ruff: ignore[non-augmented-assignment] -- += would mutate the shared default_capabilities list
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 

@@ -58,7 +58,7 @@ async def main() -> None:
 
     async def dun() -> None:
         # TODO: switch to event driven code
-        while shutdown_path.exists():  # noqa: ASYNC110
+        while shutdown_path.exists():  # ruff: ignore[async-busy-wait]
             await asyncio.sleep(0.25)
 
         task.cancel()

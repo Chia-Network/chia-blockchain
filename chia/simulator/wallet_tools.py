@@ -34,8 +34,8 @@ assert len(DEFAULT_SEED) == 32
 class WalletTool:
     next_address = 0
     # TODO: make this a dataclass to make these instance attributes instead of mutable class attributes
-    pubkey_num_lookup: dict[bytes, uint32] = {}  # noqa: RUF012
-    puzzle_pk_cache: dict[bytes32, PrivateKey] = {}  # noqa: RUF012
+    pubkey_num_lookup: dict[bytes, uint32] = {}  # ruff: ignore[mutable-class-default]
+    puzzle_pk_cache: dict[bytes32, PrivateKey] = {}  # ruff: ignore[mutable-class-default]
 
     def __init__(self, constants: ConsensusConstants, sk: PrivateKey | None = None):
         self.constants = constants

@@ -29,7 +29,9 @@ async def get_nft_count(wallet: NFTWallet) -> int:
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -255,7 +257,9 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -485,7 +489,9 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -777,7 +783,9 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
@@ -1101,7 +1109,9 @@ async def test_nft_offer_sell_nft_for_cat(
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("test_change", [True, False])
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
@@ -1460,7 +1470,9 @@ async def test_nft_offer_request_nft_for_cat(
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 1, "blocks_needed": [2], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
@@ -1652,7 +1664,14 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
 )
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 2, "blocks_needed": [3, 3], "config_overrides": {"automatically_add_unknown_cats": True}}],
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [3, 3],
+            "config_overrides": {"automatically_add_unknown_cats": True},
+            "reorg_exempt": True,
+        }
+    ],
     indirect=True,
 )
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])

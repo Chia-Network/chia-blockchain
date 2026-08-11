@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -15,7 +17,7 @@ class WalletInterestedStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, wrapper: DBWrapper2):
+    async def create(cls, wrapper: DBWrapper2) -> WalletInterestedStore:
         self = cls()
         self.db_wrapper = wrapper
 
@@ -67,7 +69,7 @@ class WalletInterestedStore:
             row = await cursor.fetchone()
         if row is None:
             return None
-        return row[0]
+        return int(row[0])
 
     async def add_interested_puzzle_hash(self, puzzle_hash: bytes32, wallet_id: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -110,7 +112,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_tokens(self) -> list:
+    async def get_unacknowledged_tokens(self) -> list[dict[str, Any]]:
         """
         Get a list of all unacknowledged CATs
         :return: A json style list of unacknowledged CATs

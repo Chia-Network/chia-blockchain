@@ -63,7 +63,7 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
-from chia.full_node.weight_proof import WeightProofHandler
+from chia.full_node.weight_proof import WeightProofHandler, _minimum_recent_chain_length
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
@@ -105,6 +105,37 @@ from chia.util.task_referencer import create_referenced_task
 # Use 15s here instead of the default 60s call_api timeout to bound how
 # long short_sync_backtrack can occupy a new_peak slot.
 SHORT_SYNC_BACKTRACK_BLOCK_REQUEST_TIMEOUT_SEC: int = 15
+
+
+async def respond_blocks_or_ban(
+    peer: WSChiaConnection,
+    response: RespondBlocks,
+    start_height: int,
+    end_height: int,
+    log: logging.Logger,
+) -> bool:
+    """
+    Return True if response covers the inclusive requested height range.
+    Otherwise ban the peer and return False.
+
+    Honest nodes return the full inclusive range or RejectBlocks. A
+    well-formed but incomplete/mismatched RespondBlocks cannot advance
+    sync, so the peer is banned rather than credited with a fetch.
+    """
+    expected_heights = list(range(start_height, end_height + 1))
+    if (
+        response.start_height == start_height
+        and response.end_height == end_height
+        and [block.height for block in response.blocks] == expected_heights
+    ):
+        return True
+    log.warning(
+        f"peer {peer.peer_info.host} responded to request_blocks "
+        f"{start_height}-{end_height} with {response.start_height}-"
+        f"{response.end_height} ({len(response.blocks)} blocks), banning"
+    )
+    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+    return False
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -676,8 +707,15 @@ class FullNode:
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
-                if not response:
+                if not isinstance(response, RespondBlocks):
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
+                if not await respond_blocks_or_ban(peer, response, height, end_height, self.log):
+                    raise ConsensusError(
+                        Err.INVALID_PROTOCOL_MESSAGE,
+                        error_msg=(
+                            f"Error short batch syncing, incomplete/mismatched blocks for {height}-{end_height}"
+                        ),
+                    )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: StateChangeSummary | None
                     prev_b = None
@@ -1198,6 +1236,9 @@ class FullNode:
         if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
+        if len(response.wp.recent_chain_data) < _minimum_recent_chain_length(self.constants):
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            raise RuntimeError(f"Weight proof recent chain was too short: {weight_proof_peer.peer_info.host}")
         if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
             await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
@@ -1363,6 +1404,8 @@ class FullNode:
                         self.log.info(f"peer timed out after {end - start:.1f} s")
                         await peer.close()
                     elif isinstance(response, RespondBlocks):
+                        if not await respond_blocks_or_ban(peer, response, start_height, end_height, self.log):
+                            continue
                         if end - start > 5:
                             self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
                             # this isn't a great peer, reduce its priority
