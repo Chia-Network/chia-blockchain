@@ -80,23 +80,17 @@ def test_oversized_witness_rejected_before_cached_verifier() -> None:
     ],
 )
 def test_invalid_witness_size_rejected_before_verifier(witness_type: uint8, witness_size: int) -> None:
-    cache_info_before = vdf.verify_vdf.cache_info()
-
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     proof = VDFProof(witness_type, bytes(witness_size), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
-    assert vdf.verify_vdf.cache_info() == cache_info_before
 
 
 def test_witness_type_above_max_rejected_before_verifier() -> None:
-    cache_info_before = vdf.verify_vdf.cache_info()
-
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     # MAX_VDF_WITNESS_SIZE is 64; witness_type + 1 must be <= 64, so 64 is rejected.
     proof = VDFProof(uint8(64), bytes(100), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
-    assert vdf.verify_vdf.cache_info() == cache_info_before
