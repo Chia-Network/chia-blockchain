@@ -79,7 +79,7 @@ def test_oversized_witness_rejected_before_cached_verifier() -> None:
         "type63_one_long",
     ],
 )
-def test_invalid_witness_size_rejected_before_verifier(witness_type: uint8, witness_size: int) -> None:
+def test_invalid_witness_size_rejected(witness_type: uint8, witness_size: int) -> None:
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     proof = VDFProof(witness_type, bytes(witness_size), False)
@@ -87,10 +87,45 @@ def test_invalid_witness_size_rejected_before_verifier(witness_type: uint8, witn
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
 
 
-def test_witness_type_above_max_rejected_before_verifier() -> None:
+def test_witness_type_above_max_rejected() -> None:
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     # MAX_VDF_WITNESS_SIZE is 64; witness_type + 1 must be <= 64, so 64 is rejected.
     proof = VDFProof(uint8(64), bytes(100), False)
+
+    assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
+
+
+def test_target_vdf_info_mismatch_rejected() -> None:
+    classgroup_element = ClassgroupElement.get_default_element()
+    info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
+    target = VDFInfo(bytes32(b"\x01" * 32), uint64(1), classgroup_element)
+    proof = VDFProof(uint8(0), bytes(100), False)
+
+    assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info, target)
+
+
+def test_verifier_failure_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
+    monkeypatch.setattr(vdf, "verify_vdf", lambda *args: False)
+
+    classgroup_element = ClassgroupElement.get_default_element()
+    info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
+    proof = VDFProof(uint8(0), bytes(100), False)
+
+    assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
+
+
+def test_verifier_exception_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
+
+    def raise_error(*args: object) -> bool:
+        raise RuntimeError("chiavdf blew up")
+
+    monkeypatch.setattr(vdf, "verify_vdf", raise_error)
+
+    classgroup_element = ClassgroupElement.get_default_element()
+    info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
+    proof = VDFProof(uint8(0), bytes(100), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
