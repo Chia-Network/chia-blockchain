@@ -79,28 +79,19 @@ def test_oversized_witness_rejected_before_cached_verifier() -> None:
         "type63_one_long",
     ],
 )
-def test_invalid_witness_size_rejected_before_verifier(
-    monkeypatch: pytest.MonkeyPatch, witness_type: uint8, witness_size: int
-) -> None:
-    def fail_if_called(*args: object) -> bool:
-        raise AssertionError("verify_vdf should not be called for invalid witness size")
-
-    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
-    monkeypatch.setattr(vdf, "verify_vdf", fail_if_called)
+def test_invalid_witness_size_rejected_before_verifier(witness_type: uint8, witness_size: int) -> None:
+    cache_info_before = vdf.verify_vdf.cache_info()
 
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
     proof = VDFProof(witness_type, bytes(witness_size), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
+    assert vdf.verify_vdf.cache_info() == cache_info_before
 
 
-def test_witness_type_above_max_rejected_before_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fail_if_called(*args: object) -> bool:
-        raise AssertionError("verify_vdf should not be called when witness_type exceeds MAX_VDF_WITNESS_SIZE")
-
-    monkeypatch.setattr(vdf, "get_discriminant", lambda *args: 1)
-    monkeypatch.setattr(vdf, "verify_vdf", fail_if_called)
+def test_witness_type_above_max_rejected_before_verifier() -> None:
+    cache_info_before = vdf.verify_vdf.cache_info()
 
     classgroup_element = ClassgroupElement.get_default_element()
     info = VDFInfo(bytes32.zeros, uint64(1), classgroup_element)
@@ -108,3 +99,4 @@ def test_witness_type_above_max_rejected_before_verifier(monkeypatch: pytest.Mon
     proof = VDFProof(uint8(64), bytes(100), False)
 
     assert not vdf.validate_vdf(proof, DEFAULT_CONSTANTS, classgroup_element, info)
+    assert vdf.verify_vdf.cache_info() == cache_info_before
