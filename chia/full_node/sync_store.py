@@ -146,7 +146,6 @@ class SyncStore:
             del self.peak_to_peer[h]
 
         self._backtrack_syncing.pop(node_id, None)
-        self.batch_syncing.discard(node_id)
 
         self.peers_changed.set()
 
