@@ -1571,7 +1571,9 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
+async def test_offer_endpoints(
+    wallet_environments: WalletTestFramework, wallet_type: type[CATWallet], caplog: pytest.LogCaptureFixture
+) -> None:
     env_1 = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
@@ -1664,10 +1666,11 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     ).coin_records
     for cr in test_crs:
         assert cr.coin in spend_bundle.additions()
-    with pytest.raises(ValueError):
-        await env_1.rpc_client.get_coin_records_by_names(
-            GetCoinRecordsByNames(names=[a.name() for a in spend_bundle.additions() if a.amount == 4])
-        )
+    test_names = [a.name() for a in spend_bundle.additions() if a.amount == 4]
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        await env_1.rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=test_names))
+    assert f"Coin IDs not found yet: {['0x' + name.hex() for name in test_names]}" in caplog.text
     # Create an offer of 5 chia for one CAT
     await env_1.rpc_client.create_offer_for_ids(
         CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
@@ -2083,7 +2086,9 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_coin_records_by_names(wallet_environments: WalletTestFramework) -> None:
+async def test_get_coin_records_by_names(
+    wallet_environments: WalletTestFramework, caplog: pytest.LogCaptureFixture
+) -> None:
     env = wallet_environments.environments[0]
     wallet_node: WalletNode = env.node
     client: WalletRpcClient = env.rpc_client
@@ -2141,9 +2146,10 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
     )
     assert {record.coin for record in rpc_result.coin_records} == filter_coins
     # 8. Test the failure case
-    with pytest.raises(ValueError, match="not found"):
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
         await client.get_coin_records_by_names(GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False))
-
+    assert "Coin IDs not found yet" in caplog.text
     # 9. Sync-status guard: when not fully synced, requests are rejected unless
     # allow_unsynced=True. The simulator's get_sync_status short-circuits to
     # SYNCED so we patch the state manager directly to drive the unsynced path.

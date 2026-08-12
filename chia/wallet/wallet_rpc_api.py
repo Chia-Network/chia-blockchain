@@ -1658,8 +1658,8 @@ class WalletRpcApi:
             missed_coins: list[str] = [
                 "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
             ]
-            if missed_coins:
-                raise ValueError(f"Coin ID's: {missed_coins} not found.")
+            if len(missed_coins) > 0:
+                log.warning(f"Coin IDs not found yet: {missed_coins}")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
 
