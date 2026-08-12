@@ -573,8 +573,9 @@ async def test_short_sync_batch_releases_slot_and_reaps_segment_tasks_on_success
     assert peer.peer_node_id not in node.sync_store.batch_syncing
     assert done_task not in node._segment_task_list
     assert running_task in node._segment_task_list
+    # wait_for keeps this from blocking for the task's full sleep if the cancel is dropped.
     with contextlib.suppress(asyncio.CancelledError):
-        await running_task
+        await asyncio.wait_for(running_task, timeout=5)
     assert running_task.cancelled()
 
 

@@ -685,8 +685,12 @@ class FullNode:
                     self.blockchain.height_to_hash(uint32(first.block.height - 1)) if first.block.height > 0 else None
                 )
                 if hash is None or hash != first.block.prev_header_hash:
-                    self.log.info("Batch syncing stopped, this is a deep chain")
-                    # First block is not connected to our blockchain; do a long sync instead
+                    # Not connected to our blockchain, so do a long sync instead. A deep chain is the
+                    # usual cause, but the peer may also have answered with an unrelated height.
+                    self.log.info(
+                        f"Batch syncing stopped, block at height {first.block.height} does not connect to our "
+                        f"chain (requested height {start_height})"
+                    )
                     return False
 
             batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
