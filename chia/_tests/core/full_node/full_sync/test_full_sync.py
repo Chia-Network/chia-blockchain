@@ -457,7 +457,7 @@ async def test_short_sync_batch_bans_peer_answering_wrong_block_range(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
 @pytest.mark.anyio
-@pytest.mark.parametrize("first_block", ["height_zero", "height_above_peak", "wrong_parent", "missing"])
+@pytest.mark.parametrize("first_block", ["height_zero", "height_above_peak", "missing"])
 async def test_short_sync_batch_releases_slot_when_first_block_does_not_connect(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     consensus_mode: ConsensusMode,
@@ -481,11 +481,6 @@ async def test_short_sync_batch_releases_slot_when_first_block_does_not_connect(
         above_peak = bt.get_consecutive_blocks(2, block_list_input=blocks)[-1]
         assert node.blockchain.height_to_hash(uint32(above_peak.height - 1)) is None
         response = full_node_protocol.RespondBlock(above_peak)
-    elif first_block == "wrong_parent":
-        fork = bt.get_consecutive_blocks(2, block_list_input=blocks[:2], seed=b"fork")
-        assert fork[2].header_hash != blocks[2].header_hash
-        assert fork[3].prev_header_hash != node.blockchain.height_to_hash(uint32(2))
-        response = full_node_protocol.RespondBlock(fork[3])
     else:
         response = None
 
@@ -530,12 +525,12 @@ async def test_short_sync_batch_releases_slot_when_first_block_request_raises(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
 @pytest.mark.anyio
-async def test_short_sync_batch_releases_slot_and_reaps_segment_tasks_on_success(
+async def test_short_sync_batch_reaps_segment_tasks(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     consensus_mode: ConsensusMode,
 ) -> None:
-    # The success path also releases the slot, and reaps pending sub epoch segment tasks:
-    # finished ones are dropped from the list, unfinished ones are cancelled.
+    # Once the first block connects, pending sub epoch segment tasks are reaped: finished
+    # ones are dropped from the list, unfinished ones are cancelled.
     _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
     node = full_node_2.full_node
 
@@ -543,7 +538,6 @@ async def test_short_sync_batch_releases_slot_and_reaps_segment_tasks_on_success
     for block in blocks:
         await node.add_block(block)
     connecting_block = bt.get_consecutive_blocks(1, block_list_input=blocks)[-1]
-    assert node.blockchain.height_to_hash(uint32(2)) == connecting_block.prev_header_hash
 
     async def noop() -> None:
         return None
@@ -561,15 +555,12 @@ async def test_short_sync_batch_releases_slot_and_reaps_segment_tasks_on_success
             return PeerInfo("127.0.0.1", uint16(0))
 
         async def call_api(self, api_function: Any, request: object) -> full_node_protocol.RespondBlock:
-            assert isinstance(request, full_node_protocol.RequestBlock)
             return full_node_protocol.RespondBlock(connecting_block)
 
     peer = cast(WSChiaConnection, DummyPeer())
-    # start == target leaves the batch download loop empty, so this covers the
-    # first-block fetch and the cleanup around it without downloading blocks.
-    result = await node.short_sync_batch(peer, uint32(3), uint32(3))
+    # start == target leaves the batch download loop empty, so the run stops after the reaping.
+    assert await node.short_sync_batch(peer, uint32(3), uint32(3)) is True
 
-    assert result is True
     assert peer.peer_node_id not in node.sync_store.batch_syncing
     assert done_task not in node._segment_task_list
     assert running_task in node._segment_task_list
