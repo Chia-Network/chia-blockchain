@@ -44,6 +44,7 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_header_block
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
 @pytest.mark.anyio
@@ -2183,6 +2184,51 @@ async def test_collect_valid_states(
         )
     assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
     assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_state_update_received_rejects_oversized_update(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    peer = next(iter(wallet_server.all_connections.values()))
+
+    wallet_node.config["max_coin_state_update_items"] = 2
+    coin_generator = CoinGenerator()
+    items = [CoinState(coin_generator.get().coin, None, None) for _ in range(10)]
+    update = wallet_protocol.CoinStateUpdate(uint32(1), uint32(0), bytes32(b"\0" * 32), items)
+    api = WalletNodeAPI(wallet_node)
+
+    with caplog.at_level(logging.ERROR):
+        await wallet_node.state_update_received(update, peer)
+        assert "coin state update with too many items" in caplog.text
+        caplog.clear()
+
+        await api.coin_state_update(bytes(update), peer)
+        await time_out_assert(10, lambda: "coin state update with too many items" in caplog.text)
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_state_update_received_accepts_update_within_limit(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    peer = next(iter(wallet_server.all_connections.values()))
+
+    wallet_node.config["max_coin_state_update_items"] = 5
+    update = wallet_protocol.CoinStateUpdate(uint32(1), uint32(0), bytes32(b"\0" * 32), [])
+
+    with caplog.at_level(logging.INFO):
+        await wallet_node.state_update_received(update, peer)
+
+    assert not peer.closed
+    assert peer.peer_info.host not in wallet_server.banned_peers
+    assert "Received coin state update" in caplog.text
+    assert "0 items" in caplog.text
 
 
 @pytest.mark.anyio

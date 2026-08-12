@@ -1161,13 +1161,27 @@ class WalletNode:
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
+    def max_coin_state_update_items(self) -> int:
+        return int(self.config.get("max_coin_state_update_items", 100_000))
+
     async def state_update_received(self, request: CoinStateUpdate, peer: WSChiaConnection) -> None:
         # This gets called every time there is a new coin or puzzle hash change in the DB
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
-        for coin in request.items:
-            self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
+        # Wire-path deserialization also applies list_limits at max+1 (see WalletNodeAPI.coin_state_update).
+        max_items = self.max_coin_state_update_items()
+        item_count = len(request.items)
+        if item_count > max_items:
+            self.log.error(
+                f"Peer {peer.peer_info.host} sent coin state update with too many items, "
+                f": list truncated to limit of {max_items + 1}"
+            )
+
+        self.log.info(
+            f"Received coin state update from {peer.peer_info.host}: "
+            f"{item_count} items at height {request.height} fork_height {request.fork_height}"
+        )
 
         async with self.wallet_state_manager.lock:
             await self.add_states_from_peer(
