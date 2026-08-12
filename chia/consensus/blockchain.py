@@ -40,6 +40,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.generator_validation import validate_tx_generator
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -738,16 +739,9 @@ class Blockchain:
             finished_sub_slots=len(block.finished_sub_slots),
         )
 
-        # Version 1 (plain generator buffer, no ref list) is required after the 3.0
-        # hard fork; version 0 is required before it.
-        if block.version == 1:
-            if prev_tx_height < self.constants.HARD_FORK2_HEIGHT:
-                return None, Err.INVALID_BLOCK_VERSION
-        elif block.version == 0:
-            if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
-                return None, Err.INVALID_BLOCK_VERSION
-        else:
-            return None, Err.INVALID_BLOCK_VERSION
+        version_error = validate_tx_generator(self.constants, block, prev_tx_height)
+        if version_error:
+            return None, version_error
 
         # With soft fork 9 we ban transactions_generator_ref_list.
         if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT and block.transactions_generator_ref_list != []:

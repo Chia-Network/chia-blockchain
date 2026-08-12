@@ -27,7 +27,7 @@ from chia.consensus.block_generator_info import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.generator_validation import validate_generator_ref_list
+from chia.consensus.generator_validation import validate_generator_ref_list, validate_tx_generator
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
@@ -252,16 +252,9 @@ async def validate_block_body(
 
         assert conds is None
 
-        # Version is still validated for non-transaction blocks (keyed on
-        # pre_sp_tx_block_height), matching unfinished-header validation.
-        if block.version == 1:
-            if pre_sp_tx_height < constants.HARD_FORK2_HEIGHT:
-                return Err.INVALID_BLOCK_VERSION
-        elif block.version == 0:
-            if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-                return Err.INVALID_BLOCK_VERSION
-        else:
-            return Err.INVALID_BLOCK_VERSION
+        version_error = validate_tx_generator(constants, block, pre_sp_tx_height)
+        if version_error:
+            return version_error
 
         # This means the block is valid
         return None
@@ -335,17 +328,9 @@ async def validate_block_body(
                 curr_b = records.block_record(curr_b.prev_hash)
                 assert curr_b is not None
 
-    # Validate block version. Version 1 (plain generator buffer, no ref list) is required
-    # after the 3.0 hard fork, and version 0 is required before it. Activation is based on
-    # pre_sp_tx_block_height (0 for genesis), matching unfinished-header validation.
-    if block.version == 1:
-        if pre_sp_tx_height < constants.HARD_FORK2_HEIGHT:
-            return Err.INVALID_BLOCK_VERSION
-    elif block.version == 0:
-        if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-            return Err.INVALID_BLOCK_VERSION
-    else:
-        return Err.INVALID_BLOCK_VERSION
+    version_error = validate_tx_generator(constants, block, pre_sp_tx_height)
+    if version_error:
+        return version_error
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
@@ -380,7 +365,7 @@ async def validate_block_body(
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
     # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
     # 8c. The generator ref list must not point to a height >= this block's height
-    generator_ref_error = validate_generator_ref_list(constants, block, height, prev_transaction_block_height)
+    generator_ref_error = validate_generator_ref_list(constants, block, height, pre_sp_tx_height)
     if generator_ref_error is not None:
         return generator_ref_error
 

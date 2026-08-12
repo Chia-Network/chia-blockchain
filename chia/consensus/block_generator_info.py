@@ -5,6 +5,8 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 
 def block_has_transactions_generator(block: BlockInfo) -> bool:
+    # these fields are mutually exclusive
+    assert block.transactions_generator is None or block.transactions_generator_buffer is None
     return block.transactions_generator is not None or block.transactions_generator_buffer is not None
 
 
