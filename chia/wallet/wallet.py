@@ -22,14 +22,11 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.derive_keys import _derive_path
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
-    puzzle_for_pk,
-    puzzle_hash_for_pk,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_reserve_fee_condition
+from chia.wallet.puzzles.standard_puzzle_drivers import HiddenPuzzleInfo, StandardPuzzle
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
@@ -94,10 +91,10 @@ class Wallet:
         return self.wallet_id
 
     def convert_secret_key_to_synthetic(self, secret_key: PrivateKey) -> PrivateKey:
-        return calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        return calculate_synthetic_secret_key(secret_key, HiddenPuzzleInfo().puzzle_hash)
 
     def convert_public_key_to_synthetic(self, public_key: G1Element) -> G1Element:
-        return calculate_synthetic_public_key(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        return StandardPuzzle(pre_known_original_public_key=public_key).synthetic_public_key
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
@@ -148,17 +145,17 @@ class Wallet:
         return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return puzzle_for_pk(pubkey)
+        return StandardPuzzle(pre_known_original_public_key=pubkey).puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return puzzle_hash_for_pk(pubkey)
+        return StandardPuzzle(pre_known_original_public_key=pubkey).puzzle_hash
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
-        return puzzle_for_pk(G1Element.from_bytes(public_key))
+        return self.puzzle_for_pk(G1Element.from_bytes(public_key))
 
     def make_solution(
         self,
