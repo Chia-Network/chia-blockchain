@@ -21,7 +21,7 @@ class InnerPuzzle(Protocol):
     def puzzle_hash(self) -> bytes32: ...
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None: ...
 
 
 _T_InnerPuzzle_co = TypeVar("_T_InnerPuzzle_co", bound=InnerPuzzle, covariant=True)
@@ -30,6 +30,13 @@ _T_InnerPuzzle_co = TypeVar("_T_InnerPuzzle_co", bound=InnerPuzzle, covariant=Tr
 class OuterPuzzle(InnerPuzzle, Protocol[_T_InnerPuzzle_co]):
     @property
     def inner_puzzle(self) -> _T_InnerPuzzle_co: ...
+
+
+class Solution(Protocol):
+    def as_program(self) -> Program: ...
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> Solution | None: ...
 
 
 class SmartCoin(InnerPuzzle, Protocol):
@@ -86,4 +93,19 @@ class UnknownPuzzle(PuzzleWithPuzzleHash):
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:  # pragma: no cover
+        raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
+
+
+@dataclass
+class UnknownSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("UnknownSolution", None)
+
+    solution: Program
+
+    def as_program(self) -> Program:
+        return self.solution
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
