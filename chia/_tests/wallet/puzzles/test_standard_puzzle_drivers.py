@@ -15,7 +15,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     MOD,
     calculate_synthetic_public_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.standard_puzzle_drivers import (
     HiddenPuzzleInfo,
     StandardPuzzle,
@@ -66,7 +66,7 @@ def test_standard_puzzle_drivers() -> None:
     delegated_reveal = Program.to((1, [Remark(Program.to("delegated")).to_program()]))
     delegated_solution = Program.NIL
     solution_without_original = StandardPuzzleSolution(
-        puzzle_reveal=delegated_reveal,
+        delegated_puzzle=delegated_reveal,
         delegated_solution=delegated_solution,
     )
     matched_delegated = StandardPuzzle.match(
@@ -80,7 +80,7 @@ def test_standard_puzzle_drivers() -> None:
     hidden_reveal = Program.to(1)
     solution_with_original = StandardPuzzleSolution(
         original_public_key=original_public_key,
-        puzzle_reveal=hidden_reveal,
+        delegated_puzzle=hidden_reveal,
         delegated_solution=Program.to([42]),
     )
     matched_hidden = StandardPuzzle.match(
@@ -94,50 +94,48 @@ def test_standard_puzzle_drivers() -> None:
     assert matched_hidden.hidden_puzzle_info.pre_computed_puzzle_hash is None
     assert matched_hidden.hidden_puzzle_info.puzzle_hash == hidden_reveal.get_tree_hash()
 
-    assert StandardPuzzleSolution.match(Program.to(1)) is None
-    assert StandardPuzzleSolution.match(Program.to([1, 2])) is None
-    assert StandardPuzzleSolution.match(Program.to([1, 2, 3, 4])) is None
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to(1))) is None
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to([1, 2]))) is None
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to([1, 2, 3, 4]))) is None
 
-    matched_solution_nil_key = StandardPuzzleSolution.match(solution_without_original.as_program())
+    matched_solution_nil_key = StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(solution_without_original.as_program())
+    )
     assert matched_solution_nil_key is not None
     assert matched_solution_nil_key.original_public_key is None
-    assert matched_solution_nil_key.puzzle_reveal == delegated_reveal
+    assert matched_solution_nil_key.delegated_puzzle == delegated_reveal
     assert matched_solution_nil_key.delegated_solution == delegated_solution
 
-    matched_solution_with_key = StandardPuzzleSolution.match(solution_with_original.as_program())
+    matched_solution_with_key = StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(solution_with_original.as_program())
+    )
     assert matched_solution_with_key is not None
     assert matched_solution_with_key.original_public_key == original_public_key
-    assert matched_solution_with_key.puzzle_reveal == hidden_reveal
+    assert matched_solution_with_key.delegated_puzzle == hidden_reveal
     assert matched_solution_with_key.delegated_solution == Program.to([42])
 
     coin = Coin(parent_id, from_original.puzzle_hash, amount)
     xch_coin = StandardXCHCoin(coin=coin, pre_known_original_public_key=original_public_key)
     create_coin = CreateCoin(bytes32(bytes([3] * 32)), uint64(500))
     remark = Remark(Program.to("hi"))
-    condition_spend = xch_coin.spend([create_coin, remark])
-    assert condition_spend.coin == coin
-    assert condition_spend.puzzle_reveal == xch_coin.puzzle.to_serialized()
+    condition_solution = StandardPuzzleSolution.for_conditions([create_coin, remark])
     expected_delegated = Program.to((1, [create_coin.to_program(), remark.to_program()]))
-    assert StandardPuzzleSolution.match(Program.from_bytes(bytes(condition_spend.solution))) == StandardPuzzleSolution(
-        puzzle_reveal=expected_delegated,
+    assert StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(condition_solution.as_program())
+    ) == StandardPuzzleSolution(
+        delegated_puzzle=expected_delegated,
         delegated_solution=Program.NIL,
-    )
-
-    delegated_spend = xch_coin.spend_delegated(delegated_puzzle=delegated_reveal, delegated_solution=Program.to([7]))
-    assert delegated_spend.coin == coin
-    assert StandardPuzzleSolution.match(Program.from_bytes(bytes(delegated_spend.solution))) == StandardPuzzleSolution(
-        puzzle_reveal=delegated_reveal,
-        delegated_solution=Program.to([7]),
     )
 
     synthetic_only_coin = StandardXCHCoin(coin=coin, pre_known_synthetic_public_key=synthetic_public_key)
     with pytest.raises(ValueError, match="Must set `pre_known_original_public_key`"):
-        synthetic_only_coin.spend_hidden(Program.NIL)
+        synthetic_only_coin.hidden_puzzle_solution(Program.NIL)
 
-    hidden_spend = xch_coin.spend_hidden(Program.to([99]))
-    assert hidden_spend.coin == coin
-    assert StandardPuzzleSolution.match(Program.from_bytes(bytes(hidden_spend.solution))) == StandardPuzzleSolution(
+    hidden_solution = xch_coin.hidden_puzzle_solution(Program.to([99]))
+    assert StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(hidden_solution.as_program())
+    ) == StandardPuzzleSolution(
         original_public_key=original_public_key,
-        puzzle_reveal=DEFAULT_HIDDEN_PUZZLE,
+        delegated_puzzle=DEFAULT_HIDDEN_PUZZLE,
         delegated_solution=Program.to([99]),
     )

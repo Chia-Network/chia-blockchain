@@ -4,12 +4,11 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, cast
 
-from chia_rs import Coin, CoinSpend, G1Element
+from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import make_spend
 from chia.wallet.conditions import Condition
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE,
@@ -18,7 +17,14 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     QUOTED_MOD_HASH,
     calculate_synthetic_public_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import InnerPuzzle, PuzzleWithPuzzleHash, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import (
+    InnerPuzzle,
+    PuzzleWithPuzzleHash,
+    SmartCoin,
+    Solution,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.util.curry_and_treehash import curry_and_treehash, shatree_atom
 
 
@@ -60,7 +66,7 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
         return curry_and_treehash(QUOTED_MOD_HASH, public_key_hash)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> StandardPuzzle | None:
         if unknown_puzzle.mod == MOD:
             if unknown_puzzle.curried_args is None:
                 return None
@@ -74,7 +80,7 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
                     raise ValueError("Trying to match a standard puzzle without a standard puzzle solution")
                 if solution.original_public_key is not None:
                     original_public_key = solution.original_public_key
-                    hidden_puzzle_info.puzzle = solution.puzzle_reveal
+                    hidden_puzzle_info.puzzle = solution.delegated_puzzle
                     hidden_puzzle_info.pre_computed_puzzle_hash = None
             return cls(
                 pre_known_synthetic_public_key=G1Element.from_bytes(list_of_args[0].as_atom()),
@@ -83,60 +89,56 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
             )
         return None
 
+    def hidden_puzzle_solution(self, solution: Program) -> StandardPuzzleSolution:
+        if self.pre_known_original_public_key is None:
+            raise ValueError(
+                "Must set `pre_known_original_public_key` on `StandardPuzzle` before you can exercise the hidden puzzle"
+            )
+        return StandardPuzzleSolution(
+            original_public_key=self.pre_known_original_public_key,
+            delegated_puzzle=self.hidden_puzzle_info.puzzle,
+            delegated_solution=solution,
+        )
+
 
 @dataclass(kw_only=True)
 class StandardPuzzleSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("StandardPuzzleSolution", None)
+
     original_public_key: G1Element | None = None
-    puzzle_reveal: Program
+    delegated_puzzle: Program
     delegated_solution: Program
 
+    @classmethod
+    def for_conditions(cls, conditions: list[Condition]) -> Self:
+        return cls(
+            delegated_puzzle=Program.to((1, [cond.to_program() for cond in conditions])),
+            delegated_solution=Program.NIL,
+        )
+
     def as_program(self) -> Program:
-        return Program.to([self.original_public_key, self.puzzle_reveal, self.delegated_solution])
+        return Program.to([self.original_public_key, self.delegated_puzzle, self.delegated_solution])
 
     @classmethod
-    def match(cls, solution: Program) -> Self | None:
-        if solution.atom is not None:
+    def match(cls, *, unknown_solution: UnknownSolution) -> StandardPuzzleSolution | None:
+        if unknown_solution.as_program().atom is not None:
             return None
-        list_of_values = list(solution.as_iter())
+        list_of_values = list(unknown_solution.as_program().as_iter())
         if len(list_of_values) != 3:
             return None
-        return cls(
+        return StandardPuzzleSolution(
             original_public_key=G1Element.from_bytes(list_of_values[0].as_atom())
             if list_of_values[0] != Program.to(None)
             else None,
-            puzzle_reveal=list_of_values[1],
+            delegated_puzzle=list_of_values[1],
             delegated_solution=list_of_values[2],
         )
 
 
 @dataclass(kw_only=True)
 class StandardXCHCoin(StandardPuzzle):
+    if TYPE_CHECKING:
+        _protocol_check_2: ClassVar[SmartCoin] = cast("StandardXCHCoin", None)
+
     coin: Coin
-
-    def spend(self, conditions: list[Condition]) -> CoinSpend:
-        return self.spend_delegated(
-            delegated_puzzle=Program.to((1, [cond.to_program() for cond in conditions])),
-            delegated_solution=Program.NIL,
-        )
-
-    def spend_delegated(self, delegated_puzzle: Program, delegated_solution: Program) -> CoinSpend:
-        return make_spend(
-            self.coin,
-            self.puzzle,
-            StandardPuzzleSolution(puzzle_reveal=delegated_puzzle, delegated_solution=delegated_solution).as_program(),
-        )
-
-    def spend_hidden(self, hidden_puzzle_solution: Program) -> CoinSpend:
-        if self.pre_known_original_public_key is None:
-            raise ValueError(
-                "Must set `pre_known_original_public_key` on `StandardPuzzle` before you can exercise the hidden puzzle"
-            )
-        return make_spend(
-            self.coin,
-            self.puzzle,
-            StandardPuzzleSolution(
-                original_public_key=self.pre_known_original_public_key,
-                puzzle_reveal=self.hidden_puzzle_info.puzzle,
-                delegated_solution=hidden_puzzle_solution,
-            ).as_program(),
-        )
