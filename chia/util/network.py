@@ -154,17 +154,19 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
         return IPAddress.create(host)
     except ValueError:
         pass
-    addrset: list[
-        tuple[socket.AddressFamily, socket.SocketKind, int, str, tuple[str, int] | tuple[str, int, int, int]]
-    ] = await asyncio.get_event_loop().getaddrinfo(host, None)
+    addrset = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []
     ips_v6 = []
     for family, _, _, _, ip_port in addrset:
-        ip = IPAddress.create(ip_port[0])
+        if family not in {socket.AF_INET, socket.AF_INET6}:
+            continue
+        host_ip = ip_port[0]
+        assert isinstance(host_ip, str)
+        ip = IPAddress.create(host_ip)
         if family == socket.AF_INET:
             ips_v4.append(ip)
-        if family == socket.AF_INET6:
+        else:
             ips_v6.append(ip)
     preferred, alternative = (ips_v6, ips_v4) if prefer_ipv6 else (ips_v4, ips_v6)
     if len(preferred) > 0:
