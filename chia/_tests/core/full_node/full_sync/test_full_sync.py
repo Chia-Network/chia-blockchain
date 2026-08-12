@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from typing import Any, cast
@@ -29,6 +30,7 @@ from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -451,6 +453,129 @@ async def test_short_sync_batch_bans_peer_answering_wrong_block_range(
     assert peak is not None
     assert peak.header_hash == peak_before.header_hash
     assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+@pytest.mark.parametrize("first_block", ["height_zero", "height_above_peak", "wrong_parent", "missing"])
+async def test_short_sync_batch_releases_slot_when_first_block_does_not_connect(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+    first_block: str,
+) -> None:
+    # The first block's height comes from the peer's response, so it need not be the
+    # height we asked for. Only a height whose parent is in our height map can connect,
+    # so every other answer must return False and free the peer's batch_syncing slot.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+
+    response: full_node_protocol.RespondBlock | None
+    if first_block == "height_zero":
+        assert blocks[0].height == 0
+        response = full_node_protocol.RespondBlock(blocks[0])
+    elif first_block == "height_above_peak":
+        above_peak = bt.get_consecutive_blocks(2, block_list_input=blocks)[-1]
+        assert node.blockchain.height_to_hash(uint32(above_peak.height - 1)) is None
+        response = full_node_protocol.RespondBlock(above_peak)
+    elif first_block == "wrong_parent":
+        fork = bt.get_consecutive_blocks(2, block_list_input=blocks[:2], seed=b"fork")
+        assert fork[2].header_hash != blocks[2].header_hash
+        assert fork[3].prev_header_hash != node.blockchain.height_to_hash(uint32(2))
+        response = full_node_protocol.RespondBlock(fork[3])
+    else:
+        response = None
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x05" * 32)
+
+        async def call_api(self, api_function: Any, request: object) -> full_node_protocol.RespondBlock | None:
+            assert isinstance(request, full_node_protocol.RequestBlock)
+            return response
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    # start_height > 0 so the peer-controlled first-block fetch runs.
+    result = await node.short_sync_batch(peer, uint32(3), uint32(4))
+
+    assert result is False
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_releases_slot_when_first_block_request_raises(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # A failure fetching the first block must release the batch_syncing slot before the
+    # exception propagates, so a later attempt from the same peer is not skipped.
+    _full_node_1, full_node_2, _server_1, _server_2, _bt = two_nodes
+    node = full_node_2.full_node
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x06" * 32)
+
+        async def call_api(self, api_function: Any, request: object) -> full_node_protocol.RespondBlock:
+            raise ValueError("request failed")
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    with pytest.raises(ValueError, match="request failed"):
+        await node.short_sync_batch(peer, uint32(3), uint32(4))
+
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.anyio
+async def test_short_sync_batch_releases_slot_and_reaps_segment_tasks_on_success(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    consensus_mode: ConsensusMode,
+) -> None:
+    # The success path also releases the slot, and reaps pending sub epoch segment tasks:
+    # finished ones are dropped from the list, unfinished ones are cancelled.
+    _full_node_1, full_node_2, _server_1, _server_2, bt = two_nodes
+    node = full_node_2.full_node
+
+    blocks = bt.get_consecutive_blocks(3)
+    for block in blocks:
+        await node.add_block(block)
+    connecting_block = bt.get_consecutive_blocks(1, block_list_input=blocks)[-1]
+    assert node.blockchain.height_to_hash(uint32(2)) == connecting_block.prev_header_hash
+
+    async def noop() -> None:
+        return None
+
+    done_task = create_referenced_task(noop())
+    await asyncio.sleep(0)
+    assert done_task.done()
+    running_task = create_referenced_task(asyncio.sleep(60))
+    node._segment_task_list.extend([done_task, running_task])
+
+    class DummyPeer:
+        peer_node_id = bytes32(b"\x07" * 32)
+
+        def get_peer_logging(self) -> PeerInfo:
+            return PeerInfo("127.0.0.1", uint16(0))
+
+        async def call_api(self, api_function: Any, request: object) -> full_node_protocol.RespondBlock:
+            assert isinstance(request, full_node_protocol.RequestBlock)
+            return full_node_protocol.RespondBlock(connecting_block)
+
+    peer = cast(WSChiaConnection, DummyPeer())
+    # start == target leaves the batch download loop empty, so this covers the
+    # first-block fetch and the cleanup around it without downloading blocks.
+    result = await node.short_sync_batch(peer, uint32(3), uint32(3))
+
+    assert result is True
+    assert peer.peer_node_id not in node.sync_store.batch_syncing
+    assert done_task not in node._segment_task_list
+    assert running_task in node._segment_task_list
+    with contextlib.suppress(asyncio.CancelledError):
+        await running_task
+    assert running_task.cancelled()
 
 
 @pytest.mark.anyio
