@@ -50,7 +50,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.get_block_challenge import post_hard_fork2
+from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -2603,7 +2603,16 @@ class FullNode:
                 generator_args = []
 
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
-            flags = get_flags_for_height_and_constants(height, self.constants)
+            # Match finished-block prevalidation: CLVM flags are gated on the
+            # latest tx block infused before this block's signage point.
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(block.finished_sub_slots),
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
 
             # on mainnet we won't receive unfinished blocks for heights
             # below the hard fork activation, but we have tests where we do
