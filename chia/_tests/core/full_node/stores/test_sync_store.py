@@ -145,6 +145,20 @@ async def test_backtrack_syncing_removes_on_disconnect(seeded_random: random.Ran
 
 
 @pytest.mark.anyio
+async def test_batch_syncing_removes_on_disconnect(seeded_random: random.Random) -> None:
+    store = SyncStore()
+    node_id = bytes32.random(r=seeded_random)
+
+    store.batch_syncing.add(node_id)
+    store.peer_disconnected(node_id=node_id)
+    assert node_id not in store.batch_syncing
+
+    # Disconnecting a peer that holds no slot is a no-op.
+    store.peer_disconnected(node_id=node_id)
+    assert node_id not in store.batch_syncing
+
+
+@pytest.mark.anyio
 async def test_get_heaviest_peak_returns_none_when_peaks_evicted() -> None:
     """get_heaviest_peak() returns None (not AssertionError) when all peaks are evicted from peak_to_peer."""
     store = SyncStore()
