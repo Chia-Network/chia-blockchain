@@ -1,4 +1,4 @@
-# ruff: noqa: E402 # See imports after multiprocessing.set_start_method
+# ruff: file-ignore[module-import-not-at-top-of-file] # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
 import asyncio
@@ -1575,4 +1575,5 @@ async def wallet_environments(
                     for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
                 ],
                 tx_config,
+                request.param.get("reorg_exempt", False),
             )

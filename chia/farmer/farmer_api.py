@@ -22,6 +22,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotList2,
     PlotSyncStart,
     PoolDifficulty,
     SignatureRequestSourceData,
@@ -107,6 +108,8 @@ class FarmerAPI:
                 new_proof_of_space.sp_hash,
                 height=sp.peak_height,
                 prev_transaction_block_height=sp.last_tx_height,
+                filter_challenge=sp.filter_challenge,
+                signage_point_index=sp.signage_point_index,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = new_proof_of_space.proof.compute_plot_id()
@@ -121,6 +124,7 @@ class FarmerAPI:
                 new_proof_of_space.proof.param(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
+                height=sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -228,6 +232,7 @@ class FarmerAPI:
                     new_proof_of_space.proof.param(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
+                    height=sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -348,7 +353,25 @@ class FarmerAPI:
 
                 agg_sig: G2Element = AugSchemeMPL.aggregate([plot_signature, authentication_signature])
 
-                post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
+                current_auth_token = await self.farmer._get_current_authentication_token(
+                    pool_state_dict["pool_config"], authentication_token_timeout
+                )
+                if not isinstance(current_auth_token, str):
+                    self.farmer.log.error(
+                        f"Not logged into pool while trying to POST partial: {pool_state_dict['pool_config'].pool_url}"
+                    )
+                    increment_pool_stats(
+                        self.farmer.pool_state,
+                        p2_singleton_puzzle_hash,
+                        "missing_partials",
+                        time.time(),
+                    )
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
+                    return
+                post_partial_request: PostPartialRequest = PostPartialRequest(payload, current_auth_token, agg_sig)
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
@@ -364,7 +387,7 @@ class FarmerAPI:
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
-                            f"{pool_url}/partial",
+                            self.farmer._url_for_endpoint(pool_state_dict["pool_config"], "partial"),
                             json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.farmer.log),
                             headers={
@@ -569,7 +592,7 @@ class FarmerAPI:
 
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
-        if proof_bytes is None or len(proof_bytes) == 0:
+        if len(proof_bytes) == 0:
             self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.fragments[:5]}...")
             return
 
@@ -667,6 +690,7 @@ class FarmerAPI:
                 pool_difficulties,
                 new_signage_point.peak_height,
                 new_signage_point.last_tx_height,
+                new_signage_point.filter_challenge,
             )
 
             # The plot size in the call to calculate_prefix_bits is only used
@@ -687,7 +711,7 @@ class FarmerAPI:
                 return conn.protocol_version <= Version("0.0.36")
 
             def new_harvesters(conn: WSChiaConnection) -> bool:
-                return conn.protocol_version > Version("0.0.36")
+                return conn.protocol_version >= Version("0.0.38")
 
             msg1 = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message1)
             await self.farmer.server.send_to_all_if([msg1], NodeType.HARVESTER, old_harvesters)
@@ -791,12 +815,20 @@ class FarmerAPI:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
     @metadata.request(peer_required=True)
+    async def respond_plots2(self, _: harvester_protocol.RespondPlots2, peer: WSChiaConnection) -> None:
+        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @metadata.request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
     @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @metadata.request(peer_required=True)
+    async def plot_sync_loaded2(self, message: PlotSyncPlotList2, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded2(message)
 
     @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
@@ -856,6 +888,8 @@ class FarmerAPI:
             response.sp_hash,
             height=peak_height,
             prev_transaction_block_height=last_tx_height,
+            filter_challenge=sps[0].filter_challenge,
+            signage_point_index=signage_point_index,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")

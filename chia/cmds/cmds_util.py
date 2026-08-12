@@ -453,7 +453,7 @@ class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
         ).autofill(constants=DEFAULT_CONSTANTS, config=config, logged_in_fingerprint=fingerprint)
 
 
-def format_bytes(bytes: int) -> str:
+def format_bytes(bytes: object) -> str:
     if not isinstance(bytes, int) or bytes < 0:
         return "Invalid"
 

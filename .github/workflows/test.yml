@@ -84,7 +84,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
@@ -226,7 +226,7 @@ jobs:
         with:
           jobs: ${{ toJSON(needs) }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -301,7 +301,7 @@ jobs:
           coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
-      - uses: coverallsapp/github-action@v2
+      - uses: coverallsapp/github-action@v2.3.8
         if: always() && steps.alls-green.outputs.success == 'true' && github.event.repository.visibility == 'public'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

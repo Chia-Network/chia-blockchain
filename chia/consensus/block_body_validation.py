@@ -23,12 +23,12 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.generator_validation import validate_generator_ref_list
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
-
 #  peak->  o
 #  main    |
 #  chain   o  o <- peak_height  \ additions and removals
@@ -215,6 +215,17 @@ async def validate_block_body(
     prev_transaction_block_height: uint32 = uint32(0)
     prev_transaction_block_timestamp: uint64 = uint64(0)
 
+    # 0. Validate block version. Version 1 (which omits transaction_generator_ref_list
+    # and encodes the generator as a plain buffer) is only valid after the 3.0 hard fork.
+    # TODO: allow version 1 after the hard fork activates
+    #   if block.version == 1:
+    #       if height < constants.HARD_FORK2_HEIGHT:
+    #           return Err.INVALID_BLOCK_VERSION
+    #   elif block.version != 0:
+    #       return Err.INVALID_BLOCK_VERSION
+    if block.version != 0:
+        return Err.INVALID_BLOCK_VERSION
+
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
     # None
@@ -223,6 +234,7 @@ async def validate_block_body(
             block.foliage_transaction_block is not None
             or block.transactions_info is not None
             or block.transactions_generator is not None
+            or block.transactions_generator_buffer is not None
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
 
@@ -340,26 +352,9 @@ async def validate_block_body(
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
     # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
     # 8c. The generator ref list must not point to a height >= this block's height
-    if block.transactions_generator_ref_list == []:
-        if block.transactions_info.generator_refs_root != bytes([1] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-    else:
-        # With hard fork 2 we ban transactions_generator_ref_list.
-        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
-            return Err.TOO_MANY_GENERATOR_REFS
-
-        # If we have a generator reference list, we must have a generator
-        if block.transactions_generator is None:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-
-        # The generator_refs_root must be the hash of the concatenation of the list[uint32]
-        generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
-        if block.transactions_info.generator_refs_root != generator_refs_hash:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
-        if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-            return Err.TOO_MANY_GENERATOR_REFS
-        if any([index >= height for index in block.transactions_generator_ref_list]):
-            return Err.FUTURE_GENERATOR_REFS
+    generator_ref_error = validate_generator_ref_list(constants, block, height, prev_transaction_block_height)
+    if generator_ref_error is not None:
+        return generator_ref_error
 
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions created

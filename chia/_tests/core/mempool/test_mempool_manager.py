@@ -22,6 +22,7 @@ from chia_rs import (
     check_time_locks,
     get_conditions_from_spendbundle,
     run_block_generator2,
+    supports_fast_forward,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -72,6 +73,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -1684,12 +1686,16 @@ def test_dedup_info_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     mempool_item = mempool_item_from_spendbundle(sb)
     dedup_coin_spends = IdenticalSpendDedup()
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
     assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))]
+    assert dedup_state_update == {}
+    # get_deduplication_info must not mutate the dedup state on its own
+    assert dedup_coin_spends == IdenticalSpendDedup()
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     assert dedup_coin_spends == IdenticalSpendDedup()
 
 
@@ -1704,7 +1710,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     assert mempool_item.conds is not None
     dedup_coin_spends = IdenticalSpendDedup()
     solution = SerializedProgram.to(conditions)
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
@@ -1714,6 +1720,10 @@ def test_dedup_info_eligible_1st_time() -> None:
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(TEST_COIN_AMOUNT - 1)),
     }
     expected_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID].cost
+    # The update is returned but not applied until explicitly committed
+    assert dedup_coin_spends == IdenticalSpendDedup()
+    assert dedup_state_update == {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     assert dedup_coin_spends == IdenticalSpendDedup(
         {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
     )
@@ -1752,7 +1762,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     # Only the eligible one that we encountered more than once gets deduplicated
@@ -1760,8 +1770,11 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     assert cost_saving == test_coin_cost
     assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)]
     # The coin we encountered a second time is already in the map
-    # The coin we encountered for the first time gets added with its solution and cost
+    # The coin we encountered for the first time is only reported in the update,
+    # not committed until we explicitly do so
     test_coin2_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID2].cost
+    assert dedup_state_update == {TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=test_coin2_cost)}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=test_coin_cost),
@@ -1801,13 +1814,16 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
+    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
         bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb3.coin_spends
     assert cost_saving == test_coin_cost + test_coin2_cost
     assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)]
-    # TEST_COIN_ID3 is non-eligible, so it doesn't end up in this map
+    # Both eligible coins were already known, so there's nothing new to commit
+    # (TEST_COIN_ID3 is non-eligible, so it never ends up in the map)
+    assert dedup_state_update == {}
+    dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(initial_solution, test_coin_cost),
@@ -2423,30 +2439,49 @@ async def test_height_added_to_mempool(optimized_path: bool, test_coins_mempool_
     assert mempool_item.height_added_to_mempool == original_height
 
 
+# Builds the UnspentLineageInfo the coin store would report for the latest
+# unspent version of a singleton. The grandparent id (parent_parent_id) must be
+# the real one, otherwise reconstructing the parent coin id fails; both
+# can_fast_forward_singleton (at admission) and perform_the_fast_forward (at
+# block building) verify that. We recover it from the lineage proof embedded in
+# the singleton solution rather than fabricating a placeholder.
+def singleton_lineage_info(coin_spend: CoinSpend) -> UnspentLineageInfo:
+    solution = Program.from_bytes(bytes(coin_spend.solution))
+    lineage_proof = LineageProof.from_program(
+        solution.first(),
+        [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+    )
+    assert lineage_proof.parent_name is not None
+    coin = coin_spend.coin
+    return UnspentLineageInfo(coin.name(), coin.parent_coin_info, lineage_proof.parent_name)
+
+
 # This is a test utility to provide a simple view of the coin table for the
 # mempool manager.
 class TestCoins:
     coin_records: dict[bytes32, CoinRecord]
     lineage_info: dict[bytes32, UnspentLineageInfo]
 
-    def __init__(self, coins: list[Coin], lineage: dict[bytes32, Coin]) -> None:
+    def __init__(self, coins: list[Coin], lineage: dict[bytes32, CoinSpend]) -> None:
         self.coin_records = {}
         for c in coins:
             self.coin_records[c.name()] = CoinRecord(c, uint32(0), uint32(0), False, TEST_TIMESTAMP)
         self.lineage_info = {}
-        for ph, c in lineage.items():
-            self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
+        for ph, coin_spend in lineage.items():
+            self.lineage_info[ph] = singleton_lineage_info(coin_spend)
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
         self.coin_records[coin_id] = self.coin_records[coin_id].replace(spent_block_index=height)
 
-    def update_lineage(self, puzzle_hash: bytes32, coin: Coin | None) -> None:
-        if coin is None:
+    def update_lineage(self, puzzle_hash: bytes32, coin_spend: CoinSpend | None) -> None:
+        if coin_spend is None:
             self.lineage_info.pop(puzzle_hash)
         else:
-            assert coin.puzzle_hash == puzzle_hash
-            prev = self.lineage_info[puzzle_hash]
-            self.lineage_info[puzzle_hash] = UnspentLineageInfo(coin.name(), coin.parent_coin_info, prev.coin_id)
+            assert coin_spend.coin.puzzle_hash == puzzle_hash
+            # Derive the lineage info from the singleton spend itself, so the
+            # grandparent id (parent_parent_id) is the real one. can_fast_forward_singleton
+            # and perform_the_fast_forward reconstruct the parent coin id from it.
+            self.lineage_info[puzzle_hash] = singleton_lineage_info(coin_spend)
 
     async def get_coin_records(self, coin_ids: Collection[bytes32]) -> list[CoinRecord]:
         ret = []
@@ -2465,8 +2500,6 @@ class TestCoins:
 def make_singleton_spend(
     launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1
 ) -> CoinSpend:
-    from chia_rs import supports_fast_forward
-
     from chia.wallet.lineage_proof import LineageProof
     from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, solution_for_singleton
 
@@ -2545,7 +2578,7 @@ async def test_new_peak_ff_eviction(
     )
     bundle = SpendBundle([singleton_spend, coin_spend], G2Element())
 
-    coins = TestCoins([singleton_spend.coin, TEST_COIN], {singleton_spend.coin.puzzle_hash: singleton_spend.coin})
+    coins = TestCoins([singleton_spend.coin, TEST_COIN], {singleton_spend.coin.puzzle_hash: singleton_spend})
 
     async with setup_mempool(coins) as mempool_manager:
         bundle_add_info = await mempool_manager.add_spend_bundle(
@@ -2626,7 +2659,7 @@ async def test_multiple_ff(use_optimization: bool) -> None:
     # the singleton puzzle hash resulves to the most recent singleton coin, number 2
     # pretend that coin1 is spent
     singleton_ph = singleton_spend2.coin.puzzle_hash
-    coins = TestCoins([singleton_spend1.coin, singleton_spend2.coin, TEST_COIN], {singleton_ph: singleton_spend2.coin})
+    coins = TestCoins([singleton_spend1.coin, singleton_spend2.coin, TEST_COIN], {singleton_ph: singleton_spend2})
 
     async with setup_mempool(coins) as mempool_manager:
         bundle_add_info = await mempool_manager.add_spend_bundle(
@@ -2652,7 +2685,7 @@ async def test_multiple_ff(use_optimization: bool) -> None:
         assert not item.bundle_coin_spends[coin_spend.coin.name()].supports_fast_forward
 
         # spend the singleton coin2 and make coin3 the latest version
-        coins.update_lineage(singleton_ph, singleton_spend3.coin)
+        coins.update_lineage(singleton_ph, singleton_spend3)
         coins.spend_coin(singleton_spend2.coin.name(), uint32(11))
 
         await advance_mempool(mempool_manager, [singleton_spend2.coin.name()], use_optimization=use_optimization)
@@ -2695,7 +2728,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
     # the singleton puzzle hash resulves to the most recent singleton coin, number 2
     # pretend that coin1 is spent
     singleton_ph = spend_a.coin.puzzle_hash
-    coins = TestCoins([spend_a.coin, spend_b.coin, spend_c.coin, TEST_COIN], {singleton_ph: spend_a.coin})
+    coins = TestCoins([spend_a.coin, spend_b.coin, spend_c.coin, TEST_COIN], {singleton_ph: spend_a})
 
     async with setup_mempool(coins) as mempool_manager:
         bundle_add_info = await mempool_manager.add_spend_bundle(
@@ -2714,7 +2747,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
         assert spend.latest_singleton_lineage is not None
         assert spend.latest_singleton_lineage.coin_id == spend_a.coin.name()
 
-        coins.update_lineage(singleton_ph, spend_b.coin)
+        coins.update_lineage(singleton_ph, spend_b)
         coins.spend_coin(spend_a.coin.name(), uint32(11))
 
         await advance_mempool(mempool_manager, [spend_a.coin.name()])
@@ -2726,7 +2759,7 @@ async def test_advancing_ff(use_optimization: bool) -> None:
         assert spend.latest_singleton_lineage is not None
         assert spend.latest_singleton_lineage.coin_id == spend_b.coin.name()
 
-        coins.update_lineage(singleton_ph, spend_c.coin)
+        coins.update_lineage(singleton_ph, spend_c)
         coins.spend_coin(spend_b.coin.name(), uint32(12))
 
         await advance_mempool(mempool_manager, [spend_b.coin.name()], use_optimization=use_optimization)
@@ -3009,7 +3042,7 @@ async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
     singleton_spend2 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT, child_amount=3)
     coins = TestCoins(
         coins=[singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2],
-        lineage={singleton_spend2.coin.puzzle_hash: singleton_spend2.coin},
+        lineage={singleton_spend2.coin.puzzle_hash: singleton_spend2},
     )
 
     async with setup_mempool(coins) as mempool_manager:
@@ -3048,7 +3081,7 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
     PARENT_PARENT = bytes32([2] * 32)
     singleton_spend = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
     coins = TestCoins(
-        coins=[singleton_spend.coin, TEST_COIN], lineage={singleton_spend.coin.puzzle_hash: singleton_spend.coin}
+        coins=[singleton_spend.coin, TEST_COIN], lineage={singleton_spend.coin.puzzle_hash: singleton_spend}
     )
 
     async with setup_mempool(coins) as mempool_manager:
@@ -3382,8 +3415,8 @@ async def test_new_peak_deferred_ff_items() -> None:
     coins = TestCoins(
         [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2],
         {
-            singleton_spend1.coin.puzzle_hash: singleton_spend1.coin,
-            singleton_spend2.coin.puzzle_hash: singleton_spend2.coin,
+            singleton_spend1.coin.puzzle_hash: singleton_spend1,
+            singleton_spend2.coin.puzzle_hash: singleton_spend2,
         },
     )
     async with setup_mempool(coins) as mempool_manager:
@@ -3400,10 +3433,11 @@ async def test_new_peak_deferred_ff_items() -> None:
             )
             assert mempool_manager.get_mempool_item(sb_name) is not None
             sb_names.append(sb_name)
-        # Let's advance the mempool by spending these singletons into new lineages
-        singleton1_new_latest = Coin(singleton1_id, singleton_spend1.coin.puzzle_hash, singleton_spend1.coin.amount)
+        # Let's advance the mempool by spending these singletons into new lineages.
+        # The new latest coin is a real child of the previous singleton coin.
+        singleton1_new_latest = make_singleton_spend(bytes32([1] * 32), singleton_spend1.coin.parent_coin_info)
         coins.update_lineage(singleton_spend1.coin.puzzle_hash, singleton1_new_latest)
-        singleton2_new_latest = Coin(singleton2_id, singleton_spend2.coin.puzzle_hash, singleton_spend2.coin.amount)
+        singleton2_new_latest = make_singleton_spend(bytes32([2] * 32), singleton_spend2.coin.parent_coin_info)
         coins.update_lineage(singleton_spend2.coin.puzzle_hash, singleton2_new_latest)
         await advance_mempool(mempool_manager, [singleton1_id, singleton2_id], use_optimization=True)
         # Both items should get updated with their related latest lineages
@@ -3411,12 +3445,12 @@ async def test_new_peak_deferred_ff_items() -> None:
         assert mi1 is not None
         latest_singleton_lineage1 = mi1.bundle_coin_spends[singleton1_id].latest_singleton_lineage
         assert latest_singleton_lineage1 is not None
-        assert latest_singleton_lineage1.coin_id == singleton1_new_latest.name()
+        assert latest_singleton_lineage1.coin_id == singleton1_new_latest.coin.name()
         mi2 = mempool_manager.get_mempool_item(sb_names[1])
         assert mi2 is not None
         latest_singleton_lineage2 = mi2.bundle_coin_spends[singleton2_id].latest_singleton_lineage
         assert latest_singleton_lineage2 is not None
-        assert latest_singleton_lineage2.coin_id == singleton2_new_latest.name()
+        assert latest_singleton_lineage2.coin_id == singleton2_new_latest.coin.name()
 
 
 @pytest.mark.anyio
@@ -3432,7 +3466,7 @@ async def test_different_ff_versions() -> None:
     version2_id = singleton_spend2.coin.name()
     singleton_ph = singleton_spend2.coin.puzzle_hash
     coins = TestCoins(
-        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2], {singleton_ph: singleton_spend2.coin}
+        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2], {singleton_ph: singleton_spend2}
     )
     async with setup_mempool(coins) as mempool_manager:
         mempool_items: list[MempoolItem] = []
@@ -3459,9 +3493,10 @@ async def test_different_ff_versions() -> None:
         latest_singleton_lineage2 = mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
         assert latest_singleton_lineage2 is not None
         assert latest_singleton_lineage2.coin_id == latest_lineage_id
-        # Let's update the lineage with a new version of the singleton
-        new_latest_lineage = Coin(version2_id, singleton_ph, singleton_spend2.coin.amount)
-        new_latest_lineage_id = new_latest_lineage.name()
+        # Let's update the lineage with a new version of the singleton, a real
+        # child of version 2.
+        new_latest_lineage = make_singleton_spend(launcher_id, singleton_spend2.coin.parent_coin_info)
+        new_latest_lineage_id = new_latest_lineage.coin.name()
         coins.update_lineage(singleton_ph, new_latest_lineage)
         await advance_mempool(mempool_manager, [version1_id, version2_id], use_optimization=True)
         # Both items should get updated with the latest lineage
