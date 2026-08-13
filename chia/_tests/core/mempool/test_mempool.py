@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import random
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from chia_rs import (
@@ -45,9 +46,10 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import IdenticalSpendDedup
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.mempool import MAX_SPENDS_PER_BLOCK, Mempool
+from chia.full_node.mempool import MAX_BLOCK_ATOMS, MAX_BLOCK_PAIRS, MAX_SKIPPED_ITEMS, MAX_SPENDS_PER_BLOCK, Mempool
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -3470,6 +3472,80 @@ def test_max_spends_per_block(old: bool) -> None:
     assert generator is not None
     # The 2-coin items were skipped but the final 1-coin item fits.
     assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
+
+
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("limit", ["atoms", "pairs"])
+def test_block_atom_and_pair_limits(old: bool, limit: str) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Each item accrues a third of the block limit, so exactly 3 items fit
+    # (the limit is inclusive), and any further item must be skipped. The other
+    # limit (cost, spends, and the counterpart of atoms/pairs) is kept small so
+    # only the limit under test is binding.
+    block_limit = MAX_BLOCK_ATOMS if limit == "atoms" else MAX_BLOCK_PAIRS
+    per_item = block_limit // 3
+    num_atoms = per_item if limit == "atoms" else 0
+    num_pairs = per_item if limit == "pairs" else 0
+
+    num_items = 6
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, num_atoms=num_atoms, num_pairs=num_pairs)
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # 3 * per_item == block_limit, so 3 items fit and the rest are skipped.
+    assert len(generator.removals) == 3
+
+
+def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Each item takes a third of the atom budget, so only 3 fit; the rest are
+    # skipped. Without an early exit, every later item would still be scanned.
+    per_item = MAX_BLOCK_ATOMS // 3
+    num_items = 3 + MAX_SKIPPED_ITEMS + 5
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, num_atoms=per_item)
+        assert mempool.add_to_pool(item).error is None
+    assert mempool.size() == num_items
+
+    dedup_calls = 0
+    original_get_deduplication_info = IdenticalSpendDedup.get_deduplication_info
+
+    def counting_get_deduplication_info(self: IdenticalSpendDedup, **kwargs: Any) -> Any:
+        nonlocal dedup_calls
+        dedup_calls += 1
+        return original_get_deduplication_info(self, **kwargs)
+
+    monkeypatch.setattr(IdenticalSpendDedup, "get_deduplication_info", counting_get_deduplication_info)
+
+    generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # Only 3 items fit the atom budget.
+    assert len(generator.removals) == 3
+    # Scanning stops after MAX_SKIPPED_ITEMS skips: 3 fitting + MAX_SKIPPED_ITEMS
+    # skipped items are processed, and none beyond that.
+    assert dedup_calls == 3 + MAX_SKIPPED_ITEMS
 
 
 @pytest.mark.parametrize("old", [True, False])
