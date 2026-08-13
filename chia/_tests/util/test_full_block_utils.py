@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import platform
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 import pytest
 from chia_rs import (
@@ -346,6 +347,73 @@ def test_block_info_from_block_rejects_short_refs_count_prefix() -> None:
 
     with pytest.raises(ValueError, match="refs count prefix requires 4 bytes, remaining buffer 1"):
         block_info_from_block(memoryview(block_bytes))
+
+
+def _version1_block_bytes_with_generator_buffer() -> tuple[bytearray, int]:
+    for block in get_full_blocks(0):
+        if block.version == 1 and block.transactions_generator_buffer is not None:
+            return bytearray(bytes(block)), len(block.transactions_generator_buffer)
+    raise AssertionError("expected a version-1 block with transactions_generator_buffer")
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_short_generator_buffer_length_prefix(parse: Callable[[memoryview], Any]) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    # Trailing layout: discriminant (1) + length (4) + buffer. Leave discriminant + 1 length byte.
+    del block_bytes[-(buf_len + 3) :]
+
+    with pytest.raises(ValueError, match="generator_buffer length prefix requires 4 bytes, remaining buffer 1"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_generator_buffer_length_exceeding_remaining_buffer(
+    parse: Callable[[memoryview], Any],
+) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    length_offset = len(block_bytes) - buf_len - 4
+    block_bytes[length_offset : length_offset + 4] = (buf_len + 1).to_bytes(4, "big")
+
+    with pytest.raises(ValueError, match=f"generator_buffer length: {buf_len + 1}, exceeds remaining buffer {buf_len}"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_invalid_generator_version(parse: Callable[[memoryview], Any]) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    # Present bit set with version 2 (unsupported).
+    block_bytes[-(buf_len + 4 + 1)] = (2 << 1) | 1
+
+    with pytest.raises(ValueError, match="invalid FullBlock generator version: 2"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("version", [0, 1])
+def test_cheap_parser_reads_present_generator_for_supported_versions(version: int) -> None:
+    for block in get_full_blocks(0):
+        if block.version != version:
+            continue
+        if version == 0 and block.transactions_generator is None:
+            continue
+        if version == 1 and block.transactions_generator_buffer is None:
+            continue
+
+        block_bytes = memoryview(bytes(block))
+        gen = generator_from_block(block_bytes)
+        assert gen is not None
+        if version == 0:
+            assert Program.from_bytes(gen) == block.transactions_generator
+        else:
+            assert gen == block.transactions_generator_buffer
+
+        block_info = block_info_from_block(block_bytes)
+        assert block_info.version == version
+        assert block_info.transactions_generator == block.transactions_generator
+        assert block_info.transactions_generator_buffer == block.transactions_generator_buffer
+        assert block_info.transactions_generator_ref_list == block.transactions_generator_ref_list
+        return
+
+    raise AssertionError(f"expected a version-{version} block with a present generator")
 
 
 def test_cheap_parser_matches_round_tripped_block() -> None:
