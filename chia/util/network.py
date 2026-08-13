@@ -160,7 +160,7 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     ips_v6 = []
     for family, _, _, _, ip_port in addrset:
         if family not in {socket.AF_INET, socket.AF_INET6}:
-            continue
+            continue  # pragma: no cover
         host_ip = ip_port[0]
         assert isinstance(host_ip, str)
         ip = IPAddress.create(host_ip)
