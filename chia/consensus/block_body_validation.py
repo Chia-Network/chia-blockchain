@@ -365,7 +365,7 @@ async def validate_block_body(
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
     # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
     # 8c. The generator ref list must not point to a height >= this block's height
-    generator_ref_error = validate_generator_ref_list(constants, block, height, pre_sp_tx_height)
+    generator_ref_error = validate_generator_ref_list(constants, block, height, prev_transaction_block_height)
     if generator_ref_error is not None:
         return generator_ref_error
 
