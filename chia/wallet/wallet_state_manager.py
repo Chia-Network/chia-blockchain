@@ -1757,9 +1757,15 @@ class WalletStateManager:
                             used_up_to = derivation_index
 
                     if coin_state.created_height is None:
-                        # TODO implements this coin got reorged
+                        # A CoinState with created_height=None means this coin was
+                        # reorged. There is deliberately no per-coin handling here:
+                        # correctness relies on the bulk rollback that
+                        # add_states_from_peer already performed (perform_atomic_rollback
+                        # to the fork height) before these states are processed, after
+                        # which the re-orged coin is re-added under its new height by the
+                        # normal new-coin path.
                         # TODO: we need to potentially roll back the pool wallet here
-                        pass
+                        self.log.warning(f"Ignoring reorged coin state for {coin_name}, relying on bulk rollback")
                     # if the new coin has not been spent (i.e not ephemeral)
                     elif coin_state.spent_height is None:
                         if local_record is None:
