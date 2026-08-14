@@ -231,8 +231,6 @@ farmer:
   # analyze with python -m chia.util.profiler <path>
   enable_profiler: False
 
-  # To send a share to a pool, a proof of space must have required_iters less than this number
-  pool_share_threshold: 1000
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -260,13 +258,9 @@ timelord:
       - *self_hostname
       - localhost
       - 127.0.0.1
-    ips_estimate:
-      - 150000
   full_node_peers:
     - host: *self_hostname
       port: 8444
-  # Maximum number of seconds allowed for a client to reconnect to the server.
-  max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
@@ -338,8 +332,6 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v2_CHALLENGE.sqlite
-  # peer_db_path is deprecated and has been replaced by peers_file_path
-  peer_db_path: db/peer_table_node.sqlite
   peers_file_path: db/peers.dat
 
   multiprocessing_start_method: default
@@ -482,8 +474,6 @@ ui:
   # Which port to use to communicate with the full node
   rpc_port: 8555
 
-  # This SSH key is for the ui SSH server
-  ssh_filename: config/ssh_host_key
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -544,17 +534,11 @@ wallet:
   full_node_peers:
     - host: *self_hostname
       port: 8444
-  # The path of NFT off-chain metadata cache
-  nft_metadata_cache_path: "nft_cache"
-  # The length of NFT ID prefix will be used as hash index
-  nft_metadata_cache_hash_length: 3
   multiprocessing_start_method: default
 
   testing: False
   # v2 used by the light wallet sync protocol
   database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
-  # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
-  wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
 
   # this is a debug and profiling facility that logs all SQLite commands to a
