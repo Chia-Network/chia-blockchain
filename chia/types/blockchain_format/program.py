@@ -309,7 +309,3 @@ def run(prg: SerializedProgram | Program, args: Any) -> Program:
 
 def run_with_cost(prg: SerializedProgram | Program, max_cost: int, args: Any) -> tuple[int, Program]:
     return _run(prg, max_cost, 0, args)
-
-
-def run_mempool_with_cost(prg: SerializedProgram | Program, max_cost: int, args: Any) -> tuple[int, Program]:
-    return _run(prg, max_cost, MEMPOOL_MODE, args)
