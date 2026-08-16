@@ -1192,8 +1192,6 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework, capsys
         )
     )
 
-    message = "0123456789ABCDEF"
-    response = await api_0.sign_message_by_id(SignMessageByID(id=did_id, message=message, is_hex=True, safe_mode=False))
     assert AugSchemeMPL.verify(
         response.pubkey,
         hexstr_to_bytes(message),
