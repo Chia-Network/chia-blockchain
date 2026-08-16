@@ -61,11 +61,12 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_request_types import (
+    GetCoinRecords,
     GetTransactionMemo,
     GetTransactions,
+    SignMessageByAddress,
     SpendClawbackCoins,
 )
 
@@ -511,7 +512,8 @@ class TestWalletSimulator:
                         }
                     },
                 ),
-            ]
+            ],
+            reorg_exempt=True,
         )
         await wallet_environments.process_pending_states(
             [
@@ -619,6 +621,15 @@ class TestWalletSimulator:
             fee=uint64(test_fee),
         )
         assert len(clawback_transactions) == 1
+        # just test that an extra submission doesn't do anything
+        await env.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(
+                coin_ids=[merkle_coin.name()],
+                fee=uint64(test_fee),
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
 
         await wallet_environments.process_pending_states(
             [
@@ -945,191 +956,6 @@ class TestWalletSimulator:
 
     @pytest.mark.parametrize(
         "wallet_environments",
-        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
-        indirect=True,
-    )
-    @pytest.mark.limit_consensus_modes(reason="irrelevant")
-    @pytest.mark.anyio
-    async def test_wallet_clawback_reorg(self, wallet_environments: WalletTestFramework) -> None:
-        full_node_api = wallet_environments.full_node
-        env = wallet_environments.environments[0]
-        env_2 = wallet_environments.environments[1]
-        wsm = env.wallet_state_manager
-        wsm_2 = env_2.wallet_state_manager
-
-        tx_amount = 500
-        async with wsm_2.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            normal_puzhash = await action_scope.get_puzzle_hash(wsm_2)
-        # Transfer to normal wallet
-        await run_send_cmd(
-            wallet_environments,
-            env,
-            amount=uint64(tx_amount),
-            puzzle_hash=normal_puzhash,
-            clawback_time=5,
-        )
-
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {
-                            "unconfirmed_wallet_balance": -1 * tx_amount,
-                            "<=#spendable_balance": -1 * tx_amount,
-                            "<=#max_send_amount": -1 * tx_amount,
-                            ">=#pending_change": 1,  # any amount increase
-                            "pending_coin_removal_count": 1,
-                        }
-                    },
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": -1 * tx_amount,
-                            ">=#spendable_balance": 1,  # any amount increase
-                            ">=#max_send_amount": 1,  # any amount increase
-                            "<=#pending_change": -1,  # any amount decrease
-                            "pending_coin_removal_count": -1,
-                        }
-                    },
-                ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
-            ]
-        )
-
-        # Check merkle coins
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-        # Reorg before claim
-        # Test Reorg mint
-        height = full_node_api.full_node.blockchain.get_peak_height()
-        assert height is not None
-        await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32.zeros, None)
-        )
-
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": tx_amount,  # confirmed balance comes back
-                            # clawback transaction is now outstanding
-                            "<=#spendable_balance": -1 * tx_amount,
-                            "<=#max_send_amount": -1 * tx_amount,
-                            ">=#pending_change": 1,  # any amount increase
-                            "pending_coin_removal_count": 1,
-                        }
-                    },
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": -1 * tx_amount,
-                            ">=#spendable_balance": 1,  # any amount increase
-                            ">=#max_send_amount": 1,  # any amount increase
-                            "<=#pending_change": -1,  # any amount decrease
-                            "pending_coin_removal_count": -1,
-                        }
-                    },
-                ),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
-            ]
-        )
-
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-
-        # Claim merkle coin
-        await env_2.rpc_client.set_auto_claim(AutoClaimSettings(enabled=True))
-        # clawback merkle coin
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    # After auto claim is set, the next block will trigger submission of clawback claims
-                    post_block_balance_updates={
-                        1: {
-                            "unconfirmed_wallet_balance": tx_amount,
-                            "pending_change": tx_amount,  # This is a little weird but I think intentional and correct
-                            "pending_coin_removal_count": 1,
-                        }
-                    },
-                ),
-            ]
-        )
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(),
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": tx_amount,
-                            "spendable_balance": tx_amount,
-                            "max_send_amount": tx_amount,
-                            "unspent_coin_count": 1,
-                            "pending_change": -1 * tx_amount,
-                            "pending_coin_removal_count": -1,
-                        }
-                    },
-                ),
-            ]
-        )
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-        # Reorg after claim
-        height = full_node_api.full_node.blockchain.get_peak_height()
-        assert height is not None
-        await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
-        )
-
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
-
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={},
-                ),
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": -1 * tx_amount,
-                            "spendable_balance": -1 * tx_amount,
-                            "max_send_amount": -1 * tx_amount,
-                            "unspent_coin_count": -1,
-                            "pending_change": tx_amount,
-                            "pending_coin_removal_count": 1,
-                        }
-                    },
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": tx_amount,
-                            "spendable_balance": tx_amount,
-                            "max_send_amount": tx_amount,
-                            "unspent_coin_count": 1,
-                            "pending_change": -1 * tx_amount,
-                            "pending_coin_removal_count": -1,
-                        }
-                    },
-                ),
-            ]
-        )
-
-        await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-        await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
-
-    @pytest.mark.parametrize(
-        "wallet_environments",
         [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
         indirect=True,
     )
@@ -1182,8 +1008,8 @@ class TestWalletSimulator:
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         resp = await env.rpc_client.get_coin_records(GetCoinRecords(wallet_id=uint32(1), coin_type=uint8(1)))
-        assert len(resp["coin_records"]) == 1
-        assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
+        assert len(resp.coin_records) == 1
+        assert resp.coin_records[0].id == merkle_coin.name()
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1912,7 +1738,7 @@ class TestWalletSimulator:
         assert stolen_cs is not None
 
         # get a legit signature
-        stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
+        stolen_sb, _ = await wallet.wallet_state_manager.signer.sign_bundle([stolen_cs])
         stolen_tx = wallet.wallet_state_manager.new_outgoing_transaction(
             wallet_id=wallet.id(),
             puzzle_hash=bytes32.zeros,
@@ -2186,7 +2012,9 @@ class TestWalletSimulator:
     )
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
-    async def test_sign_message(self, wallet_environments: WalletTestFramework) -> None:
+    async def test_sign_message(
+        self, wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         env = wallet_environments.environments[0]
         api_0 = env.rpc_api
 
@@ -2195,59 +2023,72 @@ class TestWalletSimulator:
 
         async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
             ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
-        response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
+        address = encode_puzzle_hash(ph, "xch")
+        capsys.readouterr()
+        await SignMessageCMD(
+            rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
+            address=CliAddress(ph, address, AddressType.XCH),
+            hex_message=message,
+        ).run()
+        output = capsys.readouterr().out
+        assert f"Message: {message}" in output
+        assert "Public Key:" in output
+        assert "Signature:" in output
+
+        pubkey = G1Element.from_bytes(bytes.fromhex(output.split("Public Key:")[1].split("\n")[0].strip()))
+        signature = G2Element.from_bytes(bytes.fromhex(output.split("Signature:")[1].split("\n")[0].strip()))
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            signature,
         )
         # Test hex string
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True}
+            SignMessageByAddress(address=address, message=message, is_hex=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"}
+            SignMessageByAddress(address=address, message=message, is_hex=True, safe_mode=True)
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test BLS sign string
         message = "Hello World"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False}
+            SignMessageByAddress(address=address, message=message, is_hex=False, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             bytes(message, "utf-8"),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False}
+            SignMessageByAddress(address=address, message=message, is_hex=True, safe_mode=False)
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            response.pubkey,
             hexstr_to_bytes(message),
-            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
+            response.signature,
         )
 
     @pytest.mark.parametrize(

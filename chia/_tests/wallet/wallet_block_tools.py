@@ -205,6 +205,8 @@ def finish_block(
         unfinished_block.transactions_info,
         unfinished_block.transactions_generator,
         [],
+        None,
+        uint8(0),
     )
 
     block_record = block_to_block_record(
@@ -340,6 +342,8 @@ def get_full_block_and_block_record(
         transactions_info,
         block_generator.program if block_generator else None,
         [],
+        None,
+        uint8(0),
     )
 
     full_block, block_record = finish_block(constants, unfinished_block, prev_block, blocks)

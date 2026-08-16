@@ -29,7 +29,9 @@ async def get_nft_count(wallet: NFTWallet) -> int:
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -178,7 +180,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     taker_fee = 1
     peer = env_taker.node.get_full_node_peer()
 
-    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -255,7 +257,9 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -410,7 +414,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     taker_fee = 1
 
     peer = env_taker.node.get_full_node_peer()
-    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -485,7 +489,9 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.anyio
 async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramework, zero_royalties: bool) -> None:
@@ -700,7 +706,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     taker_fee = 1
 
     peer = env_taker.node.get_full_node_peer()
-    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -777,7 +783,9 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
@@ -1006,7 +1014,7 @@ async def test_nft_offer_sell_nft_for_cat(
     taker_fee = 1
 
     peer = env_taker.node.get_full_node_peer()
-    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1101,7 +1109,9 @@ async def test_nft_offer_sell_nft_for_cat(
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.parametrize("test_change", [True, False])
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
@@ -1362,7 +1372,7 @@ async def test_nft_offer_request_nft_for_cat(
     taker_fee = 1
 
     peer = env_taker.node.get_full_node_peer()
-    [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await env_maker.wallet_state_manager.signer.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -1460,7 +1470,9 @@ async def test_nft_offer_request_nft_for_cat(
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [2]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 1, "blocks_needed": [2], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
@@ -1652,7 +1664,14 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
 )
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 2, "blocks_needed": [3, 3], "config_overrides": {"automatically_add_unknown_cats": True}}],
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [3, 3],
+            "config_overrides": {"automatically_add_unknown_cats": True},
+            "reorg_exempt": True,
+        }
+    ],
     indirect=True,
 )
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
@@ -2030,7 +2049,7 @@ async def test_complex_nft_offer(
     assert success
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [maker_offer], signing_response = await wsm_maker.signer.sign_offers([Offer.from_bytes(trade_make.offer)])
     if royalty_basis_pts_maker == 10000:
         with pytest.raises(ValueError):
             async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -2239,7 +2258,7 @@ async def test_complex_nft_offer(
     assert success
     assert trade_make is not None
 
-    [maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(trade_make.offer)])
+    [maker_offer], signing_response = await wsm_maker.signer.sign_offers([Offer.from_bytes(trade_make.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:

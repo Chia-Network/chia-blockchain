@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from chiabip158 import PyBIP158
 
 from chia.types.blockchain_format.coin import Coin
@@ -13,17 +13,24 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
+    if len(buf) < 4:
+        raise ValueError(f"list count prefix requires 4 bytes, remaining buffer {len(buf)}")
     n = int.from_bytes(buf[:4], "big", signed=False)
     buf = buf[4:]
+    if n > len(buf):
+        raise ValueError(f"list count {n} exceeds remaining buffer {len(buf)}")
     for _ in range(n):
         buf = skip_item(buf)
     return buf
 
 
 def skip_bytes(buf: memoryview) -> memoryview:
+    if len(buf) < 4:
+        raise ValueError(f"byte length prefix requires 4 bytes, remaining buffer {len(buf)}")
     n = int.from_bytes(buf[:4], "big", signed=False)
     buf = buf[4:]
-    assert n >= 0
+    if n > len(buf):
+        raise ValueError(f"byte length {n} exceeds remaining buffer {len(buf)}")
     return buf[n:]
 
 
@@ -253,6 +260,8 @@ class GeneratorBlockInfo:
     prev_header_hash: bytes32
     transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
+    transactions_generator_buffer: list[uint8] | None = None
+    version: uint8 = uint8(0)
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
@@ -277,8 +286,12 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
     else:
         buf = buf[1:]
 
+    if len(buf) < 4:
+        raise ValueError(f"refs count prefix requires 4 bytes, remaining buffer {len(buf)}")
     refs_length = uint32.from_bytes(buf[:4])
     buf = buf[4:]
+    if refs_length * 4 > len(buf):
+        raise ValueError(f"refs count {refs_length} exceeds remaining buffer {len(buf)}")
 
     refs = []
     for i in range(refs_length):

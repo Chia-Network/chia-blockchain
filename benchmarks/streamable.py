@@ -218,7 +218,7 @@ def compare_results(
         if data not in old:
             continue
         print(f"\ncompare: {data}, old: {old_commit_hash}, new: {new_commit_hash}")
-        print_compare_row("mode", "µs/iteration old", "µs/iteration new", "diff %")  # noqa: RUF001
+        print_compare_row("mode", "µs/iteration old", "µs/iteration new", "diff %")  # ruff: ignore[ambiguous-unicode-character-string]
         for mode, results in modes.items():
             if mode not in old[data]:
                 continue
@@ -247,8 +247,8 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
             )
             print_row(
                 mode="mode",
-                us_per_iteration="µs/iteration",  # noqa: RUF001
-                stdev_us_per_iteration="stdev µs/iteration %",  # noqa: RUF001
+                us_per_iteration="µs/iteration",  # ruff: ignore[ambiguous-unicode-character-string]
+                stdev_us_per_iteration="stdev µs/iteration %",  # ruff: ignore[ambiguous-unicode-character-string]
                 avg_iterations="avg iterations/run",
                 stdev_iterations="stdev iterations/run %",
             )

@@ -80,7 +80,7 @@ async def async_main(
 
             async def dun() -> None:
                 # TODO: switch to event driven code
-                while shutdown_path.exists():  # noqa: ASYNC110
+                while shutdown_path.exists():  # ruff: ignore[async-busy-wait]
                     await asyncio.sleep(0.25)
 
                 thread_end_event.set()
@@ -98,7 +98,7 @@ async def async_main(
         try:
             try:
                 # TODO: switch to event driven code
-                while not thread_end_event.is_set():  # noqa: ASYNC110
+                while not thread_end_event.is_set():  # ruff: ignore[async-busy-wait]
                     await asyncio.sleep(0.1)
             finally:
                 # the test checks explicitly for this

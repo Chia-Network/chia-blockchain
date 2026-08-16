@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   dependency-review:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'renovate[bot]'))
+    if: github.repository_owner == 'Chia-Network' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'renovate[bot]')))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

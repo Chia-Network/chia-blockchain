@@ -372,7 +372,7 @@ class DataStore:
                     while len(chunk) < 4:
                         size_to_read = 4 - len(chunk)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             if size_to_read < 4:
                                 raise Exception("Incomplete read of length.")
                             break
@@ -385,7 +385,7 @@ class DataStore:
                     while len(serialize_nodes_bytes) < size:
                         size_to_read = size - len(serialize_nodes_bytes)
                         cur_chunk = reader.read(size_to_read)
-                        if cur_chunk is None or cur_chunk == b"":
+                        if cur_chunk == b"":
                             raise Exception("Incomplete read of blob.")
                         serialize_nodes_bytes += cur_chunk
                     serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
@@ -545,6 +545,12 @@ class DataStore:
             start += size
 
         return Path(*segments, raw)
+
+    def merkle_blob_available(self, store_id: bytes32, root_hash: bytes32 | None) -> bool:
+        # Bypass recent_merkle_blobs so a warm cache can't hide an on-disk deletion.
+        if root_hash is None:
+            return False
+        return self.get_merkle_path(store_id=store_id, root_hash=root_hash).is_file()
 
     def get_merkle_path(self, store_id: bytes32, root_hash: bytes32 | None) -> Path:
         store_root = self.merkle_blobs_path.joinpath(store_id.hex())
@@ -922,6 +928,23 @@ class DataStore:
 
         return True
 
+    async def clear_store_roots(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+
+    async def reset_store_to_empty_root(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer():
+            await self.clear_store_roots(store_id=store_id)
+            await self.create_tree(store_id=store_id, status=Status.COMMITTED)
+        self.recent_merkle_blobs.clear()
+
     async def table_is_empty(self, store_id: bytes32) -> bool:
         tree_root = await self.get_tree_root(store_id=store_id)
 
@@ -1280,7 +1303,7 @@ class DataStore:
 
     async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> TerminalNode | None:
         root = await self.get_tree_root(store_id=store_id)
-        if root is None or root.node_hash is None:
+        if root.node_hash is None:
             return None
 
         merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=root.node_hash)
@@ -1735,16 +1758,24 @@ class DataStore:
                 "DELETE FROM ids WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
+            # Clear roots too, otherwise re-subscribe can see a stale committed root
+            # while the on-disk blobs below are gone.
+            await writer.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id",
+                {"tree_id": store_id},
+            )
             await writer.execute(
                 "DELETE FROM nodes WHERE store_id == :store_id",
                 {"store_id": store_id},
             )
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+        self.unconfirmed_keys_values.pop(store_id, None)
 
-            with contextlib.suppress(FileNotFoundError):
-                shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_merkle_path(store_id=store_id, root_hash=None))
+
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.get_key_value_path(store_id=store_id, blob_hash=None))
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:
         async with self.db_wrapper.writer() as writer:

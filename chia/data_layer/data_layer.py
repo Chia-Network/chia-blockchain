@@ -616,8 +616,28 @@ class DataLayer:
 
         await self._update_confirmation_status(store_id=store_id)
 
-        if not await self.data_store.store_id_exists(store_id=store_id):
-            await self.data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
+        root = None
+        if await self.data_store.store_id_exists(store_id=store_id):
+            root = await self.data_store.get_tree_root(store_id=store_id)
+
+        if root is None:
+            await self.data_store.reset_store_to_empty_root(store_id)
+        elif (
+            root.node_hash is not None
+            and root.generation <= singleton_record.generation
+            and not self.data_store.merkle_blob_available(store_id, root.node_hash)
+        ):
+            if self.data_store.merkle_blobs_path.is_dir():
+                self.log.warning(
+                    f"Detected committed root with missing blob for {store_id} at generation "
+                    f"{root.generation}; resetting and resyncing."
+                )
+                await self.data_store.reset_store_to_empty_root(store_id)
+            else:
+                self.log.warning(
+                    f"Merkle blobs path {self.data_store.merkle_blobs_path} is missing; skipping "
+                    f"self-heal for {store_id} - check the storage volume."
+                )
 
         timestamp = int(time.time())
         servers_info = await self.data_store.get_available_servers_for_store(store_id, timestamp)
@@ -766,7 +786,7 @@ class DataLayer:
         latest_generation = root.generation
         # Don't store full tree files before this generation.
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        publish_generation = min(singleton_record.generation, root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
@@ -783,7 +803,7 @@ class DataLayer:
                 # this particular return only happens if the files already exist, no need to log anything
                 break
             try:
-                if uploaders is not None and len(uploaders) > 0:
+                if len(uploaders) > 0:
                     request_json = {
                         "store_id": store_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
@@ -830,7 +850,7 @@ class DataLayer:
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
-        max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
+        max_generation = min(singleton_record.generation, root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
         files = []
         for generation in range(1, max_generation + 1):
@@ -849,7 +869,7 @@ class DataLayer:
                 files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
-        if uploaders is not None and len(uploaders) > 0:
+        if len(uploaders) > 0:
             request_json = {
                 "store_id": store_id.hex(),
                 "files": json.dumps(files),
