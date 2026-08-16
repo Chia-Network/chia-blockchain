@@ -414,8 +414,8 @@ def create_service_and_wallet_client_generators(
     monkeypatch.setattr(chia.cmds.peer_funcs, "get_any_service_client", test_get_any_service_client)
     monkeypatch.setattr(chia.cmds.cmds_util, "get_wallet_client", test_get_wallet_client)
     monkeypatch.setattr(chia.cmds.wallet_funcs, "get_wallet_client", test_get_wallet_client)
-    # monkeypatch.setattr(chia.cmds.cmds_util, "cli_confirm", cli_confirm)
-    # monkeypatch.setattr(chia.cmds.wallet_funcs, "cli_confirm", cli_confirm)
+    monkeypatch.setattr(chia.cmds.cmds_util, "cli_confirm", cli_confirm)
+    monkeypatch.setattr(chia.cmds.wallet_funcs, "cli_confirm", cli_confirm)
     monkeypatch.setattr(click, "confirm", click_confirm)
 
 
