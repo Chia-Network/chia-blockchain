@@ -184,6 +184,7 @@ def transaction_endpoint_runner(
             self.rpc_info.context.original_click_context is not None
             and self.push
             and self.rpc_info.context.original_click_context.get_parameter_source("push") != ParameterSource.COMMANDLINE
+            and not (hasattr(self, "examine_only") and self.examine_only)  # probably deprecate this
         ):
             click.confirm(
                 "This command will push transactions to the network if it succeeds. (Use --no-push to disable.)"
