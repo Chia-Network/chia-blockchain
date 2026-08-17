@@ -9,6 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
+from chia.wallet.puzzles.puzzle_drivers import InnerPuzzle, UnknownPuzzle
 from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 
 MofN_MOD = Program.from_bytes(puzzle_mods.M_OF_N)
@@ -429,3 +430,39 @@ class PuzzleWithRestrictions:
             )
 
         return solution
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+        if unknown_puzzle.mod != INDEX_WRAPPER or unknown_puzzle.curried_args is None:
+            return None
+
+        nonce, fed_inner_puzzle_prog = unknown_puzzle.curried_args
+        fed_inner_puzzle = UnknownPuzzle(known_puzzle=fed_inner_puzzle_prog)
+        if fed_inner_puzzle != DELEGATED_PUZZLE_FEEDER or fed_inner_puzzle.curried_args is None:
+            return None
+
+        (potentially_restricted_puzzle_prog,) = fed_inner_puzzle.curried_args
+        potentially_restricted_puzzle = UnknownPuzzle(known_puzzle=potentially_restricted_puzzle_prog)
+        if potentially_restricted_puzzle == RESTRICTION_MOD:
+            if potentially_restricted_puzzle.curried_args is None:
+                return None
+            member_restrictions, dpuz_restrictions, inner_puzzle_prog = potentially_restricted_puzzle.curried_args
+            restrictions = [
+                *(
+                    UnknownRestriction(
+                        restriction_hint=RestrictionHint(
+                            member_not_dpuz=member_not_dpuz,
+                            puzhash=restriction_prog.get_tree_hash(),
+                            memo=Program.to(None),
+                        )
+                    )
+                    for restriction_set, member_not_dpuz in zip((member_restrictions, dpuz_restrictions), (True, False))
+                    for restriction_prog in restriction_set.as_iter()
+                ),
+            ]
+            inner_puzzle = UnknownPuzzle(known_puzzle=inner_puzzle_prog)
+        else:
+            restrictions = []
+            inner_puzzle = potentially_restricted_puzzle
+
+        return cls(nonce=nonce, restrictions=restrictions, puzzle=inner_puzzle)  # type: ignore[return-value, arg-type]

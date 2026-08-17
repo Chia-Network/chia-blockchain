@@ -8,7 +8,7 @@ from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 def test_unknown_puzzle() -> None:
     no_curry = Program.to("this is a program without curried params")
-    unknown_puz = UnknownPuzzle(no_curry)
+    unknown_puz = UnknownPuzzle(known_puzzle=no_curry)
     assert unknown_puz.mod is None
     assert unknown_puz.curried_args is None
     assert unknown_puz.puzzle_hash == no_curry.get_tree_hash()
