@@ -68,12 +68,27 @@ class PuzzleWithPuzzleHash:
         return self.pre_computed_puzzle_hash
 
 
-@dataclass
+@dataclass(kw_only=True)
 class UnknownPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[InnerPuzzle] = cast("UnknownPuzzle", None)
 
-    puzzle: Program
+    known_puzzle: Program | None = None
+    known_puzzle_hash: bytes32 | None = None
+
+    def __post_init__(self) -> None:
+        if self.known_puzzle is None and self.known_puzzle_hash is None:
+            raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
+
+    @property
+    def puzzle(self) -> Program:
+        if self.known_puzzle is None:
+            raise ValueError("Attempting to access puzzle when only puzzle hash is known")
+        return self.known_puzzle
+
+    @property
+    def puzzle_hash_optimized(self) -> bytes32:
+        return self.known_puzzle_hash if self.known_puzzle_hash is not None else self.puzzle.get_tree_hash()
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:
@@ -109,3 +124,9 @@ class UnknownSolution:
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
+
+
+@dataclass
+class DelegatedPuzzleAndSolution:
+    puzzle: InnerPuzzle
+    solution: Solution

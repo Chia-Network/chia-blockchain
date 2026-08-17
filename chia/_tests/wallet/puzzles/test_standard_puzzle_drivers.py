@@ -48,20 +48,25 @@ def test_standard_puzzle_drivers() -> None:
     assert from_custom_hidden.synthetic_public_key == custom_synthetic
     assert from_custom_hidden.hidden_puzzle_info.puzzle_hash == custom_hidden.get_tree_hash()
 
-    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(Program.to(1))) is None
-    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(MOD.curry(synthetic_public_key, Program.to(2)))) is None
+    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))) is None
+    assert (
+        StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=MOD.curry(synthetic_public_key, Program.to(2))))
+        is None
+    )
 
-    matched_without_solution = StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(from_synthetic.puzzle))
+    matched_without_solution = StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.puzzle))
     assert matched_without_solution is not None
     assert matched_without_solution.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_without_solution.pre_known_original_public_key is None
     assert matched_without_solution.hidden_puzzle_info.puzzle == DEFAULT_HIDDEN_PUZZLE
 
     with mock.patch.object(UnknownPuzzle, "curried_args", new_callable=mock.PropertyMock, return_value=None):
-        assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(from_synthetic.puzzle)) is None
+        assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.puzzle)) is None
 
     with pytest.raises(ValueError, match="Trying to match a standard puzzle without a standard puzzle solution"):
-        StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(from_synthetic.puzzle), solution=Program.to(None))
+        StandardPuzzle.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.puzzle), solution=Program.to(None)
+        )
 
     delegated_reveal = Program.to((1, [Remark(Program.to("delegated")).to_program()]))
     delegated_solution = Program.NIL
@@ -70,7 +75,7 @@ def test_standard_puzzle_drivers() -> None:
         delegated_solution=delegated_solution,
     )
     matched_delegated = StandardPuzzle.match(
-        unknown_puzzle=UnknownPuzzle(from_synthetic.puzzle),
+        unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.puzzle),
         solution=solution_without_original,
     )
     assert matched_delegated is not None
@@ -84,7 +89,7 @@ def test_standard_puzzle_drivers() -> None:
         delegated_solution=Program.to([42]),
     )
     matched_hidden = StandardPuzzle.match(
-        unknown_puzzle=UnknownPuzzle(from_synthetic.puzzle),
+        unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.puzzle),
         solution=solution_with_original,
     )
     assert matched_hidden is not None
