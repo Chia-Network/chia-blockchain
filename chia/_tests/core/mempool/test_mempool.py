@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import random
 from collections.abc import Callable
-from typing import Any
 
 import pytest
 from chia_rs import (
@@ -46,7 +45,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.eligible_coin_spends import IdenticalSpendDedup
+from chia.full_node.eligible_coin_spends import DedupCoinSpend, IdenticalSpendDedup
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import MAX_BLOCK_ATOMS, MAX_BLOCK_PAIRS, MAX_SKIPPED_ITEMS, MAX_SPENDS_PER_BLOCK, Mempool
@@ -73,7 +72,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.casts import int_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -3532,10 +3531,12 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
     dedup_calls = 0
     original_get_deduplication_info = IdenticalSpendDedup.get_deduplication_info
 
-    def counting_get_deduplication_info(self: IdenticalSpendDedup, **kwargs: Any) -> Any:
+    def counting_get_deduplication_info(
+        self: IdenticalSpendDedup, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
+    ) -> tuple[list[CoinSpend], uint64, list[Coin], dict[bytes32, DedupCoinSpend]]:
         nonlocal dedup_calls
         dedup_calls += 1
-        return original_get_deduplication_info(self, **kwargs)
+        return original_get_deduplication_info(self, bundle_coin_spends=bundle_coin_spends)
 
     monkeypatch.setattr(IdenticalSpendDedup, "get_deduplication_info", counting_get_deduplication_info)
 
