@@ -313,6 +313,7 @@ class FullNode:
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
+                fast_forward=self.config.get("fast-forward", True),
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(

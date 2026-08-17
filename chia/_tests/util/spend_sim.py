@@ -59,9 +59,13 @@ and is designed so that you could test with it and then swap in a real rpc clien
 
 @asynccontextmanager
 async def sim_and_client(
-    db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
+    db_path: Path | None = None,
+    defaults: ConsensusConstants = DEFAULT_CONSTANTS,
+    pass_prefarm: bool = True,
+    *,
+    fast_forward: bool = True,
 ) -> AsyncIterator[tuple[SpendSim, SimClient]]:
-    async with SpendSim.managed(db_path, defaults) as sim:
+    async with SpendSim.managed(db_path, defaults, fast_forward=fast_forward) as sim:
         client: SimClient = SimClient(sim)
         if pass_prefarm:
             await sim.farm_block()
@@ -156,7 +160,11 @@ class SpendSim:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+        cls,
+        db_path: Path | None = None,
+        defaults: ConsensusConstants = DEFAULT_CONSTANTS,
+        *,
+        fast_forward: bool = True,
     ) -> AsyncIterator[Self]:
         self = cls()
         if db_path is None:
@@ -175,6 +183,7 @@ class SpendSim:
                 defaults,
                 InlineExecutor(),
                 validation_timeout=10,
+                fast_forward=fast_forward,
             ) as self.mempool_manager:
                 # Load the next data if there is any
                 async with self.db_wrapper.writer_maybe_transaction() as conn:
