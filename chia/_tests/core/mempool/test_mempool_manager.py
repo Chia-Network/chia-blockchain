@@ -343,6 +343,8 @@ def make_test_conds(
     before_seconds_relative: int | None = None,
     before_seconds_absolute: int | None = None,
     cost: int = 0,
+    num_atoms: int = 0,
+    num_pairs: int = 0,
     spend_ids: Sequence[tuple[bytes32 | Coin, int]] = [(TEST_COIN_ID, 0)],
     created_coins: list[list[CreateCoin]] | None = None,
 ) -> SpendBundleConditions:
@@ -397,8 +399,8 @@ def make_test_conds(
         False,
         0,
         0,
-        0,
-        0,
+        num_atoms,
+        num_pairs,
         0,
     )
 
@@ -949,6 +951,8 @@ def mk_item(
     *,
     cost: int = 1,
     fee: int = 0,
+    num_atoms: int = 0,
+    num_pairs: int = 0,
     assert_height: int | None = None,
     assert_before_height: int | None = None,
     assert_before_seconds: int | None = None,
@@ -970,7 +974,7 @@ def mk_item(
         coin_spends.append(coin_spend)
         bundle_coin_spends[coin_id] = mk_bcs(coin_spend, f)
     spend_bundle = SpendBundle(coin_spends, G2Element())
-    conds = make_test_conds(cost=cost, spend_ids=spend_ids)
+    conds = make_test_conds(cost=cost, num_atoms=num_atoms, num_pairs=num_pairs, spend_ids=spend_ids)
     return MempoolItem(
         aggregated_signature=spend_bundle.aggregated_signature,
         fee=uint64(fee),
