@@ -229,6 +229,7 @@ def check_removals(
     bundle_coin_spends: dict[bytes32, BundleCoinSpend],
     *,
     get_items_by_coin_ids: Callable[[list[bytes32]], list[MempoolItem]],
+    fast_forward: bool = True,
 ) -> tuple[Err | None, list[MempoolItem]]:
     """
     This function checks for double spends, unknown spends and conflicting transactions in mempool.
@@ -238,8 +239,9 @@ def check_removals(
     """
     conflicts = set()
     for coin_id, coin_bcs in bundle_coin_spends.items():
+        supports_ff = fast_forward and coin_bcs.supports_fast_forward
         # 1. Checks if it's been spent already
-        if removals[coin_id].spent and not coin_bcs.supports_fast_forward:
+        if removals[coin_id].spent and not supports_ff:
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
@@ -263,14 +265,15 @@ def check_removals(
                 if conflict_bcs is None:
                     log.warning(f"Coin ID {coin_id} expected but not found in mempool item {item.name}")
                     return Err.INVALID_SPEND_BUNDLE, []
+            conflict_supports_ff = fast_forward and conflict_bcs.supports_fast_forward
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
-            if not coin_bcs.supports_fast_forward and not coin_bcs.eligible_for_dedup:
+            if not supports_ff and not coin_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
             # if the spend we're adding is FF, but there's a conflicting spend
             # that isn't FF, they can't be chained, so that's a conflict
-            elif coin_bcs.supports_fast_forward and not conflict_bcs.supports_fast_forward:
+            elif supports_ff and not conflict_supports_ff:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP, but there's a conflicting spend
@@ -312,6 +315,10 @@ class MempoolManager:
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
     validation_timeout: float
+    # When False, singleton fast-forward is disabled: spends are not marked FF
+    # eligible and the double-spend / mempool-conflict exceptions for FF do not
+    # apply. Controlled by full_node config key "fast-forward" (default True).
+    fast_forward: bool
 
     def __init__(
         self,
@@ -322,6 +329,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        fast_forward: bool = True,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -357,6 +365,7 @@ class MempoolManager:
         self._worker_queue_size = 0
         self.validation_timeout = validation_timeout
         self.pool = pool
+        self.fast_forward = fast_forward
 
         # The mempool will correspond to a certain peak
         self.peak: BlockRecordProtocol | None = None
@@ -379,6 +388,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        fast_forward: bool = True,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
@@ -387,6 +397,7 @@ class MempoolManager:
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
             validation_timeout=validation_timeout,
+            fast_forward=fast_forward,
         )
         try:
             yield self
@@ -677,7 +688,7 @@ class MempoolManager:
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
-            if bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend):
+            if self.fast_forward and bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend):
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been spent in a
                 # non-FF spend, this fast forward spend will never become valid.
@@ -768,7 +779,10 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = check_removals(
-            removal_record_dict, bundle_coin_spends, get_items_by_coin_ids=self.mempool.get_items_by_coin_ids
+            removal_record_dict,
+            bundle_coin_spends,
+            get_items_by_coin_ids=self.mempool.get_items_by_coin_ids,
+            fast_forward=self.fast_forward,
         )
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.

@@ -261,6 +261,7 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
+    fast_forward: bool = True,
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -269,6 +270,7 @@ async def instantiate_mempool_manager(
         InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
         validation_timeout=10,
+        fast_forward=fast_forward,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -2489,13 +2491,14 @@ def make_singleton_spend(
 
 
 @asynccontextmanager
-async def setup_mempool(coins: TestCoins) -> AsyncGenerator[MempoolManager, None]:
+async def setup_mempool(coins: TestCoins, *, fast_forward: bool = True) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         coins.get_coin_records,
         coins.get_unspent_lineage_info,
         DEFAULT_CONSTANTS,
         InlineExecutor(),
         validation_timeout=10,
+        fast_forward=fast_forward,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=uint32(5000000), timestamp=uint64(12345678))
         await mempool_manager.new_peak(test_block_record, None)
@@ -3042,8 +3045,9 @@ async def test_spending_singleton_to_invalidate_existing_ff_spends() -> None:
 
 @pytest.mark.parametrize("flags", [ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, ELIGIBLE_FOR_FF | ELIGIBLE_FOR_DEDUP])
 @pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("fast_forward", [True, False])
 @pytest.mark.anyio
-async def test_check_removals_with_block_creation(flags: int, old: bool) -> None:
+async def test_check_removals_with_block_creation(flags: int, old: bool, fast_forward: bool) -> None:
     LAUNCHER_ID = bytes32([1] * 32)
     PARENT_PARENT = bytes32([2] * 32)
     singleton_spend = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT)
@@ -3051,7 +3055,7 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
         coins=[singleton_spend.coin, TEST_COIN], lineage={singleton_spend.coin.puzzle_hash: singleton_spend.coin}
     )
 
-    async with setup_mempool(coins) as mempool_manager:
+    async with setup_mempool(coins, fast_forward=fast_forward) as mempool_manager:
         sb1 = SpendBundle([singleton_spend], G2Element())
         sb1_conds = make_test_conds(
             spend_ids=[(singleton_spend.coin, 0)],
@@ -3108,6 +3112,7 @@ class CheckRemovalsCase:
     bundle_coin_spends: dict[bytes32, BundleCoinSpend] = dataclasses.field(default_factory=dict)
     conflicting_mempool_items: dict[bytes32, list[MempoolItem]] = dataclasses.field(default_factory=dict)
     expected_result: tuple[Err | None, list[MempoolItem]] = dataclasses.field(default_factory=lambda: (None, []))
+    fast_forward: bool = True
     marks: Marks = ()
 
 
@@ -3136,6 +3141,13 @@ class CheckRemovalsCase:
         expected_result=(None, []),
     ),
     CheckRemovalsCase(
+        id="Already spent FF coin rejected when fast-forward disabled",
+        removals={TEST_COIN_ID: make_coin_record(TEST_COIN, spent_block_index=1)},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
+        expected_result=(Err.DOUBLE_SPEND, []),
+        fast_forward=False,
+    ),
+    CheckRemovalsCase(
         id="FF coin, non FF mempool conflict",
         removals={TEST_COIN_ID: TEST_COIN_RECORD},
         bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
@@ -3155,6 +3167,14 @@ class CheckRemovalsCase:
         bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
         conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])]},
         expected_result=(None, []),
+    ),
+    CheckRemovalsCase(
+        id="FF coin, FF mempool conflict rejected when fast-forward disabled",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD},
+        bundle_coin_spends={TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF)},
+        conflicting_mempool_items={TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])]},
+        expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])]),
+        fast_forward=False,
     ),
     CheckRemovalsCase(
         id="Dedup coin, Dedup mempool conflict",
@@ -3209,6 +3229,23 @@ class CheckRemovalsCase:
         expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN])]),
     ),
     CheckRemovalsCase(
+        id="Both FF and non FF coins, FF conflict also rejected when fast-forward disabled",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN)),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2), ELIGIBLE_FOR_FF),
+        },
+        conflicting_mempool_items={
+            TEST_COIN_ID: [mk_item([TEST_COIN])],
+            TEST_COIN_ID2: [mk_item([TEST_COIN2], flags=[ELIGIBLE_FOR_FF])],
+        },
+        expected_result=(
+            Err.MEMPOOL_CONFLICT,
+            [mk_item([TEST_COIN]), mk_item([TEST_COIN2], flags=[ELIGIBLE_FOR_FF])],
+        ),
+        fast_forward=False,
+    ),
+    CheckRemovalsCase(
         id="Two FF coins, only one with non FF conflict",
         removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
         bundle_coin_spends={
@@ -3220,6 +3257,23 @@ class CheckRemovalsCase:
             TEST_COIN_ID2: [mk_item([TEST_COIN2])],
         },
         expected_result=(Err.MEMPOOL_CONFLICT, [mk_item([TEST_COIN2])]),
+    ),
+    CheckRemovalsCase(
+        id="Two FF coins both conflict when fast-forward disabled",
+        removals={TEST_COIN_ID: TEST_COIN_RECORD, TEST_COIN_ID2: TEST_COIN_RECORD2},
+        bundle_coin_spends={
+            TEST_COIN_ID: mk_bcs(mk_coin_spend(TEST_COIN), ELIGIBLE_FOR_FF),
+            TEST_COIN_ID2: mk_bcs(mk_coin_spend(TEST_COIN2), ELIGIBLE_FOR_FF),
+        },
+        conflicting_mempool_items={
+            TEST_COIN_ID: [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF])],
+            TEST_COIN_ID2: [mk_item([TEST_COIN2])],
+        },
+        expected_result=(
+            Err.MEMPOOL_CONFLICT,
+            [mk_item([TEST_COIN], flags=[ELIGIBLE_FOR_FF]), mk_item([TEST_COIN2])],
+        ),
+        fast_forward=False,
     ),
     CheckRemovalsCase(
         id="Conflicting items are added to conflicts only once",
@@ -3248,6 +3302,7 @@ def test_check_removals(case: CheckRemovalsCase) -> None:
         bundle_coin_spends=case.bundle_coin_spends,
         removals=case.removals,
         get_items_by_coin_ids=test_get_items_by_coin_ids,
+        fast_forward=case.fast_forward,
     )
     expected_err, expected_conflicts = case.expected_result
     err, conflicts = result

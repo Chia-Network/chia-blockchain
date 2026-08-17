@@ -331,14 +331,17 @@ async def prepare_and_test_singleton(
 
 
 @pytest.mark.anyio
-async def test_singleton_fast_forward_solo() -> None:
+@pytest.mark.parametrize("fast_forward", [True, False])
+async def test_singleton_fast_forward_solo(fast_forward: bool) -> None:
     """
     We don't allow a spend bundle with *only* fast forward spends, since those
     are difficult to evict from the mempool. They would always be valid as long as
-    the singleton exists.
+    the singleton exists. When fast-forward is disabled, a solo spend of the
+    current unspent singleton is treated as a normal spend (and succeeds); a
+    subsequent re-spend of that spent coin is rejected as a double spend.
     """
     SINGLETON_AMOUNT = uint64(1337)
-    async with sim_and_client() as (sim, sim_client):
+    async with sim_and_client(fast_forward=fast_forward) as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
             sim, sim_client, True, SINGLETON_AMOUNT
         )
@@ -347,40 +350,53 @@ async def test_singleton_fast_forward_solo() -> None:
         inner_conditions: list[list[Any]] = [
             [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT],
         ]
-        singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
-        # spending the eve coin is not eligible for fast forward, so we need to make this spend first, to test FF
-        await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=G2Element())
-        unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
-            singleton_puzzle_hash
-        )
-        singleton_child, _ = await get_singleton_and_remaining_coins(sim)
-        assert singleton_child.amount == SINGLETON_AMOUNT
-        assert unspent_lineage_info == UnspentLineageInfo(
-            coin_id=singleton_child.name(),
-            parent_id=eve_coin_spend.coin.name(),
-            parent_parent_id=eve_coin_spend.coin.parent_coin_info,
-        )
-
-        inner_conditions = [[ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_AMOUNT]]
-        # this is a FF spend that isn't combined with any other spend. It's not allowed
+        # This spends the current unspent singleton. With FF enabled it is marked
+        # FF-eligible and rejected as a solo FF bundle. With FF disabled it is a
+        # normal spend of an unspent coin and is accepted.
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
         status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], G2Element()))
-        assert error is Err.INVALID_SPEND_BUNDLE
-        assert status == MempoolInclusionStatus.FAILED
+        if fast_forward:
+            assert status == MempoolInclusionStatus.FAILED
+            assert error is Err.INVALID_SPEND_BUNDLE
+            # Lineage is unchanged because the spend was not farmed
+            unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
+                singleton_puzzle_hash
+            )
+            singleton_child, _ = await get_singleton_and_remaining_coins(sim)
+            assert singleton_child.amount == SINGLETON_AMOUNT
+            assert unspent_lineage_info == UnspentLineageInfo(
+                coin_id=singleton_child.name(),
+                parent_id=eve_coin_spend.coin.name(),
+                parent_parent_id=eve_coin_spend.coin.parent_coin_info,
+            )
+            # Retrying the same solo FF spend is still rejected
+            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], G2Element()))
+            assert status == MempoolInclusionStatus.FAILED
+            assert error is Err.INVALID_SPEND_BUNDLE
+        else:
+            assert status == MempoolInclusionStatus.SUCCESS
+            assert error is None
+            await sim.farm_block()
+            # Re-spending the now-spent singleton is a double spend
+            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], G2Element()))
+            assert status == MempoolInclusionStatus.FAILED
+            assert error is Err.DOUBLE_SPEND
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("is_eligible_for_ff", [True, False])
-async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) -> None:
+@pytest.mark.parametrize("fast_forward", [True, False])
+async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool, fast_forward: bool) -> None:
     """
     This tests uses the `is_eligible_for_ff` parameter to cover both when a
     singleton is eligible for fast forward and when it's not, as we attempt to
     spend an earlier version of it, in a different block, and watch it either
     get properly fast forwarded to the latest unspent (when it's eligible) or
-    get correctly rejected as a double spend (when it's not eligible)
+    get correctly rejected as a double spend (when it's not eligible). The
+    `fast_forward` setting must also be enabled for the FF exception to apply.
     """
     SINGLETON_AMOUNT = uint64(1337)
-    async with sim_and_client() as (sim, sim_client):
+    async with sim_and_client(fast_forward=fast_forward) as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
             sim, sim_client, is_eligible_for_ff, SINGLETON_AMOUNT
         )
@@ -434,7 +450,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             signing_coin=singleton,
             aggsig=sig,
         )
-        if is_eligible_for_ff:
+        if is_eligible_for_ff and fast_forward:
             # Instead of rejecting this as double spend, we perform a fast forward,
             # spending the singleton child as a result, and creating the latest
             # version which is the grandchild in this scenario
@@ -448,21 +464,23 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
                 coin_id=singleton_grandchild.name(), parent_id=singleton_child.name(), parent_parent_id=singleton.name()
             )
         else:
-            # As this singleton is not eligible for fast forward, attempting to
-            # spend one of its earlier versions is considered a double spend
+            # Not eligible for FF, or FF disabled in the mempool: spending an
+            # earlier version is a double spend
             assert status == MempoolInclusionStatus.FAILED
             assert error == Err.DOUBLE_SPEND
 
 
 @pytest.mark.anyio
-async def test_singleton_fast_forward_same_block() -> None:
+@pytest.mark.parametrize("fast_forward", [True, False])
+async def test_singleton_fast_forward_same_block(fast_forward: bool) -> None:
     """
     This tests covers sending multiple transactions that spend an already spent
     singleton version, all in the same block, to make sure they get properly
-    fast forwarded and chained down to a latest unspent version
+    fast forwarded and chained down to a latest unspent version. When
+    fast-forward is disabled, those re-spends are rejected as double spends.
     """
     SINGLETON_AMOUNT = uint64(1337)
-    async with sim_and_client() as (sim, sim_client):
+    async with sim_and_client(fast_forward=fast_forward) as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
             sim, sim_client, True, SINGLETON_AMOUNT
         )
@@ -494,7 +512,7 @@ async def test_singleton_fast_forward_same_block() -> None:
             coin_id=singleton_child.name(), parent_id=singleton.name(), parent_parent_id=eve_coin_spend.coin.name()
         )
         # Now let's send 3 arbitrary spends of the already spent singleton in
-        # one block. They should all properly fast forward
+        # one block. They should all properly fast forward when enabled.
 
         sk = AugSchemeMPL.key_gen(b"a" * 32)
         g1 = sk.get_g1()
@@ -513,8 +531,15 @@ async def test_singleton_fast_forward_same_block() -> None:
             )
             remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
             status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend, remaining_coin_spend], aggsig))
-            assert error is None
-            assert status == MempoolInclusionStatus.SUCCESS
+            if fast_forward:
+                assert error is None
+                assert status == MempoolInclusionStatus.SUCCESS
+            else:
+                assert status == MempoolInclusionStatus.FAILED
+                assert error == Err.DOUBLE_SPEND
+
+        if not fast_forward:
+            return
 
         # Farm a block to process all these spend bundles
         await sim.farm_block()
@@ -530,13 +555,16 @@ async def test_singleton_fast_forward_same_block() -> None:
 
 
 @pytest.mark.anyio
-async def test_mempool_items_immutability_on_ff() -> None:
+@pytest.mark.parametrize("fast_forward", [True, False])
+async def test_mempool_items_immutability_on_ff(fast_forward: bool) -> None:
     """
     This tests processing singleton fast forward spends for mempool items using
-    modified copies, without altering those original mempool items.
+    modified copies, without altering those original mempool items. When
+    fast-forward is disabled, the re-spend of the earlier singleton version is
+    rejected as a double spend.
     """
     SINGLETON_AMOUNT = uint64(1337)
-    async with sim_and_client() as (sim, sim_client):
+    async with sim_and_client(fast_forward=fast_forward) as (sim, sim_client):
         singleton, eve_coin_spend, inner_puzzle, remaining_coin = await prepare_and_test_singleton(
             sim, sim_client, True, SINGLETON_AMOUNT
         )
@@ -583,6 +611,11 @@ async def test_mempool_items_immutability_on_ff() -> None:
         sb = SpendBundle([remaining_coin_spend, singleton_coin_spend], sig)
         sb_name = sb.name()
         status, error = await sim_client.push_tx(sb)
+        if not fast_forward:
+            assert status == MempoolInclusionStatus.FAILED
+            assert error == Err.DOUBLE_SPEND
+            return
+
         assert status == MempoolInclusionStatus.SUCCESS
         assert error is None
         original_item = copy.copy(sim_client.service.mempool_manager.get_mempool_item(sb_name))
@@ -606,13 +639,14 @@ async def test_mempool_items_immutability_on_ff() -> None:
 
 
 @pytest.mark.anyio
-async def test_double_spend_ff_spend_no_latest_unspent() -> None:
+@pytest.mark.parametrize("fast_forward", [True, False])
+async def test_double_spend_ff_spend_no_latest_unspent(fast_forward: bool) -> None:
     """
     This test covers the scenario where we receive a spend bundle with a
     singleton fast forward spend that has currently no unspent coin.
     """
     singleton_amount = uint64(1337)
-    async with sim_and_client() as (sim, sim_client):
+    async with sim_and_client(fast_forward=fast_forward) as (sim, sim_client):
         # Prepare a singleton spend
         singleton, eve_coin_spend, inner_puzzle, _ = await prepare_and_test_singleton(
             sim, sim_client, True, singleton_amount=singleton_amount
