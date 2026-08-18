@@ -1267,6 +1267,15 @@ class WalletNode:
                 elif request_height < height:
                     # The peer might be slightly behind but still synced, so we should allow fetching one more block
                     break
+                elif expected_hash is not None:
+                    # Only reached on the starting height. In anchored mode, this block establishes
+                    # the hash chain used to validate any backtracked headers. Without it, continuing
+                    # would only compare lower headers against the original peak hash and fail later.
+                    # Treat the peer as not synced instead.
+                    self.log.warning(
+                        f"missing header block response for height {request_height} from Peer {peer.get_peer_info()}."
+                    )
+                    return None
             else:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 

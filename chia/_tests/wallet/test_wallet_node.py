@@ -626,6 +626,75 @@ async def test_get_timestamp_for_height_from_peer_rejects_wrong_response_height(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("peak_response", [None, []])
+async def test_get_timestamp_for_height_from_peer_rejects_missing_peak_response(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch, peak_response: list[object] | None
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    expected_hash = bytes32(b"\x01" * 32)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+    requested_heights: list[int] = []
+
+    async def missing_response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object] | None:
+        requested_heights.append(int(start_height))
+        return peak_response
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", missing_response)
+
+    # An anchored lookup whose peak height returns no block (empty or timeout) must not
+    # backtrack with a stale anchor; it returns None after the single failed peak request.
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, expected_hash) is None
+    assert requested_heights == [100]
+    add_to_blocks.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_unanchored_backtracks_past_missing_peak(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    timestamp = uint64(12_345)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+    requested_heights: list[int] = []
+
+    async def response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object]:
+        requested_heights.append(int(start_height))
+        if int(start_height) == 100:
+            return []
+        return [
+            types.SimpleNamespace(
+                height=uint32(start_height),
+                header_hash=bytes32(b"\x05" * 32),
+                prev_header_hash=bytes32(b"\x06" * 32),
+                foliage_transaction_block=types.SimpleNamespace(timestamp=timestamp),
+            )
+        ]
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", response)
+
+    # Without an anchor an empty peak response is not fatal: the lookup keeps backtracking
+    # toward an older transaction block, so the anchored short-circuit must not apply here.
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer) == timestamp
+    assert requested_heights == [100, 99]
+
+
+@pytest.mark.anyio
 async def test_get_timestamp_for_height_from_peer_rejects_multiple_response_blocks(
     root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
