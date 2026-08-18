@@ -9,12 +9,12 @@ from chia_rs import (
     ConsensusConstants,
     G2Element,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     run_block_generator,
     run_block_generator2,
 )
 from chia_rs.sized_ints import uint16, uint32
 
+from chia.consensus.flags import get_flags_for_height_and_constants_interned as get_flags_for_height_and_constants
 from chia.types.generator_types import BlockGenerator
 from chia.util.errors import Err
 from chia.util.streamable import Streamable, streamable

@@ -25,11 +25,12 @@ from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
+from chia.consensus.block_creation import generator_root
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_2026
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -106,7 +107,12 @@ class WalletBlockTools(BlockTools):
             if transaction_data is not None and len(block_list_input) > 0:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
-                block_generator = simple_solution_generator(transaction_data)
+                if block_list_input[-1].height >= constants.HARD_FORK2_HEIGHT:
+                    # post-HF2 consensus (INTERNED_GENERATOR) requires the
+                    # serde_2026 generator format
+                    block_generator = simple_solution_generator_2026(transaction_data)
+                else:
+                    block_generator = simple_solution_generator(transaction_data)
             pool_target = PoolTarget(
                 pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph, uint32(0)
             )
@@ -287,7 +293,7 @@ def get_full_block_and_block_record(
 
     generator_hash = bytes32.zeros
     if block_generator is not None:
-        generator_hash = std_hash(block_generator.program)
+        generator_hash = generator_root(bytes(block_generator.program), height, constants)
 
     foliage_data = FoliageBlockData(
         bytes32.zeros,
