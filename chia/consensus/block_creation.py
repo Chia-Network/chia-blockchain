@@ -51,6 +51,159 @@ def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> ui
     return uint64(removal_amount - addition_amount)
 
 
+def create_transaction_block_info(
+    constants: ConsensusConstants,
+    new_block_gen: NewBlockGenerator | None,
+    prev_block: BlockRecord | None,
+    blocks: BlockRecordsProtocol,
+    total_iters_sp: uint128,
+    timestamp: uint64,
+    compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64] = compute_block_fee,
+) -> tuple[FoliageTransactionBlock, TransactionsInfo] | None:
+    """
+    Computes the farmer-independent transaction-block foliage and transactions info for the block that
+    would extend ``prev_block`` at signage-point total iters ``total_iters_sp``. Returns ``None`` if that
+    block is not a transaction block.
+
+    This is factored out of ``create_foliage`` so that block creation and the ``create_block_generator``
+    RPC (used by lightweight farmer gateways) share a single implementation, rather than duplicating the
+    filter/merkle-root/reward-claim logic. Nothing here depends on the proof of space or farmer identity.
+    """
+    if prev_block is None:
+        is_transaction_block = True
+        prev_transaction_block: BlockRecord | None = None
+    else:
+        is_transaction_block, prev_transaction_block = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
+    if not is_transaction_block:
+        return None
+
+    height: uint32 = uint32(0) if prev_block is None else uint32(prev_block.height + 1)
+
+    byte_array_tx: list[bytearray] = []
+    tx_additions: list[Coin] = []
+    tx_removals: list[bytes32] = []
+    generator_block_heights_list: list[uint32] = []
+
+    # Calculate the cost of transactions
+    if new_block_gen is not None:
+        cost: uint64 = new_block_gen.cost
+        spend_bundle_fees: uint64 = compute_fees(new_block_gen.additions, new_block_gen.removals)
+    else:
+        spend_bundle_fees = uint64(0)
+        cost = uint64(0)
+
+    reward_claims_incorporated: list[Coin] = []
+    if height > 0:
+        assert prev_transaction_block is not None
+        assert prev_block is not None
+        curr: BlockRecord = prev_block
+        while not curr.is_transaction_block:
+            curr = blocks.block_record(curr.prev_hash)
+
+        assert curr.fees is not None
+        pool_coin = create_pool_coin(
+            curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
+        )
+
+        farmer_coin = create_farmer_coin(
+            curr.height,
+            curr.farmer_puzzle_hash,
+            uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
+            constants.GENESIS_CHALLENGE,
+        )
+        assert curr.header_hash == prev_transaction_block.header_hash
+        reward_claims_incorporated += [pool_coin, farmer_coin]
+
+        if curr.height > 0:
+            curr = blocks.block_record(curr.prev_hash)
+            # Prev block is not genesis
+            while not curr.is_transaction_block:
+                pool_coin = create_pool_coin(
+                    curr.height,
+                    curr.pool_puzzle_hash,
+                    calculate_pool_reward(curr.height),
+                    constants.GENESIS_CHALLENGE,
+                )
+                farmer_coin = create_farmer_coin(
+                    curr.height,
+                    curr.farmer_puzzle_hash,
+                    calculate_base_farmer_reward(curr.height),
+                    constants.GENESIS_CHALLENGE,
+                )
+                reward_claims_incorporated += [pool_coin, farmer_coin]
+                curr = blocks.block_record(curr.prev_hash)
+
+    for coin in reward_claims_incorporated:
+        tx_additions.append(coin)
+        byte_array_tx.append(bytearray(coin.puzzle_hash))
+
+    if new_block_gen is not None:
+        generator_block_heights_list = new_block_gen.block_refs
+        for coin in new_block_gen.additions:
+            tx_additions.append(coin)
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
+        for coin in new_block_gen.removals:
+            cname = coin.name()
+            tx_removals.append(cname)
+            byte_array_tx.append(bytearray(cname))
+
+    bip158: PyBIP158 = PyBIP158(byte_array_tx)
+    encoded = bytes(bip158.GetEncoded())
+
+    additions_merkle_items: list[bytes32] = []
+
+    # Create addition Merkle set
+    puzzlehash_coin_map: dict[bytes32, list[bytes32]] = {}
+
+    for coin in tx_additions:
+        if coin.puzzle_hash in puzzlehash_coin_map:
+            puzzlehash_coin_map[coin.puzzle_hash].append(coin.name())
+        else:
+            puzzlehash_coin_map[coin.puzzle_hash] = [coin.name()]
+
+    # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+    for puzzle, coin_ids in puzzlehash_coin_map.items():
+        additions_merkle_items.append(puzzle)
+        additions_merkle_items.append(hash_coin_ids(coin_ids))
+
+    additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
+    removals_root = bytes32(compute_merkle_set_root(tx_removals))
+
+    generator_hash = bytes32.zeros
+    if new_block_gen is not None:
+        generator_hash = std_hash(new_block_gen.program)
+
+    generator_refs_hash = bytes32([1] * 32)
+    if generator_block_heights_list not in (None, []):
+        generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
+        generator_refs_hash = std_hash(generator_ref_list_bytes)
+
+    filter_hash: bytes32 = std_hash(encoded)
+
+    transactions_info = TransactionsInfo(
+        generator_hash,
+        generator_refs_hash,
+        new_block_gen.signature if new_block_gen else G2Element(),
+        spend_bundle_fees,
+        cost,
+        reward_claims_incorporated,
+    )
+    if prev_transaction_block is None:
+        prev_transaction_block_hash: bytes32 = constants.GENESIS_CHALLENGE
+    else:
+        prev_transaction_block_hash = prev_transaction_block.header_hash
+
+    foliage_transaction_block = FoliageTransactionBlock(
+        prev_transaction_block_hash,
+        timestamp,
+        filter_hash,
+        additions_root,
+        removals_root,
+        transactions_info.get_hash(),
+    )
+    return foliage_transaction_block, transactions_info
+
+
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -87,15 +240,6 @@ def create_foliage(
 
     """
 
-    if prev_block is not None:
-        res = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
-        is_transaction_block: bool = res[0]
-        prev_transaction_block: BlockRecord | None = res[1]
-    else:
-        # Genesis is a transaction block
-        prev_transaction_block = None
-        is_transaction_block = True
-
     rng = random.Random()
     rng.seed(seed)
     # Use the extension data to create different blocks based on header hash
@@ -104,11 +248,6 @@ def create_foliage(
         height: uint32 = uint32(0)
     else:
         height = uint32(prev_block.height + 1)
-
-    # Create filter
-    byte_array_tx: list[bytearray] = []
-    tx_additions: list[Coin] = []
-    tx_removals: list[bytes32] = []
 
     pool_target_signature: G2Element | None = get_pool_signature(
         pool_target, reward_block_unfinished.proof_of_space.pool_public_key
@@ -132,144 +271,27 @@ def create_foliage(
         assert prev_block is not None
         prev_block_hash = prev_block.header_hash
 
-    generator_block_heights_list: list[uint32] = []
-
+    tx_info = create_transaction_block_info(
+        constants,
+        new_block_gen,
+        prev_block,
+        blocks,
+        total_iters_sp,
+        timestamp,
+        compute_fees,
+    )
     foliage_transaction_block_hash: bytes32 | None
-
-    if is_transaction_block:
-        cost: uint64
-        spend_bundle_fees: uint64
-
-        # Calculate the cost of transactions
-        if new_block_gen is not None:
-            cost = new_block_gen.cost
-            spend_bundle_fees = compute_fees(new_block_gen.additions, new_block_gen.removals)
-        else:
-            spend_bundle_fees = uint64(0)
-            cost = uint64(0)
-
-        reward_claims_incorporated = []
-        if height > 0:
-            assert prev_transaction_block is not None
-            assert prev_block is not None
-            curr: BlockRecord = prev_block
-            while not curr.is_transaction_block:
-                curr = blocks.block_record(curr.prev_hash)
-
-            assert curr.fees is not None
-            pool_coin = create_pool_coin(
-                curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
-            )
-
-            farmer_coin = create_farmer_coin(
-                curr.height,
-                curr.farmer_puzzle_hash,
-                uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
-                constants.GENESIS_CHALLENGE,
-            )
-            assert curr.header_hash == prev_transaction_block.header_hash
-            reward_claims_incorporated += [pool_coin, farmer_coin]
-
-            if curr.height > 0:
-                curr = blocks.block_record(curr.prev_hash)
-                # Prev block is not genesis
-                while not curr.is_transaction_block:
-                    pool_coin = create_pool_coin(
-                        curr.height,
-                        curr.pool_puzzle_hash,
-                        calculate_pool_reward(curr.height),
-                        constants.GENESIS_CHALLENGE,
-                    )
-                    farmer_coin = create_farmer_coin(
-                        curr.height,
-                        curr.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr.height),
-                        constants.GENESIS_CHALLENGE,
-                    )
-                    reward_claims_incorporated += [pool_coin, farmer_coin]
-                    curr = blocks.block_record(curr.prev_hash)
-
-        for coin in reward_claims_incorporated:
-            tx_additions.append(coin)
-            byte_array_tx.append(bytearray(coin.puzzle_hash))
-
-        if new_block_gen is not None:
-            generator_block_heights_list = new_block_gen.block_refs
-            for coin in new_block_gen.additions:
-                tx_additions.append(coin)
-                byte_array_tx.append(bytearray(coin.puzzle_hash))
-            for coin in new_block_gen.removals:
-                cname = coin.name()
-                tx_removals.append(cname)
-                byte_array_tx.append(bytearray(cname))
-
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
-        encoded = bytes(bip158.GetEncoded())
-
-        additions_merkle_items: list[bytes32] = []
-
-        # Create addition Merkle set
-        puzzlehash_coin_map: dict[bytes32, list[bytes32]] = {}
-
-        for coin in tx_additions:
-            if coin.puzzle_hash in puzzlehash_coin_map:
-                puzzlehash_coin_map[coin.puzzle_hash].append(coin.name())
-            else:
-                puzzlehash_coin_map[coin.puzzle_hash] = [coin.name()]
-
-        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coin_ids in puzzlehash_coin_map.items():
-            additions_merkle_items.append(puzzle)
-            additions_merkle_items.append(hash_coin_ids(coin_ids))
-
-        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
-        removals_root = bytes32(compute_merkle_set_root(tx_removals))
-
-        generator_hash = bytes32.zeros
-        if new_block_gen is not None:
-            generator_hash = std_hash(new_block_gen.program)
-
-        generator_refs_hash = bytes32([1] * 32)
-        if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
-            generator_refs_hash = std_hash(generator_ref_list_bytes)
-
-        filter_hash: bytes32 = std_hash(encoded)
-
-        transactions_info: TransactionsInfo | None = TransactionsInfo(
-            generator_hash,
-            generator_refs_hash,
-            new_block_gen.signature if new_block_gen else G2Element(),
-            spend_bundle_fees,
-            cost,
-            reward_claims_incorporated,
-        )
-        if prev_transaction_block is None:
-            prev_transaction_block_hash: bytes32 = constants.GENESIS_CHALLENGE
-        else:
-            prev_transaction_block_hash = prev_transaction_block.header_hash
-
-        assert transactions_info is not None
-        foliage_transaction_block: FoliageTransactionBlock | None = FoliageTransactionBlock(
-            prev_transaction_block_hash,
-            timestamp,
-            filter_hash,
-            additions_root,
-            removals_root,
-            transactions_info.get_hash(),
-        )
-        assert foliage_transaction_block is not None
-
+    if tx_info is not None:
+        foliage_transaction_block, transactions_info = tx_info
         foliage_transaction_block_hash = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: G2Element | None = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
-        assert foliage_transaction_block_signature is not None
     else:
-        foliage_transaction_block_hash = None
-        foliage_transaction_block_signature = None
         foliage_transaction_block = None
         transactions_info = None
+        foliage_transaction_block_hash = None
+        foliage_transaction_block_signature = None
     assert (foliage_transaction_block_hash is None) == (foliage_transaction_block_signature is None)
 
     foliage = Foliage(
