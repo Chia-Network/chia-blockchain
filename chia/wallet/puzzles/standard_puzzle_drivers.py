@@ -19,6 +19,8 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_drivers import (
     InnerPuzzle,
+    NilSolution,
+    P2Conditions,
     PuzzleWithPuzzleHash,
     SmartCoin,
     Solution,
@@ -117,8 +119,8 @@ class StandardPuzzleSolution:
     @classmethod
     def for_conditions(cls, conditions: list[Condition]) -> Self:
         return cls(
-            delegated_puzzle=Program.to((1, [cond.to_program() for cond in conditions])),
-            delegated_solution=Program.NIL,
+            delegated_puzzle=P2Conditions(conditions=conditions).puzzle,
+            delegated_solution=NilSolution().as_program(),
         )
 
     def as_program(self) -> Program:

@@ -38,6 +38,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
     InnerPuzzle,
+    NilSolution,
+    P2Conditions,
     PuzzleWithPuzzleHash,
     UnknownPuzzle,
     UnknownSolution,
@@ -365,25 +367,20 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             exiting=exiting,
             genesis_challenge=genesis_challenge,
         )
-        rev_puzzle = Program.to(
-            (
-                1,
-                [
-                    CreateCoin(
-                        plotnft_inner_puzzle.puzzle_hash,
-                        uint64(1),
-                        memo_blob=Program.to((hint, plotnft_inner_puzzle.puzzle_with_restrictions.memo())),
-                    ).to_program(),
-                    CreateCoinAnnouncement(msg=b"").to_program(),
-                    *([] if remark is None else [remark.to_program()]),
-                ],
-            )
+        rev_puzzle = P2Conditions(
+            conditions=[
+                CreateCoin(
+                    plotnft_inner_puzzle.puzzle_hash,
+                    uint64(1),
+                    memo_blob=Program.to((hint, plotnft_inner_puzzle.puzzle_with_restrictions.memo())),
+                ),
+                CreateCoinAnnouncement(msg=b""),
+                *([] if remark is None else [remark]),
+            ]
         )
         pre_rev_launch_result = super().launch(
             origin_coin=origin_coin,
-            launch_info=SingletonLaunchInfo(
-                desired_inner_puzzle=UnknownPuzzle(known_puzzle=rev_puzzle), key_value_hints={}
-            ),
+            launch_info=SingletonLaunchInfo(desired_inner_puzzle=rev_puzzle, key_value_hints={}),
         )
         rev_coin_id = pre_rev_launch_result.launched_singleton.coin.name()
         assert_rev_ca = AssertCoinAnnouncement(asserted_id=rev_coin_id, asserted_msg=b"")
@@ -394,7 +391,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             SingletonSolution(
                 lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
                 coin_amount=uint64(1),
-                inner_solution=UnknownSolution(solution=Program.NIL),
+                inner_solution=NilSolution(),
             ).as_program(),
         )
         return PlotNFTLaunchResult(
@@ -409,7 +406,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
                 launcher_id=launcher_id,
                 lineage_proof=LineageProof(
                     parent_name=pre_rev_launch_result.launched_singleton.coin.parent_coin_info,
-                    inner_puzzle_hash=rev_puzzle.get_tree_hash(),
+                    inner_puzzle_hash=rev_puzzle.puzzle_hash,
                     amount=pre_rev_launch_result.launched_singleton.coin.amount,
                 ),
                 inner_puzzle=plotnft_inner_puzzle,
@@ -584,22 +581,17 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             reward_delegated_puzzles_and_solutions=reward_delegated_puzzles_and_solutions,
         )
         dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_puzzle=Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(
-                                puzzle_hash=self.inner_puzzle.puzzle_hash,
-                                amount=self.coin.amount,
-                                memos=[self.singleton_struct.struct_hash],
-                            ).to_program(),
-                            *[msg.to_program() for msg in messages],
-                        ],
-                    )
-                )
+            puzzle=P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        puzzle_hash=self.inner_puzzle.puzzle_hash,
+                        amount=self.coin.amount,
+                        memos=[self.singleton_struct.struct_hash],
+                    ),
+                    *messages,
+                ]
             ),
-            solution=UnknownSolution(solution=Program.to([])),
+            solution=NilSolution(),
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
@@ -625,22 +617,17 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         )
 
         dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_puzzle=Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(
-                                plotnft_puzzle.puzzle_hash,
-                                amount=self.coin.amount,
-                                memo_blob=Program.to((self.singleton_struct.struct_hash, plotnft_puzzle.memo)),
-                            ).to_program(),
-                            *(cond.to_program() for cond in extra_conditions),
-                        ],
-                    )
-                )
+            puzzle=P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        plotnft_puzzle.puzzle_hash,
+                        amount=self.coin.amount,
+                        memo_blob=Program.to((self.singleton_struct.struct_hash, plotnft_puzzle.memo)),
+                    ),
+                    *extra_conditions,
+                ]
             ),
-            solution=UnknownSolution(solution=Program.to([])),
+            solution=NilSolution(),
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
