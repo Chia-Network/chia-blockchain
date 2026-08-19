@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar, cast
 
@@ -50,25 +50,25 @@ class OptimizedPuzzleHashPuzzle(Protocol):
     def puzzle_hash_optimized(self) -> bytes32: ...
 
 
-@dataclass
 class PuzzleWithPuzzleHash:
     """
     This is designed to be a base class to `Inner/OuterPuzzle`s which provides caching on the puzzle hash generation
     """
 
-    pre_computed_puzzle_hash: bytes32 | None = field(default=None, kw_only=True)
+    pre_computed_puzzle_hash: bytes32 | None = None
 
     @property
     def puzzle_hash(self) -> bytes32:
         if self.pre_computed_puzzle_hash is None:
             if isinstance(self, OptimizedPuzzleHashPuzzle):
-                self.pre_computed_puzzle_hash = self.puzzle_hash_optimized
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle_hash_optimized)
             else:
-                self.pre_computed_puzzle_hash = self.puzzle.get_tree_hash()  # type: ignore[attr-defined]
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle.get_tree_hash())  # type: ignore[attr-defined]
+        assert self.pre_computed_puzzle_hash is not None
         return self.pre_computed_puzzle_hash
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class UnknownPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[InnerPuzzle] = cast("UnknownPuzzle", None)

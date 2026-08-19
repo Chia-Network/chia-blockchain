@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast
 
 from chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -95,7 +96,7 @@ class SingletonStruct:
 _T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast("SingletonPuzzle[_T_InnerPuzzle]", None)
@@ -139,6 +140,11 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
             launcher_id=bytes32(singleton_struct.at("rf").as_atom()),
             inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
         )
+
+    def with_inner_puzzle(self, inner_puzzle: InnerPuzzle) -> Any:
+        # should be used as little as possible because it doesn't seem possible to return a
+        # newly paramed instance of the current type so we have to resort to Any
+        return replace(self, inner_puzzle=inner_puzzle)  # type: ignore[arg-type]
 
 
 @dataclass(kw_only=True)
@@ -187,7 +193,7 @@ class SingletonLaunchInfo(Generic[_T_InnerPuzzle]):
 @dataclass(kw_only=True, frozen=True)
 class SingletonLaunchResult(Generic[_T_InnerPuzzle]):
     necessary_conditions: list[Condition]
-    launcher_spend: CoinSpend
+    necessary_spends: list[CoinSpend]
     launched_singleton: Singleton[_T_InnerPuzzle]
 
 
@@ -199,16 +205,15 @@ def _new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: InnerPuzzle, s
     )
 
 
-_T_LaunchInnerPuzzle = TypeVar("_T_LaunchInnerPuzzle", bound=InnerPuzzle)
-
-
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
     if TYPE_CHECKING:
         _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("Singleton[_T_InnerPuzzle]", None)
 
     coin: Coin
     lineage_proof: LineageProof
+
+    _T_LaunchInnerPuzzle = TypeVar("_T_LaunchInnerPuzzle", bound=InnerPuzzle)
 
     @classmethod
     def launch(
@@ -240,11 +245,13 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
 
         return SingletonLaunchResult(
             necessary_conditions=[create_launcher_condition, assert_launcher_announcement],
-            launcher_spend=make_spend(
-                launcher_coin,
-                cls.singleton_puzzles.singleton_launcher,
-                launcher_solution,
-            ),
+            necessary_spends=[
+                make_spend(
+                    launcher_coin,
+                    cls.singleton_puzzles.singleton_launcher,
+                    launcher_solution,
+                )
+            ],
             launched_singleton=Singleton(
                 coin=Coin(
                     parent_coin_info=launcher_id,
@@ -287,7 +294,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
     def claim_p2_singletons(
         self,
         *,
-        rewards_to_claim: list[P2Singleton],
+        rewards_to_claim: Sequence[P2Singleton],
         reward_delegated_puzzles_and_solutions: list[DelegatedPuzzleAndSolution],
     ) -> tuple[list[CoinSpend], list[SendMessage]]:
         if len(rewards_to_claim) != len(reward_delegated_puzzles_and_solutions):
@@ -313,7 +320,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
         ], messages_to_send
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class P2SingletonPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[InnerPuzzle] = cast("P2SingletonPuzzle", None)
@@ -359,6 +366,6 @@ class P2SingletonPuzzle(PuzzleWithPuzzleHash):
         return cls(singleton_id=bytes32(singleton_struct_prog.at("rf").as_atom()))
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class P2Singleton(P2SingletonPuzzle):
     coin: Coin

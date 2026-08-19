@@ -109,7 +109,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         await push_bundle(
             sim,
             sim_client,
-            [starting_spend, launch_result.launcher_spend],
+            [starting_spend, *launch_result.necessary_spends],
             cost_logger=cost_logger,
             cost_log_msg="Singleton Launch + ACS",
         )
@@ -126,7 +126,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
             cost_logger=cost_logger,
             cost_log_msg="Singleton Eve Spend w/ ACS",
         )
-        singleton.inner_puzzle = ACS
+        singleton = singleton.with_inner_puzzle(ACS)
 
         await sim.farm_block(ACS_PH)  # for non-FF spends
 
@@ -140,7 +140,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
             cost_logger=cost_logger,
             cost_log_msg="Singleton Spend + ACS",
         )
-        singleton.inner_puzzle = ACS
+        singleton = singleton.with_inner_puzzle(ACS)
 
         # CLAIM A P2_SINGLETON
         assert singleton.coin == await odd_singleton_coin(sim)
@@ -171,7 +171,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
             cost_logger=cost_logger,
             cost_log_msg="Singleton w/ ACS claim p2_singleton",
         )
-        singleton.inner_puzzle = ACS
+        singleton = singleton.with_inner_puzzle(ACS)
         assert len(await sim_client.get_coin_records_by_puzzle_hash(bytes32.zeros, include_spent_coins=False)) == 1
 
         # CREATE MULTIPLE ODD CHILDREN (Negative Test)
