@@ -21,41 +21,48 @@ from chia.wallet.conditions import (
     SendMessage,
     parse_conditions_non_consensus,
 )
-from chia.wallet.puzzles.custody.custody_architecture import (
-    DelegatedPuzzleAndSolution,
-    PuzzleWithRestrictions,
-)
+from chia.wallet.puzzles.custody.custody_architecture import MIPSComponentBase, PuzzleWithRestrictions
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
 from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
+from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, InnerPuzzle, UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
-class EasyDPuzWrapper:
-    def memo(self, nonce: int) -> Program:
+class EasyDPuzWrapper(MIPSComponentBase):
+    @property
+    def memo(self) -> Program:
         return Program.to(None)
 
-    def puzzle(self, nonce: int) -> Program:
+    @property
+    def puzzle(self) -> Program:
         # (mod (conditions remark) (c (list REMARK remark) conditions)) -> (c (c (q . 1) (c 5 ())) 2)
         return Program.to([4, [4, (1, 1), [4, 5, None]], 2])
 
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
+    @property
+    def puzzle_hash(self) -> bytes32:
+        return self.puzzle.get_tree_hash()
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None: ...
 
 
 @pytest.mark.anyio
 async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         restriction = ValidatorStackRestriction(required_wrappers=[EasyDPuzWrapper(), EasyDPuzWrapper()])
-        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], member=ACSMember())
 
         # Farm and find coin
-        await sim.farm_block(pwr.puzzle_hash())
-        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+        await sim.farm_block(pwr.puzzle_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[0].coin
 
         # Attempt to just use any old dpuz
-        any_old_dpuz = DelegatedPuzzleAndSolution(puzzle=Program.to((1, [[1, "foo"]])), solution=Program.to(None))
+        any_old_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [[1, "foo"]]))),
+            solution=UnknownSolution(solution=Program.to(None)),
+        )
         not_wrapped_attempt = WalletSpendBundle(
-            [make_spend(coin, pwr.puzzle_reveal(), pwr.solve([], [], Program.to([[1, "bar"]]), any_old_dpuz))],
+            [make_spend(coin, pwr.puzzle, pwr.solve([], [], Program.to([[1, "bar"]]), any_old_dpuz))],
             G2Element(),
         )
         result = await client.push_tx(not_wrapped_attempt)
@@ -71,10 +78,10 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
                 [
                     make_spend(
                         coin,
-                        pwr.puzzle_reveal(),
+                        pwr.puzzle,
                         pwr.solve(
                             [],
-                            [restriction.solve(original_dpuz=any_old_dpuz.puzzle)],
+                            [restriction.solve(original_dpuz=any_old_dpuz.puzzle.puzzle)],
                             Program.to([[1, "bar"]]),
                             wrapped_dpuz,
                         ),
@@ -87,7 +94,7 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None, None])
+        assert restriction.memo == Program.to([None, None])
 
         # error check
         with pytest.raises(
@@ -100,22 +107,25 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         restriction = ValidatorStackRestriction(required_wrappers=[Heightlock(heightlock=uint32(10))])
-        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], member=ACSMember())
 
         # Farm and find coin
-        await sim.farm_block(pwr.puzzle_hash())
-        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+        await sim.farm_block(pwr.puzzle_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[0].coin
 
         # Attempt to just use any old dpuz
-        any_old_dpuz = DelegatedPuzzleAndSolution(puzzle=Program.to((1, [[1, "foo"]])), solution=Program.to(None))
+        any_old_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [[1, "foo"]]))),
+            solution=UnknownSolution(solution=Program.to(None)),
+        )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
         not_timelocked_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
-                    pwr.puzzle_reveal(),
+                    pwr.puzzle,
                     pwr.solve(
-                        [], [Program.to([any_old_dpuz.puzzle.get_tree_hash()])], Program.to([[1, "bar"]]), any_old_dpuz
+                        [], [Program.to([any_old_dpuz.puzzle.puzzle_hash])], Program.to([[1, "bar"]]), any_old_dpuz
                     ),
                 )
             ],
@@ -126,8 +136,12 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
 
         # Now actually put a timelock in the dpuz
         timelocked_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to((1, [AssertHeightRelative(height=uint32(10)).to_program(), [1, "foo"], [1, "bat"]])),
-            solution=Program.to(None),
+            puzzle=UnknownPuzzle(
+                known_puzzle=Program.to(
+                    (1, [AssertHeightRelative(height=uint32(10)).to_program(), [1, "foo"], [1, "bat"]])
+                )
+            ),
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [Program.to(None)])
         sb = cost_logger.add_cost(
@@ -136,10 +150,10 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
                 [
                     make_spend(
                         coin,
-                        pwr.puzzle_reveal(),
+                        pwr.puzzle,
                         pwr.solve(
                             [],
-                            [Program.to([timelocked_dpuz.puzzle.get_tree_hash()])],
+                            [Program.to([timelocked_dpuz.puzzle.puzzle_hash])],
                             Program.to([[1, "bar"]]),
                             wrapped_dpuz,
                         ),
@@ -164,7 +178,7 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
         assert Remark(Program.to(["bat"])) in conditions
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None])
+        assert restriction.memo == Program.to([None])
 
 
 @pytest.mark.anyio
@@ -173,24 +187,25 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
         restriction = ValidatorStackRestriction(
             required_wrappers=[FixedCreateCoinDestinations(allowed_ph=bytes32.zeros)]
         )
-        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], member=ACSMember())
 
         # Farm and find coin
-        await sim.farm_block(pwr.puzzle_hash())
-        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+        await sim.farm_block(pwr.puzzle_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[0].coin
 
         # Attempt to create a coin somewhere else
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()])), solution=Program.to(None)
+            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()]))),
+            solution=UnknownSolution(Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
         escape_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
-                    pwr.puzzle_reveal(),
+                    pwr.puzzle,
                     pwr.solve(
-                        [], [Program.to([any_old_dpuz.puzzle.get_tree_hash()])], Program.to([[1, "bar"]]), any_old_dpuz
+                        [], [Program.to([any_old_dpuz.puzzle.puzzle_hash])], Program.to([[1, "bar"]]), any_old_dpuz
                     ),
                 )
             ],
@@ -201,10 +216,12 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
 
         # Now send it to the correct place
         correct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to(
-                (1, [CreateCoin(bytes32.zeros, uint64(1)).to_program(), Remark(Program.to("foo")).to_program()])
+            puzzle=UnknownPuzzle(
+                known_puzzle=Program.to(
+                    (1, [CreateCoin(bytes32.zeros, uint64(1)).to_program(), Remark(Program.to("foo")).to_program()])
+                )
             ),
-            solution=Program.to(None),
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(correct_dpuz, [Program.to(None)])
         sb = cost_logger.add_cost(
@@ -213,10 +230,10 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
                 [
                     make_spend(
                         coin,
-                        pwr.puzzle_reveal(),
+                        pwr.puzzle,
                         pwr.solve(
                             [],
-                            [Program.to([correct_dpuz.puzzle.get_tree_hash()])],
+                            [Program.to([correct_dpuz.puzzle.puzzle_hash])],
                             Program.to([Remark(Program.to("bar")).to_program()]),
                             wrapped_dpuz,
                         ),
@@ -235,44 +252,46 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
         assert Remark(Program.to("bar")) in conditions
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None])
+        assert restriction.memo == Program.to([None])
 
 
 @pytest.mark.anyio
 async def test_send_message_banned(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         restriction = ValidatorStackRestriction(required_wrappers=[SendMessageBanned()])
-        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], member=ACSMember())
 
         # Farm and find coin
-        await sim.farm_block(pwr.puzzle_hash())
-        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+        await sim.farm_block(pwr.puzzle_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[0].coin
 
         # Attempt to send a message
         send_message_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to(
-                (
-                    1,
-                    [
-                        SendMessage(
-                            bytes32.zeros,
-                            sender=MessageParticipant(parent_id_committed=bytes32.zeros),
-                            receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
-                        ).to_program()
-                    ],
+            puzzle=UnknownPuzzle(
+                known_puzzle=Program.to(
+                    (
+                        1,
+                        [
+                            SendMessage(
+                                bytes32.zeros,
+                                sender=MessageParticipant(parent_id_committed=bytes32.zeros),
+                                receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
+                            ).to_program()
+                        ],
+                    )
                 )
             ),
-            solution=Program.to(None),
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(send_message_dpuz, [Program.to(None)])
         escape_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
-                    pwr.puzzle_reveal(),
+                    pwr.puzzle,
                     pwr.solve(
                         [],
-                        [Program.to([send_message_dpuz.puzzle.get_tree_hash()])],
+                        [Program.to([send_message_dpuz.puzzle.puzzle_hash])],
                         Program.to(None),
                         wrapped_dpuz,
                     ),
@@ -285,8 +304,8 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
 
         # Now send it to the correct place
         self_destruct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to(None),
-            solution=Program.to(None),
+            puzzle=UnknownPuzzle(known_puzzle=Program.to(None)),
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(self_destruct_dpuz, [Program.to(None)])
         sb = cost_logger.add_cost(
@@ -295,10 +314,10 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
                 [
                     make_spend(
                         coin,
-                        pwr.puzzle_reveal(),
+                        pwr.puzzle,
                         pwr.solve(
                             [],
-                            [Program.to([self_destruct_dpuz.puzzle.get_tree_hash()])],
+                            [Program.to([self_destruct_dpuz.puzzle.puzzle_hash])],
                             Program.to(None),
                             wrapped_dpuz,
                         ),
@@ -311,4 +330,4 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None])
+        assert restriction.memo == Program.to([None])

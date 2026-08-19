@@ -21,7 +21,6 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution as MIPSDpuzAndSol
 from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
 from chia.wallet.puzzles.custody.member_puzzles import SINGLETON_MEMBER_MOD, SingletonMember
 from chia.wallet.puzzles.puzzle_drivers import (
@@ -334,11 +333,15 @@ class P2SingletonPuzzle(PuzzleWithPuzzleHash):
 
     @property
     def _puzzle_with_restrictions(self) -> PuzzleWithRestrictions:
-        return PuzzleWithRestrictions(nonce=self.nonce, restrictions=[], puzzle=self.singleton_member)
+        return PuzzleWithRestrictions(nonce=self.nonce, restrictions=[], member=self.singleton_member)
 
     @property
     def puzzle(self) -> Program:
-        return self._puzzle_with_restrictions.puzzle_reveal()
+        return self._puzzle_with_restrictions.puzzle
+
+    @property
+    def puzzle_hash_optimized(self) -> bytes32:
+        return self._puzzle_with_restrictions.puzzle_hash
 
     def solve(
         self, singleton_inner_puzzle_hash: bytes32, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
@@ -347,10 +350,7 @@ class P2SingletonPuzzle(PuzzleWithPuzzleHash):
             [],
             [],
             self.singleton_member.solve(singleton_inner_puzzle_hash),
-            MIPSDpuzAndSol(
-                puzzle=delegated_puzzle_and_solution.puzzle.puzzle,
-                solution=delegated_puzzle_and_solution.solution.as_program(),
-            ),
+            delegated_puzzle_and_solution,
         )
 
     @classmethod
