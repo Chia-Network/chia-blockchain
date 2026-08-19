@@ -28,13 +28,13 @@ from chia.wallet.puzzles.puzzle_drivers import (
 from chia.wallet.util.curry_and_treehash import curry_and_treehash, shatree_atom
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class HiddenPuzzleInfo(PuzzleWithPuzzleHash):
     puzzle: Program = field(default_factory=lambda: DEFAULT_HIDDEN_PUZZLE)
     pre_computed_puzzle_hash: bytes32 | None = field(default=DEFAULT_HIDDEN_PUZZLE_HASH, kw_only=True)
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class StandardPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[InnerPuzzle] = cast("StandardPuzzle", None)
@@ -51,9 +51,12 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
     def synthetic_public_key(self) -> G1Element:
         if self.pre_known_synthetic_public_key is None:
             assert self.pre_known_original_public_key is not None  # guarded by __post_init__
-            self.pre_known_synthetic_public_key = calculate_synthetic_public_key(
-                self.pre_known_original_public_key, self.hidden_puzzle_info.puzzle_hash
+            object.__setattr__(
+                self,
+                "pre_known_synthetic_public_key",
+                calculate_synthetic_public_key(self.pre_known_original_public_key, self.hidden_puzzle_info.puzzle_hash),
             )
+            assert self.pre_known_synthetic_public_key is not None
         return self.pre_known_synthetic_public_key
 
     @property
@@ -80,8 +83,9 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
                     raise ValueError("Trying to match a standard puzzle without a standard puzzle solution")
                 if solution.original_public_key is not None:
                     original_public_key = solution.original_public_key
-                    hidden_puzzle_info.puzzle = solution.delegated_puzzle
-                    hidden_puzzle_info.pre_computed_puzzle_hash = None
+                    hidden_puzzle_info = HiddenPuzzleInfo(
+                        puzzle=solution.delegated_puzzle, pre_computed_puzzle_hash=None
+                    )
             return cls(
                 pre_known_synthetic_public_key=G1Element.from_bytes(list_of_args[0].as_atom()),
                 pre_known_original_public_key=original_public_key,
@@ -136,7 +140,7 @@ class StandardPuzzleSolution:
         )
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class StandardXCHCoin(StandardPuzzle):
     if TYPE_CHECKING:
         _protocol_check_2: ClassVar[SmartCoin] = cast("StandardXCHCoin", None)

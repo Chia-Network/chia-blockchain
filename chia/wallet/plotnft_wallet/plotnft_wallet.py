@@ -10,14 +10,15 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
-from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
+from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConfig
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
-from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle, SingletonStruct
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
@@ -67,7 +68,7 @@ class PlotNFT2Wallet:
 
     @property
     def hint(self) -> bytes32:
-        return SingletonStruct(launcher_id=self.plotnft_id).struct_hash()
+        return SingletonStruct(launcher_id=self.plotnft_id).struct_hash
 
     @property
     def plotnft_id(self) -> bytes32:
@@ -75,7 +76,7 @@ class PlotNFT2Wallet:
 
     @property
     def p2_singleton_puzzle_hash(self) -> bytes32:
-        return RewardPuzzle(singleton_id=self.plotnft_id).puzzle_hash()
+        return P2SingletonPuzzle(singleton_id=self.plotnft_id).puzzle_hash
 
     @property
     def rewards_claim_puzhash(self) -> bytes32:
@@ -114,7 +115,7 @@ class PlotNFT2Wallet:
         target_puzzle_hash = await action_scope.get_puzzle_hash(wallet_state_manager)
         target_pubkey = G1Element.from_bytes(await wallet_state_manager.get_public_key(target_puzzle_hash))
         origin_coins = await xch_wallet.select_coins(amount=uint64(fee + 1), action_scope=action_scope)
-        announcement_assertions, coin_spends, new_plotnft = PlotNFT.launch(
+        launch_result = PlotNFT.launch_plotnft(
             origin_coins=list(origin_coins),
             user_config=UserConfig(synthetic_pubkey=xch_wallet.convert_public_key_to_synthetic(target_pubkey)),
             genesis_challenge=wallet_state_manager.constants.GENESIS_CHALLENGE,
@@ -123,17 +124,19 @@ class PlotNFT2Wallet:
             remark=Remark(rest=Program.to(pool_url)) if pool_url is not None else None,
         )
         async with action_scope.use() as interface:
-            interface.side_effects.extra_spends.append(WalletSpendBundle(coin_spends, G2Element()))
+            interface.side_effects.extra_spends.append(WalletSpendBundle(launch_result.necessary_spends, G2Element()))
+        create_launcher = next(cond for cond in launch_result.necessary_conditions if isinstance(cond, CreateCoin))
+        other_conditions = iter(cond for cond in launch_result.necessary_conditions if not isinstance(cond, CreateCoin))
         await xch_wallet.generate_signed_transaction(
-            amounts=[uint64(1)],
-            puzzle_hashes=[new_plotnft.singleton_struct.singleton_puzzles.singleton_launcher_hash],
+            amounts=[create_launcher.amount],
+            puzzle_hashes=[create_launcher.puzzle_hash],
             action_scope=action_scope,
             fee=fee,
             coins=origin_coins,
-            extra_conditions=(*announcement_assertions, *extra_conditions),
-            origin_id=coin_spends[0].coin.parent_coin_info,
+            extra_conditions=(*other_conditions, *extra_conditions),
+            origin_id=launch_result.necessary_spends[0].coin.parent_coin_info,
         )
-        return new_plotnft
+        return launch_result.launched_singleton
 
     async def claim_rewards(
         self,
@@ -154,33 +157,37 @@ class PlotNFT2Wallet:
             rewards_to_claim=rewards_to_claim,
             reward_delegated_puzzles_and_solutions=[
                 DelegatedPuzzleAndSolution(
-                    puzzle=self.xch_wallet.make_solution(
-                        primaries=[
-                            CreateCoin(
-                                puzzle_hash=self.rewards_claim_puzhash,
-                                amount=uint64(total_reward_amount - fee),
-                            ),
-                        ],
-                        fee=fee,
-                        conditions=(*extra_conditions, CreateCoinAnnouncement(b""))
-                        if len(rewards_to_claim) > 1
-                        else extra_conditions,
-                    ).at("rf"),  # strips away to just the delegated puzzle (bit of a hack)
-                    solution=Program.to(None),
+                    puzzle=UnknownPuzzle(
+                        known_puzzle=self.xch_wallet.make_solution(
+                            primaries=[
+                                CreateCoin(
+                                    puzzle_hash=self.rewards_claim_puzhash,
+                                    amount=uint64(total_reward_amount - fee),
+                                ),
+                            ],
+                            fee=fee,
+                            conditions=(*extra_conditions, CreateCoinAnnouncement(b""))
+                            if len(rewards_to_claim) > 1
+                            else extra_conditions,
+                        ).at("rf")
+                    ),  # strips away to just the delegated puzzle (bit of a hack)
+                    solution=UnknownSolution(solution=Program.to(None)),
                 )
                 if i == 0
                 else DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(
-                        (
-                            1,
-                            [
-                                AssertCoinAnnouncement(
-                                    asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b""
-                                ).to_program()
-                            ],
+                    puzzle=UnknownPuzzle(
+                        known_puzzle=Program.to(
+                            (
+                                1,
+                                [
+                                    AssertCoinAnnouncement(
+                                        asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b""
+                                    ).to_program()
+                                ],
+                            )
                         )
                     ),
-                    solution=Program.to(None),
+                    solution=UnknownSolution(solution=Program.to(None)),
                 )
                 for i, reward in enumerate(rewards_to_claim)
             ],
@@ -204,7 +211,7 @@ class PlotNFT2Wallet:
                         ),
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=plotnft.puzzle_hash(nonce=uint64(0)),
+                            puzzle_hash=plotnft.puzzle_hash,
                             amount=uint64(1),
                         ),
                     ],
@@ -229,7 +236,7 @@ class PlotNFT2Wallet:
             plotnft = await self.get_current_plotnft()
         else:
             plotnft = plotnft_override
-        if plotnft.pool_config is not None:
+        if plotnft.inner_puzzle.pool_config is not None:
             await self.leave_pool(
                 action_scope=action_scope,
                 fee=fee,
@@ -244,7 +251,7 @@ class PlotNFT2Wallet:
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         url_remark = Remark(rest=Program.to(pool_url))
         coin_spends = plotnft.join_pool(
-            user_config=plotnft.user_config,
+            user_config=plotnft.inner_puzzle.user_config,
             pool_config=pool_config,
             extra_conditions=(*extra_conditions, fee_hook, url_remark),
         )
@@ -268,7 +275,9 @@ class PlotNFT2Wallet:
                     additions=[
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=dataclasses.replace(plotnft, pool_config=pool_config).puzzle_hash(nonce=0),
+                            puzzle_hash=dataclasses.replace(
+                                plotnft, inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, pool_config=pool_config)
+                            ).puzzle_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -293,17 +302,21 @@ class PlotNFT2Wallet:
         ):
             raise ValueError("Both new_pool_url or new_pool_config must be provided together")
         plotnft = await self.get_current_plotnft()
-        if not plotnft.pooling or plotnft.exiting:
+        if not plotnft.inner_puzzle.pooling or plotnft.inner_puzzle.exiting:
             raise ValueError("`leave_pool` called on a non-pooling or exiting PlotNFT")
-        next_plotnft = dataclasses.replace(plotnft, exiting=True)
+        next_plotnft = dataclasses.replace(
+            plotnft, inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, exiting=True)
+        )
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
-        exit_create_coin = plotnft.exit_to_waiting_room_condition()
+        exit_create_coin = plotnft.inner_puzzle.exit_to_waiting_room_condition
         exit_to_waiting_room_dpuz_and_sol = DelegatedPuzzleAndSolution(
-            puzzle=self.xch_wallet.make_solution(
-                primaries=[exit_create_coin],
-                conditions=(*extra_conditions, fee_hook),
-            ).at("rf"),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=Program.to(None),
+            puzzle=UnknownPuzzle(
+                known_puzzle=self.xch_wallet.make_solution(
+                    primaries=[exit_create_coin],
+                    conditions=(*extra_conditions, fee_hook),
+                ).at("rf")
+            ),  # strips away to just the delegated puzzle (bit of a hack)
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         coin_spends = plotnft.exit_to_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         if fee > 0:
@@ -334,7 +347,7 @@ class PlotNFT2Wallet:
                     additions=[
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=next_plotnft.puzzle_hash(nonce=0),
+                            puzzle_hash=next_plotnft.puzzle_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -353,19 +366,21 @@ class PlotNFT2Wallet:
     ) -> None:
         plotnft = await self.get_current_plotnft()
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
-        heightlock, exit_create_coin = plotnft.exit_from_waiting_room_conditions()
+        heightlock, exit_create_coin = plotnft.inner_puzzle.exit_from_waiting_room_conditions
         exit_to_waiting_room_dpuz_and_sol = DelegatedPuzzleAndSolution(
-            puzzle=self.xch_wallet.make_solution(
-                primaries=[exit_create_coin],
-                conditions=(fee_hook, heightlock, *extra_conditions),
-            ).at("rf"),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=Program.to(None),
+            puzzle=UnknownPuzzle(
+                known_puzzle=self.xch_wallet.make_solution(
+                    primaries=[exit_create_coin],
+                    conditions=(fee_hook, heightlock, *extra_conditions),
+                ).at("rf")
+            ),  # strips away to just the delegated puzzle (bit of a hack)
+            solution=UnknownSolution(solution=Program.to(None)),
         )
         coin_spends = plotnft.exit_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         next_plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            previous_plotnft_puzzle=plotnft,
+            previous_plotnft_puzzle=plotnft.inner_puzzle,
         )
         if exiting_info.exiting_fee > 0:
             await self.xch_wallet.create_tandem_xch_tx(
@@ -387,9 +402,10 @@ class PlotNFT2Wallet:
                     additions=[
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=dataclasses.replace(plotnft, pool_config=None, exiting=False).puzzle_hash(
-                                nonce=0
-                            ),
+                            puzzle_hash=dataclasses.replace(
+                                plotnft,
+                                inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, pool_config=None, exiting=False),
+                            ).puzzle_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -411,7 +427,7 @@ class PlotNFT2Wallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-                puzzle_hash_for_synthetic_public_key(coin_data.user_config.synthetic_pubkey)
+                puzzle_hash_for_synthetic_public_key(coin_data.inner_puzzle.user_config.synthetic_pubkey)
             )
             if index is None:
                 raise ValueError(f"No index found for synthetic pubkey for launcher_id: {coin_data.launcher_id}")
@@ -424,14 +440,14 @@ class PlotNFT2Wallet:
                     root_path=self.wallet_state_manager.root_path,
                     p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
                 ) as pool_config:
-                    pool_config.owner_public_key = coin_data.user_config.synthetic_pubkey
+                    pool_config.owner_public_key = coin_data.inner_puzzle.user_config.synthetic_pubkey
                     pool_config.key_derivation_index = int(index)
-                    if coin_data.pool_config is not None:
-                        if coin_data.pool_config.pool_puzzle_hash != pool_config.target_puzzle_hash:
+                    if coin_data.inner_puzzle.pool_config is not None:
+                        if coin_data.inner_puzzle.pool_config.pool_puzzle_hash != pool_config.target_puzzle_hash:
                             pool_config.pool_url = await self.wallet_state_manager.plotnft2_store.get_latest_remark(
                                 coin_data.launcher_id
                             )
-                            pool_config.target_puzzle_hash = coin_data.pool_config.pool_puzzle_hash
+                            pool_config.target_puzzle_hash = coin_data.inner_puzzle.pool_config.pool_puzzle_hash
                     else:
                         pool_config.target_puzzle_hash = bytes32.from_hexstr(pool_config.payout_instructions)
             else:
@@ -442,11 +458,11 @@ class PlotNFT2Wallet:
                 PoolingShareState(
                     launcher_id=coin_data.launcher_id,
                     pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(coin_data.launcher_id)
-                    if coin_data.pool_config is not None
+                    if coin_data.inner_puzzle.pool_config is not None
                     else "",
-                    owner_public_key=coin_data.user_config.synthetic_pubkey,
-                    target_puzzle_hash=coin_data.pool_config.pool_puzzle_hash
-                    if coin_data.pool_config is not None
+                    owner_public_key=coin_data.inner_puzzle.user_config.synthetic_pubkey,
+                    target_puzzle_hash=coin_data.inner_puzzle.pool_config.pool_puzzle_hash
+                    if coin_data.inner_puzzle.pool_config is not None
                     else payout_puzzle_hash,
                     p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash,
                     payout_instructions=payout_puzzle_hash.hex(),
@@ -454,9 +470,10 @@ class PlotNFT2Wallet:
                     version=2,
                 ).add(root_path=self.wallet_state_manager.root_path)
 
-            if coin_data.exiting:
+            if coin_data.inner_puzzle.exiting:
                 await self.wallet_state_manager.plotnft2_store.add_exiting_height(
-                    wallet_id=self.id(), height=uint32(height + coin_data.guaranteed_pool_config.heightlock)
+                    wallet_id=self.id(),
+                    height=uint32(height + coin_data.inner_puzzle.guaranteed_pool_config.heightlock),
                 )
             else:
                 finish_height = await self.wallet_state_manager.plotnft2_store.get_exiting_height(wallet_id=self.id())
@@ -516,12 +533,12 @@ class PlotNFT2Wallet:
         self,
     ) -> PoolWalletInfo:  # backwards compat with previous pool wallet
         plotnft = await self.get_current_plotnft()
-        if plotnft.pool_config is None:
+        if plotnft.inner_puzzle.pool_config is None:
             singleton_state = PoolSingletonState.SELF_POOLING
             rewards_claim_ph = self.rewards_claim_puzhash
         else:
-            rewards_claim_ph = plotnft.pool_config.pool_puzzle_hash
-            if plotnft.exiting:
+            rewards_claim_ph = plotnft.inner_puzzle.pool_config.pool_puzzle_hash
+            if plotnft.inner_puzzle.exiting:
                 singleton_state = PoolSingletonState.LEAVING_POOL
             else:
                 singleton_state = PoolSingletonState.FARMING_TO_POOL
@@ -531,11 +548,13 @@ class PlotNFT2Wallet:
                 version=uint8(2),
                 state=uint8(singleton_state.value),
                 target_puzzle_hash=rewards_claim_ph,
-                owner_pubkey=plotnft.user_config.synthetic_pubkey,
+                owner_pubkey=plotnft.inner_puzzle.user_config.synthetic_pubkey,
                 pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(plotnft.launcher_id)
-                if plotnft.pool_config is not None
+                if plotnft.inner_puzzle.pool_config is not None
                 else None,
-                relative_lock_height=plotnft.pool_config.heightlock if plotnft.pool_config is not None else uint32(0),
+                relative_lock_height=plotnft.inner_puzzle.pool_config.heightlock
+                if plotnft.inner_puzzle.pool_config is not None
+                else uint32(0),
             ),
             target=PoolState(
                 version=uint8(2),
@@ -545,17 +564,17 @@ class PlotNFT2Wallet:
                 target_puzzle_hash=self.rewards_claim_puzhash
                 if exiting_info.next_pool_puzzle_hash is None
                 else exiting_info.next_pool_puzzle_hash,
-                owner_pubkey=plotnft.user_config.synthetic_pubkey,
+                owner_pubkey=plotnft.inner_puzzle.user_config.synthetic_pubkey,
                 pool_url=None if exiting_info.next_pool_url is None else exiting_info.next_pool_url,
                 relative_lock_height=uint32(0)
                 if exiting_info.next_heightlock is None
                 else exiting_info.next_heightlock,
             )
-            if plotnft.exiting
+            if plotnft.inner_puzzle.exiting
             else None,
             launcher_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
             launcher_id=plotnft.launcher_id,
-            p2_singleton_puzzle_hash=RewardPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash(),
+            p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash,
             tip_singleton_coin_id=plotnft.coin.name(),
             singleton_block_height=await self.wallet_state_manager.plotnft2_store.get_plotnft_created_height(
                 coin_id=plotnft.coin.name()

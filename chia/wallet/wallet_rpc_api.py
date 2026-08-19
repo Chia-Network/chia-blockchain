@@ -18,7 +18,7 @@ from clvm_tools.binutils import assemble
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.pools.plotnft_drivers import PoolConfig, RewardPuzzle
+from chia.pools.plotnft_drivers import PoolConfig
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import (
     FARMING_TO_POOL,
@@ -64,6 +64,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
@@ -1214,7 +1215,7 @@ class WalletRpcApi:
                         transaction=REPLACEABLE_TRANSACTION_RECORD,
                         total_fee=uint64(request.fee),
                         launcher_id=plotnft.launcher_id,
-                        p2_singleton_puzzle_hash=RewardPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash(),
+                        p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash,
                         # irrelevant, will be replace in serialization
                         type=WalletType.PLOTNFT_2.name,
                         wallet_id=uint32(0),

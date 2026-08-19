@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.puzzle_drivers import InnerPuzzle, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 
 MofN_MOD = Program.from_bytes(puzzle_mods.M_OF_N)
@@ -216,6 +216,27 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
         else:
             return self.puzzle(nonce).get_tree_hash()
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> MofN | None:
+        if unknown_puzzle.mod not in [MofN_MOD, NofN_MOD, OneOfN_MOD] or unknown_puzzle.curried_args is None:  # ruff: ignore[literal-membership]
+            return None
+
+        if unknown_puzzle.mod == NofN_MOD:
+            list_of_members = [_ for _ in unknown_puzzle.curried_args]
+            pwr_matches = [
+                PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=member))
+                for member in list_of_members
+            ]
+            if None in pwr_matches:
+                return None
+            # come on mypy, be better
+            return MofN(m=len(list_of_members), members=pwr_matches)  # type: ignore[arg-type]
+        elif unknown_puzzle.mod == MofN_MOD:
+            (m, _) = unknown_puzzle.curried_args
+            return MofN(m=m.as_int(), members=[])
+        else:
+            return MofN(m=1, members=[])
 
 
 # A convenience object for hinting the two solution values that must always exist
@@ -432,7 +453,7 @@ class PuzzleWithRestrictions:
         return solution
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> PuzzleWithRestrictions | None:
         if unknown_puzzle.mod != INDEX_WRAPPER or unknown_puzzle.curried_args is None:
             return None
 
@@ -465,4 +486,4 @@ class PuzzleWithRestrictions:
             restrictions = []
             inner_puzzle = potentially_restricted_puzzle
 
-        return cls(nonce=nonce, restrictions=restrictions, puzzle=inner_puzzle)  # type: ignore[return-value, arg-type]
+        return cls(nonce=nonce, restrictions=restrictions, puzzle=inner_puzzle)  # type: ignore[arg-type]

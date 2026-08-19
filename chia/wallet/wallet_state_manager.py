@@ -1002,7 +1002,7 @@ class WalletStateManager:
                     coin_spend=coin_spend,
                     genesis_challenge=self.constants.GENESIS_CHALLENGE,
                     pre_uncurry=uncurried,
-                    previous_plotnft_puzzle=previous_plotnft,
+                    previous_plotnft_puzzle=previous_plotnft.inner_puzzle if previous_plotnft is not None else None,
                 )
                 for id, wallet in self.wallets.items():
                     if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == next_plot_nft.launcher_id:
