@@ -21,6 +21,10 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+)
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -68,7 +72,8 @@ class PreValidationResult(Streamable):
 def _run_block(
     block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
 ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
-    assert block.transactions_generator is not None
+    generator_bytes = get_transactions_generator_bytes(block)
+    assert generator_bytes is not None
     assert block.transactions_info is not None
     flags = get_flags_for_height_and_constants(prev_tx_height, constants)
     if block.height >= constants.HARD_FORK_HEIGHT:
@@ -76,7 +81,7 @@ def _run_block(
     else:
         run_block = run_block_generator
     error, error_msg, conds = run_block(
-        bytes(block.transactions_generator),
+        generator_bytes,
         prev_generators,
         block.transactions_info.cost,
         flags,
@@ -122,9 +127,9 @@ def _pre_validate_block(
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
         if conds is not None:
             assert conds.validated_signature is True
-            assert block.transactions_generator is not None
+            assert block_has_transactions_generator(block)
             removals_and_additions = tx_removals_and_additions(conds)
-        elif block.transactions_generator is not None:
+        elif block_has_transactions_generator(block):
             assert prev_generators is not None
             assert block.transactions_info is not None
 
@@ -138,7 +143,9 @@ def _pre_validate_block(
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
-            if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+            generator_bytes = get_transactions_generator_bytes(block)
+            assert generator_bytes is not None
+            if std_hash(generator_bytes) != block.transactions_info.generator_root:
                 return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
             if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
                 return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
@@ -146,7 +153,7 @@ def _pre_validate_block(
                 return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
             if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
-                if not is_canonical_serialization(bytes(block.transactions_generator)):
+                if not is_canonical_serialization(generator_bytes):
                     return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
 
             err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
@@ -285,7 +292,7 @@ async def pre_validate_block(
         return return_error(Err.INVALID_POSPACE)
 
     if block.transactions_info is None:
-        if block.transactions_generator is not None or block.transactions_generator_ref_list:
+        if block_has_transactions_generator(block) or block.transactions_generator_ref_list != []:
             error = (
                 Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA
                 if block.foliage.foliage_transaction_block_hash is not None

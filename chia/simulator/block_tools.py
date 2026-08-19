@@ -39,6 +39,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
     solution_generator,
     solve_proof,
 )
@@ -52,6 +53,7 @@ from chia.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block_with_mmr,
 )
+from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
@@ -100,7 +102,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
+from chia.types.blockchain_format.program import INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_filter_bits,
     calculate_pos_challenge,
@@ -203,10 +205,11 @@ def compute_block_cost(
 
     condition_cost = 0
     clvm_cost = 0
+    flags = int(get_flags_for_height_and_constants(prev_tx_height, constants))
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = _run(generator, INFINITE_COST, DEFAULT_FLAGS, [DESERIALIZE_MOD, blocks])
+        cost, result = _run(generator, INFINITE_COST, flags, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
         for spend in result.first().as_iter():
@@ -215,7 +218,7 @@ def compute_block_cost(
             puzzle = spend.at("rf")
             solution = spend.at("rrrf")
 
-            cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
+            cost, result = _run(puzzle, INFINITE_COST, flags, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(
                 result, charge_for_conditions=prev_tx_height >= constants.HARD_FORK2_HEIGHT
@@ -223,7 +226,7 @@ def compute_block_cost(
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, DEFAULT_FLAGS, [generator, block_program_args])
+        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, flags, [generator, block_program_args])
 
         for res in result.first().as_iter():
             # each condition item is:
@@ -868,7 +871,7 @@ class BlockTools:
             # block references can only point to transaction blocks, so we need
             # to record which ones are
             for b in block_list:
-                if b.transactions_generator is not None:
+                if block_has_transactions_generator(b):
                     generator_block_heights.append(b.height)
 
         constants = self.constants
@@ -1135,6 +1138,7 @@ class BlockTools:
                             finished_sub_slots_at_ip,
                             signage_point,
                             latest_block,
+                            prev_tx_height,
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
@@ -1176,7 +1180,7 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
-                        if full_block.transactions_generator is not None:
+                        if block_has_transactions_generator(full_block):
                             generator_block_heights.append(full_block.height)
 
                         blocks_added_this_sub_slot += 1
@@ -1472,6 +1476,7 @@ class BlockTools:
                             finished_sub_slots_at_ip,
                             signage_point,
                             latest_block,
+                            prev_tx_height,
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
@@ -1514,7 +1519,7 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
-                        if full_block.transactions_generator is not None:
+                        if block_has_transactions_generator(full_block):
                             generator_block_heights.append(full_block.height)
 
                         blocks_added_this_sub_slot += 1
@@ -1647,6 +1652,7 @@ class BlockTools:
                         signage_point,
                         timestamp,
                         BlockCache({}, BlockchainMMRManager(constants.GENESIS_CHALLENGE)),
+                        uint32(0),
                         seed=seed,
                         finished_sub_slots_input=finished_sub_slots,
                         compute_fees=compute_fee_test,
@@ -2264,6 +2270,7 @@ def get_full_block_and_block_record(
     finished_sub_slots: list[EndOfSubSlotBundle],
     signage_point: SignagePoint,
     prev_block: BlockRecord,
+    pre_sp_tx_height: uint32,
     seed: bytes = b"",
     *,
     mmr_manager: BlockchainMMRManager,
@@ -2305,6 +2312,7 @@ def get_full_block_and_block_record(
         signage_point,
         uint64(timestamp),
         BlockCache(blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE)),
+        pre_sp_tx_height,
         seed,
         new_gen,
         prev_block,

@@ -6,6 +6,7 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
 from chia.util.errors import Err
 
@@ -130,9 +131,10 @@ class AugmentedBlockchain:
         while curr is not None:
             b = curr[0]
             if b.height in generator_refs:
-                if b.transactions_generator is None:
+                gen = get_transactions_generator_bytes(b)
+                if gen is None:
                     raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                generators[b.height] = bytes(b.transactions_generator)
+                generators[b.height] = gen
                 to_remove.append(b.height)
             header_hash = b.prev_header_hash
             curr = self._extra_blocks.get(header_hash)

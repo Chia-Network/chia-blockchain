@@ -41,12 +41,16 @@ from packaging.version import Version
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+)
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.get_block_challenge import post_hard_fork2
+from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -2031,6 +2035,11 @@ class FullNode:
         record = state_change_summary.peak
         sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(record.header_hash, False)
 
+        generator_bytes = get_transactions_generator_bytes(block)
+        generator_size: int | str = len(generator_bytes) if generator_bytes is not None else "No tx"
+        generator_refs_size: int | str = (
+            len(block.transactions_generator_ref_list) if generator_bytes is not None else "No tx"
+        )
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
             f"hh {record.header_hash.hex()}, "
@@ -2041,10 +2050,8 @@ class FullNode:
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
-            f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
-            f"Generator ref list size: "
-            f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
+            f"Generator size: {generator_size}, "
+            f"Generator ref list size: {generator_refs_size}"
         )
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
@@ -2231,7 +2238,7 @@ class FullNode:
             block.is_transaction_block()
             and block.transactions_info is not None
             and block.transactions_info.generator_root != bytes([0] * 32)
-            and block.transactions_generator is None
+            and not block_has_transactions_generator(block)
         ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
@@ -2248,7 +2255,7 @@ class FullNode:
             if (
                 unf_entry is not None
                 and unf_entry.unfinished_block is not None
-                and unf_entry.unfinished_block.transactions_generator is not None
+                and block_has_transactions_generator(unf_entry.unfinished_block)
                 and unf_entry.unfinished_block.foliage_transaction_block == block.foliage_transaction_block
             ):
                 # We checked that the transaction block is the same, therefore all transactions and the signature
@@ -2261,6 +2268,8 @@ class FullNode:
                 block = block.replace(
                     transactions_generator=unf_entry.unfinished_block.transactions_generator,
                     transactions_generator_ref_list=unf_entry.unfinished_block.transactions_generator_ref_list,
+                    transactions_generator_buffer=unf_entry.unfinished_block.transactions_generator_buffer,
+                    version=unf_entry.unfinished_block.version,
                 )
             else:
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
@@ -2282,14 +2291,14 @@ class FullNode:
                         f"Received the wrong block for height {block.height} {new_block.header_hash.hex()}"
                     )
                     return None
-                assert new_block.transactions_generator is not None
+                assert block_has_transactions_generator(new_block)
 
                 self.log.debug(
                     f"Wrong info in the cache for bh {new_block.header_hash.hex()}, "
                     f"there might be multiple blocks from the "
                     f"same farmer with the same pospace."
                 )
-                # This recursion ends here, we cannot recurse again because transactions_generator is not None
+                # This recursion ends here, we cannot recurse again because the generator is present
                 return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
@@ -2465,8 +2474,9 @@ class FullNode:
         if block.foliage_transaction_block is not None:
             state_changed_data["timestamp"] = block.foliage_transaction_block.timestamp
 
-        if block.transactions_generator is not None:
-            state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
+        generator_bytes = get_transactions_generator_bytes(block)
+        if generator_bytes is not None:
+            state_changed_data["transaction_generator_size_bytes"] = len(generator_bytes)
 
         state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
         if added is not None:
@@ -2580,7 +2590,7 @@ class FullNode:
                 f"Time for header validate: {validate_time:0.3f}s",
             )
 
-        if block.transactions_generator is not None:
+        if block_has_transactions_generator(block):
             pre_validation_start = time.monotonic()
             assert block.transactions_info is not None
             if len(block.transactions_generator_ref_list) > 0:
@@ -2593,7 +2603,16 @@ class FullNode:
                 generator_args = []
 
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
-            flags = get_flags_for_height_and_constants(height, self.constants)
+            # Match finished-block prevalidation: CLVM flags are gated on the
+            # latest tx block infused before this block's signage point.
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(block.finished_sub_slots),
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
 
             # on mainnet we won't receive unfinished blocks for heights
             # below the hard fork activation, but we have tests where we do
@@ -2602,13 +2621,16 @@ class FullNode:
             else:
                 run_block = run_block_generator
 
+            generator_bytes = get_transactions_generator_bytes(block)
+            assert generator_bytes is not None
+
             # run_block() also validates the signature
             # bump nice for each unfinished block we already have for this
             # reward hash, so a burst of duplicates doesn't starve mempool
             # transaction validation
             err, err_msg, conditions = await self.pool.run_in_loop(
                 run_block,
-                bytes(block.transactions_generator),
+                generator_bytes,
                 generator_args,
                 min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                 flags,

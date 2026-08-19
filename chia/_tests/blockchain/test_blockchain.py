@@ -10,6 +10,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
+from typing import cast
 
 import pytest
 from chia_rs import (
@@ -45,6 +46,11 @@ from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkAdd, ForkInfo
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+    get_transactions_generator_program,
+)
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -56,7 +62,7 @@ from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.coin_store import CoinStore
-from chia.simulator.block_tools import BlockTools, create_block_tools_async
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, make_unfinished_block
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.vdf_prover import get_vdf_info_and_proof
 from chia.simulator.wallet_tools import WalletTool
@@ -330,16 +336,16 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
-            None,
-            uint8(0),
+            block.transactions_generator_buffer,
+            block.version,
         )
         conds = None
-        # if this assert fires, remove it along with the pragma for the block
-        # below
-        assert unf.transactions_generator is None
-        if unf.transactions_generator is not None:  # pragma: no cover
+        # if this assert fires, remove it along with the block below
+        assert not block_has_transactions_generator(unf)
+        if block_has_transactions_generator(unf):  # pragma: no cover
             block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
+            assert unf.transactions_info is not None
             npc_result = get_name_puzzle_conditions(
                 block_generator,
                 unf.transactions_info.cost,
@@ -366,16 +372,16 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
             [],
-            None,
-            uint8(0),
+            block.transactions_generator_buffer,
+            block.version,
         )
         conds = None
-        # if this assert fires, remove it along with the pragma for the block
-        # below
-        assert unf.transactions_generator is None
-        if unf.transactions_generator is not None:  # pragma: no cover
+        # if this assert fires, remove it along with the block below
+        assert not block_has_transactions_generator(unf)
+        if block_has_transactions_generator(unf):
             block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
+            assert unf.transactions_info is not None
             npc_result = get_name_puzzle_conditions(
                 block_generator,
                 unf.transactions_info.cost,
@@ -463,16 +469,16 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                     [],
-                    None,
-                    uint8(0),
+                    block.transactions_generator_buffer,
+                    block.version,
                 )
                 conds = None
-                # if this assert fires, remove it along with the pragma for the block
-                # below
-                assert block.transactions_generator is None
-                if block.transactions_generator is not None:  # pragma: no cover
+                # if this assert fires, remove it along with the block below
+                assert not block_has_transactions_generator(block)
+                if block_has_transactions_generator(block):
                     block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
+                    assert unf.transactions_info is not None
                     npc_result = get_name_puzzle_conditions(
                         block_generator,
                         unf.transactions_info.cost,
@@ -2409,7 +2415,10 @@ class TestBodyValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        block = recursive_replace(original_block, "transactions_generator", SerializedProgram.to(None))
+        if original_block.version == 0:
+            block = recursive_replace(original_block, "transactions_generator", SerializedProgram.to(None))
+        else:
+            block = recursive_replace(original_block, "transactions_generator_buffer", b"\xff")
         await _validate_and_add_block(
             empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
         )
@@ -2428,6 +2437,35 @@ class TestBodyValidation:
         await _validate_and_add_block(
             empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
         )
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("wrong_version", [uint8(0), uint8(1), uint8(2)])
+    @pytest.mark.parametrize("transaction_block", [True, False])
+    async def test_invalid_block_version(
+        self, empty_blockchain: Blockchain, bt: BlockTools, wrong_version: uint8, transaction_block: bool
+    ) -> None:
+        # Version 1 is required after HF2 (keyed on prev tx height); version 0 before.
+        # Across consensus modes this covers both directions: reject v1 pre-fork and v0 post-fork.
+        # Unknown versions (e.g. 2) are always rejected. Applies to tx and non-tx blocks.
+        blocks = bt.get_consecutive_blocks(1)
+        while transaction_block != (blocks[-1].foliage_transaction_block is not None):
+            await _validate_and_add_block(empty_blockchain, blocks[-1])
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+
+        block = blocks[-1]
+        assert block.is_transaction_block() == transaction_block
+        if wrong_version == block.version:
+            pytest.skip(f"version {wrong_version} is valid for this consensus mode")
+
+        bad_block = recursive_replace(block, "version", wrong_version)
+        await _validate_and_add_block(
+            empty_blockchain, bad_block, expected_error=Err.INVALID_BLOCK_VERSION, skip_prevalidation=True
+        )
+
+        unf = make_unfinished_block(block, bt.constants)
+        bad_unf = recursive_replace(unf, "version", wrong_version)
+        _, err = await empty_blockchain.validate_unfinished_block_header(bad_unf)
+        assert err == Err.INVALID_BLOCK_VERSION
 
     @pytest.mark.anyio
     async def test_tx_block_missing_data(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -2623,16 +2661,21 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     async def test_prevalidation_fast_fail(
-        self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        monkeypatch: pytest.MonkeyPatch,
+        consensus_mode: ConsensusMode,
     ) -> None:
         # Adversarial fast-fail: a peer can take a valid block, keep all
         # farmed/signed header fields and commitments intact, and swap only
-        # transactions_generator for malicious CLVM. Prevalidation must reject
-        # this with the cheap generator_root hash check
+        # the generator for malicious CLVM. Prevalidation must reject this with
+        # the cheap generator_root hash check
         # (INVALID_TRANSACTIONS_GENERATOR_HASH) BEFORE executing the generator,
         # so the expensive CLVM run is never performed for the bad block. This
         # mirrors the unfinished-block path, which already gates CLVM on these
-        # commitments.
+        # commitments. Covers both pre-HF3 (transactions_generator) and
+        # post-HF3 (transactions_generator_buffer) block formats.
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         await _validate_and_add_block(b, blocks[0])
@@ -2653,16 +2696,29 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         block: FullBlock = blocks[-1]
-        assert block.transactions_generator is not None
+        assert block_has_transactions_generator(block)
+        assert block.transactions_info is not None
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            assert block.version == 1
+        else:
+            assert block.version == 0
+
+        def replace_generator(blk: FullBlock, generator: SerializedProgram) -> FullBlock:
+            if blk.version == 0:
+                return cast(FullBlock, recursive_replace(blk, "transactions_generator", generator))
+            return cast(FullBlock, recursive_replace(blk, "transactions_generator_buffer", bytes(generator)))
 
         # Swap only the generator bytes; leave transactions_info.generator_root
         # and all foliage/signatures pointing at the original generator. This
         # is the attack: commitments unchanged, generator replaced (the peer
         # cannot re-sign without the plot key).
         malicious_generator = SerializedProgram.fromhex("80")
-        mutated = recursive_replace(block, "transactions_generator", malicious_generator)
+        mutated = replace_generator(block, malicious_generator)
         # Sanity: the swap actually breaks the commitment.
-        assert std_hash(bytes(mutated.transactions_generator)) != mutated.transactions_info.generator_root
+        mutated_generator_bytes = get_transactions_generator_bytes(mutated)
+        assert mutated_generator_bytes is not None
+        assert mutated.transactions_info is not None
+        assert std_hash(mutated_generator_bytes) != mutated.transactions_info.generator_root
 
         # Trap _run_block: if the generator is executed, raise. _pre_validate_block's
         # outer try/except would convert that into UNKNOWN, so observing
@@ -2684,7 +2740,7 @@ class TestBodyValidation:
         # transactions-info commitment. Make the replacement generator and its
         # direct root self-consistent; the missing signed link must still reject
         # the block before CLVM execution.
-        mutated = recursive_replace(block, "transactions_generator", malicious_generator)
+        mutated = replace_generator(block, malicious_generator)
         mutated = recursive_replace(mutated, "transactions_info.generator_root", std_hash(bytes(malicious_generator)))
         mutated = recursive_replace(mutated, "foliage_transaction_block", None)
 
@@ -2778,7 +2834,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         await _validate_and_add_block(b, blocks[-1])
-        assert blocks[-1].transactions_generator is not None
+        assert block_has_transactions_generator(blocks[-1])
 
         # after the 3.0 hard fork, we no longer allow block references, so the
         # block_refs parameter is no longer valid, nor this test
@@ -2830,9 +2886,10 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
-        assert blocks[-1].transactions_generator is not None
+        generator = get_transactions_generator_program(blocks[-1])
+        assert generator is not None
         assert blocks[-1].transactions_info is not None
-        block_generator = BlockGenerator(blocks[-1].transactions_generator, [])
+        block_generator = BlockGenerator(generator, [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
@@ -2911,8 +2968,9 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [])
+        generator = get_transactions_generator_program(block_2)
+        assert generator is not None
+        block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -2946,8 +3004,9 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [])
+        generator = get_transactions_generator_program(block_2)
+        assert generator is not None
+        block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -2981,8 +3040,9 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [])
+        generator = get_transactions_generator_program(block_2)
+        assert generator is not None
+        block_generator = BlockGenerator(generator, [])
         max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -3965,7 +4025,10 @@ class TestReorgs:
         generator = SerializedProgram.fromhex("c00101")
         assert not is_canonical_serialization(bytes(generator))
 
-        block = recursive_replace(original_block, "transactions_generator", generator)
+        if original_block.version == 0:
+            block = recursive_replace(original_block, "transactions_generator", generator)
+        else:
+            block = recursive_replace(original_block, "transactions_generator_buffer", bytes(generator))
         block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
@@ -4384,9 +4447,10 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
     assert bc.get_tx_peak() == last_tx_block_record
 
 
-def to_bytes(gen: SerializedProgram | None) -> bytes:
+def get_gen(block: FullBlock) -> bytes:
+    gen = get_transactions_generator_bytes(block)
     assert gen is not None
-    return bytes(gen)
+    return gen
 
 
 @pytest.mark.anyio
@@ -4439,7 +4503,7 @@ async def test_lookup_block_generators(
             b.clean_block_records()
         generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2)})
         assert generators == {
-            uint32(2): to_bytes(blocks_1[2].transactions_generator),
+            uint32(2): get_gen(blocks_1[2]),
         }
 
     # multiple generators from the shared part of the chain
@@ -4448,21 +4512,21 @@ async def test_lookup_block_generators(
             b.clean_block_records()
         generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2), uint32(10), uint32(26)})
         assert generators == {
-            uint32(2): to_bytes(blocks_1[2].transactions_generator),
-            uint32(10): to_bytes(blocks_1[10].transactions_generator),
-            uint32(26): to_bytes(blocks_1[26].transactions_generator),
+            uint32(2): get_gen(blocks_1[2]),
+            uint32(10): get_gen(blocks_1[10]),
+            uint32(26): get_gen(blocks_1[26]),
         }
 
     # lookups from the past the fork
     if clear_cache:
         b.clean_block_records()
     generators = await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(503)})
-    assert generators == {uint32(503): to_bytes(blocks_1[503].transactions_generator)}
+    assert generators == {uint32(503): get_gen(blocks_1[503])}
 
     if clear_cache:
         b.clean_block_records()
     generators = await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(516)})
-    assert generators == {uint32(516): to_bytes(blocks_2[516].transactions_generator)}
+    assert generators == {uint32(516): get_gen(blocks_2[516])}
 
     # make sure we don't cross the forks
     if clear_cache:

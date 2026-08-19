@@ -54,6 +54,11 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+    get_transactions_generator_program,
+)
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
@@ -263,7 +268,9 @@ async def test_block_compression(
     await time_out_assert(30, check_transaction_confirmed, True, tr)
 
     # Confirm generator is not compressed
-    program: SerializedProgram | None = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program: SerializedProgram | None = get_transactions_generator_program(
+        (await full_node_1.get_all_full_blocks())[-1]
+    )
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -292,7 +299,7 @@ async def test_block_compression(
     await time_out_assert(10, check_transaction_confirmed, True, tr)
 
     # Confirm generator is compressed
-    program = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
     # since the hard fork, we don't use this compression mechanism
@@ -373,7 +380,7 @@ async def test_block_compression(
     await time_out_assert(10, check_transaction_confirmed, True, tr)
 
     # Confirm generator is compressed
-    program = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
     # since the hard fork, we don't use this compression mechanism
@@ -426,7 +433,7 @@ async def test_block_compression(
 
     # Confirm generator is not compressed, #CAT creation has a cat spend
     all_blocks = await full_node_1.get_all_full_blocks()
-    program = all_blocks[-1].transactions_generator
+    program = get_transactions_generator_program(all_blocks[-1])
     assert program is not None
     assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
@@ -473,7 +480,7 @@ async def test_block_compression(
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
     # Confirm generator is not compressed
-    program = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -914,9 +921,9 @@ async def test_respond_unfinished(
     assert result.conds.cost > 0
 
     assert not full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
-    assert block.transactions_generator is not None
-    block_no_transactions = block.replace(transactions_generator=None)
-    assert block_no_transactions.transactions_generator is None
+    assert block_has_transactions_generator(block)
+    block_no_transactions = block.replace(transactions_generator=None, transactions_generator_buffer=None)
+    assert not block_has_transactions_generator(block_no_transactions)
 
     await full_node_1.full_node.add_block(block_no_transactions)
     assert full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
@@ -1656,13 +1663,13 @@ async def test_request_block(
     res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, False))
     assert res is not None
     assert res.type != ProtocolMessageTypes.reject_block.value
-    assert fnp.RespondBlock.from_bytes(res.data).block.transactions_generator is None
+    assert not block_has_transactions_generator(fnp.RespondBlock.from_bytes(res.data).block)
 
     # Ask with transactions
     res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, True))
     assert res is not None
     assert res.type != ProtocolMessageTypes.reject_block.value
-    assert fnp.RespondBlock.from_bytes(res.data).block.transactions_generator is not None
+    assert block_has_transactions_generator(fnp.RespondBlock.from_bytes(res.data).block)
 
     # Ask for another one
     res = await full_node_1.request_block(fnp.RequestBlock(uint32(blocks[-1].height - 1), True))
@@ -1728,14 +1735,14 @@ async def test_request_blocks(
     fetched_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
     assert len(fetched_blocks) == 6
     for b in fetched_blocks:
-        assert b.transactions_generator is None
+        assert not block_has_transactions_generator(b)
 
     # Ask with transactions
     res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), True))
     assert res is not None
     fetched_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
     assert len(fetched_blocks) == 6
-    assert fetched_blocks[-1].transactions_generator is not None
+    assert block_has_transactions_generator(fetched_blocks[-1])
     assert std_hash(fetched_blocks[-1]) == std_hash(blocks_t[-1])
 
 
@@ -2064,6 +2071,7 @@ async def test_unfinished_block_with_replaced_generator(
     if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
+    use_v1 = block.version == 1
     unf = UnfinishedBlock(
         block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
         reward_chain_block,
@@ -2072,10 +2080,10 @@ async def test_unfinished_block_with_replaced_generator(
         foliage,
         transaction_block,
         transactions_info,
-        replaced_generator,
+        None if use_v1 else replaced_generator,
         generator_refs,
-        None,
-        uint8(0),
+        bytes(replaced_generator) if use_v1 else None,
+        block.version,
     )
 
     _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -2126,7 +2134,8 @@ async def test_double_blocks_same_pospace(
     new_m = block_2.foliage.foliage_transaction_block_hash
     new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
     block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-    block_2 = recursive_replace(block_2, "transactions_generator", None)
+    block_2 = block_2.replace(transactions_generator=None, transactions_generator_buffer=None)
+    assert not block_has_transactions_generator(block_2)
 
     rb_task = create_referenced_task(full_node_2.full_node.add_block(block_2, dummy_peer))
 
@@ -3556,7 +3565,8 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
             assert rec.coin == reward
             assert rec.coinbase
 
-        if block.transactions_generator is None:
+        generator_bytes = get_transactions_generator_bytes(block)
+        if generator_bytes is None:
             if len(records) > 0:  # pragma: no cover
                 print(f"height: {block.height} unexpected coins in the DB: {records} TX: No")
                 print_coin_records(records)
@@ -3568,7 +3578,7 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
         #    assert False
 
         flags = get_flags_for_height_and_constants(block.height, test_constants)
-        additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
+        additions, removals = additions_and_removals(generator_bytes, [], flags, test_constants)
 
         for add, hint in additions:
             rec = records.pop(add.name())
@@ -4360,7 +4370,11 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     assert block1.foliage_transaction_block == block2.foliage_transaction_block, "Mismatch in foliage_transaction_block"
     assert block1.transactions_info == block2.transactions_info, "Mismatch in transactions_info"
     assert block1.transactions_generator == block2.transactions_generator, "Mismatch in transactions_generator"
+    assert block1.transactions_generator_buffer == block2.transactions_generator_buffer, (
+        "Mismatch in transactions_generator_buffer"
+    )
     assert block1.transactions_generator_ref_list == block2.transactions_generator_ref_list
+    assert block1.version == block2.version, "Mismatch in version"
 
     # Final assertion to check the entire block
     assert block1 == block2, "The entire block objects are not identical"
@@ -5039,7 +5053,7 @@ async def test_declare_proof_of_space_empty_block_no_new_tx_window_yet(
     )
     unfinished_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, candidate_block)
     # Make sure we created an empty block
-    assert unfinished_block.transactions_generator is None
+    assert not block_has_transactions_generator(unfinished_block)
 
 
 @pytest.mark.anyio
@@ -5073,6 +5087,6 @@ async def test_declare_proof_of_space_unfinished_block_includes_block_generator(
     )
     candidate_block = blocks[-1]
     unfinished_block = await declare_pos_unfinished_block(full_node_api, dummy_peer, candidate_block)
-    assert unfinished_block.transactions_generator is not None
+    assert block_has_transactions_generator(unfinished_block)
     assert unfinished_block.transactions_info is not None
     assert unfinished_block.transactions_info.cost > 0
