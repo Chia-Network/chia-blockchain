@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar, cast
@@ -10,6 +10,7 @@ from chia_rs.sized_bytes import bytes32
 from typing_extensions import Self, runtime_checkable
 
 from chia.types.blockchain_format.program import Program
+from chia.wallet.conditions import Condition, parse_conditions_non_consensus
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
@@ -124,6 +125,104 @@ class UnknownSolution:
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
+
+
+@dataclass(kw_only=True, frozen=True)
+class P2Conditions(PuzzleWithPuzzleHash):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[InnerPuzzle] = cast("P2Conditions", None)
+
+    conditions: Sequence[Condition]
+
+    @property
+    def puzzle(self) -> Program:
+        return Program.to((1, [cond.to_program() for cond in self.conditions]))
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
+        if unknown_puzzle.puzzle.at("f") != Program.to(1):
+            return None
+
+        try:
+            return cls(conditions=parse_conditions_non_consensus(unknown_puzzle.puzzle.at("r").as_iter()))
+        except Exception:
+            return None
+
+
+ACS = Program.to(1)
+ACS_PH = ACS.get_tree_hash()
+
+
+@dataclass(kw_only=True, frozen=True)
+class ACSPuzzle(PuzzleWithPuzzleHash):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[InnerPuzzle] = cast("ACSPuzzle", None)
+
+    @property
+    def puzzle(self) -> Program:
+        return ACS
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
+        if unknown_puzzle.puzzle == ACS:
+            return cls()
+        return None
+
+
+@dataclass(kw_only=True, frozen=True)
+class ACSSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("ACSSolution", None)
+
+    conditions: Sequence[Condition]
+
+    def as_program(self) -> Program:
+        return Program.to([cond.to_program() for cond in self.conditions])
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+        try:
+            return cls(conditions=parse_conditions_non_consensus(unknown_solution.as_program().as_iter()))
+        except Exception:
+            return None
+
+
+NIL_HASH = Program.NIL.get_tree_hash()
+
+
+@dataclass(kw_only=True, frozen=True)
+class NilPuzzle(PuzzleWithPuzzleHash):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[InnerPuzzle] = cast("NilPuzzle", None)
+
+    @property
+    def puzzle(self) -> Program:
+        return Program.NIL
+
+    @property
+    def puzzle_hash_optimized(self) -> bytes32:
+        return NIL_HASH
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
+        if unknown_puzzle.puzzle == Program.NIL:
+            return cls()
+        return None
+
+
+@dataclass(kw_only=True, frozen=True)
+class NilSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("NilSolution", None)
+
+    def as_program(self) -> Program:
+        return Program.NIL
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+        if unknown_solution.as_program() == Program.NIL:
+            return cls()
+        return None
 
 
 @dataclass
