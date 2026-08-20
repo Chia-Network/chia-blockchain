@@ -343,8 +343,10 @@ class FullNodeAPI:
             return None
         return None
 
-    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
-    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction], peer_required=True)
+    async def request_transaction(
+        self, request: full_node_protocol.RequestTransaction, peer: WSChiaConnection
+    ) -> Message | None:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -353,6 +355,12 @@ class FullNodeAPI:
         if spend_bundle is None:
             return None
 
+        if not is_localhost(peer.peer_info.host) and not is_in_network(
+            peer.peer_info.host, self.full_node.server.exempt_peer_networks
+        ):
+            # Pace successful replies. Coupled with a rate limits v3 receive
+            # window of 3, 0.5s per fetch is ~360 replies per minute.
+            await asyncio.sleep(0.5)
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
@@ -381,6 +389,7 @@ class FullNodeAPI:
                 f"Received unsolicited transaction {spend_name} from peer "
                 f"{peer.peer_node_id} / {peer.peer_info.host} version {peer.version}"
             )
+            await peer.close(RATE_LIMITER_BAN_SECONDS)
             return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:

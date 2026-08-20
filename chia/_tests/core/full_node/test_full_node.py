@@ -1213,7 +1213,7 @@ async def test_new_transaction_and_mempool(
         await full_node_1.send_transaction(respond_transaction, fake_peer)
 
         request = fnp.RequestTransaction(spend_bundle.get_hash())
-        req = await full_node_1.request_transaction(request)
+        req = await full_node_1.request_transaction(request, fake_peer)
 
         fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
         fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000000)
@@ -1329,7 +1329,7 @@ async def test_request_respond_transaction(
 
     tx_id = bytes32.random(seeded_random)
     request_transaction = fnp.RequestTransaction(tx_id)
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is None
 
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1346,7 +1346,7 @@ async def test_request_respond_transaction(
     await time_out_assert(10, time_out_messages(incoming_queue, "new_transaction"))
 
     request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is not None
     assert msg.data == bytes(fnp.RespondTransaction(spend_bundle))
 
@@ -1368,7 +1368,7 @@ async def test_respond_transaction_fail(
 
     tx_id = bytes32.random(seeded_random)
     request_transaction = fnp.RequestTransaction(tx_id)
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is None
 
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1617,7 +1617,7 @@ async def test_malformed_peer_version_on_connect(
         await full_node_1.full_node.on_connect(peer)
 
         # Unparseable version should be treated as old, so the counter is incremented
-        assert peer.expected_mempool_responses == 100
+        assert peer.expected_mempool_responses == 200
     finally:
         full_node_1.full_node.config["selected_network"] = original_network
 
