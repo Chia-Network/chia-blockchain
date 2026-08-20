@@ -418,6 +418,15 @@ class PlotNFT2Wallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
+        """
+        Because the wallet doesn't have broad support for MIPS-style custody, transferring using addresses is
+        a bit complicated because transferring to the wrong kind of address could leave the wallet unable to
+        sync/spend the PlotNFT. As a guard, we implement this endpoint as a transfer between local keys to make
+        sure that we generate the correct kind of inner puzzle.
+
+        This is not necessarily a permanent restriction, but solves the primary use case of transferring between
+        a user's own wallets and keeps the implementation relatively simple for now.
+        """
         plotnft = await self.get_current_plotnft()
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         root_pubkey = await self.wallet_state_manager.wallet_node.keychain_proxy.get_key_for_fingerprint(
