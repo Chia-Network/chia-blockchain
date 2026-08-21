@@ -33,6 +33,16 @@ try {
     $ErrorActionPreference = "SilentlyContinue"
     npm ci --loglevel=error
     npm audit fix
+
+    # Work around Electron's postinstall being silently skipped in the workspaces/
+    # hoisted install, which leaves node_modules/electron present but without its
+    # platform binary (no path.txt). Re-run Electron's own installer if needed.
+    # Otherwise 'npm run electron' fails with "Electron failed to install correctly".
+    if (-not (Test-Path "node_modules/electron/path.txt")) {
+        Write-Output "Electron binary is missing; running Electron's install script."
+        node node_modules/electron/install.js
+    }
+
     npm run build
     py ..\installhelper.py
 
