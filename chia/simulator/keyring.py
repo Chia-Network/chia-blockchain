@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from chia.util.file_keyring import FileKeyring, keyring_path_from_root
@@ -11,7 +12,9 @@ from chia.util.keychain import Keychain
 from chia.util.keyring_wrapper import KeyringWrapper
 
 
-def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
+def setup_mock_file_keyring(
+    mock_configure_backend: Any, temp_file_keyring_dir: str | Path, populate: bool = False
+) -> None:
     if populate:
         # Populate the file keyring with an empty (but encrypted) data set
         file_keyring_path = keyring_path_from_root(Path(temp_file_keyring_dir))
@@ -54,7 +57,7 @@ class TempKeyring:
             existing_keyring_path=existing_keyring_path,
             use_os_credential_store=use_os_credential_store,
         )
-        self.old_keys_root_path = None
+        self.old_keys_root_path: Path | None = None
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
@@ -66,7 +69,7 @@ class TempKeyring:
         populate: bool,
         existing_keyring_path: str | None,
         use_os_credential_store: bool,
-    ):
+    ) -> Keychain:
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
@@ -92,7 +95,7 @@ class TempKeyring:
 
         return keychain
 
-    def __enter__(self):
+    def __enter__(self) -> Keychain:
         assert not self.cleaned_up
         if KeyringWrapper.get_shared_instance(create_if_necessary=False) is not None:
             self.old_keys_root_path = KeyringWrapper.get_shared_instance().keys_root_path
@@ -101,7 +104,7 @@ class TempKeyring:
         KeyringWrapper.set_keys_root_path(kc.keyring_wrapper.keys_root_path)
         return kc
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
+    def __exit__(self, *args: object) -> None:
         self.cleanup()
 
     def get_keychain(self) -> Keychain:
@@ -114,7 +117,7 @@ class TempKeyring:
 
         if self.delete_on_cleanup:
             self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
-            shutil.rmtree(self.keychain._temp_dir)
+            shutil.rmtree(self.keychain._temp_dir)  # type: ignore[attr-defined]
 
         if self.old_keys_root_path is not None:
             if KeyringWrapper.get_shared_instance(create_if_necessary=False) is not None:
