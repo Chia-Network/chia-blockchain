@@ -83,6 +83,8 @@ echo ""
 # Pipelines directly, so skip unless you are completing a source/developer install.
 # Ubuntu special cases above.
 if [ ! "$CI" ]; then
+  echo "Undoing any package-lock.json changes before submodule update"
+  git checkout package-lock.json
   echo "Running git submodule update --init --recursive."
   echo ""
   git submodule update --init --recursive
