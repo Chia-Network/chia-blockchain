@@ -88,6 +88,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
@@ -997,10 +998,12 @@ class WalletStateManager:
             )
 
         # Check if the coin is a VC
-        is_vc, _err_msg = VerifiedCredential.is_vc(uncurried)
+        is_vc = VerifiedCredential.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+        )
         if is_vc:
-            vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
-            return await VCWallet.identify(self, vc), vc
+            vc = VerifiedCredential.get_next_from_coin_spend(coin_spend)
+            return await VCWallet.identify(self, vc), vc  # type: ignore[return-value]
 
         # Check if the coin is a PlotNFT
         if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:

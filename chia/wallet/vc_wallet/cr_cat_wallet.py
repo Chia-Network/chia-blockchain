@@ -49,7 +49,6 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
     construct_cr_layer_hash,
     construct_pending_approval_state,
 )
-from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -471,7 +470,7 @@ class CRCATWallet(CATWallet):
             raise RuntimeError("CR-CATs cannot be spent without an appropriate VC")  # pragma: no cover
 
         # Loop through the coins we've selected and gather the information we need to spend them
-        vc: VerifiedCredential | None = None
+        vc = None
         vc_announcements_to_make: list[bytes] = []
         inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
         first = True
@@ -565,18 +564,18 @@ class CRCATWallet(CATWallet):
 
         if vc is None:  # pragma: no cover
             raise RuntimeError("Spending no cat coins is not an appropriate use of _generate_unsigned_spendbundle")
-        if vc.proof_hash is None:
+        if vc.inner_puzzle.proof_hash is None:
             raise RuntimeError("CR-CATs found an appropriate VC but that VC contains no proofs")  # pragma: no cover
 
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         expected_announcements, coin_spends, _ = CRCAT.spend_many(
             inner_spends,
             proof_of_inclusions,
             Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.inner_puzzle.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
         )
@@ -708,15 +707,13 @@ class CRCATWallet(CATWallet):
 
         # Select the relevant VC coin
         vc_wallet: VCWallet = await self.wallet_state_manager.get_or_create_vc_wallet()
-        vc: VerifiedCredential | None = await vc_wallet.get_vc_with_provider_in_and_proofs(
+        vc = await vc_wallet.get_vc_with_provider_in_and_proofs(
             self.info.authorized_providers, self.info.proofs_checker.flags
         )
-        if vc is None:  # pragma: no cover
-            raise RuntimeError(f"No VC exists that can approve spends for CR-CAT wallet {self.id()}")
-        if vc.proof_hash is None:
+        if vc.inner_puzzle.proof_hash is None:
             raise RuntimeError(f"VC {vc.launcher_id} has no proofs to authorize transaction")  # pragma: no cover
         proof_of_inclusions: Program = await vc_wallet.proof_of_inclusions_for_root_and_keys(
-            vc.proof_hash, self.info.proofs_checker.flags
+            vc.inner_puzzle.proof_hash, self.info.proofs_checker.flags
         )
 
         # Generate the bundle nonce
@@ -742,7 +739,7 @@ class CRCATWallet(CATWallet):
             ],
             proof_of_inclusions,
             Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
-            vc.proof_provider,
+            vc.inner_puzzle.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash(),
         )
