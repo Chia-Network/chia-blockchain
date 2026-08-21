@@ -439,6 +439,20 @@ class WalletRpcClient(RpcClient):
         self,
         request: wallet_request_types.PWStatus,
     ) -> wallet_request_types.PWStatusResponse: ...
+    async def plotnft_transfer(
+        self,
+        request: wallet_request_types.PlotNFTTransfer,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = ...,
+        timelock_info: ConditionValidTimes = ...,
+    ) -> wallet_request_types.PlotNFTTransferResponse: ...
+    async def plotnft_melt(
+        self,
+        request: wallet_request_types.PlotNFTMelt,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = ...,
+        timelock_info: ConditionValidTimes = ...,
+    ) -> wallet_request_types.PlotNFTMeltResponse: ...
     async def create_new_dl(
         self,
         request: wallet_request_types.CreateNewDL,

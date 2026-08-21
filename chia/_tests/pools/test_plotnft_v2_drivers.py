@@ -34,6 +34,7 @@ from chia.wallet.conditions import (
     SendMessage,
     parse_conditions_non_consensus,
 )
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -384,6 +385,32 @@ def test_plotnft_errors() -> None:
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=False,
         ).guaranteed_pool_config
+
+    with pytest.raises(ValueError, match="Cannot create a new user config for a pooling PlotNFT"):
+        PlotNFT(
+            coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
+            singleton_lineage_proof=LineageProof(),
+            launcher_id=bytes32.zeros,
+            genesis_challenge=bytes32.zeros,
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(0), pool_memoization=Program.to(None)
+            ),
+            exiting=False,
+        ).new_user_config(user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()), hint=bytes32.zeros)
+
+    with pytest.raises(ValueError, match="Cannot melt a pooling PlotNFT"):
+        PlotNFT(
+            coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
+            singleton_lineage_proof=LineageProof(),
+            launcher_id=bytes32.zeros,
+            genesis_challenge=bytes32.zeros,
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(0), pool_memoization=Program.to(None)
+            ),
+            exiting=False,
+        ).melt()
 
     default_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 
