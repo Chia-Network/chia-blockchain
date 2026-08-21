@@ -713,22 +713,23 @@ class MempoolManager:
             )
 
         non_ff_spend_ids = set()
-        ff_latest_ids = set()
+        effective_spend_ids = set()
         for coin_id, spend_data in bundle_coin_spends.items():
             if spend_data.latest_singleton_lineage is None:
                 non_ff_spend_ids.add(coin_id)
+                effective_spend_id = coin_id
             else:
-                ff_latest_ids.add(spend_data.latest_singleton_lineage.coin_id)
+                effective_spend_id = spend_data.latest_singleton_lineage.coin_id
+            # Fast forward spends are only allowed to be spent once in a spend bundle
+            if effective_spend_id in effective_spend_ids:
+                return Err.INVALID_SPEND_BUNDLE, None, []
+            effective_spend_ids.add(effective_spend_id)
         # Fast forward spends are only allowed when bundled with other, non-FF
         # spends in order to evict an FF spend, it must be associated with a
         # normal spend that can be included in a block or invalidated some
         # other way.
         if len(non_ff_spend_ids) == 0:
             return Err.INVALID_SPEND_BUNDLE, None, []
-        # Fast forward spends rebase onto latest unspent coin IDs so a non-FF
-        # spend of the same coin is a double spend after rebase.
-        if len(ff_latest_ids.intersection(non_ff_spend_ids)) > 0:
-            return Err.DOUBLE_SPEND, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
