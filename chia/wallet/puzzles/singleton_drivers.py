@@ -132,7 +132,7 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     def match(
         cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
     ) -> SingletonPuzzle[UnknownPuzzle] | None:
-        if unknown_puzzle.mod == cls.singleton_puzzles.singleton_mod or unknown_puzzle.curried_args is None:
+        if unknown_puzzle.mod != cls.singleton_puzzles.singleton_mod or unknown_puzzle.curried_args is None:
             return None
         singleton_struct, inner_puzzle = unknown_puzzle.curried_args
         return SingletonPuzzle(
@@ -196,7 +196,7 @@ class SingletonLaunchResult(Generic[_T_InnerPuzzle]):
     launched_singleton: Singleton[_T_InnerPuzzle]
 
 
-def _new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: InnerPuzzle, solution: Solution) -> CreateCoin:
+def new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: InnerPuzzle, solution: Solution) -> CreateCoin:
     return next(
         cond
         for cond in parse_conditions_non_consensus(run(inner_puzzle.puzzle, solution.as_program()).as_iter())
@@ -275,7 +275,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
         )
 
     def action_spend(self, inner_solution: Solution) -> tuple[CoinSpend, Singleton[UnknownPuzzle]]:
-        next_create_coin = _new_create_coin_from_inner_puzzle_and_solution(self.inner_puzzle, inner_solution)
+        next_create_coin = new_create_coin_from_inner_puzzle_and_solution(self.inner_puzzle, inner_solution)
         next_singleton_puzzle = SingletonPuzzle(
             launcher_id=self.launcher_id, inner_puzzle=UnknownPuzzle(known_puzzle_hash=next_create_coin.puzzle_hash)
         )

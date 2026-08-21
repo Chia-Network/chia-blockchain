@@ -89,6 +89,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
@@ -981,10 +982,13 @@ class WalletStateManager:
             return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
         # Check if the coin is a VC
-        is_vc, _err_msg = VerifiedCredential.is_vc(uncurried)
+        is_vc = VerifiedCredential.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+        )
         if is_vc:
-            vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
-            return await self.handle_vc(vc), vc
+            vc = VerifiedCredential.get_next_from_coin_spend(coin_spend)
+            # the Streamable hint is in error so we need this type ignore
+            return await self.handle_vc(vc), vc  # type: ignore[return-value]
 
         # Check if the coin is a PlotNFT
         if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
@@ -1614,10 +1618,10 @@ class WalletStateManager:
             await self.tx_store.add_transaction_record(tx_record)
         return None
 
-    async def handle_vc(self, vc: VerifiedCredential) -> WalletIdentifier | None:
+    async def handle_vc(self, vc: VerifiedCredential[UnknownPuzzle]) -> WalletIdentifier | None:
         # Check the ownership
         derivation_record: DerivationRecord | None = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-            vc.inner_puzzle_hash
+            vc.inner_puzzle.custody_puzzle.puzzle_hash
         )
         if derivation_record is None:
             self.log.warning(
