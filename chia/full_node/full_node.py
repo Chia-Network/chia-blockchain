@@ -310,7 +310,7 @@ class FullNode:
 
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
-            self._coin_store = await CoinStore.create(self.db_wrapper)
+            self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)

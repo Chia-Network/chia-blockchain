@@ -4,8 +4,9 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from collections.abc import Collection
-from typing import Any, ClassVar
+from collections.abc import AsyncIterator, Collection
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -13,12 +14,43 @@ from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.coin_store_protocol import CoinStoreProtocol, CoinStoreSnapshot
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
+if TYPE_CHECKING:
+    from chia.full_node.block_store import BlockStore
+
 log = logging.getLogger(__name__)
+
+
+@typing_extensions.final
+@dataclasses.dataclass
+class _CoinStoreSnapshot:
+    """
+    A read view over the read transaction held open by `CoinStore.snapshot()`.
+    Only obtainable through that context manager.
+    """
+
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[CoinStoreSnapshot] = cast("_CoinStoreSnapshot", None)
+
+    _coin_store: CoinStore
+    _peak: tuple[uint32, bytes32] | None
+
+    def peak(self) -> tuple[uint32, bytes32] | None:
+        return self._peak
+
+    async def get_coin_records(self, coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        return await self._coin_store.get_coin_records(coin_ids)
+
+    async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
+        return await self._coin_store.get_coins_added_at_height(height)
+
+    async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
+        return await self._coin_store.get_coins_removed_at_height(height)
 
 
 @typing_extensions.final
@@ -28,16 +60,28 @@ class CoinStore:
     This object handles CoinRecords in DB.
     """
 
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[CoinStoreProtocol] = cast("CoinStore", None)
+
     db_wrapper: DBWrapper2
+    # Needed by snapshot() to read the peak. The peak physically lives in
+    # BlockStore's tables for now; reading it over the snapshot's read
+    # transaction (same database, same connection) keeps it consistent with
+    # the coin reads. Moving the peak into the coin store is a later step.
+    block_store: BlockStore | None = None
     # Fall back to the `coin_puzzle_hash` index if the ff unspent index
     # does not exist.
     _unspent_lineage_for_ph_idx: str = "coin_puzzle_hash"
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
+    async def create(cls, db_wrapper: DBWrapper2, block_store: BlockStore | None = None) -> CoinStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"CoinStore does not support database schema v{db_wrapper.db_version}")
-        self = CoinStore(db_wrapper)
+        if block_store is not None:
+            # snapshot() consistency relies on both stores reading through
+            # the same database wrapper (and thus the same read transaction)
+            assert block_store.db_wrapper is db_wrapper
+        self = CoinStore(db_wrapper, block_store)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating coin store tables and indexes.")
@@ -252,6 +296,32 @@ class CoinStore:
                         coin_record = CoinRecord(coin, row[0], row[1], row[2] != 0, row[6])
                         coins.append(coin_record)
                 return coins
+
+    @asynccontextmanager
+    async def snapshot(self) -> AsyncIterator[_CoinStoreSnapshot]:
+        """
+        Acquire a consistent read view of the coin store.
+
+        This holds a read transaction open for the duration of the scope, so
+        all reads made through the snapshot observe the same database state:
+        writes committed after acquisition become visible only after the
+        scope exits. The peak is read inside the same transaction (which also
+        pins the sqlite snapshot) and cached, so `peak()` is consistent with
+        the coin reads by construction.
+
+        Reads must be made from the task that acquired the snapshot: the
+        underlying read connection is associated with the current asyncio
+        task, and reads from other tasks would use a different connection
+        outside this transaction.
+        """
+        if self.block_store is None:
+            raise RuntimeError("CoinStore.snapshot() requires a block_store reference to read the peak")
+        async with self.db_wrapper.reader():
+            peak: tuple[uint32, bytes32] | None = None
+            peak_row = await self.block_store.get_peak()
+            if peak_row is not None:
+                peak = (peak_row[1], peak_row[0])
+            yield _CoinStoreSnapshot(self, peak)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
