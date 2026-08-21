@@ -129,7 +129,7 @@ class WalletTransactionStore:
                 name=record.name,
                 memos=record.memos,
             )
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     bytes(transaction_record_old),
@@ -146,7 +146,7 @@ class WalletTransactionStore:
                     record.type,
                 ),
             )
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
             ltx = get_light_transaction_record(record)
