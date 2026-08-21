@@ -1,5 +1,5 @@
 interfaces = []
-exclude = ["**/*__pycache__", "**/*egg-info", "**/docs", "**/tests", "**/venv"]
+exclude = ["**/*__pycache__", "**/*egg-info", "**/docs", "**/tests", "**/venv", "chia/_vendored"]
 source_roots = ["."]
 
 [[modules]]

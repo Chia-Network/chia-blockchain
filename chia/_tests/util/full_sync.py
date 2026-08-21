@@ -13,13 +13,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import cast
 
-import aiosqlite
 import zstd
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
+from chia._vendored import aiosqlite
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
