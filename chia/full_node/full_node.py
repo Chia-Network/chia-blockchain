@@ -95,6 +95,7 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
+from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -2238,10 +2239,10 @@ class FullNode:
             block.is_transaction_block()
             and block.transactions_info is not None
             and block.transactions_info.generator_root != bytes([0] * 32)
-            and not block_has_transactions_generator(block)
         ):
-            # This is the case where we already had the unfinished block, and asked for this block without
-            # the transactions (since we already had them). Therefore, here we add the transactions.
+            # This is a transaction block with a generator. Look up the matching unfinished block in the
+            # cache; if it's there, use its pre-validation result. If the finished block arrived without
+            # its generator, take the generator and ref list from the cached unfinished block.
             pos = block.reward_chain_block.proof_of_space
             if pos.version == 1 and pos.quality_string() is None:
                 raise ConsensusError(Err.INVALID_POSPACE)
@@ -2265,13 +2266,21 @@ class FullNode:
                 assert foliage_hash is not None
                 pre_validation_result = unf_entry.result
                 assert pre_validation_result is not None
+                # If the block arrived with a generator, reject it if it doesn't match generator_root
+                # before replacing it with the cached one.
+                incoming_generator = get_transactions_generator_bytes(block)
+                if (
+                    incoming_generator is not None
+                    and std_hash(incoming_generator) != block.transactions_info.generator_root
+                ):
+                    raise ConsensusError(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
                 block = block.replace(
                     transactions_generator=unf_entry.unfinished_block.transactions_generator,
                     transactions_generator_ref_list=unf_entry.unfinished_block.transactions_generator_ref_list,
                     transactions_generator_buffer=unf_entry.unfinished_block.transactions_generator_buffer,
                     version=unf_entry.unfinished_block.version,
                 )
-            else:
+            elif not block_has_transactions_generator(block):
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
                 # with the same unfinished block hash in the cache, so we need to fetch the correct one
                 if peer is None:
@@ -2300,6 +2309,8 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because the generator is present
                 return await self.add_block(new_block, peer, bls_cache)
+            # else: the block carries its generator but we have no cached result, so it is validated
+            # normally during pre-validation below.
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
         async with (
