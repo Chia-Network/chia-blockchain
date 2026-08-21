@@ -144,9 +144,6 @@ class LastState:
     def get_total_iters(self) -> uint128:
         return self.total_iters
 
-    def get_last_peak_challenge(self) -> bytes32 | None:
-        return self.last_peak_challenge
-
     def get_difficulty(self) -> uint64:
         return self.difficulty
 
