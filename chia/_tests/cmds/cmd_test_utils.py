@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+import click
 import pytest
 from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -406,12 +407,16 @@ def create_service_and_wallet_client_generators(
     def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
         return None
 
+    def click_confirm(input_message: str, abort: bool) -> None:
+        return None
+
     monkeypatch.setattr(chia.cmds.cmds_util, "get_any_service_client", test_get_any_service_client)
     monkeypatch.setattr(chia.cmds.peer_funcs, "get_any_service_client", test_get_any_service_client)
     monkeypatch.setattr(chia.cmds.cmds_util, "get_wallet_client", test_get_wallet_client)
     monkeypatch.setattr(chia.cmds.wallet_funcs, "get_wallet_client", test_get_wallet_client)
     monkeypatch.setattr(chia.cmds.cmds_util, "cli_confirm", cli_confirm)
     monkeypatch.setattr(chia.cmds.wallet_funcs, "cli_confirm", cli_confirm)
+    monkeypatch.setattr(click, "confirm", click_confirm)
 
 
 def run_cli_command(capsys: object, chia_root: Path, command_list: list[str]) -> str:
