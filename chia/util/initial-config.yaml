@@ -251,8 +251,7 @@ timelord_launcher:
   logging: *logging
 
 timelord:
-  # Provides a list of VDF clients expected to connect to this timelord.
-  # For each client, an IP is provided, together with the estimated iterations per second.
+  # Provides a list of VDF client IPs allowed to connect to this timelord.
   vdf_clients:
     ip:
       - *self_hostname
