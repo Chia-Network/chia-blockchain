@@ -19,8 +19,9 @@ from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
+    HASH_TREE_CAT_CORE_PUZZLES,
     QUOTED_CAT_MOD_HASH,
-    construct_cat_puzzle,
+    CATPuzzle,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
@@ -32,6 +33,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
@@ -274,12 +276,11 @@ class RCATWallet(CATWallet):
             hint,
         ).get_tree_hash()
         if (
-            construct_cat_puzzle(
-                Program.to(CAT_MOD_HASH),
-                self.info.limitations_program_hash,
-                hint_inner_hash,
-                mod_code_hash=CAT_MOD_HASH_HASH,
-            ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
+            CATPuzzle(
+                tail_hash=self.info.limitations_program_hash,
+                inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint_inner_hash),
+                cat_puzzles=HASH_TREE_CAT_CORE_PUZZLES,
+            ).puzzle.get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
             == coin.puzzle_hash
         ):
             return True

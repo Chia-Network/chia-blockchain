@@ -36,9 +36,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATPuzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
@@ -79,11 +80,9 @@ async def mint_cr_cat(
 ) -> None:
     async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
-    cat_puzzle: Program = construct_cat_puzzle(
-        CAT_MOD,
-        tail.get_tree_hash(),
-        Program.to(1),
-    )
+    cat_puzzle: Program = CATPuzzle(
+        tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+    ).puzzle
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)

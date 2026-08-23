@@ -1188,7 +1188,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCInnerPuzzl
 class RevocationOuterPuzzle:
     def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         revocation_layer_match = RevocationLayer.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle.mod.curry(puzzle.args))
+            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle.mod.curry(*puzzle.args.as_iter()))
         )
         if revocation_layer_match is None:
             return None

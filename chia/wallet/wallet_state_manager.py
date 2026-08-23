@@ -45,7 +45,7 @@ from chia.util.path import path_from_root
 from chia.util.streamable import Streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CATPuzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.clawback_manager import ClawbackManager
@@ -941,13 +941,12 @@ class WalletStateManager:
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
 
         # Check if the coin is a CAT
-        cat_curried_args = match_cat_puzzle(uncurried)
-        if cat_curried_args is not None:
-            cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
+        matched_cat = CATPuzzle.match_uncurried(uncurried)
+        if matched_cat is not None:
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.as_atom()),
-                bytes32(tail_program_hash.as_atom()),
-                cat_inner_puzzle,
+                CAT_MOD_HASH,
+                matched_cat.tail_hash,
+                matched_cat.inner_puzzle.puzzle,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
             )

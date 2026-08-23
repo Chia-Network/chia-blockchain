@@ -26,9 +26,10 @@ from chia.types.coin_spend import make_spend
 from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATCorePuzzles, CATPuzzle
 from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
@@ -202,9 +203,10 @@ class CRCAT:
             proofs_checker,
             payment.puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(payment.puzzle_hash)
-        new_cat_puzhash = construct_cat_puzzle(CAT_MOD, tail_hash, new_cr_layer_hash).get_tree_hash_precalc(
-            new_cr_layer_hash
-        )
+        new_cat_puzhash = CATPuzzle(
+            tail_hash=tail_hash,
+            inner_puzzle=UnknownPuzzle(known_puzzle_hash=new_cr_layer_hash),
+        ).puzzle.get_tree_hash_precalc(new_cr_layer_hash)
 
         eve_innerpuz: Program = Program.to(
             (
@@ -217,11 +219,10 @@ class CRCAT:
                 ],
             )
         )
-        eve_cat_puzzle: Program = construct_cat_puzzle(
-            CAT_MOD,
-            tail_hash,
-            eve_innerpuz,
-        )
+        eve_cat_puzzle: Program = CATPuzzle(
+            tail_hash=tail_hash,
+            inner_puzzle=UnknownPuzzle(known_puzzle=eve_innerpuz),
+        ).puzzle
         eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
@@ -269,11 +270,10 @@ class CRCAT:
         )
 
     def construct_puzzle(self, inner_puzzle: Program) -> Program:
-        return construct_cat_puzzle(
-            CAT_MOD,
-            self.tail_hash,
-            self.construct_cr_layer(inner_puzzle),
-        )
+        return CATPuzzle(
+            tail_hash=self.tail_hash,
+            inner_puzzle=UnknownPuzzle(known_puzzle=self.construct_cr_layer(inner_puzzle)),
+        ).puzzle
 
     def construct_cr_layer(self, inner_puzzle: Program) -> Program:
         return construct_cr_layer(
@@ -288,7 +288,7 @@ class CRCAT:
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a CR-CAT and an error
         message for if the puzzle is a mismatch.
         """
-        if puzzle_reveal.mod != CAT_MOD:
+        if puzzle_reveal.mod != CATCorePuzzles().cat_mod:
             return False, "top most layer is not a CAT"  # pragma: no cover
         layer_below_cat: UncurriedPuzzle = uncurry_puzzle(uncurry_puzzle(puzzle_reveal.args.at("rrf")).mod)
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:

@@ -15,7 +15,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATPuzzle
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
@@ -67,12 +67,12 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     cat_list: list[CAT] = []
     for spend in coin_spends.as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
-        args = match_cat_puzzle(uncurry_puzzle(puzzle))
+        matched_cat = CATPuzzle.match_uncurried(uncurry_puzzle(puzzle))
 
-        if args is None:
+        if matched_cat is None:
             continue
 
-        _, asset_id, _ = args
+        asset_id = matched_cat.tail_hash
         memo = ""
 
         puzzle_result = puzzle.run(solution)
