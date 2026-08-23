@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import bisect
 import logging
 import time
 import traceback
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -24,7 +25,6 @@ from chia_rs import (
     PoolTarget,
     RespondToPhUpdates,
     RewardChainBlockUnfinished,
-    SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
     get_flags_for_height_and_constants,
@@ -35,6 +35,10 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import calculate_infusion_point_total_iters, create_unfinished_block
+from chia.consensus.block_generator_info import (
+    block_has_transactions_generator,
+    get_transactions_generator_bytes,
+)
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
@@ -85,6 +89,36 @@ else:
 
 MAX_COIN_HASHES_PER_REQUEST = 50
 MAX_COINS_MAP_SIZE = 100
+
+
+def ses_intervals_for_range(
+    ses_heights: Sequence[uint32],
+    start_height: uint32,
+    end_height: uint32,
+) -> list[tuple[uint32, uint32]]:
+    """
+    Return 0-2 SES height intervals (start, next) covering [start_height, end_height].
+
+    Uses bisect instead of a linear scan (mainnet has tens of thousands of SES heights).
+    """
+    if len(ses_heights) < 2:
+        return []
+
+    idx = bisect.bisect_right(ses_heights, start_height) - 1
+    if not (0 <= idx < len(ses_heights) - 1):
+        return []
+
+    ses_start_height = ses_heights[idx]
+    next_ses_height = ses_heights[idx + 1]
+    if not (ses_start_height <= start_height < next_ses_height):
+        return []
+
+    intervals: list[tuple[uint32, uint32]] = [(ses_start_height, next_ses_height)]
+    if not (ses_start_height < end_height < next_ses_height) and idx < len(ses_heights) - 2:
+        # Request spans two SES intervals.
+        next_next_height = ses_heights[idx + 2]
+        intervals.append((next_ses_height, next_next_height))
+    return intervals
 
 
 async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
@@ -423,8 +457,8 @@ class FullNodeAPI:
 
         block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            if not request.include_transaction_block and block.transactions_generator is not None:
-                block = block.replace(transactions_generator=None)
+            if not request.include_transaction_block and block_has_transactions_generator(block):
+                block = block.replace(transactions_generator=None, transactions_generator_buffer=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
@@ -458,7 +492,7 @@ class FullNodeAPI:
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     return make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                block = block.replace(transactions_generator=None)
+                block = block.replace(transactions_generator=None, transactions_generator_buffer=None)
                 blocks.append(block)
             msg = make_msg(
                 ProtocolMessageTypes.respond_blocks,
@@ -1178,6 +1212,7 @@ class FullNodeAPI:
                 sp_vdfs,
                 timestamp,
                 self.full_node.blockchain,
+                tx_height,
                 b"",
                 new_block_gen,
                 prev_b,
@@ -1217,7 +1252,7 @@ class FullNodeAPI:
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
             # Adds backup in case the first one fails
-            if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
+            if unfinished_block.is_transaction_block() and block_has_transactions_generator(unfinished_block):
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
@@ -1233,6 +1268,7 @@ class FullNodeAPI:
                     sp_vdfs,
                     timestamp,
                     self.full_node.blockchain,
+                    tx_height,
                     b"",
                     None,
                     prev_b,
@@ -1374,7 +1410,7 @@ class FullNodeAPI:
 
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
 
-        if block.transactions_generator is not None:
+        if block_has_transactions_generator(block):
             block_generator: BlockGenerator | None = await get_block_generator(
                 self.full_node.blockchain.lookup_block_generators, block
             )
@@ -1387,9 +1423,11 @@ class FullNodeAPI:
             # trusted peers use dedicated threads at high priority;
             # untrusted peers are deprioritized
             trusted = self.is_trusted(peer)
+            generator_bytes = get_transactions_generator_bytes(block)
+            assert generator_bytes is not None
             additions, removals = await self.full_node.pool.run_in_loop(
                 additions_and_removals,
-                bytes(block.transactions_generator),
+                generator_bytes,
                 block_generator.generator_refs,
                 flags,
                 self.full_node.constants,
@@ -1537,7 +1575,7 @@ class FullNodeAPI:
                 proofs_map: list[tuple[bytes32, bytes]] = []
 
                 # If there are no transactions, respond with empty lists
-                if block.transactions_generator is None:
+                if not block_has_transactions_generator(block):
                     proofs: list[tuple[bytes32, bytes]] | None
                     if request.coin_names is None:
                         proofs = None
@@ -1549,7 +1587,7 @@ class FullNodeAPI:
                         coins_map.append((removed_name, removed_coin))
                     response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
                 else:
-                    assert block.transactions_generator
+                    assert block_has_transactions_generator(block)
                     leafs: list[bytes32] = []
                     for removed_name, removed_coin in all_removals_dict.items():
                         leafs.append(removed_name)
@@ -1627,7 +1665,7 @@ class FullNodeAPI:
 
         block: BlockInfo | None = await self.full_node.block_store.get_block_info(header_hash)
 
-        if block is None or block.transactions_generator is None:
+        if block is None or not block_has_transactions_generator(block):
             return reject_msg
 
         block_generator: BlockGenerator | None = await get_block_generator(
@@ -1947,32 +1985,9 @@ class FullNodeAPI:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
         ses_height = self.full_node.blockchain.get_ses_heights()
-        start_height = request.start_height
-        end_height = request.end_height
-        ses_hash_heights = []
-        ses_reward_hashes = []
-
-        for idx, ses_start_height in enumerate(ses_height):
-            if idx == len(ses_height) - 1:
-                break
-
-            next_ses_height = ses_height[idx + 1]
-            # start_ses_hash
-            if ses_start_height <= start_height < next_ses_height:
-                ses_hash_heights.append([ses_start_height, next_ses_height])
-                ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
-                ses_reward_hashes.append(ses.reward_chain_hash)
-                if ses_start_height < end_height < next_ses_height:
-                    break
-                else:
-                    if idx == len(ses_height) - 2:
-                        break
-                    # else add extra ses as request start <-> end spans two ses
-                    next_next_height = ses_height[idx + 2]
-                    ses_hash_heights.append([next_ses_height, next_next_height])
-                    nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
-                    ses_reward_hashes.append(nex_ses.reward_chain_hash)
-                    break
+        intervals = ses_intervals_for_range(ses_height, request.start_height, request.end_height)
+        ses_hash_heights = [[start, end] for start, end in intervals]
+        ses_reward_hashes = [self.full_node.blockchain.get_ses(start).reward_chain_hash for start, _end in intervals]
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)

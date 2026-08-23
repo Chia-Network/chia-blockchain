@@ -115,6 +115,7 @@ class Wallet:
         unconfirmed_tx: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.id()
         )
+        counted_additions = set()
         addition_amount = 0
 
         for record in unconfirmed_tx:
@@ -139,8 +140,12 @@ class Wallet:
                 continue
 
             for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
+                if (
+                    await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id())
+                    and coin not in counted_additions
+                ):
                     addition_amount += coin.amount
+                    counted_additions.add(coin)
 
         return uint64(addition_amount)
 
@@ -175,11 +180,6 @@ class Wallet:
             condition_list.append(make_reserve_fee_condition(fee))
 
         return solution_for_conditions(condition_list)
-
-    def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
-        python_program = solution.as_python()
-        python_program[1].append(condition)
-        return Program.to(python_program)
 
     async def select_coins(
         self,

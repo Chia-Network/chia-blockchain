@@ -31,18 +31,18 @@ def test_base_event_loop_has_methods() -> None:
         method = getattr(base_selector_event_loop, "create_server")
         assert inspect.ismethod(method)
         if sys.version_info >= (3, 13):
-            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, keep_alive=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # noqa: E501
+            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, keep_alive=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # ruff: ignore[line-too-long]
         elif sys.version_info >= (3, 11):
-            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # noqa: E501
+            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # ruff: ignore[line-too-long]
         else:
-            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, start_serving=True)"  # noqa: E501
+            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, start_serving=True)"  # ruff: ignore[line-too-long]
         assert str(inspect.signature(method)) == expected_signature
 
         assert hasattr(base_selector_event_loop, "_start_serving")
         method = getattr(base_selector_event_loop, "_start_serving")
         assert inspect.ismethod(method)
         if sys.version_info >= (3, 11):
-            expected_signature = "(protocol_factory, sock, sslcontext=None, server=None, backlog=100, ssl_handshake_timeout=60.0, ssl_shutdown_timeout=30.0)"  # noqa: E501
+            expected_signature = "(protocol_factory, sock, sslcontext=None, server=None, backlog=100, ssl_handshake_timeout=60.0, ssl_shutdown_timeout=30.0)"  # ruff: ignore[line-too-long]
         else:
             expected_signature = (
                 "(protocol_factory, sock, sslcontext=None, server=None, backlog=100, ssl_handshake_timeout=60.0)"
@@ -60,11 +60,11 @@ def test_base_event_loop_has_methods() -> None:
         assert inspect.ismethod(method)
         assert (
             inspect.getsource(method)
-            == "    async def create_server(self, *args, **kwargs) -> PausableServer:  # type: ignore[no-untyped-def]\n        return await _chia_create_server(super(), *args, **kwargs)\n"  # noqa: E501
+            == "    async def create_server(self, *args, **kwargs) -> PausableServer:  # type: ignore[no-untyped-def]\n        return await _chia_create_server(super(), *args, **kwargs)\n"  # ruff: ignore[line-too-long]
         )
 
         assert inspect.isfunction(_chia_create_server)
-        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any', port: 'Any', *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'bool | None' = None, reuse_port: 'bool | None' = None, ssl_handshake_timeout: 'float | None' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # noqa: E501
+        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any', port: 'Any', *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'bool | None' = None, reuse_port: 'bool | None' = None, ssl_handshake_timeout: 'float | None' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # ruff: ignore[line-too-long]
         assert str(inspect.signature(_chia_create_server)) == expected_signature
 
         class EchoProtocol(asyncio.Protocol):

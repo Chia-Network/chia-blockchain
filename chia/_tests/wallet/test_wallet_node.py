@@ -44,6 +44,7 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_header_block
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
 @pytest.mark.anyio
@@ -622,6 +623,75 @@ async def test_get_timestamp_for_height_from_peer_rejects_wrong_response_height(
 
     assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, expected_hash) is None
     add_to_blocks.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("peak_response", [None, []])
+async def test_get_timestamp_for_height_from_peer_rejects_missing_peak_response(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch, peak_response: list[object] | None
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    expected_hash = bytes32(b"\x01" * 32)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+    requested_heights: list[int] = []
+
+    async def missing_response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object] | None:
+        requested_heights.append(int(start_height))
+        return peak_response
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", missing_response)
+
+    # An anchored lookup whose peak height returns no block (empty or timeout) must not
+    # backtrack with a stale anchor; it returns None after the single failed peak request.
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer, expected_hash) is None
+    assert requested_heights == [100]
+    add_to_blocks.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_timestamp_for_height_from_peer_unanchored_backtracks_past_missing_peak(
+    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants)
+    timestamp = uint64(12_345)
+    peer = cast(WSChiaConnection, types.SimpleNamespace(get_peer_info=lambda: "peer"))
+    add_to_blocks = Mock()
+    cache = types.SimpleNamespace(
+        get_height_timestamp=Mock(return_value=None),
+        get_block=Mock(return_value=None),
+        add_to_blocks=add_to_blocks,
+    )
+    requested_heights: list[int] = []
+
+    async def response(peer: WSChiaConnection, start_height: uint32, end_height: uint32) -> list[object]:
+        requested_heights.append(int(start_height))
+        if int(start_height) == 100:
+            return []
+        return [
+            types.SimpleNamespace(
+                height=uint32(start_height),
+                header_hash=bytes32(b"\x05" * 32),
+                prev_header_hash=bytes32(b"\x06" * 32),
+                foliage_transaction_block=types.SimpleNamespace(timestamp=timestamp),
+            )
+        ]
+
+    monkeypatch.setattr(wallet_node, "get_cache_for_peer", lambda peer: cache)
+    monkeypatch.setattr("chia.wallet.wallet_node.request_header_blocks", response)
+
+    # Without an anchor an empty peak response is not fatal: the lookup keeps backtracking
+    # toward an older transaction block, so the anchored short-circuit must not apply here.
+    assert await wallet_node.get_timestamp_for_height_from_peer(uint32(100), peer) == timestamp
+    assert requested_heights == [100, 99]
 
 
 @pytest.mark.anyio
@@ -2183,3 +2253,102 @@ async def test_collect_valid_states(
         )
     assert [cs.coin.name() for cs in valid_states] == [good_coin_state.coin.name()]
     assert f"Failed to validate coin_state {bad_coin_state}" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_state_update_received_rejects_oversized_update(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    peer = next(iter(wallet_server.all_connections.values()))
+
+    wallet_node.config["max_coin_state_update_items"] = 2
+    coin_generator = CoinGenerator()
+    items = [CoinState(coin_generator.get().coin, None, None) for _ in range(10)]
+    update = wallet_protocol.CoinStateUpdate(uint32(1), uint32(0), bytes32(b"\0" * 32), items)
+    api = WalletNodeAPI(wallet_node)
+
+    with caplog.at_level(logging.ERROR):
+        await wallet_node.state_update_received(update, peer)
+        assert "coin state update with too many items" in caplog.text
+        caplog.clear()
+
+        await api.coin_state_update(bytes(update), peer)
+        await time_out_assert(10, lambda: "coin state update with too many items" in caplog.text)
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.anyio
+async def test_state_update_received_accepts_update_within_limit(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    peer = next(iter(wallet_server.all_connections.values()))
+
+    wallet_node.config["max_coin_state_update_items"] = 5
+    update = wallet_protocol.CoinStateUpdate(uint32(1), uint32(0), bytes32(b"\0" * 32), [])
+
+    with caplog.at_level(logging.INFO):
+        await wallet_node.state_update_received(update, peer)
+
+    assert not peer.closed
+    assert peer.peer_info.host not in wallet_server.banned_peers
+    assert "Received coin state update" in caplog.text
+    assert "0 items" in caplog.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "subscription_kind",
+    ["puzzle_hash", "coin_id"],
+)
+async def test_process_new_subscriptions_continues_after_peer_error(
+    setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    subscription_kind: str,
+) -> None:
+    """One failing peer must not skip subscription registration on later peers."""
+    [bad_fn_api, good_fn_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
+    # Keep both peers; do not prefer a trusted peer that would disconnect the other.
+    wallet_node.config["trusted_peers"] = {}
+
+    assert await wallet_server.start_client(PeerInfo(self_hostname, bad_fn_api.server.get_port()), None)
+    assert await wallet_server.start_client(PeerInfo(self_hostname, good_fn_api.server.get_port()), None)
+    await time_out_assert(10, lambda: len(wallet_server.get_connections(NodeType.FULL_NODE)) == 2)
+
+    target = bytes32.random()
+
+    async def register_for_ph_updates(
+        self: object, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
+    ) -> None:
+        raise RuntimeError("simulated peer failure")
+
+    async def register_for_coin_updates(
+        self: object, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
+    ) -> None:
+        raise RuntimeError("simulated peer failure")
+
+    if subscription_kind == "puzzle_hash":
+        handler: Any = register_for_ph_updates
+
+        def good_peer_subscribed() -> bool:
+            return target in good_fn_api.full_node.subscriptions.puzzle_subscriptions(wallet_server.node_id)
+
+    else:
+        handler = register_for_coin_updates
+
+        def good_peer_subscribed() -> bool:
+            return target in good_fn_api.full_node.subscriptions.coin_subscriptions(wallet_server.node_id)
+
+    with patch_request_handler(api=bad_fn_api, handler=handler):
+        if subscription_kind == "puzzle_hash":
+            await wallet_node.new_peak_queue.subscribe_to_puzzle_hashes([target])
+        else:
+            await wallet_node.new_peak_queue.subscribe_to_coin_ids([target])
+        await time_out_assert(10, good_peer_subscribed)
+        await time_out_assert(10, lambda: bad_fn_api.server.node_id not in wallet_server.all_connections)
+
+    assert good_fn_api.server.node_id in wallet_server.all_connections

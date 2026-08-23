@@ -53,6 +53,18 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
     )
 
 
+def argument(*param_decls: str, **kwargs: Any) -> Any:
+    return field(
+        metadata=dict(
+            argument_args=dict(
+                param_decls=tuple(param_decls),
+                **kwargs,
+            ),
+        ),
+        default=kwargs.get("default", MISSING),
+    )
+
+
 @final
 @dataclasses.dataclass
 class ChiaCliContext:
@@ -111,6 +123,7 @@ _CLASS_TYPES_TO_CLICK_TYPES = {
 class _CommandParsingStage:
     my_dataclass: type[ChiaCommand]
     my_option_decorators: list[Callable[[SyncCmd], SyncCmd]]
+    my_argument_decorators: list[Callable[[SyncCmd], SyncCmd]]
     my_members: dict[str, _CommandParsingStage]
     my_kwarg_names: list[str]
     _needs_context: bool
@@ -152,6 +165,9 @@ class _CommandParsingStage:
 
         for decorator in self.get_all_option_decorators():
             cmd_to_return = decorator(cmd_to_return)
+        # Positional arguments are currently only supported directly on commands.
+        for decorator in self.my_argument_decorators:
+            cmd_to_return = decorator(cmd_to_return)
 
         return cmd_to_return
 
@@ -167,6 +183,7 @@ class _CommandParsingStage:
 
 def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
     option_decorators: list[Callable[[SyncCmd], SyncCmd]] = []
+    argument_decorators: list[Callable[[SyncCmd], SyncCmd]] = []
     kwarg_names: list[str] = []
     members: dict[str, _CommandParsingStage] = {}
     needs_context: bool = False
@@ -234,10 +251,20 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                     **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
                 )
             )
+        elif "argument_args" in cls_field.metadata:
+            argument_args = cls_field.metadata["argument_args"]
+            kwarg_names.append(field_name)
+            argument_decorators.append(
+                click.argument(
+                    *argument_args["param_decls"],
+                    **{k: v for k, v in argument_args.items() if k != "param_decls"},
+                )
+            )
 
     return _CommandParsingStage(
         my_dataclass=cls,
         my_option_decorators=option_decorators,
+        my_argument_decorators=argument_decorators,
         my_members=members,
         my_kwarg_names=kwarg_names,
         _needs_context=needs_context,

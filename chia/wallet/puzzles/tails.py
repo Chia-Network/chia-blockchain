@@ -25,7 +25,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.conditions import CreateCoin
+from chia.wallet.conditions import CreateCoin, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -123,9 +123,11 @@ class GenesisById(LimitationsProgram):
             interface.side_effects.transactions = inner_action_scope.side_effects.transactions
 
         inner_tree_hash = cat_inner.get_tree_hash()
-        inner_solution = wallet.standard_wallet.add_condition_to_solution(
-            Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(primaries=[CreateCoin(inner_tree_hash, amount, [inner_tree_hash])]),
+        inner_solution = wallet.standard_wallet.make_solution(
+            primaries=[CreateCoin(inner_tree_hash, amount, [inner_tree_hash])],
+            conditions=(
+                UnknownCondition(opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]),
+            ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,

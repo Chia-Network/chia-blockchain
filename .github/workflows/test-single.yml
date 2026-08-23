@@ -52,7 +52,7 @@ defaults:
     shell: bash
 
 env:
-  BLOCKS_AND_PLOTS_VERSION: 0.45.29
+  BLOCKS_AND_PLOTS_VERSION: 0.45.32
 
 jobs:
   # Download the test blocks and plots exactly once per runner OS and store them

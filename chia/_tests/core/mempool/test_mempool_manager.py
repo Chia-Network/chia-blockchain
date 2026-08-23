@@ -78,6 +78,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import MELT_CONDITION, puzzle_for_singleton, solution_for_singleton
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -343,6 +344,8 @@ def make_test_conds(
     before_seconds_relative: int | None = None,
     before_seconds_absolute: int | None = None,
     cost: int = 0,
+    num_atoms: int = 0,
+    num_pairs: int = 0,
     spend_ids: Sequence[tuple[bytes32 | Coin, int]] = [(TEST_COIN_ID, 0)],
     created_coins: list[list[CreateCoin]] | None = None,
 ) -> SpendBundleConditions:
@@ -397,8 +400,8 @@ def make_test_conds(
         False,
         0,
         0,
-        0,
-        0,
+        num_atoms,
+        num_pairs,
         0,
     )
 
@@ -949,6 +952,8 @@ def mk_item(
     *,
     cost: int = 1,
     fee: int = 0,
+    num_atoms: int = 0,
+    num_pairs: int = 0,
     assert_height: int | None = None,
     assert_before_height: int | None = None,
     assert_before_seconds: int | None = None,
@@ -970,7 +975,7 @@ def mk_item(
         coin_spends.append(coin_spend)
         bundle_coin_spends[coin_id] = mk_bcs(coin_spend, f)
     spend_bundle = SpendBundle(coin_spends, G2Element())
-    conds = make_test_conds(cost=cost, spend_ids=spend_ids)
+    conds = make_test_conds(cost=cost, num_atoms=num_atoms, num_pairs=num_pairs, spend_ids=spend_ids)
     return MempoolItem(
         aggregated_signature=spend_bundle.aggregated_signature,
         fee=uint64(fee),
@@ -2498,11 +2503,8 @@ class TestCoins:
 
 # creates a CoinSpend of a made up
 def make_singleton_spend(
-    launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1
+    launcher_id: bytes32, parent_parent_id: bytes32 = bytes32([3] * 32), child_amount: int = 1, *, melt: bool = False
 ) -> CoinSpend:
-    from chia.wallet.lineage_proof import LineageProof
-    from chia.wallet.puzzles.singleton_top_layer_v1_1 import puzzle_for_singleton, solution_for_singleton
-
     singleton_puzzle = puzzle_for_singleton(launcher_id, Program.to(1)).to_serialized()
 
     PARENT_COIN = Coin(parent_parent_id, singleton_puzzle.get_tree_hash(), uint64(1))
@@ -2510,7 +2512,9 @@ def make_singleton_spend(
 
     lineage_proof = LineageProof(parent_parent_id, IDENTITY_PUZZLE_HASH, uint64(1))
 
-    inner_solution = Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(child_amount)]])
+    inner_solution = Program.to(
+        [MELT_CONDITION] if melt else [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(child_amount)]]
+    )
     singleton_solution = solution_for_singleton(lineage_proof, uint64(1), inner_solution).to_serialized()
 
     ret = CoinSpend(COIN, singleton_puzzle, singleton_solution)
@@ -3573,3 +3577,28 @@ async def test_mempool_item_to_spend_bundle() -> None:
         result = mi.to_spend_bundle()
         assert result == sb
         assert result.name() == sb_name
+
+
+@pytest.mark.anyio
+async def test_bundle_with_old_ff_spend_plus_melt_ff_spend() -> None:
+    """
+    Covers the scenario where a spend bundle has a coin that gets spent by
+    another spend immediately after fast forward, to make sure we reject that
+    spend bundle.
+    """
+    launcher_id = bytes32([1] * 32)
+    version_1_spend = make_singleton_spend(launcher_id, bytes32([2] * 32))
+    version_2_spend = make_singleton_spend(launcher_id, bytes32([3] * 32))
+    version_3_spend = make_singleton_spend(launcher_id, bytes32([4] * 32), melt=True)
+    coins = TestCoins(
+        [version_1_spend.coin, version_2_spend.coin, version_3_spend.coin],
+        {version_3_spend.coin.puzzle_hash: version_3_spend},
+    )
+    coins.spend_coin(version_1_spend.coin.name())
+    coins.spend_coin(version_2_spend.coin.name())
+    sb = SpendBundle([version_1_spend, version_3_spend], G2Element())
+    async with setup_mempool(coins) as mempool_manager:
+        _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
+        assert status == MempoolInclusionStatus.FAILED
+        assert error == Err.DOUBLE_SPEND
+        assert_sb_not_in_pool(mempool_manager, sb)

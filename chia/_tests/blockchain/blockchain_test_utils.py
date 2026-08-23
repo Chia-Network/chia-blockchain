@@ -5,6 +5,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -76,7 +77,7 @@ async def _validate_and_add_block(
     await check_block_store_invariant(blockchain)
 
     if skip_prevalidation:
-        if block.transactions_generator is None:
+        if not block_has_transactions_generator(block):
             conds = None
         else:
             # fake the signature validation. Just say True here.

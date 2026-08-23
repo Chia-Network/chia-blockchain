@@ -15,6 +15,7 @@ from chia._tests.util.coin_store import add_coin_records_to_db
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -97,12 +98,12 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
             should_be_included.add(pool_coin)
             if not block.is_transaction_block():
                 continue
-            if block.transactions_generator is not None:
+            if block_has_transactions_generator(block):
                 assert block.transactions_info is not None
                 flags = get_flags_for_height_and_constants(block.height, bt.constants)
-                additions, removals = additions_and_removals(
-                    bytes(block.transactions_generator), [], flags, bt.constants
-                )
+                generator_bytes = get_transactions_generator_bytes(block)
+                assert generator_bytes is not None
+                additions, removals = additions_and_removals(generator_bytes, [], flags, bt.constants)
                 tx_removals = [name for name, _ in removals]
                 tx_additions = [(addition.name(), addition, False) for addition, _ in additions]
             else:

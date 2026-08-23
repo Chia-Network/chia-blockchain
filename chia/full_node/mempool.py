@@ -72,6 +72,13 @@ MEMPOOL_ITEM_FEE_LIMIT = 2**50
 # slots relative to their CLVM cost.
 MAX_SPENDS_PER_BLOCK = 6000
 
+# In addition to the CLVM cost and spend limits, blocks are limited in the
+# number of atoms and pairs their generator may allocate when executed. We track
+# these while building a block and stop before exceeding them. The atom and pair
+# counts a spend bundle uses are recorded in its SpendBundleConditions.
+MAX_BLOCK_ATOMS = 60_000_000
+MAX_BLOCK_PAIRS = 60_000_000
+
 
 @dataclass
 class MempoolRemoveInfo:
@@ -587,6 +594,8 @@ class Mempool:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_count = 0  # Checks that total spends do not exceed MAX_SPENDS_PER_BLOCK
+        atom_sum = 0  # Checks that total atoms do not exceed MAX_BLOCK_ATOMS
+        pair_sum = 0  # Checks that total pairs do not exceed MAX_BLOCK_PAIRS
         processed_spend_bundles = 0
         additions: list[Coin] = []
         # This contains a map of coin ID to a coin spend solution and its
@@ -655,13 +664,25 @@ class Mempool:
                     break  # pragma: no cover
                 new_cost_sum = cost_sum + item_cost
                 new_spend_count = spend_count + len(unique_coin_spends)
-                if new_cost_sum > self.mempool_info.max_block_clvm_cost or new_spend_count > MAX_SPENDS_PER_BLOCK:
+                new_atom_sum = atom_sum + item.conds.num_atoms
+                new_pair_sum = pair_sum + item.conds.num_pairs
+                if (
+                    new_cost_sum > self.mempool_info.max_block_clvm_cost
+                    or new_spend_count > MAX_SPENDS_PER_BLOCK
+                    or new_atom_sum > MAX_BLOCK_ATOMS
+                    or new_pair_sum > MAX_BLOCK_PAIRS
+                ):
                     log.info(
-                        "Skipping mempool item. Cumulative cost %d (max %d) spends %d (max %d)",
+                        "Skipping mempool item. Cumulative cost %d (max %d) spends %d (max %d) "
+                        "atoms %d (max %d) pairs %d (max %d)",
                         new_cost_sum,
                         self.mempool_info.max_block_clvm_cost,
                         new_spend_count,
                         MAX_SPENDS_PER_BLOCK,
+                        new_atom_sum,
+                        MAX_BLOCK_ATOMS,
+                        new_pair_sum,
+                        MAX_BLOCK_PAIRS,
                     )
                     skipped_items += 1
                     if skipped_items < MAX_SKIPPED_ITEMS:
@@ -675,6 +696,8 @@ class Mempool:
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
                 spend_count = new_spend_count
+                atom_sum = new_atom_sum
+                pair_sum = new_pair_sum
                 processed_spend_bundles += 1
                 # Let's stop taking more items if we don't have enough cost left
                 # for at least `MIN_COST_THRESHOLD` because that would mean we're
@@ -729,10 +752,17 @@ class Mempool:
         # the total (estimated) cost of the transactions added so far
         block_cost = 0
         added_spends = 0
+        # the number of atoms and pairs accrued from committed batches so far.
+        # We track these independently to stop before exceeding the block atom
+        # and pair limits.
+        added_atoms = 0
+        added_pairs = 0
 
         batch_transactions: list[SpendBundle] = []
         batch_additions: list[Coin] = []
         batch_spends = 0
+        batch_atoms = 0
+        batch_pairs = 0
         # this cost only includes conditions and execution cost, not byte-cost
         batch_cost = 0
 
@@ -740,6 +770,14 @@ class Mempool:
             current_time = monotonic()
             if current_time - generator_creation_start >= timeout:
                 log.info(f"exiting early, already spent {current_time - generator_creation_start:0.2f} s")
+                break
+
+            # Stop scanning once too many items don't fit, rather than burning
+            # the timeout on fast-forward and dedup work. Unlike block cost, the
+            # atom and pair budgets aren't freed by compression, so once
+            # saturated every further item keeps getting skipped here.
+            if skipped_items >= MAX_SKIPPED_ITEMS:
+                log.info("Skipped %d mempool items, stopping block creation", skipped_items)
                 break
 
             name = bytes32(row[0])
@@ -774,6 +812,12 @@ class Mempool:
                     skipped_items += 1
                     continue
 
+                new_atom_count = added_atoms + batch_atoms + item.conds.num_atoms
+                new_pair_count = added_pairs + batch_pairs + item.conds.num_pairs
+                if new_atom_count > MAX_BLOCK_ATOMS or new_pair_count > MAX_BLOCK_PAIRS:
+                    skipped_items += 1
+                    continue
+
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
@@ -787,6 +831,8 @@ class Mempool:
                         committed_ff = singleton_ff.copy()
                         committed_dedup = dedup_coin_spends.copy()
                         added_spends += batch_spends
+                        added_atoms += batch_atoms
+                        added_pairs += batch_pairs
                         additions.extend(batch_additions)
                         removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
                         log.info(
@@ -797,6 +843,8 @@ class Mempool:
                         batch_transactions = []
                         batch_additions = []
                         batch_spends = 0
+                        batch_atoms = 0
+                        batch_pairs = 0
                     else:
                         log.info(f"Skipping transaction batch cumulative cost: {block_cost} batch cost: {batch_cost}")
                         skipped_items += 1
@@ -808,6 +856,8 @@ class Mempool:
                         batch_transactions = []
                         batch_additions = []
                         batch_spends = 0
+                        batch_atoms = 0
+                        batch_pairs = 0
                         # Reprocess the current item against the correct fast
                         # forward and dedup state.
                         bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
@@ -825,6 +875,8 @@ class Mempool:
                 batch_cost += cost - cost_saving
                 batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
                 batch_spends += len(unique_coin_spends)
+                batch_atoms += item.conds.num_atoms
+                batch_pairs += item.conds.num_pairs
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum
                 block_cost += item.conds.cost - cost_saving
@@ -844,6 +896,8 @@ class Mempool:
 
             if added:
                 added_spends += batch_spends
+                added_atoms += batch_atoms
+                added_pairs += batch_pairs
                 additions.extend(batch_additions)
                 removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
                 log.info(

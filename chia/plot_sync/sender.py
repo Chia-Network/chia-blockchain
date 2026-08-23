@@ -201,7 +201,7 @@ class Sender:
         start = time.time()
         assert self._response is not None
         # TODO: switch to event driven code
-        while time.time() - start < Constants.message_timeout and self._response.message is None:  # noqa: ASYNC110
+        while time.time() - start < Constants.message_timeout and self._response.message is None:  # ruff: ignore[async-busy-wait]
             await asyncio.sleep(0.1)
         return self._response.message is not None
 

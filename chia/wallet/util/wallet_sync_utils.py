@@ -18,7 +18,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.shared_protocol import Capability
+from chia.protocols.shared_protocol import Capability, Error
 from chia.protocols.wallet_protocol import (
     RegisterForCoinUpdates,
     RegisterForPhUpdates,
@@ -51,6 +51,21 @@ class PeerRequestException(Exception):
     pass
 
 
+def _coin_states_from_subscribe_response(
+    response: object,
+    peer_host: str,
+    request_name: str,
+) -> list[CoinState]:
+    """Normalize call_api results for subscription helpers into coin states or ValueError."""
+    if response is None:
+        raise ValueError(f"None response from peer {peer_host} for {request_name}")
+    if isinstance(response, Error):
+        raise ValueError(f"Error response from peer {peer_host} for {request_name}: {response}")
+    if isinstance(response, (RespondToPhUpdates, RespondToCoinUpdates)):
+        return response.coin_states
+    raise ValueError(f"Unexpected response from peer {peer_host} for {request_name}: {type(response).__name__}")
+
+
 async def subscribe_to_phs(
     puzzle_hashes: list[bytes32],
     peer: WSChiaConnection,
@@ -61,12 +76,10 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: RespondToPhUpdates | None = await peer.call_api(
+    all_coins_state: RespondToPhUpdates | Error | None = await peer.call_api(
         FullNodeAPI.register_for_ph_updates, msg, timeout=300, priority=priority
     )
-    if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_ph_updates")
-    return all_coins_state.coin_states
+    return _coin_states_from_subscribe_response(all_coins_state, peer.peer_info.host, "register_for_ph_updates")
 
 
 async def subscribe_to_coin_updates(
@@ -79,13 +92,10 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: RespondToCoinUpdates | None = await peer.call_api(
+    all_coins_state: RespondToCoinUpdates | Error | None = await peer.call_api(
         FullNodeAPI.register_for_coin_updates, msg, timeout=300, priority=priority
     )
-
-    if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_coin_updates")
-    return all_coins_state.coin_states
+    return _coin_states_from_subscribe_response(all_coins_state, peer.peer_info.host, "register_for_coin_updates")
 
 
 def validate_additions(

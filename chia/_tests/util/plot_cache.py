@@ -2,7 +2,7 @@
 Persistent cache for expensive plot operations: get_qualities_for_challenge(),
 get_full_proof(), and solve_proof().
 
-The cache is stored in the plots directory as `.plot_cache.pickle` and is keyed
+The cache is stored in the plots directory as `plot_cache.pickle` and is keyed
 by (plot_id, challenge) for qualities and full proofs, and by
 (partial_proof_bytes, plot_id) for solve_proof.
 
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import atexit
 import logging
-import pickle  # noqa: S403
+import pickle  # ruff: ignore[suspicious-pickle-import]
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ from chia.plotting.prover import QualityProtocol, V1Prover, V1Quality, V2Prover,
 
 log = logging.getLogger(__name__)
 
-CACHE_FILENAME = ".plot_cache.pickle"
+CACHE_FILENAME = "plot_cache.pickle"
 
 # (plot_id, challenge) -> list of serialized quality data
 # V1: each entry is 32 bytes (quality bytes32)
@@ -50,7 +50,7 @@ def _load_from_disk(path: Path) -> tuple[dict[Any, Any], dict[Any, Any], dict[An
     if not path.exists():
         return {}, {}, {}
     try:
-        data = pickle.loads(path.read_bytes())  # noqa: S301
+        data = pickle.loads(path.read_bytes())  # ruff: ignore[suspicious-pickle-usage]
         if isinstance(data, tuple) and len(data) == 3:
             return data[0], data[1], data[2]
     except Exception:

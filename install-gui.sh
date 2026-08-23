@@ -105,6 +105,16 @@ if [ ! "$CI" ]; then
 
   npm ci
   npm audit fix || true
+
+  # Work around Electron's postinstall being silently skipped in the workspaces/
+  # hoisted install, which leaves node_modules/electron present but without its
+  # platform binary (no path.txt). Re-run Electron's own installer if needed.
+  # Otherwise `npm run electron` fails with "Electron failed to install correctly".
+  if [ ! -f node_modules/electron/path.txt ]; then
+    echo "Electron binary is missing; running Electron's install script."
+    node node_modules/electron/install.js
+  fi
+
   npm run build
 
   # Set modified output of `chia version` to version property of GUI's package.json

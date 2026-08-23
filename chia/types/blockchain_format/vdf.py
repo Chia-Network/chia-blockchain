@@ -61,6 +61,14 @@ def validate_vdf(
         return False
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
         return False
+    # A witness holds one serialized classgroup element followed by one segment per
+    # level of recursion. Each segment stores an iteration count, a 264-bit challenge
+    # prime (33 bytes), and another classgroup element.
+    form_size = ClassgroupElement.get_size()
+    witness_segment_size = uint64.SIZE + 33 + form_size
+    expected_witness_size = form_size + proof.witness_type * witness_segment_size
+    if len(proof.witness) != expected_witness_size:
+        return False
     if len(input_el.data) != 100:
         log.error(f"Invalid ClassgroupElement size: {len(input_el.data)} (expected 100)")
         return False

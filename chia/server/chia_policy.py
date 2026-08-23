@@ -275,7 +275,7 @@ if sys.platform == "win32":
         async def _chia_accept_loop(self, listener: socket.socket) -> tuple[socket.socket, tuple[object, ...]]:
             while True:
                 # TODO: switch to event drive code
-                while not self.allow_connections:  # noqa: ASYNC110
+                while not self.allow_connections:  # ruff: ignore[async-busy-wait]
                     await asyncio.sleep(0.01)
 
                 try:
@@ -320,7 +320,7 @@ if sys.platform == "win32":
 
             future = self._register(ov, listener, finish_accept)
             coro = accept_coro(self, future, conn)
-            asyncio.ensure_future(coro, loop=self._loop)  # noqa: RUF006
+            asyncio.ensure_future(coro, loop=self._loop)  # ruff: ignore[asyncio-dangling-task]
             return future
 
         def accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:

@@ -299,6 +299,7 @@ def create_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockRecordsProtocol,
+    pre_sp_tx_height: uint32,
     seed: bytes = b"",
     new_block_gen: NewBlockGenerator | None = None,
     prev_block: BlockRecord | None = None,
@@ -324,6 +325,7 @@ def create_unfinished_block(
         get_pool_signature: function that returns signature corresponding to pool public key
         signage_point: signage point information (VDFs)
         timestamp: timestamp to add to the foliage block, if created
+        pre_sp_tx_height: height of the latest tx block infused before this block's signage point
         seed: seed to randomize chain
         new_block_gen: transactions to add to the foliage block, if created, including aggregate signature
         prev_block: previous block (already in chain) from the signage point
@@ -395,6 +397,22 @@ def create_unfinished_block(
         seed,
         compute_fees,
     )
+    # Version / generator format is an SP-time decision keyed on pre_sp_tx_height
+    # (latest tx block infused before this block's signage point).
+    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+        # Post hard fork 2: serialize the generator as a plain buffer (version 1).
+        version = uint8(1)
+        if new_block_gen is not None:
+            generator_buffer: bytes | None = bytes(new_block_gen.program)
+        else:
+            generator_buffer = None
+        generator = None
+        generator_refs: list[uint32] = []
+    else:
+        version = uint8(0)
+        generator = new_block_gen.program if new_block_gen else None
+        generator_buffer = None
+        generator_refs = new_block_gen.block_refs if new_block_gen else []
     return UnfinishedBlock(
         finished_sub_slots,
         rc_block,
@@ -403,10 +421,10 @@ def create_unfinished_block(
         foliage,
         foliage_transaction_block,
         transactions_info,
-        new_block_gen.program if new_block_gen else None,
-        new_block_gen.block_refs if new_block_gen else [],
-        None,
-        uint8(0),
+        generator,
+        generator_refs,
+        generator_buffer,
+        version,
     )
 
 

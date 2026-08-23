@@ -218,9 +218,9 @@ async def test_basic_store(
                 block.foliage_transaction_block,
                 block.transactions_info,
                 block.transactions_generator,
-                [],
-                None,
-                uint8(0),
+                block.transactions_generator_ref_list,
+                block.transactions_generator_buffer,
+                block.version,
             )
         )
 
