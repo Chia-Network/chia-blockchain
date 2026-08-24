@@ -710,6 +710,8 @@ class MempoolManager:
                 additions=spend_additions,
                 cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
+                atom_count=spend_conds.atom_count,
+                pair_count=spend_conds.pair_count,
             )
 
         non_ff_spend_ids = set()

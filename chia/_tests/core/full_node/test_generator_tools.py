@@ -48,6 +48,8 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        atom_count=0,
+        pair_count=0,
         fingerprint=b"",
     ),
     SpendConditions(
@@ -76,6 +78,8 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        atom_count=0,
+        pair_count=0,
         fingerprint=b"",
     ),
 ]
