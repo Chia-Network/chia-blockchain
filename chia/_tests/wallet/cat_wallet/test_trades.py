@@ -534,9 +534,7 @@ async def test_cat_trades(
                 "type": AssetType.CR.value,
                 "authorized_providers": ["0x" + provider.hex() for provider in authorized_providers],
                 "proofs_checker": (
-                    proofs_checker_maker.as_program()
-                    if wallet == cat_wallet_maker
-                    else proofs_checker_taker.as_program()
+                    proofs_checker_maker.puzzle if wallet == cat_wallet_maker else proofs_checker_taker.puzzle
                 ),
             }
         driver_dict[asset_id] = PuzzleInfo(driver_item)

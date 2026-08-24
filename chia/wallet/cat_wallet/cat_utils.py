@@ -87,10 +87,16 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     def _pre_hashed_tail_hash(self) -> bytes32:
         return Program.to(self.tail_hash).get_tree_hash()
 
+    @cached_property
+    def _pre_hashed_cat_mod_hash(self) -> bytes32:
+        return Program.to(self.cat_puzzles.cat_mod_hash).get_tree_hash()
+
     @property
     def puzzle_hash_optimized(self) -> bytes32:
+        # CAT is curried as: MOD.curry(MOD_HASH, tail_hash, inner_puzzle)
         return curry_and_treehash(
             self.cat_puzzles.hash_of_quoted_mod_hash,
+            self._pre_hashed_cat_mod_hash,
             self._pre_hashed_tail_hash,
             self.inner_puzzle.puzzle_hash,
         )

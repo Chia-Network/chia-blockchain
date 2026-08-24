@@ -33,7 +33,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, PendingApprovalPuzzle
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
 from chia.wallet.wallet import Wallet
@@ -447,17 +447,17 @@ class VCWallet:
         send the change back to it's original puzzle hash or else a taker wallet will not approve it.
         """
         # Gather all of the CRCATs being spent and the CRCATs that each creates
-        crcat_spends: list[CRCATSpend] = []
+        crcat_spends: list[CRCATSpend[UnknownPuzzle, UnknownSolution]] = []
         other_spends: list[CoinSpend] = []
         spends_to_fix: dict[bytes32, CoinSpend] = {}
         for spend in offer.to_valid_spend().coin_spends:
             if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0]:
-                crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
+                crcat_spend = CRCATSpend.from_coin_spend(spend)
                 if crcat_spend.incomplete:
                     crcat_spends.append(crcat_spend)
                     if spend in offer._bundle.coin_spends:
                         spends_to_fix[spend.coin.name()] = spend
-                elif spend in offer._bundle.coin_spends:  # pragma: no cover
+                elif spend in offer._bundle.coin_spends:
                     other_spends.append(spend)
             elif spend in offer._bundle.coin_spends:
                 other_spends.append(spend)
@@ -471,18 +471,22 @@ class VCWallet:
             # Check first whether we can approve...
             available_vcs: list[VCRecord] = [
                 vc_rec
-                for vc_rec in await self.store.get_vc_records_by_providers(crcat_spend.crcat.authorized_providers)
+                for vc_rec in await self.store.get_vc_records_by_providers(
+                    crcat_spend.crcat.inner_puzzle.authorized_providers
+                )
                 if vc_rec.confirmed_at_height != 0
             ]
             if len(available_vcs) == 0:  # pragma: no cover
-                raise ValueError(f"No VC available with provider in {crcat_spend.crcat.authorized_providers}")
+                raise ValueError(
+                    f"No VC available with provider in {crcat_spend.crcat.inner_puzzle.authorized_providers}"
+                )
             vc = VerifiedCredential.from_streamable(available_vcs[0].vc)
             vc_to_use: bytes32 = vc.launcher_id
             vcs[vc_to_use] = vc
             # ...then whether or not we should
             our_crcat: bool = (
                 await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                    crcat_spend.crcat.inner_puzzle_hash
+                    crcat_spend.crcat.inner_puzzle.inner_puzzle.puzzle_hash
                 )
                 is not None
             )
@@ -496,19 +500,19 @@ class VCWallet:
                         is not None
                     )
                     or (  # it's going back where it came from
-                        bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle_hash
+                        bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle.inner_puzzle.puzzle_hash
                     )
                     or (  # it's going to the pending state
                         cc.at("rrr") != Program.NIL
                         and cc.at("rrrf").atom is None
                         and bytes32(cc.at("rf").as_atom())
-                        == construct_pending_approval_state(
-                            bytes32(cc.at("rrrff").as_atom()), uint64(cc.at("rrf").as_int())
-                        ).get_tree_hash()
+                        == PendingApprovalPuzzle(
+                            target_puzzle_hash=bytes32(cc.at("rrrff").as_atom()), amount=uint64(cc.at("rrf").as_int())
+                        ).puzzle_hash
                     )
                     or bytes32(cc.at("rf").as_atom()) == Offer.ph()  # it's going to the offer mod
                 ):
-                    outputs_ok = False  # pragma: no cover
+                    outputs_ok = False
             if our_crcat or outputs_ok:
                 announcements_to_make.setdefault(vc_to_use, [])
                 announcements_to_assert.setdefault(vc_to_use, [])
@@ -519,7 +523,8 @@ class VCWallet:
                     [
                         AssertCoinAnnouncement(
                             asserted_id=crcat_spend.crcat.coin.name(),
-                            asserted_msg=b"\xcd" + std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)),
+                            asserted_msg=b"\xcd"
+                            + std_hash(crc.inner_puzzle.inner_puzzle.puzzle_hash + int_to_bytes(crc.coin.amount)),
                         )
                         for crc in crcat_spend.children
                     ]
@@ -530,7 +535,7 @@ class VCWallet:
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
                         vc.inner_puzzle.proof_hash,  # type: ignore
-                        ProofsChecker.from_program(uncurry_puzzle(crcat_spend.crcat.proofs_checker)).flags,
+                        crcat_spend.crcat.inner_puzzle.proofs_checker.flags,
                     ),
                     vc.inner_puzzle.proof_provider,
                     vc.launcher_id,

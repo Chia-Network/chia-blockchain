@@ -31,17 +31,17 @@ from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.cr_cat_drivers import PendingApprovalPuzzle, ProofsChecker
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -1024,11 +1024,16 @@ class TradeManager:
                         AssetType.CR.value,
                     ]
                 ):
+                    proofs_checker_match = ProofsChecker.match(
+                        unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle_info["also"]["proofs_checker"])
+                    )
+                    if proofs_checker_match is None:
+                        raise ValueError("Unknown proofs checker for CRCAT")
                     vc = await (
                         await self.wallet_state_manager.get_or_create_vc_wallet()
                     ).get_vc_with_provider_in_and_proofs(
                         puzzle_info["also"]["authorized_providers"],
-                        ProofsChecker.from_program(uncurry_puzzle(puzzle_info["also"]["proofs_checker"])).flags,
+                        proofs_checker_match.flags,
                     )
                     if vc is None:
                         raise ValueError("Cannot request CR-CATs that you cannot approve with a VC")  # pragma: no cover
@@ -1038,9 +1043,9 @@ class TradeManager:
                     [
                         dataclasses.replace(
                             payment,
-                            puzzle_hash=construct_pending_approval_state(
-                                payment.puzzle_hash, payment.amount
-                            ).get_tree_hash(),
+                            puzzle_hash=PendingApprovalPuzzle(
+                                target_puzzle_hash=payment.puzzle_hash, amount=payment.amount
+                            ).puzzle_hash,
                         )
                         for payment in payments
                     ]

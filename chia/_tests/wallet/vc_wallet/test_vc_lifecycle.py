@@ -15,9 +15,16 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.wallet.conditions import CreateCoin, CreatePuzzleAnnouncement
+from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, NilSolution, P2Conditions, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACSSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
@@ -425,7 +432,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
         # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))
         proofs_checker_runner: Program = Program.fromhex(
             "ff02ffff03ffff02ff02ffff04ff05ff808080ff80ffff01ff088080ff0180"
-        ).curry(proofs_checker.as_program())
+        ).curry(proofs_checker.puzzle)
         await sim.farm_block(proofs_checker_runner.get_tree_hash())
         proof_checker_coin: Coin = (
             await client.get_coin_records_by_puzzle_hashes(
@@ -642,21 +649,21 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 proofs = ["test", "test2"]
             proofs_checker: ProofsChecker = ProofsChecker(proofs)
             AUTHORIZED_PROVIDERS: list[bytes32] = [launcher_id]
-            dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
+            conds_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
                 cr_coin_1,
                 CreateCoin(ACS_PH, uint64(cr_coin_1.amount)),
-                Program.NIL,
-                Program.NIL,
+                NilPuzzle(),
+                NilSolution(),
                 AUTHORIZED_PROVIDERS,
-                proofs_checker.as_program(),
+                proofs_checker,
             )
-            dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
+            conds_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
                 cr_coin_2,
                 CreateCoin(ACS_PH, uint64(cr_coin_2.amount)),
-                Program.NIL,
-                Program.NIL,
+                NilPuzzle(),
+                NilSolution(),
                 AUTHORIZED_PROVIDERS,
-                proofs_checker.as_program(),
+                proofs_checker,
             )
             result = await client.push_tx(
                 WalletSpendBundle(
@@ -664,12 +671,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         make_spend(
                             cr_coin_1,
                             RUN_PUZ_PUZ,
-                            dpuz_1,
+                            P2Conditions(conditions=conds_1).puzzle,
                         ),
                         make_spend(
                             cr_coin_2,
                             RUN_PUZ_PUZ,
-                            dpuz_2,
+                            P2Conditions(conditions=conds_2).puzzle,
                         ),
                         launch_crcat_spend_1,
                         launch_crcat_spend_2,
@@ -699,40 +706,49 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             None,
         ):
             # The CR-CAT coin spends
+            # Attach the ACS reveal (launch only stores the inner puzzle hash)
+            cr_1_with_reveal = replace(cr_1, inner_puzzle=replace(cr_1.inner_puzzle, inner_puzzle=ACS))
+            cr_2_with_reveal = replace(cr_2, inner_puzzle=replace(cr_2.inner_puzzle, inner_puzzle=ACS))
+            malicious_cr_1_with_reveal = replace(
+                malicious_cr_1, inner_puzzle=replace(malicious_cr_1.inner_puzzle, inner_puzzle=ACS)
+            )
+            malicious_cr_2_with_reveal = replace(
+                malicious_cr_2, inner_puzzle=replace(malicious_cr_2.inner_puzzle, inner_puzzle=ACS)
+            )
             expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
                 [
                     (
-                        cr_1 if error != "use_malicious_cats" else malicious_cr_1,
+                        cr_1_with_reveal if error != "use_malicious_cats" else malicious_cr_1_with_reveal,
                         0,
-                        ACS.puzzle,
-                        Program.to(
-                            [
-                                [
-                                    51,
+                        ACSSolution(
+                            conditions=[
+                                CreateCoin(
                                     ACS_PH,
                                     cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
-                                ],
-                                *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
+                                )
                             ]
+                            + (
+                                [CreateCoinAnnouncement(msg=b"\xcd" + bytes(32))]
+                                if error == "make_banned_announcement"
+                                else []
+                            )
                         ),
                     ),
                     (
-                        cr_2 if error != "use_malicious_cats" else malicious_cr_2,
+                        cr_2_with_reveal if error != "use_malicious_cats" else malicious_cr_2_with_reveal,
                         0,
-                        ACS.puzzle,
-                        Program.to(
-                            [
-                                [
-                                    51,
+                        ACSSolution(
+                            conditions=[
+                                CreateCoin(
                                     ACS_PH,
                                     cr_2.coin.amount if error != "use_malicious_cats" else malicious_cr_2.coin.amount,
-                                ]
+                                )
                             ]
                         ),
                     ),
                 ],
                 NEW_PROOFS if error != "use_malicious_cats" else MALICIOUS_PROOFS,
-                Program.NIL,
+                NilSolution(),
                 launcher_id,
                 vc.launcher_id,
                 vc.inner_puzzle.revocation_layer.puzzle_hash,

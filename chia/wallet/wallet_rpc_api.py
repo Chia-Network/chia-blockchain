@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
@@ -64,13 +63,13 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_valid_address
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
@@ -2017,9 +2016,9 @@ class WalletRpcApi:
                                 **info.info,
                                 "also": {
                                     **info.info["also"],
-                                    "flags": ProofsChecker.from_program(
-                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
-                                    ).flags,
+                                    "flags": ProofsChecker.match(
+                                        unknown_puzzle=UnknownPuzzle(known_puzzle=info.info["also"]["proofs_checker"])
+                                    ).flags,  # type: ignore[union-attr]
                                 },
                             }
                         )

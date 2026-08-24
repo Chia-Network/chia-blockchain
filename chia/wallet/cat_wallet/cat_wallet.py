@@ -55,7 +55,10 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.cr_cat_drivers import (
+    CRCAT,
+    PendingApprovalPuzzle,
+)
 from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -486,14 +489,14 @@ class CATWallet:
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
                     await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        crcat.inner_puzzle_hash
+                        crcat.inner_puzzle.inner_puzzle.puzzle_hash
                     )
                     is None
-                    and crcat.inner_puzzle_hash
-                    != construct_pending_approval_state(
-                        hinted_coin.hint,
-                        uint64(coin_state.coin.amount),
-                    ).get_tree_hash()
+                    and crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                    != PendingApprovalPuzzle(
+                        target_puzzle_hash=hinted_coin.hint,
+                        amount=uint64(coin_state.coin.amount),
+                    ).puzzle_hash
                 ):
                     wallet_state_manager.log.error(
                         f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}"
@@ -517,8 +520,8 @@ class CATWallet:
                             assert crcat is not None  # again, mypy isn't this smart
                             await CRCATWallet.convert_to_cr(
                                 found_cat_wallet,
-                                crcat.authorized_providers,
-                                ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                                crcat.inner_puzzle.authorized_providers,
+                                crcat.inner_puzzle.proofs_checker,
                             )
                             wallet_state_manager.state_changed("converted cat wallet to cr", wallet_info.id)
                             return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
@@ -544,8 +547,8 @@ class CATWallet:
                         wallet_state_manager,
                         wallet_state_manager.main_wallet,
                         crcat.tail_hash,
-                        authorized_providers=crcat.authorized_providers,
-                        proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                        authorized_providers=crcat.inner_puzzle.authorized_providers,
+                        proofs_checker=crcat.inner_puzzle.proofs_checker,
                     )
                 elif wallet_type is RCATWallet:
                     cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(

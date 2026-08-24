@@ -45,7 +45,7 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia.wallet.vc_wallet.cr_cat_drivers import CredentialRestrictionLayer, ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
@@ -116,16 +116,16 @@ async def mint_cr_cat(
                             [
                                 [
                                     51,
-                                    construct_cr_layer(
-                                        authorized_providers,
-                                        proofs_checker.as_program(),
-                                        our_puzzle,
-                                    ).get_tree_hash(),
+                                    CredentialRestrictionLayer(
+                                        authorized_providers=authorized_providers,
+                                        proofs_checker=proofs_checker,
+                                        inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle),
+                                    ).puzzle_hash,
                                     CAT_AMOUNT_0,
                                     [our_puzzle.get_tree_hash()],
                                 ],
                                 [51, None, -113, tail, None],
-                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.as_program()],
+                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.puzzle],
                             ]
                         ),
                         None,
