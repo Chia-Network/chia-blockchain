@@ -2652,42 +2652,40 @@ async def test_multiple_ff(use_optimization: bool) -> None:
 
     # in the next block, this will be the latest singleton coin
     singleton_spend3 = make_singleton_spend(LAUNCHER_ID, PARENT_PARENT3)
-
-    coin_spend = make_spend(
-        TEST_COIN,
-        IDENTITY_PUZZLE,
-        Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1336]]),
-    )
-    bundle = SpendBundle([singleton_spend1, singleton_spend2, coin_spend], G2Element())
-
     # the singleton puzzle hash resulves to the most recent singleton coin, number 2
     # pretend that coin1 is spent
     singleton_ph = singleton_spend2.coin.puzzle_hash
-    coins = TestCoins([singleton_spend1.coin, singleton_spend2.coin, TEST_COIN], {singleton_ph: singleton_spend2})
+    coins = TestCoins(
+        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2], {singleton_ph: singleton_spend2}
+    )
 
     async with setup_mempool(coins) as mempool_manager:
-        bundle_add_info = await mempool_manager.add_spend_bundle(
-            bundle,
-            make_test_conds(
-                spend_ids=[
-                    (singleton_spend1.coin, ELIGIBLE_FOR_FF),
-                    (singleton_spend2.coin, ELIGIBLE_FOR_FF),
-                    (TEST_COIN, 0),
-                ],
-                cost=1000000,
-            ),
-            bundle.name(),
-            first_added_height=uint32(1),
-        )
-        assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
-        invariant_check_mempool(mempool_manager.mempool)
+        bundles_names = []
+        for singleton_spend, regular_coin in [(singleton_spend1, TEST_COIN), (singleton_spend2, TEST_COIN2)]:
+            bundle = SpendBundle([singleton_spend, mk_coin_spend(regular_coin)], G2Element())
+            bundle_add_info = await mempool_manager.add_spend_bundle(
+                bundle,
+                make_test_conds(
+                    spend_ids=[
+                        (singleton_spend.coin, ELIGIBLE_FOR_FF),
+                        (regular_coin, 0),
+                    ],
+                    cost=1000000,
+                ),
+                bundle.name(),
+                first_added_height=uint32(1),
+            )
+            assert bundle_add_info.status == MempoolInclusionStatus.SUCCESS
+            invariant_check_mempool(mempool_manager.mempool)
 
-        item = mempool_manager.get_mempool_item(bundle.name())
-        assert item is not None
-        assert item.bundle_coin_spends[singleton_spend1.coin.name()].supports_fast_forward
-        assert item.bundle_coin_spends[singleton_spend2.coin.name()].supports_fast_forward
-        assert not item.bundle_coin_spends[coin_spend.coin.name()].supports_fast_forward
-
+            item = mempool_manager.get_mempool_item(bundle.name())
+            assert item is not None
+            assert item.bundle_coin_spends[singleton_spend.coin.name()].supports_fast_forward
+            assert not item.bundle_coin_spends[regular_coin.name()].supports_fast_forward
+            latest_singleton_lineage = item.bundle_coin_spends[singleton_spend.coin.name()].latest_singleton_lineage
+            assert latest_singleton_lineage is not None
+            assert latest_singleton_lineage.coin_id == singleton_spend2.coin.name()
+            bundles_names.append(bundle.name())
         # spend the singleton coin2 and make coin3 the latest version
         coins.update_lineage(singleton_ph, singleton_spend3)
         coins.spend_coin(singleton_spend2.coin.name(), uint32(11))
@@ -2695,14 +2693,12 @@ async def test_multiple_ff(use_optimization: bool) -> None:
         await advance_mempool(mempool_manager, [singleton_spend2.coin.name()], use_optimization=use_optimization)
 
         # we can still fast-forward the singleton spends, the bundle should still be valid
-        item = mempool_manager.get_mempool_item(bundle.name())
-        assert item is not None
-        spend = item.bundle_coin_spends[singleton_spend1.coin.name()]
-        assert spend.latest_singleton_lineage is not None
-        assert spend.latest_singleton_lineage.coin_id == singleton_spend3.coin.name()
-        spend = item.bundle_coin_spends[singleton_spend2.coin.name()]
-        assert spend.latest_singleton_lineage is not None
-        assert spend.latest_singleton_lineage.coin_id == singleton_spend3.coin.name()
+        for bundle_name, singleton_spend in zip(bundles_names, [singleton_spend1, singleton_spend2]):
+            item = mempool_manager.get_mempool_item(bundle_name)
+            assert item is not None
+            spend = item.bundle_coin_spends[singleton_spend.coin.name()]
+            assert spend.latest_singleton_lineage is not None
+            assert spend.latest_singleton_lineage.coin_id == singleton_spend3.coin.name()
 
 
 @pytest.mark.anyio
@@ -3580,16 +3576,16 @@ async def test_mempool_item_to_spend_bundle() -> None:
 
 
 @pytest.mark.anyio
-async def test_bundle_with_old_ff_spend_plus_melt_ff_spend() -> None:
+@pytest.mark.parametrize("melt", [True, False])
+async def test_multiple_ff_same_sb(melt: bool) -> None:
     """
-    Covers the scenario where a spend bundle has a coin that gets spent by
-    another spend immediately after fast forward, to make sure we reject that
-    spend bundle.
+    Covers the scenario where a spend bundle has multiple spends of the same
+    fast forward singleton to make sure we reject that spend bundle.
     """
     launcher_id = bytes32([1] * 32)
     version_1_spend = make_singleton_spend(launcher_id, bytes32([2] * 32))
     version_2_spend = make_singleton_spend(launcher_id, bytes32([3] * 32))
-    version_3_spend = make_singleton_spend(launcher_id, bytes32([4] * 32), melt=True)
+    version_3_spend = make_singleton_spend(launcher_id, bytes32([4] * 32), melt=melt)
     coins = TestCoins(
         [version_1_spend.coin, version_2_spend.coin, version_3_spend.coin],
         {version_3_spend.coin.puzzle_hash: version_3_spend},
@@ -3600,5 +3596,5 @@ async def test_bundle_with_old_ff_spend_plus_melt_ff_spend() -> None:
     async with setup_mempool(coins) as mempool_manager:
         _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
         assert status == MempoolInclusionStatus.FAILED
-        assert error == Err.DOUBLE_SPEND
+        assert error == Err.INVALID_SPEND_BUNDLE
         assert_sb_not_in_pool(mempool_manager, sb)
