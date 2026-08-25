@@ -39,7 +39,9 @@ def get_parent_branch(value: bytes32, proof: tuple[int, list[bytes32]]) -> tuple
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [2, 2]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [2, 2], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
@@ -353,7 +355,9 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [3]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 1, "blocks_needed": [3], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]
@@ -579,7 +583,9 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
 
 
 @pytest.mark.limit_consensus_modes
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [3, 3]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [3, 3], "reorg_exempt": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> None:
     env_maker = wallet_environments.environments[0]

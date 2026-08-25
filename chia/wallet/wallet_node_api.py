@@ -189,7 +189,13 @@ class WalletNodeAPI:
     async def reject_block_headers(self, request: wallet_protocol.RejectBlockHeaders) -> None:
         pass
 
-    @metadata.request(peer_required=True, execute_task=True)
+    @metadata.request(
+        peer_required=True,
+        execute_task=True,
+        # Cap deserialization at max+1 so oversized updates are still detectable and banned in
+        # state_update_received, without materializing an unbounded CoinState list.
+        list_limits=lambda self, peer: {"items": self.wallet_node.max_coin_state_update_items() + 1},
+    )
     async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection) -> None:
         await self.wallet_node.new_peak_queue.full_node_state_updated(request, peer)
 

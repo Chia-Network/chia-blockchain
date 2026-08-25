@@ -15,7 +15,7 @@ from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 
 def did_recovery_is_nil(recovery_program: Program) -> bool:
     # cannot use set as not hashable
-    if recovery_program in (Program.NIL, NIL_TREEHASH):  # noqa: PLR6201
+    if recovery_program in (Program.NIL, NIL_TREEHASH):  # ruff: ignore[literal-membership]
         return True
     else:
         return False

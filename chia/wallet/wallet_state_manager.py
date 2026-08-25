@@ -54,7 +54,6 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     parse_timelock_info,
 )
-from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -883,6 +882,11 @@ class WalletStateManager:
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
                     all_unspent_coins.add(addition)
 
+        for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as unconfirmed.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for removal in record.removals:
                 if (
                     await self.does_coin_belong_to_wallet(removal, wallet_id, record.hint_dict())
@@ -917,6 +921,10 @@ class WalletStateManager:
             or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
         ):
             return None, None
+
+        dl_identification = await DataLayerWallet.identify(self, coin_state)
+        if dl_identification is not None:
+            return dl_identification, None
 
         response: list[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
@@ -1135,16 +1143,6 @@ class WalletStateManager:
             wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
         elif coin_state.created_height is not None:
             wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
-            try:
-                dl_wallet = await self.get_dl_wallet()
-            except ValueError:
-                pass
-            else:
-                if (
-                    await dl_wallet.get_singleton_record(coin_name) is not None
-                    or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
-                ):
-                    wallet_identifier = WalletIdentifier.create(dl_wallet)
 
         # If this coin was previously only stored as an "interest-only" record (REMOTE),
         # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific

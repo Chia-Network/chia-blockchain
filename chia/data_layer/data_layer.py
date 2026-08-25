@@ -616,8 +616,28 @@ class DataLayer:
 
         await self._update_confirmation_status(store_id=store_id)
 
-        if not await self.data_store.store_id_exists(store_id=store_id):
-            await self.data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
+        root = None
+        if await self.data_store.store_id_exists(store_id=store_id):
+            root = await self.data_store.get_tree_root(store_id=store_id)
+
+        if root is None:
+            await self.data_store.reset_store_to_empty_root(store_id)
+        elif (
+            root.node_hash is not None
+            and root.generation <= singleton_record.generation
+            and not self.data_store.merkle_blob_available(store_id, root.node_hash)
+        ):
+            if self.data_store.merkle_blobs_path.is_dir():
+                self.log.warning(
+                    f"Detected committed root with missing blob for {store_id} at generation "
+                    f"{root.generation}; resetting and resyncing."
+                )
+                await self.data_store.reset_store_to_empty_root(store_id)
+            else:
+                self.log.warning(
+                    f"Merkle blobs path {self.data_store.merkle_blobs_path} is missing; skipping "
+                    f"self-heal for {store_id} - check the storage volume."
+                )
 
         timestamp = int(time.time())
         servers_info = await self.data_store.get_available_servers_for_store(store_id, timestamp)

@@ -1234,7 +1234,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "take_offer": [
             (
                 Offer.from_bech32(test_offer_file_bech32),
-                DEFAULT_TX_CONFIG,
+                DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 None,
                 500000000000,
                 True,

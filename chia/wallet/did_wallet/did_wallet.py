@@ -298,6 +298,7 @@ class DIDWallet:
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
         addition_amount = 0
+        counted_additions = set()
 
         for record in unconfirmed_tx:
             our_spend = False
@@ -317,9 +318,10 @@ class DIDWallet:
                     if len(memos) > 0 and len(memos[0]) == 32
                 }
                 if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict)) and (
-                    coin not in record.removals
+                    coin not in record.removals and coin not in counted_additions
                 ):
                     addition_amount += coin.amount
+                    counted_additions.add(coin)
 
         return uint64(addition_amount)
 
@@ -1169,7 +1171,8 @@ class DIDWallet:
 
     async def add_parent(self, name: bytes32, parent: LineageProof | None) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
-        current_list = self.did_info.parent_info.copy()
+        # coping for not being a dict - thanks streamable!
+        current_list = [(n, p) for n, p in self.did_info.parent_info if n != name]
         current_list.append((name, parent))
         did_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,

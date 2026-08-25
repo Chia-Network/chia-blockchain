@@ -19,6 +19,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -41,13 +42,6 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="function", params=[True, False])
 def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
-
-
-def maybe_serialize(gen: SerializedProgram | None) -> bytes | None:
-    if gen is None:
-        return None
-    else:
-        return bytes(gen)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -93,9 +87,13 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert block == await store.get_full_block(block.header_hash)
             assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
             assert GeneratorBlockInfo(
-                block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
+                block.foliage.prev_block_hash,
+                block.transactions_generator,
+                block.transactions_generator_ref_list,
+                block.transactions_generator_buffer,
+                block.version,
             ) == await store.get_block_info(block.header_hash)
-            assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
+            assert get_transactions_generator_bytes(block) == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
@@ -107,10 +105,10 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert FullBlock.from_bytes(buf) == block
 
             assert await store.get_full_blocks_at([block.height]) == [block]
-            if block.transactions_generator is not None:
-                assert await store.get_generators_at({block.height}) == {
-                    block.height: bytes(block.transactions_generator)
-                }
+            if block_has_transactions_generator(block):
+                generator_bytes = get_transactions_generator_bytes(block)
+                assert generator_bytes is not None
+                assert await store.get_generators_at({block.height}) == {block.height: generator_bytes}
             else:
                 with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
                     await store.get_generators_at({block.height})
@@ -430,13 +428,13 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
             await store.set_peak(block_record.header_hash)
             new_blocks.append(block)
 
-        expected_generators = {b.height: maybe_serialize(b.transactions_generator) for b in new_blocks[1:10]}
+        expected_generators = {b.height: get_transactions_generator_bytes(b) for b in new_blocks[1:10]}
         generators = await store.get_generators_at({uint32(x) for x in range(1, 10)})
         assert generators == expected_generators
 
         # test out-of-order heights
         expected_generators = {
-            b.height: maybe_serialize(b.transactions_generator) for b in [new_blocks[i] for i in [4, 8, 3, 9]]
+            b.height: get_transactions_generator_bytes(b) for b in [new_blocks[i] for i in [4, 8, 3, 9]]
         }
         generators = await store.get_generators_at({uint32(4), uint32(8), uint32(3), uint32(9)})
         assert generators == expected_generators
@@ -446,10 +444,10 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
 
         assert await store.get_generators_at(set()) == {}
 
-        assert await store.get_generator(blocks[2].header_hash) == maybe_serialize(new_blocks[2].transactions_generator)
-        assert await store.get_generator(blocks[4].header_hash) == maybe_serialize(new_blocks[4].transactions_generator)
-        assert await store.get_generator(blocks[6].header_hash) == maybe_serialize(new_blocks[6].transactions_generator)
-        assert await store.get_generator(blocks[7].header_hash) == maybe_serialize(new_blocks[7].transactions_generator)
+        assert await store.get_generator(blocks[2].header_hash) == get_transactions_generator_bytes(new_blocks[2])
+        assert await store.get_generator(blocks[4].header_hash) == get_transactions_generator_bytes(new_blocks[4])
+        assert await store.get_generator(blocks[6].header_hash) == get_transactions_generator_bytes(new_blocks[6])
+        assert await store.get_generator(blocks[7].header_hash) == get_transactions_generator_bytes(new_blocks[7])
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import BlockRecord, FullBlock, SubEpochSummary, UnfinishedBlock, is_overflow_block
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64, uint128
+from chia_rs.sized_ints import uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
@@ -279,9 +279,9 @@ class TestNewPeak:
                     block_1.foliage_transaction_block,
                     block_1.transactions_info,
                     block_1.transactions_generator,
-                    [],
-                    None,
-                    uint8(0),
+                    block_1.transactions_generator_ref_list,
+                    block_1.transactions_generator_buffer,
+                    block_1.version,
                 )
                 await full_node.add_unfinished_block(block_1_unf, None)
                 unf: UnfinishedBlock = full_node.full_node_store.get_unfinished_block(block_1_unf.partial_hash)

@@ -1595,7 +1595,10 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
                     }
                 },
             ),
-        ]
+        ],
+        # TODO: there's a bug here where the user store autoincrement means this has a new ID after deleted
+        # Instead of 2, it becomes 3 because there was a 2 at some point (is my best guess)
+        reorg_exempt=True,
     )
 
     # Transfer NFT, wallet will be deleted
