@@ -18,6 +18,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.cmds.wallet import GetDerivationIndexCMD, UpdateDerivationIndexCMD
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
@@ -28,6 +29,7 @@ from chia.util.timing import adjusted_timeout
 from chia.wallet import wallet_state_manager as wsm_mod
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.nft_wallet import nft_wallet as nft_wallet_mod
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
@@ -476,8 +478,11 @@ class PuzzleHashState:
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) -> None:
-    wsm = wallet_environments.environments[0].wallet_state_manager
+async def test_puzzle_hash_requests(
+    wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]
+) -> None:
+    env = wallet_environments.environments[0]
+    wsm = env.wallet_state_manager
 
     async def get_puzzle_hash_state() -> PuzzleHashState:
         last_index = await wsm.puzzle_store.get_last_derivation_path_for_wallet(wsm.main_wallet.id())
@@ -489,10 +494,10 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     expected_state = await get_puzzle_hash_state()
 
-    # Quick test of this RPC
-    assert (
-        await wallet_environments.environments[0].rpc_client.get_current_derivation_index()
-    ).index == expected_state.highest_index
+    # Quick test of this command
+    capsys.readouterr()
+    await GetDerivationIndexCMD(rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"]).run()
+    assert f"Last derivation index: {expected_state.highest_index}" in capsys.readouterr().out
 
     # `create_more_puzzle_hashes`
     # No-op
@@ -648,9 +653,12 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
         )
 
     # Test the actual functionality
-    assert (
-        await rpc_client.extend_derivation_index(ExtendDerivationIndex(index=uint32(expected_state.highest_index + 5)))
-    ).index == expected_state.highest_index + 5
+    capsys.readouterr()
+    await UpdateDerivationIndexCMD(
+        rpc_info=wallet_environments.cmd_tx_endpoint_args(env)["rpc_info"],
+        index=expected_state.highest_index + 5,
+    ).run()
+    assert f"Updated derivation index: {expected_state.highest_index + 5}" in capsys.readouterr().out
     expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state
 
@@ -971,8 +979,8 @@ async def test_handle_nft_auto_add_limit(
     def fake_get_new_owner_did(_unft: UncurriedNFT, _solution: Program) -> bytes32:
         return foreign_did_id
 
-    monkeypatch.setattr(wsm_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
-    monkeypatch.setattr(wsm_mod, "get_new_owner_did", fake_get_new_owner_did)
+    monkeypatch.setattr(nft_wallet_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
+    monkeypatch.setattr(nft_wallet_mod, "get_new_owner_did", fake_get_new_owner_did)
 
     nft_data = _build_fake_nft_data(
         old_p2_puzhash=old_p2_puzhash,
@@ -984,7 +992,7 @@ async def test_handle_nft_auto_add_limit(
 
     before = nft_wallet_count()
     with caplog.at_level(logging.WARNING, logger=wsm.log.name):
-        result = await wsm.handle_nft(nft_data)
+        result = await NFTWallet.identify(wsm, nft_data)
     after = nft_wallet_count()
 
     if seed_matching_wallet:

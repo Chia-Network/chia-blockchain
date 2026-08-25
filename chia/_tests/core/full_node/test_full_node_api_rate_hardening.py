@@ -224,6 +224,7 @@ def _make_block_ns(
         is_transaction_block=lambda: is_tx_block,
         foliage_transaction_block=ftb,
         transactions_generator=b"gen" if has_generator else None,
+        transactions_generator_buffer=None,
     )
 
 

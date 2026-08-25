@@ -2,7 +2,7 @@
 Persistent cache for expensive plot operations: get_qualities_for_challenge(),
 get_full_proof(), and solve_proof().
 
-The cache is stored in the plots directory as `.plot_cache.pickle` and is keyed
+The cache is stored in the plots directory as `plot_cache.pickle` and is keyed
 by (plot_id, challenge) for qualities and full proofs, and by
 (partial_proof_bytes, plot_id) for solve_proof.
 
@@ -27,7 +27,7 @@ from chia.plotting.prover import QualityProtocol, V1Prover, V1Quality, V2Prover,
 
 log = logging.getLogger(__name__)
 
-CACHE_FILENAME = ".plot_cache.pickle"
+CACHE_FILENAME = "plot_cache.pickle"
 
 # (plot_id, challenge) -> list of serialized quality data
 # V1: each entry is 32 bytes (quality bytes32)

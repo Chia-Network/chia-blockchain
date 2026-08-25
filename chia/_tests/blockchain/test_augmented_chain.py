@@ -12,6 +12,7 @@ from chia_rs.sized_ints import uint32
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.augmented_chain import AugmentedBlockchain, AugmentedBlockchainValidationError
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.simulator.block_tools import BlockTools
@@ -143,9 +144,9 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
     with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[1].header_hash, {uint32(1)})
 
-    expect_gen = blocks[2].transactions_generator
+    expect_gen = get_transactions_generator_bytes(blocks[2])
     assert expect_gen is not None
-    assert await abc.lookup_block_generators(blocks[5].prev_header_hash, {uint32(2)}) == {uint32(2): bytes(expect_gen)}
+    assert await abc.lookup_block_generators(blocks[5].prev_header_hash, {uint32(2)}) == {uint32(2): expect_gen}
 
     for i in range(1, 5):
         assert await abc.prev_block_hash([blocks[i].header_hash]) == [blocks[i - 1].header_hash]
@@ -365,9 +366,9 @@ async def test_read_only_snapshot_preserves_generator_lookup(default_10000_block
     abc = AugmentedBlockchain(underlying)
     abc.add_extra_block(blocks[2], BR(blocks[2]))
 
-    generator = blocks[2].transactions_generator
+    generator = get_transactions_generator_bytes(blocks[2])
     assert generator is not None
-    expected = {uint32(2): bytes(generator)}
+    expected = {uint32(2): generator}
 
     snapshot = abc.read_only_snapshot()
     assert await abc.lookup_block_generators(blocks[2].header_hash, {uint32(2)}) == expected

@@ -22,9 +22,11 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.types.peer_info import PeerInfo
+from chia.util.errors import Err
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -84,8 +86,9 @@ async def ignore_block_validation(
 
     def run_block(
         block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-    ) -> tuple[int | None, str | None, SpendBundleConditions | None]:
-        assert block.transactions_generator is not None
+    ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
+        generator_bytes = get_transactions_generator_bytes(block)
+        assert generator_bytes is not None
         assert block.transactions_info is not None
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
         if block.height >= constants.HARD_FORK_HEIGHT:
@@ -93,7 +96,7 @@ async def ignore_block_validation(
         else:
             run_block = run_block_generator
         err, err_msg, conds = run_block(
-            bytes(block.transactions_generator),
+            generator_bytes,
             prev_generators,
             block.transactions_info.cost,
             flags,
@@ -104,11 +107,12 @@ async def ignore_block_validation(
         # pretend that the signatures are OK
         if conds is not None:
             conds = conds.replace(validated_signature=True)
-        return err, err_msg, conds
+        return None if err is None else Err(err), err_msg, conds
 
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
     monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
+    monkeypatch.setattr("chia.consensus.multiprocess_validation.validate_generator_ref_list", lambda *_, **__: None)
     monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", run_block)
     monkeypatch.setattr(
         "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)

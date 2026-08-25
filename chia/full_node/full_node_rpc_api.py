@@ -21,6 +21,7 @@ from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
+from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
@@ -869,7 +870,7 @@ class FullNodeRpcApi:
         assert header_hash is not None
         block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
 
-        if block is None or block.transactions_generator is None:
+        if block is None or not block_has_transactions_generator(block):
             raise RpcError.simple(RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR, "Invalid block or block generator")
 
         block_generator: BlockGenerator | None = await get_block_generator(

@@ -204,9 +204,9 @@ def finish_block(
         unfinished_block.foliage_transaction_block,
         unfinished_block.transactions_info,
         unfinished_block.transactions_generator,
-        [],
-        None,
-        uint8(0),
+        unfinished_block.transactions_generator_ref_list,
+        unfinished_block.transactions_generator_buffer,
+        unfinished_block.version,
     )
 
     block_record = block_to_block_record(
@@ -323,6 +323,7 @@ def get_full_block_and_block_record(
         foliage_transaction_block.get_hash(),
         G2Element(),
     )
+    new_format = height >= constants.HARD_FORK2_HEIGHT
     unfinished_block = UnfinishedBlock(
         [],
         RewardChainBlockUnfinished(
@@ -340,10 +341,10 @@ def get_full_block_and_block_record(
         foliage,
         foliage_transaction_block,
         transactions_info,
-        block_generator.program if block_generator else None,
+        None if new_format else (block_generator.program if block_generator else None),
         [],
-        None,
-        uint8(0),
+        bytes(block_generator.program) if block_generator and new_format else None,
+        uint8(1) if new_format else uint8(0),
     )
 
     full_block, block_record = finish_block(constants, unfinished_block, prev_block, blocks)

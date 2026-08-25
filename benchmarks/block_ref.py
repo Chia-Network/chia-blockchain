@@ -41,7 +41,7 @@ class BlockInfo:
     prev_header_hash: bytes32
     transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
-    transactions_generator_buffer: list[uint8] | None = None
+    transactions_generator_buffer: bytes | None = None
     version: uint8 = uint8(0)
 
 

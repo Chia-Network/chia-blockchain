@@ -63,8 +63,10 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         """Handle new transaction from peer."""
         ...
 
-    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
-    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction], peer_required=True)
+    async def request_transaction(
+        self, request: full_node_protocol.RequestTransaction, peer: WSChiaConnection
+    ) -> Message | None:
         """Handle transaction request."""
         ...
 

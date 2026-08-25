@@ -4,6 +4,7 @@ import pytest
 from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
 
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.simulator.block_tools import BlockTools
 
 # These test targets are used to trigger a build of the test chains.
@@ -66,10 +67,12 @@ def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> No
     for block in blocks:
         rewards = block.get_included_reward_coins()
 
-        if block.transactions_generator is not None:
+        if block_has_transactions_generator(block):
             flags = get_flags_for_height_and_constants(block.height, constants)
+            generator_bytes = get_transactions_generator_bytes(block)
+            assert generator_bytes is not None
             additions, removals = additions_and_removals(
-                bytes(block.transactions_generator),
+                generator_bytes,
                 [],
                 flags,
                 constants,

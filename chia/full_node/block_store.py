@@ -13,6 +13,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
@@ -260,7 +261,11 @@ class BlockStore:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return GeneratorBlockInfo(
-                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+                cached.foliage.prev_block_hash,
+                cached.transactions_generator,
+                cached.transactions_generator_ref_list,
+                cached.transactions_generator_buffer,
+                cached.version,
             )
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
@@ -279,13 +284,17 @@ class BlockStore:
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
                 return GeneratorBlockInfo(
-                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                    b.foliage.prev_block_hash,
+                    b.transactions_generator,
+                    b.transactions_generator_ref_list,
+                    b.transactions_generator_buffer,
+                    b.version,
                 )
 
     async def get_generator(self, header_hash: bytes32) -> bytes | None:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            return None if cached.transactions_generator is None else bytes(cached.transactions_generator)
+            return get_transactions_generator_bytes(cached)
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -302,7 +311,7 @@ class BlockStore:
                 # generator_from_block() fails, fall back to the reliable
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
-                return None if b.transactions_generator is None else bytes(b.transactions_generator)
+                return get_transactions_generator_bytes(b)
 
     async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]:
         if len(heights) == 0:
@@ -325,7 +334,7 @@ class BlockStore:
                         # generator_from_block() fails, fall back to the reliable
                         # definition of parsing a block
                         b = FullBlock.from_bytes(block_bytes)
-                        gen = None if b.transactions_generator is None else bytes(b.transactions_generator)
+                        gen = get_transactions_generator_bytes(b)
                     if gen is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     generators[uint32(row[1])] = gen
