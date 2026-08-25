@@ -74,7 +74,7 @@ def make_sub_epoch_summary(
         )
     else:
         challenge_root = None
-        log.info(
+        log.debug(
             f"make_sub_epoch_summary: height={blocks_included_height} < fork_height={constants.HARD_FORK2_HEIGHT}, "
             f"using None for challenge_root"
         )
