@@ -786,16 +786,36 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
-                # This `ff_state_update` is only committed later on via
-                # `update_fast_forward_spends` if the item gets batched.
-                bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
-                    mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
-                )
-                # This `dedup_state_update` is only committed later on via
-                # `update_deduplication_spends` if the item gets batched.
-                unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
-                    dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
-                )
+                if skipped_items >= PRIORITY_TX_THRESHOLD:
+                    # If we've encountered `PRIORITY_TX_THRESHOLD` number of
+                    # transactions that don't fit in the remaining block size,
+                    # we want to keep looking for smaller transactions that
+                    # might fit, but we also want to avoid spending too much
+                    # time on potentially expensive ones, hence this shortcut.
+                    if any(
+                        sd.eligible_for_dedup or sd.supports_fast_forward for sd in item.bundle_coin_spends.values()
+                    ):
+                        log.info(f"Skipping transaction with dedup or FF spends {name}")
+                        continue
+                    unique_coin_spends = []
+                    unique_additions = []
+                    for spend_data in item.bundle_coin_spends.values():
+                        unique_coin_spends.append(spend_data.coin_spend)
+                        unique_additions.extend(spend_data.additions)
+                    ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
+                    dedup_state_update: dict[bytes32, DedupCoinSpend] = {}
+                    cost_saving = 0
+                else:
+                    # This `ff_state_update` is only committed later on via
+                    # `update_fast_forward_spends` if the item gets batched.
+                    bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
+                        mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
+                    )
+                    # This `dedup_state_update` is only committed later on via
+                    # `update_deduplication_spends` if the item gets batched.
+                    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
+                        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
+                    )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
