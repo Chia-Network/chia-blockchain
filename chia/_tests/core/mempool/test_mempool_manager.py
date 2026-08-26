@@ -1990,13 +1990,11 @@ async def test_bundle_coin_spends() -> None:
                 additions=[Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount)],
                 cost=uint64(ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + execution_cost),
                 latest_singleton_lineage=None,
-                atom_count=bcs.atom_count,
-                pair_count=bcs.pair_count,
+                atom_count=mi123e.conds.spends[i].atom_count,
+                pair_count=mi123e.conds.spends[i].pair_count,
             )
             assert bcs.atom_count >= 0
             assert bcs.pair_count >= 0
-            assert bcs.atom_count == mi123e.conds.spends[i].atom_count
-            assert bcs.pair_count == mi123e.conds.spends[i].pair_count
         eligible_bcs = mi123e.bundle_coin_spends[coins[3].name()]
         assert eligible_bcs == BundleCoinSpend(
             coin_spend=eligible_sb.coin_spends[0],
@@ -2004,11 +2002,11 @@ async def test_bundle_coin_spends() -> None:
             additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
             cost=uint64(ConditionCost.CREATE_COIN.value + execution_cost),
             latest_singleton_lineage=None,
-            atom_count=eligible_bcs.atom_count,
-            pair_count=eligible_bcs.pair_count,
+            atom_count=mi123e.conds.spends[3].atom_count,
+            pair_count=mi123e.conds.spends[3].pair_count,
         )
-        assert eligible_bcs.atom_count == mi123e.conds.spends[3].atom_count
-        assert eligible_bcs.pair_count == mi123e.conds.spends[3].pair_count
+        assert eligible_bcs.atom_count >= 0
+        assert eligible_bcs.pair_count >= 0
         total_atoms = sum(b.atom_count for b in mi123e.bundle_coin_spends.values())
         total_pairs = sum(b.pair_count for b in mi123e.bundle_coin_spends.values())
         assert total_atoms <= mi123e.conds.num_atoms

@@ -135,7 +135,6 @@ class TestROM:
         )
         assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == 1
-        actual_spend = npc_result.conds.spends[0]
 
         spend = SpendConditions(
             coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
@@ -161,8 +160,8 @@ class TestROM:
             # execution cost, just in run_block_generator2()
             execution_cost=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 44,
             condition_cost=1800000,
-            atom_count=actual_spend.atom_count,
-            pair_count=actual_spend.pair_count,
+            atom_count=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 1,
+            pair_count=0,
             fingerprint=b"",
         )
 
