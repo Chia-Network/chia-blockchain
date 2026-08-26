@@ -646,13 +646,20 @@ class Mempool:
                     ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
                     dedup_state_update: dict[bytes32, DedupCoinSpend] = {}
                     cost_saving = 0
+                    atoms_saving = 0
+                    pairs_saving = 0
                 else:
                     bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
                         mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                     )
-                    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
-                        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
-                    )
+                    (
+                        unique_coin_spends,
+                        cost_saving,
+                        atoms_saving,
+                        pairs_saving,
+                        unique_additions,
+                        dedup_state_update,
+                    ) = dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
                 item_cost = cost - cost_saving
                 log.info(
                     "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d", cost_sum, fee / item_cost, item_cost
@@ -664,8 +671,8 @@ class Mempool:
                     break  # pragma: no cover
                 new_cost_sum = cost_sum + item_cost
                 new_spend_count = spend_count + len(unique_coin_spends)
-                new_atom_sum = atom_sum + item.conds.num_atoms
-                new_pair_sum = pair_sum + item.conds.num_pairs
+                new_atom_sum = atom_sum + item.conds.num_atoms - atoms_saving
+                new_pair_sum = pair_sum + item.conds.num_pairs - pairs_saving
                 if (
                     new_cost_sum > self.mempool_info.max_block_clvm_cost
                     or new_spend_count > MAX_SPENDS_PER_BLOCK
@@ -805,6 +812,8 @@ class Mempool:
                     ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
                     dedup_state_update: dict[bytes32, DedupCoinSpend] = {}
                     cost_saving = 0
+                    atoms_saving = 0
+                    pairs_saving = 0
                 else:
                     # This `ff_state_update` is only committed later on via
                     # `update_fast_forward_spends` if the item gets batched.
@@ -813,9 +822,14 @@ class Mempool:
                     )
                     # This `dedup_state_update` is only committed later on via
                     # `update_deduplication_spends` if the item gets batched.
-                    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
-                        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
-                    )
+                    (
+                        unique_coin_spends,
+                        cost_saving,
+                        atoms_saving,
+                        pairs_saving,
+                        unique_additions,
+                        dedup_state_update,
+                    ) = dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
@@ -832,8 +846,8 @@ class Mempool:
                     skipped_items += 1
                     continue
 
-                new_atom_count = added_atoms + batch_atoms + item.conds.num_atoms
-                new_pair_count = added_pairs + batch_pairs + item.conds.num_pairs
+                new_atom_count = added_atoms + batch_atoms + item.conds.num_atoms - atoms_saving
+                new_pair_count = added_pairs + batch_pairs + item.conds.num_pairs - pairs_saving
                 if new_atom_count > MAX_BLOCK_ATOMS or new_pair_count > MAX_BLOCK_PAIRS:
                     skipped_items += 1
                     continue
@@ -883,9 +897,14 @@ class Mempool:
                         bundle_coin_spends, ff_state_update = singleton_ff.process_fast_forward_spends(
                             mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                         )
-                        unique_coin_spends, cost_saving, unique_additions, dedup_state_update = (
-                            dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
-                        )
+                        (
+                            unique_coin_spends,
+                            cost_saving,
+                            atoms_saving,
+                            pairs_saving,
+                            unique_additions,
+                            dedup_state_update,
+                        ) = dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
 
                     if done:
                         break
@@ -895,8 +914,8 @@ class Mempool:
                 batch_cost += cost - cost_saving
                 batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
                 batch_spends += len(unique_coin_spends)
-                batch_atoms += item.conds.num_atoms
-                batch_pairs += item.conds.num_pairs
+                batch_atoms += item.conds.num_atoms - atoms_saving
+                batch_pairs += item.conds.num_pairs - pairs_saving
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum
                 block_cost += item.conds.cost - cost_saving

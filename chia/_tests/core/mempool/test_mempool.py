@@ -3498,12 +3498,12 @@ def test_block_atom_and_pair_limits(old: bool, limit: str) -> None:
     # only the limit under test is binding.
     block_limit = MAX_BLOCK_ATOMS if limit == "atoms" else MAX_BLOCK_PAIRS
     per_item = block_limit // 3
-    num_atoms = per_item if limit == "atoms" else 0
-    num_pairs = per_item if limit == "pairs" else 0
+    atom_counts = [per_item] if limit == "atoms" else None
+    pair_counts = [per_item] if limit == "pairs" else None
 
     num_items = 6
     for i in range(num_items):
-        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, num_atoms=num_atoms, num_pairs=num_pairs)
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, atom_counts=atom_counts, pair_counts=pair_counts)
         info = mempool.add_to_pool(item)
         assert info.error is None
 
@@ -3531,7 +3531,7 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
     per_item = MAX_BLOCK_ATOMS // 3
     num_items = 3 + MAX_SKIPPED_ITEMS + 5
     for i in range(num_items):
-        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, num_atoms=per_item)
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, atom_counts=[per_item])
         assert mempool.add_to_pool(item).error is None
     assert mempool.size() == num_items
 
@@ -3540,7 +3540,7 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
 
     def counting_get_deduplication_info(
         self: IdenticalSpendDedup, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
-    ) -> tuple[list[CoinSpend], uint64, list[Coin], dict[bytes32, DedupCoinSpend]]:
+    ) -> tuple[list[CoinSpend], uint64, int, int, list[Coin], dict[bytes32, DedupCoinSpend]]:
         nonlocal dedup_calls
         dedup_calls += 1
         return original_get_deduplication_info(self, bundle_coin_spends=bundle_coin_spends)
@@ -3554,6 +3554,47 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
     # Scanning stops after PRIORITY_TX_THRESHOLD skips: 3 fitting + PRIORITY_TX_THRESHOLD
     # skipped items are processed, and none beyond that.
     assert dedup_calls == 3 + PRIORITY_TX_THRESHOLD
+
+
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("limit", ["atoms", "pairs"])
+def test_block_atom_and_pair_limits_with_dedup(old: bool, limit: str) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    block_limit = MAX_BLOCK_ATOMS if limit == "atoms" else MAX_BLOCK_PAIRS
+    per_item = block_limit // 3
+    # Shared dedup spend takes half; the unique spend takes the rest.
+    shared = per_item // 2
+    unique = per_item - shared
+    atom_counts = [shared, unique] if limit == "atoms" else None
+    pair_counts = [shared, unique] if limit == "pairs" else None
+    shared_coin = make_coin(0)
+
+    num_items = 6
+    for i in range(num_items):
+        item = mk_item(
+            [shared_coin, make_coin(i + 1)],
+            cost=1_000_000,
+            fee=100,
+            atom_counts=atom_counts,
+            pair_counts=pair_counts,
+            flags=[ELIGIBLE_FOR_DEDUP, 0],
+        )
+        assert mempool.add_to_pool(item).error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    assert len(generator.removals) > 4
 
 
 @pytest.mark.parametrize("old", [True, False])

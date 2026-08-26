@@ -348,17 +348,44 @@ def make_test_conds(
     num_pairs: int = 0,
     spend_ids: Sequence[tuple[bytes32 | Coin, int]] = [(TEST_COIN_ID, 0)],
     created_coins: list[list[CreateCoin]] | None = None,
+    spend_resource_counts: Sequence[tuple[int, int]] | None = None,
 ) -> SpendBundleConditions:
     if created_coins is None:
         created_coins = []
     if len(created_coins) < len(spend_ids):
         created_coins.extend([[] for _ in range(len(spend_ids) - len(created_coins))])
-    spend_info: list[tuple[bytes32, bytes32, bytes32, uint64, int, list[CreateCoin]]] = []
-    for (coin, flags), create_coin in zip(spend_ids, created_coins):
+    if spend_resource_counts is None:
+        spend_resource_counts = [(0, 0)] * len(spend_ids)
+    else:
+        assert len(spend_resource_counts) == len(spend_ids)
+    spend_info: list[tuple[bytes32, bytes32, bytes32, uint64, int, list[CreateCoin], int, int]] = []
+    for (coin, flags), create_coin, (atom_count, pair_count) in zip(spend_ids, created_coins, spend_resource_counts):
         if isinstance(coin, Coin):
-            spend_info.append((coin.name(), coin.parent_coin_info, coin.puzzle_hash, coin.amount, flags, create_coin))
+            spend_info.append(
+                (
+                    coin.name(),
+                    coin.parent_coin_info,
+                    coin.puzzle_hash,
+                    coin.amount,
+                    flags,
+                    create_coin,
+                    atom_count,
+                    pair_count,
+                )
+            )
         else:
-            spend_info.append((coin, IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT, flags, create_coin))
+            spend_info.append(
+                (
+                    coin,
+                    IDENTITY_PUZZLE_HASH,
+                    IDENTITY_PUZZLE_HASH,
+                    TEST_COIN_AMOUNT,
+                    flags,
+                    create_coin,
+                    atom_count,
+                    pair_count,
+                )
+            )
 
     return SpendBundleConditions(
         [
@@ -384,9 +411,11 @@ def make_test_conds(
                 flags,
                 execution_cost=0,
                 condition_cost=0,
+                atom_count=atom_count,
+                pair_count=pair_count,
                 fingerprint=b"",
             )
-            for coin_id, parent_id, puzzle_hash, amount, flags, create_coin in spend_info
+            for coin_id, parent_id, puzzle_hash, amount, flags, create_coin, atom_count, pair_count in spend_info
         ],
         0,
         uint32(height_absolute),
@@ -612,6 +641,8 @@ def make_bundle_spends_map_and_fee(
             latest_singleton_lineage=UnspentLineageInfo(coin_id, coin_spend.coin.parent_coin_info, bytes32([0] * 32))
             if bool(spend_conds.flags & ELIGIBLE_FOR_FF)
             else None,
+            atom_count=spend_conds.atom_count,
+            pair_count=spend_conds.pair_count,
         )
     assert additions_amount == conds.addition_amount
     assert removals_amount == conds.removal_amount
@@ -933,7 +964,7 @@ def mk_coin_spend(coin: Coin, solution: str | None = None) -> CoinSpend:
     )
 
 
-def mk_bcs(coin_spend: CoinSpend, flags: int = 0) -> BundleCoinSpend:
+def mk_bcs(coin_spend: CoinSpend, flags: int = 0, *, atom_count: int = 0, pair_count: int = 0) -> BundleCoinSpend:
     return BundleCoinSpend(
         coin_spend=coin_spend,
         eligible_for_dedup=bool(flags & ELIGIBLE_FOR_DEDUP),
@@ -944,6 +975,8 @@ def mk_bcs(coin_spend: CoinSpend, flags: int = 0) -> BundleCoinSpend:
         )
         if flags & ELIGIBLE_FOR_FF
         else None,
+        atom_count=atom_count,
+        pair_count=pair_count,
     )
 
 
@@ -952,8 +985,8 @@ def mk_item(
     *,
     cost: int = 1,
     fee: int = 0,
-    num_atoms: int = 0,
-    num_pairs: int = 0,
+    atom_counts: Sequence[int] | None = None,
+    pair_counts: Sequence[int] | None = None,
     assert_height: int | None = None,
     assert_before_height: int | None = None,
     assert_before_seconds: int | None = None,
@@ -967,15 +1000,29 @@ def mk_item(
     bundle_coin_spends = {}
     if len(flags) < len(coins):
         flags.extend([0] * (len(coins) - len(flags)))
-    for c, f in zip(coins, flags):
+    if atom_counts is None:
+        atom_counts = [0] * len(coins)
+    if pair_counts is None:
+        pair_counts = [0] * len(coins)
+    assert len(atom_counts) == len(coins)
+    assert len(pair_counts) == len(coins)
+    spend_resource_counts: list[tuple[int, int]] = []
+    for c, f, atom_count, pair_count in zip(coins, flags, atom_counts, pair_counts):
         coin_id = c.name()
         spend_ids.append((coin_id, f))
         coin_spend = mk_coin_spend(c, solution=solution)
         solution = None
         coin_spends.append(coin_spend)
-        bundle_coin_spends[coin_id] = mk_bcs(coin_spend, f)
+        spend_resource_counts.append((atom_count, pair_count))
+        bundle_coin_spends[coin_id] = mk_bcs(coin_spend, f, atom_count=atom_count, pair_count=pair_count)
     spend_bundle = SpendBundle(coin_spends, G2Element())
-    conds = make_test_conds(cost=cost, num_atoms=num_atoms, num_pairs=num_pairs, spend_ids=spend_ids)
+    conds = make_test_conds(
+        cost=cost,
+        num_atoms=sum(atom_counts),
+        num_pairs=sum(pair_counts),
+        spend_ids=spend_ids,
+        spend_resource_counts=spend_resource_counts,
+    )
     return MempoolItem(
         aggregated_signature=spend_bundle.aggregated_signature,
         fee=uint64(fee),
@@ -1691,11 +1738,13 @@ def test_dedup_info_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     mempool_item = mempool_item_from_spendbundle(sb)
     dedup_coin_spends = IdenticalSpendDedup()
-    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends
+    unique_coin_spends, cost_saving, atoms_saving, pairs_saving, unique_additions, dedup_state_update = (
+        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=mempool_item.bundle_coin_spends)
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
+    assert atoms_saving == 0
+    assert pairs_saving == 0
     assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))]
     assert dedup_state_update == {}
     # get_deduplication_info must not mutate the dedup state on its own
@@ -1715,22 +1764,34 @@ def test_dedup_info_eligible_1st_time() -> None:
     assert mempool_item.conds is not None
     dedup_coin_spends = IdenticalSpendDedup()
     solution = SerializedProgram.to(conditions)
-    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends
+    unique_coin_spends, cost_saving, atoms_saving, pairs_saving, unique_additions, dedup_state_update = (
+        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=mempool_item.bundle_coin_spends)
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
+    assert atoms_saving == 0
+    assert pairs_saving == 0
     assert set(unique_additions) == {
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1)),
         Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(TEST_COIN_AMOUNT - 1)),
     }
     expected_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID].cost
+    expected_atoms = mempool_item.bundle_coin_spends[TEST_COIN_ID].atom_count
+    expected_pairs = mempool_item.bundle_coin_spends[TEST_COIN_ID].pair_count
     # The update is returned but not applied until explicitly committed
     assert dedup_coin_spends == IdenticalSpendDedup()
-    assert dedup_state_update == {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
+    assert dedup_state_update == {
+        TEST_COIN_ID: DedupCoinSpend(
+            solution=solution, cost=expected_cost, atom_count=expected_atoms, pair_count=expected_pairs
+        )
+    }
     dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     assert dedup_coin_spends == IdenticalSpendDedup(
-        {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=expected_cost)}
+        {
+            TEST_COIN_ID: DedupCoinSpend(
+                solution=solution, cost=expected_cost, atom_count=expected_atoms, pair_count=expected_pairs
+            )
+        }
     )
 
 
@@ -1767,23 +1828,33 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends
+    unique_coin_spends, cost_saving, atoms_saving, pairs_saving, unique_additions, dedup_state_update = (
+        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=mempool_item.bundle_coin_spends)
     )
     # Only the eligible one that we encountered more than once gets deduplicated
     assert unique_coin_spends == sb2.coin_spends
     assert cost_saving == test_coin_cost
+    assert atoms_saving == mempool_item.bundle_coin_spends[TEST_COIN_ID].atom_count
+    assert pairs_saving == mempool_item.bundle_coin_spends[TEST_COIN_ID].pair_count
     assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)]
     # The coin we encountered a second time is already in the map
     # The coin we encountered for the first time is only reported in the update,
     # not committed until we explicitly do so
     test_coin2_cost = mempool_item.bundle_coin_spends[TEST_COIN_ID2].cost
-    assert dedup_state_update == {TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=test_coin2_cost)}
+    test_coin2_atoms = mempool_item.bundle_coin_spends[TEST_COIN_ID2].atom_count
+    test_coin2_pairs = mempool_item.bundle_coin_spends[TEST_COIN_ID2].pair_count
+    assert dedup_state_update == {
+        TEST_COIN_ID2: DedupCoinSpend(
+            solution=second_solution, cost=test_coin2_cost, atom_count=test_coin2_atoms, pair_count=test_coin2_pairs
+        )
+    }
     dedup_coin_spends.update_deduplication_spends(dedup_state_update)
     expected_dedup_coin_spends = IdenticalSpendDedup(
         {
             TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=test_coin_cost),
-            TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=test_coin2_cost),
+            TEST_COIN_ID2: DedupCoinSpend(
+                solution=second_solution, cost=test_coin2_cost, atom_count=test_coin2_atoms, pair_count=test_coin2_pairs
+            ),
         }
     )
     assert dedup_coin_spends == expected_dedup_coin_spends
@@ -1819,11 +1890,19 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
-    unique_coin_spends, cost_saving, unique_additions, dedup_state_update = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends
+    unique_coin_spends, cost_saving, atoms_saving, pairs_saving, unique_additions, dedup_state_update = (
+        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=mempool_item.bundle_coin_spends)
     )
     assert unique_coin_spends == sb3.coin_spends
     assert cost_saving == test_coin_cost + test_coin2_cost
+    assert atoms_saving == (
+        mempool_item.bundle_coin_spends[TEST_COIN_ID].atom_count
+        + mempool_item.bundle_coin_spends[TEST_COIN_ID2].atom_count
+    )
+    assert pairs_saving == (
+        mempool_item.bundle_coin_spends[TEST_COIN_ID].pair_count
+        + mempool_item.bundle_coin_spends[TEST_COIN_ID2].pair_count
+    )
     assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)]
     # Both eligible coins were already known, so there's nothing new to commit
     # (TEST_COIN_ID3 is non-eligible, so it never ends up in the map)
@@ -1904,20 +1983,34 @@ async def test_bundle_coin_spends() -> None:
         assert mi123e is not None
         execution_cost = 44
         for i in range(3):
-            assert mi123e.bundle_coin_spends[coins[i].name()] == BundleCoinSpend(
+            bcs = mi123e.bundle_coin_spends[coins[i].name()]
+            assert bcs == BundleCoinSpend(
                 coin_spend=sb123.coin_spends[i],
                 eligible_for_dedup=False,
                 additions=[Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount)],
                 cost=uint64(ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + execution_cost),
                 latest_singleton_lineage=None,
+                atom_count=mi123e.conds.spends[i].atom_count,
+                pair_count=mi123e.conds.spends[i].pair_count,
             )
-        assert mi123e.bundle_coin_spends[coins[3].name()] == BundleCoinSpend(
+            assert bcs.atom_count >= 0
+            assert bcs.pair_count >= 0
+        eligible_bcs = mi123e.bundle_coin_spends[coins[3].name()]
+        assert eligible_bcs == BundleCoinSpend(
             coin_spend=eligible_sb.coin_spends[0],
             eligible_for_dedup=True,
             additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
             cost=uint64(ConditionCost.CREATE_COIN.value + execution_cost),
             latest_singleton_lineage=None,
+            atom_count=mi123e.conds.spends[3].atom_count,
+            pair_count=mi123e.conds.spends[3].pair_count,
         )
+        assert eligible_bcs.atom_count >= 0
+        assert eligible_bcs.pair_count >= 0
+        total_atoms = sum(b.atom_count for b in mi123e.bundle_coin_spends.values())
+        total_pairs = sum(b.pair_count for b in mi123e.bundle_coin_spends.values())
+        assert total_atoms <= mi123e.conds.num_atoms
+        assert total_pairs <= mi123e.conds.num_pairs
 
 
 @pytest.mark.anyio
