@@ -48,7 +48,14 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.eligible_coin_spends import DedupCoinSpend, IdenticalSpendDedup
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.mempool import MAX_BLOCK_ATOMS, MAX_BLOCK_PAIRS, MAX_SKIPPED_ITEMS, MAX_SPENDS_PER_BLOCK, Mempool
+from chia.full_node.mempool import (
+    MAX_BLOCK_ATOMS,
+    MAX_BLOCK_PAIRS,
+    MAX_SKIPPED_ITEMS,
+    MAX_SPENDS_PER_BLOCK,
+    PRIORITY_TX_THRESHOLD,
+    Mempool,
+)
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -3544,9 +3551,9 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
     assert generator is not None
     # Only 3 items fit the atom budget.
     assert len(generator.removals) == 3
-    # Scanning stops after MAX_SKIPPED_ITEMS skips: 3 fitting + MAX_SKIPPED_ITEMS
+    # Scanning stops after PRIORITY_TX_THRESHOLD skips: 3 fitting + PRIORITY_TX_THRESHOLD
     # skipped items are processed, and none beyond that.
-    assert dedup_calls == 3 + MAX_SKIPPED_ITEMS
+    assert dedup_calls == 3 + PRIORITY_TX_THRESHOLD
 
 
 @pytest.mark.parametrize("old", [True, False])
