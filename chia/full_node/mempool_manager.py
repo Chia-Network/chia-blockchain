@@ -674,7 +674,9 @@ class MempoolManager:
             # SpendBundleConditions.
             spend_conds = spend_conditions.pop(coin_id)
 
-            if bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP) and not is_clvm_canonical(bytes(coin_spend.solution)):
+            if not is_clvm_canonical(bytes(coin_spend.puzzle_reveal)) or not is_clvm_canonical(
+                bytes(coin_spend.solution)
+            ):
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
