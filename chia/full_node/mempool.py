@@ -812,6 +812,8 @@ class Mempool:
                     ff_state_update: dict[bytes32, UnspentLineageInfo] = {}
                     dedup_state_update: dict[bytes32, DedupCoinSpend] = {}
                     cost_saving = 0
+                    atoms_saving = 0
+                    pairs_saving = 0
                 else:
                     # This `ff_state_update` is only committed later on via
                     # `update_fast_forward_spends` if the item gets batched.
@@ -820,9 +822,14 @@ class Mempool:
                     )
                     # This `dedup_state_update` is only committed later on via
                     # `update_deduplication_spends` if the item gets batched.
-                    unique_coin_spends, cost_saving, atoms_saving, pairs_saving, unique_additions, dedup_state_update = (
-                        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
-                    )
+                    (
+                        unique_coin_spends,
+                        cost_saving,
+                        atoms_saving,
+                        pairs_saving,
+                        unique_additions,
+                        dedup_state_update,
+                    ) = dedup_coin_spends.get_deduplication_info(bundle_coin_spends=bundle_coin_spends)
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
                     # Such a fee is very unlikely to happen but we're defensively
