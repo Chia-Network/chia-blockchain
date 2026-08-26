@@ -356,8 +356,8 @@ def make_test_conds(
         created_coins.extend([[] for _ in range(len(spend_ids) - len(created_coins))])
     if spend_resource_counts is None:
         spend_resource_counts = [(0, 0)] * len(spend_ids)
-    elif len(spend_resource_counts) < len(spend_ids):
-        spend_resource_counts = list(spend_resource_counts) + [(0, 0)] * (len(spend_ids) - len(spend_resource_counts))
+    else:
+        assert len(spend_resource_counts) == len(spend_ids)
     spend_info: list[tuple[bytes32, bytes32, bytes32, uint64, int, list[CreateCoin], int, int]] = []
     for (coin, flags), create_coin, (atom_count, pair_count) in zip(spend_ids, created_coins, spend_resource_counts):
         if isinstance(coin, Coin):
