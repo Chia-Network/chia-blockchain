@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from time import perf_counter
 
-import aiosqlite
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 
+from chia._vendored import aiosqlite
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err

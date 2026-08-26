@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-import aiosqlite
+from chia._vendored import aiosqlite
 
 
 async def lookup_db_version(db: aiosqlite.Connection) -> int:
