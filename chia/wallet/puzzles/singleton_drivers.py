@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar, cast
 
 from chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -86,6 +86,10 @@ class SingletonStruct:
                 (self.launcher_id, self.singleton_puzzles.singleton_launcher_hash),
             )
         )
+
+    @classmethod
+    def from_program(cls, program: Program) -> Self:
+        return cls(launcher_id=bytes32(program.at("rf").as_atom()))
 
     @cached_property
     def struct_hash(self) -> bytes32:
