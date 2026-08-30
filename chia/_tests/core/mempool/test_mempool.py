@@ -55,6 +55,7 @@ from chia.full_node.mempool import (
     MAX_SPENDS_PER_BLOCK,
     PRIORITY_TX_THRESHOLD,
     Mempool,
+    minimum_fee_for_cost,
 )
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
@@ -3002,6 +3003,43 @@ def test_timeout(old: bool) -> None:
     # the timeout is set to 0, we should *always* fail with a timeout
     generator = create_block(DEFAULT_CONSTANTS, uint32(10), 0.0)
     assert generator is None
+
+
+@pytest.mark.parametrize(
+    "cost, fee_per_million_cost, expected_fee",
+    [
+        (0, uint64(1_818_182), 0),
+        (1, uint64(1), 1),
+        (1_000_000, uint64(1), 1),
+        (1_000_001, uint64(1), 2),
+        (5_500_000, uint64(1_818_182), 10_000_001),
+        (11_000_000_000, uint64(0), 0),
+    ],
+)
+def test_minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64, expected_fee: int) -> None:
+    assert minimum_fee_for_cost(cost, fee_per_million_cost) == expected_fee
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_minimum_fee_only_filters_block_inclusion(old: bool) -> None:
+    mempool = construct_mempool()
+    below_floor = mk_item([coins[0]], cost=1_000_000, fee=9)
+    at_floor = mk_item([coins[1]], cost=1_000_000, fee=10)
+
+    assert mempool.add_to_pool(below_floor).error is None
+    assert mempool.add_to_pool(at_floor).error is None
+    item_ids = set(mempool.all_item_ids())
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    filtered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0, uint64(10))
+    assert filtered is not None
+    assert filtered.removals == [coins[1]]
+    assert set(mempool.all_item_ids()) == item_ids
+
+    unfiltered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0)
+    assert unfiltered is not None
+    assert set(unfiltered.removals) == {coins[0], coins[1]}
+    assert set(mempool.all_item_ids()) == item_ids
 
 
 @pytest.mark.parametrize("old", [True, False])
