@@ -331,6 +331,9 @@ full_node:
   # measure to not spend too much time building the block generator.
   # block_creation_timeout: 2.0
 
+  # Minimum transaction fee in mojos per million CLVM cost. A value of 0 disables the floor.
+  min_fee: 1818182
+
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable
