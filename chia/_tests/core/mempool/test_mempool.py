@@ -45,9 +45,17 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import DedupCoinSpend, IdenticalSpendDedup
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.mempool import MAX_SPENDS_PER_BLOCK, Mempool
+from chia.full_node.mempool import (
+    MAX_BLOCK_ATOMS,
+    MAX_BLOCK_PAIRS,
+    MAX_SKIPPED_ITEMS,
+    MAX_SPENDS_PER_BLOCK,
+    PRIORITY_TX_THRESHOLD,
+    Mempool,
+)
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -71,7 +79,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.casts import int_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -3470,6 +3478,123 @@ def test_max_spends_per_block(old: bool) -> None:
     assert generator is not None
     # The 2-coin items were skipped but the final 1-coin item fits.
     assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
+
+
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("limit", ["atoms", "pairs"])
+def test_block_atom_and_pair_limits(old: bool, limit: str) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Each item accrues a third of the block limit, so exactly 3 items fit
+    # (the limit is inclusive), and any further item must be skipped. The other
+    # limit (cost, spends, and the counterpart of atoms/pairs) is kept small so
+    # only the limit under test is binding.
+    block_limit = MAX_BLOCK_ATOMS if limit == "atoms" else MAX_BLOCK_PAIRS
+    per_item = block_limit // 3
+    atom_counts = [per_item] if limit == "atoms" else None
+    pair_counts = [per_item] if limit == "pairs" else None
+
+    num_items = 6
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, atom_counts=atom_counts, pair_counts=pair_counts)
+        info = mempool.add_to_pool(item)
+        assert info.error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # 3 * per_item == block_limit, so 3 items fit and the rest are skipped.
+    assert len(generator.removals) == 3
+
+
+def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # Each item takes a third of the atom budget, so only 3 fit; the rest are
+    # skipped. Without an early exit, every later item would still be scanned.
+    per_item = MAX_BLOCK_ATOMS // 3
+    num_items = 3 + MAX_SKIPPED_ITEMS + 5
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100, atom_counts=[per_item])
+        assert mempool.add_to_pool(item).error is None
+    assert mempool.size() == num_items
+
+    dedup_calls = 0
+    original_get_deduplication_info = IdenticalSpendDedup.get_deduplication_info
+
+    def counting_get_deduplication_info(
+        self: IdenticalSpendDedup, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
+    ) -> tuple[list[CoinSpend], uint64, int, int, list[Coin], dict[bytes32, DedupCoinSpend]]:
+        nonlocal dedup_calls
+        dedup_calls += 1
+        return original_get_deduplication_info(self, bundle_coin_spends=bundle_coin_spends)
+
+    monkeypatch.setattr(IdenticalSpendDedup, "get_deduplication_info", counting_get_deduplication_info)
+
+    generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    # Only 3 items fit the atom budget.
+    assert len(generator.removals) == 3
+    # Scanning stops after PRIORITY_TX_THRESHOLD skips: 3 fitting + PRIORITY_TX_THRESHOLD
+    # skipped items are processed, and none beyond that.
+    assert dedup_calls == 3 + PRIORITY_TX_THRESHOLD
+
+
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize("limit", ["atoms", "pairs"])
+def test_block_atom_and_pair_limits_with_dedup(old: bool, limit: str) -> None:
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    block_limit = MAX_BLOCK_ATOMS if limit == "atoms" else MAX_BLOCK_PAIRS
+    per_item = block_limit // 3
+    # Shared dedup spend takes half; the unique spend takes the rest.
+    shared = per_item // 2
+    unique = per_item - shared
+    atom_counts = [shared, unique] if limit == "atoms" else None
+    pair_counts = [shared, unique] if limit == "pairs" else None
+    shared_coin = make_coin(0)
+
+    num_items = 6
+    for i in range(num_items):
+        item = mk_item(
+            [shared_coin, make_coin(i + 1)],
+            cost=1_000_000,
+            fee=100,
+            atom_counts=atom_counts,
+            pair_counts=pair_counts,
+            flags=[ELIGIBLE_FOR_DEDUP, 0],
+        )
+        assert mempool.add_to_pool(item).error is None
+
+    assert mempool.size() == num_items
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    assert len(generator.removals) > 4
 
 
 @pytest.mark.parametrize("old", [True, False])

@@ -132,7 +132,11 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
         """Handle reject block headers from full node."""
         ...
 
-    @metadata.request(peer_required=True, execute_task=True)
+    @metadata.request(
+        peer_required=True,
+        execute_task=True,
+        list_limits=lambda self, peer: {"items": self.wallet_node.max_coin_state_update_items() + 1},
+    )
     async def coin_state_update(self, request: CoinStateUpdate, peer: WSChiaConnection) -> None:
         """Handle coin state update from full node."""
         ...

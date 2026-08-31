@@ -218,9 +218,9 @@ async def test_basic_store(
                 block.foliage_transaction_block,
                 block.transactions_info,
                 block.transactions_generator,
-                [],
-                None,
-                uint8(0),
+                block.transactions_generator_ref_list,
+                block.transactions_generator_buffer,
+                block.version,
             )
         )
 
@@ -282,7 +282,7 @@ async def test_basic_store(
 
             assert ublock is not None and ublock.required_iters == uint64(123532)
 
-        store.remove_unfinished_block(unf_block.partial_hash)
+        store.clear_unfinished_blocks_below(uint32(height + 1))
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(
             unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
