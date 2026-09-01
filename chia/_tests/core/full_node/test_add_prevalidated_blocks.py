@@ -31,6 +31,7 @@ def _make_fake_self() -> SimpleNamespace:
         weight_proof_handler=None,
         log=logging.getLogger("test.add_prevalidated_blocks"),
         _state_changed=lambda *a, **kw: None,
+        get_assumevalid=lambda: None,
     )
 
 
@@ -119,3 +120,34 @@ async def test_prevalidation_none_required_iters_returns_err() -> None:
     assert err is not None, "Expected an error to be returned"
     assert err == Err.UNKNOWN
     assert summary is None
+
+
+@pytest.mark.anyio
+async def test_assumevalid_mismatch_returns_err(monkeypatch: pytest.MonkeyPatch) -> None:
+    av_hash = bytes32(b"\x11" * 32)
+    fake_self = _make_fake_self()
+    monkeypatch.setattr(fake_self, "get_assumevalid", lambda: (av_hash, uint32(1)))
+    block = _make_fake_block(height=1)
+    assert block.header_hash != av_hash
+    ok_result = PreValidationResult(
+        error=None,
+        error_msg=None,
+        required_iters=uint64(1),
+        conds=None,
+        timing=uint32(0),
+    )
+    blockchain = SimpleNamespace(block_record=lambda _: None, remove_extra_block=lambda _: None)
+    peer_info = PeerInfo("127.0.0.1", uint16(8444))
+
+    summary, err = await FullNode.add_prevalidated_blocks(
+        fake_self,  # type: ignore[arg-type]
+        blockchain,  # type: ignore[arg-type]
+        [block],  # type: ignore[list-item]
+        [ok_result],
+        _make_fork_info(),
+        peer_info,
+        _make_validation_state(),
+    )
+
+    assert summary is None
+    assert err == Err.ASSUMEVALID_BLOCK_MISMATCH
