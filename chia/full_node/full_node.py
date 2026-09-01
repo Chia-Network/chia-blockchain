@@ -89,6 +89,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import process_config_start_method
 from chia.util.cpu import available_logical_cores
 from chia.util.db_synchronous import db_synchronous_on
@@ -1006,6 +1007,8 @@ class FullNode:
             block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
+        if not self.assumevalid_satisfied():
+            return False
         curr: BlockRecord | None = self.blockchain.get_peak()
         if curr is None:
             return False
@@ -1022,6 +1025,45 @@ class FullNode:
             return False
         else:
             return True
+
+    def get_assumevalid(self) -> tuple[bytes32, uint32] | None:
+        """
+        Returns (assumevalid_hash, assumevalid_height) only when both config values
+        are set. If only one is set, the feature is disabled and a warning is logged.
+        """
+        height = self.config.get("assumevalid_height", None)
+        hash_hex = self.config.get("assumevalid_hash", None)
+        height_set = height is not None
+        hash_set = hash_hex is not None and hash_hex != ""
+        if height_set != hash_set:
+            self.log.warning(
+                "assumevalid requires both assumevalid_height and assumevalid_hash; "
+                "ignoring incomplete config "
+                f"(height={'set' if height_set else 'unset'}, "
+                f"hash={'set' if hash_set else 'unset'})"
+            )
+            return None
+        if height is None or hash_hex is None or hash_hex == "":
+            return None
+        try:
+            return bytes32(hexstr_to_bytes(str(hash_hex))), uint32(int(height))
+        except (ValueError, TypeError) as e:
+            self.log.error(f"invalid assumevalid config: {e}")
+            return None
+
+    def assumevalid_satisfied(self) -> bool:
+        """
+        When assumevalid is configured, the node is not considered synced until the
+        block at assumevalid_height is present and matches assumevalid_hash.
+        """
+        assumevalid = self.get_assumevalid()
+        if assumevalid is None:
+            return True
+        av_hash, av_height = assumevalid
+        peak_height = self.blockchain.get_peak_height()
+        if peak_height is None or peak_height < av_height:
+            return False
+        return self.blockchain.height_to_hash(av_height) == av_hash
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
         """
@@ -1115,6 +1157,13 @@ class FullNode:
         self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
+            assumevalid = self.get_assumevalid()
+            if assumevalid is not None:
+                av_hash, av_height = assumevalid
+                self.log.info(
+                    f"assumevalid enabled: skipping aggregate signature validation for "
+                    f"blocks below height {av_height} (hash {av_hash.hex()})"
+                )
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
@@ -1766,8 +1815,12 @@ class FullNode:
         # We have to copy the ValidationState object to preserve it for the add_block()
         # call below. pre_validate_block() will update the
         # object we pass in.
+        assumevalid = self.get_assumevalid()
         ret: list[Awaitable[PreValidationResult]] = []
         for block in blocks_to_validate:
+            validate_signatures = True
+            if assumevalid is not None and block.height < assumevalid[1]:
+                validate_signatures = False
             ret.append(
                 await pre_validate_block(
                     self.constants,
@@ -1777,6 +1830,7 @@ class FullNode:
                     None,
                     vs,
                     wp_summaries=wp_summaries,
+                    validate_signatures=validate_signatures,
                     nice=(20,),
                 )
             )
@@ -1791,10 +1845,19 @@ class FullNode:
         peer_info: PeerInfo,
         vs: ValidationState,  # in-out parameter
     ) -> tuple[StateChangeSummary | None, Err | None]:
+        assumevalid = self.get_assumevalid()
         agg_state_change_summary: StateChangeSummary | None = None
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
+            if assumevalid is not None:
+                av_hash, av_height = assumevalid
+                if block.height == av_height and header_hash != av_hash:
+                    self.log.error(
+                        f"assumevalid mismatch at height {block.height}: "
+                        f"got {header_hash.hex()}, expected {av_hash.hex()} from peer {peer_info}"
+                    )
+                    return agg_state_change_summary, Err.ASSUMEVALID_BLOCK_MISMATCH
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"prevalidation failed for block {header_hash.hex()} height {block.height} "
@@ -1827,6 +1890,7 @@ class FullNode:
                 fork_info,
                 prev_ses_block=vs.prev_ses_block,
                 block_record=block_rec,
+                assumevalid_height=None if assumevalid is None else assumevalid[1],
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
