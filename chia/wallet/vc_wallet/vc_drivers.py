@@ -629,7 +629,6 @@ class VerifiedCredential(Streamable):
         self,
         new_proof_hash: bytes32 | None,
         provider_innerpuzhash: bytes32,
-        new_proof_provider: bytes32 | None = None,
     ) -> Program:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
@@ -691,7 +690,6 @@ class VerifiedCredential(Streamable):
         inner_puzzle: Program,
         inner_solution: Program,
         new_proof_hash: bytes32 | None = None,
-        new_proof_provider: bytes32 | None = None,
     ) -> tuple[CreatePuzzleAnnouncement | None, CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).

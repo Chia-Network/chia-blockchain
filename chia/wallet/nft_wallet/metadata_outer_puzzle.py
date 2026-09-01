@@ -51,7 +51,6 @@ class MetadataOuterPuzzle:
             return PuzzleInfo(constructor_dict)
         else:
             return None
-        return None  # Uncomment above when match_metadata_layer_puzzle works
 
     def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return bytes32(constructor["updater_hash"])
