@@ -5,8 +5,9 @@ import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import TracebackType
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
@@ -42,6 +43,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
+from chia.util.path import path_from_root
 from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
@@ -307,6 +309,20 @@ def check_removals(
     return None, []
 
 
+LogMempoolMode = Literal["true", "false", "timeout"]
+# Values accepted from config/YAML before normalization (unknowns become "false").
+LogMempoolConfig = bool | LogMempoolMode | None
+
+
+def _normalize_log_mempool(value: object) -> LogMempoolMode:
+    """Normalize log_mempool config: YAML bools or strings "true"/"false"/"timeout"."""
+    if value is True or value == "true":
+        return "true"
+    if value == "timeout":
+        return "timeout"
+    return "false"
+
+
 class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
@@ -329,6 +345,8 @@ class MempoolManager:
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
     validation_timeout: float
+    log_mempool: LogMempoolMode
+    root_path: Path | None
 
     def __init__(
         self,
@@ -339,8 +357,12 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        log_mempool: LogMempoolConfig = False,
+        root_path: Path | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
+        self.log_mempool = _normalize_log_mempool(log_mempool)
+        self.root_path = root_path
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
@@ -396,6 +418,8 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        log_mempool: LogMempoolConfig = False,
+        root_path: Path | None = None,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
@@ -404,6 +428,8 @@ class MempoolManager:
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
             validation_timeout=validation_timeout,
+            log_mempool=log_mempool,
+            root_path=root_path,
         )
         try:
             yield self
@@ -499,6 +525,19 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
+    def _maybe_log_timeout_spend_bundle(self, spend_name: bytes32, spend_bundle: SpendBundle) -> None:
+        """Dump a spend bundle when log_mempool is "timeout" and CLVM/sig validation timed out."""
+        if self.log_mempool != "timeout" or self.root_path is None:
+            return
+        try:
+            height = self.peak.height if self.peak is not None else 0
+            mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{height}"
+            mempool_dir.mkdir(parents=True, exist_ok=True)
+            with open(mempool_dir / f"{spend_name}.bundle", "wb+") as f:
+                f.write(bytes(spend_bundle))
+        except Exception:
+            log.exception(f"Failed to log mempool item: {spend_name}")
+
     async def pre_validate_spendbundle(
         self,
         spend_bundle: SpendBundle,
@@ -547,10 +586,14 @@ class MempoolManager:
             raise ValueError("too many pairs")
 
         if duration > self.validation_timeout:
+            name = spend_bundle_id if spend_bundle_id is not None else spend_bundle.name()
+            self._maybe_log_timeout_spend_bundle(name, spend_bundle)
             raise ValueError(f"timeout {duration:0.4} s")
 
         cost = sbc.execution_cost + sbc.condition_cost
         if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
+            name = spend_bundle_id if spend_bundle_id is not None else spend_bundle.name()
+            self._maybe_log_timeout_spend_bundle(name, spend_bundle)
             raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
 
         if bls_cache is not None:

@@ -10,6 +10,7 @@ import random
 import sqlite3
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -68,6 +69,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
+from chia.full_node.mempool_manager import SpendBundleAddInfo
 from chia.full_node.sync_store import Peak
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -1663,6 +1665,72 @@ async def test_add_transaction_remove_seen_on_unexpected_exception(
 
     assert not fn.mempool_manager.in_flight(spend_name)
     assert not fn.mempool_manager.seen(spend_name)
+
+
+def _mempool_log_path(fn: FullNode, spend_name: bytes32) -> Path:
+    return path_from_root(fn.root_path, "mempool-log") / f"{fn.blockchain.get_peak_height()}" / f"{spend_name}.bundle"
+
+
+@pytest.mark.anyio
+async def test_log_mempool_true_logs_after_pre_validate(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+    fn.config["log_mempool"] = True
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+    log_path = _mempool_log_path(fn, spend_name)
+
+    original_pre_validate = fn.mempool_manager.pre_validate_spendbundle
+    original_add = fn.mempool_manager.add_spend_bundle
+
+    async def fake_pre_validate(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        return object()  # type: ignore[return-value]
+
+    async def abort_add(*_args: Any, **_kwargs: Any) -> SpendBundleAddInfo:
+        return SpendBundleAddInfo(None, MempoolInclusionStatus.FAILED, [], Err.INVALID_SPEND_BUNDLE)
+
+    fn.mempool_manager.pre_validate_spendbundle = fake_pre_validate  # type: ignore[method-assign]
+    fn.mempool_manager.add_spend_bundle = abort_add  # type: ignore[method-assign]
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
+        fn.mempool_manager.add_spend_bundle = original_add  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.INVALID_SPEND_BUNDLE
+    assert log_path.exists()
+    assert log_path.read_bytes() == bytes(spend_bundle)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (True, "true"),
+        ("true", "true"),
+        (False, "false"),
+        ("false", "false"),
+        ("timeout", "timeout"),
+        (None, "false"),
+        ("other", "false"),
+    ],
+)
+async def test_log_mempool_mode_normalization(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    value: object,
+    expected: str,
+) -> None:
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+    if value is None:
+        fn.config.pop("log_mempool", None)
+    else:
+        fn.config["log_mempool"] = value
+    assert fn._log_mempool_mode() == expected
 
 
 @pytest.mark.anyio
