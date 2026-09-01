@@ -1797,8 +1797,8 @@ async def validate_weight_proof_inner(
             # give other stuff a turn
             await asyncio.sleep(0)
 
-        for vdf_task in asyncio.as_completed(fs=vdf_tasks):
-            validated = await vdf_task
+        for completed in asyncio.as_completed(fs=vdf_tasks):
+            validated = await completed
             if not validated:
                 return False, []
 
