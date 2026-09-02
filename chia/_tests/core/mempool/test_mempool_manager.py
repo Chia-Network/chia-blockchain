@@ -1427,7 +1427,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
             TEST_AGGSIG_CONDITION_COST = (
                 ConditionCost.AGG_SIG.value + TEST_AGG_SIG_SPEND_BYTESIZE * DEFAULT_CONSTANTS.COST_PER_BYTE
             )
-            while spend_bundle_cost + TEST_AGGSIG_CONDITION_COST < MAX_BLOCK_CLVM_COST:
+            while spend_bundle_cost + TEST_AGGSIG_CONDITION_COST < mempool_manager.max_block_clvm_cost:
                 conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
                 aggsig += sig
                 spend_bundle_cost += TEST_AGGSIG_CONDITION_COST
@@ -2965,7 +2965,7 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
     return bundles
 
 
-# if we try to fill the mempool with more than 550, all spends won't
+# if we try to fill the mempool with more than 300, all spends won't
 # necessarily fit in the block, which the test assumes
 @pytest.mark.anyio
 @pytest.mark.parametrize("mempool_size", [1, 2, 100, 300, 400, 550, 630])
@@ -2974,9 +2974,9 @@ def transactions_1000_fixture(test_wallet: WalletTool, seeded_random: random.Ran
 async def test_create_block_generator(
     mempool_size: int, seed: int, old: bool, transactions_1000: list[SpendBundle]
 ) -> None:
-    # the old way of creating bloks doesn't fit this many transactions, so we
-    # expect it to fail
-    expect_failure = mempool_size == 630 and old
+    # Both the old and new ways of creating blocks don't fit this many
+    # transactions with the 60% fill rate, so we expect it to fail.
+    expect_failure = mempool_size >= 400
 
     bundles = transactions_1000
     all_coins = [s.coin for b in bundles for s in b.coin_spends]
