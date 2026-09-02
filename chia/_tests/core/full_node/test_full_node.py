@@ -69,7 +69,6 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
-from chia.full_node.mempool_manager import SpendBundleAddInfo
 from chia.full_node.sync_store import Peak
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -1672,38 +1671,41 @@ def _mempool_log_path(fn: FullNode, spend_name: bytes32) -> Path:
 
 
 @pytest.mark.anyio
-async def test_log_mempool_true_logs_after_pre_validate(
+@pytest.mark.parametrize(
+    "log_mempool,expect_log",
+    [
+        (True, True),
+        (False, False),
+        ("timeout", False),
+    ],
+)
+async def test_log_mempool_true_logs_spend_bundle(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    log_mempool: bool | str,
+    expect_log: bool,
 ) -> None:
-    full_node_1, _server_1, _bt = one_node_one_block
+    full_node_1, _, bt = one_node_one_block
     fn = full_node_1.full_node
-    fn.config["log_mempool"] = True
+    fn.config["log_mempool"] = log_mempool
 
-    spend_bundle = make_spend_bundle(1)
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
     spend_name = spend_bundle.name()
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+
     log_path = _mempool_log_path(fn, spend_name)
-
-    original_pre_validate = fn.mempool_manager.pre_validate_spendbundle
-    original_add = fn.mempool_manager.add_spend_bundle
-
-    async def fake_pre_validate(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
-        return object()  # type: ignore[return-value]
-
-    async def abort_add(*_args: Any, **_kwargs: Any) -> SpendBundleAddInfo:
-        return SpendBundleAddInfo(None, MempoolInclusionStatus.FAILED, [], Err.INVALID_SPEND_BUNDLE)
-
-    fn.mempool_manager.pre_validate_spendbundle = fake_pre_validate  # type: ignore[method-assign]
-    fn.mempool_manager.add_spend_bundle = abort_add  # type: ignore[method-assign]
-    try:
-        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
-    finally:
-        fn.mempool_manager.pre_validate_spendbundle = original_pre_validate  # type: ignore[method-assign]
-        fn.mempool_manager.add_spend_bundle = original_add  # type: ignore[method-assign]
-
-    assert status == MempoolInclusionStatus.FAILED
-    assert err == Err.INVALID_SPEND_BUNDLE
-    assert log_path.exists()
-    assert log_path.read_bytes() == bytes(spend_bundle)
+    assert log_path.exists() == expect_log
+    if expect_log:
+        assert log_path.read_bytes() == bytes(spend_bundle)
 
 
 @pytest.mark.anyio
