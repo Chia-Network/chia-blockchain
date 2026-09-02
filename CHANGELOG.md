@@ -6,6 +6,86 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.7.4 Chia blockchain 2026-XX-XX
+
+## What's Changed
+
+### Added
+
+- Add PlotNFT v2 wallet, CLI/RPC integration, and farmer support
+- Add V2 predictable plot filter primitives, signage point wiring, and activation
+- Add harvester protocol 0.0.38 with V2 plot metadata
+- Add new full block format and cost model
+- Add canonical CLVM serialization
+- Add rate limits v3 for `request_transaction` and `respond_transaction`
+- Add max limit for wallet processing of coin state updates
+- Add automatic reorg testing to `WalletTestFramework`
+- Add systemd logging support
+- Add NFT media pipeline: preview verification & hardening, video playback controls, looping & gallery UX, IPFS gateway fetch, download timeout recovery, gallery filter by preview availability
+- Add Chia theme variants and overview in GUI
+- Port `chia wallet did`, `nft`, `notifications`, `vcs`, and remaining commands to `@chia_command` framework
+- Port `get_coin_records` and `get_height_info` to `@marshal` decorator
+
+### Changed
+
+- Bump `chia_rs` to 0.46.0
+- Bump `chialisp` from 0.4.6 to 0.5.0
+- Swap to Azure code signing
+- Increase NFT offer limit to 20 from 10
+- Refactor `pre_sp_tx_block`
+- Factor out the sync pipeline
+- Improve mempool atom- and pair-count awareness
+- Improve mempool robustness
+- Improve `UnfinishedBlock` cache
+- Improve error handling when adding block batches
+- Harden `RespondBlocks` handling for incomplete responses
+- Block validation fast fail
+- Harden cheap block parser bounds
+- Short-circuit on invalid VDF data
+- Better errors for weight proofs
+- Use bisect for `request_ses_hashes` SES lookup
+- Make farmer resilient to malformed pool difficulty responses
+- Continue wallet subscriptions after a single peer fails
+- Pass remaining CLVM cost budget when building Offer caches
+- Make sure coins aren't being spent by any other spends in the spend bundle immediately after fast forward
+- Allow at most one fast forward spend per singleton per spend bundle
+- Respect the threshold after which we stop including mempool items with fast forward or dedup spends in `create_block_generator2`
+- Add a proper run-time check for spends that are eligible for fast forward
+- Move raw hints query from `FullNodeAPI` into `HintStore`
+- Make `BlockStore.replace_proof` own its write transaction
+- Slim `CoinStoreProtocol` down to the methods consensus uses
+- Add `BlockStoreProtocol`; drop consensus dependency on `chia.full_node`
+- Replace `Streamable` in `ActionScope` with `copy.deepcopy`
+- Fix mismatching Wallets with `WalletProtocol`
+- Remove contravariant from `WalletProtocol`
+- Extract signing, clawback, and coin splitting functionality into separate modules
+- Move wallet specific coin handlers out of WSM
+- Remove interested_ph_cache and initialize coin cache in init
+- Remove unnecessary `server` field from WSM
+- Annotate `did_wallet.py`, `trade_store.py`, `test_did.py`, `wallet_coin_store.py`, `wallet_puzzle_store.py`, `wallet_interested_store.py`
+- Enable redundant expressions check in mypy
+- Remove obsolete `add_condition_to_solution` and other dead code
+- Update minimum required click to 8.4.0
+- Update cacert.pem from Mozilla CA bundle
+- Demote `None` `challenge_root` log line in `make_sub_epoch_summary`
+- Update Electron and various audit-triggered dependencies in GUI
+- Stop daemon broadcast events from rejecting pending wallet_ui requests in GUI
+
+### Fixed
+
+- Release the `batch_syncing` slot on every `short_sync_batch` exit path
+- Fix DataLayer unsubscribe cleanup
+- Add DataLayer self-heal for blobless stores
+- Fix deadlock when creating the DataLayer wallet during sync
+- Use singleton struct from singleton instead of DID inner puzzle
+- Identify DL singletons in `determine_coin_type` and save computation
+- Return `None` when anchored wallet timestamp lookup misses the peak header
+- If a dedup spend doesn't make it into the block, restore the dedup state
+- Fix `install_gui.ps1` when passing in a git commit/branch in Windows
+- Fix Electron source install not working
+- Fix "Asset type is not valid" error when creating Offer to sell NFT in GUI
+- Fix NFT preview in GUI
+
 ## 2.7.3 Chia blockchain 2026-07-16
 
 ## What's Changed
