@@ -568,6 +568,20 @@ WALLET_RPC_ENDPOINT_METADATA: list[WalletRpcMetadata] = [
         request_type=wallet_request_types.PWStatus,
         response_type=wallet_request_types.PWStatusResponse,
     ),
+    WalletRpcMetadata(
+        endpoint_name="plotnft_transfer",
+        request_type=wallet_request_types.PlotNFTTransfer,
+        response_type=wallet_request_types.PlotNFTTransferResponse,
+        tx_endpoint=True,
+        auto_push=True,
+    ),
+    WalletRpcMetadata(
+        endpoint_name="plotnft_melt",
+        request_type=wallet_request_types.PlotNFTMelt,
+        response_type=wallet_request_types.PlotNFTMeltResponse,
+        tx_endpoint=True,
+        auto_push=True,
+    ),
     # Data layer wallet
     WalletRpcMetadata(
         endpoint_name="create_new_dl",

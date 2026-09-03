@@ -24,6 +24,7 @@ from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalle
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
+from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
@@ -416,6 +417,101 @@ class PlotNFT2Wallet:
                 plotnft_override=next_plotnft,
             )
 
+    async def transfer_plotnft(
+        self,
+        *,
+        action_scope: WalletActionScope,
+        target_wallet_fingerprint: int,
+        fee: uint64 = uint64(0),
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> None:
+        """
+        Because the wallet doesn't have broad support for MIPS-style custody, transferring using addresses is
+        a bit complicated because transferring to the wrong kind of address could leave the wallet unable to
+        sync/spend the PlotNFT. As a guard, we implement this endpoint as a transfer between local keys to make
+        sure that we generate the correct kind of inner puzzle.
+
+        This is not necessarily a permanent restriction, but solves the primary use case of transferring between
+        a user's own wallets and keeps the implementation relatively simple for now.
+        """
+        plotnft = await self.get_current_plotnft()
+        fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        root_pubkey = await self.wallet_state_manager.wallet_node.keychain_proxy.get_key_for_fingerprint(
+            fingerprint=target_wallet_fingerprint, private=False
+        )
+        if root_pubkey is None:
+            raise RuntimeError(f"Error retrieving key for fingerprint {target_wallet_fingerprint}")
+        wallet_pubkey = master_pk_to_wallet_pk_unhardened(root_pubkey, index=uint32(0))
+        synthetic_pubkey = self.xch_wallet.convert_public_key_to_synthetic(wallet_pubkey)
+        hint = self.xch_wallet.puzzle_hash_for_pk(wallet_pubkey)
+        new_user_config = UserConfig(synthetic_pubkey=synthetic_pubkey)
+        coin_spends = plotnft.new_user_config(
+            user_config=new_user_config,
+            hint=hint,
+            extra_conditions=(fee_hook, *extra_conditions),
+        )
+        if fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
+
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=hint,
+                    amount=uint64(1),
+                    fee=fee,
+                    spend_bundle=spend_bundle,
+                    additions=[
+                        Coin(
+                            parent_coin_info=plotnft.coin.name(),
+                            puzzle_hash=dataclasses.replace(plotnft, user_config=new_user_config).puzzle_hash(nonce=0),
+                            amount=uint64(1),
+                        )
+                    ],
+                    removals=[plotnft.coin],
+                    name=spend_bundle.name(),
+                    extra_conditions=extra_conditions,
+                )
+            )
+
+    async def melt_plotnft(
+        self,
+        *,
+        action_scope: WalletActionScope,
+        fee: uint64 = uint64(0),
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> None:
+        plotnft = await self.get_current_plotnft()
+        fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        coin_spends = plotnft.melt(extra_conditions=(fee_hook, *extra_conditions))
+        if fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
+
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=bytes32.zeros,
+                    amount=uint64(1),
+                    fee=fee,
+                    spend_bundle=spend_bundle,
+                    additions=[],
+                    removals=[plotnft.coin],
+                    name=spend_bundle.name(),
+                    extra_conditions=extra_conditions,
+                )
+            )
+
     # Syncing
     @classmethod
     async def identify(
@@ -423,6 +519,7 @@ class PlotNFT2Wallet:
         wallet_state_manager: WalletStateManager,
         uncurried: UncurriedPuzzle,
         coin_spend: CoinSpend,
+        created_height: uint32 | None,
     ) -> tuple[WalletIdentifier, PlotNFT] | None:
         try:
             try:
@@ -448,7 +545,15 @@ class PlotNFT2Wallet:
                     break
             else:
                 matched_plotnft_wallet_id = None
-            if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+            user_key_is_owned = (
+                await wallet_state_manager.puzzle_store.index_for_puzzle_hash(
+                    puzzle_hash_for_synthetic_public_key(next_plot_nft.user_config.synthetic_pubkey)
+                )
+                is not None
+            )
+            if matched_plotnft_wallet_id is None and (
+                coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id or user_key_is_owned
+            ):
                 matched_plotnft_wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
                 wallet_state_manager.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                     wallet_state_manager=wallet_state_manager,
@@ -460,19 +565,29 @@ class PlotNFT2Wallet:
                         data=next_plot_nft.launcher_id.hex(),
                     ),
                 )
-            if matched_plotnft_wallet_id is None:  # pragma: no cover
-                # TODO: add support for receiving plotnfts you don't know about
-                raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
-            # the Streamable hint is in error so we need this type ignore
-            return (
-                WalletIdentifier(
-                    id=matched_plotnft_wallet_id,
-                    type=WalletType.PLOTNFT_2,
-                ),
-                next_plot_nft,
-            )
+            if matched_plotnft_wallet_id is None or not user_key_is_owned:
+                wallet_state_manager.log.warning(
+                    f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet"
+                )
+                if matched_plotnft_wallet_id is not None:
+                    plotnft_wallet = wallet_state_manager.wallets[matched_plotnft_wallet_id]
+                    assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                    current_plotnft = await plotnft_wallet.get_current_plotnft()
+                    current_plotnft_created_height = (
+                        await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
+                            coin_id=current_plotnft.coin.name()
+                        )
+                    )
+                    if created_height is not None and current_plotnft_created_height < created_height:
+                        await plotnft_wallet.delete_self(deleted_at_height=created_height)
+            else:
+                return (
+                    WalletIdentifier(id=matched_plotnft_wallet_id, type=WalletType.PLOTNFT_2),
+                    next_plot_nft,
+                )
         except GetNextPlotNFTError:
-            return None
+            pass
+        return None
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         if isinstance(coin_data, PlotNFT):
@@ -548,6 +663,51 @@ class PlotNFT2Wallet:
             ) as action_scope:
                 await self._finish_leaving_pool(action_scope=action_scope, exiting_info=finish_info)
 
+    async def delete_self(self, deleted_at_height: uint32) -> None:
+        await self.wallet_state_manager.plotnft2_store.add_deleted_wallet(
+            launcher_id=self.plotnft_id, name=self.wallet_info.name, height=deleted_at_height
+        )
+        await self.wallet_state_manager.delete_wallet(self.id())
+        self.wallet_state_manager.wallets.pop(self.id())
+        self.log.info("Removed PlotNFT2 wallet with ID: %s", self.plotnft_id.hex())
+        self.wallet_state_manager.state_changed("wallet_removed", wallet_id=self.id())
+        with PoolingShareState.acquire(
+            root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
+        ) as pool_config:
+            pool_config.remove()
+
+    @classmethod
+    async def potentially_reinitialize_deleted_wallets(
+        cls, *, wallet_state_manager: WalletStateManager, height: int
+    ) -> None:
+        try:
+            async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
+                wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
+                new_wallet = await cls.create(
+                    wallet_state_manager=wallet_state_manager,
+                    xch_wallet=wallet_state_manager.main_wallet,
+                    wallet_info=WalletInfo(
+                        id=wallet_id,
+                        name=name,
+                        type=uint8(WalletType.PLOTNFT_2),
+                        data=launcher_id.hex(),
+                    ),
+                )
+                wallet_state_manager.wallets[wallet_id] = new_wallet
+                plotnft = await new_wallet.get_current_plotnft()
+                created_height = await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
+                    coin_id=plotnft.coin.name()
+                )
+                await new_wallet.coin_added(
+                    plotnft.coin,
+                    created_height,
+                    # this function happens to not use the peer so we can get away with this for now
+                    peer=object(),  # type: ignore[arg-type]
+                    coin_data=plotnft,
+                )
+        except Exception as e:
+            wallet_state_manager.log.error(f"Error reintializing PlotNFT wallet with launcher id {launcher_id}: {e}")
+
     # State
     async def get_current_plotnft(self) -> PlotNFT:
         return await self.wallet_state_manager.plotnft2_store.get_latest_plotnft(self.plotnft_id)
@@ -578,9 +738,7 @@ class PlotNFT2Wallet:
     async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.get_spendable_balance(records)
 
-    async def get_current_state(
-        self,
-    ) -> PoolWalletInfo:  # backwards compat with previous pool wallet
+    async def get_current_state(self) -> PoolWalletInfo:  # backwards compat with previous pool wallet
         plotnft = await self.get_current_plotnft()
         if plotnft.pool_config is None:
             singleton_state = PoolSingletonState.SELF_POOLING
