@@ -98,14 +98,14 @@ def load(plot_dir: Path) -> None:
         print(f"plot_cache: loaded {total} entries from {_cache_path}")
 
 
-def cached_solve_proof(partial_proof: PartialProof, plot_id: bytes32, strength: int, k: int, testnet: bool) -> bytes:
+def cached_solve_proof(partial_proof: PartialProof, plot_id: bytes32, strength: int, k: int) -> bytes:
     global _hits, _misses
     key = (partial_proof.to_bytes(), bytes(plot_id))
     cached = _solve_proofs.get(key)
     if cached is not None:
         _hits += 1
         return cached
-    result = _orig_solve_proof(partial_proof, plot_id, strength, k, testnet)
+    result = _orig_solve_proof(partial_proof, plot_id, strength, k)
     _solve_proofs[key] = result
     _misses += 1
     return result
