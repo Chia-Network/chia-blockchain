@@ -385,13 +385,6 @@ class WalletRpcClient(RpcClient):
         self,
         request: wallet_request_types.NFTCalculateRoyalties,
     ) -> wallet_request_types.NFTCalculateRoyaltiesResponse: ...
-    async def nft_mint_bulk(
-        self,
-        request: wallet_request_types.NFTMintBulk,
-        tx_config: TXConfig,
-        extra_conditions: tuple[Condition, ...] = ...,
-        timelock_info: ConditionValidTimes = ...,
-    ) -> wallet_request_types.NFTMintBulkResponse: ...
     async def set_nft_did_bulk(
         self,
         request: wallet_request_types.NFTSetDIDBulk,

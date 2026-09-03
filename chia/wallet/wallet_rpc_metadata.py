@@ -517,12 +517,6 @@ WALLET_RPC_ENDPOINT_METADATA: list[WalletRpcMetadata] = [
         response_type=wallet_request_types.NFTCalculateRoyaltiesResponse,
     ),
     WalletRpcMetadata(
-        endpoint_name="nft_mint_bulk",
-        request_type=wallet_request_types.NFTMintBulk,
-        response_type=wallet_request_types.NFTMintBulkResponse,
-        tx_endpoint=True,
-    ),
-    WalletRpcMetadata(
         endpoint_name="nft_set_did_bulk",
         request_type=wallet_request_types.NFTSetDIDBulk,
         response_type=wallet_request_types.NFTSetDIDBulkResponse,

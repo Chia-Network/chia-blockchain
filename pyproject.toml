@@ -53,7 +53,7 @@ boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
-chia_rs = ">=0.47.0, <0.48"
+chia_rs = ">=0.48.0, <0.49"
 chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.4.0"  # For the CLI
 clvm = ">=0.9.14"
@@ -88,7 +88,7 @@ coverage = { version = ">=7.14.0", optional = true }
 diff-cover = { version = ">=9.2.0", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
 "keyrings.cryptfile" = { version = ">=1.3.9", optional = true }
-mypy = { version = ">=1.11.1", optional = true }
+mypy = { version = ">=2.3.0", optional = true }
 pre-commit = { version = ">=4.6.0", optional = true }
 py3createtorrent = { version = ">=1.2.1", optional = true }
 pyinstaller = { version = ">=6.20.0", python = "<3.14", optional = true }
