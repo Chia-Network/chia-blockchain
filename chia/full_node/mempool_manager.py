@@ -51,6 +51,10 @@ log = logging.getLogger(__name__)
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 
 
+def minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64) -> int:
+    return (cost * fee_per_million_cost + 999_999) // 1_000_000
+
+
 @dataclass
 class TimelockConditions:
     assert_height: uint32 = uint32(0)
@@ -328,6 +332,7 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
+    minimum_fee_per_cost: uint64
     validation_timeout: float
 
     def __init__(
@@ -339,6 +344,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        minimum_fee_per_cost: uint64 = uint64(0),
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -356,6 +362,7 @@ class MempoolManager:
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
         # spends.
         self.nonzero_fee_minimum_fpc = 5
+        self.minimum_fee_per_cost = minimum_fee_per_cost
 
         # We need to deduct the block overhead, which consists of the wrapping
         # quote opcode's bytes cost as well as its execution cost.
@@ -396,6 +403,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        minimum_fee_per_cost: uint64 = uint64(0),
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
@@ -403,6 +411,7 @@ class MempoolManager:
             consensus_constants,
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
+            minimum_fee_per_cost=minimum_fee_per_cost,
             validation_timeout=validation_timeout,
         )
         try:
@@ -797,6 +806,10 @@ class MempoolManager:
             return Err.INVALID_BLOCK_FEE_AMOUNT, None, []
 
         fees_per_cost: float = fees / cost
+        required_fee = minimum_fee_for_cost(cost, self.minimum_fee_per_cost)
+        if fees < required_fee:
+            return Err.INVALID_FEE_TOO_CLOSE_TO_ZERO, None, []
+
         # If pool is at capacity check the fee, if not then accept even without the fee
         if self.mempool.at_full_capacity(cost):
             if fees_per_cost < self.nonzero_fee_minimum_fpc:

@@ -49,6 +49,7 @@ from chia.full_node.mempool_manager import (
     compute_assert_height,
     is_atom_canonical,
     is_clvm_canonical,
+    minimum_fee_for_cost,
     optional_max,
     optional_min,
 )
@@ -264,6 +265,7 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
+    minimum_fee_per_cost: uint64 = uint64(0),
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -271,6 +273,7 @@ async def instantiate_mempool_manager(
         constants,
         InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
+        minimum_fee_per_cost=minimum_fee_per_cost,
         validation_timeout=10,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
@@ -1599,6 +1602,38 @@ def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
 
 def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
     assert mempool_manager.get_spendbundle(sb.name()) is None
+
+
+@pytest.mark.parametrize(
+    "cost, fee_per_million_cost, expected_fee",
+    [
+        (0, uint64(1_818_182), 0),
+        (1, uint64(1), 1),
+        (1_000_000, uint64(1), 1),
+        (1_000_001, uint64(1), 2),
+        (5_500_000, uint64(1_818_182), 10_000_001),
+        (11_000_000_000, uint64(0), 0),
+    ],
+)
+def test_minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64, expected_fee: int) -> None:
+    assert minimum_fee_for_cost(cost, fee_per_million_cost) == expected_fee
+
+
+@pytest.mark.anyio
+async def test_configured_minimum_fee_per_cost() -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins, minimum_fee_per_cost=uint64(1_000_000)
+    ) as mempool_manager:
+        await make_and_send_spendbundle(
+            mempool_manager,
+            TEST_COIN,
+            expected_result=(MempoolInclusionStatus.FAILED, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO),
+        )
+
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins, minimum_fee_per_cost=uint64(1_000_000)
+    ) as mempool_manager:
+        await make_and_send_spendbundle(mempool_manager, TEST_COIN, fee=100_000_000)
 
 
 @pytest.mark.anyio
