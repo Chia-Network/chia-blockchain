@@ -3,15 +3,18 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from contextlib import AbstractAsyncContextManager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, ClassVar, cast
 
-import aiosqlite
 import typing_extensions
 import zstd
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -38,6 +41,9 @@ def decompress_blob(block_bytes: bytes) -> bytes:
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[BlockStoreProtocol] = cast("BlockStore", None)
+
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
@@ -120,7 +126,8 @@ class BlockStore:
 
         self.block_cache.put(header_hash, block)
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
+        # this method owns its write transaction, callers don't need to open one
+        async with self.db_wrapper.writer() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
                 (
@@ -191,8 +198,12 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
-        return self.db_wrapper.writer()
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator[None]:
+        # the database connection is deliberately not exposed: callers only
+        # get an atomic scope, not access to the underlying database
+        async with self.db_wrapper.writer():
+            yield
 
     def get_block_from_cache(self, header_hash: bytes32) -> FullBlock | None:
         return self.block_cache.get(header_hash)
@@ -250,7 +261,11 @@ class BlockStore:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return GeneratorBlockInfo(
-                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+                cached.foliage.prev_block_hash,
+                cached.transactions_generator,
+                cached.transactions_generator_ref_list,
+                cached.transactions_generator_buffer,
+                cached.version,
             )
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
@@ -269,13 +284,17 @@ class BlockStore:
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
                 return GeneratorBlockInfo(
-                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                    b.foliage.prev_block_hash,
+                    b.transactions_generator,
+                    b.transactions_generator_ref_list,
+                    b.transactions_generator_buffer,
+                    b.version,
                 )
 
     async def get_generator(self, header_hash: bytes32) -> bytes | None:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            return None if cached.transactions_generator is None else bytes(cached.transactions_generator)
+            return get_transactions_generator_bytes(cached)
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -292,7 +311,7 @@ class BlockStore:
                 # generator_from_block() fails, fall back to the reliable
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
-                return None if b.transactions_generator is None else bytes(b.transactions_generator)
+                return get_transactions_generator_bytes(b)
 
     async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]:
         if len(heights) == 0:
@@ -315,7 +334,7 @@ class BlockStore:
                         # generator_from_block() fails, fall back to the reliable
                         # definition of parsing a block
                         b = FullBlock.from_bytes(block_bytes)
-                        gen = None if b.transactions_generator is None else bytes(b.transactions_generator)
+                        gen = get_transactions_generator_bytes(b)
                     if gen is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     generators[uint32(row[1])] = gen

@@ -13,8 +13,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.util.casts import int_from_bytes, int_to_bytes
-from chia.util.hash import std_hash
+from chia.util.casts import int_from_bytes
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -25,7 +24,6 @@ from chia.wallet.conditions import (
     UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.lineage_proof import LineageProof
@@ -43,7 +41,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
 )
-from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, create_singleton_puzzle
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -218,11 +216,7 @@ class NFTWallet:
         launcher_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id], peer=peer
         )
-        assert (
-            launcher_coin_states is not None
-            and len(launcher_coin_states) == 1
-            and launcher_coin_states[0].spent_height is not None
-        )
+        assert len(launcher_coin_states) == 1 and launcher_coin_states[0].spent_height is not None
         mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
         if uncurried_nft.supports_did:
@@ -367,6 +361,24 @@ class NFTWallet:
 
         if wallet_identifier is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
+            # Bound the number of auto-created DID-scoped NFT wallets. `new_did_id`
+            # is parsed from attacker-controllable NFT transfer data; without a cap a
+            # peer that spams inbound NFTs with unique foreign DIDs can force
+            # unbounded wallet creation. Mirrors `did_auto_add_limit`.
+            # Counter excludes the canonical did_id=None wallet so attacker-driven
+            # fanout cannot displace a user's legitimate no-DID NFT receives.
+            nft_wallet_count = sum(
+                1
+                for w in wallet_state_manager.wallets.values()
+                if isinstance(w, NFTWallet) and w.nft_wallet_info.did_id is not None
+            )
+            nft_limit = wallet_state_manager.config.get("nft_auto_add_limit", 100)
+            if new_did_id is not None and nft_wallet_count >= nft_limit:
+                wallet_state_manager.log.warning(
+                    f"You are at the max configured limit of {nft_limit} NFT wallets. "
+                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                )
+                return None
             wallet_state_manager.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
@@ -476,8 +488,6 @@ class NFTWallet:
         if percentage > MAX_ROYALTY_BASIS_POINTS:
             raise ValueError(f"Royalty percentage {percentage} exceeds 100% ({MAX_ROYALTY_BASIS_POINTS} basis points)")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
-        if coins is None:
-            return None
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()
@@ -1243,470 +1253,6 @@ class NFTWallet:
         action_scope.dispatch_websocket_event(
             self.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=self.wallet_info.id)
         )
-
-    async def mint_from_did(
-        self,
-        metadata_list: list[dict[str, Any]],
-        action_scope: WalletActionScope,
-        target_list: list[bytes32] | None = [],
-        mint_number_start: int | None = 1,
-        mint_total: int | None = None,
-        xch_coins: set[Coin] | None = None,
-        xch_change_ph: bytes32 | None = None,
-        new_innerpuzhash: bytes32 | None = None,
-        new_p2_puzhash: bytes32 | None = None,
-        did_coin: Coin | None = None,
-        did_lineage_parent: bytes32 | None = None,
-        fee: uint64 = uint64(0),
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> None:
-        """
-        Minting NFTs from the DID linked wallet, also used for bulk minting NFTs.
-        - The DID is spent along with an intermediate launcher puzzle which
-          generates a set of ephemeral coins with unique IDs by currying in the
-          mint_number and mint_total for each NFT being minted. These
-          intermediate coins then create the launcher coins for the list of NFTs
-        - The launcher coins are then spent along with the created eve spend
-          and an xch spend that funds the transactions and pays fees.
-        - There is also an option to pass in a list of target puzzlehashes. If
-          provided this method will create an additional transaction transferring
-          the minted NFTs to the row-matched target.
-        :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
-        :param target_list: [Optional] a list of targets for transferring minted NFTs (aka airdrop)
-        :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
-        puzzle. Default: 1
-        :param mint_total: [Optional] The total number of NFTs being minted
-        :param xch_coins: [Optional] For use with bulk minting to provide the coin used for funding the minting spend.
-        This coin can be one that will be created in the future
-        :param xch_change_ph: [Optional] For use with bulk minting, so we can specify the puzzle hash that the change
-        from the funding transaction goes to.
-        :param new_innerpuzhash: [Optional] The new inner puzzle hash for the DID once it is spent. For bulk minting we
-        generally don't provide this as the default behaviour is to re-use the existing inner puzzle hash
-        :param new_p2_puzhash: [Optional] The new p2 puzzle hash for the DID once it is spent. For bulk minting we
-        generally don't provide this as the default behaviour is to re-use the existing inner puzzle hash
-        :param did_coin: [Optional] The did coin to use for minting. Required for bulk minting when the DID coin will
-        be created in the future
-        :param did_lineage_parent: [Optional]  The  parent coin to use for the lineage proof in the DID spend. Needed
-        for bulk minting when the coin will be created in the future
-        :param fee: A fee amount, taken out of the xch spend.
-        """
-        # get DID Wallet
-        for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID:
-                if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
-                    did_wallet = wallet
-                    break
-        else:
-            raise ValueError("There is no DID associated with this NFT wallet")
-
-        assert did_wallet.did_info.current_inner is not None
-        assert did_wallet.did_info.origin_coin is not None
-
-        # Ensure we have an mint_total value
-        if mint_total is None:
-            mint_total = len(metadata_list)
-        assert isinstance(mint_number_start, int)
-        assert len(metadata_list) <= mint_total + 1 - mint_number_start
-
-        # Ensure we have a did coin and its next inner puzzle hash
-        if did_coin is None:
-            did_coin = await did_wallet.get_coin()
-        assert did_coin is not None
-        innerpuz: Program = did_wallet.did_info.current_inner
-        if new_innerpuzhash is None:
-            new_innerpuzhash = innerpuz.get_tree_hash()
-            uncurried_did = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-            assert uncurried_did is not None
-            p2_puzzle = uncurried_did[0]
-            new_p2_puzhash = p2_puzzle.get_tree_hash()
-        assert new_p2_puzhash is not None
-        # make the primaries for the DID spend
-        primaries = [CreateCoin(new_innerpuzhash, uint64(did_coin.amount), [bytes(new_p2_puzhash)])]
-
-        # set the chunk size for the spend bundle we're going to create
-        chunk_size = len(metadata_list)
-
-        # Because bulk minting may not mint all the NFTs in one bundle, we
-        # calculate the edition numbers that will be used in the intermediate
-        # puzzle based on the starting edition number given, and the size of the
-        # chunk going into this spend bundle
-        mint_number_end = mint_number_start + chunk_size
-
-        # Empty set to load with the announcements we will assert from DID to
-        # match the announcements from the intermediate launcher puzzle
-        did_announcements: set[Any] = set()
-        puzzle_assertions: set[Any] = set()
-        amount = uint64(1)
-        intermediate_coin_spends = []
-        launcher_spends = []
-        launcher_ids = []
-        p2_inner_puzzle = await action_scope.get_puzzle(self.wallet_state_manager)
-        p2_inner_ph = p2_inner_puzzle.get_tree_hash()
-
-        # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
-        for mint_number in range(mint_number_start, mint_number_end):
-            # Create  the puzzle, solution and coin spend for the intermediate launcher
-            intermediate_launcher_puz = did_wallet_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
-            )
-            intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
-            primaries.append(CreateCoin(intermediate_launcher_ph, uint64(0), [intermediate_launcher_ph]))
-            intermediate_launcher_sol = Program.to([])
-            intermediate_launcher_coin = Coin(did_coin.name(), intermediate_launcher_ph, uint64(0))
-            intermediate_launcher_coin_spend = make_spend(
-                intermediate_launcher_coin, intermediate_launcher_puz, intermediate_launcher_sol
-            )
-            intermediate_coin_spends.append(intermediate_launcher_coin_spend)
-
-            # create an ASSERT_COIN_ANNOUNCEMENT for the DID spend. The
-            # intermediate launcher coin issues a CREATE_COIN_ANNOUNCEMENT of
-            # the mint_number and mint_total for the launcher coin it creates
-            intermediate_announcement_message = std_hash(int_to_bytes(mint_number) + int_to_bytes(mint_total))
-            did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
-
-            # Create the launcher coin, and add its id to a list to be asserted in the DID spend
-            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
-            launcher_ids.append(launcher_coin.name())
-
-            # Grab the metadata from metadata_list. The index for metadata_list
-            # needs to be offset by mint_number_start
-            metadata = metadata_list[mint_number - mint_number_start]
-
-            # Create the inner and full puzzles for the eve spend
-            inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(),
-                b"",
-                p2_inner_puzzle,
-                metadata["royalty_pc"],
-                royalty_puzzle_hash=metadata["royalty_ph"],
-            )
-            eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-                launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
-            )
-
-            # Annnouncements for eve spend. These are asserted by the DID spend
-            announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, []]).get_tree_hash()
-            did_announcements.add(std_hash(launcher_coin.name() + announcement_message))
-
-            genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
-
-            launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
-            launcher_spends.append(launcher_cs)
-
-            eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
-
-            # To make the eve transaction we need to construct the NFTCoinInfo
-            # for the NFT (which doesn't exist yet)
-            nft_coin = NFTCoinInfo(
-                nft_id=launcher_coin.name(),
-                coin=eve_coin,
-                lineage_proof=LineageProof(
-                    parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)
-                ),
-                full_puzzle=eve_fullpuz,
-                mint_height=uint32(0),
-            )
-
-            # Create the eve transaction setting the DID owner, and applying
-            # the announcements from announcement_set to match the launcher
-            # coin annnouncement
-            if target_list:
-                target_ph = target_list[mint_number - mint_number_start]
-            else:
-                target_ph = p2_inner_ph
-            async with self.wallet_state_manager.new_action_scope(
-                action_scope.config.tx_config, push=False
-            ) as inner_action_scope:
-                await self.generate_signed_transaction(
-                    [uint64(eve_coin.amount)],
-                    [target_ph],
-                    inner_action_scope,
-                    nft_coin=nft_coin,
-                    new_owner=b"",
-                    new_did_inner_hash=b"",
-                    additional_bundles=[],
-                    memos=[[target_ph]],
-                )
-
-            async with action_scope.use() as interface:
-                interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
-
-            eve_sb = next(
-                tx.spend_bundle for tx in inner_action_scope.side_effects.transactions if tx.spend_bundle is not None
-            )
-            # Extract Puzzle Announcement from eve spend
-            eve_sol = Program.from_serialized(eve_sb.coin_spends[0].solution)
-            conds = eve_fullpuz.run(eve_sol)
-            eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
-            assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
-            puzzle_assertions.add(assertion)
-
-        # We've now created all the intermediate, launcher, eve and transfer spends.
-        # Create the xch spend to fund the minting.
-        total_amount = len(metadata_list) + fee
-        if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
-        assert len(xch_coins) > 0
-        message_list: list[bytes32] = [c.name() for c in xch_coins]
-        message: bytes32 = std_hash(b"".join(message_list))
-
-        xch_extra_conditions: tuple[Condition, ...] = (
-            AssertCoinAnnouncement(asserted_id=did_coin.name(), asserted_msg=message),
-        )
-
-        await self.standard_wallet.create_tandem_xch_tx(
-            uint64(total_amount),
-            action_scope,
-            coins=xch_coins,
-            extra_conditions=xch_extra_conditions,
-            reserve_fee=fee,
-            preferred_change_puzzle_hash=xch_change_ph,
-        )
-
-        # Create the DID spend using the announcements collected when making the intermediate launcher coins
-        did_coin_announcement = CreateCoinAnnouncement(message)
-        did_p2_solution = self.standard_wallet.make_solution(
-            primaries=primaries,
-            conditions=(
-                *extra_conditions,
-                did_coin_announcement,
-                *(AssertCoinAnnouncement(ann) for ann in did_announcements),
-                *(AssertPuzzleAnnouncement(ann) for ann in puzzle_assertions),
-            ),
-        )
-        did_inner_sol: Program = Program.to([1, did_p2_solution])
-        did_full_puzzle: Program = create_singleton_puzzle(
-            innerpuz,
-            did_wallet.did_info.origin_coin.name(),
-        )
-        # The DID lineage parent won't not exist if we're bulk minting from a future DID coin
-        if did_lineage_parent:
-            did_parent_info: LineageProof | None = LineageProof(
-                parent_name=did_lineage_parent,
-                inner_puzzle_hash=innerpuz.get_tree_hash(),
-                amount=uint64(did_coin.amount),
-            )
-        else:
-            did_parent_info = did_wallet.get_parent_for_coin(did_coin)
-        assert did_parent_info is not None
-
-        did_full_sol = Program.to(
-            [
-                [
-                    did_parent_info.parent_name,
-                    did_parent_info.inner_puzzle_hash,
-                    did_parent_info.amount,
-                ],
-                did_coin.amount,
-                did_inner_sol,
-            ]
-        )
-        did_spend = make_spend(did_coin, did_full_puzzle, did_full_sol)
-
-        # Collect up all the coin spends and sign them
-        list_of_coinspends = [did_spend, *intermediate_coin_spends, *launcher_spends]
-        unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(
-                self.wallet_state_manager.new_outgoing_transaction(
-                    wallet_id=did_wallet.id(),
-                    puzzle_hash=innerpuz.get_tree_hash(),
-                    amount=uint64(1),
-                    fee=fee,
-                    spend_bundle=unsigned_spend_bundle,
-                    additions=unsigned_spend_bundle.additions(),
-                    removals=unsigned_spend_bundle.removals(),
-                    name=unsigned_spend_bundle.name(),
-                    extra_conditions=extra_conditions,
-                )
-            )
-
-    async def mint_from_xch(
-        self,
-        metadata_list: list[dict[str, Any]],
-        action_scope: WalletActionScope,
-        target_list: list[bytes32] | None = [],
-        mint_number_start: int | None = 1,
-        mint_total: int | None = None,
-        xch_coins: set[Coin] | None = None,
-        xch_change_ph: bytes32 | None = None,
-        fee: uint64 = uint64(0),
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> None:
-        """
-        Minting NFTs from a single XCH spend using intermediate launcher puzzle
-        :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
-        :param target_list: [Optional] a list of targets for transferring minted NFTs (aka airdrop)
-        :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
-        puzzle. Default: 1
-        :param mint_total: [Optional] The total number of NFTs being minted
-        :param xch_coins: [Optional] For use with bulk minting to provide the coin used for funding the minting spend.
-        This coin can be one that will be created in the future
-        :param xch_change_ph: [Optional] For use with bulk minting, so we can specify the puzzle hash that the change
-        from the funding transaction goes to.
-        :param fee: A fee amount, taken out of the xch spend.
-        """
-
-        # Ensure we have an mint_total value
-        if mint_total is None:
-            mint_total = len(metadata_list)
-        assert isinstance(mint_number_start, int)
-        assert len(metadata_list) <= mint_total + 1 - mint_number_start
-
-        # Ensure we have an xch coin of high enough amount
-        total_amount = len(metadata_list) + fee
-        if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
-        assert len(xch_coins) > 0
-
-        funding_coin = xch_coins.copy().pop()
-
-        # set the chunk size for the spend bundle we're going to create
-        chunk_size = len(metadata_list)
-
-        # Because bulk minting may not mint all the NFTs in one bundle, we
-        # calculate the edition numbers that will be used in the intermediate
-        # puzzle based on the starting edition number given, and the size of the
-        # chunk going into this spend bundle
-        mint_number_end = mint_number_start + chunk_size
-
-        # Empty set to load with the announcements we will assert from XCH to
-        # match the announcements from the intermediate launcher puzzle
-        coin_announcements: set[bytes32] = set()
-        puzzle_assertions: set[bytes32] = set()
-        primaries = []
-        amount = uint64(1)
-        intermediate_coin_spends = []
-        launcher_spends = []
-        launcher_ids = []
-        p2_inner_puzzle = await action_scope.get_puzzle(self.wallet_state_manager)
-        p2_inner_ph = p2_inner_puzzle.get_tree_hash()
-
-        # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
-        for mint_number in range(mint_number_start, mint_number_end):
-            # Create  the puzzle, solution and coin spend for the intermediate launcher
-            intermediate_launcher_puz = did_wallet_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                SINGLETON_LAUNCHER_PUZZLE_HASH, mint_number, mint_total
-            )
-            intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
-            primaries.append(CreateCoin(intermediate_launcher_ph, uint64(1), [intermediate_launcher_ph]))
-            intermediate_launcher_sol = Program.to([])
-            intermediate_launcher_coin = Coin(funding_coin.name(), intermediate_launcher_ph, uint64(1))
-            intermediate_launcher_coin_spend = make_spend(
-                intermediate_launcher_coin, intermediate_launcher_puz, intermediate_launcher_sol
-            )
-            intermediate_coin_spends.append(intermediate_launcher_coin_spend)
-
-            # create an ASSERT_COIN_ANNOUNCEMENT for the XCH spend. The
-            # intermediate launcher coin issues a CREATE_COIN_ANNOUNCEMENT of
-            # the mint_number and mint_total for the launcher coin it creates
-            intermediate_announcement_message = std_hash(int_to_bytes(mint_number) + int_to_bytes(mint_total))
-            coin_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
-
-            # Create the launcher coin, and add its id to a list to be asserted in the XCH spend
-            launcher_coin = Coin(intermediate_launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, amount)
-            launcher_ids.append(launcher_coin.name())
-
-            # Grab the metadata from metadata_list. The index for metadata_list
-            # needs to be offset by mint_number_start, and since
-            # mint_number starts at 1 not 0, we also subtract 1.
-            metadata = metadata_list[mint_number - mint_number_start]
-
-            # Create the inner and full puzzles for the eve spend
-            inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(),
-                b"",
-                p2_inner_puzzle,
-                metadata["royalty_pc"],
-                royalty_puzzle_hash=metadata["royalty_ph"],
-            )
-            eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-                launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
-            )
-
-            # Annnouncements for eve spend. These are asserted by the xch spend
-            announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, []]).get_tree_hash()
-            coin_announcements.add(std_hash(launcher_coin.name() + announcement_message))
-
-            genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
-
-            launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
-            launcher_spends.append(launcher_cs)
-
-            eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
-
-            # To make the eve transaction we need to construct the NFTCoinInfo
-            # for the NFT (which doesn't exist yet)
-            nft_coin = NFTCoinInfo(
-                nft_id=launcher_coin.name(),
-                coin=eve_coin,
-                lineage_proof=LineageProof(
-                    parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)
-                ),
-                full_puzzle=eve_fullpuz,
-                mint_height=uint32(0),
-            )
-
-            # Create the eve transaction with targets if present
-            if target_list:
-                target_ph = target_list[mint_number - mint_number_start]
-            else:
-                target_ph = p2_inner_ph
-            async with self.wallet_state_manager.new_action_scope(
-                action_scope.config.tx_config, push=False
-            ) as inner_action_scope:
-                await self.generate_signed_transaction(
-                    [uint64(eve_coin.amount)],
-                    [target_ph],
-                    inner_action_scope,
-                    nft_coin=nft_coin,
-                    new_owner=b"",
-                    new_did_inner_hash=b"",
-                    additional_bundles=[],
-                    memos=[[target_ph]],
-                )
-
-            async with action_scope.use() as interface:
-                interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
-
-            eve_sb = next(
-                tx.spend_bundle for tx in inner_action_scope.side_effects.transactions if tx.spend_bundle is not None
-            )
-            # Extract Puzzle Announcement from eve spend
-            eve_sol = Program.from_serialized(eve_sb.coin_spends[0].solution)
-            conds = eve_fullpuz.run(eve_sol)
-            eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
-            assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
-            puzzle_assertions.add(assertion)
-
-        # We've now created all the intermediate, launcher, eve and transfer spends.
-        # Create the xch spend to fund the minting.
-        message_list: list[bytes32] = [c.name() for c in xch_coins]
-        message: bytes32 = std_hash(b"".join(message_list))
-
-        if len(xch_coins) > 1:
-            extra_conditions += (CreateCoinAnnouncement(message),)
-        extra_conditions += tuple(AssertCoinAnnouncement(ann) for ann in coin_announcements)
-        extra_conditions += tuple(AssertPuzzleAnnouncement(ann) for ann in puzzle_assertions)
-
-        await self.standard_wallet.generate_signed_transaction(
-            [p.amount for p in primaries],
-            [p.puzzle_hash for p in primaries],
-            action_scope,
-            fee=fee,
-            coins=xch_coins,
-            # Not ideal to be forced to output at least a [] here.
-            # We should have a better API to generate_signed_transaction that takes the whole CreateCoin in the API.
-            memos=[p.memos if p.memos is not None else [] for p in primaries],
-            extra_conditions=extra_conditions,
-            preferred_change_puzzle_hash=xch_change_ph,
-        )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.extra_spends.append(
-                WalletSpendBundle(intermediate_coin_spends + launcher_spends, G2Element())
-            )
 
     async def select_coins(
         self,

@@ -74,7 +74,7 @@ def make_sub_epoch_summary(
         )
     else:
         challenge_root = None
-        log.info(
+        log.debug(
             f"make_sub_epoch_summary: height={blocks_included_height} < fork_height={constants.HARD_FORK2_HEIGHT}, "
             f"using None for challenge_root"
         )
@@ -174,7 +174,7 @@ def next_sub_epoch_summary(
             constants,
             blocks,
             uint32(prev_b.height + 1),
-            prev_b.header_hash if prev_b is not None else None,
+            prev_b.header_hash,
             deficit,
             False,
         )

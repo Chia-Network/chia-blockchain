@@ -116,8 +116,8 @@ class BlockchainMock:
     def remove_block_record(self, header_hash: bytes32) -> None:
         del self._block_records[header_hash]
 
-    def add_block_record(self, block: BlockRecord) -> None:
-        self._block_records[block.header_hash] = block
+    def add_block_record(self, block_record: BlockRecord) -> None:
+        self._block_records[block_record.header_hash] = block_record
 
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True

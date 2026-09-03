@@ -49,12 +49,20 @@ from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, manage_connection
-from chia.util.errors import Err, KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
+from chia.util.errors import (
+    Err,
+    KeychainIsEmpty,
+    KeychainIsLocked,
+    KeychainKeyNotFound,
+    KeychainProxyConnectionFailure,
+    ProtocolError,
+)
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, StreamableError, streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
@@ -162,6 +170,7 @@ class WalletNode:
     validation_semaphore: asyncio.Semaphore | None = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
+    TIMESTAMP_BACKTRACK_SUB_SLOT_MULTIPLIER: ClassVar[int] = 4
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
     coin_state_retry_seconds: int = 10
@@ -323,6 +332,12 @@ class WalletNode:
         if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
             # Update in memory config
             self.config["auto_claim"] = auto_claim_config_json
+            if self._wallet_state_manager is not None:
+                self.wallet_state_manager.clawback_manager = dataclasses.replace(
+                    self.wallet_state_manager.clawback_manager,
+                    auto_claim_tx_fee=auto_claim_config.tx_fee,
+                    auto_claim_batch_size=auto_claim_config.batch_size,
+                )
             # Update config file
             with lock_and_load_config(self.root_path, "config.yaml") as config:
                 config["wallet"]["auto_claim"] = self.config["auto_claim"]
@@ -564,7 +579,8 @@ class WalletNode:
             return None
 
         for msg, sent_peers in await self._messages_to_resend():
-            if self._shut_down or self._server is None or self._wallet_state_manager is None:
+            # these may change concurrently during the await above (e.g. on shutdown)
+            if self._shut_down or self._server is None or self._wallet_state_manager is None:  # type: ignore[redundant-expr]
                 return None
             full_nodes = self.server.get_connections(NodeType.FULL_NODE)
             for peer in full_nodes:
@@ -675,7 +691,26 @@ class WalletNode:
                     # we might not be able to process some state.
                     coin_ids: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
+                        try:
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
+                            coin_states: list[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
+                            # Keep going so one bad peer cannot drop this batch for everyone else.
+                            self.log.warning(
+                                "COIN_ID_SUBSCRIPTION failed for peer %s: %s",
+                                peer.peer_info.host,
+                                e,
+                            )
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=f"Failed closing peer {peer.peer_info.host} after COIN_ID_SUBSCRIPTION error",
+                                level=logging.WARNING,
+                            ):
+                                await peer.close(9999)
+                            continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -683,8 +718,28 @@ class WalletNode:
                     self.log.debug("Pulled from queue: %s %s", item.item_type.name, item.data)
                     puzzle_hashes: list[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        # Puzzle hash subscription
-                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
+                        try:
+                            # Peer/RPC failures only. subscribe_to_* raises ValueError on None/Error
+                            # responses; call_api may raise ProtocolError/StreamableError; transport
+                            # may raise OSError. Local apply errors should surface to the outer handler.
+                            coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
+                        except (ValueError, ProtocolError, OSError, StreamableError) as e:
+                            # Keep going so one bad peer cannot drop this batch for everyone else.
+                            self.log.warning(
+                                "PUZZLE_HASH_SUBSCRIPTION failed for peer %s: %s",
+                                peer.peer_info.host,
+                                e,
+                            )
+                            with log_exceptions(
+                                self.log,
+                                consume=True,
+                                message=(
+                                    f"Failed closing peer {peer.peer_info.host} after PUZZLE_HASH_SUBSCRIPTION error"
+                                ),
+                                level=logging.WARNING,
+                            ):
+                                await peer.close(9999)
+                            continue
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -1012,6 +1067,11 @@ class WalletNode:
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
 
+        # Per-task write failures (False return or raised exception) recorded here so
+        # `add_states_from_peer` can return False after `asyncio.gather`, matching the
+        # trusted path's `return False` contract on `add_coin_states` failure.
+        failed_chunks: list[int] = []
+
         async def validate_and_add(inner_states: list[CoinState], inner_idx_start: int) -> None:
             try:
                 assert self.validation_semaphore is not None
@@ -1023,11 +1083,19 @@ class WalletNode:
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(updated_coin_states)})"
                             )
-                            await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
+                            if not await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height):
+                                log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
+                                self.log.log(
+                                    log_level,
+                                    f"add_coin_states returned False for chunk "
+                                    f"{inner_idx_start}-{inner_idx_start + len(inner_states) - 1}",
+                                )
+                                failed_chunks.append(inner_idx_start)
             except Exception as e:
                 tb = traceback.format_exc()
                 log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
                 self.log.log(log_level, f"validate_and_add failed - exception: {e}, traceback: {tb}")
+                failed_chunks.append(inner_idx_start)
 
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
@@ -1082,6 +1150,13 @@ class WalletNode:
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
         await asyncio.gather(*all_tasks)
         await self.update_ui()
+        if failed_chunks:
+            log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
+            self.log.log(
+                log_level,
+                f"add_states_from_peer: {len(failed_chunks)} chunk(s) failed to apply for peer {peer.peer_node_id}",
+            )
+            return False
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
     def is_timestamp_in_sync(self, timestamp: uint64) -> bool:
@@ -1090,13 +1165,27 @@ class WalletNode:
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
+    def max_coin_state_update_items(self) -> int:
+        return int(self.config.get("max_coin_state_update_items", 100_000))
+
     async def state_update_received(self, request: CoinStateUpdate, peer: WSChiaConnection) -> None:
         # This gets called every time there is a new coin or puzzle hash change in the DB
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
-        for coin in request.items:
-            self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
+        # Wire-path deserialization also applies list_limits at max+1 (see WalletNodeAPI.coin_state_update).
+        max_items = self.max_coin_state_update_items()
+        item_count = len(request.items)
+        if item_count > max_items:
+            self.log.error(
+                f"Peer {peer.peer_info.host} sent coin state update with too many items, "
+                f": list truncated to limit of {max_items + 1}"
+            )
+
+        self.log.info(
+            f"Received coin state update from {peer.peer_info.host}: "
+            f"{item_count} items at height {request.height} fork_height {request.fork_height}"
+        )
 
         async with self.wallet_state_manager.lock:
             await self.add_states_from_peer(
@@ -1142,36 +1231,71 @@ class WalletNode:
                 neither.append(node)
         return synced_and_trusted + synced + trusted + neither
 
-    async def get_timestamp_for_height_from_peer(self, height: uint32, peer: WSChiaConnection) -> uint64 | None:
+    async def get_timestamp_for_height_from_peer(
+        self, height: uint32, peer: WSChiaConnection, expected_header_hash: bytes32 | None = None
+    ) -> uint64 | None:
         """
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
-        a transaction block
+        a recent transaction block.
         """
         cache = self.get_cache_for_peer(peer)
         request_height: int = height
-        while request_height >= 0:
-            cached_timestamp = cache.get_height_timestamp(uint32(request_height))
+        expected_hash: bytes32 | None = expected_header_hash
+        max_backtrack = int(self.constants.MAX_SUB_SLOT_BLOCKS) * self.TIMESTAMP_BACKTRACK_SUB_SLOT_MULTIPLIER
+        min_request_height = max(0, request_height - max_backtrack + 1)
+        while request_height >= min_request_height:
+            cached_timestamp = cache.get_height_timestamp(uint32(request_height)) if expected_hash is None else None
             if cached_timestamp is not None:
                 return cached_timestamp
             block = cache.get_block(uint32(request_height))
+            if block is not None and expected_hash is not None and block.header_hash != expected_hash:
+                self.log.debug(
+                    f"get_timestamp_for_height_from_peer ignore stale cached block for height {request_height}"
+                )
+                block = None
+            fetched_block = False
             if block is None:
                 self.log.debug(f"get_timestamp_for_height_from_peer cache miss for height {request_height}")
                 response: list[HeaderBlock] | None = await request_header_blocks(
                     peer, uint32(request_height), uint32(request_height)
                 )
                 if response is not None and len(response) > 0:
-                    self.log.debug(f"get_timestamp_for_height_from_peer add to cache for height {request_height}")
-                    cache.add_to_blocks(response[0])
+                    if len(response) != 1:
+                        self.log.warning(f"bad header blocks response from Peer {peer.get_peer_info()}.")
+                        return None
                     block = response[0]
+                    if block.height != request_height:
+                        self.log.warning(f"bad header block height response from Peer {peer.get_peer_info()}.")
+                        return None
+                    fetched_block = True
                 elif request_height < height:
                     # The peer might be slightly behind but still synced, so we should allow fetching one more block
                     break
+                elif expected_hash is not None:
+                    # Only reached on the starting height. In anchored mode, this block establishes
+                    # the hash chain used to validate any backtracked headers. Without it, continuing
+                    # would only compare lower headers against the original peak hash and fail later.
+                    # Treat the peer as not synced instead.
+                    self.log.warning(
+                        f"missing header block response for height {request_height} from Peer {peer.get_peer_info()}."
+                    )
+                    return None
             else:
                 self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
+
+            if block is not None and expected_hash is not None and block.header_hash != expected_hash:
+                self.log.warning(f"bad header block hash response from Peer {peer.get_peer_info()}.")
+                return None
+
+            if block is not None and fetched_block:
+                self.log.debug(f"get_timestamp_for_height_from_peer add to cache for height {request_height}")
+                cache.add_to_blocks(block)
 
             if block is not None and block.foliage_transaction_block is not None:
                 return block.foliage_transaction_block.timestamp
 
+            if block is not None and expected_hash is not None:
+                expected_hash = block.prev_header_hash
             request_height -= 1
 
         return None
@@ -1231,7 +1355,9 @@ class WalletNode:
             return
 
         trusted: bool = self.is_trusted(peer)
-        latest_timestamp = await self.get_timestamp_for_height_from_peer(new_peak_hb.height, peer)
+        latest_timestamp = await self.get_timestamp_for_height_from_peer(
+            new_peak_hb.height, peer, new_peak_hb.header_hash
+        )
         if latest_timestamp is None or not self.is_timestamp_in_sync(latest_timestamp):
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")

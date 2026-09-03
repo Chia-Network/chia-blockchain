@@ -473,7 +473,7 @@ class TradeManager:
             valid_times=parse_timelock_info(extra_conditions),
         )
 
-        if success is True and trade_offer is not None and not validate_only:
+        if not validate_only:
             await self.save_trade(trade_offer, created_offer, action_scope)
 
         return success, trade_offer, error
@@ -562,7 +562,7 @@ class TradeManager:
                             action_scope=action_scope,
                         )
                     # Note: if we use check_for_special_offer_making, this is not used.
-                elif amount == 0:
+                else:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
                 offer_dict_no_ints[asset_id] = amount

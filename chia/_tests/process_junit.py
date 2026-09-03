@@ -208,7 +208,7 @@ def output_benchmark(
     else:
         output.write("# Benchmark Metrics\n\n")
 
-        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")  # noqa: RUF001
+        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")  # ruff: ignore[ambiguous-unicode-character-string]
         output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in sorted(results):
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
@@ -285,7 +285,7 @@ def output_time_out_assert(
     else:
         output.write("# Time Out Assert Metrics\n\n")
 
-        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")  # noqa: RUF001
+        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")  # ruff: ignore[ambiguous-unicode-character-string]
         output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in sorted(results):
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)

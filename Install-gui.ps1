@@ -17,22 +17,32 @@ if ($null -eq (Get-Command node -ErrorAction SilentlyContinue))
 Write-Output "Running 'git submodule update --init --recursive'."
 Write-Output ""
 git submodule update --init --recursive
-if ( $SUBMODULE_BRANCH ) {
-  git fetch --all
-  git reset --hard $SUBMODULE_BRANCH
-  Write-Output ""
-  Write-Output "Building the GUI with branch $SUBMODULE_BRANCH"
-  Write-Output ""
-}
-
 
 Push-Location
 try {
     Set-Location chia-blockchain-gui
 
+    if ( $SUBMODULE_BRANCH ) {
+      git fetch --all
+      git reset --hard $SUBMODULE_BRANCH
+      Write-Output ""
+      Write-Output "Building the GUI with branch $SUBMODULE_BRANCH"
+      Write-Output ""
+    }
+
     $ErrorActionPreference = "SilentlyContinue"
     npm ci --loglevel=error
     npm audit fix
+
+    # Work around Electron's postinstall being silently skipped in the workspaces/
+    # hoisted install, which leaves node_modules/electron present but without its
+    # platform binary (no path.txt). Re-run Electron's own installer if needed.
+    # Otherwise 'npm run electron' fails with "Electron failed to install correctly".
+    if (-not (Test-Path "node_modules/electron/path.txt")) {
+        Write-Output "Electron binary is missing; running Electron's install script."
+        node node_modules/electron/install.js
+    }
+
     npm run build
     py ..\installhelper.py
 

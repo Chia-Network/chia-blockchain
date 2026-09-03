@@ -33,6 +33,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
+    MIRROR_PUZZLE_HASH,
     create_graftroot_offer_puz,
     create_host_fullpuz,
     create_host_layer_puzzle,
@@ -52,7 +53,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -897,6 +898,19 @@ class DataLayerWallet:
                     raise e  # raise the error if we've tried all peers
                 continue  # try some other peers, maybe someone has it
 
+    @classmethod
+    async def identify(cls, wallet_state_manager: WalletStateManager, coin_state: CoinState) -> WalletIdentifier | None:
+        try:
+            dl_wallet = await wallet_state_manager.get_dl_wallet()
+        except ValueError:
+            return None
+        if (
+            coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
+            or await dl_wallet.get_singleton_record(coin_state.coin.name()) is not None
+        ):
+            return WalletIdentifier.create(dl_wallet)
+        return None
+
     ###########
     # UTILITY #
     ###########
@@ -1015,6 +1029,19 @@ class DataLayerWallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Offer:
+        for asset_id in offer_dict:
+            if asset_id is None:
+                raise ValueError("DataLayer update offers cannot include an XCH leg")
+            driver = driver_dict.get(asset_id)
+            if driver is None or not (
+                driver.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
+                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                raise ValueError(
+                    f"DataLayer update offers only support DL singleton legs; "
+                    f"asset {asset_id.hex()} is not a DataLayer singleton"
+                )
+
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:

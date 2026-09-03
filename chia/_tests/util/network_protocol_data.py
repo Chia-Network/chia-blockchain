@@ -15,6 +15,7 @@ from chia_rs import (
     InfusedChallengeChainSubSlot,
     PartialProof,
     PoolTarget,
+    Program,
     ProofOfSpace,
     RespondToPhUpdates,
     RewardChainBlock,
@@ -440,6 +441,8 @@ full_block = FullBlock(
         )
     ),
     [uint32(2456207540)],
+    None,
+    uint8(0),
 )
 
 respond_blocks = full_node_protocol.RespondBlocks(uint32(1000), uint32(4201431299), [full_block, full_block])
@@ -485,6 +488,8 @@ unfinished_block = UnfinishedBlock(
         )
     ),
     [uint32(1862532955)],
+    None,
+    uint8(0),
 )
 
 respond_unfinished_block = full_node_protocol.RespondUnfinishedBlock(unfinished_block)
@@ -842,6 +847,7 @@ new_signage_point_harvester2 = harvester_protocol.NewSignagePointHarvester2(
     [pool_difficulty],
     uint32(0),
     uint32(0),
+    bytes32(bytes.fromhex("e342c21b4aeaa52349d42492be934692db58494ca9bce4a8697d06fdf8e583bb")),  # filter_challenge
 )
 
 
@@ -947,10 +953,38 @@ plot = harvester_protocol.Plot(
     uint8(0),
 )
 
+plot2 = harvester_protocol.Plot2(
+    "plot_1",
+    uint8(124),
+    bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
+    G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    bytes32(bytes.fromhex("1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237")),
+    G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    uint64(3368414292564311420),
+    uint64(2573238947935295522),
+    uint8(0),
+    uint16(3145),
+    uint8(5),
+)
+
 request_plots = harvester_protocol.RequestPlots()
 
 respond_plots = harvester_protocol.RespondPlots(
     [plot],
+    ["str"],
+    ["str"],
+)
+
+respond_plots2 = harvester_protocol.RespondPlots2(
+    [plot2],
     ["str"],
     ["str"],
 )
@@ -970,7 +1004,7 @@ respond_peers_introducer = introducer_protocol.RespondPeersIntroducer(
 
 
 # POOL PROTOCOL
-authentication_payload = pool_protocol.AuthenticationPayload(
+authentication_payload = pool_protocol.AuthenticationPayloadV1(
     "method",
     bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
     bytes32(bytes.fromhex("9de241b508b5e9e2073b7645291cfaa9458d33935340399a861acf2ee1770440")),
@@ -987,10 +1021,12 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
     "pool description.",
     bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
     uint8(76),
+    Program.to(None),
 )
 
 post_partial_request = pool_protocol.PostPartialRequest(
     post_partial_payload,
+    "",
     g2_element,
 )
 
@@ -1040,6 +1076,7 @@ put_farmer_payload = pool_protocol.PutFarmerPayload(
     ),
     "payload",
     uint64(201241879360854600),
+    authentication_token_v2="",
 )
 
 put_farmer_request = pool_protocol.PutFarmerRequest(

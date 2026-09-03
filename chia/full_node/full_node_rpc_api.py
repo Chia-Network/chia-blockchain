@@ -21,6 +21,7 @@ from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
+from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
@@ -705,7 +706,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -727,7 +728,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -739,7 +740,7 @@ class FullNodeRpcApi:
             raise RpcError.simple(RpcErrorCodes.NAME_NOT_IN_REQUEST, "Name not in request")
         name = bytes32.from_hexstr(request["name"])
 
-        coin_record: CoinRecord | None = await self.service.blockchain.coin_store.get_coin_record(name)
+        coin_record: CoinRecord | None = await self.service.coin_store.get_coin_record(name)
         if coin_record is None:
             raise RpcError(
                 RpcErrorCodes.COIN_RECORD_NOT_FOUND,
@@ -768,7 +769,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -790,7 +791,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -819,7 +820,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -869,7 +870,7 @@ class FullNodeRpcApi:
         assert header_hash is not None
         block: FullBlock | None = await self.service.block_store.get_full_block(header_hash)
 
-        if block is None or block.transactions_generator is None:
+        if block is None or not block_has_transactions_generator(block):
             raise RpcError.simple(RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR, "Invalid block or block generator")
 
         block_generator: BlockGenerator | None = await get_block_generator(
@@ -1131,7 +1132,7 @@ class FullNodeRpcApi:
             last_peak_timestamp = peak.timestamp
             peak_with_timestamp = peak_height  # Last transaction block height
             last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            while last_tx_block is None or last_peak_timestamp is None:
+            while last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
                 last_peak_timestamp = last_tx_block.timestamp

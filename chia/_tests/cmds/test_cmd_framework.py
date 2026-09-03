@@ -14,7 +14,7 @@ from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
-from chia._tests.wallet.conftest import *  # noqa
+from chia._tests.wallet.conftest import *  # ruff: ignore[undefined-local-with-import-star]
 from chia.cmds.cmd_classes import ChiaCliContext, ChiaCommand, chia_command, option
 from chia.cmds.cmd_helpers import (
     _TRANSACTION_ENDPOINT_DECORATOR_APPLIED,
@@ -33,6 +33,13 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
 def check_click_parsing(cmd: ChiaCommand, *args: str, context: ChiaCliContext | None = None) -> None:
+    """
+    Helper function to test that the framework correctly parses a commandline string to a command object.
+
+    The first argument is the expected result of parsing, and the rest of the arguments are strings that would
+    be passed to the commandline.
+    """
+
     @click.group()
     def _cmd() -> None:
         pass

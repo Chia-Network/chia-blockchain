@@ -1,10 +1,6 @@
----
-description: Mempool manager test patterns — acceptance/rejection, replacement, fee-per-cost, eviction, bundle selection
-globs:
-  - chia/_tests/core/mempool/**
----
-
 # Mempool Tests
+
+Verified: 2026-07-12 against 24db9ad3901d. If source contradicts this doc, trust source and update the doc.
 
 ## Scope
 

@@ -54,7 +54,6 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     parse_timelock_info,
 )
-from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -291,6 +290,7 @@ class WalletStateManager:
             agg_sig_me_additional_data=self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             spend_bundle_push=self.wallet_node.push_tx,
         )
+
         fingerprint = self.root_pubkey.get_fingerprint()
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
@@ -881,6 +881,11 @@ class WalletStateManager:
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
                     all_unspent_coins.add(addition)
 
+        for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as unconfirmed.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for removal in record.removals:
                 if (
                     await self.does_coin_belong_to_wallet(removal, wallet_id, record.hint_dict())
@@ -915,6 +920,10 @@ class WalletStateManager:
             or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
         ):
             return None, None
+
+        dl_identification = await DataLayerWallet.identify(self, coin_state)
+        if dl_identification is not None:
+            return dl_identification, None
 
         response: list[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
@@ -964,12 +973,12 @@ class WalletStateManager:
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if did_curried_args is not None and coin_state.coin.amount % 2 == 1:
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+            p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
                 bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 uint16(num_verification.as_int()),
-                singleton_struct,
+                uncurried.args.at("f"),
                 metadata,
                 get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 parent_coin_state,
@@ -1010,11 +1019,10 @@ class WalletStateManager:
             tx_config_loader = tx_config_loader.override(
                 min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
             )
-        assert self.wallet_node.logged_in_fingerprint is not None
         return tx_config_loader.autofill(
             constants=self.constants,
             config=self.config,
-            logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
+            logged_in_fingerprint=self.root_pubkey.get_fingerprint(),
         )
 
     async def filter_spam(self, new_coin_state: list[CoinState]) -> list[CoinState]:
@@ -1069,11 +1077,7 @@ class WalletStateManager:
             launcher_parent: list[CoinState] = await self.wallet_node.get_coin_state(
                 [launcher_coin.parent_coin_info], peer=peer
             )
-            assert (
-                launcher_parent is not None
-                and len(launcher_parent) == 1
-                and launcher_parent[0].spent_height is not None
-            )
+            assert len(launcher_parent) == 1 and launcher_parent[0].spent_height is not None
             # NFTs minted out of coinbase coins would not have minter DIDs
             if self.constants.GENESIS_CHALLENGE[:16] in bytes(
                 launcher_parent[0].coin.parent_coin_info
@@ -1082,13 +1086,12 @@ class WalletStateManager:
             did_coin: list[CoinState] = await self.wallet_node.get_coin_state(
                 [launcher_parent[0].coin.parent_coin_info], peer=peer
             )
-            assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
+            assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
             uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
-                _p2_puzzle, _recovery_list_hash, _num_verification, singleton_struct, _metadata = did_curried_args
-                minter_did = bytes32(bytes(singleton_struct.rest().first())[1:])
+                minter_did = bytes32(uncurried.args.at("frf").as_atom())
         return minter_did
 
     async def _add_coin_state(
@@ -1141,16 +1144,6 @@ class WalletStateManager:
             wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
         elif coin_state.created_height is not None:
             wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height, sync_scope)
-            try:
-                dl_wallet = await self.get_dl_wallet()
-            except ValueError:
-                pass
-            else:
-                if (
-                    await dl_wallet.get_singleton_record(coin_name) is not None
-                    or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
-                ):
-                    wallet_identifier = WalletIdentifier.create(dl_wallet)
 
         # If this coin was previously only stored as an "interest-only" record (REMOTE),
         # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
@@ -1203,7 +1196,7 @@ class WalletStateManager:
             # TODO: we need to potentially roll back the pool wallet here
             pass
         # if the new coin has not been spent (i.e not ephemeral)
-        elif coin_state.created_height is not None and coin_state.spent_height is None:
+        elif coin_state.spent_height is None:
             if local_record is None:
                 await self.coin_added(
                     coin_state.coin,
@@ -1219,7 +1212,7 @@ class WalletStateManager:
                 await self.add_interested_coin_ids([coin_name])
 
         # if the coin has been spent
-        elif coin_state.created_height is not None and coin_state.spent_height is not None:
+        else:
             self.log.debug("Coin spent: %s", coin_state)
             children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
             record = local_record
@@ -1382,7 +1375,7 @@ class WalletStateManager:
                         await self.tx_store.set_confirmed(unconfirmed_record.name, uint32(coin_state.spent_height))
 
             if record.wallet_type is WalletType.POOLING_WALLET:
-                if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
+                if coin_state.coin.amount == uint64(1):
                     singleton_wallet: PoolWallet = self.get_wallet(
                         id=uint32(record.wallet_id), required_type=PoolWallet
                     )
@@ -1484,7 +1477,12 @@ class WalletStateManager:
                         and inner_puzhash is not None
                         and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                     ):
-                        dl_wallet = await self.get_dl_wallet(create_if_not_found=True)
+                        # Cannot use get_dl_wallet(create_if_not_found=True) here: it
+                        # acquires self.lock, which the sync path already holds.
+                        try:
+                            dl_wallet = await self.get_dl_wallet()
+                        except ValueError:
+                            dl_wallet = await DataLayerWallet.create_new_dl_wallet(self)
                         await dl_wallet.track_new_launcher_id(
                             child.coin.name(),
                             peer,
@@ -1526,9 +1524,6 @@ class WalletStateManager:
                         sync_scope,
                     )
                 await self.add_interested_coin_ids([coin_added_name])
-
-        else:
-            raise RuntimeError("All cases already handled")  # Logic error, all cases handled
 
         return used_up_to
 
@@ -1877,7 +1872,7 @@ class WalletStateManager:
                     for removed_coin in coins_removed:
                         trades_by_coin = await self.trade_manager.get_trades_by_coin(removed_coin)
                         for trade in trades_by_coin:
-                            if trade is not None and trade.status in {
+                            if trade.status in {
                                 TradeStatus.PENDING_CONFIRM.value,
                                 TradeStatus.PENDING_ACCEPT.value,
                                 TradeStatus.PENDING_CANCEL.value,
@@ -1989,9 +1984,6 @@ class WalletStateManager:
 
     async def _await_closed(self) -> None:
         await self.db_wrapper.close()
-
-    def unlink_db(self) -> None:
-        Path(self.db_path).unlink()
 
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
@@ -2263,7 +2255,7 @@ class WalletStateManager:
         self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
     ) -> tuple[CoinSpend, CoinState]:
         coin_state_list: list[CoinState] = await self.wallet_node.get_coin_state([coin_id], peer=peer)
-        if coin_state_list is None or len(coin_state_list) < 1:
+        if len(coin_state_list) < 1:
             raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
         coin_state: CoinState = coin_state_list[0]
         if latest:
@@ -2283,7 +2275,7 @@ class WalletStateManager:
         parent_coin_state_list: list[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
         )
-        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
+        if len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
@@ -2296,9 +2288,9 @@ class WalletStateManager:
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             raise ValueError("The coin is not a DID.")
-        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
         recovery_list_hash_bytes = recovery_list_hash.as_atom()
-        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
+        launcher_id = bytes32(uncurried.args.at("frf").as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
         memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
@@ -2354,7 +2346,7 @@ class WalletStateManager:
         launcher_coin: list[CoinState] = await self.wallet_node.get_coin_state(
             [uncurried_nft.singleton_launcher_id], peer=peer
         )
-        if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
+        if len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
             raise ValueError(f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found")
         minter_did = await self.get_minter_did(launcher_coin[0].coin, peer)
 
@@ -2387,10 +2379,11 @@ class WalletStateManager:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+        singleton_struct = uncurried.args.at("f")
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             raise ValueError("The coin is not a DID.")
-        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
         num_verification_int: uint16 | None = uint16(num_verification.as_int())
         assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(

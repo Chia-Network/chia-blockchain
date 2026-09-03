@@ -29,6 +29,7 @@ from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.eligible_coin_spends import can_fast_forward_singleton
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
@@ -243,19 +244,32 @@ def check_removals(
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
-        conflicting_items = get_items_by_coin_ids([coin_id])
+        # Fast forward spends rebase onto the latest singleton coin, so look
+        # that up as well.
+        latest_ff_id = None if coin_bcs.latest_singleton_lineage is None else coin_bcs.latest_singleton_lineage.coin_id
+        coin_ids = [coin_id]
+        if latest_ff_id is not None and latest_ff_id != coin_id:
+            coin_ids.append(latest_ff_id)
+        conflicting_items = get_items_by_coin_ids(coin_ids)
         for item in conflicting_items:
             if item in conflicts:
                 continue
             conflict_bcs = item.bundle_coin_spends.get(coin_id)
+            if conflict_bcs is None and latest_ff_id is not None:
+                conflict_bcs = item.bundle_coin_spends.get(latest_ff_id)
             if conflict_bcs is None:
                 # Check if this is an item that spends an older ff singleton
-                # version with a latest version that matches our coin ID.
+                # version with a latest version that matches our coin ID or the
+                # same latest version we rebase onto.
                 conflict_bcs = next(
                     (
                         bcs
                         for bcs in item.bundle_coin_spends.values()
-                        if bcs.latest_singleton_lineage is not None and bcs.latest_singleton_lineage.coin_id == coin_id
+                        if bcs.latest_singleton_lineage is not None
+                        and (
+                            bcs.latest_singleton_lineage.coin_id == coin_id
+                            or (latest_ff_id is not None and bcs.latest_singleton_lineage.coin_id == latest_ff_id)
+                        )
                     ),
                     None,
                 )
@@ -263,25 +277,28 @@ def check_removals(
                 if conflict_bcs is None:
                     log.warning(f"Coin ID {coin_id} expected but not found in mempool item {item.name}")
                     return Err.INVALID_SPEND_BUNDLE, []
+            same_coin = coin_id == conflict_bcs.coin_spend.coin.name()
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
             if not coin_bcs.supports_fast_forward and not coin_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
-            # if the spend we're adding is FF, but there's a conflicting spend
-            # that isn't FF, they can't be chained, so that's a conflict
-            elif coin_bcs.supports_fast_forward and not conflict_bcs.supports_fast_forward:
+            # If one spend is FF and the other isn't FF, they can't be chained
+            # so that's a conflict.
+            elif coin_bcs.supports_fast_forward != conflict_bcs.supports_fast_forward:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP, but there's a conflicting spend
             # that isn't DEDUP, we cannot merge them, so that's a conflict
-            elif coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup:
+            elif same_coin and coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP but the existing spend has a
             # different solution, we cannot merge them, so that's a conflict
-            elif coin_bcs.eligible_for_dedup and bytes(coin_bcs.coin_spend.solution) != bytes(
-                conflict_bcs.coin_spend.solution
+            elif (
+                same_coin
+                and coin_bcs.eligible_for_dedup
+                and bytes(coin_bcs.coin_spend.solution) != bytes(conflict_bcs.coin_spend.solution)
             ):
                 conflicts.add(item)
 
@@ -673,7 +690,9 @@ class MempoolManager:
             # SpendBundleConditions.
             spend_conds = spend_conditions.pop(coin_id)
 
-            if bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP) and not is_clvm_canonical(bytes(coin_spend.solution)):
+            if not is_clvm_canonical(bytes(coin_spend.puzzle_reveal)) or not is_clvm_canonical(
+                bytes(coin_spend.solution)
+            ):
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
@@ -687,6 +706,14 @@ class MempoolManager:
                 # spent_index will also fail this test, and such spends will
                 # fall back to be treated as non-FF spends.
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
+                if lineage_info is not None and not can_fast_forward_singleton(
+                    unspent_lineage_info=lineage_info, coin=coin_spend.coin
+                ):
+                    # The latest unspent version of this singleton has a
+                    # different amount than the coin we're spending, so this
+                    # spend can never be fast forwarded onto it. Fall back to
+                    # treating it as a normal spend.
+                    lineage_info = None
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
@@ -701,12 +728,27 @@ class MempoolManager:
                 additions=spend_additions,
                 cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
+                atom_count=spend_conds.atom_count,
+                pair_count=spend_conds.pair_count,
             )
 
-        # fast forward spends are only allowed when bundled with other, non-FF, spends
-        # in order to evict an FF spend, it must be associated with a normal
-        # spend that can be included in a block or invalidated some other way
-        if all([s.supports_fast_forward for s in bundle_coin_spends.values()]):
+        non_ff_spend_ids = set()
+        effective_spend_ids = set()
+        for coin_id, spend_data in bundle_coin_spends.items():
+            if spend_data.latest_singleton_lineage is None:
+                non_ff_spend_ids.add(coin_id)
+                effective_spend_id = coin_id
+            else:
+                effective_spend_id = spend_data.latest_singleton_lineage.coin_id
+            # Fast forward spends are only allowed to be spent once in a spend bundle
+            if effective_spend_id in effective_spend_ids:
+                return Err.INVALID_SPEND_BUNDLE, None, []
+            effective_spend_ids.add(effective_spend_id)
+        # Fast forward spends are only allowed when bundled with other, non-FF
+        # spends in order to evict an FF spend, it must be associated with a
+        # normal spend that can be included in a block or invalidated some
+        # other way.
+        if len(non_ff_spend_ids) == 0:
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}

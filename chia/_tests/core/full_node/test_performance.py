@@ -113,7 +113,7 @@ class TestPerformance:
                 await full_node_1.respond_transaction(respond_transaction, fake_peer)
 
                 request_transaction = fnp.RequestTransaction(spend_bundle_id)
-                req = await full_node_1.request_transaction(request_transaction)
+                req = await full_node_1.request_transaction(request_transaction, fake_peer)
 
                 if req is None:
                     break
@@ -150,7 +150,9 @@ class TestPerformance:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            [],
+            block.transactions_generator_ref_list,
+            block.transactions_generator_buffer,
+            block.version,
         )
 
         with benchmark_runner.assert_runtime(seconds=0.1, label="unfinished"):
@@ -160,7 +162,7 @@ class TestPerformance:
 
         with benchmark_runner.assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
-            block_small = block.replace(transactions_generator=None)
+            block_small = block.replace(transactions_generator=None, transactions_generator_buffer=None)
             res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")

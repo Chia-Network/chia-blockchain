@@ -450,7 +450,7 @@ class PlotNFT2Wallet:
             else:
                 matched_plotnft_wallet_id = None
             if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
-                matched_plotnft_wallet_id = uint32(len(wallet_state_manager.wallets) + 1)
+                matched_plotnft_wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
                 wallet_state_manager.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                     wallet_state_manager=wallet_state_manager,
                     xch_wallet=wallet_state_manager.main_wallet,

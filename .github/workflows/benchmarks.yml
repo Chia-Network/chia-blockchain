@@ -59,7 +59,7 @@ jobs:
         python-version: ["3.12"]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      BLOCKS_AND_PLOTS_VERSION: 0.45.21
+      BLOCKS_AND_PLOTS_VERSION: 0.45.32
 
     steps:
       - name: Clean workspace
@@ -69,7 +69,7 @@ jobs:
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -83,7 +83,7 @@ jobs:
           mode: poetry
 
       - name: Checkout test blocks and plots
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: "Chia-Network/test-cache"
           path: ".chia"

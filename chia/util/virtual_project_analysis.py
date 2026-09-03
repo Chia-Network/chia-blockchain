@@ -108,7 +108,7 @@ def build_virtual_dependency_graph(
         virtual_graph.setdefault(root, [])
 
         dependency_files = [ChiaFile.parse(Path(imp)) for imp in imports]
-        dependencies = [f.annotations.package for f in dependency_files if f.annotations is not None]
+        dependencies = [f.annotations.package for f in dependency_files]
 
         virtual_graph[root].extend(dependencies)
 
@@ -189,21 +189,14 @@ def find_cycles(
         # Parse the parent package file.
         dependent_file = ChiaFile.parse(dependent)
         # Skip this package if it has no annotations or should be ignored in cycle detection.
-        if (
-            dependent_file.annotations is None
-            or dependent_file.annotations.package in ignore_cycles_in
-            or dependent in ignore_specific_files
-        ):
+        if dependent_file.annotations.package in ignore_cycles_in or dependent in ignore_specific_files:
             continue
 
         for provider in sorted(graph[dependent]):
             if provider in excluded_paths:
                 continue
             provider_file = ChiaFile.parse(provider)
-            if (
-                provider_file.annotations is None
-                or provider_file.annotations.package == dependent_file.annotations.package
-            ):
+            if provider_file.annotations.package == dependent_file.annotations.package:
                 continue
 
             dependency_paths = find_all_dependency_paths(

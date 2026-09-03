@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import platform
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 import pytest
 from chia_rs import (
@@ -34,6 +35,8 @@ from chia.full_node.full_block_utils import (
     generator_from_block,
     get_height_and_tx_status_from_block,
     header_block_from_block,
+    skip_bytes,
+    skip_list,
     skip_reward_chain_block,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -136,6 +139,26 @@ def test_skip_reward_chain_block_handles_combined_optional_tag(has_icc: bool, ha
     )
     # The helper should consume exactly one serialized RewardChainBlock.
     assert len(skip_reward_chain_block(memoryview(bytes(reward_chain_block)))) == 0
+
+
+def test_skip_list_rejects_count_exceeding_remaining_buffer() -> None:
+    with pytest.raises(ValueError, match="list count 2 exceeds remaining buffer 1"):
+        skip_list(memoryview((2).to_bytes(4, "big") + b"\x00"), skip_bytes)
+
+
+def test_skip_list_rejects_short_count_prefix() -> None:
+    with pytest.raises(ValueError, match="list count prefix requires 4 bytes, remaining buffer 1"):
+        skip_list(memoryview(b"\x00"), skip_bytes)
+
+
+def test_skip_bytes_rejects_length_exceeding_remaining_buffer() -> None:
+    with pytest.raises(ValueError, match="byte length 4 exceeds remaining buffer 3"):
+        skip_bytes(memoryview((4).to_bytes(4, "big") + b"abc"))
+
+
+def test_skip_bytes_rejects_short_length_prefix() -> None:
+    with pytest.raises(ValueError, match="byte length prefix requires 4 bytes, remaining buffer 1"):
+        skip_bytes(memoryview(b"\x00"))
 
 
 def get_foliage_block_data() -> Iterator[FoliageBlockData]:
@@ -287,20 +310,129 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
                                 for finished_sub_slots in get_finished_sub_slots():
                                     for refs_list in get_ref_list():
                                         for gen in [None, generator]:
-                                            yield FullBlock(
-                                                finished_sub_slots,
-                                                reward_chain_block,
-                                                challenge_chain_sp_proof,
-                                                vdf_proof(),  # challenge_chain_ip_proof
-                                                reward_chain_sp_proof,
-                                                vdf_proof(),  # reward_chain_ip_proof
-                                                infused_challenge_chain_ip_proof,
-                                                foliage,
-                                                foliage_transaction_block,
-                                                transactions_info,
-                                                gen,  # transactions_generator
-                                                refs_list,  # transactions_generator_ref_list
-                                            )
+                                            for version in [0, 1]:
+                                                yield FullBlock(
+                                                    finished_sub_slots,
+                                                    reward_chain_block,
+                                                    challenge_chain_sp_proof,
+                                                    vdf_proof(),  # challenge_chain_ip_proof
+                                                    reward_chain_sp_proof,
+                                                    vdf_proof(),  # reward_chain_ip_proof
+                                                    infused_challenge_chain_ip_proof,
+                                                    foliage,
+                                                    foliage_transaction_block,
+                                                    transactions_info,
+                                                    gen if version == 0 and gen else None,  # transactions_generator
+                                                    refs_list
+                                                    if version == 0
+                                                    else [],  # transactions_generator_ref_list
+                                                    bytes(gen)
+                                                    if version == 1 and gen
+                                                    else None,  # transactions_generator_buffer
+                                                    uint8(version),
+                                                )
+
+
+def test_block_info_from_block_rejects_refs_count_exceeding_remaining_buffer() -> None:
+    block_bytes = bytearray(bytes(next(get_full_blocks(0))))
+    block_bytes[-4:] = (1).to_bytes(4, "big")
+
+    with pytest.raises(ValueError, match="refs count 1 exceeds remaining buffer 0"):
+        block_info_from_block(memoryview(block_bytes))
+
+
+def test_block_info_from_block_rejects_short_refs_count_prefix() -> None:
+    block_bytes = bytearray(bytes(next(get_full_blocks(0))))
+    del block_bytes[-3:]
+
+    with pytest.raises(ValueError, match="refs count prefix requires 4 bytes, remaining buffer 1"):
+        block_info_from_block(memoryview(block_bytes))
+
+
+def _version1_block_bytes_with_generator_buffer() -> tuple[bytearray, int]:
+    for block in get_full_blocks(0):
+        if block.version == 1 and block.transactions_generator_buffer is not None:
+            return bytearray(bytes(block)), len(block.transactions_generator_buffer)
+    raise AssertionError("expected a version-1 block with transactions_generator_buffer")
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_short_generator_buffer_length_prefix(parse: Callable[[memoryview], Any]) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    # Trailing layout: discriminant (1) + length (4) + buffer. Leave discriminant + 1 length byte.
+    del block_bytes[-(buf_len + 3) :]
+
+    with pytest.raises(ValueError, match="generator_buffer length prefix requires 4 bytes, remaining buffer 1"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_generator_buffer_length_exceeding_remaining_buffer(
+    parse: Callable[[memoryview], Any],
+) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    length_offset = len(block_bytes) - buf_len - 4
+    block_bytes[length_offset : length_offset + 4] = (buf_len + 1).to_bytes(4, "big")
+
+    with pytest.raises(ValueError, match=f"generator_buffer length: {buf_len + 1}, exceeds remaining buffer {buf_len}"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("parse", [generator_from_block, block_info_from_block])
+def test_cheap_parser_rejects_invalid_generator_version(parse: Callable[[memoryview], Any]) -> None:
+    block_bytes, buf_len = _version1_block_bytes_with_generator_buffer()
+    # Present bit set with version 2 (unsupported).
+    block_bytes[-(buf_len + 4 + 1)] = (2 << 1) | 1
+
+    with pytest.raises(ValueError, match="invalid FullBlock generator version: 2"):
+        parse(memoryview(block_bytes))
+
+
+@pytest.mark.parametrize("version", [0, 1])
+def test_cheap_parser_reads_present_generator_for_supported_versions(version: int) -> None:
+    for block in get_full_blocks(0):
+        if block.version != version:
+            continue
+        if version == 0 and block.transactions_generator is None:
+            continue
+        if version == 1 and block.transactions_generator_buffer is None:
+            continue
+
+        block_bytes = memoryview(bytes(block))
+        gen = generator_from_block(block_bytes)
+        assert gen is not None
+        if version == 0:
+            assert Program.from_bytes(gen) == block.transactions_generator
+        else:
+            assert gen == block.transactions_generator_buffer
+
+        block_info = block_info_from_block(block_bytes)
+        assert block_info.version == version
+        assert block_info.transactions_generator == block.transactions_generator
+        assert block_info.transactions_generator_buffer == block.transactions_generator_buffer
+        assert block_info.transactions_generator_ref_list == block.transactions_generator_ref_list
+        return
+
+    raise AssertionError(f"expected a version-{version} block with a present generator")
+
+
+def test_cheap_parser_matches_round_tripped_block() -> None:
+    block = next(get_full_blocks(0))
+    block_bytes = memoryview(bytes(block))
+    round_tripped = FullBlock.from_bytes(block_bytes)
+
+    height, is_tx_block = get_height_and_tx_status_from_block(block_bytes)
+    assert height == round_tripped.height
+    assert is_tx_block == round_tripped.is_transaction_block()
+    assert generator_from_block(block_bytes) is None
+
+    block_info = block_info_from_block(block_bytes)
+    assert block_info.prev_header_hash == round_tripped.prev_header_hash
+    assert block_info.transactions_generator == round_tripped.transactions_generator
+    assert block_info.transactions_generator_ref_list == round_tripped.transactions_generator_ref_list
+
+    header_block = HeaderBlock.from_bytes(header_block_from_block(block_bytes))
+    assert header_block == get_block_header(round_tripped, None)
 
 
 @pytest.mark.anyio
@@ -319,21 +451,37 @@ async def test_parser(shard: int) -> None:
         gen = generator_from_block(block_bytes)
         if gen is None:
             assert block.transactions_generator is None
-        else:
+            assert block.transactions_generator_buffer is None
+        elif block.version == 0:
             assert block.transactions_generator is not None
             assert Program.from_bytes(gen) == block.transactions_generator
+        else:
+            assert block.version == 1
+            assert block.transactions_generator_buffer is not None
+            assert gen == block.transactions_generator_buffer
         bi = block_info_from_block(block_bytes)
         if block.transactions_generator is None:
             assert bi.transactions_generator is None
         else:
             assert block.transactions_generator == bi.transactions_generator
+        if block.transactions_generator_buffer is None:
+            assert bi.transactions_generator_buffer is None
+        else:
+            assert block.transactions_generator_buffer == bi.transactions_generator_buffer
         assert block.prev_header_hash == bi.prev_header_hash
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
         # this doubles the run-time of this test, with questionable utility
+        round_trip = FullBlock.from_bytes(block_bytes)
         if gen is None:
-            assert FullBlock.from_bytes(block_bytes).transactions_generator is None
+            assert round_trip.transactions_generator is None
+            assert round_trip.transactions_generator_buffer is None
+        elif round_trip.version == 0:
+            assert round_trip.transactions_generator_buffer is None
+            assert Program.from_bytes(gen) == round_trip.transactions_generator
         else:
-            assert Program.from_bytes(gen) == FullBlock.from_bytes(block_bytes).transactions_generator
+            assert round_trip.version == 1
+            assert round_trip.transactions_generator is None
+            assert gen == round_trip.transactions_generator_buffer
 
 
 @pytest.mark.anyio

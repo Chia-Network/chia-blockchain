@@ -13,6 +13,7 @@ from clvm_tools import binutils
 from chia._tests.core.make_block_generator import make_block_generator
 from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
+from chia.consensus.block_generator_info import get_transactions_generator_program
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -98,8 +99,10 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
 
     condition_cost = ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value
     if softfork_height >= bt.constants.HARD_FORK2_HEIGHT:
+        # CREATE_COIN == NEW_CREATE_COIN + SPEND_COST after HF2
         condition_cost += ConditionCost.MESSAGE_CONDITION_COST.value
-        clvm_cost = 27360
+        # NEW_COST_MODEL (HF2) increases CLVM execution cost for this spend
+        clvm_cost = 54800
     elif softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
@@ -293,11 +296,10 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
 
     DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-    assert LARGE_BLOCK.transactions_generator is not None
+    generator = get_transactions_generator_program(LARGE_BLOCK)
+    assert generator is not None
     # first, list all spent coins in the block
-    _, result = run_with_cost(
-        LARGE_BLOCK.transactions_generator, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
-    )
+    _, result = run_with_cost(generator, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []])
 
     coin_spends = result.first()
     spent_coins: list[Coin] = []
@@ -313,13 +315,13 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
 
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
-    generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [])
+    block_generator = BlockGenerator(generator, [])
     with benchmark_runner.assert_runtime(seconds=8.5):
         for _ in range(3):
             for c in spent_coins:
                 puz, _solution = get_puzzle_and_solution_for_coin(
-                    generator.program,
-                    generator.generator_refs,
+                    block_generator.program,
+                    block_generator.generator_refs,
                     test_constants.MAX_BLOCK_COST_CLVM,
                     c,
                     get_flags_for_height_and_constants(0, test_constants),

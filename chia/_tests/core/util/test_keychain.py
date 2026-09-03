@@ -183,7 +183,7 @@ class TestKeychain:
             # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
             # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
             # support for the mutable `list`.
-            key_data in (key_data_0, key_data_1, key_data_2)  # noqa: PLR6201
+            key_data in (key_data_0, key_data_1, key_data_2)  # ruff: ignore[literal-membership]
             for key_data in keychain.get_keys(include_secrets=True)
         )
 
@@ -235,10 +235,10 @@ class TestKeychain:
         # Copyright (c) 2017 mruddy
         # https://github.com/trezor/python-mnemonic/blob/master/tests/test_mnemonic.py
         # The same sentence in various UTF-8 forms
-        words_nfkd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # noqa: E501
-        words_nfc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # noqa: E501
-        words_nfkc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # noqa: E501
-        words_nfd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # noqa: E501
+        words_nfkd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # ruff: ignore[line-too-long]
+        words_nfc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # ruff: ignore[line-too-long]
+        words_nfkc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # ruff: ignore[line-too-long]
+        words_nfd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # ruff: ignore[line-too-long]
 
         seed_nfkd = mnemonic_to_seed(words_nfkd)
         seed_nfc = mnemonic_to_seed(words_nfc)
@@ -435,7 +435,7 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
     # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
     # support for the mutable `list`.
-    assert all(key_data in (key_data_0, key_data_1) for key_data in keychain.get_keys(include_secrets=True))  # noqa: PLR6201
+    assert all(key_data in (key_data_0, key_data_1) for key_data in keychain.get_keys(include_secrets=True))  # ruff: ignore[literal-membership]
 
 
 @pytest.mark.parametrize(

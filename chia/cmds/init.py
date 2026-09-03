@@ -28,7 +28,7 @@ from chia.cmds.cmd_classes import ChiaCliContext
 @click.pass_context
 def init_cmd(
     ctx: click.Context,
-    create_certs: str,
+    create_certs: str | None,
     fix_ssl_permissions: bool,
     testnet: bool,
     set_passphrase: bool,
