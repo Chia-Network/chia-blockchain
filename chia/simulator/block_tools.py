@@ -1854,9 +1854,7 @@ class BlockTools:
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(
-                        quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2, constants.TESTNET
-                    )
+                    proof = solve_proof(quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2)
                     assert proof != b""
 
                 # Look up local_sk from plot to save locked memory

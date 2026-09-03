@@ -222,7 +222,6 @@ def check_plots(
                                 pr.get_id(),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
-                                testnet,
                             )
 
                         proof_spent_time = round(monotonic() * 1000) - proof_start_time
