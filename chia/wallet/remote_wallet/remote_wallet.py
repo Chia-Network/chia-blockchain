@@ -15,6 +15,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_sync_scope import WalletSyncScope
 
 
 # The purpose of the remote wallet is to allow the WSM to get notifications about the remote coins.
@@ -135,7 +136,7 @@ class RemoteWallet:
         return uint128(0)
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: Any, coin_data: object | None
+        self, coin: Coin, height: uint32, peer: Any, coin_data: object | None, sync_scope: WalletSyncScope
     ) -> None:  # pragma: no cover
         return None
 

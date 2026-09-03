@@ -18,6 +18,7 @@ from chia.wallet.util.notifications import construct_notification
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 
 class NotificationManager:
@@ -41,7 +42,9 @@ class NotificationManager:
         self.notification_store = await NotificationStore.create(db_wrapper)
         return self
 
-    async def potentially_add_new_notification(self, coin_state: CoinState, parent_spend: CoinSpend) -> bool:
+    async def potentially_add_new_notification(
+        self, coin_state: CoinState, parent_spend: CoinSpend, sync_scope: WalletSyncScope
+    ) -> bool:
         coin_name: bytes32 = coin_state.coin.name()
         if (
             coin_state.spent_height is None
@@ -76,7 +79,8 @@ class NotificationManager:
                         uint32(coin_state.spent_height),
                     )
                 )
-                self.wallet_state_manager.state_changed("new_on_chain_notification")
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(WebSocketEvent(name="new_on_chain_notification"))
             return True
 
     async def send_new_notification(
