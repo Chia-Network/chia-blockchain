@@ -10,7 +10,6 @@ chia.rpc.rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.wallet_tools
-chia.ssl.create_ssl
 chia.types.blockchain_format.program
 chia.wallet.puzzles.load_clvm
 chia.wallet.util.debug_spend_bundle
