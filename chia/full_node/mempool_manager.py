@@ -310,17 +310,6 @@ def check_removals(
 
 
 LogMempoolMode = Literal["true", "false", "timeout"]
-# Values accepted from config/YAML before normalization (unknowns become "false").
-LogMempoolConfig = bool | LogMempoolMode | None
-
-
-def _normalize_log_mempool(value: object) -> LogMempoolMode:
-    """Normalize log_mempool config: YAML bools or strings "true"/"false"/"timeout"."""
-    if value is True or value == "true":
-        return "true"
-    if value == "timeout":
-        return "timeout"
-    return "false"
 
 
 class MempoolManager:
@@ -357,11 +346,11 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
-        log_mempool: LogMempoolConfig = False,
+        log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
-        self.log_mempool = _normalize_log_mempool(log_mempool)
+        self.log_mempool = log_mempool
         self.root_path = root_path
 
         # Keep track of seen spend_bundles
@@ -418,7 +407,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
-        log_mempool: LogMempoolConfig = False,
+        log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
     ) -> AsyncIterator[Self]:
         self = cls(

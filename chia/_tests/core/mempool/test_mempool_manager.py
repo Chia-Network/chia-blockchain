@@ -43,7 +43,7 @@ from chia.full_node.eligible_coin_spends import (
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
-    LogMempoolConfig,
+    LogMempoolMode,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -267,7 +267,7 @@ async def instantiate_mempool_manager(
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
     validation_timeout: float = 10,
-    log_mempool: LogMempoolConfig = False,
+    log_mempool: LogMempoolMode = "false",
     root_path: Path | None = None,
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
@@ -803,12 +803,12 @@ async def test_validate_spend_bundle_timeout(monkeypatch: pytest.MonkeyPatch) ->
     "log_mempool,expect_log",
     [
         ("timeout", True),
-        (False, False),
-        (True, False),
+        ("false", False),
+        ("true", False),
     ],
 )
 async def test_log_mempool_timeout_on_pre_validate(
-    tmp_path: Path, log_mempool: LogMempoolConfig, expect_log: bool
+    tmp_path: Path, log_mempool: LogMempoolMode, expect_log: bool
 ) -> None:
     async with MempoolManager.managed(
         zero_calls_get_coin_records,
@@ -829,24 +829,6 @@ async def test_log_mempool_timeout_on_pre_validate(
         assert log_path.exists() == expect_log
         if expect_log:
             assert log_path.read_bytes() == bytes(sb)
-
-
-@pytest.mark.parametrize(
-    "value,expected",
-    [
-        (True, "true"),
-        ("true", "true"),
-        (False, "false"),
-        ("false", "false"),
-        ("timeout", "timeout"),
-        (None, "false"),
-        ("other", "false"),
-    ],
-)
-def test_normalize_log_mempool(value: object, expected: str) -> None:
-    from chia.full_node.mempool_manager import _normalize_log_mempool
-
-    assert _normalize_log_mempool(value) == expected
 
 
 @pytest.mark.anyio
