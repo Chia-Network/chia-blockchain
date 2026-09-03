@@ -1940,15 +1940,15 @@ files = [
 
 [[package]]
 name = "diff-cover"
-version = "10.4.1"
+version = "10.5.1"
 description = "Run coverage and linting reports on diffs"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "diff_cover-10.4.1-py3-none-any.whl", hash = "sha256:dc8f2654c485ec4f16e679b5af6e205783cde71185d4ceb8157662dca2d531e9"},
-    {file = "diff_cover-10.4.1.tar.gz", hash = "sha256:0ec566955c9ee7da2f6cc48fa16fac7f97ad1fc4e50a887ffb9cfe5eb1e831df"},
+    {file = "diff_cover-10.5.1-py3-none-any.whl", hash = "sha256:67ce07494e605b5d7d7b04aeec2cf524950ed0c12f026dd176883cf33c74fba0"},
+    {file = "diff_cover-10.5.1.tar.gz", hash = "sha256:f1c9417c62111e40a81c482c692c5cdd131ff93317baa993044cb291912ebba3"},
 ]
 
 [package.dependencies]
@@ -5316,4 +5316,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "1a51360b89e22d61c5b01069bb7084027409ca76f863c1c95890f9dfab42005c"
+content-hash = "a0e7efd8e3fa422624bb507884f6ebe4f4da75a7717d2a96f19139a92f2402b5"
