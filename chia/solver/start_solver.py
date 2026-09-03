@@ -20,7 +20,7 @@ from chia.solver.solver_api import SolverAPI
 from chia.solver.solver_rpc_api import SolverRpcApi
 from chia.solver.solver_service import SolverService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
@@ -70,9 +70,7 @@ def create_solver_service(
     )
 
 
-async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) -> int:
-    config = load_config(root_path, "config.yaml", fill_missing_services=True)
-    config[SERVICE_NAME] = service_config
+async def async_main(config: dict[str, Any], service_config: dict[str, Any], root_path: pathlib.Path) -> int:
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
@@ -94,8 +92,10 @@ def main() -> int:
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
-        return async_run(coro=async_main(service_config, root_path=root_path))
+        config = load_config(root_path, "config.yaml", fill_missing_services=True)
+        service_config = apply_config_cli_overrides(config[SERVICE_NAME])
+        config[SERVICE_NAME] = service_config
+        return async_run(coro=async_main(config, service_config, root_path=root_path))
 
 
 if __name__ == "__main__":
