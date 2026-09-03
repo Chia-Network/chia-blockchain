@@ -19,8 +19,8 @@ from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
-from chia.plotting.manager import Cache, PlotManager
+from chia.plotting.cache import CURRENT_VERSION, Cache, CacheDataV1
+from chia.plotting.manager import PlotManager
 from chia.plotting.prover import V1Prover
 from chia.plotting.util import (
     PlotInfo,
