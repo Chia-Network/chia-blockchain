@@ -217,6 +217,10 @@ def test_protocol_json() -> None:
     assert type(respond_plots).from_json_dict(respond_plots_json) == respond_plots
     assert str(respond_plots2_json) == str(respond_plots2.to_json_dict())
     assert type(respond_plots2).from_json_dict(respond_plots2_json) == respond_plots2
+    assert str(plot3_json) == str(plot3.to_json_dict())
+    assert type(plot3).from_json_dict(plot3_json) == plot3
+    assert str(respond_plots3_json) == str(respond_plots3.to_json_dict())
+    assert type(respond_plots3).from_json_dict(respond_plots3_json) == respond_plots3
     assert str(request_peers_introducer_json) == str(request_peers_introducer.to_json_dict())
     assert type(request_peers_introducer).from_json_dict(request_peers_introducer_json) == request_peers_introducer
     assert str(respond_peers_introducer_json) == str(respond_peers_introducer.to_json_dict())

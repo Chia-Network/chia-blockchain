@@ -53,7 +53,7 @@ class SolverAPI:
             self.log.debug(f"Successfully solved partial proof, returning {len(proof)} byte proof")
             return make_msg(
                 ProtocolMessageTypes.solution_response,
-                SolverResponse(proof=proof, partial_proof=request.partial_proof),
+                SolverResponse(proof=proof, partial_proof=request.partial_proof, plot_id=request.plot_id),
             )
 
         except Exception as e:

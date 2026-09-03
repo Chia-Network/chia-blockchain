@@ -7,6 +7,10 @@ and empty qualities across fixture setup, the test, and fixture teardown.
 Persistent fixture-chain generation is excluded: its proofs are already saved
 in the blockchain file and validation does not perform plot lookups.
 
+Qualities are keyed by (plot or plot-group ID, challenge), V1 full proofs by
+(plot_id, challenge, index), and solved V2 proofs by (partial_proof_bytes,
+member_plot_id). Cached V2 qualities include each member's plot index.
+
 After workers finish, pytest replaces the shared cache with the union of test
 recordings, regardless of the session's exit status. Partial runs retain recordings
 for tests that were not run. Fully collected files prune removed/renamed tests
@@ -147,10 +151,10 @@ def merge_test_caches(directory: Path, destination: Path) -> None:
     print(f"plot_cache: published {sum(map(len, merged))} entries ({destination.stat().st_size / 1e6:.2f} MB)")
 
 
-# (plot_id, challenge) -> list of serialized quality data
+# (plot or plot-group ID, challenge) -> list of serialized quality data
 # V1: each entry is 32 bytes (quality bytes32)
-# V2: each entry is serialized PartialProof bytes
-_qualities: dict[tuple[bytes, bytes], list[bytes]] = {}
+# V2: each entry is (plot_index, serialized PartialProof bytes)
+_qualities: dict[tuple[bytes, bytes], list[Any]] = {}
 
 # (plot_id, challenge, index) -> proof bytes
 _full_proofs: dict[tuple[bytes, bytes, int], bytes] = {}
@@ -194,7 +198,7 @@ def load(plot_dir: Path) -> None:
         print(f"plot_cache: loaded {total} entries from {cache_path}")
 
 
-def cached_solve_proof(partial_proof: PartialProof, plot_id: bytes32, strength: int, k: int, testnet: bool) -> bytes:
+def cached_solve_proof(partial_proof: PartialProof, plot_id: bytes32, strength: int, k: int) -> bytes:
     global _hits, _misses
     key = (partial_proof.to_bytes(), bytes(plot_id))
     cached = _solve_proofs.get(key)
@@ -202,7 +206,7 @@ def cached_solve_proof(partial_proof: PartialProof, plot_id: bytes32, strength: 
         _record_lookup(2, key, cached)
         _hits += 1
         return cached
-    result = _orig_solve_proof(partial_proof, plot_id, strength, k, testnet)
+    result = _orig_solve_proof(partial_proof, plot_id, strength, k)
     _solve_proofs[key] = result
     _record_lookup(2, key, result)
     _misses += 1
@@ -239,12 +243,14 @@ def install(plot_dir: Path) -> None:
         global _hits, _misses
         key = (bytes(self.get_id()), bytes(challenge))
         cached = _qualities.get(key)
-        if cached is not None:
+        if cached is not None and all(isinstance(q, tuple) and len(q) == 2 for q in cached):
             _record_lookup(0, key, cached)
             _hits += 1
-            return [V2Quality(PartialProof.from_bytes(q), self.get_strength()) for q in cached]
+            return [V2Quality(PartialProof.from_bytes(q[1]), q[0], self.get_strength()) for q in cached]
         result = orig_v2_quals(self, challenge)
-        _qualities[key] = [q.get_partial_proof().to_bytes() for q in result]  # type: ignore[attr-defined]
+        _qualities[key] = [
+            (q.get_plot_index(), q.get_partial_proof().to_bytes()) for q in result if isinstance(q, V2Quality)
+        ]
         _record_lookup(0, key, _qualities[key])
         _misses += 1
         return result

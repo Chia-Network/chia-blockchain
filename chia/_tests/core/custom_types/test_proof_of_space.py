@@ -232,7 +232,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2 missing filter_challenge",
-        pos_challenge=b32("a66f6a2ed7a1fb5f7c1db936e4a5833e06df80afb63fb13f1f85d72b8a018413"),
+        pos_challenge=b32("9f43b874e9881bb4d5760ff9bb2c98ddcd7d40fb7a4884d1a26f61b3c64bd635"),
         plot_size=PlotParam.make_v2(0, 0, 8),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -249,7 +249,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 passing plot filter with nonzero plot index and meta group",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -259,8 +259,8 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         signage_point_index=0,
     ),
     ProofOfSpaceCase(
-        id="v2 changed plot index invalidates challenge",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        id="v2 changed plot index preserves group challenge",
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(8, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -268,11 +268,10 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         ),
         filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
         signage_point_index=0,
-        expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
-        id="v2 changed meta group invalidates challenge",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        id="v2 changed meta group fails plot filter",
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 43, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -280,11 +279,11 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         ),
         filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
         signage_point_index=0,
-        expected_error="Calculated pos challenge doesn't match the provided one",
+        expected_error="Did not pass the V2 plot filter. group_strength: 9",
     ),
     ProofOfSpaceCase(
         id="v2 missing filter challenge only",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -296,7 +295,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 missing signage point index only",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -308,7 +307,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 failing plot filter",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -320,7 +319,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 height agnostic still checks supplied filter inputs",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -333,7 +332,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 height agnostic bypasses activation and missing filter inputs",
-        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        pos_challenge=b32("53f33ef7bd6333c6716880cae717acd014c4e0a85e36bde98cdbcc1e8aa7b195"),
         plot_size=PlotParam.make_v2(7, 42, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -376,7 +375,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     ProofOfSpaceCase(
         id="v2 missing filter_challenge rejected",
         plot_size=PlotParam.make_v2(0, 0, 2),
-        pos_challenge=b32("9483df4e178307ae677d86664daaef4fc52689b2b6cd7825351f2a2ad7075adb"),
+        pos_challenge=b32("343875570da2832214c4b1e18bce0df0b8c81be2d61d406be9c237934c2662b5"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),

@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace, compute_plot_id_v2
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
@@ -23,6 +23,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPathList,
     PlotSyncPlotList,
     PlotSyncPlotList2,
+    PlotSyncPlotList3,
     PlotSyncStart,
     PoolDifficulty,
     SignatureRequestSourceData,
@@ -545,15 +546,23 @@ class FarmerAPI:
         )
 
         # Process each partial proof chain through solver service to get full proofs
+        plot_id = compute_plot_id_v2(
+            partial_proof_data.strength,
+            partial_proof_data.plot_public_key,
+            partial_proof_data.pool_public_key,
+            partial_proof_data.pool_contract_puzzle_hash,
+            partial_proof_data.plot_index,
+            partial_proof_data.meta_group,
+        )
         for partial_proof in partial_proof_data.partial_proofs:
             solver_info = SolverInfo(
                 partial_proof=partial_proof,
-                plot_id=partial_proof_data.plot_id,
+                plot_id=plot_id,
                 strength=partial_proof_data.strength,
                 size=partial_proof_data.plot_size,
             )
 
-            key = bytes(partial_proof)
+            key = bytes(partial_proof) + bytes(plot_id)
             try:
                 # store pending request data for matching with response
                 self.farmer.pending_solver_requests[key] = {
@@ -582,9 +591,9 @@ class FarmerAPI:
         """
         self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
 
-        # find the matching pending request using partial_proof
+        # find the matching pending request using partial_proof and plot_id
 
-        key = bytes(response.partial_proof)
+        key = bytes(response.partial_proof) + bytes(response.plot_id)
         if key not in self.farmer.pending_solver_requests:
             self.farmer.log.warning(
                 f"Received solver response for unknown partial proof {response.partial_proof.fragments[:5]}"
@@ -604,7 +613,7 @@ class FarmerAPI:
             return
 
         sp_challenge_hash = calculate_pos_challenge(
-            proof_data.plot_id,
+            proof_data.plot_group_id,
             proof_data.challenge_hash,
             proof_data.sp_hash,
         )
@@ -831,6 +840,10 @@ class FarmerAPI:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
     @metadata.request(peer_required=True)
+    async def respond_plots3(self, _: harvester_protocol.RespondPlots3, peer: WSChiaConnection) -> None:
+        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @metadata.request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
@@ -841,6 +854,10 @@ class FarmerAPI:
     @metadata.request(peer_required=True)
     async def plot_sync_loaded2(self, message: PlotSyncPlotList2, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded2(message)
+
+    @metadata.request(peer_required=True)
+    async def plot_sync_loaded3(self, message: PlotSyncPlotList3, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded3(message)
 
     @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
