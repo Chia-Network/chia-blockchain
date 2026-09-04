@@ -55,6 +55,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
@@ -3509,6 +3510,91 @@ class TestBodyValidation:
         )
         preval_result: PreValidationResult = await future
         assert preval_result.error == Err.BAD_AGGREGATE_SIGNATURE.value
+
+    @pytest.mark.anyio
+    async def test_skip_agg_sig_validation(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+        # Skipping aggregate signature validation accepts a bad signature and leaves
+        # validated_signature=False; add_block allows that below assumevalid_height.
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+        )
+        await _validate_and_add_block(b, blocks[0])
+        await _validate_and_add_block(b, blocks[1])
+        await _validate_and_add_block(b, blocks[2])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        coin = find_reward_coin(blocks[-1], bt.pool_ph)
+        tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+
+        last_block = recursive_replace(blocks[-1], "transactions_info.aggregated_signature", G2Element.generator())
+        assert last_block.transactions_info is not None
+        last_block = recursive_replace(
+            last_block, "foliage_transaction_block.transactions_info_hash", last_block.transactions_info.get_hash()
+        )
+        assert last_block.foliage_transaction_block is not None
+        last_block = recursive_replace(
+            last_block, "foliage.foliage_transaction_block_hash", last_block.foliage_transaction_block.get_hash()
+        )
+        new_m = last_block.foliage.foliage_transaction_block_hash
+        assert new_m is not None
+        new_fsb_sig = bt.get_plot_signature(new_m, last_block.reward_chain_block.proof_of_space.plot_public_key)
+        last_block = recursive_replace(last_block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        prev_b = await b.get_block_record_from_db(last_block.prev_header_hash)
+        assert prev_b is not None
+        curr = prev_b
+        while curr.height > 0 and curr.sub_epoch_summary_included is None:
+            curr = b.block_record(curr.prev_hash)
+        prev_ses_block = curr
+        new_slot = len(last_block.finished_sub_slots) > 0
+        ssi, diff = get_next_sub_slot_iters_and_difficulty(b.constants, new_slot, prev_b, b)
+
+        aug = AugmentedBlockchain(b)
+        future = await pre_validate_block(
+            b.constants,
+            aug,
+            last_block,
+            b.pool,
+            None,
+            ValidationState(ssi, diff, prev_ses_block),
+            validate_signatures=False,
+        )
+        preval_result = await future
+        assert preval_result.error is None
+        assert preval_result.conds is not None
+        assert preval_result.validated_signature is False
+
+        block_record = aug.block_record(last_block.header_hash)
+
+        # Without assumevalid_height, add_block must reject via assert
+        with pytest.raises(AssertionError):
+            await b.add_block(
+                last_block,
+                preval_result,
+                ssi,
+                ForkInfo(last_block.height - 1, last_block.height - 1, last_block.prev_header_hash),
+                prev_ses_block=prev_ses_block,
+                block_record=block_record,
+            )
+
+        # Below the assumevalid cutoff, unvalidated signatures are allowed
+        result, err, _ = await b.add_block(
+            last_block,
+            preval_result,
+            ssi,
+            ForkInfo(last_block.height - 1, last_block.height - 1, last_block.prev_header_hash),
+            prev_ses_block=prev_ses_block,
+            block_record=block_record,
+            assumevalid_height=uint32(last_block.height + 1),
+        )
+        assert err is None
+        assert result == AddBlockResult.NEW_PEAK
 
 
 def maybe_header_hash(block: BlockRecord | None) -> bytes32 | None:

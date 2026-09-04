@@ -201,6 +201,7 @@ class Err(Enum):
     TOO_MANY_SPENDS = 149
     INVALID_HEADER_MMR_ROOT = 150
     INVALID_BLOCK_VERSION = 151
+    ASSUMEVALID_BLOCK_MISMATCH = 152
 
 
 class ValidationError(Exception):
