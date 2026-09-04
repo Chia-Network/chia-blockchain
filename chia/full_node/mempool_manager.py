@@ -574,22 +574,20 @@ class MempoolManager:
         if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
             raise ValueError("too many pairs")
 
+        if spend_bundle_id is None:
+            spend_bundle_id = spend_bundle.name()
+
         if duration > self.validation_timeout:
-            name = spend_bundle_id if spend_bundle_id is not None else spend_bundle.name()
-            self._maybe_log_timeout_spend_bundle(name, spend_bundle)
+            self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
             raise ValueError(f"timeout {duration:0.4} s")
 
         cost = sbc.execution_cost + sbc.condition_cost
         if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
-            name = spend_bundle_id if spend_bundle_id is not None else spend_bundle.name()
-            self._maybe_log_timeout_spend_bundle(name, spend_bundle)
+            self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
             raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
-
-        if spend_bundle_id is None:
-            spend_bundle_id = spend_bundle.name()
 
         log.log(
             logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
