@@ -89,7 +89,7 @@ class GSTOptionalArgs(TypedDict):
     nft_coin: NotRequired[NFTCoinInfo | None]
     new_owner: NotRequired[bytes | None]
     new_did_inner_hash: NotRequired[bytes | None]
-    trade_prices_list: NotRequired[Program | None]
+    trade_prices_list: NotRequired[dict[bytes32, int] | None]
     additional_bundles: NotRequired[list[WalletSpendBundle]]
     metadata_update: NotRequired[tuple[str, str] | None]
     # CR-CAT Wallet

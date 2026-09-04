@@ -13,12 +13,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import Mirror
-from chia.pools.plotnft_drivers import PoolConfig, RewardPuzzle
+from chia.pools.plotnft_drivers import PoolConfig
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import (
     FARMING_TO_POOL,
@@ -57,19 +56,20 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_valid_address
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
@@ -1209,7 +1209,7 @@ class WalletRpcApi:
                         transaction=REPLACEABLE_TRANSACTION_RECORD,
                         total_fee=uint64(request.fee),
                         launcher_id=plotnft.launcher_id,
-                        p2_singleton_puzzle_hash=RewardPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash(),
+                        p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash,
                         # irrelevant, will be replace in serialization
                         type=WalletType.PLOTNFT_2.name,
                         wallet_id=uint32(0),
@@ -2016,9 +2016,9 @@ class WalletRpcApi:
                                 **info.info,
                                 "also": {
                                     **info.info["also"],
-                                    "flags": ProofsChecker.from_program(
-                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
-                                    ).flags,
+                                    "flags": ProofsChecker.match(
+                                        unknown_puzzle=UnknownPuzzle(known_puzzle=info.info["also"]["proofs_checker"])
+                                    ).flags,  # type: ignore[union-attr]
                                 },
                             }
                         )
@@ -2440,8 +2440,10 @@ class WalletRpcApi:
                 start_index=request.start_index, count=request.num
             )
         for nft in nfts:
-            nft_info = await nft_puzzle_utils.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
-            nft_info_list.append(nft_info)
+            nft_driver = NFT.from_db_object(nft)
+            nft_info_list.append(
+                nft_driver.to_ux_object(db_object=nft, config=self.service.wallet_state_manager.config)
+            )
         return NFTGetNFTsResponse(wallet_id=request.wallet_id, nft_list=nft_info_list)
 
     async def nft_set_nft_did(
@@ -2456,9 +2458,7 @@ class WalletRpcApi:
         else:
             did_id = b""
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(request.nft_coin_id)
-        if not (
-            await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
-        ).supports_did:
+        if not NFT.from_db_object(nft_coin_info).is_nft1:
             raise ValueError("The NFT doesn't support setting a DID.")
 
         await nft_wallet.set_nft_did(
@@ -2509,9 +2509,7 @@ class WalletRpcApi:
             else:
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin.nft_coin_id))
             assert nft_coin_info is not None
-            if not (
-                await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
-            ).supports_did:
+            if not NFT.from_db_object(nft_coin_info).is_nft1:
                 log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
             if nft_coin.wallet_id in nft_dict:

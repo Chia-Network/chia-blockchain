@@ -84,7 +84,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATCorePuzzles, CATPuzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
@@ -102,6 +102,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
@@ -1437,7 +1438,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CATCorePuzzles().cat_mod
 
     await wallet_environments.process_pending_states(
         [
@@ -3867,7 +3868,9 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
     # Send to a CAT with an anyone can spend TAIL
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
-    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), Program.to(1))
+    cat_puzzle: Program = CATPuzzle(
+        tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+    ).puzzle
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
         "txch",

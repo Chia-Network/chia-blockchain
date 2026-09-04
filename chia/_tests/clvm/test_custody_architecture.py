@@ -17,10 +17,10 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
-    DelegatedPuzzleAndSolution,
     MemberHint,
     MemberOrDPuz,
     MIPSComponent,
+    MIPSComponentBase,
     MofN,
     ProvenSpend,
     PuzzleWithRestrictions,
@@ -29,6 +29,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     UnknownMember,
     UnknownRestriction,
 )
+from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, InnerPuzzle, UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 BUNCH_OF_ZEROS = bytes32([0] * 32)
@@ -44,13 +45,25 @@ ANY_PROGRAM = Program.to(None)
         # no restrictions
         [],
         # member validator
-        [UnknownRestriction(RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))],
+        [
+            UnknownRestriction(
+                restriction_hint=RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+            )
+        ],
         # dpuz validator
-        [UnknownRestriction(RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))],
+        [
+            UnknownRestriction(
+                restriction_hint=RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+            )
+        ],
         # multiple restrictions of various types
         [
-            UnknownRestriction(RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
-            UnknownRestriction(RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+            UnknownRestriction(
+                restriction_hint=RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+            ),
+            UnknownRestriction(
+                restriction_hint=RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+            ),
         ],
     ],
 )
@@ -58,25 +71,31 @@ ANY_PROGRAM = Program.to(None)
     "puzzle",
     [
         # Custody puzzle
-        UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+        UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
         # 1 of 2 (w/ & w/o restrictions)
         MofN(
             m=1,
             members=[
                 PuzzleWithRestrictions(
-                    nonce=1, restrictions=[], puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+                    nonce=1,
+                    restrictions=[],
+                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
                 ),
                 PuzzleWithRestrictions(
                     nonce=2,
                     restrictions=[
                         UnknownRestriction(
-                            RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                            restriction_hint=RestrictionHint(
+                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                            )
                         ),
                         UnknownRestriction(
-                            RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                            restriction_hint=RestrictionHint(
+                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                            )
                         ),
                     ],
-                    puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
                 ),
             ],
         ),
@@ -87,13 +106,13 @@ ANY_PROGRAM = Program.to(None)
                 PuzzleWithRestrictions(
                     nonce=1,
                     restrictions=[],
-                    puzzle=MofN(
+                    member=MofN(
                         m=1,
                         members=[
                             PuzzleWithRestrictions(
                                 nonce=3,
                                 restrictions=[],
-                                puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
                             )
                         ],
                     ),
@@ -101,13 +120,13 @@ ANY_PROGRAM = Program.to(None)
                 PuzzleWithRestrictions(
                     nonce=4,
                     restrictions=[],
-                    puzzle=MofN(
+                    member=MofN(
                         m=1,
                         members=[
                             PuzzleWithRestrictions(
                                 nonce=5,
                                 restrictions=[],
-                                puzzle=UnknownMember(MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
                             )
                         ],
                     ),
@@ -125,7 +144,7 @@ def test_back_and_forth_hint_parsing(restrictions: list[Restriction[MemberOrDPuz
     cwr = PuzzleWithRestrictions(
         nonce=0,
         restrictions=restrictions,
-        puzzle=puzzle,
+        member=puzzle,
     )
 
     assert PuzzleWithRestrictions.from_memo(cwr.memo()) == cwr
@@ -140,35 +159,43 @@ def test_unknown_puzzle_behavior() -> None:
     """
 
     @dataclass(frozen=True)
-    class PlaceholderPuzzle:
+    class PlaceholderPuzzle(MIPSComponentBase):
         @property
         def member_not_dpuz(self) -> bool:
             raise NotImplementedError  # pragma: no cover
 
-        def memo(self, nonce: int) -> Program:
+        @property
+        def memo(self) -> Program:
             raise NotImplementedError  # pragma: no cover
 
-        def puzzle(self, nonce: int) -> Program:
+        @property
+        def puzzle(self) -> Program:
             raise NotImplementedError  # pragma: no cover
 
-        def puzzle_hash(self, nonce: int) -> bytes32:
-            return bytes32([nonce] * 32)
+        @property
+        def puzzle_hash(self) -> bytes32:
+            assert self.nonce is not None
+            return bytes32([self.nonce] * 32)
+
+        @classmethod
+        def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+            raise NotImplementedError  # pragma: no cover
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
-    unknown_puzzle_0 = UnknownMember(MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
-    pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=unknown_puzzle_0)
+    unknown_puzzle_0 = UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+    pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0)
     assert pwr.unknown_puzzles == {BUNCH_OF_ZEROS: unknown_puzzle_0}
     known_puzzles = {BUNCH_OF_ZEROS: PlaceholderPuzzle()}
     assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
-        nonce=0, restrictions=[], puzzle=PlaceholderPuzzle()
+        nonce=0, restrictions=[], member=PlaceholderPuzzle()
     )
 
     # Now we add some restrictions
     unknown_restriction_1 = UnknownRestriction(
-        RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)
+        restriction_hint=RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)
     )
     unknown_restriction_2 = UnknownRestriction(
-        RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_TWOS, memo=ANY_PROGRAM)
+        restriction_hint=RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_TWOS, memo=ANY_PROGRAM)
     )
     pwr = replace(pwr, restrictions=[unknown_restriction_1, unknown_restriction_2])
     assert pwr.unknown_puzzles == {
@@ -182,18 +209,18 @@ def test_unknown_puzzle_behavior() -> None:
         BUNCH_OF_TWOS: PlaceholderPuzzle(),
     }
     assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
-        nonce=0, restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()], puzzle=PlaceholderPuzzle()
+        nonce=0, restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()], member=PlaceholderPuzzle()
     )
 
     # Now we do test an MofN recursion
-    unknown_puzzle_3 = UnknownMember(MemberHint(puzhash=BUNCH_OF_THREES, memo=ANY_PROGRAM))
+    unknown_puzzle_3 = UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_THREES, memo=ANY_PROGRAM))
     pwr = replace(
         pwr,
-        puzzle=MofN(
+        member=MofN(
             m=1,
             members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=unknown_puzzle_0),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], puzzle=unknown_puzzle_3),
+                PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], member=unknown_puzzle_3),
             ],
         ),
     )
@@ -218,11 +245,11 @@ def test_unknown_puzzle_behavior() -> None:
     assert filled_in == PuzzleWithRestrictions(
         nonce=0,
         restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()],
-        puzzle=MofN(
+        member=MofN(
             m=1,
             members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=PlaceholderPuzzle()),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], puzzle=PlaceholderPuzzle()),
+                PuzzleWithRestrictions(nonce=0, restrictions=[], member=PlaceholderPuzzle()),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], member=PlaceholderPuzzle()),
             ],
         ),
     )
@@ -235,31 +262,46 @@ ACS_MEMBER_PH = ACS_MEMBER.get_tree_hash()
 
 
 @dataclass(frozen=True)
-class ACSMember:
-    def memo(self, nonce: int) -> Program:
+class ACSMember(MIPSComponentBase):
+    @property
+    def memo(self) -> Program:
         raise NotImplementedError  # pragma: no cover
 
-    def puzzle(self, nonce: int) -> Program:
+    @property
+    def puzzle(self) -> Program:
+        assert self.nonce is not None
         # (r (c (q . nonce) ACS_MEMBER_PH))
-        return Program.to([6, [4, (1, nonce), ACS_MEMBER]])
+        return Program.to([6, [4, (1, self.nonce), ACS_MEMBER]])
 
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
+    @property
+    def puzzle_hash(self) -> bytes32:
+        return self.puzzle.get_tree_hash()
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+        raise NotImplementedError  # pragma: no cover
 
 
 @dataclass(frozen=True)
-class ACSDPuzValidator:
+class ACSDPuzValidator(MIPSComponentBase):
     member_not_dpuz: Literal[False] = field(init=False, default=False)
 
-    def memo(self, nonce: int) -> Program:
+    @property
+    def memo(self) -> Program:
         raise NotImplementedError  # pragma: no cover
 
-    def puzzle(self, nonce: int) -> Program:
+    @property
+    def puzzle(self) -> Program:
         # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
+    @property
+    def puzzle_hash(self) -> bytes32:
+        return self.puzzle.get_tree_hash()
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+        raise NotImplementedError  # pragma: no cover
 
 
 @pytest.mark.anyio
@@ -285,19 +327,19 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                 m_of_n = PuzzleWithRestrictions(
                     nonce=0,
                     restrictions=[],
-                    puzzle=MofN(
+                    member=MofN(
                         m=m,
                         members=[
-                            PuzzleWithRestrictions(nonce=n_i, restrictions=restrictions, puzzle=ACSMember())
+                            PuzzleWithRestrictions(nonce=n_i, restrictions=restrictions, member=ACSMember())
                             for n_i in range(n)
                         ],
                     ),
                 )
 
                 # Farm and find coin
-                await sim.farm_block(m_of_n.puzzle_hash())
+                await sim.farm_block(m_of_n.puzzle_hash)
                 m_of_n_coin = (
-                    await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash()], include_spent_coins=False)
+                    await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash], include_spent_coins=False)
                 )[0].coin
                 block_height = sim.block_height
 
@@ -308,14 +350,14 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(n), m):
                     proven_spends = {
-                        PuzzleWithRestrictions(nonce=index, restrictions=restrictions, puzzle=ACSMember()).puzzle_hash(
-                            _top_level=False
-                        ): ProvenSpend(
+                        PuzzleWithRestrictions(
+                            nonce=index, restrictions=restrictions, member=ACSMember(), _top_level=False
+                        ).puzzle_hash: ProvenSpend(
                             puzzle_reveal=PuzzleWithRestrictions(
-                                nonce=index, restrictions=restrictions, puzzle=ACSMember()
-                            ).puzzle_reveal(_top_level=False),
+                                nonce=index, restrictions=restrictions, member=ACSMember(), _top_level=False
+                            ).puzzle,
                             solution=PuzzleWithRestrictions(
-                                nonce=index, restrictions=restrictions, puzzle=ACSMember()
+                                nonce=index, restrictions=restrictions, member=ACSMember()
                             ).solve(
                                 [],
                                 [Program.to(None)] if with_restrictions else [],
@@ -326,7 +368,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                         )
                         for index in indexes
                     }
-                    assert isinstance(m_of_n.puzzle, MofN)
+                    assert isinstance(m_of_n.inner_puzzle, MofN)
                     result = await client.push_tx(
                         cost_logger.add_cost(
                             f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
@@ -334,18 +376,20 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                 [
                                     make_spend(
                                         m_of_n_coin,
-                                        m_of_n.puzzle_reveal(),
+                                        m_of_n.puzzle,
                                         m_of_n.solve(
                                             [],
                                             [],
-                                            m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
+                                            m_of_n.inner_puzzle.solve(proven_spends),  # pylint: disable=no-member
                                             DelegatedPuzzleAndSolution(
-                                                puzzle=Program.to(1),
-                                                solution=Program.to(
-                                                    [
-                                                        announcement_2.to_program(),
-                                                        announcement_1.corresponding_assertion().to_program(),
-                                                    ]
+                                                puzzle=UnknownPuzzle(known_puzzle=Program.to(1)),
+                                                solution=UnknownSolution(
+                                                    solution=Program.to(
+                                                        [
+                                                            announcement_2.to_program(),
+                                                            announcement_1.corresponding_assertion().to_program(),
+                                                        ]
+                                                    )
                                                 ),
                                             ),
                                         ),
@@ -370,25 +414,32 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
             MofN(
                 m=2,
                 members=[
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=ACSMember()),
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=ACSMember()),
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
                 ],
             )
 
 
 @dataclass(frozen=True)
-class ACSMemberValidator:
+class ACSMemberValidator(MIPSComponentBase):
     member_not_dpuz: Literal[True] = field(init=False, default=True)
 
-    def memo(self, nonce: int) -> Program:
+    @property
+    def memo(self) -> Program:
         raise NotImplementedError  # pragma: no cover
 
-    def puzzle(self, nonce: int) -> Program:
-        # (mod (conditions . program) (a program conditions))
+    @property
+    def puzzle(self) -> Program:
+        # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
+    @property
+    def puzzle_hash(self) -> bytes32:
+        return self.puzzle.get_tree_hash()
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+        raise NotImplementedError  # pragma: no cover
 
 
 @pytest.mark.anyio
@@ -400,12 +451,12 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
         pwr = PuzzleWithRestrictions(
             nonce=0,
             restrictions=[ACSMemberValidator(), ACSMemberValidator(), ACSDPuzValidator(), ACSDPuzValidator()],
-            puzzle=ACSMember(),
+            member=ACSMember(),
         )
 
         # Farm coin with puzzle inside
-        await sim.farm_block(pwr.puzzle_hash())
-        pwr_coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[
+        await sim.farm_block(pwr.puzzle_hash)
+        pwr_coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[
             0
         ].coin
 
@@ -422,7 +473,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                     [
                         make_spend(
                             pwr_coin,
-                            pwr.puzzle_reveal(),
+                            pwr.puzzle,
                             pwr.solve(
                                 [
                                     Program.to(None),
@@ -443,12 +494,14 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                     ]
                                 ),
                                 DelegatedPuzzleAndSolution(
-                                    puzzle=dpuz,
-                                    solution=Program.to(
-                                        [
-                                            announcement_2.to_program(),
-                                            announcement_1.corresponding_assertion().to_program(),
-                                        ]
+                                    puzzle=UnknownPuzzle(known_puzzle=dpuz),
+                                    solution=UnknownSolution(
+                                        solution=Program.to(
+                                            [
+                                                announcement_2.to_program(),
+                                                announcement_1.corresponding_assertion().to_program(),
+                                            ]
+                                        )
                                     ),
                                 ),
                             ),
