@@ -371,6 +371,10 @@ full_node:
   # stuck — that is intentional). Blocks above the cutoff are always fully
   # signature-validated. Header/plot signatures are never skipped.
   #
+  # Choose a block that is deeply buried, far below the current peak. If that
+  # block is later reorged out of the canonical chain, the node will get stuck
+  # (sync keeps failing the hash check at assumevalid_height).
+  #
   # WARNING: After enabling this, disabling or changing it requires wiping
   # the blockchain database and resyncing. Otherwise the DB may retain a
   # prefix of blocks whose aggregate signatures were never verified (for
