@@ -428,8 +428,11 @@ full_node:
 
   enable_memory_profiler: False
 
-  # this is a debug/auditing facility that saves all spend bundles added to the
-  # mempool, organized by peak height at the time
+  # Debug/auditing facility that saves spend bundles under mempool-log/,
+  # organized by peak height. Values: false (off), true (every tx after
+  # successful pre-validation), timeout (only txs that hit the CLVM/sig
+  # validation timeout). YAML bools true/false are accepted for backward
+  # compatibility.
   log_mempool: false
 
   # this is a debug and profiling facility that logs all SQLite commands to a

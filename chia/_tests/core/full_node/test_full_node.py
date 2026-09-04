@@ -10,6 +10,7 @@ import random
 import sqlite3
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -1663,6 +1664,92 @@ async def test_add_transaction_remove_seen_on_unexpected_exception(
 
     assert not fn.mempool_manager.in_flight(spend_name)
     assert not fn.mempool_manager.seen(spend_name)
+
+
+def _mempool_log_path(fn: FullNode, spend_name: bytes32) -> Path:
+    return path_from_root(fn.root_path, "mempool-log") / f"{fn.blockchain.get_peak_height()}" / f"{spend_name}.bundle"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "log_mempool,expect_log",
+    [
+        (True, True),
+        (False, False),
+        ("timeout", False),
+    ],
+)
+async def test_log_mempool_true_logs_spend_bundle(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    log_mempool: bool | str,
+    expect_log: bool,
+) -> None:
+    full_node_1, _, bt = one_node_one_block
+    fn = full_node_1.full_node
+    fn.config["log_mempool"] = log_mempool
+
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
+    spend_name = spend_bundle.name()
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+
+    log_path = _mempool_log_path(fn, spend_name)
+    assert log_path.exists() == expect_log
+    if expect_log:
+        assert log_path.read_bytes() == bytes(spend_bundle)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (True, "true"),
+        ("true", "true"),
+        (False, "false"),
+        ("false", "false"),
+        ("timeout", "timeout"),
+        (None, "false"),
+        ("other", "false"),
+        # Integers users may try (e.g. 0/1 as off/on); only exact bool/string forms count.
+        (0, "false"),
+        (1, "false"),
+        (2, "false"),
+        # Capitalization matters: only lowercase "true" / "timeout" are recognized.
+        ("True", "false"),
+        ("TRUE", "false"),
+        ("False", "false"),
+        ("FALSE", "false"),
+        ("Timeout", "false"),
+        ("TIMEOUT", "false"),
+        # Surrounding whitespace is not stripped.
+        (" true", "false"),
+        ("true ", "false"),
+        ("true\n", "false"),
+        (" timeout", "false"),
+        ("timeout ", "false"),
+    ],
+)
+async def test_log_mempool_mode_normalization(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    value: object,
+    expected: str,
+) -> None:
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+    if value is None:
+        fn.config.pop("log_mempool", None)
+    else:
+        fn.config["log_mempool"] = value
+    assert fn._log_mempool_mode() == expected
 
 
 @pytest.mark.anyio

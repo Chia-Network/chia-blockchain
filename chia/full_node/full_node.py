@@ -63,7 +63,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mempool_manager import LogMempoolMode, MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -349,6 +349,8 @@ class FullNode:
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
+                log_mempool=self._log_mempool_mode(),
+                root_path=self.root_path,
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(
@@ -3012,6 +3014,15 @@ class FullNode:
                 )
         return None, False
 
+    def _log_mempool_mode(self) -> LogMempoolMode:
+        """Normalize log_mempool config: YAML bools or strings \"true\"/\"false\"/\"timeout\"."""
+        v = self.config.get("log_mempool", False)
+        if v is True or v == "true":
+            return "true"
+        if v == "timeout":
+            return "timeout"
+        return "false"
+
     async def add_transaction(
         self,
         transaction: SpendBundle,
@@ -3043,6 +3054,8 @@ class FullNode:
             if peer_info.advertised_cost > 0:
                 fee_per_cost = max(fee_per_cost, peer_info.advertised_fee / peer_info.advertised_cost)
 
+        log_mempool_mode = self._log_mempool_mode()
+
         # Mark as in-flight before the expensive pre_validate call so
         # concurrent workers processing the same tx from different peers are
         # deduplicated without churning the bounded seen cache.
@@ -3053,7 +3066,8 @@ class FullNode:
             )
         except ValueError as e:
             # ValueError is used to indicate a soft failure. We don't want to
-            # ban the peer.
+            # ban the peer. Timeouts are logged by MempoolManager when
+            # log_mempool is "timeout".
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
@@ -3066,7 +3080,7 @@ class FullNode:
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 
-        if self.config.get("log_mempool", False):  # pragma: no cover
+        if log_mempool_mode == "true":
             try:
                 mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{self.blockchain.get_peak_height()}"
                 mempool_dir.mkdir(parents=True, exist_ok=True)
