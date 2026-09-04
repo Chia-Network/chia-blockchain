@@ -71,7 +71,7 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
 
     tail_hash: bytes32
     inner_puzzle: _T_InnerPuzzle
-    cat_puzzles: CATCorePuzzles = dataclasses.field(default_factory=CATCorePuzzles)
+    cat_puzzles: ClassVar[CATCorePuzzles] = CATCorePuzzles()
 
     def _inner_curry_arg(self) -> Program | bytes32:
         if isinstance(self.inner_puzzle, UnknownPuzzle) and self.inner_puzzle.known_puzzle is None:

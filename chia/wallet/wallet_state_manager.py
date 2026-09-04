@@ -71,11 +71,9 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, DIDMetadata, DIDRecoveryPuzzle
 from chia.wallet.fungibility_manager import FungibilityManager
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet import nft_puzzle_utils
-from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs, get_new_owner_did
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT, NFTSolution, OwnershipLayer
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_store import PlotNFTStore
@@ -83,7 +81,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle, SingletonStruct
 from chia.wallet.puzzles.standard_puzzle_drivers import StandardPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
@@ -962,10 +960,34 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
-        if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
-            nft_data = NFTCoinData(uncurried_nft, parent_coin_state, coin_spend)
-            return await NFTWallet.identify(self, nft_data), nft_data
+        nft_match = NFT.match(unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter())))
+        if nft_match is not None and coin_state.coin.amount % 2 == 1:
+            nft_solution_match = NFTSolution.match(
+                unknown_solution=UnknownSolution(solution=Program.from_serialized(coin_spend.solution))
+            )
+            if nft_solution_match is None:
+                return None, None
+
+            next_nft = NFT.get_next_from_previous(
+                previous_coin=coin_spend.coin,
+                previous_nft_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter())),
+                previous_solution=UnknownSolution(solution=Program.from_serialized(coin_spend.solution)),
+            )
+            assert parent_coin_state.spent_height is not None
+            return (
+                await NFTWallet.identify(
+                    self,
+                    parent_coin_state.spent_height,
+                    NFT(
+                        coin=coin_spend.coin,
+                        launcher_id=nft_match.launcher_id,
+                        lineage_proof=nft_solution_match.lineage_proof,
+                        inner_puzzle=nft_match.inner_puzzle,
+                    ),
+                    next_nft,
+                ),
+                next_nft,  # type: ignore[return-value]
+            )
 
         # Check if the coin is a DID
         singleton_match = SingletonPuzzle.match(
@@ -1005,7 +1027,7 @@ class WalletStateManager:
             return await VCWallet.identify(self, vc), vc  # type: ignore[return-value]
 
         # Check if the coin is a PlotNFT
-        if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
+        if uncurried.mod == PlotNFT.struct_driver.singleton_puzzles.singleton_mod:
             plotnft_result = await PlotNFT2Wallet.identify(self, uncurried, coin_spend)
             if plotnft_result is not None:
                 return plotnft_result  # type: ignore[return-value]
@@ -1065,15 +1087,25 @@ class WalletStateManager:
         # Get minter DID
         eve_coin = (await self.wallet_node.fetch_children(launcher_coin.name(), peer=peer))[0]
         eve_coin_spend = await fetch_coin_spend_for_coin_state(eve_coin, peer)
-        eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
-        eve_uncurried_nft: UncurriedNFT | None = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
-        if eve_uncurried_nft is None:
+        eve_full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(eve_coin_spend.puzzle_reveal))
+        eve_full_solution = UnknownSolution(solution=Program.from_serialized(eve_coin_spend.solution))
+        eve_nft_puzzle = NFT.match(unknown_puzzle=eve_full_puzzle)
+        eve_solution = NFTSolution.match(unknown_solution=eve_full_solution)
+        if eve_nft_puzzle is None or eve_solution is None:
             raise ValueError("Couldn't get minter DID for NFT")
-        if not eve_uncurried_nft.supports_did:
+        eve_nft = NFT(
+            coin=eve_coin.coin,
+            launcher_id=launcher_coin.name(),
+            lineage_proof=eve_solution.lineage_proof,
+            inner_puzzle=eve_nft_puzzle.inner_puzzle,
+        )
+        if not eve_nft.is_nft1:
             return None
-        minter_did = get_new_owner_did(eve_uncurried_nft, Program.from_serialized(eve_coin_spend.solution))
-        if minter_did == b"":
-            minter_did = None
+        next_nft = NFT.get_next_from_previous(
+            previous_coin=eve_nft.coin, previous_nft_puzzle=eve_full_puzzle, previous_solution=eve_full_solution
+        )
+        assert isinstance(next_nft.inner_puzzle.inner_puzzle, OwnershipLayer)
+        minter_did = next_nft.inner_puzzle.inner_puzzle.current_owner
         if minter_did is None:
             # Check if the NFT is a bulk minting
             launcher_parent: list[CoinState] = await self.wallet_node.get_coin_state(
@@ -2303,51 +2335,34 @@ class WalletStateManager:
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
         # convert to NFTInfo
         # Check if the metadata is updated
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
+        full_solution = UnknownSolution(solution=Program.from_serialized(coin_spend.solution))
 
-        uncurried_nft: UncurriedNFT | None = UncurriedNFT.uncurry(*full_puzzle.uncurry())
-        if uncurried_nft is None:
-            raise ValueError("The coin is not a NFT.")
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
-        # Note: This is not the actual unspent NFT full puzzle.
-        # There is no way to rebuild the full puzzle in a different wallet.
-        # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
-        if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
-                uncurried_nft, Program.from_serialized(coin_spend.solution), uncurried_nft.p2_puzzle
-            )
-        else:
-            inner_puzzle = uncurried_nft.p2_puzzle
-
-        full_puzzle = nft_puzzle_utils.create_full_puzzle(
-            uncurried_nft.singleton_launcher_id,
-            metadata,
-            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
-            inner_puzzle,
+        nft = NFT.get_next_from_previous(
+            previous_coin=coin_spend.coin, previous_nft_puzzle=full_puzzle, previous_solution=full_solution
         )
 
         # Get launcher coin
-        launcher_coin: list[CoinState] = await self.wallet_node.get_coin_state(
-            [uncurried_nft.singleton_launcher_id], peer=peer
-        )
+        launcher_coin: list[CoinState] = await self.wallet_node.get_coin_state([nft.launcher_id], peer=peer)
         if len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
-            raise ValueError(f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found")
+            raise ValueError(f"Launcher coin record 0x{nft.launcher_id.hex()} not found")
         minter_did = await self.get_minter_did(launcher_coin[0].coin, peer)
+        assert coin_state.created_height is not None
 
         return ManualNFTSearchResults(
-            nft_info=await nft_puzzle_utils.get_nft_info_from_puzzle(
-                NFTCoinInfo(
-                    uncurried_nft.singleton_launcher_id,
-                    coin_state.coin,
-                    None,
-                    full_puzzle,
-                    uint32(launcher_coin[0].spent_height),
-                    minter_did,
-                    uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
+            nft_info=nft.to_ux_object(
+                # Note: This is not the actual unspent NFT full puzzle.
+                # There is no way to rebuild the full puzzle in a different wallet.
+                # But it shouldn't have impact on generating the UX info, since inner_puzzle is not used there.
+                nft.replace_inner_most_puzzle(UnknownPuzzle(known_puzzle=Program.NIL)).to_db_object(
+                    mint_height=launcher_coin[0].spent_height,
+                    minter_did=minter_did,
+                    latest_height=coin_state.created_height,
+                    pending_transaction=False,
                 ),
-                self.config,
+                config=self.config,
             ),
-            next_p2_puzzle_hash=p2_puzzle_hash,
+            next_p2_puzzle_hash=nft.innermost_puzzle.puzzle_hash,
         )
 
     async def find_lost_did(

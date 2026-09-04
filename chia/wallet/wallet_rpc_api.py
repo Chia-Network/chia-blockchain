@@ -56,8 +56,8 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
@@ -2440,8 +2440,10 @@ class WalletRpcApi:
                 start_index=request.start_index, count=request.num
             )
         for nft in nfts:
-            nft_info = await nft_puzzle_utils.get_nft_info_from_puzzle(nft, self.service.wallet_state_manager.config)
-            nft_info_list.append(nft_info)
+            nft_driver = NFT.from_db_object(nft)
+            nft_info_list.append(
+                nft_driver.to_ux_object(db_object=nft, config=self.service.wallet_state_manager.config)
+            )
         return NFTGetNFTsResponse(wallet_id=request.wallet_id, nft_list=nft_info_list)
 
     async def nft_set_nft_did(
@@ -2456,9 +2458,7 @@ class WalletRpcApi:
         else:
             did_id = b""
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(request.nft_coin_id)
-        if not (
-            await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
-        ).supports_did:
+        if not NFT.from_db_object(nft_coin_info).is_nft1:
             raise ValueError("The NFT doesn't support setting a DID.")
 
         await nft_wallet.set_nft_did(
@@ -2509,9 +2509,7 @@ class WalletRpcApi:
             else:
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin.nft_coin_id))
             assert nft_coin_info is not None
-            if not (
-                await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
-            ).supports_did:
+            if not NFT.from_db_object(nft_coin_info).is_nft1:
                 log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
             if nft_coin.wallet_id in nft_dict:

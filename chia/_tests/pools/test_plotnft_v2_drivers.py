@@ -425,16 +425,17 @@ def test_plotnft_errors() -> None:
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
+
+        class BadLauncherStruct(SingletonStruct):
+            singleton_puzzles = SingletonCorePuzzles(
+                singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+            )
+
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.singleton_puzzles.singleton_mod).curry(
-                    SingletonStruct(
-                        launcher_id=bytes32.zeros,
-                        singleton_puzzles=SingletonCorePuzzles(
-                            singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
-                        ),
-                    ).program
+                Program.to(PlotNFT.struct_driver.singleton_puzzles.singleton_mod).curry(
+                    BadLauncherStruct(launcher_id=bytes32.zeros).program
                 ),
                 NilSolution().as_program(),
             ),
@@ -443,7 +444,7 @@ def test_plotnft_errors() -> None:
 
     def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
         return UncurriedPuzzle(
-            mod=PlotNFT.singleton_puzzles.singleton_mod,
+            mod=PlotNFT.struct_driver.singleton_puzzles.singleton_mod,
             args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz]),
         )
 

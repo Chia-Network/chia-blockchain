@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.puzzle_drivers import InnerPuzzle, OuterPuzzle, PuzzleWithPuzzleHash, UnknownPuzzle
-from chia.wallet.puzzles.singleton_drivers import SingletonCorePuzzles, SingletonStruct
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
     curry_and_treehash,
@@ -67,9 +67,9 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     inner_puzzle: _T_InnerPuzzle
     self_launcher_id: bytes32
     metadata: DIDMetadata
-    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
     recovery_list: RecoveryList
     num_of_backup_ids_needed: uint64
+    struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
 
     @property
     def puzzle(self) -> Program:
@@ -77,7 +77,7 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
             self.inner_puzzle.puzzle,
             self.recovery_list.tree_hash,
             self.num_of_backup_ids_needed,
-            SingletonStruct(launcher_id=self.self_launcher_id, singleton_puzzles=self.singleton_puzzles).program,
+            self.struct_driver(launcher_id=self.self_launcher_id).program,
             self.metadata.as_program(),
         )
 
@@ -88,7 +88,7 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
             self.inner_puzzle.puzzle_hash,
             self.recovery_list.pre_hashed,
             Program.to(self.num_of_backup_ids_needed).get_tree_hash(),
-            SingletonStruct(launcher_id=self.self_launcher_id, singleton_puzzles=self.singleton_puzzles).struct_hash,
+            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
             self.metadata.tree_hash,
         )
 
@@ -104,7 +104,7 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         )
         return DIDRecoveryPuzzle(
             inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
-            self_launcher_id=SingletonStruct.from_program(singleton_struct).launcher_id,
+            self_launcher_id=cls.struct_driver.from_program(singleton_struct).launcher_id,
             metadata=DIDMetadata.from_program(metadata),
             recovery_list=RecoveryList(
                 tree_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None

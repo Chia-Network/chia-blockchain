@@ -17,9 +17,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import RCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
-    HASH_TREE_CAT_CORE_PUZZLES,
     QUOTED_CAT_MOD_HASH,
     CATPuzzle,
 )
@@ -279,8 +277,7 @@ class RCATWallet(CATWallet):
             CATPuzzle(
                 tail_hash=self.info.limitations_program_hash,
                 inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint_inner_hash),
-                cat_puzzles=HASH_TREE_CAT_CORE_PUZZLES,
-            ).puzzle.get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
+            ).puzzle_hash
             == coin.puzzle_hash
         ):
             return True

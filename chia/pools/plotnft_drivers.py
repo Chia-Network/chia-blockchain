@@ -48,7 +48,6 @@ from chia.wallet.puzzles.singleton_drivers import (
     P2Singleton,
     P2SingletonPuzzle,
     Singleton,
-    SingletonCorePuzzles,
     SingletonLaunchInfo,
     SingletonLaunchResult,
     SingletonPuzzle,
@@ -91,7 +90,7 @@ class PlotNFTInnerPuzzle(PuzzleWithPuzzleHash):
     self_launcher_id: bytes32 | None = None
     genesis_challenge: bytes32 | None = None
     pool_config: PoolConfig | None = None
-    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
+    struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
 
     def __post_init__(self) -> None:
         if self.pool_config is not None and (
@@ -109,7 +108,7 @@ class PlotNFTInnerPuzzle(PuzzleWithPuzzleHash):
 
     @property
     def singleton_struct(self) -> SingletonStruct:
-        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
+        return self.struct_driver(launcher_id=self.launcher_id)
 
     @property
     def pooling(self) -> bool:
@@ -140,7 +139,7 @@ class PlotNFTInnerPuzzle(PuzzleWithPuzzleHash):
         assert self.genesis_challenge is not None
         return CLAIM_POOL_REWARDS_DELEGATED_PUZZLE.curry(
             self.genesis_challenge[:16],
-            self.singleton_puzzles.singleton_mod_hash,
+            self.struct_driver.singleton_puzzles.singleton_mod_hash,
             self.singleton_struct.struct_hash,
             P2SingletonPuzzle(singleton_id=self.launcher_id).puzzle_hash,
             self.forward_pool_reward_dpuz.get_tree_hash(),
@@ -357,7 +356,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         remark: Remark | None = None,
     ) -> PlotNFTLaunchResult:
         origin_coin = origin_coins[0]
-        launcher_coin = Coin(origin_coin.name(), cls.singleton_puzzles.singleton_launcher_hash, uint64(1))
+        launcher_coin = Coin(origin_coin.name(), cls.struct_driver.singleton_puzzles.singleton_launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
 
         plotnft_inner_puzzle = PlotNFTInnerPuzzle(
@@ -434,9 +433,9 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             singleton = pre_uncurry
 
         # examine the singleton level info
-        if singleton.mod != cls.singleton_puzzles.singleton_mod:
+        if singleton.mod != cls.struct_driver.singleton_puzzles.singleton_mod:
             raise GetNextPlotNFTError("Invalid singleton mod for next PlotNFT")
-        if singleton.args.at("frr") != cls.singleton_puzzles.singleton_launcher_hash:
+        if singleton.args.at("frr") != cls.struct_driver.singleton_puzzles.singleton_launcher_hash:
             raise GetNextPlotNFTError("Invalid singleton launcher for next PlotNFT")
 
         launcher_id = bytes32(singleton.args.at("frf").as_atom())

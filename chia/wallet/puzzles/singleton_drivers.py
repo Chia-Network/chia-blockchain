@@ -76,7 +76,7 @@ class SingletonCorePuzzles:
 @dataclass(kw_only=True, frozen=True)
 class SingletonStruct:
     launcher_id: bytes32
-    singleton_puzzles: SingletonCorePuzzles = SingletonCorePuzzles()
+    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
 
     @cached_property
     def program(self) -> Program:
@@ -109,14 +109,14 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
 
     launcher_id: bytes32
     inner_puzzle: _T_InnerPuzzle
-    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
+    struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
     melt_condition: ClassVar[UnknownCondition] = UnknownCondition(
         opcode=Program.to(51), args=[Program.NIL, Program.to(-113)]
     )
 
     @property
     def singleton_struct(self) -> SingletonStruct:
-        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
+        return SingletonStruct(launcher_id=self.launcher_id)
 
     @property
     def puzzle(self) -> Program:
@@ -127,7 +127,7 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     @property
     def puzzle_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
-            self.singleton_puzzles.hash_of_quoted_mod_hash,
+            self.struct_driver.singleton_puzzles.hash_of_quoted_mod_hash,
             self.singleton_struct.struct_hash,
             self.inner_puzzle.puzzle_hash,
         )
@@ -136,7 +136,10 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     def match(
         cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
     ) -> SingletonPuzzle[UnknownPuzzle] | None:
-        if unknown_puzzle.mod != cls.singleton_puzzles.singleton_mod or unknown_puzzle.curried_args is None:
+        if (
+            unknown_puzzle.mod != cls.struct_driver.singleton_puzzles.singleton_mod
+            or unknown_puzzle.curried_args is None
+        ):
             return None
         singleton_struct, inner_puzzle = unknown_puzzle.curried_args
         return SingletonPuzzle(
@@ -150,27 +153,30 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         return replace(self, inner_puzzle=inner_puzzle)  # type: ignore[arg-type]
 
 
+_T_Solution = TypeVar("_T_Solution", bound=Solution)
+
+
 @dataclass(kw_only=True)
-class SingletonSolution:
+class SingletonSolution(Generic[_T_Solution]):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[Solution] = cast("SingletonSolution", None)
+        _protocol_check: ClassVar[Solution] = cast("SingletonSolution[UnknownSolution]", None)
 
     lineage_proof: LineageProof
     coin_amount: uint64
-    inner_solution: Solution
+    inner_solution: _T_Solution
 
     def as_program(self) -> Program:
         return Program.to([self.lineage_proof.to_program(), self.coin_amount, self.inner_solution.as_program()])
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> SingletonSolution | None:
+    def match(cls, *, unknown_solution: UnknownSolution) -> SingletonSolution[UnknownSolution] | None:
         if unknown_solution.as_program().atom is not None:
             return None
         list_of_values = list(unknown_solution.as_program().as_iter())
         if len(list_of_values) != 3:
             return None
         num_lineage_proof_fields = len(list(list_of_values[0].as_iter()))
-        return cls(
+        return SingletonSolution(
             lineage_proof=LineageProof.from_program(
                 list_of_values[0],
                 [LineageProofField.PARENT_NAME, LineageProofField.AMOUNT]
@@ -228,7 +234,9 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
         if (launch_info.amount % 2) == 0:
             raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
-        launcher_coin = Coin(origin_coin.name(), cls.singleton_puzzles.singleton_launcher_hash, launch_info.amount)
+        launcher_coin = Coin(
+            origin_coin.name(), cls.struct_driver.singleton_puzzles.singleton_launcher_hash, launch_info.amount
+        )
         launcher_id = launcher_coin.name()
         new_singleton_puzzle = SingletonPuzzle(launcher_id=launcher_id, inner_puzzle=launch_info.desired_inner_puzzle)
 
@@ -240,7 +248,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
             ]
         )
         create_launcher_condition = CreateCoin(
-            puzzle_hash=cls.singleton_puzzles.singleton_launcher_hash, amount=launch_info.amount
+            puzzle_hash=cls.struct_driver.singleton_puzzles.singleton_launcher_hash, amount=launch_info.amount
         )
         assert_launcher_announcement = AssertCoinAnnouncement(
             asserted_id=launcher_id, asserted_msg=launcher_solution.get_tree_hash()
@@ -251,7 +259,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
             necessary_spends=[
                 make_spend(
                     launcher_coin,
-                    cls.singleton_puzzles.singleton_launcher,
+                    cls.struct_driver.singleton_puzzles.singleton_launcher,
                     launcher_solution,
                 )
             ],
