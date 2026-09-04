@@ -1719,6 +1719,23 @@ async def test_log_mempool_true_logs_spend_bundle(
         ("timeout", "timeout"),
         (None, "false"),
         ("other", "false"),
+        # Integers users may try (e.g. 0/1 as off/on); only exact bool/string forms count.
+        (0, "false"),
+        (1, "false"),
+        (2, "false"),
+        # Capitalization matters: only lowercase "true" / "timeout" are recognized.
+        ("True", "false"),
+        ("TRUE", "false"),
+        ("False", "false"),
+        ("FALSE", "false"),
+        ("Timeout", "false"),
+        ("TIMEOUT", "false"),
+        # Surrounding whitespace is not stripped.
+        (" true", "false"),
+        ("true ", "false"),
+        ("true\n", "false"),
+        (" timeout", "false"),
+        ("timeout ", "false"),
     ],
 )
 async def test_log_mempool_mode_normalization(
