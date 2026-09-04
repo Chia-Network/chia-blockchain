@@ -48,7 +48,6 @@ def check_plots(
 ) -> None:
     config = load_config(root_path, "config.yaml")
     selected_network = config["selected_network"]
-    testnet = selected_network != "mainnet"
     address_prefix = config["network_overrides"]["config"][selected_network]["address_prefix"]
     plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=uint32(0))
     plot_manager: PlotManager = PlotManager(
@@ -162,7 +161,12 @@ def check_plots(
             local_sk = master_sk_to_local_sk(local_master_sk)
 
             with lock:
-                log.info(f"Testing plot {plot_path} k={pr.get_param()}")
+                if isinstance(pr, V1Prover):
+                    plot_description = f"k={pr.get_param()}"
+                else:
+                    assert isinstance(pr, V2Prover)
+                    plot_description = f"strength={pr.get_strength()}, group_size={pr.get_group_size()}"
+                log.info(f"Testing plot {plot_path} {plot_description}")
                 if plot_info.pool_public_key is not None:
                     log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
                 if plot_info.pool_contract_puzzle_hash is not None:
@@ -219,7 +223,7 @@ def check_plots(
                             assert isinstance(quality, V2Quality)
                             full_proof = solve_proof(
                                 quality.get_partial_proof(),
-                                pr.get_id(),
+                                pr.plot_id_for_index(quality.get_plot_index()),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
                             )
@@ -239,13 +243,15 @@ def check_plots(
                                 pr.get_id(), pr.get_param().size_v1, challenge, full_proof
                             )
                         elif isinstance(pr, V2Prover):
+                            assert isinstance(quality, V2Quality)
                             ver_quality_str = validate_proof_v2(
                                 pr.get_id(),
+                                quality.get_plot_index(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
-                                challenge,
                                 pr.get_strength(),
+                                pr.get_meta_group(),
+                                challenge,
                                 full_proof,
-                                testnet,
                             )
 
                         if quality_str == ver_quality_str:
@@ -276,12 +282,14 @@ def check_plots(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
-                param = pr.get_param()
-                if param.size_v1 is not None:
+                if isinstance(pr, V1Prover):
+                    param = pr.get_param()
+                    assert param.size_v1 is not None
                     k = param.size_v1
                     total_good_plots_v1[k] += 1
                     total_size += plot_path.stat().st_size
                 else:
+                    assert isinstance(pr, V2Prover)
                     total_good_plots_v2 += 1
                     total_size += plot_path.stat().st_size
             else:

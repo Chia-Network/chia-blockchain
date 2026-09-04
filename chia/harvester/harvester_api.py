@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
@@ -29,7 +29,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
-    compute_plot_group_id,
     generate_plot_public_key,
     is_v1_phased_out,
     make_pos,
@@ -65,25 +64,17 @@ class HarvesterAPI:
         challenge: harvester_protocol.NewSignagePointHarvester2,
     ) -> bool:
         if plot_info.prover.get_version() == PlotVersion.V2:
+            assert isinstance(plot_info.prover, V2Prover)
             # V2 plots always use predictable filter — no fallback
             filter_challenge = getattr(challenge, "filter_challenge", None)
             if filter_challenge is None:
                 return False
-            param = plot_info.prover.get_param()
-            pool_info = (
-                plot_info.pool_contract_puzzle_hash
-                if plot_info.pool_contract_puzzle_hash
-                else plot_info.pool_public_key
-            )
-            assert pool_info is not None
-            assert param.strength_v2 is not None
-            plot_group_id = compute_plot_group_id(param.strength_v2, plot_info.plot_public_key, pool_info)
             group_strength = calculate_plot_filter_bits(
-                challenge.last_tx_height, self.harvester.constants, param.strength_v2
+                challenge.last_tx_height, self.harvester.constants, plot_info.prover.get_strength()
             )
             return passes_plot_filter_v2(
-                plot_group_id,
-                param.meta_group,
+                plot_info.prover.get_id(),
+                plot_info.prover.get_meta_group(),
                 group_strength,
                 filter_challenge,
                 challenge.signage_point_index,
@@ -124,23 +115,27 @@ class HarvesterAPI:
         return proofs_found
 
     async def _handle_v2_responses(
-        self, v2_awaitables: Sequence[Awaitable[PartialProofsData | None]], start_time: float, peer: WSChiaConnection
+        self,
+        v2_awaitables: Sequence[Awaitable[list[PartialProofsData] | None]],
+        start_time: float,
+        peer: WSChiaConnection,
     ) -> int:
         partial_proofs_found = 0
         for quality_awaitable in asyncio.as_completed(v2_awaitables):
-            partial_proofs_data = await quality_awaitable
-            if partial_proofs_data is None:
+            partial_proofs_data_list = await quality_awaitable
+            if partial_proofs_data_list is None:
                 continue
-            time_taken = time.monotonic() - start_time
-            if time_taken > 8:
-                self.harvester.log.warning(
-                    f"Looking up partial proofs on {partial_proofs_data.plot_identifier}"
-                    f"took: {time_taken}. This should be below 8 seconds"
-                    f"to minimize risk of losing rewards."
-                )
-            partial_proofs_found += len(partial_proofs_data.partial_proofs)
-            msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
-            await peer.send_message(msg)
+            for partial_proofs_data in partial_proofs_data_list:
+                time_taken = time.monotonic() - start_time
+                if time_taken > 8:
+                    self.harvester.log.warning(
+                        f"Looking up partial proofs on {partial_proofs_data.plot_identifier}"
+                        f"took: {time_taken}. This should be below 8 seconds"
+                        f"to minimize risk of losing rewards."
+                    )
+                partial_proofs_found += len(partial_proofs_data.partial_proofs)
+                msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
+                await peer.send_message(msg)
         return partial_proofs_found
 
     @metadata.request(peer_required=True)
@@ -190,12 +185,13 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> PartialProofsData | None:
+        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> list[PartialProofsData] | None:
             # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
             try:
-                plot_id = plot_info.prover.get_id()
+                assert isinstance(plot_info.prover, V2Prover)
+                plot_group_id = plot_info.prover.get_id()
                 sp_challenge_hash = calculate_pos_challenge(
-                    plot_id,
+                    plot_group_id,
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
@@ -217,14 +213,16 @@ class HarvesterAPI:
                             break
 
                 # Filter qualities that pass the required_iters check (same as V1 flow)
-                good_partial_proofs = []
+                good_qualities: dict[uint16, list[V2Quality]] = {}
                 sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
                 for quality in qualities:
+                    assert isinstance(quality, V2Quality)
+
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
                         quality.get_string(),
-                        plot_info.prover.get_param(),
+                        plot_info.prover.get_param_for_index(quality.get_plot_index()),
                         difficulty,
                         new_challenge.sp_hash,
                         height=new_challenge.last_tx_height,
@@ -233,32 +231,33 @@ class HarvesterAPI:
                     if required_iters >= sp_interval_iters:
                         continue
 
-                    assert isinstance(plot_info.prover, V2Prover)
-                    assert isinstance(quality, V2Quality)
+                    good_qualities.setdefault(quality.get_plot_index(), []).append(quality)
 
-                    good_partial_proofs.append(quality.get_partial_proof())
-
-                if len(good_partial_proofs) == 0:
+                if len(good_qualities) == 0:
                     return None
 
-                param = plot_info.prover.get_param()
-                assert param.strength_v2 is not None
-
-                return PartialProofsData(
-                    new_challenge.challenge_hash,
-                    new_challenge.sp_hash,
-                    str(filename.resolve()),
-                    good_partial_proofs,
-                    new_challenge.signage_point_index,
-                    self.harvester.constants.PLOT_SIZE_V2,
-                    param.plot_index,
-                    param.meta_group,
-                    param.strength_v2,
-                    plot_id,
-                    plot_info.pool_public_key,
-                    plot_info.pool_contract_puzzle_hash,
-                    plot_info.plot_public_key,
-                )
+                responses: list[PartialProofsData] = []
+                for plot_index, plot_qualities in good_qualities.items():
+                    param = plot_info.prover.get_param_for_index(plot_index)
+                    assert param.strength_v2 is not None
+                    responses.append(
+                        PartialProofsData(
+                            new_challenge.challenge_hash,
+                            new_challenge.sp_hash,
+                            str(filename.resolve()),
+                            [quality.get_partial_proof() for quality in plot_qualities],
+                            new_challenge.signage_point_index,
+                            self.harvester.constants.PLOT_SIZE_V2,
+                            plot_index,
+                            param.meta_group,
+                            param.strength_v2,
+                            plot_group_id,
+                            plot_info.pool_public_key,
+                            plot_info.pool_contract_puzzle_hash,
+                            plot_info.plot_public_key,
+                        )
+                    )
+                return responses
             except Exception:
                 self.harvester.log.exception("Failed V2 partial proof lookup")
                 return None
