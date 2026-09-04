@@ -11,7 +11,7 @@ from chia.types.coin_spend import make_spend
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 
 def test_cat_outer_puzzle() -> None:
@@ -19,7 +19,7 @@ def test_cat_outer_puzzle() -> None:
     tail = bytes32.zeros
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
     double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
-    uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)
+    uncurried_cat_puzzle = UnknownPuzzle(known_program=double_cat_puzzle)
     cat_driver: PuzzleInfo | None = match_puzzle(uncurried_cat_puzzle)
 
     assert cat_driver is not None

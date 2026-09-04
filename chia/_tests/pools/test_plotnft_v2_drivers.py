@@ -39,6 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -392,7 +393,7 @@ def test_plotnft_errors() -> None:
     ):
         PlotNFT.get_next_from_coin_spend(coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)))
 
-    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton mod for next PlotNFT")):
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton puzzle for next PlotNFT")):
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)), genesis_challenge=bytes32.zeros
         )
@@ -414,10 +415,12 @@ def test_plotnft_errors() -> None:
             genesis_challenge=bytes32.zeros,
         )
 
-    def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
-        return UncurriedPuzzle(
-            mod=PlotNFT.singleton_puzzles.singleton_mod,
-            args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
+    def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
+        return UnknownPuzzle.from_uncurried(
+            UncurriedPuzzle(
+                mod=PlotNFT.singleton_puzzles.singleton_mod,
+                args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
+            )
         )
 
     FAUX_SPEND = make_spend(default_coin, Program.to(None), Program.to([None, None, None]))

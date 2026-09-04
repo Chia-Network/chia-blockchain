@@ -45,9 +45,9 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions_with_cost
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
@@ -388,7 +388,7 @@ class CATWallet:
                     )
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
-                    cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
+                    cat_curried_args = match_cat_puzzle(UnknownPuzzle(known_program=coin_spend.puzzle_reveal))
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
                         coin_data = CATCoinData(
@@ -464,10 +464,12 @@ class CATWallet:
             crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a special type of CAT
-                uncurried_puzzle_reveal = uncurry_puzzle(coin_spend.puzzle_reveal)
-                if uncurried_puzzle_reveal.mod != CAT_MOD:
+                uncurried_puzzle_reveal = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+                if uncurried_puzzle_reveal.mod != CAT_MOD or uncurried_puzzle_reveal.curried_args is None:
                     return None
-                revocation_layer_match = match_revocation_layer(uncurry_puzzle(uncurried_puzzle_reveal.args.at("rrf")))
+                revocation_layer_match = match_revocation_layer(
+                    UnknownPuzzle(known_program=uncurried_puzzle_reveal.curried_args[2])
+                )
                 if revocation_layer_match is not None:
                     wallet_type = RCATWallet
                 else:
@@ -518,7 +520,7 @@ class CATWallet:
                             await CRCATWallet.convert_to_cr(
                                 found_cat_wallet,
                                 crcat.authorized_providers,
-                                ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                                ProofsChecker.from_program(UnknownPuzzle(known_program=crcat.proofs_checker)),
                             )
                             wallet_state_manager.state_changed("converted cat wallet to cr", wallet_info.id)
                             return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
@@ -545,7 +547,7 @@ class CATWallet:
                         wallet_state_manager.main_wallet,
                         crcat.tail_hash,
                         authorized_providers=crcat.authorized_providers,
-                        proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                        proofs_checker=ProofsChecker.from_program(UnknownPuzzle(known_program=crcat.proofs_checker)),
                     )
                 elif wallet_type is RCATWallet:
                     cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(

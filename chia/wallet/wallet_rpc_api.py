@@ -64,12 +64,12 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_valid_address
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
@@ -2017,7 +2017,9 @@ class WalletRpcApi:
                                 "also": {
                                     **info.info["also"],
                                     "flags": ProofsChecker.from_program(
-                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
+                                        UnknownPuzzle(
+                                            known_program=Program(assemble(info.info["also"]["proofs_checker"]))
+                                        )
                                     ).flags,
                                 },
                             }

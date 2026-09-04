@@ -36,7 +36,6 @@ from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
@@ -50,6 +49,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -1028,7 +1028,9 @@ class TradeManager:
                         await self.wallet_state_manager.get_or_create_vc_wallet()
                     ).get_vc_with_provider_in_and_proofs(
                         puzzle_info["also"]["authorized_providers"],
-                        ProofsChecker.from_program(uncurry_puzzle(puzzle_info["also"]["proofs_checker"])).flags,
+                        ProofsChecker.from_program(
+                            UnknownPuzzle(known_program=puzzle_info["also"]["proofs_checker"])
+                        ).flags,
                     )
                     if vc is None:
                         raise ValueError("Cannot request CR-CATs that you cannot approve with a VC")  # pragma: no cover

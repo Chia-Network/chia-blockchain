@@ -102,13 +102,13 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.blind_signer_tl import BLIND_SIGNER_TRANSLATION
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable
@@ -1437,7 +1437,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
+    assert UnknownPuzzle(known_program=spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
 
     await wallet_environments.process_pending_states(
         [

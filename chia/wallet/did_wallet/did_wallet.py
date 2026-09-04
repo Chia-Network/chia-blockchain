@@ -32,6 +32,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     puzzle_hash_for_pk,
 )
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE,
     create_singleton_puzzle,
@@ -39,7 +40,6 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
@@ -366,15 +366,16 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-            did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+            uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+            assert uncurried.mod is not None and uncurried.curried_args is not None
+            did_curried_args = match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
                 recovery_list_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 num_verification=uint16(num_verification.as_int()),
-                singleton_struct=uncurried.args.at("f"),
+                singleton_struct=uncurried.curried_args[0],
                 metadata=metadata,
                 inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,

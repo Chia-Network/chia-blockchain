@@ -33,6 +33,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -42,7 +43,6 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions
 
 # Mods
@@ -89,12 +89,12 @@ def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program,
     )
 
 
-def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, Program, Program] | None:
-    if uncurried_puzzle.mod == COVENANT_LAYER:
+def match_covenant_layer(uncurried_puzzle: UnknownPuzzle) -> tuple[bytes32, Program, Program] | None:
+    if uncurried_puzzle.mod == COVENANT_LAYER and uncurried_puzzle.curried_args is not None:
         return (
-            bytes32(uncurried_puzzle.args.at("f").as_atom()),
-            uncurried_puzzle.args.at("rf"),
-            uncurried_puzzle.args.at("rrf"),
+            bytes32(uncurried_puzzle.curried_args[0].as_atom()),
+            uncurried_puzzle.curried_args[1],
+            uncurried_puzzle.curried_args[2],
         )
     else:
         return None  # pragma: no cover
@@ -129,9 +129,9 @@ def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
     return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
 
 
-def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Program | None:  # pragma: no cover
-    if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER:
-        return uncurried_puzzle.args.at("f")
+def match_tp_covenant_adapter(uncurried_puzzle: UnknownPuzzle) -> Program | None:  # pragma: no cover
+    if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER and uncurried_puzzle.curried_args is not None:
+        return uncurried_puzzle.curried_args[0]
     else:
         return None
 
@@ -152,7 +152,7 @@ def create_did_tp(
 EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
-def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> tuple[()] | None:
+def match_did_tp(uncurried_puzzle: UnknownPuzzle) -> tuple[()] | None:
     if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
@@ -184,9 +184,12 @@ def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: byte
     )
 
 
-def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, bytes32] | None:
-    if uncurried_puzzle.mod == REVOCATION_LAYER:
-        return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
+def match_revocation_layer(uncurried_puzzle: UnknownPuzzle) -> tuple[bytes32, bytes32] | None:
+    if uncurried_puzzle.mod == REVOCATION_LAYER and uncurried_puzzle.curried_args is not None:
+        return (
+            bytes32(uncurried_puzzle.curried_args[1].as_atom()),
+            bytes32(uncurried_puzzle.curried_args[2].as_atom()),
+        )
     else:
         return None  # pragma: no cover
 
@@ -481,25 +484,25 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
 
     @staticmethod
-    def is_vc(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
+    def is_vc(puzzle_reveal: UnknownPuzzle) -> tuple[bool, str]:
         """
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a VC and an error
         message for if the puzzle is a mismatch. Returns True for VC launcher spends.
         """
-        if puzzle_reveal.mod != SINGLETON_MOD:
+        if puzzle_reveal.mod != SINGLETON_MOD or puzzle_reveal.curried_args is None:
             return False, "top most layer is not a singleton"
-        layer_below_singleton: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rf"))
-        if layer_below_singleton.mod != EXTIGENT_METADATA_LAYER:
+        layer_below_singleton: UnknownPuzzle = UnknownPuzzle(known_program=puzzle_reveal.curried_args[1])
+        if layer_below_singleton.mod != EXTIGENT_METADATA_LAYER or layer_below_singleton.curried_args is None:
             return False, "layer below singleton is not an exigent metadata layer"
 
         # Need to validate both transfer program...
-        full_transfer_program_as_prog: Program = layer_below_singleton.args.at("rrf")
-        full_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program_as_prog)
+        full_transfer_program_as_prog: Program = layer_below_singleton.curried_args[2]
+        full_transfer_program: UnknownPuzzle = UnknownPuzzle(known_program=full_transfer_program_as_prog)
         if full_transfer_program.mod != EML_TP_COVENANT_ADAPTER:
             # This is the first spot we'll run into trouble if we're examining a VC being launched
             # Break off to that logic here
             if full_transfer_program_as_prog == GUARANTEED_NIL_TP:
-                if layer_below_singleton.args.at("rrrrf") != P2_ANNOUNCED_DELEGATED_PUZZLE:
+                if layer_below_singleton.curried_args[4] != P2_ANNOUNCED_DELEGATED_PUZZLE:
                     return (
                         False,
                         "tp indicates VC is launching, but it does not have the correct inner puzzle",
@@ -508,29 +511,33 @@ class VerifiedCredential(Streamable):
                     return True, ""
             else:
                 return False, "top layer of transfer program is not a covenant layer adapter"  # pragma: no cover
-        adapted_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program.args.at("f"))
-        if adapted_transfer_program.mod != COVENANT_LAYER:
+        assert full_transfer_program.curried_args is not None
+        adapted_transfer_program: UnknownPuzzle = UnknownPuzzle(known_program=full_transfer_program.curried_args[0])
+        if adapted_transfer_program.mod != COVENANT_LAYER or adapted_transfer_program.curried_args is None:
             return (
                 False,
                 "transfer program is adapted to covenant layer, but covenant layer did not follow",
             )  # pragma: no cover
-        morpher: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rf"))
-        if uncurry_puzzle(morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
+        morpher: UnknownPuzzle = UnknownPuzzle(known_program=adapted_transfer_program.curried_args[1])
+        if (
+            morpher.mod is None
+            or UnknownPuzzle(known_program=morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER
+        ):
             return (
                 False,
                 "covenant for exigent metadata layer does not match the one expected for VCs",
             )  # pragma: no cover
-        if uncurry_puzzle(adapted_transfer_program.args.at("rrf")).mod != EML_DID_TP:
+        if UnknownPuzzle(known_program=adapted_transfer_program.curried_args[2]).mod != EML_DID_TP:
             return (
                 False,
                 "transfer program for exigent metadata layer was not the standard VC transfer program",
             )  # pragma: no cover
 
         # ...and layer below EML
-        layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrrf"))
-        if layer_below_eml.mod != REVOCATION_LAYER:
+        layer_below_eml: UnknownPuzzle = UnknownPuzzle(known_program=layer_below_singleton.curried_args[4])
+        if layer_below_eml.mod != REVOCATION_LAYER or layer_below_eml.curried_args is None:
             return False, "VC did not have a provider backdoor"  # pragma: no cover
-        hidden_puzzle_hash = bytes32(layer_below_eml.args.at("rf").as_atom())
+        hidden_puzzle_hash = bytes32(layer_below_eml.curried_args[1].as_atom())
         if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
             return (
                 False,
@@ -553,9 +560,10 @@ class VerifiedCredential(Streamable):
         parent_coin: Coin = parent_spend.coin
         solution = Program.from_serialized(parent_spend.solution)
 
-        singleton: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
-        launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())
-        layer_below_singleton: Program = singleton.args.at("rf")
+        singleton: UnknownPuzzle = UnknownPuzzle(known_program=parent_spend.puzzle_reveal)
+        assert singleton.curried_args is not None
+        launcher_id: bytes32 = bytes32(singleton.curried_args[0].at("rf").as_atom())
+        layer_below_singleton: Program = singleton.curried_args[1]
         singleton_lineage_proof: LineageProof = LineageProof(
             parent_name=parent_coin.parent_coin_info,
             inner_puzzle_hash=layer_below_singleton.get_tree_hash(),
@@ -576,7 +584,7 @@ class VerifiedCredential(Streamable):
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(magic_condition.at("rf").as_atom())
         else:
-            metadata_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
+            metadata_layer: UnknownPuzzle = UnknownPuzzle(known_program=layer_below_singleton)
 
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
@@ -587,8 +595,9 @@ class VerifiedCredential(Streamable):
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_atom())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
+            assert metadata_layer.curried_args is not None
             if magic_condition.at("rrrf") == Program.NIL:
-                proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
+                proof_hash_as_prog: Program = metadata_layer.curried_args[1].at("r")
             elif magic_condition.at("rrrf").atom is not None:
                 raise ValueError("Specified VC was cleared")
             else:
@@ -596,14 +605,16 @@ class VerifiedCredential(Streamable):
 
             proof_hash = None if proof_hash_as_prog == Program.NIL else bytes32(proof_hash_as_prog.as_atom())
 
-            proof_provider = bytes32(metadata_layer.args.at("rff").as_atom())
+            proof_provider = bytes32(metadata_layer.curried_args[1].at("f").as_atom())
 
-            parent_proof_hash: bytes32 = metadata_layer.args.at("rf").get_tree_hash()
+            parent_proof_hash: bytes32 = metadata_layer.curried_args[1].get_tree_hash()
+            revocation_layer = UnknownPuzzle(known_program=metadata_layer.curried_args[4])
+            assert revocation_layer.curried_args is not None
             eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_revocation_layer(
                     STANDARD_BRICK_PUZZLE_HASH,
-                    bytes32(uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").as_atom()),
+                    bytes32(revocation_layer.curried_args[2].as_atom()),
                 ).get_tree_hash(),
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None if parent_proof_hash == Program.NIL else parent_proof_hash,
@@ -830,7 +841,7 @@ class VerifiedCredential(Streamable):
 # inside of a CAT.
 @dataclass(frozen=True)
 class RevocationOuterPuzzle:
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         args = match_revocation_layer(puzzle)
         if args is None:
             return None
@@ -842,7 +853,7 @@ class RevocationOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         if solution is None:
             raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")

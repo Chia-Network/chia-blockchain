@@ -32,9 +32,9 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter
@@ -151,7 +151,7 @@ class CRCATWallet(CATWallet):
             puzzle_driver["tail"],
             name,
             [bytes32(provider) for provider in cr_layer["authorized_providers"]],
-            ProofsChecker.from_program(uncurry_puzzle(cr_layer["proofs_checker"])),
+            ProofsChecker.from_program(UnknownPuzzle(known_program=cr_layer["proofs_checker"])),
         )
 
     @classmethod
@@ -810,7 +810,7 @@ class CRCATWallet(CATWallet):
                 AssetType(inner_puzzle_driver.type()) == AssetType.CR
                 and [bytes32(provider) for provider in inner_puzzle_driver["authorized_providers"]]
                 == self.info.authorized_providers
-                and ProofsChecker.from_program(uncurry_puzzle(inner_puzzle_driver["proofs_checker"]))
+                and ProofsChecker.from_program(UnknownPuzzle(known_program=inner_puzzle_driver["proofs_checker"]))
                 == self.info.proofs_checker
             )
         return False

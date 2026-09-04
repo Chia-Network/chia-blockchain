@@ -88,6 +88,7 @@ from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_coin_store import RemoteCoinStore
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
@@ -96,7 +97,6 @@ from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -937,7 +937,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -965,20 +965,29 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
+        uncurried_nft = (
+            UncurriedNFT.uncurry(uncurried.mod, Program.to(uncurried.curried_args))
+            if uncurried.mod is not None and uncurried.curried_args is not None
+            else None
+        )
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
             nft_data = NFTCoinData(uncurried_nft, parent_coin_state, coin_spend)
             return await NFTWallet.identify(self, nft_data), nft_data
 
         # Check if the coin is a DID
-        did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+        did_curried_args = (
+            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
+            if uncurried.mod is not None and uncurried.curried_args is not None
+            else None
+        )
         if did_curried_args is not None and coin_state.coin.amount % 2 == 1:
+            assert uncurried.curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
                 bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 uint16(num_verification.as_int()),
-                uncurried.args.at("f"),
+                uncurried.curried_args[0],
                 metadata,
                 get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 parent_coin_state,
@@ -1088,10 +1097,15 @@ class WalletStateManager:
             )
             assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
-            did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+            uncurried = UnknownPuzzle(known_program=did_spend.puzzle_reveal)
+            did_curried_args = (
+                match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
+                if uncurried.mod is not None and uncurried.curried_args is not None
+                else None
+            )
             if did_curried_args is not None:
-                minter_did = bytes32(uncurried.args.at("frf").as_atom())
+                assert uncurried.curried_args is not None
+                minter_did = bytes32(uncurried.curried_args[0].at("rf").as_atom())
         return minter_did
 
     async def _add_coin_state(
@@ -1293,7 +1307,7 @@ class WalletStateManager:
                                 # if there is a child coin that is not owned by the wallet.
                                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                 # Check if the parent coin is a Clawback coin
-                                uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+                                uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
                                 clawback_metadata = match_clawback_puzzle(
                                     uncurried, coin_spend.puzzle_reveal, coin_spend.solution
                                 )
@@ -2259,15 +2273,21 @@ class WalletStateManager:
     async def manual_did_search(self, coin_id: bytes32, latest: bool = True) -> ManualDIDSearchResults:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
-        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-        curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+        curried_args = (
+            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
+            if uncurried.mod is not None and uncurried.curried_args is not None
+            else None
+        )
         if curried_args is None:
             raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
         recovery_list_hash_bytes = recovery_list_hash.as_atom()
-        launcher_id = bytes32(uncurried.args.at("frf").as_atom())
-        uncurried_p2 = uncurry_puzzle(p2_puzzle)
-        (public_key,) = uncurried_p2.args.as_iter()
+        assert uncurried.curried_args is not None
+        launcher_id = bytes32(uncurried.curried_args[0].at("rf").as_atom())
+        uncurried_p2 = UnknownPuzzle(known_program=p2_puzzle)
+        assert uncurried_p2.curried_args is not None
+        (public_key,) = uncurried_p2.curried_args
         memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
         hints = []
         coin_memos = memos.get(coin_state.coin.name())
@@ -2352,9 +2372,12 @@ class WalletStateManager:
         # Get coin state
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-        singleton_struct = uncurried.args.at("f")
-        curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+        uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+        assert uncurried.curried_args is not None
+        singleton_struct = uncurried.curried_args[0]
+        curried_args = (
+            match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args)) if uncurried.mod is not None else None
+        )
         if curried_args is None:
             raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, _, metadata = curried_args
