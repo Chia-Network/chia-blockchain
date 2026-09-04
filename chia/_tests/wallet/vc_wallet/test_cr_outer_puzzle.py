@@ -14,7 +14,7 @@ from chia.wallet.outer_puzzles import (
     solve_puzzle,
 )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import construct_cr_layer
 
 
@@ -24,7 +24,7 @@ def test_cat_outer_puzzle() -> None:
     ACS: Program = Program.to(1)
     cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, ACS)
     double_cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, cr_puzzle)
-    uncurried_cr_puzzle = uncurry_puzzle(double_cr_puzzle)
+    uncurried_cr_puzzle = UnknownPuzzle(known_program=double_cr_puzzle)
     cr_driver: PuzzleInfo | None = match_puzzle(uncurried_cr_puzzle)
 
     assert cr_driver is not None

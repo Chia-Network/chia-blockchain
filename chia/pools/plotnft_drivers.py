@@ -35,6 +35,7 @@ from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember, Fix
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
 from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -43,7 +44,6 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
@@ -417,7 +417,7 @@ class PlotNFT(PlotNFTPuzzle):
         *,
         coin_spend: CoinSpend,
         genesis_challenge: bytes32 | None = None,
-        pre_uncurry: UncurriedPuzzle | None = None,
+        pre_uncurry: UnknownPuzzle | None = None,
         previous_plotnft_puzzle: PlotNFTPuzzle | None = None,
     ) -> Self:
         # some input validation
@@ -427,19 +427,19 @@ class PlotNFT(PlotNFTPuzzle):
             assert previous_plotnft_puzzle is not None  # mypy I guess can't figure this out
             genesis_challenge = previous_plotnft_puzzle.genesis_challenge
         if pre_uncurry is None:
-            singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
+            singleton = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
         else:
             singleton = pre_uncurry
 
         # examine the singleton level info
-        if singleton.mod != cls.singleton_puzzles.singleton_mod:
-            raise GetNextPlotNFTError("Invalid singleton mod for next PlotNFT")
-        if singleton.args.at("frr") != cls.singleton_puzzles.singleton_launcher_hash:
+        if singleton.mod != cls.singleton_puzzles.singleton_mod or singleton.curried_args is None:
+            raise GetNextPlotNFTError("Invalid singleton puzzle for next PlotNFT")
+        if singleton.curried_args[0].at("rr") != cls.singleton_puzzles.singleton_launcher_hash:
             raise GetNextPlotNFTError("Invalid singleton launcher for next PlotNFT")
 
-        launcher_id = bytes32(singleton.args.at("frf").as_atom())
+        launcher_id = bytes32(singleton.curried_args[0].at("rf").as_atom())
 
-        inner_puzzle = singleton.args.at("rf")
+        inner_puzzle = singleton.curried_args[1]
         inner_conditions = parse_conditions_non_consensus(
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )

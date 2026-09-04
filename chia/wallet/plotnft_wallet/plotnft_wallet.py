@@ -26,7 +26,7 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
@@ -421,7 +421,7 @@ class PlotNFT2Wallet:
     async def identify(
         cls,
         wallet_state_manager: WalletStateManager,
-        uncurried: UncurriedPuzzle,
+        uncurried: UnknownPuzzle,
         coin_spend: CoinSpend,
     ) -> tuple[WalletIdentifier, PlotNFT] | None:
         try:
@@ -431,8 +431,9 @@ class PlotNFT2Wallet:
                 )[0]
             except ValueError:
                 try:
+                    assert uncurried.curried_args is not None
                     previous_plotnft = await wallet_state_manager.plotnft2_store.get_latest_plotnft(
-                        launcher_id=bytes32(uncurried.args.at("frf").as_atom())
+                        launcher_id=bytes32(uncurried.curried_args[0].at("rf").as_atom())
                     )
                 except RuntimeError:
                     previous_plotnft = None

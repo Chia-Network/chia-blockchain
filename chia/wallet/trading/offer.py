@@ -35,7 +35,7 @@ from chia.wallet.outer_puzzles import (
     solve_puzzle,
 )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
@@ -248,7 +248,7 @@ class Offer:
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: list[Coin] = []
 
-            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
+            parent_puzzle: UnknownPuzzle = UnknownPuzzle(known_program=parent_spend.puzzle_reveal)
             parent_solution = Program.from_serialized(parent_spend.solution)
             additions: list[Coin] = self._additions[parent_spend.coin]
 
@@ -638,7 +638,7 @@ class Offer:
         driver_dict: dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: list[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
+            driver = match_puzzle(UnknownPuzzle(known_program=coin_spend.puzzle_reveal))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None

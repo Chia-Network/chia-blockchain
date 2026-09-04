@@ -33,7 +33,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.merkle_utils import check_merkle_proof
 from chia.wallet.util.wallet_types import RemarkDataType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -139,12 +139,14 @@ class TestClawbackLifecycle:
             clawback_coin = (await sim_client.get_coin_records_by_puzzle_hash(cb_puz_hash))[0].coin
             assert clawback_coin.amount == amount
             # Test match_clawback_puzzle
-            clawback_metadata = match_clawback_puzzle(uncurry_puzzle(sender_puz), sender_puz, sender_sol)
+            clawback_metadata = match_clawback_puzzle(UnknownPuzzle(known_program=sender_puz), sender_puz, sender_sol)
             assert clawback_metadata is not None
             assert clawback_metadata.time_lock == timelock
             assert clawback_metadata.sender_puzzle_hash == sender_ph
             assert clawback_metadata.recipient_puzzle_hash == recipient_ph
-            clawback_metadata = match_clawback_puzzle(uncurry_puzzle(sender_puz), sender_puz, sender_invalid_sol)
+            clawback_metadata = match_clawback_puzzle(
+                UnknownPuzzle(known_program=sender_puz), sender_puz, sender_invalid_sol
+            )
             assert clawback_metadata is None
             # Fail an early claim spend
             recipient_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, recipient_ph, amount]])

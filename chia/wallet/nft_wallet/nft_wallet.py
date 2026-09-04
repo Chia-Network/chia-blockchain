@@ -41,10 +41,10 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
 )
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
@@ -618,7 +618,7 @@ class NFTWallet:
         nft_coin: NFTCoinInfo | None = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
-        puzzle_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_coin.full_puzzle))
+        puzzle_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_program=nft_coin.full_puzzle))
         if puzzle_info is None:
             raise ValueError("Internal Error: NFT wallet is tracking a non NFT coin")
         else:

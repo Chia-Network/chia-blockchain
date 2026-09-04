@@ -28,8 +28,8 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.trading.offer import Offer
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -444,7 +444,7 @@ class VCWallet:
         other_spends: list[CoinSpend] = []
         spends_to_fix: dict[bytes32, CoinSpend] = {}
         for spend in offer.to_valid_spend().coin_spends:
-            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0]:
+            if CRCAT.is_cr_cat(UnknownPuzzle(known_program=spend.puzzle_reveal))[0]:
                 crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
                 if crcat_spend.incomplete:
                     crcat_spends.append(crcat_spend)
@@ -523,7 +523,7 @@ class VCWallet:
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
                         vc.proof_hash,  # type: ignore
-                        ProofsChecker.from_program(uncurry_puzzle(crcat_spend.crcat.proofs_checker)).flags,
+                        ProofsChecker.from_program(UnknownPuzzle(known_program=crcat_spend.crcat.proofs_checker)).flags,
                     ),
                     vc.proof_provider,
                     vc.launcher_id,
