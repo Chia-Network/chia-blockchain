@@ -107,7 +107,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
-    compute_plot_group_id,
     generate_plot_public_key,
     generate_taproot_sk,
     is_v1_phased_out,
@@ -719,7 +718,6 @@ class BlockTools:
             size=plot_size,
             strength=strength,
             test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
-            testnet=True,
         )
         self.created_plots2 += 1
 
@@ -1784,6 +1782,7 @@ class BlockTools:
                 continue
 
             if plot_info.prover.get_version() == PlotVersion.V2:
+                assert isinstance(plot_info.prover, V2Prover)
                 # v2 plots aren't valid until after the hard fork
                 if prev_tx_height < constants.HARD_FORK2_HEIGHT:
                     continue
@@ -1802,21 +1801,13 @@ class BlockTools:
                     continue
                 if filter_challenge is None or signage_point_index is None:
                     continue
-                pool_info = (
-                    plot_info.pool_contract_puzzle_hash
-                    if plot_info.pool_contract_puzzle_hash is not None
-                    else plot_info.pool_public_key
+                plot_group_id = plot_info.prover.get_id()
+                group_strength = calculate_plot_filter_bits(
+                    prev_tx_height, constants, plot_info.prover.get_strength()
                 )
-                assert pool_info is not None
-                plot_param = plot_info.prover.get_param()
-                assert plot_param.strength_v2 is not None
-                plot_group_id = compute_plot_group_id(
-                    plot_info.prover.get_strength(), plot_info.plot_public_key, pool_info
-                )
-                group_strength = calculate_plot_filter_bits(prev_tx_height, constants, plot_param.strength_v2)
                 if not passes_plot_filter_v2(
                     plot_group_id,
-                    plot_param.meta_group,
+                    plot_info.prover.get_meta_group(),
                     group_strength,
                     filter_challenge,
                     signage_point_index,
@@ -1835,10 +1826,15 @@ class BlockTools:
             qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
             for idx, quality in enumerate(qualities):
+                if isinstance(plot_info.prover, V2Prover):
+                    assert isinstance(quality, V2Quality)
+                    plot_param = plot_info.prover.get_param_for_index(quality.get_plot_index())
+                else:
+                    plot_param = plot_info.prover.get_param()
                 required_iters = calculate_iterations_quality(
                     constants,
                     quality.get_string(),
-                    plot_info.prover.get_param(),
+                    plot_param,
                     difficulty,
                     signage_point,
                     height=prev_tx_height,
@@ -1854,7 +1850,10 @@ class BlockTools:
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2)
+                    member_plot_id = plot_info.prover.plot_id_for_index(quality.get_plot_index())
+                    proof = solve_proof(
+                        quality.get_partial_proof(), member_plot_id, strength, constants.PLOT_SIZE_V2
+                    )
                     assert proof != b""
 
                 # Look up local_sk from plot to save locked memory
@@ -1876,7 +1875,7 @@ class BlockTools:
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,
                     plot_pk,
-                    plot_info.prover.get_param(),
+                    plot_param,
                     proof,
                 )
                 found_proofs.append((required_iters, proof_of_space))

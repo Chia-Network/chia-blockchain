@@ -10,7 +10,7 @@ from chia.protocols.harvester_protocol import Plot, Plot2, supports_new_plot_ser
 
 def test_old_v2_plot_param_uses_legacy_zero_index_and_meta_group() -> None:
     plot = Plot(
-        filename="v2.plot2",
+        filename="v2.gplot",
         size=uint8(0x80 | 3),
         plot_id=bytes32.zeros,
         pool_public_key=G1Element(),
@@ -31,7 +31,7 @@ def test_old_v2_plot_param_uses_legacy_zero_index_and_meta_group() -> None:
 
 def test_v2_plot2_param_preserves_index_and_meta_group() -> None:
     plot = Plot2(
-        filename="v2.plot2",
+        filename="v2.gplot",
         size=uint8(0x80 | 3),
         plot_id=bytes32.zeros,
         pool_public_key=G1Element(),

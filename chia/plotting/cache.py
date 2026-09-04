@@ -17,7 +17,7 @@ from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 
-from chia.plotting.prover import get_prover_from_bytes
+from chia.plotting.prover import V1Prover, get_prover_from_bytes
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.util.streamable import Streamable, VersionedBlob, streamable
@@ -171,8 +171,9 @@ class Cache:
                     #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
                     #       Related: - https://github.com/Chia-Network/chia-blockchain/issues/13084
                     #                - https://github.com/Chia-Network/chiapos/pull/337
-                    param = new_entry.prover.get_param()
-                    if param.size_v1 is not None:
+                    if isinstance(new_entry.prover, V1Prover):
+                        param = new_entry.prover.get_param()
+                        assert param.size_v1 is not None
                         k = param.size_v1
                         if k not in estimated_c2_sizes:
                             estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
