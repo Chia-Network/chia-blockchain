@@ -175,7 +175,9 @@ def verify_and_get_quality_string(
         return None
 
     plot_id: bytes32 = pos.compute_plot_id()
-    new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
+    plot_group_id = compute_plot_group_id_from_pos(pos) if plot_param.strength_v2 is not None else None
+    challenge_plot_id = plot_group_id if plot_group_id is not None else plot_id
+    new_challenge: bytes32 = calculate_pos_challenge(challenge_plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
         log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
@@ -183,7 +185,7 @@ def verify_and_get_quality_string(
 
     if plot_param.strength_v2 is not None:
         if filter_challenge is not None and signage_point_index is not None:
-            plot_group_id = compute_plot_group_id_from_pos(pos)
+            assert plot_group_id is not None
             group_strength = calculate_plot_filter_bits(
                 prev_transaction_block_height, constants, plot_param.strength_v2
             )
@@ -219,14 +221,16 @@ def verify_and_get_quality_string(
     else:
         # === V2 plots ===
         assert plot_param.strength_v2 is not None
+        assert plot_group_id is not None
 
         return validate_proof_v2(
-            plot_id,
+            plot_group_id,
+            pos.plot_index,
             constants.PLOT_SIZE_V2,
-            pos.challenge,
             plot_param.strength_v2,
+            pos.meta_group,
+            pos.challenge,
             pos.proof,
-            constants.TESTNET,
         )
 
 

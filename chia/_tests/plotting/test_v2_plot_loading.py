@@ -5,9 +5,9 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from chia_rs import AugSchemeMPL, PrivateKey, compute_plot_id_v2
+from chia_rs import AugSchemeMPL, PrivateKey, compute_plot_group_id_v2
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16
+from chia_rs.sized_ints import uint8
 
 from chia.plotting.cache import Cache, CacheEntry
 from chia.plotting.create_plots import PlotKeys, create_v2_plots
@@ -34,7 +34,7 @@ def v2_plot(
         encode_puzzle_hash(bytes32(b"4" * 32), "xch") if request.param else None,
     )
     created, existing = asyncio.run(
-        create_v2_plots(tmp_path_factory.mktemp("v2-plots"), keys, size=18, test_private_keys=[master], testnet=True)
+        create_v2_plots(tmp_path_factory.mktemp("v2-plots"), keys, size=18, test_private_keys=[master])
     )
     assert not existing
     assert len(created) == 1
@@ -52,8 +52,8 @@ def test_v2_creation_and_keys(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> Non
         "8144c8ef9f89911efdc979145ef674978e5158d6afa818942aa48b183d9a863a6e7535258b3e95e34087598e3476c798"
     )
     assert entry.plot_public_key == expected_pk
-    assert prover.get_id() == compute_plot_id_v2(
-        uint8(2), expected_pk, keys.pool_public_key, keys.pool_contract_puzzle_hash, uint16(0), uint8(0)
+    assert prover.get_id() == compute_plot_group_id_v2(
+        uint8(2), expected_pk, keys.pool_public_key, keys.pool_contract_puzzle_hash
     )
 
 

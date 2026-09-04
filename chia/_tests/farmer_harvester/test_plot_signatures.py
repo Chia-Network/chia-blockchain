@@ -47,7 +47,7 @@ def signing_setup(
         if puzzle_hash is not None
         else stream_plot_info_pk(pool_sk.get_g1(), farmer_pk, master_sk)
     )
-    path = tmp_path / ("plot.plot2" if v2 else "plot.plot")
+    path = tmp_path / ("plot.gplot" if v2 else "plot.plot")
     harvester = Mock(spec=Harvester)
     harvester.plot_manager = MagicMock()
     harvester.plot_manager.plots = {
