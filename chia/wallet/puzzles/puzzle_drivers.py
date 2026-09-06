@@ -51,7 +51,9 @@ class UnknownPuzzle(PuzzleBase):
         if self.known_program is None:
             if self._uncurried_puzzle is None:
                 raise ValueError("Attempting to access puzzle when only puzzle hash is known")
-            return self._uncurried_puzzle.mod.curry(*self._uncurried_puzzle.args.as_iter())
+            known_program = self._uncurried_puzzle.mod.curry(*self._uncurried_puzzle.args.as_iter())
+            object.__setattr__(self, "known_program", known_program)
+            return known_program
         return (
             Program.from_serialized(self.known_program)
             if isinstance(self.known_program, SerializedProgram)
@@ -83,7 +85,3 @@ class UnknownPuzzle(PuzzleBase):
     @classmethod
     def from_uncurried(cls, uncurried_puzzle: UncurriedPuzzle) -> Self:
         return cls(_uncurried_puzzle=uncurried_puzzle)
-
-    @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:  # pragma: no cover
-        raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
