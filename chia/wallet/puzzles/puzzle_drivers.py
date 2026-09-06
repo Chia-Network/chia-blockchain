@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Protocol, Self
+from typing import Protocol
 
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import runtime_checkable
+from typing_extensions import Self, runtime_checkable
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
