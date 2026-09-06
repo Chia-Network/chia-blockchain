@@ -15,7 +15,7 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 @runtime_checkable
 class OptimizedPuzzleHashPuzzle(Protocol):
     @property
-    def puzzle_hash_optimized(self) -> bytes32: ...
+    def tree_hash_optimized(self) -> bytes32: ...
 
 
 class PuzzleBase:
@@ -23,17 +23,17 @@ class PuzzleBase:
     This is designed to be a base class to `Inner/OuterPuzzle`s which provides caching on the puzzle hash generation
     """
 
-    pre_computed_puzzle_hash: bytes32 | None = None
+    pre_computed_tree_hash: bytes32 | None = None
 
     @property
-    def puzzle_hash(self) -> bytes32:
-        if self.pre_computed_puzzle_hash is None:
+    def tree_hash(self) -> bytes32:
+        if self.pre_computed_tree_hash is None:
             if isinstance(self, OptimizedPuzzleHashPuzzle):
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle_hash_optimized)
+                object.__setattr__(self, "pre_computed_tree_hash", self.tree_hash_optimized)
             else:
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle.get_tree_hash())  # type: ignore[attr-defined]
-        assert self.pre_computed_puzzle_hash is not None
-        return self.pre_computed_puzzle_hash
+                object.__setattr__(self, "pre_computed_tree_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
+        assert self.pre_computed_tree_hash is not None
+        return self.pre_computed_tree_hash
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -44,13 +44,13 @@ class UnknownPuzzle(PuzzleBase):
 
     def __post_init__(self) -> None:
         if self.known_program is None and self.known_tree_hash is None and self._uncurried_puzzle is None:
-            raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
+            raise ValueError("Must specify either a program or tree hash that is unknown")
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         if self.known_program is None:
             if self._uncurried_puzzle is None:
-                raise ValueError("Attempting to access puzzle when only puzzle hash is known")
+                raise ValueError("Attempting to access program when only tree hash is known")
             known_program = self._uncurried_puzzle.mod.curry(*self._uncurried_puzzle.args.as_iter())
             object.__setattr__(self, "known_program", known_program)
             return known_program
@@ -61,18 +61,18 @@ class UnknownPuzzle(PuzzleBase):
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
-        return self.known_tree_hash if self.known_tree_hash is not None else self.puzzle.get_tree_hash()
+    def tree_hash_optimized(self) -> bytes32:
+        return self.known_tree_hash if self.known_tree_hash is not None else self.program.get_tree_hash()
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:
         if self._uncurried_puzzle is not None:
             return self._uncurried_puzzle
-        return uncurry_puzzle(self.puzzle)
+        return uncurry_puzzle(self.program)
 
     @cached_property
     def mod(self) -> Program | None:
-        if self._uncurry_result.mod == self.puzzle:
+        if self._uncurry_result.mod == self.program:
             return None
         return self._uncurry_result.mod
 
