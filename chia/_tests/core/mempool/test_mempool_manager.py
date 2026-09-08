@@ -5,6 +5,7 @@ import logging
 import random
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
@@ -42,6 +43,7 @@ from chia.full_node.eligible_coin_spends import (
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
+    LogMempoolMode,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -264,6 +266,9 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
+    validation_timeout: float = 10,
+    log_mempool: LogMempoolMode = "false",
+    root_path: Path | None = None,
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -271,7 +276,9 @@ async def instantiate_mempool_manager(
         constants,
         InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
-        validation_timeout=10,
+        validation_timeout=validation_timeout,
+        log_mempool=log_mempool,
+        root_path=root_path,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -765,6 +772,63 @@ async def test_validation_timeout() -> None:
         sb = spend_bundle_from_conditions(conditions)
         with pytest.raises(ValueError, match="timeout"):
             await mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_validate_spend_bundle_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The wall-clock check in validate_spend_bundle rejects with INVALID_SPEND_BUNDLE."""
+    async with instantiate_mempool_manager(get_coin_records_for_test_coins) as mempool_manager:
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        sbc = await mempool_manager.pre_validate_spendbundle(sb)
+        mempool_manager.validation_timeout = 0
+        clock = [1000.0]
+
+        def fake_monotonic() -> float:
+            t = clock[0]
+            clock[0] += 1.0
+            return t
+
+        # validate_spend_bundle only times Python-side work after pre_validate; on
+        # platforms with coarse monotonic() resolution duration can be 0, so force
+        # a non-zero elapsed time to test the timeout check deterministically.
+        monkeypatch.setattr("chia.full_node.mempool_manager.time.monotonic", fake_monotonic)
+        info = await mempool_manager.add_spend_bundle(sb, sbc, sb.name(), TEST_HEIGHT)
+        assert info.status == MempoolInclusionStatus.FAILED
+        assert info.error == Err.INVALID_SPEND_BUNDLE
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "log_mempool,expect_log",
+    [
+        ("timeout", True),
+        ("false", False),
+        ("true", False),
+    ],
+)
+async def test_log_mempool_timeout_on_pre_validate(
+    tmp_path: Path, log_mempool: LogMempoolMode, expect_log: bool
+) -> None:
+    async with MempoolManager.managed(
+        zero_calls_get_coin_records,
+        zero_calls_get_unspent_lineage_info_for_puzzle_hash,
+        DEFAULT_CONSTANTS,
+        InlineExecutor(),
+        validation_timeout=0,
+        log_mempool=log_mempool,
+        root_path=tmp_path,
+    ) as mempool_manager:
+        await mempool_manager.new_peak(create_test_block_record(), None)
+        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+        sb = spend_bundle_from_conditions(conditions)
+        with pytest.raises(ValueError, match="timeout"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+        log_path = tmp_path / "mempool-log" / f"{TEST_HEIGHT}" / f"{sb.name()}.bundle"
+        assert log_path.exists() == expect_log
+        if expect_log:
+            assert log_path.read_bytes() == bytes(sb)
 
 
 @pytest.mark.anyio
