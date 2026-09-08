@@ -15,7 +15,9 @@ from chia.cmds.plotnft import (
     InspectPlotNFTCMD,
     JoinPlotNFTCMD,
     LeavePlotNFTCMD,
+    MeltPlotNFTCMD,
     ShowPlotNFTCMD,
+    TransferPlotNFTCMD,
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.util.address_type import AddressType
@@ -126,4 +128,31 @@ def test_plotnft_command_default_parsing() -> None:
         ShowPlotNFTCMD(rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5),
         "--id",
         "5",
+    )
+
+    check_click_parsing(
+        TransferPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            id=5,
+            target_wallet_fingerprint=1234567890,
+            fee=uint64(3),
+        ),
+        "--id",
+        "5",
+        "--target-fingerprint",
+        "1234567890",
+        "--fee",
+        "0.000000000003",
+    )
+
+    check_click_parsing(
+        MeltPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            id=5,
+            fee=uint64(3),
+        ),
+        "--id",
+        "5",
+        "--fee",
+        "0.000000000003",
     )

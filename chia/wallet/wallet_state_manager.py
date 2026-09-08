@@ -1004,8 +1004,9 @@ class WalletStateManager:
 
         # Check if the coin is a PlotNFT
         if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
-            plotnft_result = await PlotNFT2Wallet.identify(self, uncurried, coin_spend)
+            plotnft_result = await PlotNFT2Wallet.identify(self, uncurried, coin_spend, coin_state.created_height)
             if plotnft_result is not None:
+                # Streamable hint is in error
                 return plotnft_result  # type: ignore[return-value]
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend, sync_scope)
@@ -1434,6 +1435,14 @@ class WalletStateManager:
                     vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
                     await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height), sync_scope)
             elif record.wallet_type == WalletType.PLOTNFT_2:
+                try:
+                    await self.plotnft2_store.get_plotnfts(coin_ids=[coin_name])
+                    if children == []:
+                        plotnft_wallet = self.wallets[wallet_identifier.id]
+                        assert isinstance(plotnft_wallet, PlotNFT2Wallet)
+                        await plotnft_wallet.delete_self(coin_state.spent_height)
+                except ValueError:
+                    pass
                 if isinstance(coin_data, PlotNFT):
                     await self.coin_added(
                         coin_state.coin,
@@ -1979,6 +1988,9 @@ class WalletStateManager:
                 interface.side_effects.websocket_events.append(
                     WebSocketEvent(name="wallet_removed", wallet_id=wallet_id)
                 )
+
+        # Reinitialize deleted wallets
+        await PlotNFT2Wallet.potentially_reinitialize_deleted_wallets(wallet_state_manager=self, height=height)
 
         return remove_ids
 
