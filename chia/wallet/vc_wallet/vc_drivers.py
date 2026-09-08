@@ -385,7 +385,7 @@ class VerifiedCredential(Streamable):
                 CreateCoin(wrapped_inner_puzzle_hash, uint64(1), memos),
                 Remark(rest=Program.to([new_inner_puzzle_hash])),
                 UnknownCondition(
-                    opcode=Program.to([-10]),
+                    opcode=Program.to(-10),
                     args=[Program.to(provider_id), Program.to(transfer_program.get_tree_hash())],
                 ),
             ],

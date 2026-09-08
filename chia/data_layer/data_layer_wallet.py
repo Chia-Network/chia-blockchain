@@ -27,6 +27,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
     UnknownCondition,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import (
@@ -453,7 +454,7 @@ class DataLayerWallet:
                         singleton_record.lineage_proof.amount,
                         memos=[launcher_id, root_hash, new_puz_hash],
                     ),
-                    CreateCoinAnnouncement(msg=b"$"),
+                    CreatePuzzleAnnouncement(msg=b"$"),
                 ],
             ).program
             second_full_puz: Program = create_host_fullpuz(
