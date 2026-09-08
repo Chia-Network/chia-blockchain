@@ -47,6 +47,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -445,20 +446,16 @@ class DataLayerWallet:
 
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
-            announce_only: Program = Program.to(
-                (
-                    1,
-                    [
-                        [
-                            51,
-                            new_puz_hash,
-                            singleton_record.lineage_proof.amount,
-                            [launcher_id, root_hash, new_puz_hash],
-                        ],
-                        [62, b"$"],
-                    ],
-                )
-            )
+            announce_only: Program = P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        new_puz_hash,
+                        singleton_record.lineage_proof.amount,
+                        memos=[launcher_id, root_hash, new_puz_hash],
+                    ),
+                    CreateCoinAnnouncement(msg=b"$"),
+                ],
+            ).program
             second_full_puz: Program = create_host_fullpuz(
                 announce_only,
                 root_hash,

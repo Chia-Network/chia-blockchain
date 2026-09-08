@@ -4,10 +4,12 @@ import random
 from typing import Any
 
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm.SExp import CastableType
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
+from chia.wallet.conditions import CreateCoin, UnknownCondition
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
@@ -25,7 +27,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,
 )
@@ -77,8 +79,13 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     taker_p2_ph = taker_p2_puz.get_tree_hash()
 
     # make nft solution
-    fake_lineage_proof = Program.to([bytes32.random(seeded_random), maker_p2_ph, 1])
-    transfer_conditions = Program.to([[51, taker_p2_ph, 1, [taker_p2_ph]], [-10, [], [], []]])
+    fake_lineage_proof = Program.to([bytes32.random(seeded_random), maker_p2_ph, uint64(1)])
+    transfer_conditions = ACSSolution(
+        conditions=[
+            CreateCoin(taker_p2_ph, uint64(1), [taker_p2_ph]),
+            UnknownCondition(opcode=Program.to(-10), args=[Program.NIL] * 3),
+        ]
+    ).program
 
     ownership_sol = Program.to([solution_for_conditions(transfer_conditions)])
 
@@ -113,10 +120,15 @@ def make_a_new_solution() -> tuple[Program, Program]:
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list: list[list[CastableType]] = [[200, OFFER_MOD_HASH]]
-    condition_list: list[list[CastableType]] = [
-        [51, puzhash, 1, [puzhash]],
-        [-10, new_did, trade_prices_list, new_did_inner_hash],
-    ]
+    condition_list = ACSSolution(
+        conditions=[
+            CreateCoin(puzhash, uint64(1), [puzhash]),
+            UnknownCondition(
+                opcode=Program.to(-10),
+                args=[Program.to(new_did), Program.to(trade_prices_list), Program.to(new_did_inner_hash)],
+            ),
+        ]
+    ).program
     solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 

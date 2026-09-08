@@ -27,9 +27,9 @@ from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreateCoinAnnouncement, Remark, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
@@ -165,7 +165,17 @@ def solve_cr_layer(
 
 # For the "pending approval" state
 def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Program:
-    return PENDING_VC_ANNOUNCEMENT.curry(Program.to([[51, puzzle_hash, amount, [puzzle_hash]]]))
+    return PENDING_VC_ANNOUNCEMENT.curry(
+        ACSSolution(
+            conditions=[
+                CreateCoin(
+                    puzzle_hash,
+                    amount,
+                    [puzzle_hash],
+                )
+            ]
+        ).program
+    )
 
 
 @dataclass(frozen=True)
@@ -208,17 +218,14 @@ class CRCAT:
             new_cr_layer_hash
         )
 
-        eve_innerpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, new_cr_layer_hash, payment.amount, payment.memos],
-                    [51, None, -113, tail, tail_solution],
-                    [60, None],
-                    [1, payment.puzzle_hash, authorized_providers, proofs_checker],
-                ],
-            )
-        )
+        eve_innerpuz: Program = P2Conditions(
+            conditions=[
+                CreateCoin(new_cr_layer_hash, payment.amount, payment.memos),
+                UnknownCondition(opcode=Program.to(51), args=[Program.to(None), Program.to(-113), tail, tail_solution]),
+                CreateCoinAnnouncement(msg=b""),
+                Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker])),
+            ],
+        ).program
         eve_cat_puzzle: Program = construct_cat_puzzle(
             CAT_MOD,
             tail_hash,
@@ -227,15 +234,12 @@ class CRCAT:
         eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
-        dpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, eve_cat_puzzle_hash, payment.amount],
-                    [61, std_hash(eve_coin.name())],
-                ],
-            )
-        )
+        dpuz: Program = P2Conditions(
+            conditions=[
+                CreateCoin(eve_cat_puzzle_hash, payment.amount),
+                AssertCoinAnnouncement(asserted_msg=b"", asserted_id=eve_coin.name()),
+            ]
+        ).program
 
         eve_proof: LineageProof = LineageProof(
             eve_coin.parent_coin_info,

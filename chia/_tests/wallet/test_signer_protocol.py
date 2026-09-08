@@ -38,6 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_offset,
 )
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution
 from chia.wallet.signer_protocol import (
     Coin,
     KeyHints,
@@ -199,7 +200,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         ACS_PH,
         uint64(0),
     )
-    not_our_coin_spend: CoinSpend = make_spend(not_our_coin, ACS, Program.to([[49, not_our_pubkey, not_our_message]]))
+    not_our_coin_spend: CoinSpend = make_spend(
+        not_our_coin, ACS, ACSSolution(conditions=[AggSigMe(not_our_pubkey, not_our_message)]).program
+    )
 
     not_our_utx: UnsignedTransaction = UnsignedTransaction(
         TransactionInfo([Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]),

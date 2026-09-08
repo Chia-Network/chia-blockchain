@@ -14,9 +14,9 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.wallet.conditions import CreateCoin
+from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
@@ -85,12 +85,14 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                         make_spend(
                             fake_acs_coin,
                             FAKE_ACS,
-                            Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
+                            ACSSolution(
+                                conditions=[CreateCoin(covenant_puzzle_hash, uint64(fake_acs_coin.amount))]
+                            ).program,
                         ),
                         make_spend(
                             acs_coin,
                             ACS,
-                            Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
+                            ACSSolution(conditions=[CreateCoin(covenant_puzzle_hash, uint64(acs_coin.amount))]).program,
                         ),
                     ],
                     G2Element(),
@@ -121,7 +123,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 amount=uint64(acs_coin.amount),
                             ),
                             Program.NIL,
-                            Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
+                            ACSSolution(conditions=[CreateCoin(covenant_puzzle_hash, uint64(acs_coin.amount))]).program,
                         ),
                     ),
                 ],
@@ -143,7 +145,9 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 solve_covenant_layer(
                                     LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
                                     Program.NIL,
-                                    Program.to([[51, covenant_puzzle_hash, cov.amount]]),
+                                    ACSSolution(
+                                        conditions=[CreateCoin(covenant_puzzle_hash, uint64(cov.amount))]
+                                    ).program,
                                 ),
                             ),
                         ],
@@ -177,7 +181,9 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                     amount=uint64(acs_cov.amount),
                                 ),
                                 Program.NIL,
-                                Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
+                                ACSSolution(
+                                    conditions=[CreateCoin(covenant_puzzle_hash, uint64(new_acs_cov.amount))]
+                                ).program,
                             ),
                         ),
                     ],
@@ -247,7 +253,17 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         did_authorization_spend: CoinSpend = make_spend(
             did_coin,
             MOCK_SINGLETON,
-            Program.to([[[62, std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp_hash)]]]),
+            Program.to(
+                [
+                    ACSSolution(
+                        conditions=[
+                            CreatePuzzleAnnouncement(
+                                msg=std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp_hash)
+                            )
+                        ]
+                    ).program
+                ]
+            ),
         )
 
         # Try to pass the wrong coin id
@@ -317,7 +333,9 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 async def test_revocation_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
-        hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
+        hidden_puzzle: Program = P2Conditions(  # assert a coin announcement that the solution tells us
+            conditions=[UnknownCondition(opcode=Program.to(61), args=[Program.to(1)])]
+        ).program
         hidden_puzzle_hash: bytes32 = hidden_puzzle.get_tree_hash()
         p2_either_puzzle: Program = create_revocation_layer(hidden_puzzle_hash, ACS_PH)
         assert match_revocation_layer(UnknownPuzzle(known_program=p2_either_puzzle)) == (hidden_puzzle_hash, ACS_PH)
@@ -383,7 +401,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                             p2_either_puzzle,
                             solve_revocation_layer(
                                 ACS,
-                                Program.to([[51, brick_hash, 0]]),
+                                ACSSolution(conditions=[CreateCoin(brick_hash, uint64(0))]).program,
                             ),
                         )
                     ],
@@ -545,7 +563,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
-            Program.to([[51, ACS_2_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
+            ACSSolution(
+                conditions=[
+                    CreateCoin(ACS_2_PH, uint64(vc.coin.amount)),
+                    UnknownCondition.from_program(vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)),
+                ]
+            ).program,
             new_proof_hash=NEW_PROOF_HASH,
         )
         assert expected_announcement is not None
@@ -566,12 +589,15 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                         solution_for_singleton(
                                             lineage_proof if correct_did else other_lineage_proof,
                                             uint64(did.amount) if correct_did else uint64(other_did.amount),
-                                            Program.to(
-                                                [
-                                                    [51, ACS_PH, did.amount if correct_did else other_did.amount],
-                                                    expected_announcement.to_program(),
+                                            ACSSolution(
+                                                conditions=[
+                                                    CreateCoin(
+                                                        ACS_PH,
+                                                        uint64(did.amount if correct_did else other_did.amount),
+                                                    ),
+                                                    expected_announcement,
                                                 ]
-                                            ),
+                                            ).program,
                                         ),
                                     )
                                 ]
@@ -685,30 +711,40 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         cr_1 if error != "use_malicious_cats" else malicious_cr_1,
                         0,
                         ACS,
-                        Program.to(
-                            [
-                                [
-                                    51,
+                        ACSSolution(
+                            conditions=[
+                                CreateCoin(
                                     ACS_PH,
-                                    cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
-                                ],
-                                *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
+                                    uint64(
+                                        cr_1.coin.amount
+                                        if error != "use_malicious_cats"
+                                        else malicious_cr_1.coin.amount
+                                    ),
+                                ),
+                                *(
+                                    [CreateCoinAnnouncement(msg=b"\xcd" + bytes(32))]
+                                    if error == "make_banned_announcement"
+                                    else []
+                                ),
                             ]
-                        ),
+                        ).program,
                     ),
                     (
                         cr_2 if error != "use_malicious_cats" else malicious_cr_2,
                         0,
                         ACS,
-                        Program.to(
-                            [
-                                [
-                                    51,
+                        ACSSolution(
+                            conditions=[
+                                CreateCoin(
                                     ACS_PH,
-                                    cr_2.coin.amount if error != "use_malicious_cats" else malicious_cr_2.coin.amount,
-                                ]
+                                    uint64(
+                                        cr_2.coin.amount
+                                        if error != "use_malicious_cats"
+                                        else malicious_cr_2.coin.amount
+                                    ),
+                                )
                             ]
-                        ),
+                        ).program,
                     ),
                 ],
                 NEW_PROOFS if error != "use_malicious_cats" else MALICIOUS_PROOFS,
@@ -721,29 +757,27 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             # Try to spend the coin to ourselves
             _, auth_spend, new_vc = vc.do_spend(
                 ACS_2,
-                Program.to(
-                    [
-                        [51, ACS_PH, vc.coin.amount],
-                        [
-                            62,
-                            (
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(ACS_PH, uint64(vc.coin.amount)),
+                        CreatePuzzleAnnouncement(
+                            msg=(
                                 cr_1.expected_announcement()
                                 if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_1.expected_announcement()
-                            ),
-                        ],
-                        [
-                            62,
-                            (
+                            )
+                        ),
+                        CreatePuzzleAnnouncement(
+                            msg=(
                                 cr_2.expected_announcement()
                                 if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_2.expected_announcement()
-                            ),
-                        ],
-                        *(a.to_program() for a in expected_announcements),
-                        vc.standard_magic_condition(),
+                            )
+                        ),
+                        *expected_announcements,
+                        UnknownCondition.from_program(vc.standard_magic_condition()),
                     ]
-                ),
+                ).program,
             )
 
             result = await client.push_tx(
@@ -805,7 +839,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                         else other_lineage_proof
                                     ),
                                     uint64(new_did.amount),
-                                    Program.to([[51, ACS_PH, new_did.amount], expected_announcement.to_program()]),
+                                    ACSSolution(
+                                        conditions=[CreateCoin(ACS_PH, uint64(new_did.amount)), expected_announcement]
+                                    ).program,
                                 ),
                             ),
                             yoink_spend,
@@ -855,12 +891,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         _, clear_spend, _ = vc.do_spend(
             ACS,
-            Program.to(
-                [
-                    [51, ACS_PH, vc.coin.amount],
-                    vc.magic_condition_for_self_revoke(),
+            ACSSolution(
+                conditions=[
+                    CreateCoin(ACS_PH, uint64(vc.coin.amount)),
+                    UnknownCondition.from_program(vc.magic_condition_for_self_revoke()),
                 ]
-            ),
+            ).program,
         )
         result = await client.push_tx(
             cost_logger.add_cost(

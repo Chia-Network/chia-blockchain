@@ -6,13 +6,15 @@ import pytest
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint64
 
-from chia._tests.util.misc import CoinGenerator, coin_creation_args
+from chia._tests.util.misc import CoinGenerator
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.errors import ValidationError
+from chia.wallet.conditions import CreateCoin, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 from chia.wallet.util.merkle_utils import list_to_binary_tree
 from chia.wallet.util.tx_config import (
@@ -28,27 +30,63 @@ def test_compute_spend_hints_and_additions() -> None:
     coin_generator = CoinGenerator()
     parent_coin = coin_generator.get()
     hinted_coins = [coin_generator.get(parent_coin.coin.name(), include_hint=i % 2 == 0) for i in range(10)]
-    create_coin_args = [coin_creation_args(create_coin) for create_coin in hinted_coins]
     coin_spend = make_spend(
         parent_coin.coin,
         Program.to(1),
-        Program.to(create_coin_args),
+        ACSSolution(
+            conditions=[
+                CreateCoin(
+                    create_coin.coin.puzzle_hash,
+                    create_coin.coin.amount,
+                    [create_coin.hint] if create_coin.hint is not None else [],
+                )
+                for create_coin in hinted_coins
+            ]
+        ).program,
     )
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
     assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
 
     not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32.zeros, uint64(0)), None)
     assert compute_spend_hints_and_additions(
-        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0, [["not", "a"], "hint"]]]))
+        make_spend(
+            parent_coin.coin,
+            Program.to(1),
+            ACSSolution(
+                conditions=[
+                    CreateCoin(
+                        bytes32.zeros,
+                        uint64(0),
+                        memo_blob=Program.to([["not", "a"], "hint"]),
+                    )
+                ]
+            ).program,
+        )
     )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
 
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(10000)]))
+            make_spend(
+                parent_coin.coin,
+                Program.to(1),
+                ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).program,
+            )
         )
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(10000)]))
+            make_spend(
+                parent_coin.coin,
+                Program.to(1),
+                ACSSolution(
+                    conditions=[
+                        UnknownCondition(
+                            opcode=Program.to(50),
+                            args=[Program.to(bytes48.zeros), Program.to(b"")],
+                        )
+                        for _ in range(10000)
+                    ]
+                ).program,
+            )
         )
 
 
@@ -63,7 +101,7 @@ def test_offer_rejects_spend_exceeding_max_cost() -> None:
     expensive_spend = make_spend(
         parent_coin.coin,
         Program.to(1),
-        Program.to([[51, bytes32.zeros, 0] for _ in range(10000)]),
+        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).program,
     )
     with pytest.raises(ValidationError):
         Offer({}, WalletSpendBundle([expensive_spend], G2Element()), {})
@@ -87,7 +125,7 @@ def test_offer_enforces_remaining_max_cost_across_spends() -> None:
         make_spend(
             coin_generator.get().coin,
             Program.to(1),
-            Program.to([[51, bytes32.zeros, 1] for _ in range(3500)]),
+            ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1)) for _ in range(3500)]).program,
         )
         for _ in range(2)
     ]
@@ -111,12 +149,12 @@ def test_offer_maps_clvm_cost_exceeded_value_error(monkeypatch: pytest.MonkeyPat
     coin_generator = CoinGenerator()
     # Minimal first spend (~44 cost). Leave only 10 for the second so CLVM aborts
     # inside run_with_cost with ValueError("cost exceeded or below zero").
-    first = make_spend(coin_generator.get().coin, Program.to(1), Program.to([]))
+    first = make_spend(coin_generator.get().coin, Program.to(1), ACSSolution(conditions=[]).program)
     _, first_cost = compute_spend_hints_and_additions(first)
     second = make_spend(
         coin_generator.get().coin,
         Program.to(1),
-        Program.to([[51, bytes32.zeros, 1]]),
+        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))]).program,
     )
     monkeypatch.setattr(
         offer_mod,
