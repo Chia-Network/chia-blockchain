@@ -21,26 +21,29 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
-    create_ownership_layer_puzzle,
-    get_metadata_and_phs,
-    get_new_owner_did,
+    NFT,
+    DefaultMetadataUpdater,
+    DefaultTransferProgram,
+    MetadataLayer,
+    OwnershipLayer,
+    TransferProgramCondition,
+    UpdateMetadataCondition,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
-from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
 )
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -180,96 +183,45 @@ class NFTWallet:
         if await self.nft_store.exists(coin.name()):
             # already added
             return
-        assert isinstance(coin_data, NFTCoinData), f"Invalid NFT coin data: {coin_data}"
-        await self.puzzle_solution_received(coin, coin_data, peer)
-
-    async def puzzle_solution_received(self, coin: Coin, data: NFTCoinData, peer: WSChiaConnection) -> None:
-        self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
-        # At this point, the puzzle must be a NFT puzzle.
-        # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
-
-        uncurried_nft: UncurriedNFT = data.uncurried_nft
-        self.log.debug(
-            "found the info for NFT coin %s %s %s",
-            coin.name().hex(),
-            uncurried_nft.inner_puzzle,
-            uncurried_nft.singleton_struct,
-        )
-        singleton_id = uncurried_nft.singleton_launcher_id
-        parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, data.parent_coin_spend.solution)
-        self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
-        self.log.debug("Got back updated metadata: %s", metadata)
+        assert isinstance(coin_data, NFT)
         derivation_record: (
             DerivationRecord | None
-        ) = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-        self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
+        ) = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            coin_data.innermost_puzzle.puzzle_hash
+        )
         if derivation_record is None:
-            self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
             return
-        p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
+        coin_data = coin_data.replace_inner_most_puzzle(
+            UnknownPuzzle(known_puzzle=puzzle_for_pk(derivation_record.pubkey))
+        )
         launcher_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id], peer=peer
+            [coin_data.launcher_id], peer=peer
         )
         assert len(launcher_coin_states) == 1 and launcher_coin_states[0].spent_height is not None
         mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
-        if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzle_utils.recurry_nft_puzzle(
-                uncurried_nft, Program.from_serialized(data.parent_coin_spend.solution), p2_puzzle
-            )
+        if coin_data.is_nft1:
             minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
-        else:
-            inner_puzzle = p2_puzzle
-        child_puzzle: Program = nft_puzzle_utils.create_full_puzzle(
-            singleton_id,
-            Program.to(metadata),
-            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
-            inner_puzzle,
-        )
-        self.log.debug(
-            "Created NFT full puzzle with inner: %s",
-            nft_puzzle_utils.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
-        )
-        child_puzzle_hash = child_puzzle.get_tree_hash()
-        for new_coin in compute_additions(data.parent_coin_spend):
-            self.log.debug(
-                "Comparing addition: %s with %s, amount: %s ",
-                new_coin.puzzle_hash,
-                child_puzzle_hash,
-                new_coin.amount,
-            )
-            if new_coin.puzzle_hash == child_puzzle_hash:
-                child_coin = new_coin
-                break
-        else:
-            raise ValueError("Couldn't generate child puzzle for NFT")
 
-        self.log.info("Adding a new NFT to wallet: %s", child_coin)
-        # all is well, lets add NFT to our local db
-        parent_coin = data.parent_coin_state.coin
-        confirmed_height = (
-            None if data.parent_coin_state.spent_height is None else uint32(data.parent_coin_state.spent_height)
-        )
-
-        if confirmed_height is None:
-            raise ValueError("Error finding parent")
+        self.log.info("Adding a new NFT to wallet: %s", coin_data)
 
         await self.add_coin(
-            child_coin,
-            singleton_id,
-            child_puzzle,
-            LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, uint64(parent_coin.amount)),
+            coin_data.coin,
+            coin_data.launcher_id,
+            coin_data.puzzle,
+            coin_data.lineage_proof,
             mint_height,
             minter_did,
-            confirmed_height,
+            height,
         )
 
     @classmethod
     async def identify(
         cls,
         wallet_state_manager: WalletStateManager,
-        nft_data: NFTCoinData,
+        parent_spent_height: uint32,
+        previous_nft: NFT[UnknownPuzzle],
+        added_nft: NFT[UnknownPuzzle],
     ) -> WalletIdentifier | None:
         """
         Handle the new coin when it is a NFT
@@ -281,42 +233,21 @@ class NFTWallet:
         new_did_id: bytes32 | None = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
-        uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
-        old_p2_puzhash = uncurried_nft.p2_puzzle.get_tree_hash()
-        _metadata, new_p2_puzhash = get_metadata_and_phs(
-            uncurried_nft,
-            nft_data.parent_coin_spend.solution,
-        )
-        if uncurried_nft.supports_did:
-            parsed_did_id = get_new_owner_did(
-                uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution)
-            )
-            old_did_id = uncurried_nft.owner_did
-            if parsed_did_id is None:
-                new_did_id = old_did_id
-            elif parsed_did_id == b"":
-                new_did_id = None
-            else:
-                new_did_id = parsed_did_id
-        wallet_state_manager.log.debug(
-            "Handling NFT: %s, old DID:%s, new DID:%s, old P2:%s, new P2:%s",
-            nft_data.parent_coin_spend,
-            old_did_id,
-            new_did_id,
-            old_p2_puzhash,
-            new_p2_puzhash,
-        )
+        if isinstance(previous_nft.inner_puzzle.inner_puzzle, OwnershipLayer):
+            assert isinstance(added_nft.inner_puzzle.inner_puzzle, OwnershipLayer)
+            old_did_id = previous_nft.inner_puzzle.inner_puzzle.current_owner
+            new_did_id = added_nft.inner_puzzle.inner_puzzle.current_owner
         new_derivation_record: (
             DerivationRecord | None
-        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            added_nft.innermost_puzzle.puzzle_hash
+        )
         old_derivation_record: (
             DerivationRecord | None
-        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            previous_nft.innermost_puzzle.puzzle_hash
+        )
         if new_derivation_record is None and old_derivation_record is None:
-            wallet_state_manager.log.debug(
-                "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
-                uncurried_nft.singleton_launcher_id.hex(),
-            )
             return wallet_identifier
         for nft_wallet in wallet_state_manager.wallets.copy().values():
             if not isinstance(nft_wallet, NFTWallet):
@@ -324,13 +255,11 @@ class NFTWallet:
             if nft_wallet.nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
                 wallet_state_manager.log.info(
                     "Removing old NFT, NFT_ID:%s, DID_ID:%s",
-                    uncurried_nft.singleton_launcher_id.hex(),
+                    added_nft.launcher_id.hex(),
                     old_did_id,
                 )
-                if nft_data.parent_coin_state.spent_height is not None:
-                    await nft_wallet.remove_coin(
-                        nft_data.parent_coin_spend.coin, uint32(nft_data.parent_coin_state.spent_height)
-                    )
+                if parent_spent_height is not None:
+                    await nft_wallet.remove_coin(previous_nft.coin, parent_spent_height)
                     is_empty = await nft_wallet.is_empty()
                     has_did = False
                     for did_wallet in wallet_state_manager.wallets.values():
@@ -347,7 +276,7 @@ class NFTWallet:
             if nft_wallet.nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 wallet_state_manager.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
-                    uncurried_nft.singleton_launcher_id.hex(),
+                    added_nft.launcher_id.hex(),
                     new_did_id,
                 )
                 wallet_identifier = WalletIdentifier.create(nft_wallet)
@@ -369,12 +298,12 @@ class NFTWallet:
             if new_did_id is not None and nft_wallet_count >= nft_limit:
                 wallet_state_manager.log.warning(
                     f"You are at the max configured limit of {nft_limit} NFT wallets. "
-                    f"Ignoring received NFT {uncurried_nft.singleton_launcher_id.hex()} with DID {new_did_id.hex()}"
+                    f"Ignoring received NFT {added_nft.launcher_id.hex()} with DID {new_did_id.hex()}"
                 )
                 return None
             wallet_state_manager.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
-                uncurried_nft.singleton_launcher_id,
+                added_nft.launcher_id.hex(),
                 new_did_id,
             )
             new_nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
@@ -489,21 +418,31 @@ class NFTWallet:
             # eve coin DID can be set to whatever so we keep it empty
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
-            inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(), b"", p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
+            inner_puzzle: OwnershipLayer[UnknownPuzzle, DefaultTransferProgram] | UnknownPuzzle = OwnershipLayer(
+                current_owner=None,
+                inner_puzzle=UnknownPuzzle(known_puzzle=p2_inner_puzzle),
+                transfer_program=DefaultTransferProgram(
+                    self_launcher_id=launcher_coin.name(),
+                    royalty_address=royalty_puzzle_hash,
+                    royalty_basis_points=percentage,
+                ),
             )
             self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
-            inner_puzzle = p2_inner_puzzle
+            inner_puzzle = UnknownPuzzle(known_puzzle=p2_inner_puzzle)
 
         # singleton eve puzzle
-        eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-            launcher_coin.name(), metadata, NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
+        eve_fullpuz = SingletonPuzzle(
+            launcher_id=launcher_coin.name(),
+            inner_puzzle=MetadataLayer(
+                metadata=metadata,
+                metadata_updater=DefaultMetadataUpdater(),
+                inner_puzzle=inner_puzzle,
+            ),
         )
-        eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
         # launcher announcement
-        announcement_message = Program.to([eve_fullpuz_hash, amount, []]).get_tree_hash()
+        announcement_message = Program.to([eve_fullpuz.puzzle_hash, amount, []]).get_tree_hash()
 
         self.log.debug(
             "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_message
@@ -521,13 +460,13 @@ class NFTWallet:
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
         )
-        genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
+        genesis_launcher_solution = Program.to([eve_fullpuz.puzzle_hash, amount, []])
 
         # launcher spend to generate the singleton
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-        eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
+        eve_coin = Coin(launcher_coin.name(), eve_fullpuz.puzzle_hash, uint64(amount))
 
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(launcher_sb)
@@ -541,7 +480,7 @@ class NFTWallet:
             nft_id=launcher_coin.name(),
             coin=eve_coin,
             lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
-            full_puzzle=eve_fullpuz,
+            full_puzzle=eve_fullpuz.puzzle,
             mint_height=uint32(0),
             minter_did=bytes32(did_id) if did_id is not None and did_id != b"" else None,
         )
@@ -687,7 +626,7 @@ class NFTWallet:
         nft_coin: NFTCoinInfo | None = kwargs.get("nft_coin", None)
         new_owner: bytes | None = kwargs.get("new_owner", None)
         new_did_inner_hash: bytes | None = kwargs.get("new_did_inner_hash", None)
-        trade_prices_list: Program | None = kwargs.get("trade_prices_list", None)
+        trade_prices_list: dict[bytes32, int] | None = kwargs.get("trade_prices_list", None)
         additional_bundles: list[WalletSpendBundle] = kwargs.get("additional_bundles", [])
         metadata_update: tuple[str, str] | None = kwargs.get("metadata_update", None)
         if memos is None:
@@ -746,7 +685,7 @@ class NFTWallet:
         coins: set[Coin] | None = None,
         new_owner: bytes | None = None,
         new_did_inner_hash: bytes | None = None,
-        trade_prices_list: Program | None = None,
+        trade_prices_list: dict[bytes32, int] | None = None,
         metadata_update: tuple[str, str] | None = None,
         nft_coin: NFTCoinInfo | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -779,29 +718,33 @@ class NFTWallet:
                     payments[0].puzzle_hash
                 )
                 if derivation_record is not None:
-                    new_owner = unft.owner_did
+                    new_owner = None
+                else:
+                    new_owner = b""
+            if trade_prices_list is None:
+                trade_prices_list = {}
+            if new_owner not in {None, b""} and new_did_inner_hash is None:
+                raise ValueError("Must specify new_did_inner_hash when setting a new owner")
             extra_conditions = (
                 *extra_conditions,
-                UnknownCondition(
-                    opcode=Program.to(-10),
-                    args=[
-                        Program.to(new_owner),
-                        Program.to(trade_prices_list),
-                        Program.to(new_did_inner_hash),
-                    ],
+                *(
+                    [
+                        TransferProgramCondition(
+                            trade_prices_list=trade_prices_list,
+                            new_owner=SingletonPuzzle(
+                                launcher_id=bytes32(new_owner),
+                                inner_puzzle=UnknownPuzzle(known_puzzle_hash=bytes32(new_did_inner_hash)),  # type: ignore[arg-type]
+                            )
+                            if new_owner != b""
+                            else None,
+                        )
+                    ]
+                    if new_owner is not None
+                    else []
                 ),
             )
         if metadata_update is not None:
-            extra_conditions = (
-                *extra_conditions,
-                UnknownCondition(
-                    opcode=Program.to(-24),
-                    args=[
-                        NFT_METADATA_UPDATER,
-                        Program.to(metadata_update),
-                    ],
-                ),
-            )
+            extra_conditions = (*extra_conditions, UpdateMetadataCondition(other_update=metadata_update))
 
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,
@@ -877,13 +820,13 @@ class NFTWallet:
             elif amount < 0:
                 offer_side_royalty_split += 1
 
-        trade_prices: list[tuple[uint64, bytes32]] = []
+        trade_prices: dict[bytes32, int] = {}
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
             if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
                     OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], OFFER_MOD).get_tree_hash()
                 )
-                trade_prices.append((uint64(amount // offer_side_royalty_split), settlement_ph))
+                trade_prices[settlement_ph] = uint64(amount // offer_side_royalty_split)
 
         required_royalty_info: list[tuple[bytes32, bytes32, uint16]] = []  # [(launcher_id, address, percentage)]
         offered_royalty_percentages: dict[bytes32, uint16] = {}
@@ -1008,11 +951,11 @@ class NFTWallet:
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
-                            trade_prices_list=[
-                                list(price)
-                                for price in trade_prices
-                                if price[0] * offered_royalty_percentages[asset] // MAX_ROYALTY_BASIS_POINTS != 0
-                            ],
+                            trade_prices_list={
+                                ph: price
+                                for ph, price in trade_prices.items()
+                                if price * offered_royalty_percentages[asset] // MAX_ROYALTY_BASIS_POINTS != 0
+                            },
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                         )
 

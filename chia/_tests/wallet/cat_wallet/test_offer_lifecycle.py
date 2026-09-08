@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
@@ -13,14 +11,17 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
+    CAT,
+    CATPuzzle,
     SpendableCAT,
-    construct_cat_puzzle,
+    TAILCondition,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
+from chia.wallet.conditions import AssertPuzzleAnnouncement, Condition, ConditionValidTimes, CreateCoin
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, NilSolution, UnknownPuzzle
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -38,7 +39,9 @@ def str_to_tail_hash(tail_str: str) -> bytes32:
 
 
 def str_to_cat_hash(tail_str: str) -> bytes32:
-    return construct_cat_puzzle(CAT_MOD, str_to_tail_hash(tail_str), acs).get_tree_hash()
+    return CATPuzzle(
+        tail_hash=str_to_tail_hash(tail_str), inner_puzzle=UnknownPuzzle(known_puzzle=acs)
+    ).puzzle.get_tree_hash()
 
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
@@ -56,18 +59,25 @@ async def generate_coins(
             if tail_str:
                 tail = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 tail_hash = tail.get_tree_hash()
-                cat_puzzle = construct_cat_puzzle(CAT_MOD, tail_hash, acs)
+                cat_puzzle = CATPuzzle(tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle=acs)).puzzle
                 cat_puzzle_hash = cat_puzzle.get_tree_hash()
                 payments.append(CreateCoin(cat_puzzle_hash, uint64(amount)))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
-                        CAT_MOD,
                         [
                             SpendableCAT(
-                                Coin(parent_coin.name(), cat_puzzle_hash, uint64(amount)),
-                                tail_hash,
-                                acs,
-                                Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
+                                cat=CAT(
+                                    coin=Coin(parent_coin.name(), cat_puzzle_hash, uint64(amount)),
+                                    tail_hash=tail_hash,
+                                    lineage_proof=LineageProof(),
+                                    inner_puzzle=ACSPuzzle(),
+                                ),
+                                inner_solution=ACSSolution(
+                                    conditions=[
+                                        CreateCoin(puzzle_hash=acs_ph, amount=uint64(amount)),
+                                        TAILCondition(puzzle=UnknownPuzzle(known_puzzle=tail), solution=NilSolution()),
+                                    ]
+                                ),
                             )
                         ],
                     )
@@ -89,7 +99,7 @@ async def generate_coins(
     for tail_str, _ in requested_coins.items():
         if tail_str:
             tail_hash = str_to_tail_hash(tail_str)
-            cat_ph = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
+            cat_ph = CATPuzzle(tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle=acs)).puzzle.get_tree_hash()
             coin_dict[tail_str] = [
                 cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
             ]
@@ -115,13 +125,12 @@ def generate_secure_bundle(
     offered_amount: uint64,
     tail_str: str | None = None,
 ) -> WalletSpendBundle:
-    announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum(c.amount for c in selected_coins)
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution: list[Any] = [
-        [51, Offer.ph(), offered_amount],  # Offered coin
-        [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
-        *announcement_assertions,
+    inner_solution: list[Condition] = [
+        CreateCoin(puzzle_hash=Offer.ph(), amount=offered_amount),  # Offered coin
+        CreateCoin(puzzle_hash=acs_ph, amount=uint64(selected_coin_amount - offered_amount)),  # Change
+        *announcements,
     ]
 
     if tail_str is None:
@@ -130,7 +139,7 @@ def generate_secure_bundle(
                 make_spend(
                     selected_coins[0],
                     acs,
-                    Program.to(inner_solution),
+                    ACSSolution(conditions=inner_solution).as_program(),
                 ),
                 *[make_spend(c, acs, Program.to([])) for c in non_primaries],
             ],
@@ -139,19 +148,22 @@ def generate_secure_bundle(
     else:
         spendable_cats = [
             SpendableCAT(
-                c,
-                str_to_tail_hash(tail_str),
-                acs,
-                Program.to(
-                    [
-                        [51, 0, -113, str_to_tail(tail_str), Program.to([])],  # Use the TAIL rather than lineage
+                cat=CAT(
+                    coin=c,
+                    tail_hash=str_to_tail_hash(tail_str),
+                    inner_puzzle=ACSPuzzle(),
+                    lineage_proof=LineageProof(),
+                ),
+                inner_solution=ACSSolution(
+                    conditions=[
+                        TAILCondition(puzzle=UnknownPuzzle(known_puzzle=str_to_tail(tail_str)), solution=NilSolution()),
                         *(inner_solution if c == selected_coins[0] else []),
                     ]
                 ),
             )
             for c in selected_coins
         ]
-        bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+        bundle = unsigned_spend_bundle_for_spendable_cats(spendable_cats)
 
     return bundle
 
@@ -252,7 +264,9 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         assert new_offer.is_valid()
 
         # Test preventing TAIL from running during exchange
-        blue_cat_puz = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
+        blue_cat_puz = CATPuzzle(
+            tail_hash=str_to_tail_hash("blue"), inner_puzzle=UnknownPuzzle(known_puzzle=OFFER_MOD)
+        ).puzzle
         random_hash = bytes32.zeros
         blue_spend = make_spend(
             Coin(random_hash, blue_cat_puz.get_tree_hash(), uint64(0)),

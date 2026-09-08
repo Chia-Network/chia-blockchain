@@ -842,7 +842,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, capsys: pytest
     assert response.metadata["twitter"] == "twitter"
     assert response.latest_coin == (await did_wallet_1.get_coin()).name()
     assert response.num_verification == 0
-    assert response.recovery_list_hash == Program(Program.to([])).get_tree_hash()
+    assert response.recovery_list_hash is None
     assert decode_puzzle_hash(response.p2_address) == response.hints[0]
 
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:

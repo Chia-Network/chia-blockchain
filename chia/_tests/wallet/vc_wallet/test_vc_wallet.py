@@ -36,15 +36,16 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATPuzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
+from chia.wallet.vc_wallet.cr_cat_drivers import CredentialRestrictionLayer, ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
@@ -79,11 +80,9 @@ async def mint_cr_cat(
 ) -> None:
     async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
-    cat_puzzle: Program = construct_cat_puzzle(
-        CAT_MOD,
-        tail.get_tree_hash(),
-        Program.to(1),
-    )
+    cat_puzzle: Program = CATPuzzle(
+        tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+    ).puzzle
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
@@ -117,16 +116,16 @@ async def mint_cr_cat(
                             [
                                 [
                                     51,
-                                    construct_cr_layer(
-                                        authorized_providers,
-                                        proofs_checker.as_program(),
-                                        our_puzzle,
-                                    ).get_tree_hash(),
+                                    CredentialRestrictionLayer(
+                                        authorized_providers=authorized_providers,
+                                        proofs_checker=proofs_checker,
+                                        inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle),
+                                    ).puzzle_hash,
                                     CAT_AMOUNT_0,
                                     [our_puzzle.get_tree_hash()],
                                 ],
                                 [51, None, -113, tail, None],
-                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.as_program()],
+                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.puzzle],
                             ]
                         ),
                         None,

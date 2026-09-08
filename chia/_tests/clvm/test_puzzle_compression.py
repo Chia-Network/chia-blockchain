@@ -13,8 +13,9 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CATPuzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.trading.offer import OFFER_MOD
 from chia.wallet.util.puzzle_compression import (
     LATEST_VERSION,
@@ -72,7 +73,9 @@ def test_decompress_limit() -> None:
 def test_cat_puzzle(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
-        construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), Program.to(1)),
+        CATPuzzle(
+            tail_hash=Program.to([]).get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+        ).puzzle,
         SOLUTION,
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
@@ -98,7 +101,15 @@ def test_offer_puzzle(report_compression: CompressionReporter) -> None:
 def test_nesting_puzzles(report_compression: CompressionReporter) -> None:
     coin_spend = make_spend(
         COIN,
-        construct_cat_puzzle(CAT_MOD, Program.to([]).get_tree_hash(), puzzle_for_pk(G1Element())),
+        CATPuzzle(
+            tail_hash=Program.to([]).get_tree_hash(),
+            inner_puzzle=UnknownPuzzle(
+                known_puzzle=CATPuzzle(
+                    tail_hash=Program.to([]).get_tree_hash(),
+                    inner_puzzle=UnknownPuzzle(known_puzzle=puzzle_for_pk(G1Element())),
+                ).puzzle,
+            ),
+        ).puzzle,
         SOLUTION,
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)

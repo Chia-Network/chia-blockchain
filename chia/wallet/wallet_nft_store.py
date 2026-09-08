@@ -24,7 +24,7 @@ def _to_nft_coin_info(row: Row) -> NFTCoinInfo:
     return NFTCoinInfo(
         bytes32.from_hexstr(row[0]),
         Coin.from_json_dict(json.loads(row[1])),
-        None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+        LineageProof.from_json_dict(json.loads(row[2])),
         Program.from_bytes(row[5]),
         uint32(row[3]),
         None if row[7] is None else bytes32.from_hexstr(row[7]),
@@ -123,11 +123,7 @@ class WalletNftStore:
                     int(wallet_id),
                     did_id.hex() if did_id else None,
                     json.dumps(nft_coin_info.coin.to_json_dict()),
-                    (
-                        json.dumps(nft_coin_info.lineage_proof.to_json_dict())
-                        if nft_coin_info.lineage_proof is not None
-                        else None
-                    ),
+                    json.dumps(nft_coin_info.lineage_proof.to_json_dict()),
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
                     bytes(nft_coin_info.full_puzzle),
@@ -204,7 +200,7 @@ class WalletNftStore:
             NFTCoinInfo(
                 bytes32.from_hexstr(row[0]),
                 Coin.from_json_dict(json.loads(row[1])),
-                None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+                LineageProof.from_json_dict(json.loads(row[2])),
                 Program.from_bytes(row[5]),
                 uint32(row[3]),
                 None if row[7] is None else bytes32.from_hexstr(row[7]),

@@ -8,17 +8,18 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CATPuzzle
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 def test_cat_outer_puzzle() -> None:
     ACS = Program.to(1)
     tail = bytes32.zeros
-    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
-    double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
+    cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=ACS)).puzzle
+    double_cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=cat_puzzle)).puzzle
     uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)
     cat_driver: PuzzleInfo | None = match_puzzle(uncurried_cat_puzzle)
 

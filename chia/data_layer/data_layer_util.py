@@ -20,6 +20,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 if TYPE_CHECKING:
     from chia.data_layer.data_store import DataStore
@@ -885,8 +886,8 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
     for reference_proof in dl_proof.store_proofs.proofs:
         inner_puz_hash = dl_proof.inner_puzzle_hash
         host_fullpuz_program = create_host_fullpuz(
-            inner_puz_hash, reference_proof.root(), dl_proof.store_proofs.store_id
-        )
+            UnknownPuzzle(known_puzzle_hash=inner_puz_hash), reference_proof.root(), dl_proof.store_proofs.store_id
+        ).puzzle
         expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
 
         if puzzle_hash != expected_puzzle_hash:

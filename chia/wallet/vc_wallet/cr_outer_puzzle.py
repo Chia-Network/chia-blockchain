@@ -11,8 +11,13 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
-from chia.wallet.vc_wallet.cr_cat_drivers import PROOF_FLAGS_CHECKER, construct_cr_layer, match_cr_layer, solve_cr_layer
+from chia.wallet.vc_wallet.cr_cat_drivers import (
+    CredentialRestrictionLayer,
+    CredentialRestrictionLayerSolution,
+    ProofsChecker,
+)
 
 
 @dataclass(frozen=True)
@@ -24,16 +29,17 @@ class CROuterPuzzle:
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
     def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
-        args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle)
-        if args is None:
+        cr_match: CredentialRestrictionLayer[UnknownPuzzle] | None = CredentialRestrictionLayer.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle.mod.curry(*puzzle.args.as_iter()))
+        )
+        if cr_match is None:
             return None
-        authorized_providers, proofs_checker, inner_puzzle = args
         constructor_dict: dict[str, Any] = {
             "type": "credential restricted",
-            "authorized_providers": ["0x" + ap.hex() for ap in authorized_providers],
-            "proofs_checker": disassemble(proofs_checker),
+            "authorized_providers": ["0x" + ap.hex() for ap in cr_match.authorized_providers],
+            "proofs_checker": disassemble(cr_match.proofs_checker.puzzle),
         }
-        next_constructor = self._match(uncurry_puzzle(inner_puzzle))
+        next_constructor = self._match(uncurry_puzzle(cr_match.inner_puzzle.puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
@@ -41,16 +47,19 @@ class CROuterPuzzle:
     def get_inner_puzzle(
         self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
     ) -> Program | None:
-        args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle_reveal)
-        if args is None:
+        cr_match: CredentialRestrictionLayer[UnknownPuzzle] | None = CredentialRestrictionLayer.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle_reveal.mod.curry(*puzzle_reveal.args.as_iter()))
+        )
+        if cr_match is None:
             raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
-        _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+            deep_inner_puzzle: Program | None = self._get_inner_puzzle(
+                also, uncurry_puzzle(cr_match.inner_puzzle.puzzle), None
+            )
             return deep_inner_puzzle
         else:
-            return inner_puzzle
+            return cr_match.inner_puzzle.puzzle
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.at("rrrrrrf")
@@ -68,11 +77,16 @@ class CROuterPuzzle:
         also = constructor.also()
         if also is not None:
             inner_puzzle = self._construct(also, inner_puzzle)
-        return construct_cr_layer(
-            constructor["authorized_providers"],
-            constructor["proofs_checker"] if "proofs_checker" in constructor else PROOF_FLAGS_CHECKER,
-            inner_puzzle,
+        proof_checker_match = ProofsChecker.match(
+            unknown_puzzle=UnknownPuzzle(known_puzzle=constructor["proofs_checker"])
         )
+        if proof_checker_match is None:
+            raise ValueError("An unknown proofs checker was supplied to constructor")
+        return CredentialRestrictionLayer(
+            authorized_providers=constructor["authorized_providers"],
+            proofs_checker=proof_checker_match,
+            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+        ).puzzle
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         coin_bytes: bytes = solver["coin"]
@@ -100,8 +114,12 @@ class CROuterPuzzle:
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
 
-        return solve_cr_layer(
-            *vc_info,
-            coin.name(),
-            inner_solution,
-        )
+        return CredentialRestrictionLayerSolution(
+            proof_of_inclusions=vc_info[0],
+            proof_checker_solution=UnknownSolution(solution=vc_info[1]),
+            provider_id=vc_info[2],
+            vc_launcher_id=vc_info[3],
+            vc_inner_puzhash=vc_info[4],
+            my_coin_id=coin.name(),
+            inner_solution=UnknownSolution(solution=inner_solution),
+        ).as_program()

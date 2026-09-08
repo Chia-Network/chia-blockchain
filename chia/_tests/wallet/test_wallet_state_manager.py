@@ -4,8 +4,6 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from types import SimpleNamespace
-from typing import cast
 
 import anyio
 import pytest
@@ -29,9 +27,16 @@ from chia.util.timing import adjusted_timeout
 from chia.wallet import wallet_state_manager as wsm_mod
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from chia.wallet.nft_wallet import nft_wallet as nft_wallet_mod
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    NFT,
+    DefaultMetadataUpdater,
+    DefaultTransferProgram,
+    MetadataLayer,
+    OwnershipLayer,
+)
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.transaction_record import TransactionRecord
@@ -831,37 +836,52 @@ async def _seed_did_scoped_nft_wallets(wsm: WalletStateManager, did_ids: list[by
     return created
 
 
-def _build_fake_nft_data(
+def _build_fake_nfts(
     *,
     old_p2_puzhash: bytes32,
+    new_p2_puzhash: bytes32,
     singleton_launcher_id: bytes32,
-) -> NFTCoinData:
-    """Build a duck-typed NFTCoinData for ``handle_nft``.
-
-    ``handle_nft`` only accesses a small subset of fields and the helpers it
-    invokes (``get_metadata_and_phs`` and ``get_new_owner_did``) are patched in
-    the tests. Constructing real on-chain CoinSpend/UncurriedNFT objects would
-    require a full NFT mint, which is orthogonal to the cap behavior under test.
-    """
-    uncurried_nft = SimpleNamespace(
-        supports_did=True,
-        owner_did=None,
-        p2_puzzle=SimpleNamespace(get_tree_hash=lambda: old_p2_puzhash),
-        singleton_launcher_id=singleton_launcher_id,
+    new_did_id: bytes32,
+) -> tuple[NFT[UnknownPuzzle], NFT[UnknownPuzzle]]:
+    """Build minimal NFT drivers for ``NFTWallet.identify`` cap tests."""
+    transfer_program = DefaultTransferProgram(
+        self_launcher_id=singleton_launcher_id,
+        royalty_address=None,
+        royalty_basis_points=0,
     )
-    parent_coin_spend = SimpleNamespace(
-        solution=bytes(Program.to([])),
-        coin=SimpleNamespace(),
-    )
-    parent_coin_state = SimpleNamespace(spent_height=None)
-    return cast(
-        NFTCoinData,
-        SimpleNamespace(
-            uncurried_nft=uncurried_nft,
-            parent_coin_spend=parent_coin_spend,
-            parent_coin_state=parent_coin_state,
+    previous_nft: NFT[UnknownPuzzle] = NFT(
+        coin=Coin(bytes32.zeros, bytes32.zeros, uint64(1)),
+        launcher_id=singleton_launcher_id,
+        lineage_proof=LineageProof(parent_name=bytes32.zeros, amount=uint64(1)),
+        inner_puzzle=MetadataLayer(
+            metadata=Program.to([]),
+            metadata_updater=DefaultMetadataUpdater(),
+            inner_puzzle=OwnershipLayer(
+                current_owner=None,
+                inner_puzzle=UnknownPuzzle(known_puzzle_hash=old_p2_puzhash),
+                transfer_program=transfer_program,
+            ),
         ),
     )
+    added_nft: NFT[UnknownPuzzle] = NFT(
+        coin=Coin(bytes32(b"\x11" * 32), bytes32(b"\x22" * 32), uint64(1)),
+        launcher_id=singleton_launcher_id,
+        lineage_proof=LineageProof(
+            parent_name=previous_nft.coin.parent_coin_info,
+            inner_puzzle_hash=previous_nft.inner_puzzle.puzzle_hash,
+            amount=previous_nft.coin.amount,
+        ),
+        inner_puzzle=MetadataLayer(
+            metadata=Program.to([]),
+            metadata_updater=DefaultMetadataUpdater(),
+            inner_puzzle=OwnershipLayer(
+                current_owner=new_did_id,
+                inner_puzzle=UnknownPuzzle(known_puzzle_hash=new_p2_puzhash),
+                transfer_program=transfer_program,
+            ),
+        ),
+    )
+    return previous_nft, added_nft
 
 
 @pytest.mark.limit_consensus_modes(reason="cap logic is consensus-independent")
@@ -909,7 +929,6 @@ def _build_fake_nft_data(
 @pytest.mark.anyio
 async def test_handle_nft_auto_add_limit(
     simulator_and_wallet: OldSimulatorsAndWallets,
-    monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
     case: str,
     configured_limit: int | None,
@@ -973,18 +992,11 @@ async def test_handle_nft_auto_add_limit(
     if seed_matching_wallet:
         await _seed_did_scoped_nft_wallets(wsm, [foreign_did_id])
 
-    def fake_get_metadata_and_phs(_unft: UncurriedNFT, _solution: bytes) -> tuple[Program, bytes32]:
-        return Program.to(0), new_p2_puzhash
-
-    def fake_get_new_owner_did(_unft: UncurriedNFT, _solution: Program) -> bytes32:
-        return foreign_did_id
-
-    monkeypatch.setattr(nft_wallet_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
-    monkeypatch.setattr(nft_wallet_mod, "get_new_owner_did", fake_get_new_owner_did)
-
-    nft_data = _build_fake_nft_data(
+    previous_nft, added_nft = _build_fake_nfts(
         old_p2_puzhash=old_p2_puzhash,
+        new_p2_puzhash=new_p2_puzhash,
         singleton_launcher_id=singleton_launcher_id,
+        new_did_id=foreign_did_id,
     )
 
     def nft_wallet_count() -> int:
@@ -992,7 +1004,7 @@ async def test_handle_nft_auto_add_limit(
 
     before = nft_wallet_count()
     with caplog.at_level(logging.WARNING, logger=wsm.log.name):
-        result = await NFTWallet.identify(wsm, nft_data)
+        result = await NFTWallet.identify(wsm, uint32(1), previous_nft, added_nft)
     after = nft_wallet_count()
 
     if seed_matching_wallet:

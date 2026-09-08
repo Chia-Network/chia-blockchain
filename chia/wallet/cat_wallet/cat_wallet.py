@@ -22,13 +22,13 @@ from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
+    CAT,
     CAT_MOD,
     CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
     QUOTED_CAT_MOD_HASH,
+    CATPuzzle,
     SpendableCAT,
-    construct_cat_puzzle,
-    match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
@@ -45,6 +45,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -54,7 +55,10 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.cr_cat_drivers import (
+    CRCAT,
+    PendingApprovalPuzzle,
+)
 from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -388,13 +392,12 @@ class CATWallet:
                     )
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
-                    cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
-                    if cat_curried_args is not None:
-                        cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
+                    matched_cat = CATPuzzle.match_uncurried(uncurry_puzzle(coin_spend.puzzle_reveal))
+                    if matched_cat is not None:
                         coin_data = CATCoinData(
-                            bytes32(cat_mod_hash.as_atom()),
-                            bytes32(tail_program_hash.as_atom()),
-                            cat_inner_puzzle,
+                            CAT_MOD_HASH,
+                            matched_cat.tail_hash,
+                            matched_cat.inner_puzzle.puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
                         )
@@ -459,7 +462,7 @@ class CATWallet:
         else:
             our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = parent_data.tail_program_hash
-            cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
+            cat_puzzle = CATPuzzle(tail_hash=asset_id, inner_puzzle=UnknownPuzzle(known_puzzle=our_inner_puzzle)).puzzle
             wallet_type: type[CATWallet] = CATWallet
             crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
@@ -486,14 +489,14 @@ class CATWallet:
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
                     await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        crcat.inner_puzzle_hash
+                        crcat.inner_puzzle.inner_puzzle.puzzle_hash
                     )
                     is None
-                    and crcat.inner_puzzle_hash
-                    != construct_pending_approval_state(
-                        hinted_coin.hint,
-                        uint64(coin_state.coin.amount),
-                    ).get_tree_hash()
+                    and crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                    != PendingApprovalPuzzle(
+                        target_puzzle_hash=hinted_coin.hint,
+                        amount=uint64(coin_state.coin.amount),
+                    ).puzzle_hash
                 ):
                     wallet_state_manager.log.error(
                         f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}"
@@ -517,8 +520,8 @@ class CATWallet:
                             assert crcat is not None  # again, mypy isn't this smart
                             await CRCATWallet.convert_to_cr(
                                 found_cat_wallet,
-                                crcat.authorized_providers,
-                                ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                                crcat.inner_puzzle.authorized_providers,
+                                crcat.inner_puzzle.proofs_checker,
                             )
                             wallet_state_manager.state_changed("converted cat wallet to cr", wallet_info.id)
                             return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
@@ -544,8 +547,8 @@ class CATWallet:
                         wallet_state_manager,
                         wallet_state_manager.main_wallet,
                         crcat.tail_hash,
-                        authorized_providers=crcat.authorized_providers,
-                        proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                        authorized_providers=crcat.inner_puzzle.authorized_providers,
+                        proofs_checker=crcat.inner_puzzle.proofs_checker,
                     )
                 elif wallet_type is RCATWallet:
                     cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(
@@ -893,18 +896,20 @@ class CATWallet:
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
-                coin,
-                self.tail_hash,
-                inner_puzzle,
-                innersol,
-                limitations_solution=tail_solution,
+                cat=CAT(
+                    coin=coin,
+                    lineage_proof=lineage_proof,
+                    tail_hash=self.tail_hash,
+                    inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+                ),
+                inner_solution=UnknownSolution(solution=innersol),
                 extra_delta=extra_delta,
-                lineage_proof=lineage_proof,
                 limitations_program_reveal=tail_reveal,
+                limitations_solution=tail_solution,
             )
             spendable_cat_list.append(new_spendable_cat)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)
 
         return cat_spend_bundle
 
@@ -1009,4 +1014,9 @@ class CATWallet:
             return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        return construct_cat_puzzle(CAT_MOD, self.tail_hash, hint).get_tree_hash_precalc(hint) == coin.puzzle_hash
+        return (
+            CATPuzzle(
+                tail_hash=self.tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint)
+            ).puzzle.get_tree_hash_precalc(hint)
+            == coin.puzzle_hash
+        )

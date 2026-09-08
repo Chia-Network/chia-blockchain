@@ -19,14 +19,15 @@ from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
+    CAT,
+    CATPuzzle,
     SpendableCAT,
-    construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.conditions import CreateCoin, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -110,7 +111,9 @@ class GenesisById(LimitationsProgram):
         )
         await wallet.add_lineage(origin_id, LineageProof())
 
-        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
+        minted_cat_puzzle_hash: bytes32 = CATPuzzle(
+            tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner)
+        ).puzzle.get_tree_hash()
 
         async with wallet.wallet_state_manager.new_action_scope(
             action_scope.config.tx_config, push=False
@@ -130,18 +133,30 @@ class GenesisById(LimitationsProgram):
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
-            CAT_MOD,
             [
                 SpendableCAT(
-                    next(
-                        filter(
-                            lambda a: a.amount == amount,
-                            [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
-                        )
+                    # next(
+                    #     filter(
+                    #         lambda a: a.amount == amount,
+                    #         [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
+                    #     )
+                    # ),
+                    # tail.get_tree_hash(),
+                    # cat_inner,
+                    # inner_solution,
+                    # limitations_program_reveal=tail,
+                    cat=CAT(
+                        coin=next(
+                            filter(
+                                lambda a: a.amount == amount,
+                                [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
+                            )
+                        ),
+                        lineage_proof=LineageProof(),
+                        tail_hash=tail.get_tree_hash(),
+                        inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner),
                     ),
-                    tail.get_tree_hash(),
-                    cat_inner,
-                    inner_solution,
+                    inner_solution=UnknownSolution(solution=inner_solution),
                     limitations_program_reveal=tail,
                 )
             ],
