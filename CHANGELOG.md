@@ -21,7 +21,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add max limit for wallet processing of coin state updates
 - Add automatic reorg testing to `WalletTestFramework`
 - Add systemd logging support
-- Add NFT media pipeline: preview verification & hardening, video playback controls, looping & gallery UX, IPFS gateway fetch, download timeout recovery, gallery filter by preview availability
+- Add NFT media pipeline: preview verification & hardening, video playback controls, looping & gallery UX, IPFS gateway fetch, download timeout recovery, gallery filter by preview availability (thanks @jlobue10)
 - Add user-selectable IPFS gateway for NFT resource fetching in GUI
 - Add Chia theme variants and overview in GUI
 
