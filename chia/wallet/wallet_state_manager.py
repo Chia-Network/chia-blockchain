@@ -1004,7 +1004,9 @@ class WalletStateManager:
 
         # Check if the coin is a PlotNFT
         if uncurried.mod == PlotNFT.singleton_puzzles.singleton_mod:
-            plotnft_result = await PlotNFT2Wallet.identify(self, uncurried, coin_spend, coin_state.created_height)
+            plotnft_result = await PlotNFT2Wallet.identify(
+                self, uncurried, coin_spend, coin_state.created_height, sync_scope
+            )
             if plotnft_result is not None:
                 # Streamable hint is in error
                 return plotnft_result  # type: ignore[return-value]
@@ -1440,7 +1442,7 @@ class WalletStateManager:
                     if children == []:
                         plotnft_wallet = self.wallets[wallet_identifier.id]
                         assert isinstance(plotnft_wallet, PlotNFT2Wallet)
-                        await plotnft_wallet.delete_self(coin_state.spent_height)
+                        await plotnft_wallet.delete_self(coin_state.spent_height, sync_scope)
                 except ValueError:
                     pass
                 if isinstance(coin_data, PlotNFT):
@@ -1990,7 +1992,9 @@ class WalletStateManager:
                 )
 
         # Reinitialize deleted wallets
-        await PlotNFT2Wallet.potentially_reinitialize_deleted_wallets(wallet_state_manager=self, height=height)
+        await PlotNFT2Wallet.potentially_reinitialize_deleted_wallets(
+            wallet_state_manager=self, height=height, sync_scope=sync_scope
+        )
 
         return remove_ids
 

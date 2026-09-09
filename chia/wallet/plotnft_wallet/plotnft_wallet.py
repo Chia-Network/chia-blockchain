@@ -35,7 +35,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from chia.wallet.wallet_sync_scope import WalletSyncScope
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -521,6 +521,7 @@ class PlotNFT2Wallet:
         uncurried: UncurriedPuzzle,
         coin_spend: CoinSpend,
         created_height: uint32 | None,
+        sync_scope: WalletSyncScope,
     ) -> tuple[WalletIdentifier, PlotNFT] | None:
         try:
             try:
@@ -580,7 +581,7 @@ class PlotNFT2Wallet:
                         )
                     )
                     if created_height is not None and current_plotnft_created_height < created_height:
-                        await plotnft_wallet.delete_self(deleted_at_height=created_height)
+                        await plotnft_wallet.delete_self(deleted_at_height=created_height, sync_scope=sync_scope)
             else:
                 return (
                     WalletIdentifier(id=matched_plotnft_wallet_id, type=WalletType.PLOTNFT_2),
@@ -666,14 +667,15 @@ class PlotNFT2Wallet:
             ) as action_scope:
                 await self._finish_leaving_pool(action_scope=action_scope, exiting_info=finish_info)
 
-    async def delete_self(self, deleted_at_height: uint32) -> None:
+    async def delete_self(self, deleted_at_height: uint32, sync_scope: WalletSyncScope) -> None:
         await self.wallet_state_manager.plotnft2_store.add_deleted_wallet(
             launcher_id=self.plotnft_id, name=self.wallet_info.name, height=deleted_at_height
         )
         await self.wallet_state_manager.delete_wallet(self.id())
         self.wallet_state_manager.wallets.pop(self.id())
         self.log.info("Removed PlotNFT2 wallet with ID: %s", self.plotnft_id.hex())
-        self.wallet_state_manager.state_changed("wallet_removed", wallet_id=self.id())
+        async with sync_scope.use() as interface:
+            interface.side_effects.websocket_events.append(WebSocketEvent(name="wallet_removed", wallet_id=self.id()))
         with PoolingShareState.acquire(
             root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
         ) as pool_config:
@@ -681,7 +683,7 @@ class PlotNFT2Wallet:
 
     @classmethod
     async def potentially_reinitialize_deleted_wallets(
-        cls, *, wallet_state_manager: WalletStateManager, height: int
+        cls, *, wallet_state_manager: WalletStateManager, height: int, sync_scope: WalletSyncScope
     ) -> None:
         try:
             async for launcher_id, name in wallet_state_manager.plotnft2_store.pop_deleted_wallets(height=height):
@@ -707,6 +709,7 @@ class PlotNFT2Wallet:
                     # this function happens to not use the peer so we can get away with this for now
                     peer=object(),  # type: ignore[arg-type]
                     coin_data=plotnft,
+                    sync_scope=sync_scope,
                 )
         except Exception as e:
             wallet_state_manager.log.error(f"Error reintializing PlotNFT wallet with launcher id {launcher_id}: {e}")
