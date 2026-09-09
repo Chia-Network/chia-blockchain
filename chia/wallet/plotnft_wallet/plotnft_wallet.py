@@ -675,9 +675,7 @@ class PlotNFT2Wallet:
         self.wallet_state_manager.wallets.pop(self.id())
         self.log.info("Removed PlotNFT2 wallet with ID: %s", self.plotnft_id.hex())
         async with sync_scope.use() as interface:
-            interface.side_effects.websocket_events.append(
-                WebSocketEvent(name="wallet_removed", data={"wallet_id": self.id()})
-            )
+            interface.side_effects.websocket_events.append(WebSocketEvent(name="wallet_removed", wallet_id=self.id()))
         with PoolingShareState.acquire(
             root_path=self.wallet_state_manager.root_path, p2_singleton_puzzle_hash=self.p2_singleton_puzzle_hash
         ) as pool_config:
