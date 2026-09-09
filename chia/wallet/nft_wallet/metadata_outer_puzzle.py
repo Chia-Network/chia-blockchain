@@ -11,12 +11,12 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_STATE_LAYER_MOD_HASH,
 )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 
-def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
-    if puzzle.mod == NFT_STATE_LAYER_MOD:
-        return True, list(puzzle.args.as_iter())
+def match_metadata_layer_puzzle(puzzle: UnknownPuzzle) -> tuple[bool, list[Program]]:
+    if puzzle.mod == NFT_STATE_LAYER_MOD and puzzle.curried_args is not None:
+        return True, puzzle.curried_args
     return False, []
 
 
@@ -30,13 +30,13 @@ def solution_for_metadata_layer(inner_solution: Program) -> Program:
 
 @dataclass(frozen=True)
 class MetadataOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_metadata_layer_puzzle(puzzle)
         if matched:
             _, metadata, updater_hash, inner_puzzle = curried_args
@@ -45,7 +45,7 @@ class MetadataOuterPuzzle:
                 "metadata": metadata,
                 "updater_hash": "0x" + updater_hash.as_atom().hex(),
             }
-            next_constructor = self._match(uncurry_puzzle(inner_puzzle))
+            next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
             if next_constructor is not None:
                 constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
@@ -63,14 +63,16 @@ class MetadataOuterPuzzle:
         return puzzle_for_metadata_layer(constructor["metadata"], constructor["updater_hash"], inner_puzzle)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         matched, curried_args = match_metadata_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+                deep_inner_puzzle: Program | None = self._get_inner_puzzle(
+                    also, UnknownPuzzle(known_program=inner_puzzle), None
+                )
                 return deep_inner_puzzle
             else:
                 return inner_puzzle

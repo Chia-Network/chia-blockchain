@@ -24,7 +24,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
 SINGLETON_MOD = Program.from_bytes(SINGLETON_TOP_LAYER_V1_1)
 SINGLETON_MOD_HASH = bytes32(SINGLETON_TOP_LAYER_V1_1_HASH)
@@ -173,9 +173,9 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
-def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, Iterator[Program]]:
-    if puzzle.mod == SINGLETON_MOD:
-        return True, puzzle.args.as_iter()
+def match_singleton_puzzle(puzzle: UnknownPuzzle) -> tuple[bool, Iterator[Program]]:
+    if puzzle.mod == SINGLETON_MOD and puzzle.curried_args is not None:
+        return True, iter(puzzle.curried_args)
     else:
         return False, iter(())
 

@@ -11,19 +11,19 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import PROOF_FLAGS_CHECKER, construct_cr_layer, match_cr_layer, solve_cr_layer
 
 
 @dataclass(frozen=True)
 class CROuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle)
         if args is None:
             return None
@@ -33,13 +33,13 @@ class CROuterPuzzle:
             "authorized_providers": ["0x" + ap.hex() for ap in authorized_providers],
             "proofs_checker": disassemble(proofs_checker),
         }
-        next_constructor = self._match(uncurry_puzzle(inner_puzzle))
+        next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle_reveal)
         if args is None:
@@ -47,7 +47,9 @@ class CROuterPuzzle:
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+            deep_inner_puzzle: Program | None = self._get_inner_puzzle(
+                also, UnknownPuzzle(known_program=inner_puzzle), None
+            )
             return deep_inner_puzzle
         else:
             return inner_puzzle
@@ -83,13 +85,15 @@ class CROuterPuzzle:
                 solver["vc_authorizations"][coin_name]
             )
         else:
+            proofs_checker = UnknownPuzzle(known_program=constructor["proofs_checker"])
+            assert proofs_checker.curried_args is not None
             vc_info = (
                 # TODO: This is something of a hack here, doesn't really work for proofs checkers generally.
                 # The problem is that the CAT driver above us is running its inner puzzle (us) in order to get the
                 # conditions that are output. This is bad practice on the CAT driver's part, the protocol should support
                 # asking inner drivers for what conditions they return. Alas, since this is not supported, we have to
                 # do a hack that we know will work for the one known proof checker we currently have.
-                uncurry_puzzle(constructor["proofs_checker"]).args.at("f"),
+                proofs_checker.curried_args[0],
                 Program.NIL,
                 constructor["authorized_providers"][0],  # Hack for similar reasons as above, we need a valid provider
                 None,

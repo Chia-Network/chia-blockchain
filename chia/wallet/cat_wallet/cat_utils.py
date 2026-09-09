@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -43,14 +43,13 @@ class SpendableCAT:
     limitations_program_reveal: Program = dataclasses.field(default_factory=empty_program)
 
 
-def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Iterator[Program] | None:
+def match_cat_puzzle(puzzle: UnknownPuzzle) -> Iterator[Program] | None:
     """
     Given the curried puzzle and args, test if it's a CAT and,
     if it is, return the curried arguments
     """
-    if puzzle.mod == CAT_MOD:
-        ret: Iterator[Program] = puzzle.args.as_iter()
-        return ret
+    if puzzle.mod == CAT_MOD and puzzle.curried_args is not None:
+        return iter(puzzle.curried_args)
     else:
         return None
 

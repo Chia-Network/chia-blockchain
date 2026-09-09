@@ -12,7 +12,7 @@ from chia.wallet.nft_wallet.ownership_outer_puzzle import OwnershipOuterPuzzle
 from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.vc_wallet.cr_outer_puzzle import CROuterPuzzle
 from chia.wallet.vc_wallet.vc_drivers import RevocationOuterPuzzle
 
@@ -20,9 +20,9 @@ from chia.wallet.vc_wallet.vc_drivers import RevocationOuterPuzzle
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
 
 A driver for a puzzle must include the following functions:
-  - match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]
+  - match(self, puzzle: UnknownPuzzle) -> Optional[PuzzleInfo]
     - Given a puzzle reveal, return a PuzzleInfo object that can be used to reconstruct it later
-  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle) -> Optional[Program]:
     - Given a PuzzleInfo object and a puzzle reveal, pull out this outer puzzle's inner puzzle
   - asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]
     - Given a PuzzleInfo object, generate a 32 byte ID for use in dictionaries, etc.
@@ -46,7 +46,7 @@ class AssetType(Enum):
     REVOCATION_LAYER = "revocation layer"
 
 
-def match_puzzle(puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+def match_puzzle(puzzle: UnknownPuzzle) -> PuzzleInfo | None:
     for driver in driver_lookup.values():
         potential_info: PuzzleInfo | None = driver.match(puzzle)
         if potential_info is not None:
@@ -63,7 +63,7 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
 
 
 def get_inner_puzzle(
-    constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
 ) -> Program | None:
     return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal, solution)
 

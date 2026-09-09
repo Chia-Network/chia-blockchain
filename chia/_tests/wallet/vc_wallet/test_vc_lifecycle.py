@@ -16,12 +16,12 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
@@ -61,7 +61,11 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         FAKE_ACS: Program = Program.to([3, (1, "fake"), 1, None])
         # The output puzzle will be the same for both
         covenant_puzzle: Program = create_covenant_layer(ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
-        assert match_covenant_layer(uncurry_puzzle(covenant_puzzle)) == (ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
+        assert match_covenant_layer(UnknownPuzzle(known_program=covenant_puzzle)) == (
+            ACS_PH,
+            create_std_parent_morpher(ACS_PH),
+            ACS,
+        )
         covenant_puzzle_hash: bytes32 = covenant_puzzle.get_tree_hash()
 
         # Farm both coins
@@ -196,7 +200,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         )
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
-        assert match_did_tp(uncurry_puzzle(transfer_program)) == ()
+        assert match_did_tp(UnknownPuzzle(known_program=transfer_program)) == ()
         eml_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry((MOCK_LAUNCHER_ID, None), transfer_program)
 
         await sim.farm_block(eml_puzzle.get_tree_hash())
@@ -316,7 +320,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
         hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
         hidden_puzzle_hash: bytes32 = hidden_puzzle.get_tree_hash()
         p2_either_puzzle: Program = create_revocation_layer(hidden_puzzle_hash, ACS_PH)
-        assert match_revocation_layer(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS_PH)
+        assert match_revocation_layer(UnknownPuzzle(known_program=p2_either_puzzle)) == (hidden_puzzle_hash, ACS_PH)
 
         await sim.farm_block(p2_either_puzzle.get_tree_hash())
         p2_either_coin: Coin = (
@@ -531,7 +535,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
-            assert VerifiedCredential.is_vc(uncurry_puzzle(coin_spends[1].puzzle_reveal))[0]
+            assert VerifiedCredential.is_vc(UnknownPuzzle(known_program=coin_spends[1].puzzle_reveal))[0]
         assert vc.construct_puzzle().get_tree_hash() == vc.coin.puzzle_hash
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
@@ -590,7 +594,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
-            assert VerifiedCredential.is_vc(uncurry_puzzle(update_spend.puzzle_reveal))[0]
+            assert VerifiedCredential.is_vc(UnknownPuzzle(known_program=update_spend.puzzle_reveal))[0]
 
         # Now lets farm a funds for some CR-CATs
         await sim.farm_block(RUN_PUZ_PUZ_PH)
@@ -757,7 +761,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 if test_syncing:
-                    assert all(CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0] for spend in cr_cat_spends)
+                    assert all(
+                        CRCAT.is_cr_cat(UnknownPuzzle(known_program=spend.puzzle_reveal))[0] for spend in cr_cat_spends
+                    )
                     new_crcats = [crcat for spend in cr_cat_spends for crcat in CRCAT.get_next_from_coin_spend(spend)]
                     vc = VerifiedCredential.get_next_from_coin_spend(auth_spend)
                 else:

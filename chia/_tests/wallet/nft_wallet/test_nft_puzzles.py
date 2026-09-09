@@ -25,6 +25,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,
 )
@@ -35,7 +36,6 @@ from chia.wallet.singleton import (
     SINGLETON_TOP_LAYER_MOD_HASH,
 )
 from chia.wallet.trading.offer import OFFER_MOD_HASH
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 
@@ -60,7 +60,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
         NFT_STATE_LAYER_MOD.get_tree_hash(), metadata, metadata_updater_hash, ownership_puz
     )
     nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, metadata_puz)
-    nft_info = match_puzzle(uncurry_puzzle(nft_puz))
+    nft_info = match_puzzle(UnknownPuzzle(known_program=nft_puz))
     assert nft_info is not None
     also = nft_info.also()
     assert also is not None

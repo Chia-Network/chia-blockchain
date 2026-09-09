@@ -29,8 +29,8 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
     COVENANT_LAYER_HASH,
@@ -125,14 +125,16 @@ def construct_cr_layer_hash(
 
 
 def match_cr_layer(
-    uncurried_puzzle: UncurriedPuzzle,
+    unknown_puzzle: UnknownPuzzle,
 ) -> tuple[list[bytes32], Program, Program] | None:
-    extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
-    if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
+    if unknown_puzzle.mod is None or unknown_puzzle.curried_args is None:
+        return None
+    extra_unknown_puzzle = UnknownPuzzle(known_program=unknown_puzzle.mod)
+    if extra_unknown_puzzle.mod == CREDENTIAL_RESTRICTION and extra_unknown_puzzle.curried_args is not None:
         return (
-            [bytes32(provider.as_atom()) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
-            extra_uncurried_puzzle.args.at("rrf"),
-            uncurried_puzzle.args.at("rf"),
+            [bytes32(provider.as_atom()) for provider in extra_unknown_puzzle.curried_args[1].as_iter()],
+            extra_unknown_puzzle.curried_args[2],
+            unknown_puzzle.curried_args[1],
         )
     else:
         return None
@@ -283,22 +285,28 @@ class CRCAT:
         )
 
     @staticmethod
-    def is_cr_cat(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
+    def is_cr_cat(puzzle_reveal: UnknownPuzzle) -> tuple[bool, str]:
         """
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a CR-CAT and an error
         message for if the puzzle is a mismatch.
         """
-        if puzzle_reveal.mod != CAT_MOD:
+        if puzzle_reveal.mod != CAT_MOD or puzzle_reveal.curried_args is None:
             return False, "top most layer is not a CAT"  # pragma: no cover
-        layer_below_cat: UncurriedPuzzle = uncurry_puzzle(uncurry_puzzle(puzzle_reveal.args.at("rrf")).mod)
+        inner = UnknownPuzzle(known_program=puzzle_reveal.curried_args[2])
+        if inner.mod is None:
+            return False, "CAT is not credential restricted"  # pragma: no cover
+        layer_below_cat = UnknownPuzzle(known_program=inner.mod)
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
             return False, "CAT is not credential restricted"  # pragma: no cover
 
         return True, ""
 
     @staticmethod
-    def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:  # pragma: no cover
-        return uncurry_puzzle(puzzle_reveal.args.at("rrf")).args.at("rf")
+    def get_inner_puzzle(puzzle_reveal: UnknownPuzzle) -> Program:  # pragma: no cover
+        assert puzzle_reveal.curried_args is not None
+        cr_layer = UnknownPuzzle(known_program=puzzle_reveal.curried_args[2])
+        assert cr_layer.curried_args is not None
+        return cr_layer.curried_args[1]
 
     @staticmethod
     def get_inner_solution(solution: Program) -> Program:  # pragma: no cover
@@ -306,20 +314,24 @@ class CRCAT:
 
     @classmethod
     def get_current_from_coin_spend(cls, spend: CoinSpend) -> CRCAT:  # pragma: no cover
-        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
-        first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
-        second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
+        unknown_puzzle: UnknownPuzzle = UnknownPuzzle(known_program=spend.puzzle_reveal)
+        assert unknown_puzzle.curried_args is not None
+        first_unknown_cr_layer: UnknownPuzzle = UnknownPuzzle(known_program=unknown_puzzle.curried_args[2])
+        assert first_unknown_cr_layer.mod is not None
+        assert first_unknown_cr_layer.curried_args is not None
+        second_unknown_cr_layer: UnknownPuzzle = UnknownPuzzle(known_program=first_unknown_cr_layer.mod)
+        assert second_unknown_cr_layer.curried_args is not None
         lineage_proof = LineageProof.from_program(
             Program.from_serialized(spend.solution).at("rf"),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         )
         return CRCAT(
             spend.coin,
-            bytes32(uncurried_puzzle.args.at("rf").as_atom()),
+            bytes32(unknown_puzzle.curried_args[1].as_atom()),
             lineage_proof,
-            [bytes32(ap.as_atom()) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
-            second_uncurried_cr_layer.args.at("rrf"),
-            first_uncurried_cr_layer.args.at("rf").get_tree_hash(),
+            [bytes32(ap.as_atom()) for ap in second_unknown_cr_layer.curried_args[1].as_iter()],
+            second_unknown_cr_layer.curried_args[2],
+            first_unknown_cr_layer.curried_args[1].get_tree_hash(),
         )
 
     @classmethod
@@ -606,7 +618,7 @@ class CRCATSpend:
 
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
-        inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal))
+        inner_puzzle: Program = CRCAT.get_inner_puzzle(UnknownPuzzle(known_program=spend.puzzle_reveal))
         inner_solution: Program = CRCAT.get_inner_solution(Program.from_serialized(spend.solution))
         inner_conditions: Program = inner_puzzle.run(inner_solution)
         return cls(
@@ -640,11 +652,11 @@ class ProofsChecker(Streamable):
         )
 
     @classmethod
-    def from_program(cls, uncurried_puzzle: UncurriedPuzzle) -> ProofsChecker:
-        if uncurried_puzzle.mod != PROOF_FLAGS_CHECKER:
+    def from_program(cls, unknown_puzzle: UnknownPuzzle) -> ProofsChecker:
+        if unknown_puzzle.mod != PROOF_FLAGS_CHECKER or unknown_puzzle.curried_args is None:
             raise ValueError("Puzzle was not a proof checker")  # pragma: no cover
 
-        return cls([flag.at("f").as_atom().decode("utf8") for flag in uncurried_puzzle.args.at("f").as_iter()])
+        return cls([flag.at("f").as_atom().decode("utf8") for flag in unknown_puzzle.curried_args[0].as_iter()])
 
 
 class CRCATVersion(IntEnum):
