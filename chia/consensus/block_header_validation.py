@@ -33,6 +33,10 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
     validate_pospace_and_get_required_iters,
 )
+from chia.consensus.reward_chain_block_validation import (
+    get_same_signage_point_records,
+    validate_reward_chain_block_transition,
+)
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
@@ -915,24 +919,28 @@ def validate_finished_header_block(
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
-    if not genesis_block:
-        assert prev_b is not None
-        # 27. Check block height
-        if header_block.height != prev_b.height + 1:
-            return None, ValidationError(Err.INVALID_HEIGHT)
 
-        # 28. Check weight
-        if header_block.weight != prev_b.weight + expected_vs.difficulty:
-            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_vs.difficulty}")
-            return None, ValidationError(Err.INVALID_WEIGHT)
-    else:
-        # 27b. Check genesis block height, weight, and prev block hash
-        if header_block.height != uint32(0):
-            return None, ValidationError(Err.INVALID_HEIGHT)
-        if header_block.weight != uint128(constants.DIFFICULTY_STARTING):
-            return None, ValidationError(Err.INVALID_WEIGHT)
-        if header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
-            return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
+    same_sp_records = get_same_signage_point_records(
+        blocks,
+        prev_b,
+        header_block.reward_chain_block.signage_point_index,
+        new_sub_slot,
+    )
+
+    # 27. Check block height
+    # 28. Check weight
+    # 27b. Check genesis block height, weight, and prev block hash
+    transition_validation_error = validate_reward_chain_block_transition(
+        constants,
+        header_block.reward_chain_block,
+        header_block.prev_header_hash,
+        prev_b,
+        genesis_block,
+        same_sp_records,
+        expected_vs.difficulty,
+    )
+    if transition_validation_error is not None:
+        return None, transition_validation_error
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
     if genesis_block:
