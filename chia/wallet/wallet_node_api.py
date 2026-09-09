@@ -142,10 +142,11 @@ class WalletNodeAPI:
                     await peer.close()
                     return
                 self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
-            if ack.error is not None:
-                await wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
-            else:
-                await wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
+            async with wallet_state_manager.new_sync_scope() as sync_scope:
+                if ack.error is not None:
+                    await wallet_state_manager.remove_from_queue(sync_scope, ack.txid, name, status, Err[ack.error])
+                else:
+                    await wallet_state_manager.remove_from_queue(sync_scope, ack.txid, name, status, None)
 
     @metadata.request(peer_required=True)
     async def respond_peers_introducer(

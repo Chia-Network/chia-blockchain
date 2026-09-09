@@ -44,6 +44,15 @@ def test_pool_config(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match=f"Attempting to load non-existent pooling state for {bytes32.zeros.hex()}"):
         with PoolingShareState.acquire(root_path=test_root, p2_singleton_puzzle_hash=bytes32.zeros):
             pass  # pragma: no cover
+    with pytest.raises(ValueError, match="Can only remove a config entry if you have acquired it"):
+        pool_config.remove()
+    with PoolingShareState.acquire(
+        root_path=test_root, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash
+    ) as pool_config:
+        pool_config.remove()
+        with pytest.raises(ValueError, match="Config entry was already slated for removal"):
+            pool_config.remove()
+    assert p2_singleton_puzzle_hash not in PoolingShareState.get_all_p2_singleton_puzzle_hashes(root_path=test_root)
 
 
 def test_migration(tmp_path: Path) -> None:

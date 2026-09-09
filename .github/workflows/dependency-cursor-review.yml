@@ -878,10 +878,12 @@ jobs:
           Use the provided malware scanner report as hard evidence and incorporate it into your conclusion.
           If scanner findings and your interpretation disagree, call that out explicitly.
 
-          Start your response with exactly one line:
-            Verdict: malicious
+          Your response MUST begin with exactly one standalone markdown line (nothing before it):
+            **Verdict: malicious**
           or:
-            Verdict: benign
+            **Verdict: benign**
+          That verdict line must be bold, on its own line, followed by a blank line, then your reasoning.
+          Do not embed the verdict in a sentence, append it to a paragraph, or place it mid-text.
           Then explain your reasoning briefly with top evidence.
           Do not include intermediate reasoning or self-talk.
           Keep it concise and actionable.
@@ -919,6 +921,90 @@ jobs:
 
           python3 - <<'PY'
           import json
+          import re
+
+          VERDICT_RE = re.compile(
+              r"(?m)(?:"
+              r"^[ \t]*(?:\*\*Verdict[ \t]*:[ \t]*(benign|malicious)(?:[ \t]*\*\*|(?=\b))|Verdict[ \t]*:[ \t]*(benign|malicious)\b)"
+              r"|"
+              r"(?<=[.!?:;])(?:\*\*Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*\*\*|Verdict[ \t]*:[ \t]*(benign|malicious)\b)"
+              r")",
+              re.IGNORECASE,
+          )
+
+          def _verdict_value(match: re.Match) -> str:
+            for idx in (1, 2, 3, 4):
+              token = match.group(idx)
+              if token:
+                return token.lower()
+            raise ValueError("missing verdict token")
+
+          def _removal_span(text: str, match: re.Match) -> tuple[int, int]:
+            return match.start(), match.end()
+
+          def _orphan_trailing_bold_span(text: str, match: re.Match) -> tuple[int, int] | None:
+            matched = text[match.start() : match.end()]
+            stripped = matched.lstrip(" \t")
+            if not (stripped.startswith("**") and not stripped.endswith("**")):
+              return None
+
+            line_end = text.find("\n", match.end())
+            if line_end == -1:
+              line_end = len(text)
+            suffix = text[match.end() : line_end]
+            trailing = re.search(r"\*\*[ \t]*$", suffix)
+            if not trailing:
+              return None
+            return match.end() + trailing.start(), match.end() + trailing.end()
+
+          def _merge_spans(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+            if not spans:
+              return []
+
+            ordered = sorted(spans)
+            merged = [ordered[0]]
+            for start, end in ordered[1:]:
+              prev_start, prev_end = merged[-1]
+              if start <= prev_end:
+                merged[-1] = (prev_start, max(prev_end, end))
+              else:
+                merged.append((start, end))
+            return merged
+
+          def _is_line_start_match(text: str, match: re.Match) -> bool:
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            return text[line_start:match.start()].strip() == ""
+
+          def _official_verdict_match(text: str, matches: list[re.Match]) -> re.Match:
+            for found in matches:
+              if _is_line_start_match(text, found):
+                return found
+            return matches[0]
+
+          def format_malware_review_verdict(text: str) -> str:
+            if not text or not text.strip():
+              return text
+
+            matches = list(VERDICT_RE.finditer(text))
+            if not matches:
+              return text
+
+            official = _official_verdict_match(text, matches)
+            verdict_value = _verdict_value(official)
+            spans: list[tuple[int, int]] = [_removal_span(text, official)]
+            orphan = _orphan_trailing_bold_span(text, official)
+            if orphan:
+              spans.append(orphan)
+
+            cleaned = text
+            for start, end in reversed(_merge_spans(spans)):
+              cleaned = cleaned[:start] + cleaned[end:]
+            cleaned = re.sub(r"\n{3,}", "\n\n", cleaned.strip())
+
+            bold_line = f"**Verdict: {verdict_value}**"
+            if cleaned:
+              return f"{bold_line}\n\n{cleaned}"
+            return bold_line
 
           def load_any(path):
             try:
@@ -948,7 +1034,7 @@ jobs:
 
           malware_payload = load_any("cursor_output_malware.json")
           compatibility_payload = load_any("cursor_output_compatibility.json")
-          malware_text = extract_text(malware_payload)
+          malware_text = format_malware_review_verdict(extract_text(malware_payload))
           compatibility_text = extract_text(compatibility_payload)
 
           combined_text = (
