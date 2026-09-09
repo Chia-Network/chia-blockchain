@@ -85,12 +85,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fix `install_gui.ps1` when passing in a git commit/branch in Windows
 - Fix Electron source install not working
 - Fix "Asset type is not valid" error when creating Offer to sell NFT in GUI
-- Fix NFT preview in GUI
-- Fix transient NFT download failures being persisted permanently in GUI
-- Fix NFT preview sweep bounds and cache temp file hygiene in GUI
-- Fix NFT confirmation preview freeze on unfetchable IPFS URIs in GUI
-- Fix NFT metadata URI fallback to try every URI instead of only the first in GUI
-- Fix NFT gateway reachability tracking and fallback on gateway change in GUI
 
 ## 2.7.3 Chia blockchain 2026-07-16
 
