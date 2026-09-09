@@ -75,6 +75,10 @@ for setuptools_scm/PEP 440 reasons.
 - Update `fast-uri` to fix npm audit vulnerability in GUI
 - Stop daemon broadcast events from rejecting pending wallet_ui requests in GUI
 
+### Deprecated
+
+- Python 3.10 is deprecated as of this release
+
 ### Fixed
 
 - Handle `ConnectionError` from `send_bytes` in `test_large_message_disconnect_and_ban`
