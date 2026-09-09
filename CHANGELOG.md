@@ -22,6 +22,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add automatic reorg testing to `WalletTestFramework`
 - Add systemd logging support
 - Add NFT media pipeline: preview verification & hardening, video playback controls, looping & gallery UX, IPFS gateway fetch, download timeout recovery, gallery filter by preview availability
+- Add user-selectable IPFS gateway for NFT resource fetching in GUI
 - Add Chia theme variants and overview in GUI
 - Port `chia wallet did`, `nft`, `notifications`, `vcs`, and remaining commands to `@chia_command` framework
 - Port `get_coin_records` and `get_height_info` to `@marshal` decorator
@@ -68,11 +69,15 @@ for setuptools_scm/PEP 440 reasons.
 - Update minimum required click to 8.4.0
 - Update cacert.pem from Mozilla CA bundle
 - Demote `None` `challenge_root` log line in `make_sub_epoch_summary`
+- Bump `cryptography` to 50.0.1 and use Chia wheel on macOS Intel
+- Improve singleton fast forward removals handling in mempool
 - Update Electron and various audit-triggered dependencies in GUI
+- Update `fast-uri` to fix npm audit vulnerability in GUI
 - Stop daemon broadcast events from rejecting pending wallet_ui requests in GUI
 
 ### Fixed
 
+- Handle `ConnectionError` from `send_bytes` in `test_large_message_disconnect_and_ban`
 - Release the `batch_syncing` slot on every `short_sync_batch` exit path
 - Fix DataLayer unsubscribe cleanup
 - Add DataLayer self-heal for blobless stores
@@ -85,6 +90,11 @@ for setuptools_scm/PEP 440 reasons.
 - Fix Electron source install not working
 - Fix "Asset type is not valid" error when creating Offer to sell NFT in GUI
 - Fix NFT preview in GUI
+- Fix transient NFT download failures being persisted permanently in GUI
+- Fix NFT preview sweep bounds and cache temp file hygiene in GUI
+- Fix NFT confirmation preview freeze on unfetchable IPFS URIs in GUI
+- Fix NFT metadata URI fallback to try every URI instead of only the first in GUI
+- Fix NFT gateway reachability tracking and fallback on gateway change in GUI
 
 ## 2.7.3 Chia blockchain 2026-07-16
 
