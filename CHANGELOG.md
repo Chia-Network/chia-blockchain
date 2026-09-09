@@ -24,14 +24,11 @@ for setuptools_scm/PEP 440 reasons.
 - Add NFT media pipeline: preview verification & hardening, video playback controls, looping & gallery UX, IPFS gateway fetch, download timeout recovery, gallery filter by preview availability
 - Add user-selectable IPFS gateway for NFT resource fetching in GUI
 - Add Chia theme variants and overview in GUI
-- Port `chia wallet did`, `nft`, `notifications`, `vcs`, and remaining commands to `@chia_command` framework
-- Port `get_coin_records` and `get_height_info` to `@marshal` decorator
 
 ### Changed
 
 - Bump `chia_rs` to 0.46.0
 - Bump `chialisp` from 0.4.6 to 0.5.0
-- Swap to Azure code signing
 - Increase NFT offer limit to 20 from 10
 - Refactor `pre_sp_tx_block`
 - Factor out the sync pipeline
@@ -57,12 +54,8 @@ for setuptools_scm/PEP 440 reasons.
 - Slim `CoinStoreProtocol` down to the methods consensus uses
 - Add `BlockStoreProtocol`; drop consensus dependency on `chia.full_node`
 - Replace `Streamable` in `ActionScope` with `copy.deepcopy`
-- Fix mismatching Wallets with `WalletProtocol`
-- Remove contravariant from `WalletProtocol`
 - Extract signing, clawback, and coin splitting functionality into separate modules
-- Move wallet specific coin handlers out of WSM
 - Remove interested_ph_cache and initialize coin cache in init
-- Remove unnecessary `server` field from WSM
 - Annotate `did_wallet.py`, `trade_store.py`, `test_did.py`, `wallet_coin_store.py`, `wallet_puzzle_store.py`, `wallet_interested_store.py`
 - Enable redundant expressions check in mypy
 - Remove obsolete `add_condition_to_solution` and other dead code
@@ -72,7 +65,6 @@ for setuptools_scm/PEP 440 reasons.
 - Bump `cryptography` to 50.0.1 and use Chia wheel on macOS Intel
 - Improve singleton fast forward removals handling in mempool
 - Update Electron and various audit-triggered dependencies in GUI
-- Update `fast-uri` to fix npm audit vulnerability in GUI
 - Stop daemon broadcast events from rejecting pending wallet_ui requests in GUI
 
 ### Deprecated
