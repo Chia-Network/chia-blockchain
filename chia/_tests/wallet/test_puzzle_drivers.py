@@ -6,12 +6,22 @@ import pytest
 from attr import dataclass
 from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run
 from chia.wallet import uncurried_puzzle as uncurried_puzzle_mod
-from chia.wallet.puzzles.puzzle_drivers import PuzzleBase, UnknownPuzzle
+from chia.wallet.conditions import Remark
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACS_PH,
+    NIL_HASH,
+    ACSPuzzle,
+    ACSSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    PuzzleBase,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-
-NIL_HASH = Program.NIL.get_tree_hash()
 
 
 def test_puzzle_base() -> None:
@@ -97,3 +107,39 @@ def test_unknown_puzzle() -> None:
     # Check post init
     with pytest.raises(ValueError, match="Must specify either a program or tree hash that is unknown"):
         UnknownPuzzle(known_program=None, known_tree_hash=None)
+
+
+def test_acs_puzzle() -> None:
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=bytes32.zeros)) is None
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=ACS_PH)) == ACSPuzzle()
+    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) is None
+    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not an ACS"]))) is None
+    acs_solution = ACSSolution(conditions=[Remark(rest=Program.to("foo")), Remark(rest=Program.to("bar"))])
+    assert (
+        ACSSolution.match(unknown_solution=UnknownSolution(program=run(ACSPuzzle().program, acs_solution.program)))
+        == acs_solution
+    )
+
+
+def test_nil_puzzle() -> None:
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=NIL_HASH)) == NilPuzzle()
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to("not a ()"))) is None
+    assert NilSolution.match(unknown_solution=UnknownSolution(program=Program.to("not a ()"))) is None
+    assert (
+        NilSolution.match(unknown_solution=UnknownSolution(program=run(NilPuzzle().program, NilSolution().program)))
+        == NilSolution()
+    )
+
+
+def test_p2_conditions() -> None:
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, None)))) == P2Conditions(
+        conditions=[]
+    )
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) is None
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((2, None)))) is None
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, ["not a condition"])))) is None
+    assert ACSSolution.match(
+        unknown_solution=UnknownSolution(
+            program=run(P2Conditions(conditions=[Remark(rest=Program.to("foo"))]).program, NilSolution().program)
+        )
+    ) == ACSSolution(conditions=[Remark(rest=Program.to("foo"))])

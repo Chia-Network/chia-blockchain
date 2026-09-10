@@ -30,10 +30,18 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreatePuzzleAnnouncement,
+    Remark,
+    ReserveFee,
+    UnknownCondition,
+)
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions, UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -320,7 +328,7 @@ class VerifiedCredential(Streamable):
         origin_coins: list[Coin],
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
-        memos: list[bytes32],
+        memos: list[bytes],
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> tuple[list[Program], list[CoinSpend], Self]:
@@ -372,37 +380,37 @@ class VerifiedCredential(Streamable):
             launcher_coin.name(),
             metadata_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(metadata_layer_hash)
-        launch_dpuz: Program = Program.to(
-            (
-                1,
-                [
-                    [51, wrapped_inner_puzzle_hash, uint64(1), memos],
-                    [1, new_inner_puzzle_hash],
-                    [-10, provider_id, transfer_program.get_tree_hash()],
-                ],
-            )
-        )
+        launch_dpuz: Program = P2Conditions(
+            conditions=[
+                CreateCoin(wrapped_inner_puzzle_hash, uint64(1), memos),
+                Remark(rest=Program.to([new_inner_puzzle_hash])),
+                UnknownCondition(
+                    opcode=Program.to(-10),
+                    args=[Program.to(provider_id), Program.to(transfer_program.get_tree_hash())],
+                ),
+            ],
+        ).program
         second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
             launcher_coin.name(),
             curried_eve_singleton_hash,
             uint64(1),
         )
-        first_launcher_announcement_hash = std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())
-        second_launcher_announcement_hash = std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())
-        create_launcher_conditions = Program.to(
-            [
-                [51, SINGLETON_LAUNCHER_HASH, 1],
-                [51, origin_coin.puzzle_hash, sum(c.amount for c in origin_coins) - fee - 1],
-                [52, fee],
-                [61, first_launcher_announcement_hash],
-                [61, second_launcher_announcement_hash],
-                *[cond.to_program() for cond in extra_conditions],
-            ]
-        )
+        create_launcher_conditions = [
+            CreateCoin(SINGLETON_LAUNCHER_HASH, uint64(1)),
+            CreateCoin(origin_coin.puzzle_hash, uint64(sum(c.amount for c in origin_coins) - fee - 1)),
+            ReserveFee(fee),
+            AssertCoinAnnouncement(asserted_msg=launcher_solution.get_tree_hash(), asserted_id=launcher_coin.name()),
+            (
+                second_launcher_announcement := AssertCoinAnnouncement(
+                    asserted_msg=launch_dpuz.get_tree_hash(), asserted_id=second_launcher_coin.name()
+                )
+            ),
+            *[cond for cond in extra_conditions],
+        ]
 
-        primary_dpuz: Program = Program.to((1, create_launcher_conditions))
-        additional_dpuzs: list[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
+        primary_dpuz: Program = P2Conditions(conditions=create_launcher_conditions).program
+        additional_dpuzs: list[Program] = [P2Conditions(conditions=[second_launcher_announcement]).program]
         return (
             [primary_dpuz, *additional_dpuzs],
             [

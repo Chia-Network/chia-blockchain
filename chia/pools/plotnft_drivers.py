@@ -36,7 +36,7 @@ from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember, Fix
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
 from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions, UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -351,20 +351,17 @@ class PlotNFT(PlotNFTPuzzle):
             exiting=exiting,
             genesis_challenge=genesis_challenge,
         )
-        rev_puzzle = Program.to(
-            (
-                1,
-                [
-                    CreateCoin(
-                        plotnft_puzzle.inner_puzzle_hash(),
-                        uint64(1),
-                        memo_blob=Program.to((hint, plotnft_puzzle.puzzle_with_restrictions().memo())),
-                    ).to_program(),
-                    CreateCoinAnnouncement(msg=b"").to_program(),
-                    *([] if remark is None else [remark.to_program()]),
-                ],
-            )
-        )
+        rev_puzzle = P2Conditions(
+            conditions=[
+                CreateCoin(
+                    plotnft_puzzle.inner_puzzle_hash(),
+                    uint64(1),
+                    memo_blob=Program.to((hint, plotnft_puzzle.puzzle_with_restrictions().memo())),
+                ),
+                CreateCoinAnnouncement(msg=b""),
+                *([] if remark is None else [remark]),
+            ],
+        ).program
         full_rev_singleton_puzzle = puzzle_for_singleton(
             launcher_id,
             rev_puzzle,
@@ -597,26 +594,23 @@ class PlotNFT(PlotNFTPuzzle):
         if len(rewards_to_claim) != len(reward_delegated_puzzles_and_solutions):
             raise ValueError("Number of rewards and delegated puzzles and solutions must match")
         dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=Program.to(
-                (
-                    1,
-                    [
-                        CreateCoin(
-                            puzzle_hash=self.inner_puzzle_hash(),
-                            amount=self.coin.amount,
-                            memos=[self.singleton_struct.struct_hash()],
-                        ).to_program(),
-                        *(
-                            SendMessage(
-                                msg=dpuz_and_sol.puzzle.get_tree_hash(),
-                                sender=MessageParticipant(puzzle_hash_committed=self.puzzle_hash(nonce=0)),
-                                receiver=MessageParticipant(coin_id_committed=reward.coin.name()),
-                            ).to_program()
-                            for reward, dpuz_and_sol in zip(rewards_to_claim, reward_delegated_puzzles_and_solutions)
-                        ),
-                    ],
-                )
-            ),
+            puzzle=P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        puzzle_hash=self.inner_puzzle_hash(),
+                        amount=self.coin.amount,
+                        memos=[self.singleton_struct.struct_hash()],
+                    ),
+                    *(
+                        SendMessage(
+                            msg=dpuz_and_sol.puzzle.get_tree_hash(),
+                            sender=MessageParticipant(puzzle_hash_committed=self.puzzle_hash(nonce=0)),
+                            receiver=MessageParticipant(coin_id_committed=reward.coin.name()),
+                        )
+                        for reward, dpuz_and_sol in zip(rewards_to_claim, reward_delegated_puzzles_and_solutions)
+                    ),
+                ]
+            ).program,
             solution=Program.to([]),
         )
         return [
@@ -653,19 +647,16 @@ class PlotNFT(PlotNFTPuzzle):
         )
 
         dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=Program.to(
-                (
-                    1,
-                    [
-                        CreateCoin(
-                            plotnft_puzzle.inner_puzzle_hash(),
-                            amount=self.coin.amount,
-                            memo_blob=Program.to((self.singleton_struct.struct_hash(), plotnft_puzzle.memo())),
-                        ).to_program(),
-                        *(cond.to_program() for cond in extra_conditions),
-                    ],
-                )
-            ),
+            puzzle=P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        plotnft_puzzle.inner_puzzle_hash(),
+                        amount=self.coin.amount,
+                        memo_blob=Program.to((self.singleton_struct.struct_hash(), plotnft_puzzle.memo())),
+                    ),
+                    *(cond for cond in extra_conditions),
+                ]
+            ).program,
             solution=Program.to([]),
         )
         return [
