@@ -1105,15 +1105,15 @@ botocore = ["botocore"]
 
 [[package]]
 name = "build"
-version = "1.5.0"
+version = "1.6.0"
 description = "A simple, correct Python build frontend"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "build-1.5.0-py3-none-any.whl", hash = "sha256:13f3eecb844759ab66efec90ca17639bbf14dc06cb2fdf37a9010322d9c50a6f"},
-    {file = "build-1.5.0.tar.gz", hash = "sha256:302c22c3ba2a0fd5f3911918651341ebb3896176cbdec15bd421f80b1afc7647"},
+    {file = "build-1.6.0-py3-none-any.whl", hash = "sha256:f7aaf1ebbb79178a02ba248bb524f2176b256017e17e8e4bd4289c7b38cc2bad"},
+    {file = "build-1.6.0.tar.gz", hash = "sha256:bd2c8afc603e7a2e0ce70e2ea85f0a6d02043bafbd307f5bada0f98669eca5af"},
 ]
 
 [package.dependencies]
@@ -1126,7 +1126,7 @@ tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 [package.extras]
 keyring = ["keyring"]
 uv = ["uv (>=0.1.18)"]
-virtualenv = ["virtualenv (>=20.17) ; python_version >= \"3.10\" and python_version < \"3.14\"", "virtualenv (>=20.31) ; python_version >= \"3.14\""]
+virtualenv = ["virtualenv (>=20.36.1)"]
 
 [[package]]
 name = "certifi"
@@ -5398,4 +5398,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "1a51360b89e22d61c5b01069bb7084027409ca76f863c1c95890f9dfab42005c"
+content-hash = "fe938a1497120dc51ce6106ba57e4989b2a8fc9e1a5b3ed02b156bf93ab883b9"
