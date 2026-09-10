@@ -871,7 +871,7 @@ class Mempool:
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
-                if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
+                if block_cost + item.conds.cost - cost_saving > self.mempool_info.max_block_clvm_cost:
                     added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
 
                     block_cost = builder.cost()
@@ -927,7 +927,9 @@ class Mempool:
 
                     if done:
                         break
-
+                    if block_cost + item.conds.cost - cost_saving > self.mempool_info.max_block_clvm_cost:
+                        skipped_items += 1
+                        continue
                 # Skip this item if any of its spends conflict with a coin
                 # already committed to this block, whether in an accepted batch
                 # or in the batch we're currently assembling.
