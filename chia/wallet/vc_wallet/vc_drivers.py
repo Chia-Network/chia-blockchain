@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, Generic, TypeVar, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -41,7 +41,7 @@ from chia.wallet.conditions import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.puzzle_drivers import P2Conditions, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions, Solution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -649,61 +649,44 @@ class VerifiedCredential(Streamable):
         new_proof_hash: bytes32 | None,
         provider_innerpuzhash: bytes32,
         new_proof_provider: bytes32 | None = None,
-    ) -> Program:
+    ) -> MagicTPCondition[UnknownSolution]:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
         the inner puzzle will require a corresponding announcement from the provider DID authorizing that proof hash
         change.
         """
-        magic_condition: Program = Program.to(
-            [
-                -10,
-                self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
-                [
-                    provider_innerpuzhash,
-                    self.coin.name(),
-                    Program.to(new_proof_hash),
-                    None,  # TP update is not allowed because then the singleton will leave the VC protocol
-                ],
-            ]
+        return MagicTPCondition(
+            eml_lineage_proof=self.eml_lineage_proof,
+            launcher_id=self.launcher_id,
+            tp_solution=UnknownSolution(
+                program=Program.to(
+                    [
+                        provider_innerpuzhash,
+                        self.coin.name(),
+                        Program.to(new_proof_hash),
+                        None,  # TP update is not allowed because then the singleton will leave the VC protocol
+                    ]
+                )
+            ),
         )
-        return magic_condition
 
-    def standard_magic_condition(self) -> Program:
+    def standard_magic_condition(self) -> MagicTPCondition[UnknownSolution]:
         """
         Returns the standard magic condition that needs to be returned to the metadata layer. Returning this condition
         from the inner puzzle will leave the proof hash and transfer program the same.
         """
-        magic_condition: Program = Program.to(
-            [
-                -10,
-                self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
-                None,
-            ]
+        return MagicTPCondition(
+            eml_lineage_proof=self.eml_lineage_proof,
+            launcher_id=self.launcher_id,
+            tp_solution=None,
         )
-        return magic_condition
 
-    def magic_condition_for_self_revoke(self) -> Program:
-        magic_condition: Program = Program.to(
-            [
-                -10,
-                self.eml_lineage_proof.to_program(),
-                [
-                    Program.to(self.eml_lineage_proof.parent_proof_hash),
-                    self.launcher_id,
-                ],
-                ACS_TRANSFER_PROGRAM.get_tree_hash(),
-            ]
+    def magic_condition_for_self_revoke(self) -> MagicTPCondition[UnknownSolution]:
+        return MagicTPCondition(
+            eml_lineage_proof=self.eml_lineage_proof,
+            launcher_id=self.launcher_id,
+            tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())),
         )
-        return magic_condition
 
     def do_spend(
         self,
@@ -879,3 +862,49 @@ class RevocationOuterPuzzle:
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         return solve_revocation_layer(inner_puzzle, inner_solution)  # deliberately no support for hidden puzzle spends
+
+
+_T_Solution = TypeVar("_T_Solution", bound=Solution)
+
+
+@final
+@dataclass(kw_only=True, frozen=True)
+class MagicTPCondition(Condition, Generic[_T_Solution]):
+    eml_lineage_proof: VCLineageProof
+    launcher_id: bytes32
+    tp_solution: _T_Solution | None
+
+    def __post_init__(self) -> None:
+        # Driver-only condition; fields are not streamable-serializable.
+        return None
+
+    def to_program(self) -> Program:
+        return Program.to(
+            [
+                -10,
+                self.eml_lineage_proof.to_program(),
+                [self.eml_lineage_proof.parent_proof_hash, self.launcher_id],
+                self.tp_solution.program if self.tp_solution is not None else None,
+            ]
+        )
+
+    @classmethod
+    def from_program(cls, program: Program) -> MagicTPCondition[UnknownSolution]:  # type: ignore[override]
+        _, eml_lineage_proof, proof_hash_and_launcher_id, tp_solution = program.as_iter()
+        proof_hash, launcher_id = proof_hash_and_launcher_id.as_iter()
+        num_values = eml_lineage_proof.list_len()
+        inner_puzzle_hash = None
+        if num_values == 2:
+            parent_id, amount = eml_lineage_proof.as_iter()
+        else:
+            parent_id, inner_puzzle_hash, amount = eml_lineage_proof.as_iter()
+        return MagicTPCondition(
+            eml_lineage_proof=VCLineageProof(
+                parent_proof_hash=bytes32(proof_hash.as_atom()) if proof_hash != Program.NIL else None,
+                inner_puzzle_hash=bytes32(inner_puzzle_hash.as_atom()) if inner_puzzle_hash is not None else None,
+                amount=uint64(amount.as_int()),
+                parent_name=bytes32(parent_id.as_atom()),
+            ),
+            launcher_id=bytes32(launcher_id.as_atom()),
+            tp_solution=None if tp_solution == Program.NIL else UnknownSolution(program=tp_solution),
+        )

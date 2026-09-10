@@ -27,6 +27,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD_HASH_HASH,
     QUOTED_CAT_MOD_HASH,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
@@ -39,13 +40,12 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions_with_cost
@@ -851,14 +851,9 @@ class CATWallet:
 
         for coin in cat_coins:
             if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.NIL,
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                cat_condition = TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail_reveal),
+                    solution=UnknownSolution(program=tail_solution),
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)
