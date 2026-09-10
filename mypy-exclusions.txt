@@ -1,5 +1,4 @@
 # File created by: python manage-mypy.py build-exclusions
-chia.introducer.introducer
 chia.plotters.bladebit
 chia.plotters.madmax
 chia.plotters.plotters
