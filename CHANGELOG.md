@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 2.7.4 Chia blockchain 2026-XX-XX
+## 2.7.4 Chia blockchain 2026-09-10
 
 ## What's Changed
 
