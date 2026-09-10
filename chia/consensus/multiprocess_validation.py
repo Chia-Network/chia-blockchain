@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Collection
 from dataclasses import dataclass
 
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
     BlockRecord,
     ConsensusConstants,
     FullBlock,
@@ -70,12 +71,19 @@ class PreValidationResult(Streamable):
 
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
-    block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
+    block: FullBlock,
+    prev_generators: list[bytes],
+    prev_tx_height: uint32,
+    constants: ConsensusConstants,
+    *,
+    validate_signatures: bool = True,
 ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
     generator_bytes = get_transactions_generator_bytes(block)
     assert generator_bytes is not None
     assert block.transactions_info is not None
     flags = get_flags_for_height_and_constants(prev_tx_height, constants)
+    if not validate_signatures:
+        flags |= DONT_VALIDATE_SIGNATURE
     if block.height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
     else:
@@ -102,6 +110,7 @@ def _pre_validate_block(
     expected_vs: ValidationState,
     *,
     skip_commitment_validation: bool = False,
+    validate_signatures: bool = True,
 ) -> PreValidationResult:
     """
     Args:
@@ -115,6 +124,8 @@ def _pre_validate_block(
             if it's validated.
         skip_commitment_validation: If True, skips validation of MMR roots (for weight proofs without full history).
             Challenge merkle tree validation is gated by HARD_FORK2_HEIGHT, not this flag.
+        validate_signatures: If False, skip aggregate BLS signature verification.
+            conds.validated_signature will be False when skipped.
     """
 
     validation_start = time.monotonic()
@@ -126,7 +137,7 @@ def _pre_validate_block(
     try:
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
         if conds is not None:
-            assert conds.validated_signature is True
+            assert conds.validated_signature is True or not validate_signatures
             assert block_has_transactions_generator(block)
             removals_and_additions = tx_removals_and_additions(conds)
         elif block_has_transactions_generator(block):
@@ -156,19 +167,24 @@ def _pre_validate_block(
                 if not is_canonical_serialization(generator_bytes):
                     return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
 
-            err, err_msg, conds = _run_block(block, prev_generators, prev_tx_height, constants)
+            err, err_msg, conds = _run_block(
+                block, prev_generators, prev_tx_height, constants, validate_signatures=validate_signatures
+            )
 
             assert (err is None) != (conds is None)
             if err is not None:
                 return error_result(err, err_msg)
             assert conds is not None
-            assert conds.validated_signature is True
+            if validate_signatures:
+                assert conds.validated_signature is True
+            else:
+                assert conds.validated_signature is False
             removals_and_additions = tx_removals_and_additions(conds)
         elif block.is_transaction_block():
             # This is a transaction block with just reward coins.
             removals_and_additions = ([], [])
 
-        assert conds is None or conds.validated_signature is True
+        assert conds is None or conds.validated_signature or not validate_signatures
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,
@@ -203,6 +219,7 @@ async def pre_validate_block(
     *,
     wp_summaries: list[SubEpochSummary] | None = None,
     skip_commitment_validation: bool = False,
+    validate_signatures: bool = True,
     nice: _SupportsLessThan = (0,),
     dedicated: bool = True,
 ) -> Awaitable[PreValidationResult]:
@@ -228,7 +245,8 @@ async def pre_validate_block(
             for the next block. It includes subslot iterators, difficulty and
             the previous sub epoch summary (ses) block.
         wp_summaries:
-        validate_signatures:
+        validate_signatures: If False, skip aggregate BLS signature verification.
+            conds.validated_signature will be False when skipped.
     """
     prev_b: BlockRecord | None = None
 
@@ -345,6 +363,7 @@ async def pre_validate_block(
         prev_tx_height,
         expected_vs,
         skip_commitment_validation=skip_commitment_validation,
+        validate_signatures=validate_signatures,
         nice=nice,
         dedicated=dedicated,
     )
