@@ -16,7 +16,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
@@ -25,6 +25,8 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
+    MagicTPCondition,
+    VCLineageProof,
     VerifiedCredential,
     construct_exigent_metadata_layer,
     create_covenant_layer,
@@ -566,7 +568,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             ACSSolution(
                 conditions=[
                     CreateCoin(ACS_2_PH, uint64(vc.coin.amount)),
-                    UnknownCondition.from_program(vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)),
+                    vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH),
                 ]
             ).program,
             new_proof_hash=NEW_PROOF_HASH,
@@ -775,7 +777,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             )
                         ),
                         *expected_announcements,
-                        UnknownCondition.from_program(vc.standard_magic_condition()),
+                        vc.standard_magic_condition(),
                     ]
                 ).program,
             )
@@ -894,7 +896,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             ACSSolution(
                 conditions=[
                     CreateCoin(ACS_PH, uint64(vc.coin.amount)),
-                    UnknownCondition.from_program(vc.magic_condition_for_self_revoke()),
+                    vc.magic_condition_for_self_revoke(),
                 ]
             ).program,
         )
@@ -931,3 +933,53 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             )
             > 0
         )
+
+
+def test_magic_tp_condition() -> None:
+    launcher_id = bytes32([7] * 32)
+    eve_lineage = VCLineageProof(
+        parent_name=bytes32([1] * 32),
+        amount=uint64(1),
+        parent_proof_hash=None,
+    )
+    steady_lineage = VCLineageProof(
+        parent_name=bytes32([2] * 32),
+        inner_puzzle_hash=bytes32([3] * 32),
+        amount=uint64(1),
+        parent_proof_hash=bytes32([4] * 32),
+    )
+
+    standard: MagicTPCondition[UnknownSolution] = MagicTPCondition(
+        eml_lineage_proof=steady_lineage, launcher_id=launcher_id, tp_solution=None
+    )
+    parsed_standard = MagicTPCondition.from_program(standard.to_program())
+    assert parsed_standard.launcher_id == launcher_id
+    assert parsed_standard.tp_solution is None
+    assert parsed_standard.eml_lineage_proof == steady_lineage
+
+    eve: MagicTPCondition[UnknownSolution] = MagicTPCondition(
+        eml_lineage_proof=eve_lineage, launcher_id=launcher_id, tp_solution=None
+    )
+    parsed_eve = MagicTPCondition.from_program(eve.to_program())
+    assert parsed_eve.eml_lineage_proof.parent_name == eve_lineage.parent_name
+    assert parsed_eve.eml_lineage_proof.inner_puzzle_hash is None
+    assert parsed_eve.eml_lineage_proof.parent_proof_hash is None
+
+    tp_solution = UnknownSolution(program=Program.to([ACS_PH, bytes32([5] * 32), Program.to(bytes32([6] * 32)), None]))
+    with_tp = MagicTPCondition(
+        eml_lineage_proof=steady_lineage,
+        launcher_id=launcher_id,
+        tp_solution=tp_solution,
+    )
+    parsed_with_tp = MagicTPCondition.from_program(with_tp.to_program())
+    assert parsed_with_tp.tp_solution is not None
+    assert parsed_with_tp.tp_solution.program == tp_solution.program
+
+    revoke = MagicTPCondition(
+        eml_lineage_proof=steady_lineage,
+        launcher_id=launcher_id,
+        tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())),
+    )
+    parsed_revoke = MagicTPCondition.from_program(revoke.to_program())
+    assert parsed_revoke.tp_solution is not None
+    assert parsed_revoke.tp_solution.program == Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())

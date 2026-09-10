@@ -17,7 +17,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, TAILCondition, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
@@ -26,13 +26,12 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
     parse_timelock_info,
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -493,14 +492,9 @@ class CRCATWallet(CATWallet):
                 )
 
             if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.NIL,
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                cat_condition = TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail_reveal),
+                    solution=UnknownSolution(program=tail_solution),
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)

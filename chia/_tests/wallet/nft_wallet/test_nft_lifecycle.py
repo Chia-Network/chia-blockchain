@@ -14,6 +14,8 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    TransferProgramCondition,
+    UpdateMetadataCondition,
     construct_ownership_layer,
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
@@ -68,11 +70,11 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         await sim.farm_block()
 
         if metadata_updater == "default":
-            metadata_updater_solutions: list[Program] = [
-                Program.to((b"u", "update")),
-                Program.to((b"lu", "update")),
-                Program.to((b"mu", "update")),
-                Program.to((b"foo", "update")),
+            metadata_updater_conditions: list[UpdateMetadataCondition] = [
+                UpdateMetadataCondition(data_uri="update"),
+                UpdateMetadataCondition(license_uri="update"),
+                UpdateMetadataCondition(meta_uri="update"),
+                UpdateMetadataCondition(other_update=("foo", "update")),
             ]
             expected_metadatas: list[Program] = [
                 metadata_to_program(
@@ -111,7 +113,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         else:
             return
 
-        for solution, metadata in zip(metadata_updater_solutions, expected_metadatas):
+        for metadata_condition, metadata in zip(metadata_updater_conditions, expected_metadatas):
             state_layer_coin = (
                 await sim_client.get_coin_records_by_parent_ids([state_layer_coin.name()], include_spent_coins=False)
             )[0].coin
@@ -123,10 +125,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         ACSSolution(
                             conditions=[
                                 CreateCoin(ACS_PH, uint64(1)),
-                                UnknownCondition(
-                                    opcode=Program.to(-24),
-                                    args=[METADATA_UPDATER, solution],
-                                ),
+                                metadata_condition,
                             ]
                         ).program
                     ]
@@ -340,13 +339,13 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
                     ACSSolution(
                         conditions=[
                             CreateCoin(ACS_PH, uint64(1)),
-                            UnknownCondition(
-                                opcode=Program.to(-10),
-                                args=[
-                                    Program.to(FAKE_LAUNCHER_ID),
-                                    Program.to([[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]]),
-                                    Program.to(ACS_PH),
-                                ],
+                            TransferProgramCondition(
+                                trade_prices_list={
+                                    ACS_PH: 100,
+                                    FAKE_CAT.get_tree_hash(): 100,
+                                },
+                                new_owner=FAKE_LAUNCHER_ID,
+                                new_owner_inner_puzzle_hash=ACS_PH,
                             ),
                         ]
                     ).program
@@ -415,10 +414,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
                     ACSSolution(
                         conditions=[
                             CreateCoin(ACS_PH, uint64(1)),
-                            UnknownCondition(
-                                opcode=Program.to(-10),
-                                args=[Program.to([]), Program.to([]), Program.to([])],
-                            ),
+                            TransferProgramCondition(trade_prices_list={}),
                         ]
                     ).program
                 ]
@@ -431,3 +427,40 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         result = await sim_client.push_tx(empty_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
+
+
+def test_update_metadata_condition() -> None:
+    for condition in (
+        UpdateMetadataCondition(data_uri="https://example.com/data"),
+        UpdateMetadataCondition(meta_uri="https://example.com/meta"),
+        UpdateMetadataCondition(license_uri="https://example.com/license"),
+    ):
+        assert UpdateMetadataCondition.from_program(condition.to_program()) == condition
+
+    with pytest.raises(ValueError, match="Only one of"):
+        UpdateMetadataCondition(data_uri="a", meta_uri="b")
+    with pytest.raises(ValueError, match="Only one of"):
+        UpdateMetadataCondition()
+
+    other = UpdateMetadataCondition(other_update=("foo", "bar"))
+    assert other.to_program() == Program.to([-24, NFT_METADATA_UPDATER, (b"foo", "bar")])
+    with pytest.raises(ValueError, match="Invalid key"):
+        UpdateMetadataCondition.from_program(other.to_program())
+
+
+def test_transfer_program_condition() -> None:
+    owner = bytes32([1] * 32)
+    inner = bytes32([2] * 32)
+    asset_a = bytes32([3] * 32)
+    asset_b = bytes32([4] * 32)
+
+    empty = TransferProgramCondition(trade_prices_list={})
+    assert TransferProgramCondition.from_program(empty.to_program()) == empty
+
+    full = TransferProgramCondition(
+        trade_prices_list={asset_a: 100, asset_b: 250},
+        new_owner=owner,
+        new_owner_inner_puzzle_hash=inner,
+    )
+    assert TransferProgramCondition.from_program(full.to_program()) == full
+    assert full.to_program() == Program.to([-10, owner, [[100, asset_a], [250, asset_b]], inner])

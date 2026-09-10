@@ -22,7 +22,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -335,7 +334,7 @@ class VCWallet:
             magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
-        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
+        extra_conditions = (*extra_conditions, magic_condition)
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
