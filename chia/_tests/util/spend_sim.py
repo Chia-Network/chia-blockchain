@@ -35,6 +35,7 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
@@ -447,7 +448,7 @@ class SimClient:
         coin_record = await self.service.coin_store.get_coin_record(coin_id)
         assert coin_record is not None
         puzzle, solution = get_puzzle_and_solution_for_coin(
-            generator.program,
+            SerializedProgram.from_bytes(generator.program),
             generator.generator_refs,
             self.service.defaults.MAX_BLOCK_COST_CLVM,
             coin_record.coin,
