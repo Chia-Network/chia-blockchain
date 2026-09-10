@@ -4,6 +4,15 @@ from dataclasses import dataclass
 
 from chia.wallet.puzzles import puzzle_drivers
 
+"""
+This file may have more utility in the future but for right now it acts as a substitute for putting:
+```
+if TYPE_CHECKING:
+    _protocol_check: ClassVar[Puzzle/Solution] = cast("Something", None)
+```
+into every driver class
+"""
+
 
 @dataclass(frozen=True, kw_only=True)
 class PuzzleDriverSet:
