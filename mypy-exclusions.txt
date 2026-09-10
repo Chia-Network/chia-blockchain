@@ -4,7 +4,6 @@ chia.plotters.bladebit
 chia.plotters.madmax
 chia.plotters.plotters
 chia.plotters.plotters_util
-chia.plotting.manager
 chia.plotting.util
 chia.rpc.rpc_client
 chia.simulator.full_node_simulator
