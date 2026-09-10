@@ -40,13 +40,11 @@ class WalletTool:
     def __init__(self, constants: ConsensusConstants, sk: PrivateKey | None = None):
         self.constants = constants
         self.current_balance = 0
-        self.my_utxos: set = set()
         if sk is not None:
             self.private_key = sk
         else:
             self.private_key = AugSchemeMPL.key_gen(DEFAULT_SEED)
-        self.generator_lookups: dict = {}
-        self.puzzle_pk_cache: dict = {}
+        self.puzzle_pk_cache = {}
         self.get_new_puzzle()
 
     def get_next_address_index(self) -> uint32:
