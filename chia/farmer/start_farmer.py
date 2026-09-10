@@ -20,7 +20,7 @@ from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation
@@ -78,11 +78,10 @@ def create_farmer_service(
 
 
 async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml", fill_missing_services=True)
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
-    config_pool = load_config_cli(root_path, "config.yaml", "pool")
+    config_pool = apply_config_cli_overrides(config["pool"])
     config["pool"] = config_pool
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 

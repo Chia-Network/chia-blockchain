@@ -21,7 +21,7 @@ from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
@@ -75,10 +75,7 @@ async def create_full_node_service(
     )
 
 
-async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
-    config[SERVICE_NAME] = service_config
+async def async_main(config: dict[str, Any], service_config: dict[str, Any], root_path: pathlib.Path) -> int:
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
@@ -100,7 +97,9 @@ def main() -> int:
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+        config = load_config(root_path, "config.yaml")
+        service_config = apply_config_cli_overrides(config[SERVICE_NAME])
+        config[SERVICE_NAME] = service_config
         target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
@@ -108,7 +107,9 @@ def main() -> int:
             target_peer_count = None
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
-        return async_run(coro=async_main(service_config, root_path=root_path), connection_limit=target_peer_count)
+        return async_run(
+            coro=async_main(config, service_config, root_path=root_path), connection_limit=target_peer_count
+        )
 
 
 if __name__ == "__main__":

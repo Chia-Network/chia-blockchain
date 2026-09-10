@@ -19,7 +19,7 @@ from chia.seeder.crawler_service import CrawlerService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 
 # See: https://bugs.python.org/issue29288
@@ -68,9 +68,8 @@ def create_full_node_crawler_service(
 
 
 async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)

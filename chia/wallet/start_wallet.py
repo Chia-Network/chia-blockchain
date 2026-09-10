@@ -17,7 +17,7 @@ from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation
@@ -80,9 +80,8 @@ def create_wallet_service(
 
 
 async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
 
     # This is simulator
