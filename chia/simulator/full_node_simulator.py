@@ -45,7 +45,7 @@ default = _Default()
 timeout_per_block = 5
 
 
-async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: float | None = 5):
+async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: float | None = 5) -> None:
     """Wait until all of the specified coins are simultaneously reported as spendable
     by the wallet.
 
@@ -67,7 +67,7 @@ async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: fl
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: dict) -> None:
+    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: dict[str, Any]) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
@@ -250,7 +250,7 @@ class FullNodeSimulator(FullNodeAPI):
         await self.full_node.add_block(more[-1])
         return more[-1]
 
-    async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
+    async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False) -> None:
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
@@ -300,7 +300,7 @@ class FullNodeSimulator(FullNodeAPI):
             )
         await self.full_node.add_block(more[-1])
 
-    async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
+    async def reorg_from_index_to_new_index(self, request: ReorgProtocol) -> None:
         new_index = request.new_index
         old_index = request.old_index
         coinbase_ph = request.puzzle_hash
