@@ -31,7 +31,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable
-from chia.wallet.conditions import AggSigMe
+from chia.wallet.conditions import AggSigMe, AggSigUnsafe
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -201,7 +201,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         uint64(0),
     )
     not_our_coin_spend: CoinSpend = make_spend(
-        not_our_coin, ACS, ACSSolution(conditions=[AggSigMe(not_our_pubkey, not_our_message)]).program
+        not_our_coin, ACS, ACSSolution(conditions=[AggSigUnsafe(not_our_pubkey, not_our_message)]).program
     )
 
     not_our_utx: UnsignedTransaction = UnsignedTransaction(
