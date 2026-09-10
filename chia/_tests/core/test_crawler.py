@@ -130,6 +130,44 @@ async def test_crawler_to_db(crawler_service_no_loop: CrawlerService, one_node: 
 
 
 @pytest.mark.anyio
+async def test_crawler_unbindable_timestamp(
+    crawler_service_no_loop: CrawlerService, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    A record whose best_timestamp is too large for sqlite to bind must be skipped instead of
+    abandoning the batch and leaving good_peers stale.
+    """
+    crawler = crawler_service_no_loop._node
+    crawl_store = crawler.crawl_store
+    assert crawl_store is not None
+    good_address = "10.0.0.1"
+    bad_address = "10.0.0.2"
+
+    for peer_address, best_timestamp in [(good_address, uint64(time.time())), (bad_address, uint64(2**64 - 1))]:
+        peer_record = PeerRecord(
+            peer_address,
+            peer_address,
+            uint32(8444),
+            False,
+            uint64(0),
+            uint32(0),
+            uint64(0),
+            uint64(time.time()),
+            best_timestamp,
+            "undefined",
+            uint64(0),
+            tls_version="unknown",
+        )
+        await crawl_store.add_peer(peer_record, PeerReliability(peer_address, tries=1, successes=1))
+
+    with caplog.at_level(logging.ERROR):
+        await crawler.save_to_db()
+
+    assert f"Skipping peer {bad_address}" in caplog.text
+    assert good_address in await crawl_store.get_good_peers()
+
+
+@pytest.mark.anyio
 async def test_crawler_peer_cleanup(
     crawler_service_no_loop: CrawlerService, one_node: SimulatorsAndWalletsServices
 ) -> None:
