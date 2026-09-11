@@ -16,7 +16,7 @@ from pytest_mock import MockerFixture
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases
-from chia._tests.util.time_out_assert import time_out_assert_not_none
+from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.daemon.client import DaemonProxy, connect_to_daemon
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
@@ -482,6 +482,7 @@ async def test_daemon_passthru(get_daemon, bt):
 
 @pytest.mark.anyio
 async def test_daemon_replies_when_destination_is_not_connected(get_daemon, bt):
+    ws_server = get_daemon
     config = bt.config
     daemon_port = config["daemon_port"]
 
@@ -510,9 +511,33 @@ async def test_daemon_replies_when_destination_is_not_connected(get_daemon, bt):
                 command="get_blockchain_state",
             )
 
-            # a state change broadcast to the UI while no UI is connected, and a reply routed to a client
+            # the same for a service that registered and whose session was closed afterwards, which leaves
+            # an empty connection set behind under its name
+            async with client.ws_connect(
+                f"wss://127.0.0.1:{daemon_port}",
+                autoclose=True,
+                autoping=True,
+                ssl=bt.get_daemon_ssl_context(),
+                max_msg_size=100 * 1024 * 1024,
+            ) as flaky_ws:
+                await flaky_ws.send_str(create_payload("register_service", {"service": "flaky"}, "flaky", "daemon"))
+                assert_response_success_only(await flaky_ws.receive())
+                assert len(ws_server.connections["flaky"]) == 1
+            await time_out_assert(30, lambda: len(ws_server.connections["flaky"]), 0)
+            request = create_payload_dict("healthz", {}, service_name, "flaky")
+            await ws.send_str(dict_to_json_str(request))
+            assert_response(
+                await ws.receive(),
+                {"success": False, "error": "flaky is not connected to the daemon"},
+                request_id=request["request_id"],
+                command="healthz",
+            )
+
+            # state change broadcasts to subscribers that are not connected, and a reply routed to a client
             # that has gone, are still dropped silently: the next message received answers the ping below
             await ws.send_str(create_payload("state_changed", {"state": "peak"}, service_name, "wallet_ui"))
+            await ws.send_str(create_payload("farming_info", {}, service_name, "metrics"))
+            await ws.send_str(create_payload("unfinished_block", {}, service_name, "unfinished_block_info"))
             stale_reply = create_payload_dict("get_blockchain_state", {"success": True}, service_name, "gone_ui")
             stale_reply["ack"] = True
             await ws.send_str(dict_to_json_str(stale_reply))
