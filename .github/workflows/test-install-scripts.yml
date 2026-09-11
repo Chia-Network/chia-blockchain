@@ -190,6 +190,11 @@ jobs:
           - name: rockylinux:9
             type: rocky
             url: "docker://rockylinux:9"
+          - name: ubuntu:jammy (22.04)
+            type: ubuntu
+            # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+            # Prepare Ubuntu falls back to python3.11-venv from universe.
+            url: "docker://ubuntu:jammy"
           - name: ubuntu:noble (24.04)
             type: ubuntu
             # https://packages.ubuntu.com/noble/python3 (24.04, 3.12)
