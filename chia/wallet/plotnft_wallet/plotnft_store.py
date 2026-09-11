@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from sqlite3 import Row
+from typing import Self
 
 from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self
 
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConfig
 from chia.types.blockchain_format.program import Program

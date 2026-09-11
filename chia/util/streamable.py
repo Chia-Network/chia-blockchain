@@ -18,6 +18,7 @@ from typing import (
     BinaryIO,
     ClassVar,
     Literal,
+    Self,
     TypeVar,
     Union,
     get_args,
@@ -27,7 +28,6 @@ from typing import (
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Self
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash

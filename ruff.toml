@@ -44,6 +44,12 @@ ignore = [
     # flake8-implicit-str-concat
     "ISC003", # explicit-string-concatenation
 
+    # pyupgrade
+    # `StrEnum` changes `str()` and `format()` output.  The remaining `(str, Enum)` classes
+    # cross the daemon websocket protocol, RPC error payloads and benchmark CLI parsing.
+    # TODO: convert these to `enum.StrEnum`
+    "UP042", # replace-str-enum
+
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.

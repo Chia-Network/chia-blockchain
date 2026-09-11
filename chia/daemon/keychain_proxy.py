@@ -96,7 +96,7 @@ class KeychainProxy(DaemonProxy):
                 self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise KeychainProxyConnectionTimeout
 
     async def start(self, wait_for_start: bool = False) -> None:

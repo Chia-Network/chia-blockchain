@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Self
 
-from typing_extensions import Protocol, Self
+from typing_extensions import Protocol
 
 # If accepted for general use then this should be moved to a common location
 # and probably implemented by the framework instead of manual decoration.

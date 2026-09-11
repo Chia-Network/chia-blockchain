@@ -1113,7 +1113,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         FINGERPRINT_ARG,
         "--summaries",
     ]
-    tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+    tzinfo = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
     # these are various things that should be in the output
     assert_list = [
         "Timelock information:",

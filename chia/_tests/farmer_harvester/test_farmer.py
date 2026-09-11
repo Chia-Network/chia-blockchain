@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, cast
+from typing import Any, Self, cast
 from unittest.mock import ANY, AsyncMock
 
 import pytest
@@ -16,7 +16,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotParam, PrivateKey, P
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
-from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__

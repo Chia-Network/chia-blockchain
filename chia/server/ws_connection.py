@@ -9,7 +9,7 @@ import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
-from typing import Any
+from typing import Any, final
 
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
@@ -17,7 +17,7 @@ from aiohttp.web import WebSocketResponse
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint16
 from packaging.version import Version
-from typing_extensions import Protocol, final
+from typing_extensions import Protocol
 
 from chia import __version__
 from chia.protocols.outbound_message import Message, NodeType, make_msg
@@ -767,7 +767,7 @@ class WSChiaConnection:
 
             try:
                 await asyncio.wait_for(event.wait(), timeout=timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self.log.debug(f"Request timeout: {message}")
 
             result = self.request_results.pop(message.id, None)
