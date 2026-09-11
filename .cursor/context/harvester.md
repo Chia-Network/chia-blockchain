@@ -45,7 +45,7 @@ Public docs describe harvesters as checking plots for a farmer, but source corre
 
 ## Plot Discovery And State
 
-- Plot discovery is driven by `PlotManager.start_refreshing()`, which loads the plot cache and starts a thread that periodically scans configured directories for `*.plot` and `*.plot2` files.
+- Plot discovery is driven by `PlotManager.start_refreshing()`, which loads the plot cache and starts a thread that periodically scans configured directories for `*.plot` and `*.gplot` files.
 - Refresh emits `started`, `batch_processed`, and `done` callbacks. `Harvester._plot_refresh_callback()` converts those into plot-sync start, loaded batches, and final removed/invalid/no-key/duplicate lists.
 - `PlotManager` rejects or quarantines plots when keys do not match the farmer handshake, files fail to open, duplicates are found by filename, compression exceeds configured limits, compressed plots lack decompressor contexts, or uncompressed V1 files look too small to be complete.
 - `plot_manager.plots` is protected by `PlotManager`'s lock. Code that enumerates plots for RPC, signage-point lookup, or signature lookup must use `with self.harvester.plot_manager:` to avoid racing the refresh thread.

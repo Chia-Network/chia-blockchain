@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey, compute_plot_id_v2, create_v2_plot
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey, compute_plot_group_id_v2, create_v2_single_plot_group
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16
 from chiapos import DiskPlotter
@@ -285,7 +285,6 @@ async def create_v2_plots(
     strength: int = 2,
     num: int = 1,
     test_private_keys: list[PrivateKey] | None = None,
-    testnet: bool = False,
 ) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     if keys.pool_public_key is not None:
@@ -324,8 +323,8 @@ async def create_v2_plots(
         plot_index = uint16(0)
         meta_group = uint8(0)
 
-        # The plot id is based on the harvester, farmer, pool contract puzzle
-        # hash and strength
+        # The plot group ID is based on the harvester, farmer, pool contract
+        # puzzle hash and strength
         pool_ph_or_pk: G1Element | bytes32
         if keys.pool_public_key is not None:
             pool_ph_or_pk = keys.pool_public_key
@@ -334,28 +333,26 @@ async def create_v2_plots(
         else:  # pragma: no cover
             assert False, "one of pool_contract_puzzle_hash and pool_public_key must be set"
 
-        plot_id = compute_plot_id_v2(
+        plot_group_id = compute_plot_group_id_v2(
             uint8(strength),
             plot_public_key,
             keys.pool_public_key,
             keys.pool_contract_puzzle_hash,
-            plot_index,
-            meta_group,
         )
 
-        filename = f"plot-k{size}-{plot_id}.plot2"
+        filename = f"plot-k{size}-{plot_group_id}.gplot"
         full_path: Path = final_dir / filename
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
             plot_memo = bytes(pool_ph_or_pk) + bytes(keys.farmer_public_key) + bytes(sk)
-            create_v2_plot(
-                str(full_path.absolute()), size, strength, plot_id, plot_index, meta_group, plot_memo, testnet
+            create_v2_single_plot_group(
+                str(full_path.absolute()), size, strength, plot_group_id, plot_index, meta_group, plot_memo
             )
-            created_plots[plot_id] = full_path
+            created_plots[plot_group_id] = full_path
         else:
             log.info(f"Plot {filename} already exists")
-            existing_plots[plot_id] = full_path
+            existing_plots[plot_group_id] = full_path
 
     log.info(f"Created a total of {len(created_plots)} new plots")
     for created_path in created_plots.values():

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint8, uint16, uint64
 from packaging.version import Version
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
@@ -119,7 +119,7 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             yield
     elif isinstance(plot_info.prover, V2Prover):
         with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
-            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint8(2))]
+            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint16(0), uint8(2))]
             yield
 
 

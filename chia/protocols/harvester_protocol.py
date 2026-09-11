@@ -99,7 +99,7 @@ class PartialProofsData(Streamable):
     plot_index: uint16
     meta_group: uint8
     strength: uint8
-    plot_id: bytes32
+    plot_group_id: bytes32
     pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element

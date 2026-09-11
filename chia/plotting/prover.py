@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
 from chia_rs import PartialProof, PlotParam, Prover
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8
+from chia_rs.sized_ints import uint8, uint16
 from chiapos import DiskProver
 
 
@@ -24,6 +24,7 @@ class QualityProtocol(Protocol):
 class ProverProtocol(Protocol):
     def get_filename(self) -> str: ...
     def get_param(self) -> PlotParam: ...
+    def get_param_for_index(self, plot_index: uint16) -> PlotParam: ...
     def get_strength(self) -> uint8: ...
     def get_memo(self) -> bytes: ...
     def get_compression_level(self) -> uint8: ...
@@ -39,6 +40,7 @@ class ProverProtocol(Protocol):
 @dataclass(frozen=True)
 class V2Quality(QualityProtocol):
     _partial_proof: PartialProof
+    _plot_index: uint16
     _strength: uint8
 
     def get_string(self) -> bytes32:
@@ -46,6 +48,9 @@ class V2Quality(QualityProtocol):
 
     def get_partial_proof(self) -> PartialProof:
         return self._partial_proof
+
+    def get_plot_index(self) -> uint16:
+        return self._plot_index
 
 
 class V2Prover:
@@ -71,12 +76,24 @@ class V2Prover:
         return self._prover.get_filename()
 
     def get_param(self) -> PlotParam:
+        raise AssertionError("V2 plot groups do not have a single-plot PlotParam")
+
+    def get_param_for_index(self, plot_index: uint16) -> PlotParam:
         return PlotParam.make_v2(
-            self._prover.get_plot_index(), self._prover.get_meta_group(), self._prover.get_strength()
+            plot_index, self._prover.get_meta_group(), self._prover.get_strength()
         )
 
     def get_strength(self) -> uint8:
         return uint8(self._prover.get_strength())
+
+    def get_meta_group(self) -> uint8:
+        return uint8(self._prover.get_meta_group())
+
+    def get_group_size(self) -> uint16:
+        return uint16(self._prover.get_group_size())
+
+    def plot_id_for_index(self, plot_index: uint16) -> bytes32:
+        return self._prover.plot_id_for_index(plot_index)
 
     def get_memo(self) -> bytes:
         return self._prover.get_memo()
@@ -92,10 +109,10 @@ class V2Prover:
         return self._prover.to_bytes()
 
     def get_id(self) -> bytes32:
-        return self._prover.plot_id()
+        return self._prover.plot_group_id()
 
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]:
-        return [V2Quality(q, self.get_strength()) for q in self._prover.get_qualities_for_challenge(challenge)]
+        return [V2Quality(q.chain, q.plot_index, self.get_strength()) for q in self._prover.get_qualities_for_challenge(challenge)]
 
 
 @dataclass(frozen=True)
@@ -120,6 +137,9 @@ class V1Prover:
 
     def get_param(self) -> PlotParam:
         return PlotParam.make_v1(uint8(self._disk_prover.get_size()))
+    
+    def get_param_for_index(self, plot_index: uint16) -> PlotParam:
+        raise AssertionError("V1 plots do not have plot group PlotParam")
 
     def get_strength(self) -> uint8:
         raise AssertionError("V1 plot format doesn't use strength")
@@ -151,7 +171,7 @@ class V1Prover:
 
 
 def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
-    if filename.endswith(".plot2"):
+    if filename.endswith(".gplot"):
         return V2Prover(Prover.from_bytes(prover_data))
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver.from_bytes(prover_data))
@@ -160,7 +180,7 @@ def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
 
 
 def get_prover_from_file(filename: str) -> ProverProtocol:
-    if filename.endswith(".plot2"):
+    if filename.endswith(".gplot"):
         return V2Prover(Prover(filename))
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver(filename))
