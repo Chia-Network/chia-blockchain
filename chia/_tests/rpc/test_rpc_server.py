@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import dataclasses
 import json
@@ -13,12 +14,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
+from aiohttp import WSMessage, WSMsgType
 from chia_rs.sized_ints import uint16
 
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServer, RpcServiceProtocol
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.config import load_config
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage
 
 root_logger = logging.getLogger()
@@ -44,6 +47,8 @@ class TestRpcApi:
     # unused as of the initial writing of these tests
     service: RpcServiceProtocol
     service_name: str = service_name
+    # released by tests that want the wait_for_gate endpoint to return
+    gate: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
 
     async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
         # just here to satisfy the complete protocol
@@ -54,6 +59,7 @@ class TestRpcApi:
             "/log": self.log,
             "/raise_rpc_error": self.raise_rpc_error,
             "/raise_generic_error": self.raise_generic_error,
+            "/wait_for_gate": self.wait_for_gate,
         }
 
     async def raise_rpc_error(self, request: dict[str, Any]) -> EndpointResult:
@@ -66,6 +72,10 @@ class TestRpcApi:
 
     async def raise_generic_error(self, request: dict[str, Any]) -> EndpointResult:
         raise ValueError("a non-RPC generic error")
+
+    async def wait_for_gate(self, request: dict[str, Any]) -> EndpointResult:
+        await self.gate.wait()
+        return {"waited": True}
 
     async def log(self, request: dict[str, Any]) -> EndpointResult:
         message = request["message"]
@@ -318,3 +328,143 @@ async def test_get_connections_server_none_raises(server: RpcServer[TestRpcApi])
 
     with pytest.raises(ValueError, match="Global connections is not set"):
         await server.get_connections({})
+
+
+def daemon_payload(command: str, request_id: str) -> str:
+    return json.dumps(
+        {
+            "command": command,
+            "data": {},
+            "ack": False,
+            "request_id": request_id,
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+
+@dataclasses.dataclass
+class FakeDaemonWebSocket:
+    """Stands in for the service's client websocket to the daemon."""
+
+    incoming: asyncio.Queue[WSMessage] = dataclasses.field(default_factory=asyncio.Queue)
+    sent: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+    sent_changed: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    closed: bool = False
+
+    def receive_text(self, payload: str) -> None:
+        self.incoming.put_nowait(WSMessage(WSMsgType.TEXT, payload, None))
+
+    def close_from_daemon(self) -> None:
+        self.closed = True
+        self.incoming.put_nowait(WSMessage(WSMsgType.CLOSED, None, None))
+
+    async def receive(self) -> WSMessage:
+        return await self.incoming.get()
+
+    async def send_str(self, data: str) -> None:
+        if self.closed:
+            raise aiohttp.ClientConnectionResetError("Cannot write to closing transport")
+        self.sent.append(json.loads(data))
+        self.sent_changed.set()
+
+    async def wait_for_sent(self, count: int) -> None:
+        async def wait() -> None:
+            while len(self.sent) < count:
+                self.sent_changed.clear()
+                await self.sent_changed.wait()
+
+        await asyncio.wait_for(wait(), timeout=10)
+
+
+def pending_handler_tasks(server: RpcServer[TestRpcApi]) -> list[asyncio.Task[None]]:
+    # finished tasks leave the set from a done callback, which runs a loop iteration after the task ends
+    return [task for task in server.daemon_handler_tasks if not task.done()]
+
+
+@pytest.mark.anyio
+async def test_daemon_messages_are_handled_concurrently(server: RpcServer[TestRpcApi]) -> None:
+    """A slow handler must not hold back later messages received over the daemon websocket."""
+    ws = FakeDaemonWebSocket()
+    ws.receive_text(daemon_payload("wait_for_gate", "slow"))
+    ws.receive_text(daemon_payload("healthz", "fast"))
+
+    connection_task = create_referenced_task(server.connection(ws))  # type: ignore[arg-type]
+    try:
+        # the registration and the fast response arrive while the slow handler is still waiting
+        await ws.wait_for_sent(2)
+        assert ws.sent[0]["command"] == "register_service"
+        assert ws.sent[1]["request_id"] == "fast"
+        assert ws.sent[1]["data"]["success"] is True
+        assert not connection_task.done()
+        assert len(pending_handler_tasks(server)) == 1
+
+        server.rpc_api.gate.set()
+        await ws.wait_for_sent(3)
+        assert ws.sent[2]["request_id"] == "slow"
+        assert ws.sent[2]["data"] == {"waited": True, "success": True}
+
+        ws.close_from_daemon()
+        await asyncio.wait_for(connection_task, timeout=10)
+        assert len(pending_handler_tasks(server)) == 0
+    finally:
+        server.rpc_api.gate.set()
+        connection_task.cancel()
+
+
+@pytest.mark.anyio
+async def test_daemon_connection_loop_ends_while_a_handler_is_in_flight(
+    server: RpcServer[TestRpcApi], caplog: pytest.LogCaptureFixture
+) -> None:
+    """When the daemon closes the connection the loop returns without waiting for in-flight handlers,
+    and the reply a handler can no longer deliver is logged rather than raised."""
+    ws = FakeDaemonWebSocket()
+    ws.receive_text(daemon_payload("wait_for_gate", "slow"))
+    ws.receive_text(daemon_payload("healthz", "fast"))
+
+    connection_task = create_referenced_task(server.connection(ws))  # type: ignore[arg-type]
+    try:
+        # once the fast reply is out, the slow handler is known to be in flight
+        await ws.wait_for_sent(2)
+        assert ws.sent[0]["command"] == "register_service"
+        assert ws.sent[1]["request_id"] == "fast"
+        [handler_task] = pending_handler_tasks(server)
+
+        ws.close_from_daemon()
+        await asyncio.wait_for(connection_task, timeout=10)
+        assert not handler_task.done()
+
+        with caplog.at_level(logging.WARNING, logger="chia.rpc.rpc_server"):
+            server.rpc_api.gate.set()
+            await asyncio.wait_for(handler_task, timeout=10)
+
+        assert handler_task.exception() is None
+        assert "Unable to send the response to 'wait_for_gate'" in caplog.text
+        assert len(ws.sent) == 2
+        assert len(pending_handler_tasks(server)) == 0
+    finally:
+        server.rpc_api.gate.set()
+        connection_task.cancel()
+
+
+@pytest.mark.anyio
+async def test_await_closed_cancels_in_flight_daemon_handlers(server: RpcServer[TestRpcApi]) -> None:
+    ws = FakeDaemonWebSocket()
+    ws.receive_text(daemon_payload("wait_for_gate", "slow"))
+    ws.receive_text(daemon_payload("healthz", "fast"))
+
+    connection_task = create_referenced_task(server.connection(ws))  # type: ignore[arg-type]
+    try:
+        await ws.wait_for_sent(2)
+        [handler_task] = pending_handler_tasks(server)
+        ws.close_from_daemon()
+        await asyncio.wait_for(connection_task, timeout=10)
+
+        server.close()
+        await asyncio.wait_for(server.await_closed(), timeout=10)
+
+        assert handler_task.cancelled()
+        assert len(server.daemon_handler_tasks) == 0
+    finally:
+        server.rpc_api.gate.set()
+        connection_task.cancel()
