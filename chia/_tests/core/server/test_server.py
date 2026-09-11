@@ -174,7 +174,7 @@ async def test_start_client_handshake_timeout(
     async def timeout_handshake(
         self: WSChiaConnection, network_id: str, server_port: uint16, local_type: NodeType
     ) -> None:
-        raise asyncio.TimeoutError
+        raise TimeoutError
 
     monkeypatch.setattr(WSChiaConnection, "perform_handshake", timeout_handshake)
     target_peer = PeerInfo(self_hostname, server_2.get_port())
