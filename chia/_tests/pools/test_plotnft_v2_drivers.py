@@ -35,12 +35,20 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import NilSolution, P2Conditions, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACSPuzzle,
+    ACSSolution,
+    DelegatedPuzzleAndSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+)
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -124,16 +132,12 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit to waiting room while self pooling.")):
             plotnft.exit_to_waiting_room(
-                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
-                )
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
             )
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while self pooling.")):
             plotnft.exit_waiting_room(
-                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
-                )
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
             )
 
         # Join a pool
@@ -168,14 +172,12 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while not in it")):
             plotnft.exit_waiting_room(
-                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
-                )
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
             )
 
         # Attempt to leave without waiting room
         quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+            puzzle=ACSPuzzle(), solution=ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))])
         )
         singing_info = plotnft.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(quick_exit_dpuz_and_solution)
@@ -183,7 +185,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -191,15 +193,15 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # # Attempt to make a message while leaving
         message_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to(
-                [
-                    plotnft.exit_to_waiting_room_condition().to_program(),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(
+                conditions=[
+                    plotnft.exit_to_waiting_room_condition(),
                     SendMessage(
                         bytes32.zeros,
                         sender=MessageParticipant(parent_id_committed=bytes32.zeros),
                         receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
-                    ).to_program(),
+                    ),
                 ]
             ),
         )
@@ -209,7 +211,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -217,8 +219,8 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # Leave honestly
         honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to([plotnft.exit_to_waiting_room_condition().to_program()]),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=[plotnft.exit_to_waiting_room_condition()]),
         )
         singing_info = plotnft.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
@@ -228,9 +230,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 WalletSpendBundle(
                     coin_spends,
                     user_sk.sign(
-                        singing_info.puzzle.get_tree_hash()
-                        + plotnft.coin.name()
-                        + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                        singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                     ),
                 ),
             )
@@ -241,23 +241,19 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         with pytest.raises(ValueError, match=re.escape("Already exiting to waiting room, cannot exit again")):
             plotnft.exit_to_waiting_room(
-                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
-                )
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
             )
 
         # Return to self-pooling
         exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to([cond.to_program() for cond in plotnft.exit_from_waiting_room_conditions()]),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=plotnft.exit_from_waiting_room_conditions()),
         )
         singing_info = plotnft.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
         timelocked_spend = WalletSpendBundle(
             coin_spends,
-            user_sk.sign(
-                singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
-            ),
+            user_sk.sign(singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
@@ -301,7 +297,7 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
             plotnft.claim_pool_rewards(rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[])
 
         reward_dpuz_and_sol = DelegatedPuzzleAndSolution(
-            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+            puzzle=ACSPuzzle(), solution=ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))])
         )
         coin_spends = plotnft.claim_pool_rewards(
             rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[reward_dpuz_and_sol]
@@ -342,7 +338,7 @@ async def test_plotnft_pooling_claim(
             plotnft.claim_pool_rewards(
                 rewards_to_claim=[reward],
                 reward_delegated_puzzles_and_solutions=[
-                    DelegatedPuzzleAndSolution(puzzle=Program.to(None), solution=NilSolution().program)
+                    DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
                 ],
             )
 
