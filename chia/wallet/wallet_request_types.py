@@ -4,12 +4,11 @@ from copy import deepcopy
 from dataclasses import dataclass, field, fields
 from enum import Enum
 from functools import cached_property
-from typing import Any, BinaryIO, TypeVar, final
+from typing import Any, BinaryIO, Self, TypeVar, final
 
 from chia_rs import Coin, CoinRecord, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
-from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord

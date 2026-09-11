@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, Self, cast, final
 
 from chia_rs import CoinSpend, G2Element
 from chia_rs.chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
-from typing_extensions import Self, Unpack
+from typing_extensions import Unpack
 
 from chia.pools.plotnft_drivers import (
     GetNextPlotNFTError,

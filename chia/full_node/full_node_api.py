@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from collections.abc import Collection, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import anyio
@@ -2005,8 +2005,8 @@ class FullNodeAPI:
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_fee_estimates])
     async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
         def get_fee_estimates(est: FeeEstimatorInterface, req_times: list[uint64]) -> list[FeeEstimate]:
-            now = datetime.now(timezone.utc)
-            utc_time = now.replace(tzinfo=timezone.utc)
+            now = datetime.now(UTC)
+            utc_time = now.replace(tzinfo=UTC)
             utc_now = int(utc_time.timestamp())
             deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
             fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]

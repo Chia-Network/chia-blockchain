@@ -92,7 +92,7 @@ class Crawler:
             if self.crawl_task is not None:
                 try:
                     await asyncio.wait_for(self.crawl_task, timeout=10)  # wait 10 seconds before giving up
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     self.log.error("Crawl task did not exit in time, killing task.")
                     self.crawl_task.cancel()
             if self.crawl_store is not None:

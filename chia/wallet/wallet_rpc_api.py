@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from itertools import count
 from pathlib import Path
 from types import MethodType
@@ -944,7 +944,7 @@ class WalletRpcApi:
         except ValueError as e:
             raise ValueError("Wallet is not currently connected to any full node peers") from e
 
-        now_utc: int = int(datetime.now(timezone.utc).timestamp())
+        now_utc: int = int(datetime.now(UTC).timestamp())
         time_targets = [uint64(now_utc)]
         fee_estimate_group = await self.service.request_fee_estimates(peer, time_targets)
 

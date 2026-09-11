@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -150,7 +149,7 @@ async def test_get_plugin_info_timeout() -> None:
 
     with patch(
         "chia.data_layer.data_layer.aiohttp.ClientSession",
-        side_effect=asyncio.TimeoutError("connection timed out"),
+        side_effect=TimeoutError("connection timed out"),
     ):
         remote, result = await get_plugin_info(plugin, DUMMY_TIMEOUT)
 
@@ -230,7 +229,7 @@ async def test_download_file_plugin_timeout(tmp_path: Path) -> None:
 
     with patch(
         "chia.data_layer.download_data.aiohttp.ClientSession",
-        side_effect=asyncio.TimeoutError("plugin timed out"),
+        side_effect=TimeoutError("plugin timed out"),
     ):
         result = await download_file(
             data_store=data_store,

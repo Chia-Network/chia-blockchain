@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, NotRequired, TypeVar, runtime_checkable
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
-from typing_extensions import NotRequired, Protocol, TypedDict, Unpack
+from typing_extensions import Protocol, TypedDict, Unpack
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin

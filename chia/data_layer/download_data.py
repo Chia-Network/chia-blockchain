@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from dataclasses import dataclass
@@ -134,7 +133,7 @@ async def download_file(
             await http_download(
                 target_filename_path, filename, proxy_url, server_info, timeout, log, max_delta_file_size
             )
-        except (asyncio.TimeoutError, aiohttp.ClientError, MaxDeltaFileSizeExceededError):
+        except (TimeoutError, aiohttp.ClientError, MaxDeltaFileSizeExceededError):
             new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
             log.info(
                 f"Failed to download {filename} from {new_server_info.url}."
@@ -163,7 +162,7 @@ async def download_file(
                 res_json = await response.json()
                 assert isinstance(res_json["downloaded"], bool)
                 return res_json["downloaded"]
-    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+    except (TimeoutError, aiohttp.ClientError) as e:
         log.error(f"download_file could not get response from plugin {downloader}: {type(e).__name__}: {e}")
         return False
 

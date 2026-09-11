@@ -12,11 +12,10 @@ from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, cast
+from typing import Any, cast, final
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
-from typing_extensions import final
 from watchdog.events import DirModifiedEvent, FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver

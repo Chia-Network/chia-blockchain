@@ -275,11 +275,7 @@ async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process
     assert process.stdout is not None
     assert process.stderr is not None
     stderr = await process.stderr.read()
-    if sys.version_info >= (3, 10, 6):
-        assert stderr == b""
-    else:  # pragma: no cover
-        # https://github.com/python/cpython/issues/92841
-        assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+    assert stderr == b""
     assert process.returncode == 0
 
     return process
@@ -2204,11 +2200,7 @@ async def test_clear_pending_roots(
             cleared_root = json.loads(stdout)
             stderr = await process.stderr.read()
             assert process.returncode == 0
-            if sys.version_info >= (3, 10, 6):
-                assert stderr == b""
-            else:  # pragma: no cover
-                # https://github.com/python/cpython/issues/92841
-                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            assert stderr == b""
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
@@ -3486,11 +3478,7 @@ async def test_pagination_cmds(
                 else:
                     kv_diff = json.loads(stdout)
                 assert process.returncode == 0
-                if sys.version_info >= (3, 10, 6):
-                    assert stderr == b""
-                else:  # pragma: no cover
-                    # https://github.com/python/cpython/issues/92841
-                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                assert stderr == b""
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
@@ -3665,11 +3653,7 @@ async def test_unsubmitted_batch_update(
                 res = json.loads(stdout)
                 stderr = await process.stderr.read()
                 assert process.returncode == 0
-                if sys.version_info >= (3, 10, 6):
-                    assert stderr == b""
-                else:  # pragma: no cover
-                    # https://github.com/python/cpython/issues/92841
-                    assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+                assert stderr == b""
                 assert res == {"success": True}
             elif layer == InterfaceLayer.client:
                 async with DataLayerRpcClient.create_as_context(
@@ -3807,11 +3791,7 @@ async def test_unsubmitted_batch_update(
             res = json.loads(stdout)
             stderr = await process.stderr.read()
             assert process.returncode == 0
-            if sys.version_info >= (3, 10, 6):
-                assert stderr == b""
-            else:  # pragma: no cover
-                # https://github.com/python/cpython/issues/92841
-                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            assert stderr == b""
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.client:
             async with DataLayerRpcClient.create_as_context(

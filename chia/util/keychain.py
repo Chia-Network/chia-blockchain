@@ -8,14 +8,13 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Literal, overload
+from typing import Any, Literal, final, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
-from typing_extensions import final
 
 from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.byte_types import hexstr_to_bytes

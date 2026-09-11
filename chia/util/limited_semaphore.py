@@ -6,8 +6,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-
-from typing_extensions import final
+from typing import final
 
 
 class LimitedSemaphoreFullError(Exception):
