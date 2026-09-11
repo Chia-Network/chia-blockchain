@@ -7,7 +7,7 @@ import logging
 import sys
 import traceback
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from ssl import SSLContext
 from types import MethodType
@@ -163,6 +163,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     websocket: ClientWebSocketResponse[bool] | None = None
     client_session: ClientSession | None = None
     prefer_ipv6: bool = False
+    # one task per message received over the daemon websocket, see connection()
+    daemon_handler_tasks: set[asyncio.Task[None]] = field(default_factory=set)
 
     @classmethod
     def create(
@@ -222,6 +224,11 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
             self.daemon_connection_task = None
+        handler_tasks = list(self.daemon_handler_tasks)
+        for task in handler_tasks:
+            task.cancel()
+        await asyncio.gather(*handler_tasks, return_exceptions=True)
+        self.daemon_handler_tasks.clear()
 
     async def _state_changed(self, change: str, change_data: dict[str, Any] | None) -> None:
         if self.websocket is None or self.websocket.closed:
@@ -391,6 +398,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
     async def safe_handle(self, websocket: ClientWebSocketResponse[bool], payload: str) -> None:
         message = None
+        response = None
         try:
             message = json.loads(payload)
             log.debug(f"Rpc call <- {message['command']}")
@@ -402,15 +410,23 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 # Set success to true automatically (unless it's already set)
                 if "success" not in response:
                     response["success"] = True
-                await websocket.send_str(format_response(message, response))
 
         except Exception as e:
             tb = traceback.format_exc()
             log.warning(f"Error while handling message: {tb}")
             if message is not None:
                 error_message, structured = structured_error_from_exception(e)
-                res = {"success": False, "error": error_message, "structuredError": structured}
-                await websocket.send_str(format_response(message, res))
+                response = {"success": False, "error": error_message, "structuredError": structured}
+
+        if message is None or response is None:
+            return
+
+        try:
+            await websocket.send_str(format_response(message, response))
+        except Exception as e:
+            # The daemon connection can go away while a handler runs, for example when the daemon closes it
+            # after missed heartbeats.  The reply cannot be delivered anymore and nothing is waiting for it here.
+            log.warning(f"Unable to send the response to '{message['command']}': {type(e).__name__}: {e}")
 
     async def connection(self, ws: ClientWebSocketResponse[bool]) -> None:
         data = {"service": self.service_name}
@@ -422,8 +438,16 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             msg = await ws.receive()
             if msg.type == WSMsgType.TEXT:
                 message = msg.data.strip()
-                # log.info(f"received message: {message}")
-                await self.safe_handle(ws, message)
+                # Handle every message in its own task, like the HTTP side already handles every request.
+                # Awaiting the handler here made one slow handler, for example a wallet RPC waiting for the
+                # wallet state lock during a sync batch, hold back every later message from the daemon and
+                # stop this loop from answering the daemon's pings, after which the daemon dropped the
+                # connection and silently discarded everything the UI sent until that handler returned.
+                task = create_referenced_task(
+                    self.safe_handle(ws, message), name=f"{self.service_name}_daemon_message_handler"
+                )
+                self.daemon_handler_tasks.add(task)
+                task.add_done_callback(self.daemon_handler_tasks.discard)
             elif msg.type == WSMsgType.BINARY:
                 log.debug("Received binary data")
             else:
