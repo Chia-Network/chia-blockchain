@@ -480,6 +480,47 @@ async def test_daemon_passthru(get_daemon, bt):
                 assert message["data"]["blockchain_state"]["genesis_challenge_initialized"] is True
 
 
+@pytest.mark.anyio
+async def test_daemon_replies_when_destination_is_not_connected(get_daemon, bt):
+    config = bt.config
+    daemon_port = config["daemon_port"]
+
+    async with aiohttp.ClientSession() as client:
+        async with client.ws_connect(
+            f"wss://127.0.0.1:{daemon_port}",
+            autoclose=True,
+            autoping=True,
+            ssl=bt.get_daemon_ssl_context(),
+            max_msg_size=100 * 1024 * 1024,
+        ) as ws:
+            service_name = "test_service_name"
+            data = {"service": service_name}
+            payload = create_payload("register_service", data, service_name, "daemon")
+            await ws.send_str(payload)
+            assert_response_success_only(await ws.receive())
+
+            # a request for a service without a registered connection is answered with an error,
+            # instead of being dropped and leaving the sender to wait for its own timeout
+            request = create_payload_dict("get_blockchain_state", {}, service_name, "chia_full_node")
+            await ws.send_str(dict_to_json_str(request))
+            assert_response(
+                await ws.receive(),
+                {"success": False, "error": "chia_full_node is not connected to the daemon"},
+                request_id=request["request_id"],
+                command="get_blockchain_state",
+            )
+
+            # a state change broadcast to the UI while no UI is connected, and a reply routed to a client
+            # that has gone, are still dropped silently: the next message received answers the ping below
+            await ws.send_str(create_payload("state_changed", {"state": "peak"}, service_name, "wallet_ui"))
+            stale_reply = create_payload_dict("get_blockchain_state", {"success": True}, service_name, "gone_ui")
+            stale_reply["ack"] = True
+            await ws.send_str(dict_to_json_str(stale_reply))
+            ping = create_payload_dict("running_services", {}, service_name, "daemon")
+            await ws.send_str(dict_to_json_str(ping))
+            assert_response_success_only(await ws.receive(), request_id=ping["request_id"])
+
+
 @pytest.mark.parametrize(
     "service, expected_result",
     [

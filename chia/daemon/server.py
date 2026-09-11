@@ -419,7 +419,17 @@ class WebSocketServer:
                 sockets = self.connections[destination]
                 return dict_to_json_str(message), sockets
 
-            return None
+            if message["ack"] or destination == "wallet_ui":
+                # A reply routed to a client that has gone, or a state change broadcast to the UI while no UI is
+                # connected: nothing is waiting for these, so there is nothing to say.
+                return None
+
+            # A request for a service that has no registered connection, for example one that is still starting
+            # or one whose session this daemon closed after missed heartbeats.  Answer the sender so it can retry
+            # or report the failure instead of waiting for a reply that will never come.
+            self.log.debug(f"Request '{command}' from {message['origin']} for {destination}, which is not connected")
+            response = {"success": False, "error": f"{destination} is not connected to the daemon"}
+            return format_response(message, response), {websocket}
 
         data = message["data"]
         commands_with_data = [
