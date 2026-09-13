@@ -77,7 +77,7 @@ Both paths intentionally choose a random target VDF field first, then fall back 
 
 - `timelord.lock` is the module's main consistency boundary. API handlers, VDF-client mapping, iteration submission, proof appending, compact queue mutation, and reset operations rely on this lock around multi-field mutations.
 - `_do_process_communication()` performs network reads outside many lock sections but appends validated proofs and failure records under the lock. Be careful not to hold the lock across long VDF-client reads.
-- `_handle_failures()` prioritizes liveness. A current-generation VDF-client failure resets to EOS-only work; prolonged inactivity backs off `timelord.max_allowed_inactivity_time` up to 1800s and resets all chains. `0` disables the inactivity reset; a new peak restores the configured value.
+- `_handle_failures()` splits VDF-client crashes (`_handle_vdf_failures`, EOS-only reset) from the inactivity watchdog (`_maybe_reset_for_inactivity`). The watchdog backs off `max_allowed_inactivity_time` up to 1800s. `0` disables it (`math.inf` threshold). `restore_inactivity_timeout()` re-reads the config value; `new_peak_timelord` calls that instead of assigning the field.
 - Shutdown closes the executor trigger file, cancels communication/main-loop tasks, sends stop signals to VDF clients, closes idle and assigned writers, and closes the TCP server.
 - `timelord_launcher.py` is a separate process manager for `chiavdf`'s `vdf_client` binary. It resolves the configured host, restarts clients until stopped, suppresses early stderr noise, and kills all active subprocesses on shutdown.
 
