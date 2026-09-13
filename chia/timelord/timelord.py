@@ -148,7 +148,8 @@ class Timelord:
             self.bluebox_mode = self.config.get("sanitizer_mode", False)
         self.pending_bluebox_info: list[tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
-        self.max_allowed_inactivity_time = 60
+        self.configured_max_allowed_inactivity_time = int(self.config.get("max_allowed_inactivity_time", 60))
+        self.max_allowed_inactivity_time = self.configured_max_allowed_inactivity_time
         self._executor_shutdown_tempfile: IO[bytes] | None = None
         self.bluebox_pool: ThreadPoolExecutor | None = None
 
@@ -907,12 +908,15 @@ class Timelord:
         # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
         # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
         # there are no other timelords, this reset should bring the timelord back to a running state.
+        # 0 disables the inactivity reset so a slow EOS (up to ~SUB_SLOT_TIME_TARGET) is not aborted.
+        if self.configured_max_allowed_inactivity_time <= 0:
+            return
         if time.time() - self.vdf_failure_time < self.constants.SUB_SLOT_TIME_TARGET * 3:
             # If we have recently had a failure, allow some more time to finish the slot (we can be up to 3x slower)
             active_time_threshold = self.constants.SUB_SLOT_TIME_TARGET * 3
         else:
-            # If there were no failures recently trigger a reset after 60 seconds of no activity.
-            # Signage points should be every 9 seconds
+            # If there were no failures recently, reset after the configured inactivity window.
+            # Signage points should be every 9 seconds on a healthy, calibrated slot.
             active_time_threshold = self.max_allowed_inactivity_time
         if time.time() - self.last_active_time > active_time_threshold:
             log.error(f"Not active for {active_time_threshold} seconds, restarting all chains")

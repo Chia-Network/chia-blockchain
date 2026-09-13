@@ -63,7 +63,7 @@ class TimelordAPI:
         async with self.timelord.lock:
             if self.timelord.bluebox_mode:
                 return None
-            self.timelord.max_allowed_inactivity_time = 60
+            self.timelord.max_allowed_inactivity_time = self.timelord.configured_max_allowed_inactivity_time
 
             if self.timelord.last_state.peak is None:
                 # no known peak

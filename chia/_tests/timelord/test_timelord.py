@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,10 +12,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
+from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.timelord import iters_from_block as iters_from_block_module
 from chia.timelord import timelord as timelord_module
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_service import TimelordService
 from chia.timelord.types import Chain
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -181,3 +185,72 @@ class TestHandleClient:
         assert len(tl.free_clients) == 3
         overflow_writer.close.assert_called_once()
         overflow_writer.wait_closed.assert_awaited_once()
+
+
+def _minimal_timelord_config(**overrides: object) -> dict[str, Any]:
+    config: dict[str, Any] = {"vdf_clients": {"ip": ["127.0.0.1"]}}
+    config.update(overrides)
+    return config
+
+
+def test_inactivity_timeout_defaults_to_60(tmp_path: Path, blockchain_constants: ConsensusConstants) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(), blockchain_constants)
+    assert tl.configured_max_allowed_inactivity_time == 60
+    assert tl.max_allowed_inactivity_time == 60
+
+
+def test_inactivity_timeout_reads_config(tmp_path: Path, blockchain_constants: ConsensusConstants) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), blockchain_constants)
+    assert tl.configured_max_allowed_inactivity_time == 600
+    assert tl.max_allowed_inactivity_time == 600
+
+
+@pytest.mark.anyio
+async def test_inactivity_reset_disabled_when_configured_zero(
+    tmp_path: Path, blockchain_constants: ConsensusConstants
+) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=0), blockchain_constants)
+    tl.last_active_time = time.time() - 10_000
+    tl.vdf_failures = []
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._handle_failures()
+    reset.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_inactivity_reset_uses_configured_threshold(
+    tmp_path: Path, blockchain_constants: ConsensusConstants
+) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), blockchain_constants)
+    tl.vdf_failures = []
+    tl.vdf_failure_time = 0
+
+    tl.last_active_time = time.time() - 61
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._handle_failures()
+    reset.assert_not_called()
+
+    tl.last_active_time = time.time() - 601
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._handle_failures()
+    reset.assert_awaited_once()
+    assert tl.max_allowed_inactivity_time == 1200
+
+
+@pytest.mark.anyio
+async def test_new_peak_restores_configured_inactivity_timeout(
+    tmp_path: Path, blockchain_constants: ConsensusConstants
+) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), blockchain_constants)
+    tl.lock = asyncio.Lock()
+    tl.bluebox_mode = False
+    tl.last_state = MagicMock()
+    tl.last_state.peak = None
+    tl.state_changed = MagicMock()
+    tl.max_allowed_inactivity_time = 1200
+
+    peak = MagicMock(spec=NewPeakTimelord)
+    peak.reward_chain_block.height = 1
+    await TimelordAPI(tl).new_peak_timelord(peak)
+
+    assert tl.max_allowed_inactivity_time == 600
