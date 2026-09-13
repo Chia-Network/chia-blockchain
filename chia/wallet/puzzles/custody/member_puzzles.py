@@ -22,7 +22,7 @@ SINGLETON_MEMBER_MOD = Program.from_bytes(puzzle_mods.SINGLETON_MEMBER)
 
 FIXED_PUZZLE_MEMBER_MOD = Program.from_bytes(puzzle_mods.FIXED_PUZZLE_MEMBER)
 
-_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle | None, default=None)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle | None)
 
 
 @dataclass(kw_only=True, frozen=True)

@@ -205,7 +205,9 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         synthetic_public_key = calculate_synthetic_public_key(
             bls_with_taproot_member_illegal.public_key, bls_with_taproot_member_illegal.hidden_puzzle.tree_hash
         )
-        bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
+        bls_with_taproot_member_synthetic: BLSWithTaprootMember[None] = BLSWithTaprootMember(
+            synthetic_key=synthetic_public_key
+        )
         assert bls_with_taproot_member_illegal.program == bls_with_taproot_member_synthetic.program
 
         # test some errors
@@ -228,7 +230,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                 original_public_key=sk.public_key(),
                 hidden_puzzle=None,
             )
-        synthetic_only = BLSWithTaprootMember(synthetic_key=sk.public_key())
+        synthetic_only: BLSWithTaprootMember[None] = BLSWithTaprootMember(synthetic_key=sk.public_key())
         assert synthetic_only.public_key is None
         assert synthetic_only.hidden_puzzle is None
 

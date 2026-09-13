@@ -425,12 +425,7 @@ class PuzzleWithRestrictions(PuzzleBase):
         else:
             new_puzzle = self.member
 
-        return PuzzleWithRestrictions(
-            nonce=self.nonce,
-            restrictions=new_restrictions,
-            member=new_puzzle,
-            additional_memos=self.additional_memos,
-        )
+        return replace(self, restrictions=new_restrictions, member=new_puzzle)
 
     @property
     def program(self) -> Program:
@@ -438,8 +433,12 @@ class PuzzleWithRestrictions(PuzzleBase):
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
-                [restriction.program for restriction in self.restrictions if restriction.member_not_dpuz],
-                [restriction.program for restriction in self.restrictions if not restriction.member_not_dpuz],
+                [restriction.program for restriction in self.restrictions_with_nonces if restriction.member_not_dpuz],
+                [
+                    restriction.program
+                    for restriction in self.restrictions_with_nonces
+                    if not restriction.member_not_dpuz
+                ],
                 inner_puzzle,
             )
         else:
@@ -489,18 +488,18 @@ class PuzzleWithRestrictions(PuzzleBase):
         return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle_hash).get_tree_hash_precalc(fed_inner_puzzle_hash)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> PuzzleWithRestrictions | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> PuzzleWithRestrictions | None:
         if unknown_puzzle.mod != INDEX_WRAPPER or unknown_puzzle.curried_args is None:
             return None
 
         nonce, fed_inner_puzzle_prog = unknown_puzzle.curried_args
         fed_inner_puzzle = UnknownPuzzle(known_program=fed_inner_puzzle_prog)
-        if fed_inner_puzzle != DELEGATED_PUZZLE_FEEDER or fed_inner_puzzle.curried_args is None:
+        if fed_inner_puzzle.mod != DELEGATED_PUZZLE_FEEDER or fed_inner_puzzle.curried_args is None:
             return None
 
         (potentially_restricted_puzzle_prog,) = fed_inner_puzzle.curried_args
         potentially_restricted_puzzle = UnknownPuzzle(known_program=potentially_restricted_puzzle_prog)
-        if potentially_restricted_puzzle == RESTRICTION_MOD:
+        if potentially_restricted_puzzle.mod == RESTRICTION_MOD:
             if potentially_restricted_puzzle.curried_args is None:
                 return None
             member_restrictions, dpuz_restrictions, inner_puzzle_prog = potentially_restricted_puzzle.curried_args
@@ -522,7 +521,11 @@ class PuzzleWithRestrictions(PuzzleBase):
             restrictions = []
             inner_puzzle = potentially_restricted_puzzle
 
-        return cls(nonce=nonce, restrictions=restrictions, member=inner_puzzle)  # type: ignore[arg-type]
+        return cls(
+            nonce=nonce.as_int(),
+            restrictions=restrictions,  # type: ignore[arg-type]
+            member=UnknownMember(puzzle_hint=MemberHint(puzhash=inner_puzzle.tree_hash, memo=Program.NIL)),
+        )
 
 
 @dataclass(kw_only=True, frozen=True)
