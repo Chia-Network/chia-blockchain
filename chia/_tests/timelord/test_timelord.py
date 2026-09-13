@@ -12,7 +12,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
-from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.timelord import iters_from_block as iters_from_block_module
 from chia.timelord import timelord as timelord_module
 from chia.timelord.iters_from_block import iters_from_block
@@ -249,7 +248,7 @@ async def test_new_peak_restores_configured_inactivity_timeout(
     tl.state_changed = MagicMock()
     tl.max_allowed_inactivity_time = 1200
 
-    peak = MagicMock(spec=NewPeakTimelord)
+    peak = MagicMock()
     peak.reward_chain_block.height = 1
     await TimelordAPI(tl).new_peak_timelord(peak)
 
