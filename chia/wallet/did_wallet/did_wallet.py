@@ -973,24 +973,6 @@ class DIDWallet:
             recovery_list_hash=self.reset_recovery_list(),
         )
 
-    async def get_innerpuz_for_new_innerhash(self, pubkey: G1Element) -> Program:
-        """
-        Get the inner puzzle for a new owner
-        :param pubkey: Pubkey
-        :return: Inner puzzle
-        """
-        # Note: the recovery list will be kept.
-        # In a selling case, the seller should clean the recovery list then transfer to the new owner.
-        assert self.did_info.origin_coin is not None
-        return did_wallet_puzzles.create_innerpuz(
-            p2_puzzle_or_hash=puzzle_for_pk(pubkey),
-            recovery_list=self.did_info.backup_ids,
-            num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
-            launcher_id=self.did_info.origin_coin.name(),
-            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            recovery_list_hash=self.reset_recovery_list(),
-        )
-
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
         assert self.did_info.origin_coin is not None
