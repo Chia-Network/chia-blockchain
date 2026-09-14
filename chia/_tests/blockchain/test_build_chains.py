@@ -4,6 +4,7 @@ import pytest
 from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.simulator.block_tools import BlockTools
 
@@ -62,6 +63,18 @@ def test_trigger_default_10000_compact(default_10000_blocks_compact: list[FullBl
     pass
 
 
+@pytest.mark.build_test_chains
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_trigger_fork_height2_0(fork_height2_0_1000_blocks: list[FullBlock]) -> None:
+    pass
+
+
+@pytest.mark.build_test_chains
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_trigger_fork_height2_500(fork_height2_500_1000_blocks: list[FullBlock]) -> None:
+    pass
+
+
 def validate_coins(constants: ConsensusConstants, blocks: list[FullBlock]) -> None:
     unspent_coins: set[Coin] = set()
     for block in blocks:
@@ -107,6 +120,7 @@ def validate_chain(
     time_per_block: float | None = None,
     dummy_block_references: bool = False,
     include_transactions: bool = False,
+    validation_length: int = 80,
 ) -> None:
     validate_coins(bt.constants, blocks)
 
@@ -114,10 +128,9 @@ def validate_chain(
     # the ones we would have generated
     input_length = len(block_list_input) if block_list_input else 0
 
-    # 80 blocks is a balance between capturing all features of the
-    # chains (such as block references) versus the cost of
-    # generating and comparing blocks.
-    request_length = min(80, len(blocks) - input_length)
+    # 80 blocks is normally a balance between capturing chain features and
+    # generation cost. Callers may extend the range to cover later activation.
+    request_length = min(validation_length, len(blocks) - input_length)
 
     expected_blocks: list[FullBlock] = bt.get_consecutive_blocks(
         request_length,
@@ -199,6 +212,30 @@ def test_validate_default_10000_compact(bt: BlockTools, default_10000_blocks_com
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
+    )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_validate_fork_height2_0(
+    fork_height2_0_block_tools: BlockTools,
+    fork_height2_0_1000_blocks: list[FullBlock],
+) -> None:
+    validate_chain(fork_height2_0_block_tools, fork_height2_0_1000_blocks, seed=b"fork_zero")
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_validate_fork_height2_500(
+    fork_height2_500_block_tools: BlockTools,
+    fork_height2_500_1000_blocks: list[FullBlock],
+) -> None:
+    validate_chain(
+        fork_height2_500_block_tools,
+        fork_height2_500_1000_blocks,
+        seed=b"fork_500",
+        validation_length=int(
+            fork_height2_500_block_tools.constants.HARD_FORK2_HEIGHT
+            + fork_height2_500_block_tools.constants.SUB_EPOCH_BLOCKS
+        ),
     )
 
 
