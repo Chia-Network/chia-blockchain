@@ -21,7 +21,7 @@ from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSH
 from chia.seeder.crawl_store import CrawlStore
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 from chia.util.task_referencer import create_referenced_task
@@ -583,9 +583,8 @@ def main() -> None:  # pragma: no cover
     freeze_support()
     root_path = resolve_root_path(override=None)
 
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
