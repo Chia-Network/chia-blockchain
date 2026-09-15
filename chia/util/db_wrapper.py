@@ -7,16 +7,14 @@ import contextlib
 import functools
 import secrets
 import sqlite3
-import sys
 from collections.abc import AsyncIterator, Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, final
 
 import aiosqlite
 import anyio
-from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
@@ -119,18 +117,9 @@ def sql_trace_callback(req: str, file: TextIO, name: str | None = None) -> None:
 def get_host_parameter_limit() -> int:
     # NOTE: This does not account for dynamically adjusted limits since it makes a
     #       separate db and connection.  If aiosqlite adds support we should use it.
-    if sys.version_info >= (3, 11):
-        with contextlib.closing(sqlite3.connect(":memory:")) as connection:
-            limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
-            host_parameter_limit = connection.getlimit(limit_number)
-    # guessing based on defaults, seems you can't query
-
-    # https://www.sqlite.org/changes.html#version_3_32_0
-    # Increase the default upper bound on the number of parameters from 999 to 32766.
-    elif sqlite3.sqlite_version_info >= (3, 32, 0):
-        host_parameter_limit = 32766
-    else:
-        host_parameter_limit = 999
+    with contextlib.closing(sqlite3.connect(":memory:")) as connection:
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
+        host_parameter_limit = connection.getlimit(limit_number)
     return host_parameter_limit
 
 
@@ -143,10 +132,9 @@ def _suppress_task_cancellation() -> Iterator[None]:
     1. ``anyio.CancelScope(shield=True)`` — prevents NEW ``task.cancel()``
        calls from anyio's cancellation delivery (e.g. scope timeouts, task
        group cancellation) during the await.
-    2. ``task.uncancel()`` (Python 3.11+) — clears any ALREADY-PENDING
-       ``_must_cancel`` flag so the await is not immediately interrupted.
-       On exit, the flag is re-applied so cancellation fires at the next
-       *unprotected* await point.
+    2. ``task.uncancel()`` — clears any ALREADY-PENDING ``_must_cancel`` flag
+       so the await is not immediately interrupted.  On exit, the flag is
+       re-applied so cancellation fires at the next *unprotected* await point.
 
     The anyio shield alone is insufficient because its
     ``_restart_cancellation_in_parent()`` re-calls ``task.cancel()`` when
@@ -157,17 +145,13 @@ def _suppress_task_cancellation() -> Iterator[None]:
     outside anyio's scope tree (e.g. ``ws_connection.cancel_tasks()``).
     Callers that need to handle that case should place the protected await
     inside a try/except/finally for cleanup.
-
-    On Python < 3.11 (which lacks ``task.cancelling()``/``task.uncancel()``),
-    only the anyio shield is active.
     """
     task = asyncio.current_task()
     assert task is not None
     saved = 0
-    if sys.version_info >= (3, 11):
-        while task.cancelling() > 0:
-            task.uncancel()
-            saved += 1
+    while task.cancelling() > 0:
+        task.uncancel()
+        saved += 1
     with anyio.CancelScope(shield=True):
         try:
             yield

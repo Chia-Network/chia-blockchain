@@ -4,14 +4,13 @@ import asyncio
 import contextlib
 import json
 import logging
-import sys
 import traceback
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
 from types import MethodType
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar, final
 
 from aiohttp import (
     ClientConnectorError,
@@ -21,7 +20,7 @@ from aiohttp import (
     web,
 )
 from chia_rs.sized_ints import uint16
-from typing_extensions import Protocol, final
+from typing_extensions import Protocol
 
 from chia import __version__
 from chia.protocols.outbound_message import NodeType
@@ -338,10 +337,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         level_number = logger.level
         level_name = logging.getLevelName(level_number)
 
-        if sys.version_info >= (3, 11):
-            map = logging.getLevelNamesMapping()
-        else:
-            map = logging._nameToLevel
+        map = logging.getLevelNamesMapping()
 
         return {
             "success": True,

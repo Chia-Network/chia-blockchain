@@ -5,7 +5,6 @@ import dataclasses
 import json
 import logging
 import ssl
-import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -23,10 +22,7 @@ from chia.util.ws_message import WsRpcMessage
 
 root_logger = logging.getLogger()
 
-if sys.version_info >= (3, 11):  # pragma: no cover
-    name_to_number_level_map = logging.getLevelNamesMapping()
-else:
-    name_to_number_level_map = logging._nameToLevel
+name_to_number_level_map = logging.getLevelNamesMapping()
 
 number_to_name_level_map = {number: name for name, number in name_to_number_level_map.items()}
 

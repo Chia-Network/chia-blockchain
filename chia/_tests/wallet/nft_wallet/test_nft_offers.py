@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from typing_extensions import Any
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert

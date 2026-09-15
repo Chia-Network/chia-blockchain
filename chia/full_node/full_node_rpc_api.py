@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import (
@@ -1151,8 +1151,8 @@ class FullNodeRpcApi:
             last_tx_block_fees = last_tx_block.fees
             last_tx_block_height = last_tx_block.height
 
-        dt = datetime.now(timezone.utc)
-        utc_time = dt.replace(tzinfo=timezone.utc)
+        dt = datetime.now(UTC)
+        utc_time = dt.replace(tzinfo=UTC)
         utc_timestamp = utc_time.timestamp()
 
         return {

@@ -3,13 +3,12 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from chia_rs import G1Element
 from chia_rs.chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend

@@ -9,9 +9,7 @@ import dataclasses
 import logging
 from collections.abc import AsyncIterator
 from enum import IntEnum
-from typing import Generic, TypeVar
-
-from typing_extensions import final
+from typing import Generic, TypeVar, final
 
 log = logging.getLogger(__name__)
 

@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
+from typing import final
 
 from filelock import BaseFileLock, FileLock, Timeout
-from typing_extensions import final
 
 
 class LockfileError(Exception):
