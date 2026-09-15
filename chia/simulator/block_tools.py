@@ -119,7 +119,7 @@ from chia.types.blockchain_format.proof_of_space import (
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.generator_types import NewBlockGenerator
+from chia.types.generator_types import GeneratorFormat, NewBlockGenerator
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
 from chia.util.config import (
@@ -470,6 +470,8 @@ class BlockTools:
             )
             return NewBlockGenerator(
                 program_bytes,
+                # this test/sim builder always produces classic CLVM
+                GeneratorFormat.CLASSIC,
                 [],
                 block_refs + dummy_refs,
                 bundle.aggregated_signature,
@@ -483,7 +485,17 @@ class BlockTools:
             cost = compute_block_cost(
                 SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
             )
-            return NewBlockGenerator(program_bytes, [], block_refs + dummy_refs, G2Element(), [], [], cost)
+            return NewBlockGenerator(
+                program_bytes,
+                # this test/sim builder always produces classic CLVM
+                GeneratorFormat.CLASSIC,
+                [],
+                block_refs + dummy_refs,
+                G2Element(),
+                [],
+                [],
+                cost,
+            )
 
         return None
 
@@ -993,6 +1005,8 @@ class BlockTools:
             )
             block_generator = NewBlockGenerator(
                 program_bytes,
+                # this test/sim builder always produces classic CLVM
+                GeneratorFormat.CLASSIC,
                 [],
                 block_refs,
                 transaction_data.aggregated_signature,

@@ -34,7 +34,7 @@ from chia.full_node.eligible_coin_spends import (
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.clvm_cost import CLVMCost
-from chia.types.generator_types import NewBlockGenerator
+from chia.types.generator_types import GeneratorFormat, NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
 from chia.util.batches import to_batches
@@ -579,6 +579,8 @@ class Mempool:
 
         return NewBlockGenerator(
             block_program,
+            # classic-only until post-HF2 mempool emission is wired up
+            GeneratorFormat.CLASSIC,
             [],
             [],
             spend_bundle.aggregated_signature,
@@ -989,6 +991,8 @@ class Mempool:
 
         return NewBlockGenerator(
             block_program,
+            # classic-only until post-HF2 mempool emission is wired up
+            GeneratorFormat.CLASSIC,
             [],
             [],
             signature,

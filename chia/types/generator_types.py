@@ -1,18 +1,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import IntEnum
 
 from chia_rs import Coin, G2Element
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint8, uint32, uint64
 
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, streamable, streamable_enum
+
+
+# The two encodings a block generator's bytes can be in. Values mirror the
+# wire-version convention already used for FullBlock/UnfinishedBlock.version
+# (see chia/consensus/block_creation.py): 0 for pre-HF2 blocks, 1 for post-HF2.
+@streamable_enum(uint8)
+class GeneratorFormat(IntEnum):
+    CLASSIC = 0
+    SERDE_2026 = 1
 
 
 # This holds what we need to pre validate a block generator
 @streamable
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
-    program: bytes = field(default_factory=lambda: b"\x80")
+    program: bytes
+    # the encoding of `program` above. There's no reasonable default here:
+    # the caller always knows which encoding it built or read, and picking
+    # one implicitly would silently assume classic CLVM.
+    format: GeneratorFormat
     # to run the block generator, we need the actual bytes of the previous
     # generators it may reference. These are parameters passed in to the block
     # generator

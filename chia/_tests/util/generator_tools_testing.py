@@ -5,7 +5,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.block_generator_info import get_transactions_generator_bytes
+from chia.consensus.block_generator_info import get_transactions_generator_bytes, get_transactions_generator_format
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.generator_tools import tx_removals_and_additions
 from chia.types.blockchain_format.coin import Coin
@@ -29,8 +29,10 @@ def run_and_get_removals_and_additions(
 
     generator = get_transactions_generator_bytes(block)
     if generator is not None:
+        generator_format = get_transactions_generator_format(block)
+        assert generator_format is not None
         npc_result = get_name_puzzle_conditions(
-            BlockGenerator(generator, []),
+            BlockGenerator(generator, generator_format, []),
             max_cost,
             mempool_mode=mempool_mode,
             height=height,

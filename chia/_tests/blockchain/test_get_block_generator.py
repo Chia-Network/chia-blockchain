@@ -8,7 +8,7 @@ from chia_rs.sized_ints import uint8, uint32
 
 from chia.consensus.get_block_generator import get_block_generator
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, GeneratorFormat
 from chia.util.casts import int_to_bytes
 
 
@@ -70,4 +70,4 @@ async def test_no_generator() -> None:
 async def test_no_refs() -> None:
     br = BR(bytes32.zeros, DUMMY_PROGRAM, [])
     bg = await get_block_generator(never_called, br)
-    assert bg == BlockGenerator(bytes(DUMMY_PROGRAM), [])
+    assert bg == BlockGenerator(bytes(DUMMY_PROGRAM), GeneratorFormat.CLASSIC, [])

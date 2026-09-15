@@ -33,7 +33,7 @@ from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator, NewBlockGenerator
+from chia.types.generator_types import BlockGenerator, GeneratorFormat, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
@@ -520,6 +520,13 @@ class FullNodeRpcApi:
 
         flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
 
+        if block_generator.format != GeneratorFormat.CLASSIC:
+            raise RpcError.simple(
+                RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR,
+                f"Block {header_hash.hex()} generator is not classic CLVM",
+                data={"header_hash": header_hash.hex()},
+            )
+
         spends = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block,
             self.service.constants,
@@ -550,6 +557,14 @@ class FullNodeRpcApi:
             return {"block_spends_with_conditions": []}
 
         flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
+
+        if block_generator.format != GeneratorFormat.CLASSIC:
+            raise RpcError.simple(
+                RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR,
+                f"Block {header_hash.hex()} generator is not classic CLVM",
+                data={"header_hash": header_hash.hex()},
+            )
+
         spends_with_conditions = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block_with_conditions,
             self.service.constants,
@@ -878,6 +893,8 @@ class FullNodeRpcApi:
             self.service.blockchain.lookup_block_generators, block
         )
         assert block_generator is not None
+        if block_generator.format != GeneratorFormat.CLASSIC:
+            raise RpcError.simple(RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR, "Invalid block or block generator")
 
         try:
             flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=block)
@@ -967,7 +984,8 @@ class FullNodeRpcApi:
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
     async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
-        gen = NewBlockGenerator()
+        # placeholder for "no peak yet"; matches the old nil-default's intent
+        gen = NewBlockGenerator(b"\x80", GeneratorFormat.CLASSIC)
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):

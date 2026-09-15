@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_generator_info import get_transactions_generator_bytes
+from chia.consensus.block_generator_info import get_transactions_generator_bytes, get_transactions_generator_format
 from chia.types.block_protocol import BlockInfo
 from chia.types.generator_types import BlockGenerator
 
@@ -19,11 +19,13 @@ async def get_block_generator(
     if program is None:
         assert len(ref_list) == 0
         return None
+    generator_format = get_transactions_generator_format(block)
+    assert generator_format is not None
     if len(ref_list) == 0:
-        return BlockGenerator(program, [])
+        return BlockGenerator(program, generator_format, [])
 
     generator_refs = set(ref_list)
     generators: dict[uint32, bytes] = await lookup_block_generators(block.prev_header_hash, generator_refs)
 
     result = [generators[height] for height in block.transactions_generator_ref_list]
-    return BlockGenerator(program, result)
+    return BlockGenerator(program, generator_format, result)

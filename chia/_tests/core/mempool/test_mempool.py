@@ -77,7 +77,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.fee_rate import FeeRate
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, GeneratorFormat
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.casts import int_to_bytes
@@ -2253,7 +2253,7 @@ def generator_condition_tester(
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} {coin_amount} (() (q . ())))))"  # ruff: ignore[line-too-long]
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
-    generator = BlockGenerator(bytes(program), [])
+    generator = BlockGenerator(bytes(program), GeneratorFormat.CLASSIC, [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator, max_cost, mempool_mode=mempool_mode, height=height, constants=test_constants
@@ -2510,7 +2510,7 @@ class TestGeneratorConditions:
                 f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # ruff: ignore[line-too-long]
             ).as_bin()
         )
-        generator = BlockGenerator(bytes(program), [])
+        generator = BlockGenerator(bytes(program), GeneratorFormat.CLASSIC, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height, constants=test_constants
         )

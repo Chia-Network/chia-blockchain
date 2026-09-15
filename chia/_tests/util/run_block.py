@@ -14,7 +14,7 @@ from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, GeneratorFormat
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
@@ -146,7 +146,8 @@ def run_generator_with_args(
 ) -> list[CAT]:
     if not generator_program_hex:
         return []
-    block_generator = BlockGenerator(hexstr_to_bytes(generator_program_hex), generator_args)
+    # sourced from a block's "transactions_generator" JSON field, which is always classic CLVM
+    block_generator = BlockGenerator(hexstr_to_bytes(generator_program_hex), GeneratorFormat.CLASSIC, generator_args)
     return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 
