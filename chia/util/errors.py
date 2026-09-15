@@ -296,10 +296,6 @@ class KeychainProxyConnectionFailure(KeychainException):
         super().__init__("Failed to connect to keychain service")
 
 
-class KeychainLockTimeout(KeychainException):
-    pass
-
-
 class KeychainProxyConnectionTimeout(KeychainException):
     def __init__(self) -> None:
         super().__init__("Could not reconnect to keychain service in 30 seconds.")

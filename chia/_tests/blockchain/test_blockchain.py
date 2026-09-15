@@ -3065,53 +3065,6 @@ class TestBodyValidation:
         # a general runtime error. The previous test tests this.
 
     @pytest.mark.anyio
-    async def test_max_coin_amount(self, db_version: int, bt: BlockTools) -> None:
-        # 10
-        # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
-        # limit in Coin
-        pass
-        #
-        # with TempKeyring() as keychain:
-        #     new_test_constants = bt.constants.replace(
-        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
-        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
-        #     )
-        #     b, db_wrapper = await create_blockchain(new_test_constants, db_version)
-        #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = bt_2.constants.replace(
-        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
-        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
-        #     )
-        #     blocks = bt_2.get_consecutive_blocks(
-        #         3,
-        #         guarantee_transaction_block=True,
-        #         farmer_reward_puzzle_hash=bt.pool_ph,
-        #     )
-        #     assert (await b.add_block(blocks[0]))[0] == AddBlockResult.NEW_PEAK
-        #     assert (await b.add_block(blocks[1]))[0] == AddBlockResult.NEW_PEAK
-        #     assert (await b.add_block(blocks[2]))[0] == AddBlockResult.NEW_PEAK
-
-        #     wt: WalletTool = bt_2.get_pool_wallet_tool()
-
-        #     condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        #     output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
-        #     condition_dict[ConditionOpcode.CREATE_COIN].append(output)
-
-        #     coin = find_reward_coin(blocks[1], bt.pool_ph)
-        #     tx = wt.generate_signed_transaction_multiple_coins(
-        #         uint64(10),
-        #         wt.get_new_puzzlehash(),
-        #         coin,
-        #         condition_dic=condition_dict,
-        #     )
-        #     with pytest.raises(Exception):
-        #         blocks = bt_2.get_consecutive_blocks(
-        #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
-        #         )
-        #     await db_wrapper.close()
-        #     b.shut_down()
-
-    @pytest.mark.anyio
     async def test_invalid_merkle_roots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 11
         blocks = bt.get_consecutive_blocks(

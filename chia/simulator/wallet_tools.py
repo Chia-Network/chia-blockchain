@@ -218,20 +218,3 @@ class WalletTool:
         )
         assert transaction is not None
         return self.sign_transaction(transaction)
-
-    def generate_signed_transaction_multiple_coins(
-        self,
-        amount: uint64,
-        new_puzzle_hash: bytes32,
-        coins: list[Coin],
-        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] | None = None,
-        fee: int = 0,
-        additional_outputs: list[tuple[bytes32, int]] | None = None,
-    ) -> SpendBundle:
-        if condition_dic is None:
-            condition_dic = {}
-        transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, coins, condition_dic, fee, additional_outputs=additional_outputs
-        )
-        assert transaction is not None
-        return self.sign_transaction(transaction)
