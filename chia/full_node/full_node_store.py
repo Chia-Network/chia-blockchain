@@ -11,6 +11,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -548,6 +549,15 @@ class FullNodeStore:
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
                     make_challenge_root=post_hard_fork,
+                    challenge_root_end_height=(
+                        get_challenge_start_height(
+                            self.constants,
+                            blocks,
+                            peak.header_hash,
+                        )
+                        if post_hard_fork
+                        else None
+                    ),
                 )
 
                 if eos.challenge_chain.subepoch_summary_hash is None:
