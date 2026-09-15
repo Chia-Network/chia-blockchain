@@ -3004,6 +3004,46 @@ def test_timeout(old: bool) -> None:
     assert generator is None
 
 
+@pytest.mark.parametrize("old", [True, False])
+def test_timeout_after_some_items(old: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Timeout is checked between mempool items. After some items are included,
+    the next check should stop scanning and still return a partial block.
+    """
+    mempool = construct_mempool()
+    num_items = 10
+    include_before_timeout = 3
+
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], flags=[0], fee=0, cost=50)
+        assert mempool.add_to_pool(item).error is None
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+
+    full = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0)
+    assert full is not None
+    assert len(full.removals) == num_items
+
+    timeout = 1.0
+    # monotonic() is called once for the start timestamp, then once per
+    # mempool item for the timeout check (plus a few times after the loop).
+    calls = {"n": 0}
+    start = 1000.0
+
+    def fake_monotonic() -> float:
+        n = calls["n"]
+        calls["n"] += 1
+        if n == 0 or n <= include_before_timeout:
+            return start
+        return start + timeout + 0.1
+
+    monkeypatch.setattr("chia.full_node.mempool.monotonic", fake_monotonic)
+
+    generator = create_block(DEFAULT_CONSTANTS, uint32(10), timeout)
+    assert generator is not None
+    assert len(generator.removals) == include_before_timeout
+
+
 def rand_hash() -> bytes32:
     # TODO: does this need to be creating a new rng?
     return bytes32.random(r=random.Random())
