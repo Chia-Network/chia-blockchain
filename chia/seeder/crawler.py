@@ -230,15 +230,18 @@ class Crawler:
 
                 for response in self.peers_retrieved:
                     for response_peer in response.peer_list:
+                        # Gossiped timestamps are unvalidated, and values outside this range cannot be
+                        # bound by SQLite. Treat them as stale, the same way node_discovery does.
+                        if response_peer.timestamp < 100000000 or response_peer.timestamp > time.time() + 10 * 60:
+                            peer_timestamp = uint64(time.time() - 5 * 24 * 60 * 60)
+                        else:
+                            peer_timestamp = response_peer.timestamp
                         if response_peer.host not in self.best_timestamp_per_peer:
-                            self.best_timestamp_per_peer[response_peer.host] = response_peer.timestamp
+                            self.best_timestamp_per_peer[response_peer.host] = peer_timestamp
                         self.best_timestamp_per_peer[response_peer.host] = max(
-                            self.best_timestamp_per_peer[response_peer.host], response_peer.timestamp
+                            self.best_timestamp_per_peer[response_peer.host], peer_timestamp
                         )
-                        if (
-                            response_peer.host not in self.seen_nodes
-                            and response_peer.timestamp > time.time() - 5 * 24 * 3600
-                        ):
+                        if response_peer.host not in self.seen_nodes and peer_timestamp > time.time() - 5 * 24 * 3600:
                             self.seen_nodes.add(response_peer.host)
                             new_peer = PeerRecord(
                                 response_peer.host,
@@ -249,7 +252,7 @@ class Crawler:
                                 uint32(0),
                                 uint64(0),
                                 uint64(time.time()),
-                                uint64(response_peer.timestamp),
+                                peer_timestamp,
                                 "undefined",
                                 uint64(0),
                                 tls_version="unknown",
@@ -308,16 +311,18 @@ class Crawler:
         # Try up to 5 times to write to the DB in case there is a lock that causes a timeout
         if self.crawl_store is None:
             raise ValueError("Not Connected to DB")
-        for i in range(1, 5):
-            try:
-                await self.crawl_store.load_to_db()
-                await self.crawl_store.load_reliable_peers_to_db()
-                return
-            except Exception as e:
-                self.log.error(f"Exception while saving to DB: {e}.")
-                self.log.error("Waiting 5 seconds before retry...")
-                await asyncio.sleep(5)
-                continue
+        # good_peers is rewritten by load_reliable_peers_to_db, so it must not be skipped when the
+        # peer_records write fails, otherwise the DNS server keeps serving a stale snapshot.
+        for save in (self.crawl_store.load_to_db, self.crawl_store.load_reliable_peers_to_db):
+            for i in range(1, 5):
+                try:
+                    await save()
+                    break
+                except Exception as e:
+                    self.log.error(f"Exception while saving to DB: {e}.")
+                    self.log.error("Waiting 5 seconds before retry...")
+                    await asyncio.sleep(5)
+                    continue
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
