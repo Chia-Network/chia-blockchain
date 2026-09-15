@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, SpendBundle
 from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
@@ -21,13 +21,13 @@ KFA = {v: k for k, v in CONDITIONS.items()}
 # we may need also to save the `genesis_coin_mod` or its hash
 
 
-def disassemble(sexp: Program):
+def disassemble(sexp: Program) -> str:
     """
     This version of `disassemble` also disassembles condition opcodes like `ASSERT_ANNOUNCEMENT_CONSUMED`.
     """
     kfa = dict(KEYWORD_FROM_ATOM)
     kfa.update((Program.to(k).as_atom(), v) for k, v in KFA.items())
-    return bu_disassemble(sexp, kfa)
+    return str(bu_disassemble(sexp, kfa))
 
 
 def coin_as_program(coin: Coin) -> Program:
@@ -65,7 +65,10 @@ def uncurry_dump(puzzle: Program, prefix: str = "") -> None:
     recursive_uncurry_dump(puzzle, 1, prefix, UncurriedPuzzle(mod, curried_args))
 
 
-def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
+def debug_spend_bundle(
+    spend_bundle: SpendBundle,
+    agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
+) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.
