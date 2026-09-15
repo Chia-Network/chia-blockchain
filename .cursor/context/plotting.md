@@ -40,7 +40,7 @@ Public plotting docs frame plots as files tied to a farmer key, pool key, or poo
 
 ## Discovery And Refresh Model
 
-- Plot discovery reads configured harvester directories via `get_plot_directories()` and scans `*.plot` plus `*.plot2`. Recursive scan and symlink following are config driven; path resolution failures and unreadable directories are logged and skipped.
+- Plot discovery reads configured harvester directories via `get_plot_directories()` and scans `*.plot` plus `*.gplot`. Recursive scan and symlink following are config driven; path resolution failures and unreadable directories are logged and skipped.
 - `PlotManager.start_refreshing()` loads the cache and starts a thread that periodically scans directories when `needs_refresh()` is true. `stop_refreshing()` joins that thread; `reset()` clears loaded plots and error state.
 - Refresh emits `started`, `batch_processed`, and `done` callbacks. Harvester converts those callbacks into plot-sync messages, so callback ordering and result semantics are observable by farmer/UI state.
 - `PlotManager.plots` is protected by the manager's lock. Harvester code snapshots or reads it under `with plot_manager:` and then performs expensive proof work outside the lock. Do not add disk proof reads, RPC calls, or long logging loops while holding this lock.
@@ -66,7 +66,7 @@ Public plotting docs frame plots as files tied to a farmer key, pool key, or poo
 
 - V1 uses `chiapos.DiskProver`; full proofs are retrieved locally with `get_full_proof(challenge, index, parallel_read)`, and proof validation uses `chiapos.Verifier`.
 - V2 uses `chia_rs.Prover`; quality lookup returns `PartialProof` wrappers, and full proof solving is done by `chia_rs.solve_proof()` in diagnostics or by solver services in the farmer flow.
-- `get_prover_from_file()` and `get_prover_from_bytes()` dispatch solely by filename suffix: `.plot2` means V2, `.plot` means V1. Unsupported extensions raise `ValueError`.
+- `get_prover_from_file()` and `get_prover_from_bytes()` dispatch solely by filename suffix: `.gplot` means V2, `.plot` means V1. Unsupported extensions raise `ValueError`.
 - `V1Prover.get_strength()` intentionally raises because strength is V2-only. Code that needs plot parameters should use `get_param()` and branch on `size_v1` vs `strength_v2`.
 - `V2Prover.get_compression_level()` returns zero because V2 plots are not treated as compressed V1 plots. Do not reuse V1 compression policy as a V2 strength policy.
 

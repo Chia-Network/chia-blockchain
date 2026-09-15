@@ -163,7 +163,7 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2 missing filter_challenge",
-        pos_challenge=b32("a66f6a2ed7a1fb5f7c1db936e4a5833e06df80afb63fb13f1f85d72b8a018413"),
+        pos_challenge=b32("9f43b874e9881bb4d5760ff9bb2c98ddcd7d40fb7a4884d1a26f61b3c64bd635"),
         plot_size=PlotParam.make_v2(0, 0, 8),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -207,7 +207,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     ProofOfSpaceCase(
         id="v2 missing filter_challenge rejected",
         plot_size=PlotParam.make_v2(0, 0, 2),
-        pos_challenge=b32("9483df4e178307ae677d86664daaef4fc52689b2b6cd7825351f2a2ad7075adb"),
+        pos_challenge=b32("343875570da2832214c4b1e18bce0df0b8c81be2d61d406be9c237934c2662b5"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),

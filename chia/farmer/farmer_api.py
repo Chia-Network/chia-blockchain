@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace, compute_plot_id_v2
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
@@ -43,6 +43,7 @@ from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
@@ -538,10 +539,18 @@ class FarmerAPI:
         )
 
         # Process each partial proof chain through solver service to get full proofs
+        plot_id = compute_plot_id_v2(
+            partial_proof_data.strength,
+            partial_proof_data.plot_public_key,
+            partial_proof_data.pool_public_key,
+            partial_proof_data.pool_contract_puzzle_hash,
+            partial_proof_data.plot_index,
+            partial_proof_data.meta_group,
+        )
         for partial_proof in partial_proof_data.partial_proofs:
             solver_info = SolverInfo(
                 partial_proof=partial_proof,
-                plot_id=partial_proof_data.plot_id,
+                plot_id=plot_id,
                 strength=partial_proof_data.strength,
                 size=partial_proof_data.plot_size,
             )
@@ -596,7 +605,11 @@ class FarmerAPI:
             self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.fragments[:5]}...")
             return
 
-        sp_challenge_hash = proof_data.challenge_hash
+        sp_challenge_hash = calculate_pos_challenge(
+            proof_data.plot_group_id,
+            proof_data.challenge_hash,
+            proof_data.sp_hash,
+        )
         new_proof_of_space = harvester_protocol.NewProofOfSpace(
             proof_data.challenge_hash,
             proof_data.sp_hash,

@@ -15,6 +15,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32
 
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import (
     DEFAULT_DECOMPRESSOR_THREAD_COUNT,
     DEFAULT_DECOMPRESSOR_TIMEOUT,
@@ -190,21 +191,24 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
-                param = prover.get_param()
-                if param.size_v1 is not None:
+                if isinstance(prover, V1Prover):
+                    param = prover.get_param()
+                    assert param.size_v1 is not None
                     k = uint8(param.size_v1)
+                    plot_id = prover.get_id()
                     plot_index = uint16(0)
                     meta_group = uint8(0)
                 else:
-                    assert param.strength_v2 is not None
-                    k = uint8(0x80 | param.strength_v2)
-                    plot_index = param.plot_index
-                    meta_group = param.meta_group
+                    assert isinstance(prover, V2Prover)
+                    k = uint8(0x80 | prover.get_strength())
+                    plot_id = prover.get_id()
+                    plot_index = uint16(0)
+                    meta_group = prover.get_meta_group()
                 response_plots.append(
                     {
                         "filename": str(path),
                         "size": k,
-                        "plot_id": prover.get_id(),
+                        "plot_id": plot_id,
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
                         "plot_public_key": plot_info.plot_public_key,
