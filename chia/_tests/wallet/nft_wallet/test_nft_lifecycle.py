@@ -5,19 +5,21 @@ import itertools
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import AssertPuzzleAnnouncement
+from chia.wallet.conditions import AssertPuzzleAnnouncement, CreateCoin, CreatePuzzleAnnouncement, UnknownCondition
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
     construct_ownership_layer,
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
 )
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_TRANSFER_PROGRAM_DEFAULT
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = Program.to(1)
@@ -55,7 +57,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         generic_spend = make_spend(
             state_layer_coin,
             state_layer_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
+            Program.to([ACSSolution(conditions=[CreateCoin(ACS_PH, uint64(1))]).program]),
         )
         generic_bundle = cost_logger.add_cost(
             "State layer only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
@@ -118,10 +120,15 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                 state_layer_puzzle,
                 Program.to(
                     [
-                        [
-                            [51, ACS_PH, 1],
-                            [-24, METADATA_UPDATER, solution],
-                        ]
+                        ACSSolution(
+                            conditions=[
+                                CreateCoin(ACS_PH, uint64(1)),
+                                UnknownCondition(
+                                    opcode=Program.to(-24),
+                                    args=[METADATA_UPDATER, solution],
+                                ),
+                            ]
+                        ).program
                     ]
                 ),
             )
@@ -158,7 +165,19 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         generic_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
+            Program.to(
+                [
+                    ACSSolution(
+                        conditions=[
+                            CreateCoin(ACS_PH, uint64(1)),
+                            UnknownCondition(
+                                opcode=Program.to(-10),
+                                args=[Program.to([]), Program.to([])],
+                            ),
+                        ]
+                    ).program
+                ]
+            ),
         )
         generic_bundle = cost_logger.add_cost(
             "Ownership only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
@@ -173,7 +192,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         skip_tp_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
+            Program.to([ACSSolution(conditions=[CreateCoin(ACS_PH, uint64(1))]).program]),
         )
         skip_tp_bundle = WalletSpendBundle([skip_tp_spend], G2Element())
 
@@ -187,11 +206,16 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             ownership_puzzle,
             Program.to(
                 [
-                    [
-                        [51, ACS_PH, 1],
-                        [-10, TARGET_OWNER, TARGET_TP],
-                        [62, b"\xad\x4c" + bytes32.zeros],
-                    ]
+                    ACSSolution(
+                        conditions=[
+                            CreateCoin(ACS_PH, uint64(1)),
+                            UnknownCondition(
+                                opcode=Program.to(-10),
+                                args=[Program.to(TARGET_OWNER), TARGET_TP],
+                            ),
+                            CreatePuzzleAnnouncement(msg=b"\xad\x4c" + bytes32.zeros),
+                        ]
+                    ).program
                 ]
             ),
         )
@@ -217,14 +241,19 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             ownership_puzzle,
             Program.to(
                 [
-                    [
-                        [51, ACS_PH, 1],
-                        [-10, TARGET_OWNER, TARGET_TP],
-                        expected_announcement.to_program(),
-                        # create and assert a harmless puzzle announcement
-                        harmless_announcement.corresponding_creation().to_program(),
-                        harmless_announcement.to_program(),
-                    ]
+                    ACSSolution(
+                        conditions=[
+                            CreateCoin(ACS_PH, uint64(1)),
+                            UnknownCondition(
+                                opcode=Program.to(-10),
+                                args=[Program.to(TARGET_OWNER), TARGET_TP],
+                            ),
+                            expected_announcement,
+                            # create and assert a harmless puzzle announcement
+                            harmless_announcement.corresponding_creation(),
+                            harmless_announcement,
+                        ]
+                    ).program
                 ]
             ),
         )
@@ -280,7 +309,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         generic_spend = make_spend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1]]]),
+            Program.to([ACSSolution(conditions=[CreateCoin(ACS_PH, uint64(1))]).program]),
         )
         generic_bundle = cost_logger.add_cost(
             "Ownership only coin (default NFT1 TP) - one child created", WalletSpendBundle([generic_spend], G2Element())
@@ -307,14 +336,28 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             ownership_coin,
             ownership_puzzle,
             Program.to(
-                [[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]], ACS_PH]]]
+                [
+                    ACSSolution(
+                        conditions=[
+                            CreateCoin(ACS_PH, uint64(1)),
+                            UnknownCondition(
+                                opcode=Program.to(-10),
+                                args=[
+                                    Program.to(FAKE_LAUNCHER_ID),
+                                    Program.to([[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]]),
+                                    Program.to(ACS_PH),
+                                ],
+                            ),
+                        ]
+                    ).program
+                ]
             ),
         )
 
         did_announcement_spend = make_spend(
             singleton_coin,
             FAKE_SINGLETON,
-            Program.to([[[62, FAKE_LAUNCHER_ID]]]),
+            Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=FAKE_LAUNCHER_ID)]).program]),
         )
 
         expected_announcement_data = Program.to(
@@ -323,10 +366,14 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         xch_announcement_spend = make_spend(
             xch_coin,
             ACS,
-            Program.to([[62, expected_announcement_data]]),
+            ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=expected_announcement_data)]).program,
         )
 
-        cat_announcement_spend = make_spend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
+        cat_announcement_spend = make_spend(
+            cat_coin,
+            FAKE_CAT,
+            Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=expected_announcement_data)]).program]),
+        )
 
         # Make sure every combo except all of them fail
         for i in range(1, 3):
@@ -363,7 +410,19 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         empty_spend = make_spend(
             new_ownership_coin,
             new_ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
+            Program.to(
+                [
+                    ACSSolution(
+                        conditions=[
+                            CreateCoin(ACS_PH, uint64(1)),
+                            UnknownCondition(
+                                opcode=Program.to(-10),
+                                args=[Program.to([]), Program.to([]), Program.to([])],
+                            ),
+                        ]
+                    ).program
+                ]
+            ),
         )
         empty_bundle = cost_logger.add_cost(
             "Ownership only coin (default NFT1 TP) - one child created + clear DID",

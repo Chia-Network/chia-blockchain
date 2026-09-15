@@ -9,9 +9,10 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
 
 
 def test_cat_outer_puzzle() -> None:
@@ -43,7 +44,7 @@ def test_cat_outer_puzzle() -> None:
         + uint64(child_coin.amount).stream_to_bytes().hex()
     )
     parent_spend_as_hex: str = "0x" + bytes(parent_spend).hex()
-    inner_solution = Program.to([[51, ACS.get_tree_hash(), 100]])
+    inner_solution = ACSSolution(conditions=[CreateCoin(ACS.get_tree_hash(), uint64(100))]).program
 
     solution: Program = solve_puzzle(
         cat_driver,

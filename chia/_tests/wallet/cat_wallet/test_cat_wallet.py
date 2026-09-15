@@ -38,6 +38,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer
@@ -77,17 +78,12 @@ async def mint_cat(
         else:
             wrapped_inner_puzzle_hash = inner_puzzle_hash
             extra_args = tuple()
-        eve_inner_puzzle = Program.to(
-            (
-                1,
-                [
-                    CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]).to_program(),
-                    UnknownCondition(
-                        opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]
-                    ).to_program(),
-                ],
-            )
-        )
+        eve_inner_puzzle = P2Conditions(
+            conditions=[
+                CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]),
+                UnknownCondition(opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]),
+            ]
+        ).program
         eve_cat_puzzle = construct_cat_puzzle(
             CAT_MOD,
             tail_hash,

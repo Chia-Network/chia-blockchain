@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -10,7 +11,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
+from chia.wallet.conditions import CreateCoin, CreatePuzzleAnnouncement
 from chia.wallet.db_wallet.db_wallet_puzzles import GRAFTROOT_DL_OFFERS
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions
 from chia.wallet.util.merkle_utils import build_merkle_tree, build_merkle_tree_from_binary_tree, simplify_merkle_proof
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -40,7 +43,8 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
         # Create the coin we're testing
         all_values: list[bytes32] = [bytes32([x] * 32) for x in range(100)]
         root, proofs = build_merkle_tree(all_values)
-        p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
+        # A coin to create to make sure this hits the blockchain
+        p2_conditions = P2Conditions(conditions=[CreateCoin(ACS_PH, uint64(0))]).program
         desired_key_values = ((bytes32.zeros, bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
         desired_row_hashes: list[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
         fake_struct: Program = Program.to((ACS_PH, NIL_PH))
@@ -83,7 +87,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
             fake_spend = make_spend(
                 fake_coin,
                 fake_puzzle,
-                Program.to([[[62, "$"]]]),
+                Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).program]),
             )
 
             proofs_of_inclusion = []
@@ -135,7 +139,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 new_fake_spend = make_spend(
                     fake_coin_bad_announcement,
                     fake_puzzle_bad_announcement,
-                    Program.to([[[62, "$"]]]),
+                    Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).program]),
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)

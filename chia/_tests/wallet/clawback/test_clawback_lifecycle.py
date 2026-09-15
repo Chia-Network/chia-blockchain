@@ -18,6 +18,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.streamable import VersionedBlob
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,
     create_clawback_merkle_tree,
@@ -33,7 +34,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
 from chia.wallet.util.merkle_utils import check_merkle_proof
 from chia.wallet.util.wallet_types import RemarkDataType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -282,7 +283,7 @@ class TestClawbackLifecycle:
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == sender_ph
 
-        recipient_sol = Program.to([[51, recipient_ph, amount]])
+        recipient_sol = ACSSolution(conditions=[CreateCoin(recipient_ph, amount)]).program
         cb_recipient_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
         clawback_puz.run(cb_recipient_sol)
         conds = conditions_dict_for_solution(clawback_puz, cb_recipient_sol, INFINITE_COST)

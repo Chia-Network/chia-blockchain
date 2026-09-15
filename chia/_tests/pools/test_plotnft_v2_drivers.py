@@ -40,7 +40,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import NilSolution, P2Conditions, UnknownPuzzle
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -125,14 +125,14 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match=re.escape("Cannot exit to waiting room while self pooling.")):
             plotnft.exit_to_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=Program.to(None)
+                    puzzle=Program.to(None), solution=NilSolution().program
                 )
             )
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while self pooling.")):
             plotnft.exit_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=Program.to(None)
+                    puzzle=Program.to(None), solution=NilSolution().program
                 )
             )
 
@@ -169,7 +169,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while not in it")):
             plotnft.exit_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=Program.to(None)
+                    puzzle=Program.to(None), solution=NilSolution().program
                 )
             )
 
@@ -242,7 +242,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match=re.escape("Already exiting to waiting room, cannot exit again")):
             plotnft.exit_to_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=Program.to(None)
+                    puzzle=Program.to(None), solution=NilSolution().program
                 )
             )
 
@@ -342,7 +342,7 @@ async def test_plotnft_pooling_claim(
             plotnft.claim_pool_rewards(
                 rewards_to_claim=[reward],
                 reward_delegated_puzzles_and_solutions=[
-                    DelegatedPuzzleAndSolution(puzzle=Program.to(None), solution=Program.to(None))
+                    DelegatedPuzzleAndSolution(puzzle=Program.to(None), solution=NilSolution().program)
                 ],
             )
 
@@ -456,15 +456,12 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program(),
-                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)).to_program(),
-                        ],
-                    )
-                )
+                P2Conditions(
+                    conditions=[
+                        CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)),
+                        CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)),
+                    ],
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -473,7 +470,11 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                Program.to((1, [CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program()]))
+                P2Conditions(
+                    conditions=[
+                        CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)),
+                    ],
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -482,23 +483,20 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(
-                                puzzle_hash=bytes32.zeros,
-                                amount=uint64(1),
-                                memo_blob=Program.to(
-                                    (
-                                        bytes32.zeros,
-                                        ("not the namespace", [None, [[None, bytes32.zeros, None]], None, None]),
-                                    )
-                                ),
-                            ).to_program()
-                        ],
-                    )
-                )
+                P2Conditions(
+                    conditions=[
+                        CreateCoin(
+                            puzzle_hash=bytes32.zeros,
+                            amount=uint64(1),
+                            memo_blob=Program.to(
+                                (
+                                    bytes32.zeros,
+                                    ("not the namespace", [None, [[None, bytes32.zeros, None]], None, None]),
+                                )
+                            ),
+                        )
+                    ],
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -507,26 +505,26 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(
-                                puzzle_hash=bytes32.zeros,
-                                amount=uint64(1),
-                                memo_blob=Program.to(
+                P2Conditions(
+                    conditions=[
+                        CreateCoin(
+                            puzzle_hash=bytes32.zeros,
+                            amount=uint64(1),
+                            memo_blob=Program.to(
+                                (
+                                    bytes32.zeros,
                                     (
                                         bytes32.zeros,
                                         (
                                             PuzzleWithRestrictions.spec_namespace,
                                             [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
                                         ),
-                                    )
+                                    ),
                                 ),
-                            ).to_program()
-                        ],
-                    )
-                )
+                            ),
+                        )
+                    ],
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -535,32 +533,29 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                Program.to(
-                    (
-                        1,
-                        [
-                            CreateCoin(
-                                puzzle_hash=bytes32.zeros,
-                                amount=uint64(1),
-                                memo_blob=Program.to(
+                P2Conditions(
+                    conditions=[
+                        CreateCoin(
+                            puzzle_hash=bytes32.zeros,
+                            amount=uint64(1),
+                            memo_blob=Program.to(
+                                (
+                                    bytes32.zeros,
                                     (
-                                        bytes32.zeros,
-                                        (
-                                            PuzzleWithRestrictions.spec_namespace,
-                                            [
-                                                None,
-                                                [[None, bytes32.zeros, None]],
-                                                None,
-                                                [bytes32.zeros, None],
-                                                [G1Element()],
-                                            ],
-                                        ),
-                                    )
-                                ),
-                            ).to_program()
-                        ],
-                    )
-                )
+                                        PuzzleWithRestrictions.spec_namespace,
+                                        [
+                                            None,
+                                            [[None, bytes32.zeros, None]],
+                                            None,
+                                            [bytes32.zeros, None],
+                                            [G1Element()],
+                                        ],
+                                    ),
+                                )
+                            ),
+                        )
+                    ],
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )

@@ -20,7 +20,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.conditions import CreateCoin, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -100,14 +102,17 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             [starting_coin],
             [NO_LINEAGE_PROOF],
             [
-                Program.to(
-                    [
-                        [51, acs_ph, starting_coin.amount - 3, [b"memo"]],
-                        [51, acs_ph, 1],
-                        [51, acs_ph, 2],
-                        [51, 0, -113, tail, checker_solution],
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(starting_coin.amount - 3), [b"memo"]),
+                        CreateCoin(acs_ph, uint64(1)),
+                        CreateCoin(acs_ph, uint64(2)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
                     ]
-                )
+                ).program
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution],
@@ -130,8 +135,23 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             coins,
             [NO_LINEAGE_PROOF] * 2,
             [
-                Program.to([[51, acs_ph, coins[0].amount + coins[1].amount], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, 0, -113, tail, checker_solution]]),
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(coins[0].amount + coins[1].amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution] * 2,
@@ -152,9 +172,31 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             coins,
             [NO_LINEAGE_PROOF] * 3,
             [
-                Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, 0, -113, tail, checker_solution]]),
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(total_amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution] * 3,
@@ -175,7 +217,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             tail,
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [lineage_proof],
-            [Program.to([[51, acs_ph, total_amount]])],
+            [ACSSolution(conditions=[CreateCoin(acs_ph, uint64(total_amount))]).program],
             (MempoolInclusionStatus.SUCCESS, None),
             reveal_limitations_program=False,
             cost_logger=cost_logger,
@@ -189,7 +231,17 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             tail,
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, total_amount - 1], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(total_amount - 1)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             extra_deltas=[-1],
             limitations_solutions=[checker_solution],
@@ -200,7 +252,10 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         # Mint some value
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle(
+            [make_spend(acs_coin, acs, ACSSolution(conditions=[]).program)],
+            G2Element(),
+        )
         await do_spend(
             sim,
             sim_client,
@@ -208,7 +263,15 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
             [
-                Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]])
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(total_amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
             ],  # We subtracted 1 last time so it's normal now
             (MempoolInclusionStatus.SUCCESS, None),
             extra_deltas=[1],
@@ -244,8 +307,24 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
             [parent_of_mint, parent_of_melt],
             [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF],
             [
-                Program.to([[51, acs_ph, parent_of_mint.amount], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, acs_ph, parent_of_melt.amount], [51, 0, -113, tail, checker_solution]]),
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(parent_of_mint.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(parent_of_melt.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution] * 2,
@@ -272,10 +351,42 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
             [eve_to_mint, eve_to_melt, standard_to_mint, standard_to_melt],
             [NO_LINEAGE_PROOF, NO_LINEAGE_PROOF, mint_lineage, melt_lineage],
             [
-                Program.to([[51, acs_ph, eve_to_mint.amount + 13], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, acs_ph, eve_to_melt.amount - 21], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, acs_ph, standard_to_mint.amount + 21], [51, 0, -113, tail, checker_solution]]),
-                Program.to([[51, acs_ph, standard_to_melt.amount - 13], [51, 0, -113, tail, checker_solution]]),
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(eve_to_mint.amount + 13)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(eve_to_melt.amount - 21)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(standard_to_mint.amount + 21)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(standard_to_melt.amount - 13)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program,
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution] * 4,
@@ -299,7 +410,14 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+                [
+                    make_spend(
+                        starting_coin,
+                        acs,
+                        ACSSolution(conditions=[CreateCoin(cat_ph, uint64(starting_coin.amount))]).program,
+                    )
+                ],
+                G2Element(),
             )
         )
         await sim.farm_block()
@@ -310,7 +428,17 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
             tail,
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(starting_coin.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution],
             cost_logger=cost_logger,
@@ -332,7 +460,14 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+                [
+                    make_spend(
+                        starting_coin,
+                        acs,
+                        ACSSolution(conditions=[CreateCoin(cat_ph, uint64(starting_coin.amount))]).program,
+                    )
+                ],
+                G2Element(),
             )
         )
         await sim.farm_block()
@@ -343,7 +478,17 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
             tail,
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(starting_coin.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution],
             cost_logger=cost_logger,
@@ -373,7 +518,17 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
             tail,
             [starting_coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(starting_coin.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution],
             signatures=[signature],
@@ -391,7 +546,17 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
             tail,
             [coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, coin.amount - 1], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(coin.amount - 1)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             extra_deltas=[-1],
             limitations_solutions=[checker_solution],
@@ -407,7 +572,10 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
         # Need something to fund the minting
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle(
+            [make_spend(acs_coin, acs, ACSSolution(conditions=[]).program)],
+            G2Element(),
+        )
 
         await do_spend(
             sim,
@@ -415,7 +583,17 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
             tail,
             [coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, coin.amount + 1], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(coin.amount + 1)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             extra_deltas=[1],
             limitations_solutions=[checker_solution],
@@ -440,7 +618,14 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+                [
+                    make_spend(
+                        starting_coin,
+                        acs,
+                        ACSSolution(conditions=[CreateCoin(cat_ph, uint64(starting_coin.amount))]).program,
+                    )
+                ],
+                G2Element(),
             )
         )
         await sim.farm_block()
@@ -463,7 +648,17 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
             tail,
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
-            [Program.to([[51, acs_ph, starting_coin.amount], [51, 0, -113, tail, checker_solution]])],
+            [
+                ACSSolution(
+                    conditions=[
+                        CreateCoin(acs_ph, uint64(starting_coin.amount)),
+                        UnknownCondition(
+                            opcode=Program.to(51),
+                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        ),
+                    ]
+                ).program
+            ],
             (MempoolInclusionStatus.SUCCESS, None),
             signatures=[signature],
             limitations_solutions=[checker_solution],
