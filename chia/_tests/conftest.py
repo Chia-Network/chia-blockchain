@@ -287,6 +287,14 @@ def _install_plot_cache() -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _install_derivation_cache() -> None:
+    from chia._tests.util.derivation_cache import install as install_derivation_cache
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    install_derivation_cache(DEFAULT_ROOT_PATH.parent / "test-plots")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _block_production_keyring_access(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     from unittest.mock import patch
 
