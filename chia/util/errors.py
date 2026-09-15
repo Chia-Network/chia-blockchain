@@ -201,6 +201,9 @@ class Err(Enum):
     TOO_MANY_SPENDS = 149
     INVALID_HEADER_MMR_ROOT = 150
     INVALID_BLOCK_VERSION = 151
+    # CLVM / spend-bundle validation exceeded the configured wall-clock timeout
+    TIMEOUT = 152
+    COMPLEX_GENERATOR_RECEIVED = 153
 
 
 class ValidationError(Exception):

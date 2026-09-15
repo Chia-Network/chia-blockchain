@@ -3974,15 +3974,14 @@ class TestReorgs:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        # overlong encoding
-        generator = SerializedProgram.fromhex("c00101")
-        assert not is_canonical_serialization(bytes(generator))
+        # Overlong atom encoding. Program/SerializedProgram can no longer load
+        # non-canonical CLVM, so inject raw bytes via the generator buffer.
+        generator_bytes = bytes.fromhex("c00101")
+        assert not is_canonical_serialization(generator_bytes)
 
-        if original_block.version == 0:
-            block = recursive_replace(original_block, "transactions_generator", generator)
-        else:
-            block = recursive_replace(original_block, "transactions_generator_buffer", bytes(generator))
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        block = recursive_replace(original_block, "transactions_generator", None)
+        block = recursive_replace(block, "transactions_generator_buffer", generator_bytes)
+        block = recursive_replace(block, "transactions_info.generator_root", std_hash(generator_bytes))
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )
