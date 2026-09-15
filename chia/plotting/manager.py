@@ -45,7 +45,7 @@ class PlotManager:
     _lock: threading.Lock
     _refresh_thread: threading.Thread | None
     _refreshing_enabled: bool
-    _refresh_callback: Callable
+    _refresh_callback: Callable[[PlotRefreshEvents, PlotRefreshResult], None]
     _initial: bool
     max_compression_level_allowed: int
     context_count: int
@@ -54,7 +54,7 @@ class PlotManager:
     def __init__(
         self,
         root_path: Path,
-        refresh_callback: Callable,
+        refresh_callback: Callable[[PlotRefreshEvents, PlotRefreshResult], None],
         constants: ConsensusConstants,
         match_str: str | None = None,
         open_no_key_filenames: bool = False,
@@ -87,10 +87,10 @@ class PlotManager:
         self.context_count = 0
         self.constants = constants
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self._lock.acquire()
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, *args: object) -> None:
         self._lock.release()
 
     def configure_decompressor(
@@ -139,10 +139,10 @@ class PlotManager:
             self.no_key_filenames.clear()
             self._initial = True
 
-    def set_refresh_callback(self, callback: Callable):
+    def set_refresh_callback(self, callback: Callable[[PlotRefreshEvents, PlotRefreshResult], None]) -> None:
         self._refresh_callback = callback
 
-    def set_public_keys(self, farmer_public_keys: list[G1Element], pool_public_keys: list[G1Element]):
+    def set_public_keys(self, farmer_public_keys: list[G1Element], pool_public_keys: list[G1Element]) -> None:
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
 
@@ -167,7 +167,7 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def start_refreshing(self, sleep_interval_ms: int = 1000):
+    def start_refreshing(self, sleep_interval_ms: int = 1000) -> None:
         self._refreshing_enabled = True
         if self._refresh_thread is None or not self._refresh_thread.is_alive():
             self.cache.load()
@@ -184,7 +184,7 @@ class PlotManager:
         log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
-    def _refresh_task(self, sleep_interval_ms: int):
+    def _refresh_task(self, sleep_interval_ms: int) -> None:
         while self._refreshing_enabled:
             try:
                 while not self.needs_refresh() and self._refreshing_enabled:
