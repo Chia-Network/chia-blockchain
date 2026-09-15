@@ -78,8 +78,14 @@ class SyncStore:
         if new_peak:
             old_peak = self.peer_to_peak.get(peer_id)
             if old_peak is not None and old_peak.header_hash != header_hash:
-                if old_peak.header_hash in self.peak_to_peer:
-                    self.peak_to_peer[old_peak.header_hash].discard(peer_id)
+                # A peer that has moved to a newer peak still holds the blocks
+                # behind the current sync target. Dropping them from that
+                # mapping during weight-proof validation leaves long sync with
+                # "no peers with header_hash" even though they can still serve
+                # the target. Keep membership for the active target peak.
+                if self.target_peak is None or old_peak.header_hash != self.target_peak.header_hash:
+                    if old_peak.header_hash in self.peak_to_peer:
+                        self.peak_to_peer[old_peak.header_hash].discard(peer_id)
             self.peer_to_peak[peer_id] = Peak(header_hash, height, weight)
 
     def get_peers_that_have_peak(self, header_hashes: list[bytes32]) -> set[bytes32]:
