@@ -110,6 +110,7 @@ class TestSave:
 
 
 class TestInstallAndCorrectness:
+    @pytest.mark.skipif(not dc._installed, reason="derivation cache fixture disabled for CI A/B (B = no cache)")
     def test_cache_is_installed(self) -> None:
         assert dc._installed
         sk = _seed_key()
@@ -136,6 +137,7 @@ class TestInstallAndCorrectness:
         assert wallet == orig_wallet
         assert local == orig_local
 
+    @pytest.mark.skipif(not dc._installed, reason="derivation cache fixture disabled for CI A/B (B = no cache)")
     def test_hit_increments(self) -> None:
         sk = _seed_key()
         old_hits = dc._hits
