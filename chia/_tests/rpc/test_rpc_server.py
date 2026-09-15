@@ -60,6 +60,7 @@ class TestRpcApi:
             "/raise_rpc_error": self.raise_rpc_error,
             "/raise_generic_error": self.raise_generic_error,
             "/wait_for_gate": self.wait_for_gate,
+            "/ignore_cancellation": self.ignore_cancellation,
         }
 
     async def raise_rpc_error(self, request: dict[str, Any]) -> EndpointResult:
@@ -76,6 +77,15 @@ class TestRpcApi:
     async def wait_for_gate(self, request: dict[str, Any]) -> EndpointResult:
         await self.gate.wait()
         return {"waited": True}
+
+    async def ignore_cancellation(self, request: dict[str, Any]) -> EndpointResult:
+        # a misbehaving handler that swallows its cancellation and keeps waiting for the gate
+        while True:
+            try:
+                await self.gate.wait()
+                return {"released": True}
+            except asyncio.CancelledError:
+                continue
 
     async def log(self, request: dict[str, Any]) -> EndpointResult:
         message = request["message"]
@@ -467,4 +477,33 @@ async def test_await_closed_cancels_in_flight_daemon_handlers(server: RpcServer[
         assert len(server.daemon_handler_tasks) == 0
     finally:
         server.rpc_api.gate.set()
+        connection_task.cancel()
+
+
+@pytest.mark.anyio
+async def test_await_closed_gives_up_on_handlers_that_ignore_cancellation(
+    server: RpcServer[TestRpcApi], caplog: pytest.LogCaptureFixture
+) -> None:
+    ws = FakeDaemonWebSocket()
+    ws.receive_text(daemon_payload("ignore_cancellation", "stuck"))
+    ws.receive_text(daemon_payload("healthz", "fast"))
+    server.daemon_handler_shutdown_timeout = 0.1
+
+    connection_task = create_referenced_task(server.connection(ws))  # type: ignore[arg-type]
+    try:
+        await ws.wait_for_sent(2)
+        [handler_task] = pending_handler_tasks(server)
+        ws.close_from_daemon()
+        await asyncio.wait_for(connection_task, timeout=10)
+
+        server.close()
+        with caplog.at_level(logging.WARNING, logger="chia.rpc.rpc_server"):
+            await asyncio.wait_for(server.await_closed(), timeout=10)
+
+        assert not handler_task.done()
+        assert len(server.daemon_handler_tasks) == 0
+        assert "Timed out waiting for 1 daemon message handler(s)" in caplog.text
+    finally:
+        server.rpc_api.gate.set()
+        await asyncio.wait_for(handler_task, timeout=10)
         connection_task.cancel()

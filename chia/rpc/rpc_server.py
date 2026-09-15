@@ -165,6 +165,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     prefer_ipv6: bool = False
     # one task per message received over the daemon websocket, see connection()
     daemon_handler_tasks: set[asyncio.Task[None]] = field(default_factory=set)
+    # how long await_closed() waits for cancelled handler tasks before giving up on them, in seconds
+    daemon_handler_shutdown_timeout: float = 10
 
     @classmethod
     def create(
@@ -219,16 +221,25 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             await self.websocket.close()
         if self.client_session is not None:
             await self.client_session.close()
+        await self._cancel_daemon_handler_tasks()
         if self.webserver is not None:
             await self.webserver.await_closed()
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
             self.daemon_connection_task = None
+
+    async def _cancel_daemon_handler_tasks(self) -> None:
         handler_tasks = list(self.daemon_handler_tasks)
+        self.daemon_handler_tasks.clear()
+        if len(handler_tasks) == 0:
+            return
         for task in handler_tasks:
             task.cancel()
-        await asyncio.gather(*handler_tasks, return_exceptions=True)
-        self.daemon_handler_tasks.clear()
+        # asyncio.wait() neither cancels nor awaits the tasks when the timeout passes, so a handler that
+        # never finishes cannot hold up the shutdown
+        _, pending = await asyncio.wait(handler_tasks, timeout=self.daemon_handler_shutdown_timeout)
+        if len(pending) > 0:
+            log.warning(f"Timed out waiting for {len(pending)} daemon message handler(s) to finish cancelling")
 
     async def _state_changed(self, change: str, change_data: dict[str, Any] | None) -> None:
         if self.websocket is None or self.websocket.closed:
