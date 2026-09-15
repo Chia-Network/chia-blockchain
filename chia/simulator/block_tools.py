@@ -464,10 +464,12 @@ class BlockTools:
             assert rng is not None
             bundle, additions = make_spend_bundle(available_coins, wallet, rng)
             removals = bundle.removals()
-            program = simple_solution_generator(bundle).program
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
+            program_bytes = simple_solution_generator(bundle).program
+            cost = compute_block_cost(
+                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
+            )
             return NewBlockGenerator(
-                program,
+                program_bytes,
                 [],
                 block_refs + dummy_refs,
                 bundle.aggregated_signature,
@@ -477,9 +479,11 @@ class BlockTools:
             )
 
         if dummy_block_references:
-            program = SerializedProgram.from_bytes(solution_generator([]))
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            return NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
+            program_bytes = solution_generator([])
+            cost = compute_block_cost(
+                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
+            )
+            return NewBlockGenerator(program_bytes, [], block_refs + dummy_refs, G2Element(), [], [], cost)
 
         return None
 
@@ -980,13 +984,15 @@ class BlockTools:
             additions = compute_additions_unchecked(transaction_data)
             removals = transaction_data.removals()
             if curr.height >= self.constants.HARD_FORK_HEIGHT:
-                program = simple_solution_generator_backrefs(transaction_data).program
+                program_bytes = simple_solution_generator_backrefs(transaction_data).program
             else:
-                program = simple_solution_generator(transaction_data).program
+                program_bytes = simple_solution_generator(transaction_data).program
             block_refs = []
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
+            cost = compute_block_cost(
+                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
+            )
             block_generator = NewBlockGenerator(
-                program,
+                program_bytes,
                 [],
                 block_refs,
                 transaction_data.aggregated_signature,

@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from chia_rs import Coin, G2Element
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.streamable import Streamable, streamable
 
 
@@ -13,7 +12,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
-    program: SerializedProgram = field(default_factory=SerializedProgram.default)
+    program: bytes = field(default_factory=lambda: b"\x80")
     # to run the block generator, we need the actual bytes of the previous
     # generators it may reference. These are parameters passed in to the block
     # generator
