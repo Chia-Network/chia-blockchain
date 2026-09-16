@@ -13,7 +13,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator, GeneratorFormat
+from chia.types.generator_types import BlockGenerator
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
@@ -60,7 +60,7 @@ def to_sp(sexp: bytes) -> SerializedProgram:
 
 def block_generator() -> BlockGenerator:
     generator_list = [FIRST_GENERATOR, SECOND_GENERATOR]
-    return BlockGenerator(COMPILED_GENERATOR_CODE, GeneratorFormat.CLASSIC, generator_list)
+    return BlockGenerator(COMPILED_GENERATOR_CODE, generator_list)
 
 
 EXPECTED_ABBREVIATED_COST = 108379

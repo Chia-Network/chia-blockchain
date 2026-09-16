@@ -49,7 +49,6 @@ from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
-    get_transactions_generator_format,
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -2888,10 +2887,8 @@ class TestBodyValidation:
 
         generator = get_transactions_generator_bytes(blocks[-1])
         assert generator is not None
-        generator_format = get_transactions_generator_format(blocks[-1])
-        assert generator_format is not None
         assert blocks[-1].transactions_info is not None
-        block_generator = BlockGenerator(generator, generator_format, [])
+        block_generator = BlockGenerator(generator, [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
@@ -2972,9 +2969,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
-        generator_format = get_transactions_generator_format(block_2)
-        assert generator_format is not None
-        block_generator = BlockGenerator(generator, generator_format, [])
+        block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -3010,9 +3005,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
-        generator_format = get_transactions_generator_format(block_2)
-        assert generator_format is not None
-        block_generator = BlockGenerator(generator, generator_format, [])
+        block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -3048,9 +3041,7 @@ class TestBodyValidation:
 
         generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
-        generator_format = get_transactions_generator_format(block_2)
-        assert generator_format is not None
-        block_generator = BlockGenerator(generator, generator_format, [])
+        block_generator = BlockGenerator(generator, [])
         max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
         npc_result = get_name_puzzle_conditions(
             block_generator,

@@ -74,7 +74,7 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
-from chia.types.generator_types import BlockGenerator, GeneratorFormat, NewBlockGenerator
+from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ConsensusError, Err
@@ -1686,10 +1686,6 @@ class FullNodeAPI:
         # untrusted peers are deprioritized
         trusted = self.is_trusted(peer)
         try:
-            if block_generator.format != GeneratorFormat.CLASSIC:
-                # this peer-protocol handler only understands classic CLVM generators;
-                # raise so the except below turns this into a clean reject_msg
-                raise ValueError("block generator is not classic CLVM")
             puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 SerializedProgram.from_bytes(block_generator.program),

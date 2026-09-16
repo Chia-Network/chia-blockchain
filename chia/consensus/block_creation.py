@@ -36,7 +36,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.generator_types import GeneratorFormat, NewBlockGenerator
+from chia.types.generator_types import NewBlockGenerator
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
@@ -404,19 +404,14 @@ def create_unfinished_block(
         # Post hard fork 2: serialize the generator as a plain buffer (version 1).
         version = uint8(1)
         if new_block_gen is not None:
-            generator_buffer: bytes | None = new_block_gen.program
+            generator_buffer: bytes | None = bytes(new_block_gen.program)
         else:
             generator_buffer = None
         generator = None
         generator_refs: list[uint32] = []
     else:
         version = uint8(0)
-        if new_block_gen is not None:
-            if new_block_gen.format != GeneratorFormat.CLASSIC:
-                raise ValueError(f"expected a classic CLVM generator for a pre-HF2 block, got {new_block_gen.format!r}")
-            generator = SerializedProgram.from_bytes(new_block_gen.program)
-        else:
-            generator = None
+        generator = SerializedProgram.from_bytes(new_block_gen.program) if new_block_gen else None
         generator_buffer = None
         generator_refs = new_block_gen.block_refs if new_block_gen else []
     return UnfinishedBlock(
