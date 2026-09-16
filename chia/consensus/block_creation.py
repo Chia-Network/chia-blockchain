@@ -404,7 +404,7 @@ def create_unfinished_block(
         # Post hard fork 2: serialize the generator as a plain buffer (version 1).
         version = uint8(1)
         if new_block_gen is not None:
-            generator_buffer: bytes | None = bytes(new_block_gen.program)
+            generator_buffer: bytes | None = new_block_gen.program
         else:
             generator_buffer = None
         generator = None

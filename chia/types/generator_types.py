@@ -12,7 +12,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
-    program: bytes = field(default_factory=lambda: b"\x80")
+    program: bytes
     # to run the block generator, we need the actual bytes of the previous
     # generators it may reference. These are parameters passed in to the block
     # generator

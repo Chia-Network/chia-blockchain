@@ -967,7 +967,8 @@ class FullNodeRpcApi:
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
     async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
-        gen = NewBlockGenerator()
+        # placeholder for "no peak yet" (empty CLVM program)
+        gen = NewBlockGenerator(b"\x80")
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
