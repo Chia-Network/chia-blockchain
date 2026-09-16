@@ -3,14 +3,16 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import pytest
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
     AugSchemeMPL,
+    BlockBuilder,
     CoinSpend,
+    ConsensusConstants,
     FullBlock,
     G1Element,
     G2Element,
@@ -52,6 +54,7 @@ from chia.full_node.mempool import (
     MAX_BLOCK_ATOMS,
     MAX_BLOCK_PAIRS,
     MAX_SKIPPED_ITEMS,
+    MAX_SPENDS_PER_BATCH,
     MAX_SPENDS_PER_BLOCK,
     PRIORITY_TX_THRESHOLD,
     Mempool,
@@ -3692,6 +3695,55 @@ def test_skipped_item_does_not_leak_dedup_state(old: bool) -> None:
     # In particular the shared coin must not have been deduplicated away against
     # the skipped big item.
     assert removals == {shared_coin, unique_coin}
+
+
+def test_create_block_generator2_spend_batch_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    create_block_generator2 flushes to BlockBuilder before exceeding
+    MAX_SPENDS_PER_BATCH coin spends. A single mempool item larger than the cap
+    is still included as one batch.
+    """
+    max_cost = uint64(11_000_000_000)
+    fee_estimator = create_bitcoin_fee_estimator(max_cost)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(max_cost * 10)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(max_cost),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+
+    # 50 single-spend items: should be flushed in batches of MAX_SPENDS_PER_BATCH.
+    for i in range(50):
+        item = mk_item([make_coin(i)], cost=1_000_000, fee=100)
+        assert mempool.add_to_pool(item).error is None
+
+    # One item larger than the cap: included as a single batch.
+    oversized_coins = [make_coin(1000 + i) for i in range(MAX_SPENDS_PER_BATCH + 5)]
+    oversized = mk_item(oversized_coins, cost=1_000_000, fee=50)
+    assert mempool.add_to_pool(oversized).error is None
+
+    batch_spend_counts: list[int] = []
+    original_add = BlockBuilder.add_spend_bundles
+
+    def recording_add(
+        self: BlockBuilder,
+        bundles: Sequence[SpendBundle],
+        cost: uint64,
+        constants: ConsensusConstants,
+    ) -> tuple[bool, bool]:
+        spend_count = sum(len(b.coin_spends) for b in bundles)
+        batch_spend_counts.append(spend_count)
+        return original_add(self, bundles, cost, constants)
+
+    monkeypatch.setattr(BlockBuilder, "add_spend_bundles", recording_add)
+
+    generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0)
+    assert generator is not None
+    assert len(generator.removals) == 50 + MAX_SPENDS_PER_BATCH + 5
+
+    assert any(n == MAX_SPENDS_PER_BATCH + 5 for n in batch_spend_counts)
+    for n in batch_spend_counts:
+        assert n <= MAX_SPENDS_PER_BATCH or n == MAX_SPENDS_PER_BATCH + 5
 
 
 def test_keccak() -> None:
