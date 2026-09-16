@@ -225,6 +225,8 @@ def next_sub_epoch_summary(
             True,
         )
 
+    blocks_included_height = uint32(prev_b.height + 2)
+    first_sub_epoch = (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1
     challenge_root_end_height = (
         get_challenge_start_height(
             constants,
@@ -232,14 +234,14 @@ def next_sub_epoch_summary(
             block.prev_header_hash,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
         )
-        if with_challenge_root
+        if with_challenge_root and not first_sub_epoch
         else None
     )
 
     return make_sub_epoch_summary(
         constants,
         blocks,
-        uint32(prev_b.height + 2),
+        blocks_included_height,
         prev_b,
         next_difficulty,
         next_sub_slot_iters,
