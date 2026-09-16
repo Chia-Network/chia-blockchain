@@ -878,7 +878,7 @@ class Mempool:
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
                 if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM or (
-                    batch_transactions and batch_spends + len(unique_coin_spends) > MAX_SPENDS_PER_BATCH
+                    len(batch_transactions) > 0 and batch_spends + len(unique_coin_spends) > MAX_SPENDS_PER_BATCH
                 ):
                     added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
 

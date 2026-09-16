@@ -3740,10 +3740,7 @@ def test_create_block_generator2_spend_batch_cap(monkeypatch: pytest.MonkeyPatch
     generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0)
     assert generator is not None
     assert len(generator.removals) == 50 + MAX_SPENDS_PER_BATCH + 5
-
-    assert any(n == MAX_SPENDS_PER_BATCH + 5 for n in batch_spend_counts)
-    for n in batch_spend_counts:
-        assert n <= MAX_SPENDS_PER_BATCH or n == MAX_SPENDS_PER_BATCH + 5
+    assert batch_spend_counts == [50, MAX_SPENDS_PER_BATCH + 5]
 
 
 def test_keccak() -> None:
