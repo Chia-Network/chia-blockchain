@@ -1049,7 +1049,7 @@ class FullNode:
             return None
         try:
             return bytes32(hexstr_to_bytes(str(hash_hex))), uint32(int(height))
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError, OverflowError) as e:
             self.log.error(f"invalid assumevalid config: {e}")
             return None
 
@@ -1576,7 +1576,16 @@ class FullNode:
                 )
                 await self.hint_store.add_hints(hints_to_add)
             if err is not None:
-                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                # ASSUMEVALID_BLOCK_MISMATCH is local checkpoint policy (wrong/stale
+                # assumevalid_hash, or a reorg at that height), not evidence the peer
+                # sent an invalid block. Still abort sync as a fatal error.
+                if err == Err.ASSUMEVALID_BLOCK_MISMATCH:
+                    self.log.error(
+                        f"Aborting sync due to assumevalid mismatch at batch "
+                        f"{start_height}-{end_height}; not banning peer {peer.peer_info}"
+                    )
+                else:
+                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                 if state_change_summary is not None:
                     committed_end = state_change_summary.peak.height
                     self.log.info(

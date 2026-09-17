@@ -262,8 +262,11 @@ async def test_assumevalid_long_sync(
         assert f"height {av_height}" in caplog.text
         assert configured_hash.hex() in caplog.text
         assert av_block.header_hash.hex() in caplog.text
+        assert "not banning peer" in caplog.text
 
         peak2 = full_node_2.full_node.blockchain.get_peak()
         assert peak2 is None or peak2.height < av_height
         assert not node_height_exactly(full_node_2, peak.height)
         assert not full_node_2.full_node.assumevalid_satisfied()
+        # Local checkpoint miss must abort sync without a consensus ban.
+        assert server_2.banned_peers == {}
