@@ -49,7 +49,6 @@ from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
-    get_transactions_generator_program,
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -2886,7 +2885,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
-        generator = get_transactions_generator_program(blocks[-1])
+        generator = get_transactions_generator_bytes(blocks[-1])
         assert generator is not None
         assert blocks[-1].transactions_info is not None
         block_generator = BlockGenerator(generator, [])
@@ -2968,7 +2967,7 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
@@ -3004,7 +3003,7 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
@@ -3040,7 +3039,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)

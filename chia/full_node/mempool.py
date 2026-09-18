@@ -33,7 +33,6 @@ from chia.full_node.eligible_coin_spends import (
 )
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.internal_mempool_item import InternalMempoolItem
@@ -579,7 +578,7 @@ class Mempool:
         assert conds.cost > 0
 
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            block_program,
             [],
             [],
             spend_bundle.aggregated_signature,
@@ -989,7 +988,7 @@ class Mempool:
         )
 
         return NewBlockGenerator(
-            SerializedProgram.from_bytes(block_program),
+            block_program,
             [],
             [],
             signature,
