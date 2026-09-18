@@ -228,41 +228,7 @@ class Crawler:
                 if len(tasks) > 0:
                     await asyncio.wait(tasks, timeout=30)
 
-                for response in self.peers_retrieved:
-                    for response_peer in response.peer_list:
-                        # Gossiped timestamps are unvalidated, and values outside this range cannot be
-                        # bound by SQLite. Treat them as stale, the same way node_discovery does.
-                        if response_peer.timestamp < 100000000 or response_peer.timestamp > time.time() + 10 * 60:
-                            peer_timestamp = uint64(time.time() - 5 * 24 * 60 * 60)
-                        else:
-                            peer_timestamp = response_peer.timestamp
-                        if response_peer.host not in self.best_timestamp_per_peer:
-                            self.best_timestamp_per_peer[response_peer.host] = peer_timestamp
-                        self.best_timestamp_per_peer[response_peer.host] = max(
-                            self.best_timestamp_per_peer[response_peer.host], peer_timestamp
-                        )
-                        if response_peer.host not in self.seen_nodes and peer_timestamp > time.time() - 5 * 24 * 3600:
-                            self.seen_nodes.add(response_peer.host)
-                            new_peer = PeerRecord(
-                                response_peer.host,
-                                response_peer.host,
-                                uint32(response_peer.port),
-                                False,
-                                uint64(0),
-                                uint32(0),
-                                uint64(0),
-                                uint64(time.time()),
-                                peer_timestamp,
-                                "undefined",
-                                uint64(0),
-                                tls_version="unknown",
-                            )
-                            new_peer_reliability = PeerReliability(response_peer.host)
-                            self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
-                        await self.crawl_store.update_best_timestamp(
-                            response_peer.host,
-                            self.best_timestamp_per_peer[response_peer.host],
-                        )
+                await self.ingest_retrieved_peers()
                 for host, version in self.version_cache:
                     self.handshake_time[host] = uint64(time.time())
                     self.host_to_version[host] = version
@@ -306,6 +272,44 @@ class Crawler:
                 self._state_changed("crawl_batch_completed")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
+
+    async def ingest_retrieved_peers(self) -> None:
+        assert self.crawl_store is not None
+        now = time.time()
+        for response in self.peers_retrieved:
+            for response_peer in response.peer_list:
+                # Gossiped timestamps are unvalidated, and values outside this range cannot be
+                # bound by SQLite. Skip them so they cannot refresh stored freshness.
+                if response_peer.timestamp < 100000000 or response_peer.timestamp > now + 10 * 60:
+                    continue
+                peer_timestamp = response_peer.timestamp
+                if response_peer.host not in self.best_timestamp_per_peer:
+                    self.best_timestamp_per_peer[response_peer.host] = peer_timestamp
+                self.best_timestamp_per_peer[response_peer.host] = max(
+                    self.best_timestamp_per_peer[response_peer.host], peer_timestamp
+                )
+                if response_peer.host not in self.seen_nodes and peer_timestamp > now - 5 * 24 * 3600:
+                    self.seen_nodes.add(response_peer.host)
+                    new_peer = PeerRecord(
+                        response_peer.host,
+                        response_peer.host,
+                        uint32(response_peer.port),
+                        False,
+                        uint64(0),
+                        uint32(0),
+                        uint64(0),
+                        uint64(now),
+                        peer_timestamp,
+                        "undefined",
+                        uint64(0),
+                        tls_version="unknown",
+                    )
+                    new_peer_reliability = PeerReliability(response_peer.host)
+                    self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
+                await self.crawl_store.update_best_timestamp(
+                    response_peer.host,
+                    self.best_timestamp_per_peer[response_peer.host],
+                )
 
     async def save_to_db(self) -> None:
         # Try up to 5 times to write to the DB in case there is a lock that causes a timeout
