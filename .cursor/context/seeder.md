@@ -71,8 +71,11 @@ Read this for crawler peer discovery, crawler DB scoring/persistence, DNS seed r
   peak arrives, the attempt is scored as a failure.
 - `RespondPeers` entries update `best_timestamp_per_peer` and create new
   candidates only when their advertised timestamp is within the source-defined
-  freshness horizon. That horizon also gates version reporting and RPC-visible
-  `best_timestamp_per_peer` data.
+  range (not before 100000000, not more than 10 minutes in the future) and
+  freshness horizon. Out-of-range timestamps are skipped, not rewritten to
+  `now - 5 days`, so invalid gossip cannot refresh stored `best_timestamp` or
+  appear in recent-peer RPC/metrics. That horizon also gates version reporting
+  and RPC-visible `best_timestamp_per_peer` data.
 - After each batch the crawler writes peer records, rewrites `good_peers` from
   current reliability scores, prunes records older than `crawler.prune_peer_days`
   by `best_timestamp`, clears temporary caches, clears `server.banned_peers`, and
@@ -133,7 +136,8 @@ Read this for crawler peer discovery, crawler DB scoring/persistence, DNS seed r
   DNS responses.
 - The crawler treats peer-gossiped timestamps as freshness hints. Keep the
   five-day filter and pruning behavior explicit; stale or future-biased gossip
-  should not become DNS output without fresh reachability evidence.
+  should not become DNS output without fresh reachability evidence, and
+  out-of-range timestamps must not be rewritten into a recent substitute.
 - The crawler currently clears `server.banned_peers` after each batch. Changes to
   ban handling need to account for crawler-specific connection churn without
   weakening generic `ChiaServer` behavior elsewhere.
