@@ -6,7 +6,7 @@ from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochSummary,
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.challenge_tree import compute_challenge_merkle_root
+from chia.consensus.challenge_tree import compute_challenge_merkle_root, get_challenge_start_height
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (
     _get_next_difficulty,
@@ -29,6 +29,7 @@ def make_sub_epoch_summary(
     new_sub_slot_iters: uint64 | None,
     *,
     make_challenge_root: bool = False,
+    challenge_root_end_height: uint32 | None = None,
     prev_ses_block: BlockRecord | None = None,
 ) -> SubEpochSummary:
     """
@@ -67,9 +68,17 @@ def make_sub_epoch_summary(
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
     if make_challenge_root:
-        challenge_root = compute_challenge_merkle_root(blocks, blocks_included_height, prev_ses_block.height)
+        assert challenge_root_end_height is not None
+        previous_trigger = blocks.block_record(prev_ses_block.prev_hash)
+        challenge_root_start = get_challenge_start_height(
+            constants,
+            blocks,
+            previous_trigger.header_hash,
+        )
+        assert challenge_root_start < challenge_root_end_height
+        challenge_root = compute_challenge_merkle_root(blocks, challenge_root_end_height, challenge_root_start)
         log.info(
-            f"make_sub_epoch_summary: height={blocks_included_height} >= fork_height={constants.HARD_FORK2_HEIGHT}, "
+            f"make_sub_epoch_summary: range=[{challenge_root_start}, {challenge_root_end_height}), "
             f"computed challenge_root={challenge_root.hex()}"
         )
     else:
@@ -216,12 +225,26 @@ def next_sub_epoch_summary(
             True,
         )
 
+    blocks_included_height = uint32(prev_b.height + 2)
+    first_sub_epoch = (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1
+    challenge_root_end_height = (
+        get_challenge_start_height(
+            constants,
+            blocks,
+            block.prev_header_hash,
+            block.reward_chain_block.pos_ss_cc_challenge_hash,
+        )
+        if with_challenge_root and not first_sub_epoch
+        else None
+    )
+
     return make_sub_epoch_summary(
         constants,
         blocks,
-        uint32(prev_b.height + 2),
+        blocks_included_height,
         prev_b,
         next_difficulty,
         next_sub_slot_iters,
         make_challenge_root=with_challenge_root,
+        challenge_root_end_height=challenge_root_end_height,
     )
