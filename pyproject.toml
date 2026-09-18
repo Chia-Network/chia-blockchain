@@ -62,7 +62,11 @@ chialisp = ">=0.4.1"  # Rust implementation of ChiaLisp compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
 colorlog = ">=6.9.0"  # Adds color to logs
 concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs
-cryptography = ">=48.0.0"  # Python cryptography library for TLS - keyring conflict
+# 50.x dropped official macOS Intel wheels; pull those from the Chia index.
+cryptography = [
+    {version = ">=50.0.1", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'", source = "chia"},
+    {version = ">=50.0.1", markers = "sys_platform != 'darwin' or platform_machine != 'x86_64'"},
+]
 dnslib = ">=0.9.25"  # dns lib
 dnspython = ">=2.6.1"  # Query DNS seeds
 filelock = ">=3.29.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
