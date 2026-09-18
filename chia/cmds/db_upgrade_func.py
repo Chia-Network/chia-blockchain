@@ -424,7 +424,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         )
         print("-- [4/4] Creating coin_record coin_spent_index index")
         coin_spent_index_start_time = monotonic()
-        conn.execute("CREATE INDEX out_db.coin_spent_index ON coin_record(spent_index)")
+        conn.execute("CREATE INDEX out_db.coin_spent_index ON coin_record(spent_index) WHERE spent_index>0")
         conn.commit()
         end_time = monotonic()
         print(
