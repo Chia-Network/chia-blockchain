@@ -309,6 +309,8 @@ class Blockchain:
         fork_info: ForkInfo,
         prev_ses_block: BlockRecord | None = None,
         block_record: BlockRecord | None = None,
+        *,
+        assumevalid_height: uint32 | None = None,
     ) -> tuple[AddBlockResult, Err | None, StateChangeSummary | None]:
         """
         This method must be called under the blockchain lock
@@ -398,7 +400,11 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
-        assert not block_has_transactions_generator(block) or pre_validation_result.validated_signature
+        assert (
+            not block_has_transactions_generator(block)
+            or pre_validation_result.validated_signature
+            or (assumevalid_height is not None and block.height < assumevalid_height)
+        )
         error_code = await validate_block_body(
             self.constants,
             self,
