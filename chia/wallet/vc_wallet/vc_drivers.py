@@ -693,7 +693,6 @@ class VerifiedCredential(Streamable):
         inner_puzzle: Program,
         inner_solution: Program,
         new_proof_hash: bytes32 | None = None,
-        new_proof_provider: bytes32 | None = None,
     ) -> tuple[CreatePuzzleAnnouncement | None, CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).

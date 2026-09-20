@@ -3279,10 +3279,13 @@ async def test_check_removals_with_block_creation(flags: int, old: bool) -> None
 @pytest.mark.parametrize(
     "puzzle_hex,solution_hex",
     [
-        # ((1)) with a non-canonical atom length prefix in the solution
-        (None, "ffffc001018080"),
-        # atom 1 with a non-canonical length prefix in the puzzle
-        ("c00101", "80"),
+        # Overlong atom prefixes (e.g. c00101) can no longer be loaded into
+        # Program/SerializedProgram; use back-references, which still parse but
+        # are rejected by is_clvm_canonical().
+        # identity puzzle with a back-reference in the solution
+        (None, "fe80"),
+        # back-reference as the puzzle
+        ("fe80", "80"),
     ],
 )
 async def test_mempool_requires_canonical_clvm(flags: int, puzzle_hex: str | None, solution_hex: str) -> None:

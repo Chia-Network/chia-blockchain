@@ -555,6 +555,7 @@ class MempoolManager:
                 self.max_tx_clvm_cost,
                 self.constants,
                 flags | MEMPOOL_MODE,
+                self.validation_timeout,
                 nice=(5, -fee_per_cost),
             )
         # validate_clvm_and_signature raises a ValueError with an error code
@@ -562,6 +563,12 @@ class MempoolManager:
             # Convert that to a ValidationError
             if len(e.args) > 1:
                 error = Err(e.args[1])
+                # Timeout is a soft rejection; preserve the ValueError("timeout") API.
+                if error is Err.TIMEOUT:
+                    if spend_bundle_id is None:
+                        spend_bundle_id = spend_bundle.name()
+                    self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
+                    raise ValueError("timeout") from e
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
@@ -577,14 +584,10 @@ class MempoolManager:
         if spend_bundle_id is None:
             spend_bundle_id = spend_bundle.name()
 
-        if duration > self.validation_timeout:
-            self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
-            raise ValueError(f"timeout {duration:0.4} s")
-
         cost = sbc.execution_cost + sbc.condition_cost
         if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
             self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
-            raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
+            raise ValueError("timeout")
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)

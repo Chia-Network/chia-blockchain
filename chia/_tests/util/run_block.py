@@ -15,6 +15,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
+from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 
@@ -60,7 +61,9 @@ def npc_to_dict(npc: NPC) -> dict[str, Any]:
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> list[CAT]:
     block_args = block_generator.generator_refs
-    _cost, block_result = run_with_cost(block_generator.program, max_cost, [DESERIALIZE_MOD, block_args])
+    _cost, block_result = run_with_cost(
+        Program.from_bytes(block_generator.program), max_cost, [DESERIALIZE_MOD, block_args]
+    )
 
     coin_spends = block_result.first()
 
@@ -143,8 +146,7 @@ def run_generator_with_args(
 ) -> list[CAT]:
     if not generator_program_hex:
         return []
-    generator_program = SerializedProgram.fromhex(generator_program_hex)
-    block_generator = BlockGenerator(generator_program, generator_args)
+    block_generator = BlockGenerator(hexstr_to_bytes(generator_program_hex), generator_args)
     return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 

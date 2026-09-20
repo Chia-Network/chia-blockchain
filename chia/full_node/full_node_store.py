@@ -400,9 +400,6 @@ class FullNodeStore:
             return None
         log.info(f"Don't have rc hash {challenge.hex()}. caching signage point {index}.")
 
-    def get_future_ip(self, rc_challenge_hash: bytes32) -> list[timelord_protocol.NewInfusionPointVDF]:
-        return self.future_ip_cache.get(rc_challenge_hash, [])
-
     def clear_old_cache_entries(self) -> None:
         self.future_ip_cache.evict_expired()
         self.future_eos_cache.evict_expired()

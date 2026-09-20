@@ -927,7 +927,7 @@ jobs:
               r"(?m)(?:"
               r"^[ \t]*(?:\*\*Verdict[ \t]*:[ \t]*(benign|malicious)(?:[ \t]*\*\*|(?=\b))|Verdict[ \t]*:[ \t]*(benign|malicious)\b)"
               r"|"
-              r"(?<=[.!?:;])(?:\*\*Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*\*\*|Verdict[ \t]*:[ \t]*(benign|malicious)\b)"
+              r"(?<=[.!?:;])[ \t]*(?:\*\*Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*\*\*|Verdict[ \t]*:[ \t]*(benign|malicious)\b)"
               r")",
               re.IGNORECASE,
           )
@@ -939,8 +939,25 @@ jobs:
                 return token.lower()
             raise ValueError("missing verdict token")
 
+          GLUED_TERMINAL_RE = re.compile(r"^[ \t]*(?:\*\*[ \t]*)?[.!?]?[ \t]*$")
+          GLUED_TRAILING_PUNCT_RE = re.compile(r"^[ \t]*[.!?][ \t]*$")
+          NUMBERED_LIST_MARKER_RE = re.compile(r"^[ \t]*\d+\.$")
+
           def _removal_span(text: str, match: re.Match) -> tuple[int, int]:
-            return match.start(), match.end()
+            if _is_line_start_match(text, match) and (
+              _is_standalone_verdict_line(text, match)
+              or _is_line_start_official_with_trailer(text, match)
+            ):
+              line_start = text.rfind("\n", 0, match.start()) + 1
+              line_end = _line_end(text, match.end())
+              return line_start, line_end
+            start, end = match.start(), match.end()
+            if _is_glued_verdict_match(text, match):
+              remainder = text[match.end() : _line_end(text, match.end())]
+              trailing = GLUED_TRAILING_PUNCT_RE.match(remainder)
+              if trailing:
+                end = match.end() + trailing.end()
+            return start, end
 
           def _orphan_trailing_bold_span(text: str, match: re.Match) -> tuple[int, int] | None:
             matched = text[match.start() : match.end()]
@@ -971,15 +988,169 @@ jobs:
                 merged.append((start, end))
             return merged
 
+          STANDALONE_LINE_RE = re.compile(
+              r"^(?:"
+              r"\*\*Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*(?:[.!?])?[ \t]*\*\*(?:[.!?])?[ \t]*"
+              r"|\*\*Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*(?:[.!?])?[ \t]*"
+              r"|Verdict[ \t]*:[ \t]*(benign|malicious)[ \t]*(?:[.!?])?[ \t]*"
+              r")$",
+              re.IGNORECASE,
+          )
+          FORMAT_HEADING_RE = re.compile(
+              r"^\s*"
+              r"(?:#+[ \t]+)?"
+              r"(?:\*\*)?"
+              r"(?:"
+              r"(?:example|output|required)\s+format"
+              r"|format\s+example"
+              r"|(?:example\s+)?template"
+              r")\s*:?"
+              r"(?:\*\*)?"
+              r"\s*:?"
+              r"[ \t]*$",
+              re.IGNORECASE,
+          )
+          OR_FORMAT_LINE_RE = re.compile(r"^\s*or\s*:\s*$", re.IGNORECASE)
+          LINE_START_TRAILER_RE = re.compile(
+              r"^[ \t]*(?:"
+              r"(?:"
+              r"\*\*"
+              r"|[.!?]"
+              r"|\([^)]*\)"
+              r"|[-–—][ \t]+[^\n]*"
+              r")"
+              r"[ \t]*"
+              r")*[ \t]*$",
+              re.IGNORECASE,
+          )
+
+          def _line_end(text: str, pos: int) -> int:
+            line_end = text.find("\n", pos)
+            return len(text) if line_end == -1 else line_end
+
+          def _line_text(text: str, match: re.Match) -> str:
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            line_end = _line_end(text, match.end())
+            return text[line_start:line_end]
+
+          def _preceding_nonempty_line(text: str, line_start: int) -> str:
+            pos = line_start
+            while pos > 0:
+              prev_end = pos - 1
+              prev_start = text.rfind("\n", 0, prev_end) + 1
+              line = text[prev_start:prev_end]
+              if line.strip():
+                return line
+              pos = prev_start
+            return ""
+
+          def _following_nonempty_line(text: str, line_end: int) -> str:
+            pos = line_end
+            if pos < len(text) and text[pos] == "\n":
+              pos += 1
+            while pos < len(text):
+              next_end = text.find("\n", pos)
+              if next_end == -1:
+                next_end = len(text)
+              line = text[pos:next_end]
+              if line.strip():
+                return line
+              pos = next_end + 1
+            return ""
+
           def _is_line_start_match(text: str, match: re.Match) -> bool:
             line_start = text.rfind("\n", 0, match.start()) + 1
             return text[line_start:match.start()].strip() == ""
 
-          def _official_verdict_match(text: str, matches: list[re.Match]) -> re.Match:
+          def _is_numbered_list_glue_anchor(text: str, anchor_pos: int, line_start: int) -> bool:
+            if anchor_pos < 0 or text[anchor_pos] != ".":
+              return False
+            prefix = text[line_start : anchor_pos + 1]
+            return NUMBERED_LIST_MARKER_RE.match(prefix) is not None
+
+          def _is_glued_verdict_match(text: str, match: re.Match) -> bool:
+            if _is_line_start_match(text, match):
+              return False
+            pos = match.start()
+            while pos > 0 and text[pos - 1] in " \t":
+              pos -= 1
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            if pos <= line_start:
+              return False
+            anchor_pos = pos - 1
+            anchor = text[anchor_pos]
+            if match.start() < len(text) and text[match.start()] in " \t":
+              if anchor not in ".!?":
+                return False
+              if _is_numbered_list_glue_anchor(text, anchor_pos, line_start):
+                return False
+              remainder = text[match.end() : _line_end(text, match.end())]
+              return GLUED_TERMINAL_RE.match(remainder) is not None
+            if anchor not in ".!?":
+              return False
+            remainder = text[match.end() : _line_end(text, match.end())]
+            return GLUED_TERMINAL_RE.match(remainder) is not None
+
+          def _is_standalone_verdict_line(text: str, match: re.Match) -> bool:
+            line = _line_text(text, match).lstrip(" \t")
+            return STANDALONE_LINE_RE.match(line) is not None
+
+          def _has_line_start_reasoning_continuation(text: str, match: re.Match) -> bool:
+            line = _line_text(text, match)
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            remainder = line[match.end() - line_start :]
+            stripped = remainder.lstrip()
+            if not stripped:
+              return False
+            if re.match(r"(?i)^because\b", stripped):
+              return True
+            return bool(re.match(r"^[a-z]", stripped))
+
+          def _is_line_start_official_with_trailer(text: str, match: re.Match) -> bool:
+            line = _line_text(text, match)
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            remainder = line[match.end() - line_start :]
+            return LINE_START_TRAILER_RE.match(remainder) is not None
+
+          def _is_format_example_line(text: str, match: re.Match) -> bool:
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            line_end = _line_end(text, match.end())
+            preceding = _preceding_nonempty_line(text, line_start)
+            if FORMAT_HEADING_RE.match(preceding):
+              return True
+            if OR_FORMAT_LINE_RE.match(preceding):
+              return True
+            following = _following_nonempty_line(text, line_end)
+            return bool(OR_FORMAT_LINE_RE.match(following))
+
+          def _is_official_candidate(text: str, match: re.Match) -> bool:
+            if _is_format_example_line(text, match):
+              return False
+            if _is_line_start_match(text, match):
+              if _is_standalone_verdict_line(text, match):
+                return True
+              if _has_line_start_reasoning_continuation(text, match):
+                return False
+              return _is_line_start_official_with_trailer(text, match)
+            if _is_glued_verdict_match(text, match):
+              return True
+            return False
+
+          def _should_strip_from_body(text: str, match: re.Match) -> bool:
+            if _is_line_start_match(text, match):
+              if _is_standalone_verdict_line(text, match):
+                return True
+              return _is_official_candidate(text, match)
+            return _is_glued_verdict_match(text, match)
+
+          def _official_verdict_match(text: str, matches: list[re.Match]) -> re.Match | None:
             for found in matches:
-              if _is_line_start_match(text, found):
+              if _is_line_start_match(text, found) and _is_official_candidate(text, found):
                 return found
-            return matches[0]
+            for found in matches:
+              if _is_official_candidate(text, found):
+                return found
+            return None
 
           def format_malware_review_verdict(text: str) -> str:
             if not text or not text.strip():
@@ -990,11 +1161,18 @@ jobs:
               return text
 
             official = _official_verdict_match(text, matches)
+            if official is None:
+              return text
+
             verdict_value = _verdict_value(official)
-            spans: list[tuple[int, int]] = [_removal_span(text, official)]
-            orphan = _orphan_trailing_bold_span(text, official)
-            if orphan:
-              spans.append(orphan)
+            spans: list[tuple[int, int]] = []
+            for found in matches:
+              if not _should_strip_from_body(text, found):
+                continue
+              spans.append(_removal_span(text, found))
+              orphan = _orphan_trailing_bold_span(text, found)
+              if orphan:
+                spans.append(orphan)
 
             cleaned = text
             for start, end in reversed(_merge_spans(spans)):

@@ -72,6 +72,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -1687,7 +1688,7 @@ class FullNodeAPI:
         try:
             puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
-                block_generator.program,
+                SerializedProgram.from_bytes(block_generator.program),
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,

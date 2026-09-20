@@ -280,6 +280,13 @@ timelord:
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
 
+  # Seconds of no finished SP/IP/EOS before the timelord resets all VDF chains.
+  # Signage points are normally ~9s, but finishing a sub-slot can take ~10 minutes
+  # when SSI is high or blocks are sparse. 0 disables this inactivity reset
+  # (VDF-client failure handling is unchanged). After each reset the timeout
+  # doubles up to 1800s; a new peak restores this configured value.
+  max_allowed_inactivity_time: 60
+
   multiprocessing_start_method: default
 
   start_rpc_server: True

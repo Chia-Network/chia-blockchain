@@ -33,6 +33,7 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import BlockGenerator
 from chia.util.block_cache import BlockCache
@@ -341,7 +342,7 @@ def get_full_block_and_block_record(
         foliage,
         foliage_transaction_block,
         transactions_info,
-        None if new_format else (block_generator.program if block_generator else None),
+        None if new_format else (SerializedProgram.from_bytes(block_generator.program) if block_generator else None),
         [],
         bytes(block_generator.program) if block_generator and new_format else None,
         uint8(1) if new_format else uint8(0),
