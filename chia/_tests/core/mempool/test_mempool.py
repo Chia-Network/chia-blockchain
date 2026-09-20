@@ -2253,7 +2253,7 @@ def generator_condition_tester(
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} {coin_amount} (() (q . ())))))"  # ruff: ignore[line-too-long]
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
-    generator = BlockGenerator(program, [])
+    generator = BlockGenerator(bytes(program), [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator, max_cost, mempool_mode=mempool_mode, height=height, constants=test_constants
@@ -2510,7 +2510,7 @@ class TestGeneratorConditions:
                 f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # ruff: ignore[line-too-long]
             ).as_bin()
         )
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(bytes(program), [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height, constants=test_constants
         )
@@ -3002,6 +3002,46 @@ def test_timeout(old: bool) -> None:
     # the timeout is set to 0, we should *always* fail with a timeout
     generator = create_block(DEFAULT_CONSTANTS, uint32(10), 0.0)
     assert generator is None
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_timeout_after_some_items(old: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Timeout is checked between mempool items. After some items are included,
+    the next check should stop scanning and still return a partial block.
+    """
+    mempool = construct_mempool()
+    num_items = 10
+    include_before_timeout = 3
+
+    for i in range(num_items):
+        item = mk_item([make_coin(i)], flags=[0], fee=0, cost=50)
+        assert mempool.add_to_pool(item).error is None
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+
+    full = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0)
+    assert full is not None
+    assert len(full.removals) == num_items
+
+    timeout = 1.0
+    # monotonic() is called once for the start timestamp, then once per
+    # mempool item for the timeout check (plus a few times after the loop).
+    calls = {"n": 0}
+    start = 1000.0
+
+    def fake_monotonic() -> float:
+        n = calls["n"]
+        calls["n"] += 1
+        if n == 0 or n <= include_before_timeout:
+            return start
+        return start + timeout + 0.1
+
+    monkeypatch.setattr("chia.full_node.mempool.monotonic", fake_monotonic)
+
+    generator = create_block(DEFAULT_CONSTANTS, uint32(10), timeout)
+    assert generator is not None
+    assert len(generator.removals) == include_before_timeout
 
 
 def rand_hash() -> bytes32:

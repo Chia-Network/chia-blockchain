@@ -24,13 +24,3 @@ class WalletInfo(Streamable):
     name: str
     type: uint8  # WalletType(type)
     data: str
-
-
-@streamable
-@dataclass(frozen=True)
-class WalletInfoBackup(Streamable):
-    """
-    Used for transforming list of WalletInfo objects into bytes.
-    """
-
-    wallet_list: list[WalletInfo]

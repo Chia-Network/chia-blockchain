@@ -5,6 +5,7 @@ import contextlib
 import dataclasses
 import io
 import logging
+import math
 import os
 import random
 import tempfile
@@ -148,7 +149,7 @@ class Timelord:
             self.bluebox_mode = self.config.get("sanitizer_mode", False)
         self.pending_bluebox_info: list[tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
-        self.max_allowed_inactivity_time = 60
+        self.restore_inactivity_timeout()
         self._executor_shutdown_tempfile: IO[bytes] | None = None
         self.bluebox_pool: ThreadPoolExecutor | None = None
 
@@ -888,34 +889,44 @@ class Timelord:
                     self.total_unfinished += 1
             await self._reset_chains()
 
+    def restore_inactivity_timeout(self) -> None:
+        self.max_allowed_inactivity_time = int(self.config.get("max_allowed_inactivity_time", 60))
+
     async def _handle_failures(self) -> None:
-        if len(self.vdf_failures) > 0:
-            # This can happen if one of the VDF processes has an issue. In this case, we abort all other
-            # infusion points and signage points, and go straight to the end of slot, so we avoid potential
-            # issues with the number of iterations that failed.
+        await self._handle_vdf_failures()
+        await self._maybe_reset_for_inactivity()
 
-            failed_chain, proof_label = self.vdf_failures[0]
-            log.error(
-                f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, "
-                f"label {proof_label}, current: {self.num_resets}"
-            )
-            if proof_label == self.num_resets:
-                await self._reset_chains(only_eos=True)
-            self.vdf_failure_time = time.time()
-            self.vdf_failures = []
+    async def _handle_vdf_failures(self) -> None:
+        if len(self.vdf_failures) == 0:
+            return
+        # This can happen if one of the VDF processes has an issue. In this case, we abort all other
+        # infusion points and signage points, and go straight to the end of slot, so we avoid potential
+        # issues with the number of iterations that failed.
+        failed_chain, proof_label = self.vdf_failures[0]
+        log.error(
+            f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, "
+            f"label {proof_label}, current: {self.num_resets}"
+        )
+        if proof_label == self.num_resets:
+            await self._reset_chains(only_eos=True)
+        self.vdf_failure_time = time.time()
+        self.vdf_failures = []
 
+    async def _maybe_reset_for_inactivity(self) -> None:
         # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
         # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
         # there are no other timelords, this reset should bring the timelord back to a running state.
-        if time.time() - self.vdf_failure_time < self.constants.SUB_SLOT_TIME_TARGET * 3:
+        # 0 disables the inactivity reset so a slow EOS (up to ~SUB_SLOT_TIME_TARGET) is not aborted.
+        if self.max_allowed_inactivity_time <= 0:
+            threshold = math.inf
+        elif time.time() - self.vdf_failure_time < self.constants.SUB_SLOT_TIME_TARGET * 3:
             # If we have recently had a failure, allow some more time to finish the slot (we can be up to 3x slower)
-            active_time_threshold = self.constants.SUB_SLOT_TIME_TARGET * 3
+            threshold = float(self.constants.SUB_SLOT_TIME_TARGET * 3)
         else:
-            # If there were no failures recently trigger a reset after 60 seconds of no activity.
-            # Signage points should be every 9 seconds
-            active_time_threshold = self.max_allowed_inactivity_time
-        if time.time() - self.last_active_time > active_time_threshold:
-            log.error(f"Not active for {active_time_threshold} seconds, restarting all chains")
+            # Signage points should be every 9 seconds on a healthy, calibrated slot.
+            threshold = float(self.max_allowed_inactivity_time)
+        if time.time() - self.last_active_time > threshold:
+            log.error(f"Not active for {threshold} seconds, restarting all chains")
             self.max_allowed_inactivity_time = min(self.max_allowed_inactivity_time * 2, 1800)
             await self._reset_chains()
 

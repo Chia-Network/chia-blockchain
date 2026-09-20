@@ -49,7 +49,6 @@ from chia.consensus.block_body_validation import ForkAdd, ForkInfo
 from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
-    get_transactions_generator_program,
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -2886,7 +2885,7 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
-        generator = get_transactions_generator_program(blocks[-1])
+        generator = get_transactions_generator_bytes(blocks[-1])
         assert generator is not None
         assert blocks[-1].transactions_info is not None
         block_generator = BlockGenerator(generator, [])
@@ -2968,7 +2967,7 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
@@ -3004,7 +3003,7 @@ class TestBodyValidation:
         assert new_m is not None
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         assert block.transactions_info is not None
@@ -3040,7 +3039,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
-        generator = get_transactions_generator_program(block_2)
+        generator = get_transactions_generator_bytes(block_2)
         assert generator is not None
         block_generator = BlockGenerator(generator, [])
         max_cost = min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
@@ -3063,53 +3062,6 @@ class TestBodyValidation:
 
         # when the CLVM program exceeds cost during execution, it will fail with
         # a general runtime error. The previous test tests this.
-
-    @pytest.mark.anyio
-    async def test_max_coin_amount(self, db_version: int, bt: BlockTools) -> None:
-        # 10
-        # TODO: fix, this is not reaching validation. Because we can't create a block with such amounts due to uint64
-        # limit in Coin
-        pass
-        #
-        # with TempKeyring() as keychain:
-        #     new_test_constants = bt.constants.replace(
-        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
-        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
-        #     )
-        #     b, db_wrapper = await create_blockchain(new_test_constants, db_version)
-        #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = bt_2.constants.replace(
-        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
-        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
-        #     )
-        #     blocks = bt_2.get_consecutive_blocks(
-        #         3,
-        #         guarantee_transaction_block=True,
-        #         farmer_reward_puzzle_hash=bt.pool_ph,
-        #     )
-        #     assert (await b.add_block(blocks[0]))[0] == AddBlockResult.NEW_PEAK
-        #     assert (await b.add_block(blocks[1]))[0] == AddBlockResult.NEW_PEAK
-        #     assert (await b.add_block(blocks[2]))[0] == AddBlockResult.NEW_PEAK
-
-        #     wt: WalletTool = bt_2.get_pool_wallet_tool()
-
-        #     condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-        #     output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
-        #     condition_dict[ConditionOpcode.CREATE_COIN].append(output)
-
-        #     coin = find_reward_coin(blocks[1], bt.pool_ph)
-        #     tx = wt.generate_signed_transaction_multiple_coins(
-        #         uint64(10),
-        #         wt.get_new_puzzlehash(),
-        #         coin,
-        #         condition_dic=condition_dict,
-        #     )
-        #     with pytest.raises(Exception):
-        #         blocks = bt_2.get_consecutive_blocks(
-        #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
-        #         )
-        #     await db_wrapper.close()
-        #     b.shut_down()
 
     @pytest.mark.anyio
     async def test_invalid_merkle_roots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -4021,15 +3973,14 @@ class TestReorgs:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        # overlong encoding
-        generator = SerializedProgram.fromhex("c00101")
-        assert not is_canonical_serialization(bytes(generator))
+        # Overlong atom encoding. Program/SerializedProgram can no longer load
+        # non-canonical CLVM, so inject raw bytes via the generator buffer.
+        generator_bytes = bytes.fromhex("c00101")
+        assert not is_canonical_serialization(generator_bytes)
 
-        if original_block.version == 0:
-            block = recursive_replace(original_block, "transactions_generator", generator)
-        else:
-            block = recursive_replace(original_block, "transactions_generator_buffer", bytes(generator))
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
+        block = recursive_replace(original_block, "transactions_generator", None)
+        block = recursive_replace(block, "transactions_generator_buffer", generator_bytes)
+        block = recursive_replace(block, "transactions_info.generator_root", std_hash(generator_bytes))
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )

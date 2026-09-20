@@ -20,7 +20,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
 )
-from chia.wallet.derive_keys import _derive_path
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_public_key,
@@ -480,6 +479,3 @@ class Wallet:
             if wallet_identifier is not None and wallet_identifier.id == self.id():
                 return True
         return False
-
-    def hardened_pubkey_for_path(self, path: list[int]) -> G1Element:
-        return _derive_path(self.wallet_state_manager.get_master_private_key(), path).get_g1()

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, TypeVar
 
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -17,15 +16,7 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-T = TypeVar("T")
-
 minimum_send_attempts = 6
-
-
-@dataclass
-class ItemAndTransactionRecords(Generic[T]):
-    item: T
-    transaction_records: list[TransactionRecord]
 
 
 @streamable

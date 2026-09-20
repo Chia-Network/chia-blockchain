@@ -105,7 +105,7 @@ def test_empty_conditions() -> None:
 
 # this is a malicious generator which should fail
 TEST_GENERATOR = BlockGenerator(
-    SerializedProgram.fromhex(
+    bytes.fromhex(
         "ff02ffff01ff02ffff01ff04ffff04ffff04ffff01a00101010101010101010101010101010101010101010101010101010101010101ffff04ffff04ffff0101ffff02ff02ffff04ff02ffff04ff05ffff04ff0bffff04ff17ff80808080808080ffff01ff7bffff80ffff018080808080ff8080ff8080ffff04ffff01ff02ffff03ff17ffff01ff04ff05ffff04ff0bffff02ff02ffff04ff02ffff04ff05ffff04ff0bffff04ffff11ff17ffff010180ff8080808080808080ff8080ff0180ff018080ffff04ffff01ff42ff24ff8568656c6c6fffa0010101010101010101010101010101010101010101010101010101010101010180ffff04ffff01ff43ff24ff8568656c6c6fffa0010101010101010101010101010101010101010101010101010101010101010180ffff04ffff01830f4240ff0180808080"
     ),
     [],
@@ -114,7 +114,7 @@ TEST_GENERATOR = BlockGenerator(
 
 def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
-        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+        test_constants, SerializedProgram.from_bytes(TEST_GENERATOR.program), TEST_GENERATOR.generator_refs, 100
     )
     assert conditions["block_spends"] == [
         CoinSpend(
@@ -131,7 +131,7 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block_with_conditions(
-        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
+        test_constants, SerializedProgram.from_bytes(TEST_GENERATOR.program), TEST_GENERATOR.generator_refs, 100
     )
     assert len(conditions) == 1
     assert conditions[0]["coin_spend"] == CoinSpend(
