@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import ClassVar, Protocol, TypeVar
@@ -55,9 +56,11 @@ class MIPSComponentBase(PuzzleBase):
 @dataclass(kw_only=True, frozen=True)
 class MemberHint:
     puzhash: bytes32
-    memo: Program
+    memo: Program | None
 
     def to_program(self) -> Program:
+        if self.memo is None:
+            raise ValueError("Trying to create a hint for an unknown member without the hinted memo")
         return Program.to([self.puzhash, self.memo])
 
     @classmethod
@@ -75,6 +78,8 @@ class UnknownMember(MIPSComponentBase):
 
     @property
     def memo(self) -> Program:
+        if self.puzzle_hint.memo is None:
+            raise ValueError("Trying to create a memo for an unknown member without the hinted memo")
         return self.puzzle_hint.memo
 
     @property
@@ -105,9 +110,11 @@ class Restriction(MIPSComponent, Protocol[_T_MemberNotDPuz_co]):
 class RestrictionHint:
     member_not_dpuz: bool
     puzhash: bytes32
-    memo: Program
+    memo: Program | None
 
     def to_program(self) -> Program:
+        if self.memo is None:
+            raise ValueError("Trying to create a hint for an unknown restriction without the hinted memo")
         return Program.to([self.member_not_dpuz, self.puzhash, self.memo])
 
     @classmethod
@@ -130,6 +137,8 @@ class UnknownRestriction(MIPSComponentBase):
 
     @property
     def memo(self) -> Program:
+        if self.restriction_hint.memo is None:
+            raise ValueError("Trying to create a memo for an unknown restriction without the hinted memo")
         return self.restriction_hint.memo
 
     @property
@@ -152,7 +161,22 @@ class ProvenSpend:
     solution: Solution
 
 
-class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs for m of n puzzles in the tree
+@dataclass(kw_only=True, frozen=True)
+class MofNMerkleTree:
+    nodes: list[PuzzleWithRestrictions] | None = None
+    known_root: bytes32 | None = None
+
+    def __post_init__(self) -> None:
+        if self.nodes is None and self.root is None:
+            raise ValueError("Must specify either known nodes or known root")
+
+    def split_list(self, puzzle_hashes: list[bytes32]) -> tuple[list[bytes32], list[bytes32]]:
+        mid_index = math.ceil(len(puzzle_hashes) / 2)
+        first = puzzle_hashes[0:mid_index]
+        rest = puzzle_hashes[mid_index : len(puzzle_hashes)]
+
+        return first, rest
+
     def _m_of_n_proof(self, puzzle_hashes: list[bytes32], spends_to_prove: dict[bytes32, ProvenSpend]) -> Program:
         if len(puzzle_hashes) == 1:  # we've reached a leaf node
             if puzzle_hashes[0] in spends_to_prove:
@@ -173,15 +197,33 @@ class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs f
                 return Program.to(hash_a_pair(bytes32(first_proof.as_atom()), bytes32(rest_proof.as_atom())))
 
     def generate_m_of_n_proof(self, spends_to_prove: dict[bytes32, ProvenSpend]) -> Program:
-        return self._m_of_n_proof(self.nodes, spends_to_prove)
+        if self.nodes is None:
+            raise ValueError("Nodes must be known to generate a proof")
+        return self._m_of_n_proof([node.tree_hash for node in self.nodes], spends_to_prove)
+
+    def _root(self, puzzle_hashes: list[bytes32]) -> bytes32:
+        if len(puzzle_hashes) == 1:
+            return hash_an_atom(puzzle_hashes[0])
+        else:
+            first, rest = self.split_list(puzzle_hashes)
+            return hash_a_pair(self._root(first), self._root(rest))
+
+    @cached_property
+    def root(self) -> bytes32:
+        if self.known_root is not None:
+            return self.known_root
+        assert self.nodes is not None  # post init
+        return self._root([node.tree_hash for node in self.nodes])
 
 
 @dataclass(kw_only=True, frozen=True)
 class MofNHint:
     m: int
-    member_memos: list[Program]
+    member_memos: list[Program] | None
 
     def to_program(self) -> Program:
+        if self.member_memos is None:
+            raise ValueError("Trying to create a m-of-n hint with no member memos")
         return Program.to([self.m, self.member_memos])
 
     @classmethod
@@ -196,31 +238,36 @@ class MofNHint:
 @dataclass(kw_only=True, frozen=True)
 class MofN(MIPSComponentBase):
     m: int
-    members: list[PuzzleWithRestrictions]
+    merkle_tree: MofNMerkleTree
 
     def __post_init__(self) -> None:
-        if self.m > self.n:
+        if self.merkle_tree.nodes is not None and self.m > self.n:
             raise ValueError("M cannot be greater than N")
         if self.m < 1:
             raise ValueError("M must be greater than 0")
-        if len(list(set(self._merkle_tree.nodes))) != len(self._merkle_tree.nodes):
+        if self.merkle_tree.nodes is not None and any(
+            True if node._top_level else False for node in self.merkle_tree.nodes
+        ):
+            raise ValueError("Top-level nodes are not supported by MofN drivers")
+        node_hashes = [node.tree_hash for node in self.merkle_tree.nodes] if self.merkle_tree.nodes is not None else []
+        if len(list(set(node_hashes))) != len(node_hashes):
             raise ValueError("Duplicate nodes not currently supported by MofN drivers")
 
     @property
-    def members_non_top_level(self) -> list[PuzzleWithRestrictions]:
-        return [replace(member, _top_level=False) for member in self.members]
+    def nodes(self) -> list[PuzzleWithRestrictions]:
+        if self.merkle_tree.nodes is None:
+            raise ValueError("Merkle tree shape is unknown")
+        return self.merkle_tree.nodes
 
     @property
     def n(self) -> int:
-        return len(self.members)
+        return len(self.nodes)
 
-    @property
-    def _merkle_tree(self) -> MerkleTree:
-        nodes = [member.tree_hash for member in self.members_non_top_level]
+    @cached_property
+    def tree_for_one_of_n_proof(self) -> MerkleTree:
         if self.m > 1:
-            return MofNMerkleTree(nodes)
-        else:
-            return MerkleTree(nodes)
+            raise ValueError("OneOfN proof is not supported for MofN trees")
+        return MerkleTree([member.tree_hash for member in self.nodes])
 
     @property
     def memo(self) -> Program:  # pragma: no cover
@@ -229,16 +276,16 @@ class MofN(MIPSComponentBase):
     @property
     def program(self) -> Program:
         if self.m == self.n:
-            return NofN_MOD.curry([member.program for member in self.members_non_top_level])
+            return NofN_MOD.curry([member.program for member in self.nodes])
         elif self.m > 1:
-            return MofN_MOD.curry(self.m, self._merkle_tree.calculate_root())
+            return MofN_MOD.curry(self.m, self.merkle_tree.root)
         else:
-            return OneOfN_MOD.curry(self._merkle_tree.calculate_root())
+            return OneOfN_MOD.curry(self.merkle_tree.root)
 
     @property
     def tree_hash_optimized(self) -> bytes32:
         if self.m == self.n:
-            member_hashes = [member.tree_hash for member in self.members_non_top_level]
+            member_hashes = [member.tree_hash for member in self.nodes]
             return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
         else:
             return self.program.get_tree_hash()
@@ -257,14 +304,13 @@ class MofN(MIPSComponentBase):
             if None in pwr_matches:
                 return None
             # come on mypy, be better
-            return MofN(m=len(list_of_members), members=pwr_matches)  # type: ignore[arg-type]
+            return MofN(m=len(list_of_members), merkle_tree=MofNMerkleTree(nodes=pwr_matches))  # type: ignore[arg-type]
         elif unknown_puzzle.mod == MofN_MOD:
-            # TODO: We need to figure out a way to implement arbitrary context as part of the matching protocol
-            (m, _) = unknown_puzzle.curried_args
-            return MofN(m=m.as_int(), members=[])
+            (m, root) = unknown_puzzle.curried_args
+            return MofN(m=m.as_int(), merkle_tree=MofNMerkleTree(known_root=bytes32(root.as_atom())))
         else:
-            # TODO: We need to figure out a way to implement arbitrary context as part of the matching protocol
-            return MofN(m=1, members=[])
+            (root,) = unknown_puzzle.curried_args
+            return MofN(m=1, merkle_tree=MofNMerkleTree(known_root=bytes32(root.as_atom())))
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -279,17 +325,15 @@ class MofNSolution:
     @property
     def program(self) -> Program:
         if self.puzzle.m == self.puzzle.n:
-            return Program.to(
-                [[self.spends_to_prove[node].solution.program for node in self.puzzle._merkle_tree.nodes]]
-            )
+            return Program.to([[self.spends_to_prove[node.tree_hash].solution.program for node in self.puzzle.nodes]])
         elif self.puzzle.m > 1:
             return Program.to(
-                [self.puzzle._merkle_tree.generate_m_of_n_proof(self.spends_to_prove)]  # type: ignore[attr-defined]
+                [self.puzzle.merkle_tree.generate_m_of_n_proof(self.spends_to_prove)]  # type: ignore[arg-type]
             )
         else:
             only_key = next(iter(self.spends_to_prove.keys()))
             proven_spend = self.spends_to_prove[only_key]
-            proof = self.puzzle._merkle_tree.generate_proof(only_key)
+            proof = self.puzzle.tree_for_one_of_n_proof.generate_proof(only_key)
             return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution.program])
 
     @classmethod
@@ -300,7 +344,7 @@ class MofNSolution:
 @dataclass(kw_only=True, frozen=True)
 class PuzzleWithRestrictions(PuzzleBase):
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
-    restrictions: list[Restriction[MemberOrDPuz]]
+    restrictions: Sequence[Restriction[MemberOrDPuz]]
     member: MIPSComponent
     additional_memos: Program | None = None
     spec_namespace: ClassVar[str] = "CHIP-0043"
@@ -333,7 +377,7 @@ class PuzzleWithRestrictions(PuzzleBase):
         if isinstance(self.member_with_nonce, MofN):
             puzzle_hint = MofNHint(
                 m=self.member_with_nonce.m,
-                member_memos=[member.memo for member in self.member_with_nonce.members],
+                member_memos=[member.memo for member in self.member_with_nonce.nodes],
             )
         else:
             puzzle_hint = MemberHint(
@@ -355,7 +399,7 @@ class PuzzleWithRestrictions(PuzzleBase):
         )
 
     @classmethod
-    def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
+    def from_memo(cls, memo: Program, *, top_level: bool = True) -> PuzzleWithRestrictions:
         if memo.atom is not None or memo.first() != Program.to(cls.spec_namespace):
             raise ValueError("Attempting to parse a memo that does not belong to this spec")
         nonce = memo.at("rf")
@@ -367,8 +411,12 @@ class PuzzleWithRestrictions(PuzzleBase):
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
+            assert m_of_n_hint.member_memos is not None
             puzzle: MIPSComponent = MofN(
-                m=m_of_n_hint.m, members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
+                m=m_of_n_hint.m,
+                merkle_tree=MofNMerkleTree(
+                    nodes=[PuzzleWithRestrictions.from_memo(memo, top_level=False) for memo in m_of_n_hint.member_memos]
+                ),
             )
         else:
             puzzle_hint = MemberHint.from_program(puzzle_hint_prog)
@@ -379,6 +427,7 @@ class PuzzleWithRestrictions(PuzzleBase):
             restrictions=[UnknownRestriction(restriction_hint=hint) for hint in restriction_hints],
             member=puzzle,
             additional_memos=additional_memos,
+            _top_level=top_level,
         )
 
     @property
@@ -393,7 +442,7 @@ class PuzzleWithRestrictions(PuzzleBase):
         elif isinstance(self.member, MofN):
             unknown_puzzles = {
                 uph: up
-                for puz_w_restriction in self.member.members
+                for puz_w_restriction in self.member.nodes
                 for uph, up in puz_w_restriction.unknown_puzzles.items()
             }
         else:
@@ -420,7 +469,9 @@ class PuzzleWithRestrictions(PuzzleBase):
         elif isinstance(self.member, MofN):
             new_puzzle = replace(
                 self.member,
-                members=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.member.members],
+                merkle_tree=MofNMerkleTree(
+                    nodes=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.member.nodes]
+                ),
             )
         else:
             new_puzzle = self.member
@@ -523,8 +574,8 @@ class PuzzleWithRestrictions(PuzzleBase):
 
         return cls(
             nonce=nonce.as_int(),
-            restrictions=restrictions,  # type: ignore[arg-type]
-            member=UnknownMember(puzzle_hint=MemberHint(puzhash=inner_puzzle.tree_hash, memo=Program.NIL)),
+            restrictions=restrictions,
+            member=UnknownMember(puzzle_hint=MemberHint(puzhash=inner_puzzle.tree_hash, memo=None)),
         )
 
 

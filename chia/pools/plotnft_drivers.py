@@ -28,6 +28,7 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import (
     MofN,
+    MofNMerkleTree,
     MofNSolution,
     ProvenSpend,
     PuzzleWithRestrictions,
@@ -248,10 +249,12 @@ class PlotNFTPuzzle:
             restrictions=[],
             member=MofN(
                 m=1,
-                members=[
-                    self.user_puzzle_with_restrictions(),
-                    self.pool_puzzle_with_restrictions(),
-                ],
+                merkle_tree=MofNMerkleTree(
+                    nodes=[
+                        self.user_puzzle_with_restrictions(),
+                        self.pool_puzzle_with_restrictions(),
+                    ]
+                ),
             )
             if self.pooling
             else self.bls_member,

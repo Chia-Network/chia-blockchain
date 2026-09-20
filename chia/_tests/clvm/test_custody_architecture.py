@@ -22,6 +22,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     MIPSComponent,
     MIPSComponentBase,
     MofN,
+    MofNMerkleTree,
     MofNSolution,
     ProvenSpend,
     PuzzleWithRestrictions,
@@ -84,63 +85,81 @@ ANY_PROGRAM = Program.to(None)
         # 1 of 2 (w/ & w/o restrictions)
         MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(
-                    nonce=1,
-                    restrictions=[],
-                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
-                ),
-                PuzzleWithRestrictions(
-                    nonce=2,
-                    restrictions=[
-                        UnknownRestriction(
-                            restriction_hint=RestrictionHint(
-                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
-                            )
-                        ),
-                        UnknownRestriction(
-                            restriction_hint=RestrictionHint(
-                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
-                            )
-                        ),
-                    ],
-                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
-                ),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(
+                        nonce=1,
+                        restrictions=[],
+                        member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+                        _top_level=False,
+                    ),
+                    PuzzleWithRestrictions(
+                        nonce=2,
+                        restrictions=[
+                            UnknownRestriction(
+                                restriction_hint=RestrictionHint(
+                                    member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                                )
+                            ),
+                            UnknownRestriction(
+                                restriction_hint=RestrictionHint(
+                                    member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                                )
+                            ),
+                        ],
+                        member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                        _top_level=False,
+                    ),
+                ],
+            ),
         ),
         # 2 of 2 (further 1 of 1s)
         MofN(
             m=2,
-            members=[
-                PuzzleWithRestrictions(
-                    nonce=1,
-                    restrictions=[],
-                    member=MofN(
-                        m=1,
-                        members=[
-                            PuzzleWithRestrictions(
-                                nonce=3,
-                                restrictions=[],
-                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
-                            )
-                        ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(
+                        nonce=1,
+                        restrictions=[],
+                        member=MofN(
+                            m=1,
+                            merkle_tree=MofNMerkleTree(
+                                nodes=[
+                                    PuzzleWithRestrictions(
+                                        nonce=3,
+                                        restrictions=[],
+                                        member=UnknownMember(
+                                            puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                                        ),
+                                        _top_level=False,
+                                    )
+                                ],
+                            ),
+                        ),
+                        _top_level=False,
                     ),
-                ),
-                PuzzleWithRestrictions(
-                    nonce=4,
-                    restrictions=[],
-                    member=MofN(
-                        m=1,
-                        members=[
-                            PuzzleWithRestrictions(
-                                nonce=5,
-                                restrictions=[],
-                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
-                            )
-                        ],
+                    PuzzleWithRestrictions(
+                        nonce=4,
+                        restrictions=[],
+                        member=MofN(
+                            m=1,
+                            merkle_tree=MofNMerkleTree(
+                                nodes=[
+                                    PuzzleWithRestrictions(
+                                        nonce=5,
+                                        restrictions=[],
+                                        member=UnknownMember(
+                                            puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)
+                                        ),
+                                        _top_level=False,
+                                    )
+                                ],
+                            ),
+                        ),
+                        _top_level=False,
                     ),
-                ),
-            ],
+                ]
+            ),
         ),
     ],
 )
@@ -226,10 +245,12 @@ def test_unknown_puzzle_behavior() -> None:
         pwr,
         member=MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], member=unknown_puzzle_3),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0, _top_level=False),
+                    PuzzleWithRestrictions(nonce=1, restrictions=[], member=unknown_puzzle_3, _top_level=False),
+                ],
+            ),
         ),
     )
     assert pwr.unknown_puzzles == {
@@ -255,10 +276,12 @@ def test_unknown_puzzle_behavior() -> None:
         restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()],
         member=MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], member=PlaceholderPuzzle()),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], member=PlaceholderPuzzle()),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=PlaceholderPuzzle(), _top_level=False),
+                    PuzzleWithRestrictions(nonce=1, restrictions=[], member=PlaceholderPuzzle(), _top_level=False),
+                ],
+            ),
         ),
     )
     assert filled_in.unknown_puzzles == {}
@@ -326,10 +349,14 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                     restrictions=[],
                     member=MofN(
                         m=m,
-                        members=[
-                            PuzzleWithRestrictions(nonce=n_i, restrictions=restrictions, member=ACSMember())
-                            for n_i in range(n)
-                        ],
+                        merkle_tree=MofNMerkleTree(
+                            nodes=[
+                                PuzzleWithRestrictions(
+                                    nonce=n_i, restrictions=restrictions, member=ACSMember(), _top_level=False
+                                )
+                                for n_i in range(n)
+                            ],
+                        ),
                     ),
                 )
 
@@ -400,18 +427,20 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
 
         # couple of error cases
         with pytest.raises(ValueError, match=re.escape("M cannot be greater than N")):
-            MofN(m=50, members=[])
+            MofN(m=50, merkle_tree=MofNMerkleTree(nodes=[]))
 
         with pytest.raises(ValueError, match=re.escape("M must be greater than 0")):
-            MofN(m=0, members=[])
+            MofN(m=0, merkle_tree=MofNMerkleTree(nodes=[]))
 
         with pytest.raises(ValueError, match=re.escape("Duplicate nodes not currently supported by MofN drivers")):
             MofN(
                 m=2,
-                members=[
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
-                ],
+                merkle_tree=MofNMerkleTree(
+                    nodes=[
+                        PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                        PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                    ],
+                ),
             )
 
 
