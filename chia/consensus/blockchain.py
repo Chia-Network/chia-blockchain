@@ -1006,13 +1006,6 @@ class Blockchain:
                 ret.append(await self.block_store.get_prev_hash(h))
         return ret
 
-    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        ret = header_hash in self.__block_records
-        if ret:
-            return True
-
-        return (await self.block_store.get_block_record(header_hash)) is not None
-
     # can only called on the heighest block
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)

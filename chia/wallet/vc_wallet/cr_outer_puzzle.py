@@ -12,7 +12,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import (
     CredentialRestrictionLayer,
     CredentialRestrictionLayerSolution,
@@ -22,15 +21,15 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
 
 @dataclass(frozen=True)
 class CROuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         cr_match: CredentialRestrictionLayer[UnknownPuzzle] | None = CredentialRestrictionLayer.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle.mod.curry(*puzzle.args.as_iter()))
+            unknown_puzzle=puzzle
         )
         if cr_match is None:
             return None
@@ -39,23 +38,23 @@ class CROuterPuzzle:
             "authorized_providers": ["0x" + ap.hex() for ap in cr_match.authorized_providers],
             "proofs_checker": disassemble(cr_match.proofs_checker.puzzle),
         }
-        next_constructor = self._match(uncurry_puzzle(cr_match.inner_puzzle.puzzle))
+        next_constructor = self._match(UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         cr_match: CredentialRestrictionLayer[UnknownPuzzle] | None = CredentialRestrictionLayer.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle_reveal.mod.curry(*puzzle_reveal.args.as_iter()))
+            unknown_puzzle=puzzle_reveal
         )
         if cr_match is None:
             raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also, uncurry_puzzle(cr_match.inner_puzzle.puzzle), None
+                also, UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.puzzle), None
             )
             return deep_inner_puzzle
         else:
@@ -97,13 +96,15 @@ class CROuterPuzzle:
                 solver["vc_authorizations"][coin_name]
             )
         else:
+            proofs_checker_args = UnknownPuzzle(known_puzzle=constructor["proofs_checker"]).curried_args
+            assert proofs_checker_args is not None
             vc_info = (
                 # TODO: This is something of a hack here, doesn't really work for proofs checkers generally.
                 # The problem is that the CAT driver above us is running its inner puzzle (us) in order to get the
                 # conditions that are output. This is bad practice on the CAT driver's part, the protocol should support
                 # asking inner drivers for what conditions they return. Alas, since this is not supported, we have to
                 # do a hack that we know will work for the one known proof checker we currently have.
-                uncurry_puzzle(constructor["proofs_checker"]).args.at("f"),
+                proofs_checker_args[0],
                 Program.NIL,
                 constructor["authorized_providers"][0],  # Hack for similar reasons as above, we need a valid provider
                 None,

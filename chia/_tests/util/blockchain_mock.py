@@ -75,9 +75,6 @@ class BlockchainMock:
             return False
         return True
 
-    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        return header_hash in self._block_records
-
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 

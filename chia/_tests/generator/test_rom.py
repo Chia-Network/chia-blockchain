@@ -60,7 +60,7 @@ def to_sp(sexp: bytes) -> SerializedProgram:
 
 def block_generator() -> BlockGenerator:
     generator_list = [FIRST_GENERATOR, SECOND_GENERATOR]
-    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list)
+    return BlockGenerator(COMPILED_GENERATOR_CODE, generator_list)
 
 
 EXPECTED_ABBREVIATED_COST = 108379
@@ -77,7 +77,7 @@ EXPECTED_OUTPUT = (
 def run_generator(self: BlockGenerator) -> tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([self.generator_refs])
-    return run_with_cost(GENERATOR_MOD, MAX_COST, [self.program, args])
+    return run_with_cost(GENERATOR_MOD, MAX_COST, [Program.from_bytes(self.program), args])
 
 
 def as_atom_list(prg: CLVMStorage) -> list[bytes]:

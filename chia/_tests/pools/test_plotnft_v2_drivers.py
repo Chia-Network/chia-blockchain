@@ -44,9 +44,9 @@ from chia.wallet.puzzles.puzzle_drivers import (
     NilPuzzle,
     NilSolution,
     P2Conditions,
+    UnknownPuzzle,
 )
 from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle, SingletonCorePuzzles, SingletonStruct
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 user_sk = calculate_synthetic_secret_key(
@@ -442,10 +442,11 @@ def test_plotnft_errors() -> None:
             genesis_challenge=bytes32.zeros,
         )
 
-    def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
-        return UncurriedPuzzle(
-            mod=PlotNFT.struct_driver.singleton_puzzles.singleton_mod,
-            args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz]),
+    def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
+        return UnknownPuzzle(
+            known_puzzle=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
+                SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz
+            )
         )
 
     FAUX_SPEND = make_spend(default_coin, NilPuzzle().puzzle, Program.to([None, None, None]))

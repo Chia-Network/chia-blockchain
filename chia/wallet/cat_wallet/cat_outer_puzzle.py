@@ -19,19 +19,18 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
 @dataclass(frozen=True)
 class CATOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
-        matched_cat = CATPuzzle.match_uncurried(puzzle)
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
+        matched_cat = CATPuzzle.match(unknown_puzzle=puzzle)
         if matched_cat is None:
             return None
         inner_puzzle = matched_cat.inner_puzzle.puzzle
@@ -39,22 +38,22 @@ class CATOuterPuzzle:
             "type": "CAT",
             "tail": "0x" + matched_cat.tail_hash.hex(),
         }
-        next_constructor = self._match(uncurry_puzzle(inner_puzzle))
+        next_constructor = self._match(UnknownPuzzle(known_puzzle=inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
-        matched_cat = CATPuzzle.match_uncurried(puzzle_reveal)
+        matched_cat = CATPuzzle.match(unknown_puzzle=puzzle_reveal)
         if matched_cat is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
         inner_puzzle = matched_cat.inner_puzzle.puzzle
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also, uncurry_puzzle(inner_puzzle), solution.first() if solution is not None else None
+                also, UnknownPuzzle(known_puzzle=inner_puzzle), solution.first() if solution is not None else None
             )
             return deep_inner_puzzle
         else:
@@ -114,7 +113,9 @@ class CATOuterPuzzle:
             else:
                 constructed_solution = solution
                 constructed_puzzle = puzzle
-            matched_cat = CATPuzzle.match_uncurried(uncurry_puzzle(parent_spend.puzzle_reveal))
+            matched_cat = CATPuzzle.match(
+                unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(parent_spend.puzzle_reveal))
+            )
             assert matched_cat is not None
             parent_inner_puzzle = matched_cat.inner_puzzle.puzzle
             spendable_cats.append(

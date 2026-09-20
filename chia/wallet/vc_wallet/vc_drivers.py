@@ -1186,10 +1186,8 @@ class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCInnerPuzzl
 # inside of a CAT.
 @dataclass(frozen=True)
 class RevocationOuterPuzzle:
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
-        revocation_layer_match = RevocationLayer.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle.mod.curry(*puzzle.args.as_iter()))
-        )
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
+        revocation_layer_match = RevocationLayer.match(unknown_puzzle=puzzle)
         if revocation_layer_match is None:
             return None
         constructor_dict: dict[str, Any] = {
@@ -1199,7 +1197,7 @@ class RevocationOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         if solution is None:
             raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")

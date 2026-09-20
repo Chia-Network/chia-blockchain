@@ -149,20 +149,13 @@ def _load_config_maybe_locked(
     raise RuntimeError("Was not able to read config file successfully")
 
 
-def load_config_cli(
-    root_path: Path,
-    filename: str,
-    sub_config: str | None = None,
-    fill_missing_services: bool = False,
-) -> dict[str, Any]:
+def apply_config_cli_overrides(config: dict[str, Any]) -> dict[str, Any]:
     """
-    Loads configuration from the specified filename, in the config directory,
-    and then overrides any properties using the passed in command line arguments.
-    Nested properties in the config file can be used in the command line with ".",
-    for example --farmer_peer.host. Does not support lists.
+    Overrides any properties of the given (already loaded) config section
+    using command line arguments. Nested properties can be used on the
+    command line with ".", for example --farmer_peer.host. Does not
+    support lists.
     """
-    config = load_config(root_path, filename, sub_config, fill_missing_services=fill_missing_services)
-
     flattened_props = flatten_properties(config)
     parser = argparse.ArgumentParser()
 
@@ -177,6 +170,20 @@ def load_config_cli(
             flattened_props[key] = value
 
     return unflatten_properties(flattened_props)
+
+
+def load_config_cli(
+    root_path: Path,
+    filename: str,
+    sub_config: str | None = None,
+    fill_missing_services: bool = False,
+) -> dict[str, Any]:
+    """
+    Loads configuration from the specified filename, in the config directory,
+    and then overrides any properties using the passed in command line arguments.
+    """
+    config = load_config(root_path, filename, sub_config, fill_missing_services=fill_missing_services)
+    return apply_config_cli_overrides(config)
 
 
 def flatten_properties(config: dict[str, Any]) -> dict[str, Any]:

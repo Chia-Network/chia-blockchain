@@ -42,6 +42,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -96,7 +97,9 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
@@ -124,9 +127,13 @@ class VCWallet:
             )
             return
         vc_record: VCRecord = VCRecord(vc.as_streamable(), height)
-        self.wallet_state_manager.state_changed(
-            "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
-        )
+
+        async with sync_scope.use() as interface:
+            interface.side_effects.websocket_events.append(
+                WebSocketEvent(
+                    name="vc_coin_added", wallet_id=self.id(), data=dict(launcher_id=vc_record.vc.launcher_id.hex())
+                )
+            )
         await self.store.add_or_replace_vc_record(vc_record)
 
     @classmethod
@@ -151,7 +158,7 @@ class VCWallet:
         vc_wallet = await VCWallet.create_new_vc_wallet(wallet_state_manager, wallet_state_manager.main_wallet)
         return WalletIdentifier(vc_wallet.id(), WalletType.VC)
 
-    async def remove_coin(self, coin: Coin, height: uint32) -> None:
+    async def remove_coin(self, coin: Coin, height: uint32, sync_scope: WalletSyncScope) -> None:
         """
         remove the VC if it is transferred to another key
         :param coin:
@@ -161,9 +168,14 @@ class VCWallet:
         vc_record: VCRecord | None = await self.store.get_vc_record_by_coin_id(coin.name())
         if vc_record is not None:
             await self.store.delete_vc_record(vc_record.vc.launcher_id)
-            self.wallet_state_manager.state_changed(
-                "vc_coin_removed", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
-            )
+            async with sync_scope.use() as interface:
+                interface.side_effects.websocket_events.append(
+                    WebSocketEvent(
+                        name="vc_coin_removed",
+                        wallet_id=self.id(),
+                        data=dict(launcher_id=vc_record.vc.launcher_id.hex()),
+                    )
+                )
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
         """

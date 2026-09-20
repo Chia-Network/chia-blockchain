@@ -43,6 +43,8 @@ from chia.wallet.wallet_request_types import (
     GetTransaction,
     GetWalletBalance,
     GetWallets,
+    PlotNFTMelt,
+    PlotNFTTransfer,
     PWAbsorbRewards,
     PWJoinPool,
     PWSelfPool,
@@ -449,6 +451,39 @@ async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: in
     func = functools.partial(
         wallet_info.client.pw_absorb_rewards,
         PWAbsorbRewards(
+            wallet_id=uint32(selected_wallet_id),
+            fee=fee,
+            push=True,
+        ),
+        DEFAULT_TX_CONFIG,
+    )
+    await submit_tx_with_confirmation(msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id)
+
+
+async def transfer_cmd(
+    *, wallet_info: WalletClientInfo, fee: uint64, wallet_id: int | None, target_wallet_fingerprint: int
+) -> None:
+    selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+    msg = f"\nWill transfer plot NFT for wallet ID: {selected_wallet_id} to fingerprint: {target_wallet_fingerprint}."
+    func = functools.partial(
+        wallet_info.client.plotnft_transfer,
+        PlotNFTTransfer(
+            wallet_id=uint32(selected_wallet_id),
+            fee=fee,
+            target_wallet_fingerprint=uint32(target_wallet_fingerprint),
+            push=True,
+        ),
+        DEFAULT_TX_CONFIG,
+    )
+    await submit_tx_with_confirmation(msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id)
+
+
+async def melt_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: int | None) -> None:
+    selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+    msg = f"\nWill melt plot NFT for wallet ID: {selected_wallet_id}"
+    func = functools.partial(
+        wallet_info.client.plotnft_melt,
+        PlotNFTMelt(
             wallet_id=uint32(selected_wallet_id),
             fee=fee,
             push=True,

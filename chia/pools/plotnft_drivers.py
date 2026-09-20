@@ -54,7 +54,6 @@ from chia.wallet.puzzles.singleton_drivers import (
     SingletonSolution,
     SingletonStruct,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
@@ -418,7 +417,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         *,
         coin_spend: CoinSpend,
         genesis_challenge: bytes32 | None = None,
-        pre_uncurry: UncurriedPuzzle | None = None,
+        pre_uncurry: UnknownPuzzle | None = None,
         previous_plotnft_puzzle: PlotNFTInnerPuzzle | None = None,
     ) -> Self:
         # some input validation
@@ -428,19 +427,19 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             assert previous_plotnft_puzzle is not None  # mypy I guess can't figure this out
             genesis_challenge = previous_plotnft_puzzle.genesis_challenge
         if pre_uncurry is None:
-            singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
+            singleton = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
         else:
             singleton = pre_uncurry
 
         # examine the singleton level info
-        if singleton.mod != cls.struct_driver.singleton_puzzles.singleton_mod:
+        if singleton.mod != cls.struct_driver.singleton_puzzles.singleton_mod or singleton.curried_args is None:
             raise GetNextPlotNFTError("Invalid singleton mod for next PlotNFT")
-        if singleton.args.at("frr") != cls.struct_driver.singleton_puzzles.singleton_launcher_hash:
+        if singleton.curried_args[0].at("rr") != cls.struct_driver.singleton_puzzles.singleton_launcher_hash:
             raise GetNextPlotNFTError("Invalid singleton launcher for next PlotNFT")
 
-        launcher_id = bytes32(singleton.args.at("frf").as_atom())
+        launcher_id = bytes32(singleton.curried_args[0].at("rf").as_atom())
 
-        inner_puzzle = singleton.args.at("rf")
+        inner_puzzle = singleton.curried_args[1]
         inner_conditions = parse_conditions_non_consensus(
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )
@@ -524,6 +523,70 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             launcher_id=launcher_id,
             remarks=remarks,
         )
+
+    def new_user_config(
+        self, user_config: UserConfig, hint: bytes32, extra_conditions: tuple[Condition, ...] = tuple()
+    ) -> list[CoinSpend]:
+        if self.inner_puzzle.pooling:
+            raise ValueError("Cannot create a new user config for a pooling PlotNFT")
+
+        plotnft_puzzle = PlotNFTInnerPuzzle(
+            self_launcher_id=self.launcher_id,
+            user_config=user_config,
+            pool_config=None,
+            exiting=False,
+            genesis_challenge=self.inner_puzzle.genesis_challenge,
+        )
+
+        dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        plotnft_puzzle.puzzle_hash,
+                        amount=self.coin.amount,
+                        memo_blob=Program.to((hint, plotnft_puzzle.memo)),
+                    ),
+                    *extra_conditions,
+                ]
+            ),
+            solution=NilSolution(),
+        )
+        coin_spend = self.spend(
+            inner_solution=UnknownSolution(
+                self.inner_puzzle.puzzle_with_restrictions.solve(
+                    member_validator_solutions=[],
+                    dpuz_validator_solutions=[],
+                    member_solution=self.inner_puzzle.bls_member.solve(),
+                    delegated_puzzle_and_solution=dpuz_and_solution,
+                )
+            )
+        )
+        return [coin_spend]
+
+    def melt(self, extra_conditions: tuple[Condition, ...] = tuple()) -> list[CoinSpend]:
+        if self.inner_puzzle.pooling:
+            raise ValueError("Cannot melt a pooling PlotNFT")
+
+        dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=P2Conditions(
+                conditions=[
+                    SingletonPuzzle.melt_condition,
+                    *extra_conditions,
+                ]
+            ),
+            solution=NilSolution(),
+        )
+        coin_spend = self.spend(
+            inner_solution=UnknownSolution(
+                self.inner_puzzle.puzzle_with_restrictions.solve(
+                    member_validator_solutions=[],
+                    dpuz_validator_solutions=[],
+                    member_solution=self.inner_puzzle.bls_member.solve(),
+                    delegated_puzzle_and_solution=dpuz_and_solution,
+                )
+            )
+        )
+        return [coin_spend]
 
     def forward_pool_reward(self, reward: PoolReward) -> list[CoinSpend]:
         if not self.inner_puzzle.pooling:

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,6 +12,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.timelord import iters_from_block as iters_from_block_module
 from chia.timelord import timelord as timelord_module
 from chia.timelord.iters_from_block import iters_from_block
@@ -181,3 +184,52 @@ class TestHandleClient:
         assert len(tl.free_clients) == 3
         overflow_writer.close.assert_called_once()
         overflow_writer.wait_closed.assert_awaited_once()
+
+
+def _minimal_timelord_config(**overrides: object) -> dict[str, Any]:
+    config: dict[str, Any] = {"vdf_clients": {"ip": ["127.0.0.1"]}}
+    config.update(overrides)
+    return config
+
+
+def test_inactivity_timeout_defaults_to_60(tmp_path: Path) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(), DEFAULT_CONSTANTS)
+    assert tl.max_allowed_inactivity_time == 60
+
+
+def test_inactivity_timeout_reads_config(tmp_path: Path) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), DEFAULT_CONSTANTS)
+    assert tl.max_allowed_inactivity_time == 600
+
+
+def test_restore_inactivity_timeout_rereads_config(tmp_path: Path) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), DEFAULT_CONSTANTS)
+    tl.max_allowed_inactivity_time = 1200
+    tl.restore_inactivity_timeout()
+    assert tl.max_allowed_inactivity_time == 600
+
+
+@pytest.mark.anyio
+async def test_inactivity_reset_disabled_when_configured_zero(tmp_path: Path) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=0), DEFAULT_CONSTANTS)
+    tl.last_active_time = time.time() - 10_000
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._maybe_reset_for_inactivity()
+    reset.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_inactivity_reset_uses_configured_threshold(tmp_path: Path) -> None:
+    tl = Timelord(tmp_path, _minimal_timelord_config(max_allowed_inactivity_time=600), DEFAULT_CONSTANTS)
+    tl.vdf_failure_time = 0
+
+    tl.last_active_time = time.time() - 61
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._maybe_reset_for_inactivity()
+    reset.assert_not_called()
+
+    tl.last_active_time = time.time() - 601
+    with patch.object(tl, "_reset_chains", new_callable=AsyncMock) as reset:
+        await tl._maybe_reset_for_inactivity()
+    reset.assert_awaited_once()
+    assert tl.max_allowed_inactivity_time == 1200

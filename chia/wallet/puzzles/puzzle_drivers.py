@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar, cast
@@ -102,7 +102,7 @@ class UnknownPuzzle(PuzzleWithPuzzleHash):
         return self._uncurry_result.mod
 
     @cached_property
-    def curried_args(self) -> Iterable[Program] | None:
+    def curried_args(self) -> list[Program] | None:
         if self.mod is None:
             return None
         return list(self._uncurry_result.args.as_iter())

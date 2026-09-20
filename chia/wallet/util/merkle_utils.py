@@ -12,13 +12,6 @@ Proof_Tree_Type = Any  # Union[bytes32, tuple[bytes32, "Proof_Tree_Type"]]
 HASH_TREE_PREFIX = bytes([2])
 HASH_LEAF_PREFIX = bytes([1])
 
-# paths here are not quite the same a `NodePath` paths. We don't need the high order bit
-# anymore since the proof indicates how big the path is.
-
-
-def compose_paths(path_1: int, path_2: int, path_2_length: int) -> int:
-    return (path_1 << path_2_length) | path_2
-
 
 def sha256(*args: bytes) -> bytes32:
     return bytes32(hashlib.sha256(b"".join(args)).digest())

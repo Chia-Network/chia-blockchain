@@ -148,10 +148,6 @@ class VCStore:
 
         return self
 
-    async def _clear_database(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:  # pragma: no cover
-            await (await conn.execute("DELETE FROM vc_records")).close()
-
     async def add_or_replace_vc_record(self, record: VCRecord) -> None:
         """
         Store VCRecord in DB.

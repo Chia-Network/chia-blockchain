@@ -19,6 +19,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.notification_store import NotificationStore
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.wallet_sync_scope import WalletSyncScope
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -84,10 +85,10 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
 
     func = notification_manager_2.potentially_add_new_notification
 
-    async def track_coin_state(coin_state: CoinState, parent_spend: CoinSpend) -> bool:
+    async def track_coin_state(coin_state: CoinState, parent_spend: CoinSpend, sync_scope: WalletSyncScope) -> bool:
         nonlocal most_recent_args
         most_recent_args = (coin_state, parent_spend)
-        result: bool = await func(coin_state, parent_spend)
+        result: bool = await func(coin_state, parent_spend, sync_scope)
         return result
 
     # there's maybe a more reasonable way to do this with monkypatching but this works for now
@@ -242,9 +243,15 @@ async def test_notifications(wallet_environments: WalletTestFramework, capsys: p
     ).run()
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
 
-    assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
+    async with env_2.wallet_state_manager.new_sync_scope() as sync_scope:
+        assert not await notification_manager_2.potentially_add_new_notification(
+            most_recent_args[0], most_recent_args[1], sync_scope
+        )
     await DeleteNotificationsCMD(rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=True, ids=tuple()).run()
-    assert not await notification_manager_2.potentially_add_new_notification(most_recent_args[0], most_recent_args[1])
+    async with env_2.wallet_state_manager.new_sync_scope() as sync_scope:
+        assert not await notification_manager_2.potentially_add_new_notification(
+            most_recent_args[0], most_recent_args[1], sync_scope
+        )
 
     await DeleteNotificationsCMD(
         rpc_info=NeedsWalletRPC(client_info=client_info_2), delete_all=False, ids=tuple()
