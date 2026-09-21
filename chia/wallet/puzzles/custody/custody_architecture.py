@@ -541,19 +541,18 @@ class PuzzleWithRestrictions(PuzzleBase):
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> PuzzleWithRestrictions | None:
         top_level = True
-        nonce = Program.NIL
 
-        next_puzzle = unknown_puzzle
         if unknown_puzzle.mod != INDEX_WRAPPER or unknown_puzzle.curried_args is None:
+            return None
+
+        nonce, fed_inner_puzzle_prog = unknown_puzzle.curried_args
+        next_puzzle = UnknownPuzzle(known_program=fed_inner_puzzle_prog)
+        if next_puzzle.mod != DELEGATED_PUZZLE_FEEDER or next_puzzle.curried_args is None:
             top_level = False
         else:
-            nonce, fed_inner_puzzle_prog = unknown_puzzle.curried_args
-            next_puzzle = UnknownPuzzle(known_program=fed_inner_puzzle_prog)
-            if next_puzzle.mod != DELEGATED_PUZZLE_FEEDER or next_puzzle.curried_args is None:
-                top_level = False
-            else:
-                (potentially_restricted_puzzle_prog,) = next_puzzle.curried_args
-                next_puzzle = UnknownPuzzle(known_program=potentially_restricted_puzzle_prog)
+            (potentially_restricted_puzzle_prog,) = next_puzzle.curried_args
+            next_puzzle = UnknownPuzzle(known_program=potentially_restricted_puzzle_prog)
+
         if next_puzzle.mod == RESTRICTION_MOD:
             if next_puzzle.curried_args is None:
                 return None
