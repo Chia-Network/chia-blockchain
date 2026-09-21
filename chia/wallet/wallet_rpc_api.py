@@ -1214,7 +1214,7 @@ class WalletRpcApi:
                         transaction=REPLACEABLE_TRANSACTION_RECORD,
                         total_fee=uint64(request.fee),
                         launcher_id=plotnft.launcher_id,
-                        p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash,
+                        p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).tree_hash,
                         # irrelevant, will be replace in serialization
                         type=WalletType.PLOTNFT_2.name,
                         wallet_id=uint32(0),

@@ -283,7 +283,7 @@ class TestClawbackLifecycle:
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == sender_ph
 
-        recipient_sol = ACSSolution(conditions=[CreateCoin(recipient_ph, amount)]).as_program()
+        recipient_sol = ACSSolution(conditions=[CreateCoin(recipient_ph, amount)]).program
         cb_recipient_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
         clawback_puz.run(cb_recipient_sol)
         conds = conditions_dict_for_solution(clawback_puz, cb_recipient_sol, INFINITE_COST)

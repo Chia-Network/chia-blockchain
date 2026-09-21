@@ -15,8 +15,8 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import Condition, CreateCoin, parse_conditions_non_consensus
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.puzzle_drivers import (
-    InnerPuzzle,
     OuterPuzzle,
+    Puzzle,
     PuzzleWithPuzzleHash,
     SmartCoin,
     Solution,
@@ -61,26 +61,26 @@ HASH_TREE_CAT_CORE_PUZZLES = CATCorePuzzles(
 )
 
 
-_T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
+class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast("CATPuzzle[_T_InnerPuzzle]", None)
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("CATPuzzle[_T_Puzzle]", None)
 
     tail_hash: bytes32
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
     cat_puzzles: ClassVar[CATCorePuzzles] = CATCorePuzzles()
 
     def _inner_curry_arg(self) -> Program | bytes32:
         if isinstance(self.inner_puzzle, UnknownPuzzle) and self.inner_puzzle.known_puzzle is None:
             assert self.inner_puzzle.known_puzzle_hash is not None
             return self.inner_puzzle.known_puzzle_hash
-        return self.inner_puzzle.puzzle
+        return self.inner_puzzle.program
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return self.cat_puzzles.cat_mod.curry(self.cat_puzzles.cat_mod_hash, self.tail_hash, self._inner_curry_arg())
 
     @cached_property
@@ -92,13 +92,13 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         return Program.to(self.cat_puzzles.cat_mod_hash).get_tree_hash()
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         # CAT is curried as: MOD.curry(MOD_HASH, tail_hash, inner_puzzle)
         return curry_and_treehash(
             self.cat_puzzles.hash_of_quoted_mod_hash,
             self._pre_hashed_cat_mod_hash,
             self._pre_hashed_tail_hash,
-            self.inner_puzzle.puzzle_hash,
+            self.inner_puzzle.tree_hash,
         )
 
     @classmethod
@@ -106,7 +106,7 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         return cls.match(unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter())))
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> CATPuzzle[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> CATPuzzle[UnknownPuzzle] | None:
         cat_puzzles = CATCorePuzzles()
         if unknown_puzzle.mod != cat_puzzles.cat_mod or unknown_puzzle.curried_args is None:
             return None
@@ -118,9 +118,9 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class CAT(CATPuzzle[_T_InnerPuzzle], Generic[_T_InnerPuzzle]):
+class CAT(CATPuzzle[_T_Puzzle], Generic[_T_Puzzle]):
     if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("CAT[_T_InnerPuzzle]", None)
+        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("CAT[_T_Puzzle]", None)
 
     coin: Coin
     lineage_proof: LineageProof
@@ -128,8 +128,8 @@ class CAT(CATPuzzle[_T_InnerPuzzle], Generic[_T_InnerPuzzle]):
 
 # information needed to spend a cc
 @dataclasses.dataclass(kw_only=True, frozen=True)
-class SpendableCAT(Generic[_T_InnerPuzzle]):
-    cat: CAT[_T_InnerPuzzle]
+class SpendableCAT(Generic[_T_Puzzle]):
+    cat: CAT[_T_Puzzle]
     inner_solution: Solution
     extra_delta: int = 0
     limitations_solution: Program = dataclasses.field(default_factory=lambda: Program.NIL)
@@ -138,9 +138,7 @@ class SpendableCAT(Generic[_T_InnerPuzzle]):
     @property
     def inner_conditions(self) -> list[Condition]:
         return list(
-            parse_conditions_non_consensus(
-                run(self.cat.inner_puzzle.puzzle, self.inner_solution.as_program()).as_iter()
-            )
+            parse_conditions_non_consensus(run(self.cat.inner_puzzle.program, self.inner_solution.program).as_iter())
         )
 
 
@@ -148,8 +146,8 @@ _T_Solution = TypeVar("_T_Solution", bound=Solution)
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True)
-class TAILCondition(Condition, Generic[_T_InnerPuzzle, _T_Solution]):
-    puzzle: _T_InnerPuzzle
+class TAILCondition(Condition, Generic[_T_Puzzle, _T_Solution]):
+    puzzle: _T_Puzzle
     solution: _T_Solution
 
     def __post_init__(self) -> None:
@@ -157,13 +155,13 @@ class TAILCondition(Condition, Generic[_T_InnerPuzzle, _T_Solution]):
         return
 
     def to_program(self) -> Program:
-        return Program.to([ConditionOpcode.CREATE_COIN, None, -113, self.puzzle.puzzle, self.solution.as_program()])
+        return Program.to([ConditionOpcode.CREATE_COIN, None, -113, self.puzzle.program, self.solution.program])
 
     @classmethod
     def from_program(cls, program: Program) -> TAILCondition[UnknownPuzzle, UnknownSolution]:  # type: ignore[override]
         return TAILCondition(
             puzzle=UnknownPuzzle(known_puzzle=program.at("rrrf")),
-            solution=UnknownSolution(solution=program.at("rrrrf")),
+            solution=UnknownSolution(program=program.at("rrrrf")),
         )
 
 
@@ -186,15 +184,15 @@ def _subtotals_for_deltas(deltas: list[int]) -> list[int]:
     return subtotals
 
 
-def _next_info_for_spendable_cat(spendable_cat: SpendableCAT[_T_InnerPuzzle]) -> Program:
+def _next_info_for_spendable_cat(spendable_cat: SpendableCAT[_T_Puzzle]) -> Program:
     c = spendable_cat.cat.coin
-    list = [c.parent_coin_info, spendable_cat.cat.inner_puzzle.puzzle_hash, c.amount]
+    list = [c.parent_coin_info, spendable_cat.cat.inner_puzzle.tree_hash, c.amount]
     return Program.to(list)
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
 def unsigned_spend_bundle_for_spendable_cats(
-    spendable_cat_list: list[SpendableCAT[_T_InnerPuzzle]],
+    spendable_cat_list: list[SpendableCAT[_T_Puzzle]],
 ) -> WalletSpendBundle:
     """
     Given a list of `SpendableCAT` objects, create a `WalletSpendBundle` that spends all those coins.
@@ -236,7 +234,7 @@ def unsigned_spend_bundle_for_spendable_cats(
         next_info = infos_for_next[next_index]
 
         solution = [
-            spend_info.inner_solution.as_program(),
+            spend_info.inner_solution.program,
             spend_info.cat.lineage_proof.to_program(),
             prev_id,
             my_info,
@@ -244,7 +242,7 @@ def unsigned_spend_bundle_for_spendable_cats(
             subtotals[index],
             spend_info.extra_delta,
         ]
-        coin_spend = make_spend(spend_info.cat.coin, spend_info.cat.puzzle, Program.to(solution))
+        coin_spend = make_spend(spend_info.cat.coin, spend_info.cat.program, Program.to(solution))
         coin_spends.append(coin_spend)
 
     return WalletSpendBundle(coin_spends, G2Element())

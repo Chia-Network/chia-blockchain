@@ -36,7 +36,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_with_taproot_member)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.puzzle_hash,
+            puzhash=bls_puzzle.inner_puzzle.tree_hash,
             memo=bls_puzzle.inner_puzzle.memo,
         )
 
@@ -53,8 +53,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
 
         # Farm and find coin
-        await sim.farm_block(bls_puzzle.puzzle_hash)
-        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash], include_spent_coins=False))[
+        await sim.farm_block(bls_puzzle.tree_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.tree_hash], include_spent_coins=False))[
             0
         ].coin
         block_height = sim.block_height
@@ -67,7 +67,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    bls_puzzle.puzzle,
+                    bls_puzzle.program,
                     bls_puzzle.solve(
                         [],
                         [],
@@ -75,7 +75,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),
@@ -105,7 +105,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    bls_puzzle.puzzle,
+                    bls_puzzle.program,
                     bls_puzzle.solve(
                         [],
                         [],
@@ -113,7 +113,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),
@@ -140,7 +140,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_with_taproot_member)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.puzzle_hash,
+            puzhash=bls_puzzle.inner_puzzle.tree_hash,
             memo=bls_puzzle.inner_puzzle.memo,
         )
 
@@ -157,8 +157,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
 
         # Farm and find coin
-        await sim.farm_block(bls_puzzle.puzzle_hash)
-        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash], include_spent_coins=False))[
+        await sim.farm_block(bls_puzzle.tree_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.tree_hash], include_spent_coins=False))[
             0
         ].coin
         block_height = sim.block_height
@@ -167,7 +167,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    bls_puzzle.puzzle,
+                    bls_puzzle.program,
                     bls_puzzle.solve(
                         [],
                         [],
@@ -175,7 +175,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),
@@ -201,7 +201,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             bls_with_taproot_member.public_key, bls_with_taproot_member.hidden_puzzle.get_tree_hash()
         )
         bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
-        assert bls_with_taproot_member.puzzle == bls_with_taproot_member_synthetic.puzzle
+        assert bls_with_taproot_member.program == bls_with_taproot_member_synthetic.program
 
         # test some errors
         with pytest.raises(
@@ -280,7 +280,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         )[0].coin
 
         memo = MemberHint(
-            puzhash=singleton_member_puzzle.inner_puzzle.puzzle_hash,
+            puzhash=singleton_member_puzzle.inner_puzzle.tree_hash,
             memo=singleton_member_puzzle.inner_puzzle.memo,
         )
 
@@ -297,10 +297,10 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         )
 
         # Farm and find coin
-        await sim.farm_block(singleton_member_puzzle.puzzle_hash)
+        await sim.farm_block(singleton_member_puzzle.tree_hash)
         coin = (
             await client.get_coin_records_by_puzzle_hashes(
-                [singleton_member_puzzle.puzzle_hash], include_spent_coins=False
+                [singleton_member_puzzle.tree_hash], include_spent_coins=False
             )
         )[0].coin
         block_height = sim.block_height
@@ -329,7 +329,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    singleton_member_puzzle.puzzle,
+                    singleton_member_puzzle.program,
                     singleton_member_puzzle.solve(
                         [],
                         [],
@@ -337,7 +337,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),
@@ -375,7 +375,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=fixed_puzzle_member)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.puzzle_hash,
+            puzhash=bls_puzzle.inner_puzzle.tree_hash,
             memo=bls_puzzle.inner_puzzle.memo,
         )
 
@@ -392,8 +392,8 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         )
 
         # Farm and find coin
-        await sim.farm_block(bls_puzzle.puzzle_hash)
-        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash], include_spent_coins=False))[
+        await sim.farm_block(bls_puzzle.tree_hash)
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.tree_hash], include_spent_coins=False))[
             0
         ].coin
         block_height = sim.block_height
@@ -405,7 +405,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    bls_puzzle.puzzle,
+                    bls_puzzle.program,
                     bls_puzzle.solve(
                         [],
                         [],
@@ -413,7 +413,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=Program.to(0)),  # not the fixed puzzle
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),
@@ -440,7 +440,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
             [
                 make_spend(
                     coin,
-                    bls_puzzle.puzzle,
+                    bls_puzzle.program,
                     bls_puzzle.solve(
                         [],
                         [],
@@ -448,7 +448,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         DelegatedPuzzleAndSolution(
                             puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),  # the fixed puzzle
                             solution=UnknownSolution(
-                                solution=Program.to(
+                                program=Program.to(
                                     [
                                         announcement.to_program(),
                                         announcement.corresponding_assertion().to_program(),

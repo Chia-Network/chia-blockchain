@@ -38,7 +38,7 @@ def cat_puzzle_for_tail(tail: Program) -> CATPuzzle[ACSPuzzle]:
 def tail_condition(tail: Program, checker_solution: Program) -> TAILCondition[UnknownPuzzle, UnknownSolution]:
     return TAILCondition(
         puzzle=UnknownPuzzle(known_puzzle=tail),
-        solution=UnknownSolution(solution=checker_solution),
+        solution=UnknownSolution(program=checker_solution),
     )
 
 
@@ -104,7 +104,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         tail = Program.to([])
         checker_solution = Program.to([])
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
         await sim.farm_block(cat_ph)
         starting_coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
@@ -260,7 +260,7 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
         tail = Program.to([])
         checker_solution = Program.to([])
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
         await sim.farm_block(cat_ph)
         await sim.farm_block(cat_ph)
 
@@ -359,7 +359,7 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
         tail = GenesisById.construct([Program.to(starting_coin.name())])
         checker_solution = GenesisById.solve([], {})
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
 
         await sim_client.push_tx(
             WalletSpendBundle(
@@ -399,7 +399,7 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
         tail = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
         checker_solution = GenesisByPuzhash.solve([], starting_coin.to_json_dict())
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
 
         await sim_client.push_tx(
             WalletSpendBundle(
@@ -437,7 +437,7 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
         tail = EverythingWithSig.construct([Program.to(sk.get_g1())])
         checker_solution = EverythingWithSig.solve([], {})
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
         await sim.farm_block(cat_ph)
 
         # Test eve spend
@@ -535,7 +535,7 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
         sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
         tail = DelegatedLimitations.construct([Program.to(sk.get_g1())])
         cat_puzzle = cat_puzzle_for_tail(tail)
-        cat_ph = cat_puzzle.puzzle.get_tree_hash()
+        cat_ph = cat_puzzle.program.get_tree_hash()
 
         await sim_client.push_tx(
             WalletSpendBundle(

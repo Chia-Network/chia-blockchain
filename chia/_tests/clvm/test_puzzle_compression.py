@@ -75,7 +75,7 @@ def test_cat_puzzle(report_compression: CompressionReporter) -> None:
         COIN,
         CATPuzzle(
             tail_hash=Program.to([]).get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
-        ).puzzle,
+        ).program,
         SOLUTION,
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)
@@ -107,9 +107,9 @@ def test_nesting_puzzles(report_compression: CompressionReporter) -> None:
                 known_puzzle=CATPuzzle(
                     tail_hash=Program.to([]).get_tree_hash(),
                     inner_puzzle=UnknownPuzzle(known_puzzle=puzzle_for_pk(G1Element())),
-                ).puzzle,
+                ).program,
             ),
-        ).puzzle,
+        ).program,
         SOLUTION,
     )
     compressed = compress_object_with_puzzles(bytes(coin_spend), LATEST_VERSION)

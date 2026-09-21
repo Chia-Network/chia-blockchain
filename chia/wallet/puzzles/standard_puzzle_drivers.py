@@ -18,9 +18,9 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_public_key,
 )
 from chia.wallet.puzzles.puzzle_drivers import (
-    InnerPuzzle,
     NilSolution,
     P2Conditions,
+    Puzzle,
     PuzzleWithPuzzleHash,
     SmartCoin,
     Solution,
@@ -32,14 +32,14 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash, shatree_atom
 
 @dataclass(kw_only=True, frozen=True)
 class HiddenPuzzleInfo(PuzzleWithPuzzleHash):
-    puzzle: Program = field(default_factory=lambda: DEFAULT_HIDDEN_PUZZLE)
+    program: Program = field(default_factory=lambda: DEFAULT_HIDDEN_PUZZLE)
     pre_computed_puzzle_hash: bytes32 | None = field(default=DEFAULT_HIDDEN_PUZZLE_HASH, kw_only=True)
 
 
 @dataclass(kw_only=True, frozen=True)
 class StandardPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("StandardPuzzle", None)
+        _protocol_check: ClassVar[Puzzle] = cast("StandardPuzzle", None)
 
     pre_known_synthetic_public_key: G1Element | None = None
     pre_known_original_public_key: G1Element | None = None
@@ -56,42 +56,30 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
             object.__setattr__(
                 self,
                 "pre_known_synthetic_public_key",
-                calculate_synthetic_public_key(self.pre_known_original_public_key, self.hidden_puzzle_info.puzzle_hash),
+                calculate_synthetic_public_key(self.pre_known_original_public_key, self.hidden_puzzle_info.tree_hash),
             )
             assert self.pre_known_synthetic_public_key is not None
         return self.pre_known_synthetic_public_key
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return MOD.curry(self.synthetic_public_key)
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         public_key_hash = shatree_atom(bytes(self.synthetic_public_key))
         return curry_and_treehash(QUOTED_MOD_HASH, public_key_hash)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> StandardPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> StandardPuzzle | None:
         if unknown_puzzle.mod == MOD:
             if unknown_puzzle.curried_args is None:
                 return None
             list_of_args = [arg for arg in unknown_puzzle.curried_args]
             if len(list_of_args) != 1:
                 return None
-            original_public_key = None
-            hidden_puzzle_info = HiddenPuzzleInfo()
-            if solution is not None:
-                if not isinstance(solution, StandardPuzzleSolution):
-                    raise ValueError("Trying to match a standard puzzle without a standard puzzle solution")
-                if solution.original_public_key is not None:
-                    original_public_key = solution.original_public_key
-                    hidden_puzzle_info = HiddenPuzzleInfo(
-                        puzzle=solution.delegated_puzzle, pre_computed_puzzle_hash=None
-                    )
             return cls(
                 pre_known_synthetic_public_key=G1Element.from_bytes(list_of_args[0].as_atom()),
-                pre_known_original_public_key=original_public_key,
-                hidden_puzzle_info=hidden_puzzle_info,
             )
         return None
 
@@ -102,7 +90,7 @@ class StandardPuzzle(PuzzleWithPuzzleHash):
             )
         return StandardPuzzleSolution(
             original_public_key=self.pre_known_original_public_key,
-            delegated_puzzle=self.hidden_puzzle_info.puzzle,
+            delegated_puzzle=self.hidden_puzzle_info.program,
             delegated_solution=solution,
         )
 
@@ -119,18 +107,19 @@ class StandardPuzzleSolution:
     @classmethod
     def for_conditions(cls, conditions: list[Condition]) -> Self:
         return cls(
-            delegated_puzzle=P2Conditions(conditions=conditions).puzzle,
-            delegated_solution=NilSolution().as_program(),
+            delegated_puzzle=P2Conditions(conditions=conditions).program,
+            delegated_solution=NilSolution().program,
         )
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         return Program.to([self.original_public_key, self.delegated_puzzle, self.delegated_solution])
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> StandardPuzzleSolution | None:
-        if unknown_solution.as_program().atom is not None:
+        if unknown_solution.program.atom is not None:
             return None
-        list_of_values = list(unknown_solution.as_program().as_iter())
+        list_of_values = list(unknown_solution.program.as_iter())
         if len(list_of_values) != 3:
             return None
         return StandardPuzzleSolution(

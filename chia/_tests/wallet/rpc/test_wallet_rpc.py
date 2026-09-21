@@ -3870,7 +3870,7 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
         our_ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
     cat_puzzle: Program = CATPuzzle(
         tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
-    ).puzzle
+    ).program
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
         "txch",

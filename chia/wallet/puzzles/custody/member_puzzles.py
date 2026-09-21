@@ -48,7 +48,7 @@ class BLSWithTaprootMember(MIPSComponentBase, PuzzleWithPuzzleHash):
             return calculate_synthetic_public_key(self.public_key, self.hidden_puzzle.get_tree_hash())
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return BLS_WITH_TAPROOT_MEMBER_MOD.curry(bytes(self.guaranteed_synthetic_key))
 
     def sign_with_synthetic_secret_key(self, original_secret_key: PrivateKey, message: bytes) -> G2Element:
@@ -65,19 +65,12 @@ class BLSWithTaprootMember(MIPSComponentBase, PuzzleWithPuzzleHash):
         return Program.to([0])
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> BLSWithTaprootMember | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> BLSWithTaprootMember | None:
         if unknown_puzzle.mod != BLS_WITH_TAPROOT_MEMBER_MOD or unknown_puzzle.curried_args is None:
             return None
         (synthetic_key_prog,) = unknown_puzzle.curried_args
         synthetic_key = G1Element.from_bytes(synthetic_key_prog.as_atom())
-        original_key = None
-        hidden_puzzle = None
-        if solution is not None:
-            solution_match = BLSWithTaprootMemberSolution.match(unknown_solution=solution)
-            if solution_match is not None:
-                original_key = solution_match.original_public_key
-                hidden_puzzle = solution_match.hidden_puzzle
-        return BLSWithTaprootMember(synthetic_key=synthetic_key, public_key=original_key, hidden_puzzle=hidden_puzzle)
+        return BLSWithTaprootMember(synthetic_key=synthetic_key)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -93,7 +86,8 @@ class BLSWithTaprootMemberSolution:
         ):
             raise ValueError("Must specify both or neither of original_public_key and hidden_puzzle")
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         if self.hidden_puzzle is not None:
             if self.original_public_key is None:
                 raise ValueError("Need original_public_key for hidden_puzzle spend")
@@ -103,9 +97,9 @@ class BLSWithTaprootMemberSolution:
     @classmethod
     def match(cls, *, unknown_solution: object) -> BLSWithTaprootMemberSolution | None:
         assert isinstance(unknown_solution, UnknownSolution)
-        if unknown_solution.as_program().atom is not None:
+        if unknown_solution.program.atom is not None:
             return None
-        list_of_values = list(unknown_solution.as_program().as_iter())
+        list_of_values = list(unknown_solution.program.as_iter())
         if len(list_of_values) == 2:
             return BLSWithTaprootMemberSolution(
                 original_public_key=G1Element.from_bytes(list_of_values[0].as_atom()), hidden_puzzle=list_of_values[1]
@@ -129,7 +123,7 @@ class SingletonMember(MIPSComponentBase, PuzzleWithPuzzleHash):
         return Program.to(0)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         singleton_struct = (self.singleton_mod_hash, (self.singleton_id, self.singleton_launcher_hash))
         return SINGLETON_MEMBER_MOD.curry(singleton_struct)
 
@@ -137,7 +131,7 @@ class SingletonMember(MIPSComponentBase, PuzzleWithPuzzleHash):
         return Program.to([singleton_inner_puzzle_hash])
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> BLSWithTaprootMember | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> BLSWithTaprootMember | None: ...
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -151,11 +145,11 @@ class FixedPuzzleMember(MIPSComponentBase, PuzzleWithPuzzleHash):
         return Program.to(0)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return FIXED_PUZZLE_MEMBER_MOD.curry(self.fixed_puzzle_hash)
 
     def solve(self) -> Program:
         return Program.to([])
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> BLSWithTaprootMember | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> BLSWithTaprootMember | None: ...

@@ -113,7 +113,7 @@ class GenesisById(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = CATPuzzle(
             tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner)
-        ).puzzle.get_tree_hash()
+        ).program.get_tree_hash()
 
         async with wallet.wallet_state_manager.new_action_scope(
             action_scope.config.tx_config, push=False
@@ -156,7 +156,7 @@ class GenesisById(LimitationsProgram):
                         tail_hash=tail.get_tree_hash(),
                         inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner),
                     ),
-                    inner_solution=UnknownSolution(solution=inner_solution),
+                    inner_solution=UnknownSolution(program=inner_solution),
                     limitations_program_reveal=tail,
                 )
             ],

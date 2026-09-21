@@ -29,7 +29,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     UnknownMember,
     UnknownRestriction,
 )
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, InnerPuzzle, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, Puzzle, UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 BUNCH_OF_ZEROS = bytes32([0] * 32)
@@ -169,16 +169,16 @@ def test_unknown_puzzle_behavior() -> None:
             raise NotImplementedError  # pragma: no cover
 
         @property
-        def puzzle(self) -> Program:
+        def program(self) -> Program:
             raise NotImplementedError  # pragma: no cover
 
         @property
-        def puzzle_hash(self) -> bytes32:
+        def tree_hash(self) -> bytes32:
             assert self.nonce is not None
             return bytes32([self.nonce] * 32)
 
         @classmethod
-        def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+        def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
             raise NotImplementedError  # pragma: no cover
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
@@ -268,17 +268,17 @@ class ACSMember(MIPSComponentBase):
         raise NotImplementedError  # pragma: no cover
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         assert self.nonce is not None
         # (r (c (q . nonce) ACS_MEMBER_PH))
         return Program.to([6, [4, (1, self.nonce), ACS_MEMBER]])
 
     @property
-    def puzzle_hash(self) -> bytes32:
-        return self.puzzle.get_tree_hash()
+    def tree_hash(self) -> bytes32:
+        return self.program.get_tree_hash()
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -291,16 +291,16 @@ class ACSDPuzValidator(MIPSComponentBase):
         raise NotImplementedError  # pragma: no cover
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
     @property
-    def puzzle_hash(self) -> bytes32:
-        return self.puzzle.get_tree_hash()
+    def tree_hash(self) -> bytes32:
+        return self.program.get_tree_hash()
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -337,9 +337,9 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                 )
 
                 # Farm and find coin
-                await sim.farm_block(m_of_n.puzzle_hash)
+                await sim.farm_block(m_of_n.tree_hash)
                 m_of_n_coin = (
-                    await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash], include_spent_coins=False)
+                    await client.get_coin_records_by_puzzle_hashes([m_of_n.tree_hash], include_spent_coins=False)
                 )[0].coin
                 block_height = sim.block_height
 
@@ -352,10 +352,10 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                     proven_spends = {
                         PuzzleWithRestrictions(
                             nonce=index, restrictions=restrictions, member=ACSMember(), _top_level=False
-                        ).puzzle_hash: ProvenSpend(
+                        ).tree_hash: ProvenSpend(
                             puzzle_reveal=PuzzleWithRestrictions(
                                 nonce=index, restrictions=restrictions, member=ACSMember(), _top_level=False
-                            ).puzzle,
+                            ).program,
                             solution=PuzzleWithRestrictions(
                                 nonce=index, restrictions=restrictions, member=ACSMember()
                             ).solve(
@@ -376,7 +376,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                 [
                                     make_spend(
                                         m_of_n_coin,
-                                        m_of_n.puzzle,
+                                        m_of_n.program,
                                         m_of_n.solve(
                                             [],
                                             [],
@@ -384,7 +384,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                             DelegatedPuzzleAndSolution(
                                                 puzzle=UnknownPuzzle(known_puzzle=Program.to(1)),
                                                 solution=UnknownSolution(
-                                                    solution=Program.to(
+                                                    program=Program.to(
                                                         [
                                                             announcement_2.to_program(),
                                                             announcement_1.corresponding_assertion().to_program(),
@@ -429,16 +429,16 @@ class ACSMemberValidator(MIPSComponentBase):
         raise NotImplementedError  # pragma: no cover
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
     @property
-    def puzzle_hash(self) -> bytes32:
-        return self.puzzle.get_tree_hash()
+    def tree_hash(self) -> bytes32:
+        return self.program.get_tree_hash()
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -455,10 +455,8 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
         )
 
         # Farm coin with puzzle inside
-        await sim.farm_block(pwr.puzzle_hash)
-        pwr_coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash], include_spent_coins=False))[
-            0
-        ].coin
+        await sim.farm_block(pwr.tree_hash)
+        pwr_coin = (await client.get_coin_records_by_puzzle_hashes([pwr.tree_hash], include_spent_coins=False))[0].coin
 
         # Some announcements to make a ring between the delegated puzzle and the inner puzzle
         announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=pwr_coin.name())
@@ -473,7 +471,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                     [
                         make_spend(
                             pwr_coin,
-                            pwr.puzzle,
+                            pwr.program,
                             pwr.solve(
                                 [
                                     Program.to(None),
@@ -496,7 +494,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                 DelegatedPuzzleAndSolution(
                                     puzzle=UnknownPuzzle(known_puzzle=dpuz),
                                     solution=UnknownSolution(
-                                        solution=Program.to(
+                                        program=Program.to(
                                             [
                                                 announcement_2.to_program(),
                                                 announcement_1.corresponding_assertion().to_program(),

@@ -78,7 +78,7 @@ class PlotNFT2Wallet:
 
     @property
     def p2_singleton_puzzle_hash(self) -> bytes32:
-        return P2SingletonPuzzle(singleton_id=self.plotnft_id).puzzle_hash
+        return P2SingletonPuzzle(singleton_id=self.plotnft_id).tree_hash
 
     @property
     def rewards_claim_puzhash(self) -> bytes32:
@@ -173,7 +173,7 @@ class PlotNFT2Wallet:
                             else extra_conditions,
                         ).at("rf")
                     ),  # strips away to just the delegated puzzle (bit of a hack)
-                    solution=UnknownSolution(solution=Program.to(None)),
+                    solution=UnknownSolution(program=Program.to(None)),
                 )
                 if i == 0
                 else DelegatedPuzzleAndSolution(
@@ -189,7 +189,7 @@ class PlotNFT2Wallet:
                             )
                         )
                     ),
-                    solution=UnknownSolution(solution=Program.to(None)),
+                    solution=UnknownSolution(program=Program.to(None)),
                 )
                 for i, reward in enumerate(rewards_to_claim)
             ],
@@ -213,7 +213,7 @@ class PlotNFT2Wallet:
                         ),
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=plotnft.puzzle_hash,
+                            puzzle_hash=plotnft.tree_hash,
                             amount=uint64(1),
                         ),
                     ],
@@ -279,7 +279,7 @@ class PlotNFT2Wallet:
                             parent_coin_info=plotnft.coin.name(),
                             puzzle_hash=dataclasses.replace(
                                 plotnft, inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, pool_config=pool_config)
-                            ).puzzle_hash,
+                            ).tree_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -318,7 +318,7 @@ class PlotNFT2Wallet:
                     conditions=(*extra_conditions, fee_hook),
                 ).at("rf")
             ),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=UnknownSolution(solution=Program.to(None)),
+            solution=UnknownSolution(program=Program.to(None)),
         )
         coin_spends = plotnft.exit_to_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         if fee > 0:
@@ -349,7 +349,7 @@ class PlotNFT2Wallet:
                     additions=[
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
-                            puzzle_hash=next_plotnft.puzzle_hash,
+                            puzzle_hash=next_plotnft.tree_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -376,7 +376,7 @@ class PlotNFT2Wallet:
                     conditions=(fee_hook, heightlock, *extra_conditions),
                 ).at("rf")
             ),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=UnknownSolution(solution=Program.to(None)),
+            solution=UnknownSolution(program=Program.to(None)),
         )
         coin_spends = plotnft.exit_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         next_plotnft = PlotNFT.get_next_from_coin_spend(
@@ -407,7 +407,7 @@ class PlotNFT2Wallet:
                             puzzle_hash=dataclasses.replace(
                                 plotnft,
                                 inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, pool_config=None, exiting=False),
-                            ).puzzle_hash,
+                            ).tree_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -480,7 +480,7 @@ class PlotNFT2Wallet:
                             puzzle_hash=dataclasses.replace(
                                 plotnft,
                                 inner_puzzle=dataclasses.replace(plotnft.inner_puzzle, user_config=new_user_config),
-                            ).puzzle_hash,
+                            ).tree_hash,
                             amount=uint64(1),
                         )
                     ],
@@ -799,7 +799,7 @@ class PlotNFT2Wallet:
             else None,
             launcher_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
             launcher_id=plotnft.launcher_id,
-            p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash,
+            p2_singleton_puzzle_hash=P2SingletonPuzzle(singleton_id=plotnft.launcher_id).tree_hash,
             tip_singleton_coin_id=plotnft.coin.name(),
             singleton_block_height=await self.wallet_state_manager.plotnft2_store.get_plotnft_created_height(
                 coin_id=plotnft.coin.name()

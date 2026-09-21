@@ -29,8 +29,8 @@ from chia.wallet.conditions import Condition, CreateCoin, parse_conditions_non_c
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.puzzles.puzzle_drivers import (
-    InnerPuzzle,
     OuterPuzzle,
+    Puzzle,
     PuzzleWithPuzzleHash,
     SmartCoin,
     Solution,
@@ -66,19 +66,19 @@ INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 @dataclass(frozen=True, kw_only=True)
 class DefaultMetadataUpdater(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _inner_puzzle_protocol_check: ClassVar[InnerPuzzle] = cast("DefaultMetadataUpdater", None)
+        _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("DefaultMetadataUpdater", None)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return NFT_METADATA_UPDATER
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return NFT_METADATA_UPDATER_HASH
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> DefaultMetadataUpdater | None:
-        if unknown_puzzle.puzzle_hash != DefaultMetadataUpdater().puzzle_hash:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> DefaultMetadataUpdater | None:
+        if unknown_puzzle.tree_hash != DefaultMetadataUpdater().tree_hash:
             return None
         return DefaultMetadataUpdater()
 
@@ -89,7 +89,7 @@ class UpdateMetadataCondition(Condition):
     meta_uri: str | None = None
     license_uri: str | None = None
     other_update: tuple[str, str] | None = None
-    metadata_updater: InnerPuzzle = DefaultMetadataUpdater()
+    metadata_updater: Puzzle = DefaultMetadataUpdater()
 
     data_key: ClassVar[Literal[b"u"]] = b"u"
     meta_key: ClassVar[Literal[b"mu"]] = b"mu"
@@ -119,7 +119,7 @@ class UpdateMetadataCondition(Condition):
         else:
             raise ValueError("One of data_uri, meta_uri, or license_uri must be provided")
 
-        return Program.to([-24, self.metadata_updater.puzzle, (key, uri)])
+        return Program.to([-24, self.metadata_updater.program, (key, uri)])
 
     @classmethod
     def from_program(cls, program: Program) -> Self:
@@ -174,7 +174,8 @@ class NFTMetadata:
             return self.prepend_value(key=self.license_key, value=condition.license_uri)
         raise NotImplementedError("Impossible to reach")  # pragma: no cover
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         return Program.to(
             [
                 *([(self.data_key, Program.to(self.data_uris))] if self.data_uris is not None else []),
@@ -242,18 +243,18 @@ class NFTMetadata:
         )
 
 
-_T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
-_T_MetadataUpdater = TypeVar("_T_MetadataUpdater", bound=InnerPuzzle)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
+_T_MetadataUpdater = TypeVar("_T_MetadataUpdater", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class MetadataLayer(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle, _T_MetadataUpdater]):
+class MetadataLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_MetadataUpdater]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast(
-            "MetadataLayer[_T_InnerPuzzle, _T_MetadataUpdater]", None
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "MetadataLayer[_T_Puzzle, _T_MetadataUpdater]", None
         )
 
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
     metadata: Program
     metadata_updater: _T_MetadataUpdater
 
@@ -262,25 +263,23 @@ class MetadataLayer(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle, _T_MetadataUpd
         return self.metadata.get_tree_hash()
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return NFT_STATE_LAYER_MOD.curry(
-            NFT_STATE_LAYER_MOD_HASH, self.metadata, self.metadata_updater.puzzle_hash, self.inner_puzzle.puzzle
+            NFT_STATE_LAYER_MOD_HASH, self.metadata, self.metadata_updater.tree_hash, self.inner_puzzle.program
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             HASH_OF_STATE_LAYER_QUOTED_MOD_HASH,
             NFT_STATE_LAYER_MOD_HASH_HASH,
             self.metadata_hash,
-            Program.to(self.metadata_updater.puzzle_hash).get_tree_hash(),
-            self.inner_puzzle.puzzle_hash,
+            Program.to(self.metadata_updater.tree_hash).get_tree_hash(),
+            self.inner_puzzle.tree_hash,
         )
 
     @classmethod
-    def match(
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
-    ) -> MetadataLayer[UnknownPuzzle, UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> MetadataLayer[UnknownPuzzle, UnknownPuzzle] | None:
         if unknown_puzzle.mod != NFT_STATE_LAYER_MOD or unknown_puzzle.curried_args is None:
             return None
 
@@ -300,16 +299,18 @@ _T_InnerSolution = TypeVar("_T_InnerSolution", bound=Solution)
 class MetadataLayerSolution(Generic[_T_InnerSolution]):
     inner_solution: _T_InnerSolution
 
-    def as_program(self) -> Program:
-        return Program.to([self.inner_solution.as_program()])
+    @property
+    def program(self) -> Program:
+        return Program.to([self.inner_solution.program])
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> MetadataLayerSolution[UnknownSolution] | None:
-        if (  # check it's a one item list
-            unknown_solution.as_program().cons is None or unknown_solution.as_program().at("r") != Program.NIL
-        ):
+        if unknown_solution.program.atom is not None:
             return None
-        return MetadataLayerSolution(inner_solution=UnknownSolution(solution=unknown_solution.as_program().at("f")))
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 1:
+            return None
+        return MetadataLayerSolution(inner_solution=UnknownSolution(program=list_of_values[0]))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -327,7 +328,7 @@ class TransferProgramCondition(Condition):
                 -10,
                 self.new_owner.launcher_id if self.new_owner is not None else None,
                 [[v, k] for k, v in self.trade_prices_list.items()],
-                self.new_owner.inner_puzzle.puzzle_hash if self.new_owner is not None else None,
+                self.new_owner.inner_puzzle.tree_hash if self.new_owner is not None else None,
             ]
         )
 
@@ -351,7 +352,7 @@ class TransferProgramCondition(Condition):
 @dataclass(frozen=True, kw_only=True)
 class DefaultTransferProgram(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _inner_puzzle_protocol_check: ClassVar[InnerPuzzle] = cast("DefaultTransferProgram", None)
+        _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("DefaultTransferProgram", None)
 
     self_launcher_id: bytes32
     royalty_address: bytes32 | None
@@ -359,13 +360,13 @@ class DefaultTransferProgram(PuzzleWithPuzzleHash):
     struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return NFT_TRANSFER_PROGRAM_DEFAULT.curry(
             SingletonStruct(launcher_id=self.self_launcher_id).program, self.royalty_address, self.royalty_basis_points
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             HASH_OF_TRANSFER_PROGRAM_QUOTED_MOD_HASH,
             self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
@@ -374,7 +375,7 @@ class DefaultTransferProgram(PuzzleWithPuzzleHash):
         )
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> DefaultTransferProgram | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> DefaultTransferProgram | None:
         if unknown_puzzle.mod != NFT_TRANSFER_PROGRAM_DEFAULT or unknown_puzzle.curried_args is None:
             return None
 
@@ -387,40 +388,38 @@ class DefaultTransferProgram(PuzzleWithPuzzleHash):
         )
 
 
-_T_TransferProgram = TypeVar("_T_TransferProgram", bound=InnerPuzzle)
+_T_TransferProgram = TypeVar("_T_TransferProgram", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class OwnershipLayer(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle, _T_TransferProgram]):
+class OwnershipLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_TransferProgram]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast(
-            "OwnershipLayer[_T_InnerPuzzle, _T_TransferProgram]", None
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "OwnershipLayer[_T_Puzzle, _T_TransferProgram]", None
         )
 
     current_owner: bytes32 | None
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
     transfer_program: _T_TransferProgram
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return NFT_OWNERSHIP_LAYER.curry(
-            NFT_OWNERSHIP_LAYER_HASH, self.current_owner, self.transfer_program.puzzle, self.inner_puzzle.puzzle
+            NFT_OWNERSHIP_LAYER_HASH, self.current_owner, self.transfer_program.program, self.inner_puzzle.program
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             HASH_OF_OWNERSHIP_LAYER_QUOTED_MOD_HASH,
             NFT_OWNERSHIP_LAYER_HASH_HASH,
             Program.to(self.current_owner).get_tree_hash(),
-            self.transfer_program.puzzle_hash,
-            self.inner_puzzle.puzzle_hash,
+            self.transfer_program.tree_hash,
+            self.inner_puzzle.tree_hash,
         )
 
     @classmethod
-    def match(
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
-    ) -> OwnershipLayer[UnknownPuzzle, UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> OwnershipLayer[UnknownPuzzle, UnknownPuzzle] | None:
         if unknown_puzzle.mod != NFT_OWNERSHIP_LAYER or unknown_puzzle.curried_args is None:
             return None
 
@@ -437,16 +436,18 @@ class OwnershipLayer(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle, _T_TransferPr
 class OwnershipLayerSolution(Generic[_T_InnerSolution]):
     inner_solution: _T_InnerSolution
 
-    def as_program(self) -> Program:
-        return Program.to([self.inner_solution.as_program()])
+    @property
+    def program(self) -> Program:
+        return Program.to([self.inner_solution.program])
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> OwnershipLayerSolution[UnknownSolution] | None:
-        if (  # check it's a one item list
-            unknown_solution.as_program().cons is None or unknown_solution.as_program().at("r") != Program.NIL
-        ):
+        if unknown_solution.program.atom is not None:
             return None
-        return OwnershipLayerSolution(inner_solution=UnknownSolution(solution=unknown_solution.as_program().at("f")))
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 1:
+            return None
+        return OwnershipLayerSolution(inner_solution=UnknownSolution(program=list_of_values[0]))
 
 
 class NFTSolution(
@@ -473,10 +474,8 @@ class NFTSolution(
 
 
 class NFT(
-    Singleton[
-        MetadataLayer[_T_InnerPuzzle | OwnershipLayer[_T_InnerPuzzle, DefaultTransferProgram], DefaultMetadataUpdater]
-    ],
-    Generic[_T_InnerPuzzle],
+    Singleton[MetadataLayer[_T_Puzzle | OwnershipLayer[_T_Puzzle, DefaultTransferProgram], DefaultMetadataUpdater]],
+    Generic[_T_Puzzle],
 ):
     if TYPE_CHECKING:
         _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("NFT[UnknownPuzzle]", None)
@@ -486,7 +485,7 @@ class NFT(
         return isinstance(self.inner_puzzle.inner_puzzle, OwnershipLayer)
 
     @property
-    def innermost_puzzle(self) -> _T_InnerPuzzle:
+    def innermost_puzzle(self) -> _T_Puzzle:
         if self.is_nft1:
             assert isinstance(self.inner_puzzle.inner_puzzle, OwnershipLayer)
             return self.inner_puzzle.inner_puzzle.inner_puzzle
@@ -496,24 +495,24 @@ class NFT(
 
     @classmethod
     def match(  # type: ignore[override]
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
+        cls, *, unknown_puzzle: UnknownPuzzle
     ) -> (
         SingletonPuzzle[
             MetadataLayer[UnknownPuzzle | OwnershipLayer[UnknownPuzzle, DefaultTransferProgram], DefaultMetadataUpdater]
         ]
         | None
     ):
-        singleton_match = SingletonPuzzle.match(unknown_puzzle=unknown_puzzle, solution=solution)
+        singleton_match = SingletonPuzzle.match(unknown_puzzle=unknown_puzzle)
         if singleton_match is None:
             return None
 
-        metadata_match = MetadataLayer.match(unknown_puzzle=singleton_match.inner_puzzle, solution=solution)
+        metadata_match = MetadataLayer.match(unknown_puzzle=singleton_match.inner_puzzle)
         if metadata_match is None:
             return None
         metadata_updater_match = DefaultMetadataUpdater.match(unknown_puzzle=metadata_match.metadata_updater)
         if metadata_updater_match is None:
             return None
-        ownership_match = OwnershipLayer.match(unknown_puzzle=metadata_match.inner_puzzle, solution=solution)
+        ownership_match = OwnershipLayer.match(unknown_puzzle=metadata_match.inner_puzzle)
         default_tp_match = None
         if ownership_match is not None:
             default_tp_match = DefaultTransferProgram.match(unknown_puzzle=ownership_match.transfer_program)
@@ -535,7 +534,7 @@ class NFT(
             ),
         )
 
-    def replace_inner_most_puzzle(self, new_inner_puzzle: InnerPuzzle) -> Self:
+    def replace_inner_most_puzzle(self, new_inner_puzzle: Puzzle) -> Self:
         if isinstance(self.inner_puzzle.inner_puzzle, OwnershipLayer):
             updated_ownership = replace(self.inner_puzzle.inner_puzzle, inner_puzzle=new_inner_puzzle)  # type: ignore[arg-type]
             updated_metadata = replace(self.inner_puzzle, inner_puzzle=updated_ownership)
@@ -566,7 +565,7 @@ class NFT(
         if isinstance(inner_solution, OwnershipLayerSolution) and previous_nft.is_nft1:
             inner_solution = inner_solution.inner_solution
 
-        conditions_prog = run(previous_nft.innermost_puzzle.puzzle, inner_solution.as_program())
+        conditions_prog = run(previous_nft.innermost_puzzle.program, inner_solution.program)
         conditions = parse_conditions_non_consensus(
             conditions_prog.as_iter(),
             additional_conditions={
@@ -585,9 +584,9 @@ class NFT(
         nft_puzzle = SingletonPuzzle(
             launcher_id=previous_nft.launcher_id,
             inner_puzzle=MetadataLayer(
-                metadata=previous_metadata.update_from_condition(condition=update_metadata_condition).as_program()
+                metadata=previous_metadata.update_from_condition(condition=update_metadata_condition).program
                 if update_metadata_condition is not None
-                else previous_metadata.as_program(),
+                else previous_metadata.program,
                 metadata_updater=DefaultMetadataUpdater(),
                 inner_puzzle=OwnershipLayer(
                     current_owner=(tp_condition.new_owner.launcher_id if tp_condition.new_owner is not None else None)
@@ -603,12 +602,12 @@ class NFT(
         return NFT(
             coin=Coin(
                 previous_nft.coin.name(),
-                nft_puzzle.puzzle_hash,
+                nft_puzzle.tree_hash,
                 next_singleton_coin.amount,
             ),
             launcher_id=previous_nft.launcher_id,
             lineage_proof=LineageProof(
-                previous_nft.coin.parent_coin_info, previous_nft.inner_puzzle.puzzle_hash, previous_nft.coin.amount
+                previous_nft.coin.parent_coin_info, previous_nft.inner_puzzle.tree_hash, previous_nft.coin.amount
             ),
             inner_puzzle=nft_puzzle.inner_puzzle,
         )
@@ -637,7 +636,7 @@ class NFT(
             nft_id=self.launcher_id,
             coin=self.coin,
             lineage_proof=self.lineage_proof,
-            full_puzzle=self.puzzle,
+            full_puzzle=self.program,
             mint_height=mint_height,
             minter_did=minter_did,
             latest_height=latest_height,
@@ -668,11 +667,11 @@ class NFT(
             b"" if parsed_metadata.license_hash is None else parsed_metadata.license_hash,
             uint64(0) if parsed_metadata.edition_total is None else uint64(parsed_metadata.edition_total),
             uint64(0) if parsed_metadata.edition_number is None else uint64(parsed_metadata.edition_number),
-            self.inner_puzzle.metadata_updater.puzzle_hash,
+            self.inner_puzzle.metadata_updater.tree_hash,
             disassemble(self.inner_puzzle.metadata),
             db_object.mint_height,
             self.is_nft1,
-            self.innermost_puzzle.puzzle_hash,
+            self.innermost_puzzle.tree_hash,
             db_object.pending_transaction,
             db_object.minter_did,
             off_chain_metadata=None,

@@ -400,7 +400,7 @@ class CATWallet:
                         coin_data = CATCoinData(
                             CAT_MOD_HASH,
                             matched_cat.tail_hash,
-                            matched_cat.inner_puzzle.puzzle,
+                            matched_cat.inner_puzzle.program,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
                         )
@@ -466,7 +466,9 @@ class CATWallet:
         else:
             our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = parent_data.tail_program_hash
-            cat_puzzle = CATPuzzle(tail_hash=asset_id, inner_puzzle=UnknownPuzzle(known_puzzle=our_inner_puzzle)).puzzle
+            cat_puzzle = CATPuzzle(
+                tail_hash=asset_id, inner_puzzle=UnknownPuzzle(known_puzzle=our_inner_puzzle)
+            ).program
             wallet_type: type[CATWallet] = CATWallet
             crcat = None
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
@@ -493,14 +495,14 @@ class CATWallet:
                 # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
                 if (
                     await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                        crcat.inner_puzzle.inner_puzzle.tree_hash
                     )
                     is None
-                    and crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                    and crcat.inner_puzzle.inner_puzzle.tree_hash
                     != PendingApprovalPuzzle(
                         target_puzzle_hash=hinted_coin.hint,
                         amount=uint64(coin_state.coin.amount),
-                    ).puzzle_hash
+                    ).tree_hash
                 ):
                     wallet_state_manager.log.error(
                         f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}"
@@ -915,7 +917,7 @@ class CATWallet:
                     tail_hash=self.tail_hash,
                     inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
                 ),
-                inner_solution=UnknownSolution(solution=innersol),
+                inner_solution=UnknownSolution(program=innersol),
                 extra_delta=extra_delta,
                 limitations_program_reveal=tail_reveal,
                 limitations_solution=tail_solution,
@@ -1030,6 +1032,6 @@ class CATWallet:
         return (
             CATPuzzle(
                 tail_hash=self.tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint)
-            ).puzzle.get_tree_hash_precalc(hint)
+            ).program.get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )

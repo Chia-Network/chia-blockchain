@@ -33,7 +33,7 @@ class CATOuterPuzzle:
         matched_cat = CATPuzzle.match(unknown_puzzle=puzzle)
         if matched_cat is None:
             return None
-        inner_puzzle = matched_cat.inner_puzzle.puzzle
+        inner_puzzle = matched_cat.inner_puzzle.program
         constructor_dict: dict[str, Any] = {
             "type": "CAT",
             "tail": "0x" + matched_cat.tail_hash.hex(),
@@ -49,7 +49,7 @@ class CATOuterPuzzle:
         matched_cat = CATPuzzle.match(unknown_puzzle=puzzle_reveal)
         if matched_cat is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
-        inner_puzzle = matched_cat.inner_puzzle.puzzle
+        inner_puzzle = matched_cat.inner_puzzle.program
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
@@ -78,7 +78,7 @@ class CATOuterPuzzle:
         return CATPuzzle(
             tail_hash=bytes32(constructor["tail"]),
             inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
-        ).puzzle
+        ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
@@ -117,7 +117,7 @@ class CATOuterPuzzle:
                 unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(parent_spend.puzzle_reveal))
             )
             assert matched_cat is not None
-            parent_inner_puzzle = matched_cat.inner_puzzle.puzzle
+            parent_inner_puzzle = matched_cat.inner_puzzle.program
             spendable_cats.append(
                 SpendableCAT(
                     cat=CAT(
@@ -130,7 +130,7 @@ class CATOuterPuzzle:
                             uint64(parent_coin.amount),
                         ),
                     ),
-                    inner_solution=UnknownSolution(solution=constructed_solution),
+                    inner_solution=UnknownSolution(program=constructed_solution),
                 )
             )
         bundle = unsigned_spend_bundle_for_spendable_cats(spendable_cats)

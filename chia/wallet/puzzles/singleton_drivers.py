@@ -25,9 +25,9 @@ from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestricti
 from chia.wallet.puzzles.custody.member_puzzles import SINGLETON_MEMBER_MOD, SingletonMember
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
-    InnerPuzzle,
     OptimizedPuzzleHashPuzzle,
     OuterPuzzle,
+    Puzzle,
     PuzzleWithPuzzleHash,
     SmartCoin,
     Solution,
@@ -96,19 +96,17 @@ class SingletonStruct:
         return self.program.get_tree_hash()
 
 
-_T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
+class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast("SingletonPuzzle[_T_InnerPuzzle]", None)
-        _optimized_ph_protocol_check: ClassVar[OptimizedPuzzleHashPuzzle] = cast(
-            "SingletonPuzzle[_T_InnerPuzzle]", None
-        )
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("SingletonPuzzle[_T_Puzzle]", None)
+        _optimized_ph_protocol_check: ClassVar[OptimizedPuzzleHashPuzzle] = cast("SingletonPuzzle[_T_Puzzle]", None)
 
     launcher_id: bytes32
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
     struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
     melt_condition: ClassVar[UnknownCondition] = UnknownCondition(
         opcode=Program.to(51), args=[Program.NIL, Program.to(-113)]
@@ -119,23 +117,21 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         return SingletonStruct(launcher_id=self.launcher_id)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return self.singleton_struct.singleton_puzzles.singleton_mod.curry(
-            self.singleton_struct.program, self.inner_puzzle.puzzle
+            self.singleton_struct.program, self.inner_puzzle.program
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             self.struct_driver.singleton_puzzles.hash_of_quoted_mod_hash,
             self.singleton_struct.struct_hash,
-            self.inner_puzzle.puzzle_hash,
+            self.inner_puzzle.tree_hash,
         )
 
     @classmethod
-    def match(
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
-    ) -> SingletonPuzzle[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> SingletonPuzzle[UnknownPuzzle] | None:
         if (
             unknown_puzzle.mod != cls.struct_driver.singleton_puzzles.singleton_mod
             or unknown_puzzle.curried_args is None
@@ -147,7 +143,7 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
             inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
         )
 
-    def with_inner_puzzle(self, inner_puzzle: InnerPuzzle) -> Any:
+    def with_inner_puzzle(self, inner_puzzle: Puzzle) -> Any:
         # should be used as little as possible because it doesn't seem possible to return a
         # newly paramed instance of the current type so we have to resort to Any
         return replace(self, inner_puzzle=inner_puzzle)  # type: ignore[arg-type]
@@ -165,14 +161,15 @@ class SingletonSolution(Generic[_T_Solution]):
     coin_amount: uint64
     inner_solution: _T_Solution
 
-    def as_program(self) -> Program:
-        return Program.to([self.lineage_proof.to_program(), self.coin_amount, self.inner_solution.as_program()])
+    @property
+    def program(self) -> Program:
+        return Program.to([self.lineage_proof.to_program(), self.coin_amount, self.inner_solution.program])
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> SingletonSolution[UnknownSolution] | None:
-        if unknown_solution.as_program().atom is not None:
+        if unknown_solution.program.atom is not None:
             return None
-        list_of_values = list(unknown_solution.as_program().as_iter())
+        list_of_values = list(unknown_solution.program.as_iter())
         if len(list_of_values) != 3:
             return None
         num_lineage_proof_fields = len(list(list_of_values[0].as_iter()))
@@ -189,8 +186,8 @@ class SingletonSolution(Generic[_T_Solution]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonLaunchInfo(Generic[_T_InnerPuzzle]):
-    desired_inner_puzzle: _T_InnerPuzzle
+class SingletonLaunchInfo(Generic[_T_Puzzle]):
+    desired_inner_puzzle: _T_Puzzle
     key_value_hints: dict[str, str]
     amount: uint64 = uint64(1)
 
@@ -200,37 +197,37 @@ class SingletonLaunchInfo(Generic[_T_InnerPuzzle]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonLaunchResult(Generic[_T_InnerPuzzle]):
+class SingletonLaunchResult(Generic[_T_Puzzle]):
     necessary_conditions: list[Condition]
     necessary_spends: list[CoinSpend]
-    launched_singleton: Singleton[_T_InnerPuzzle]
+    launched_singleton: Singleton[_T_Puzzle]
 
 
-def new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: InnerPuzzle, solution: Solution) -> CreateCoin:
+def new_create_coin_from_inner_puzzle_and_solution(inner_puzzle: Puzzle, solution: Solution) -> CreateCoin:
     return next(
         cond
-        for cond in parse_conditions_non_consensus(run(inner_puzzle.puzzle, solution.as_program()).as_iter())
+        for cond in parse_conditions_non_consensus(run(inner_puzzle.program, solution.program).as_iter())
         if isinstance(cond, CreateCoin) and cond.amount % 2 == 1
     )
 
 
 @dataclass(kw_only=True, frozen=True)
-class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
+class Singleton(SingletonPuzzle[_T_Puzzle]):
     if TYPE_CHECKING:
-        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("Singleton[_T_InnerPuzzle]", None)
+        _smart_coin_protocol_check: ClassVar[SmartCoin] = cast("Singleton[_T_Puzzle]", None)
 
     coin: Coin
     lineage_proof: LineageProof
 
-    _T_LaunchInnerPuzzle = TypeVar("_T_LaunchInnerPuzzle", bound=InnerPuzzle)
+    _T_LaunchPuzzle = TypeVar("_T_LaunchPuzzle", bound=Puzzle)
 
     @classmethod
     def launch(
         cls,
         *,
         origin_coin: Coin,
-        launch_info: SingletonLaunchInfo[_T_LaunchInnerPuzzle],
-    ) -> SingletonLaunchResult[_T_LaunchInnerPuzzle]:
+        launch_info: SingletonLaunchInfo[_T_LaunchPuzzle],
+    ) -> SingletonLaunchResult[_T_LaunchPuzzle]:
         if (launch_info.amount % 2) == 0:
             raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
@@ -242,7 +239,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
 
         launcher_solution = Program.to(
             [
-                new_singleton_puzzle.puzzle_hash,
+                new_singleton_puzzle.tree_hash,
                 launch_info.amount,
                 [(k, v) for k, v in launch_info.key_value_hints.items()],
             ]
@@ -266,7 +263,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
             launched_singleton=Singleton(
                 coin=Coin(
                     parent_coin_info=launcher_id,
-                    puzzle_hash=new_singleton_puzzle.puzzle_hash,
+                    puzzle_hash=new_singleton_puzzle.tree_hash,
                     amount=launch_info.amount,
                 ),
                 lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
@@ -278,12 +275,12 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
     def spend(self, inner_solution: Solution) -> CoinSpend:
         return make_spend(
             coin=self.coin,
-            puzzle_reveal=self.puzzle,
+            puzzle_reveal=self.program,
             solution=SingletonSolution(
                 lineage_proof=self.lineage_proof,
                 coin_amount=self.coin.amount,
                 inner_solution=inner_solution,
-            ).as_program(),
+            ).program,
         )
 
     def action_spend(self, inner_solution: Solution) -> tuple[CoinSpend, Singleton[UnknownPuzzle]]:
@@ -292,10 +289,10 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
             launcher_id=self.launcher_id, inner_puzzle=UnknownPuzzle(known_puzzle_hash=next_create_coin.puzzle_hash)
         )
         return self.spend(inner_solution), Singleton(
-            coin=Coin(self.coin.name(), puzzle_hash=next_singleton_puzzle.puzzle_hash, amount=next_create_coin.amount),
+            coin=Coin(self.coin.name(), puzzle_hash=next_singleton_puzzle.tree_hash, amount=next_create_coin.amount),
             lineage_proof=LineageProof(
                 parent_name=self.coin.parent_coin_info,
-                inner_puzzle_hash=self.inner_puzzle.puzzle_hash,
+                inner_puzzle_hash=self.inner_puzzle.tree_hash,
                 amount=self.coin.amount,
             ),
             launcher_id=self.launcher_id,
@@ -312,8 +309,8 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
             raise ValueError("Number of rewards and delegated puzzles and solutions must match")
         messages_to_send = [
             SendMessage(
-                msg=dpuz_and_sol.puzzle.puzzle_hash,
-                sender=MessageParticipant(puzzle_hash_committed=self.puzzle_hash),
+                msg=dpuz_and_sol.puzzle.tree_hash,
+                sender=MessageParticipant(puzzle_hash_committed=self.tree_hash),
                 receiver=MessageParticipant(coin_id_committed=reward.coin.name()),
             )
             for reward, dpuz_and_sol in zip(rewards_to_claim, reward_delegated_puzzles_and_solutions)
@@ -321,9 +318,9 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
         return [
             make_spend(
                 coin=reward.coin,
-                puzzle_reveal=reward.puzzle,
+                puzzle_reveal=reward.program,
                 solution=reward.solve(
-                    self.inner_puzzle.puzzle_hash,
+                    self.inner_puzzle.tree_hash,
                     delegated_puzzle_and_solution=dpuz_and_sol,
                 ),
             )
@@ -334,7 +331,7 @@ class Singleton(SingletonPuzzle[_T_InnerPuzzle]):
 @dataclass(kw_only=True, frozen=True)
 class P2SingletonPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("P2SingletonPuzzle", None)
+        _protocol_check: ClassVar[Puzzle] = cast("P2SingletonPuzzle", None)
 
     singleton_id: bytes32
     nonce: int = 0
@@ -348,12 +345,12 @@ class P2SingletonPuzzle(PuzzleWithPuzzleHash):
         return PuzzleWithRestrictions(nonce=self.nonce, restrictions=[], member=self.singleton_member)
 
     @property
-    def puzzle(self) -> Program:
-        return self._puzzle_with_restrictions.puzzle
+    def program(self) -> Program:
+        return self._puzzle_with_restrictions.program
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
-        return self._puzzle_with_restrictions.puzzle_hash
+    def tree_hash_optimized(self) -> bytes32:
+        return self._puzzle_with_restrictions.tree_hash
 
     def solve(
         self, singleton_inner_puzzle_hash: bytes32, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
@@ -366,15 +363,15 @@ class P2SingletonPuzzle(PuzzleWithPuzzleHash):
         )
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
-        mips_match = PuzzleWithRestrictions.match(unknown_puzzle=unknown_puzzle, solution=solution)
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
+        mips_match = PuzzleWithRestrictions.match(unknown_puzzle=unknown_puzzle)
         if mips_match is None:
             return None
         assert isinstance(mips_match, PuzzleWithRestrictions)
-        assert isinstance(mips_match.puzzle, UnknownPuzzle)
-        if mips_match.puzzle.mod != SINGLETON_MEMBER_MOD or mips_match.puzzle.curried_args is None:
+        assert isinstance(mips_match.program, UnknownPuzzle)
+        if mips_match.program.mod != SINGLETON_MEMBER_MOD or mips_match.program.curried_args is None:
             return None
-        (singleton_struct_prog,) = mips_match.puzzle.curried_args
+        (singleton_struct_prog,) = mips_match.program.curried_args
         return cls(singleton_id=bytes32(singleton_struct_prog.at("rf").as_atom()))
 
 

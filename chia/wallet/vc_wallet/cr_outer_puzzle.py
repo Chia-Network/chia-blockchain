@@ -36,9 +36,9 @@ class CROuterPuzzle:
         constructor_dict: dict[str, Any] = {
             "type": "credential restricted",
             "authorized_providers": ["0x" + ap.hex() for ap in cr_match.authorized_providers],
-            "proofs_checker": disassemble(cr_match.proofs_checker.puzzle),
+            "proofs_checker": disassemble(cr_match.proofs_checker.program),
         }
-        next_constructor = self._match(UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.puzzle))
+        next_constructor = self._match(UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.program))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
@@ -54,11 +54,11 @@ class CROuterPuzzle:
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also, UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.puzzle), None
+                also, UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.program), None
             )
             return deep_inner_puzzle
         else:
-            return cr_match.inner_puzzle.puzzle
+            return cr_match.inner_puzzle.program
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.at("rrrrrrf")
@@ -85,7 +85,7 @@ class CROuterPuzzle:
             authorized_providers=constructor["authorized_providers"],
             proofs_checker=proof_checker_match,
             inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
-        ).puzzle
+        ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         coin_bytes: bytes = solver["coin"]
@@ -117,10 +117,10 @@ class CROuterPuzzle:
 
         return CredentialRestrictionLayerSolution(
             proof_of_inclusions=vc_info[0],
-            proof_checker_solution=UnknownSolution(solution=vc_info[1]),
+            proof_checker_solution=UnknownSolution(program=vc_info[1]),
             provider_id=vc_info[2],
             vc_launcher_id=vc_info[3],
             vc_inner_puzhash=vc_info[4],
             my_coin_id=coin.name(),
-            inner_solution=UnknownSolution(solution=inner_solution),
-        ).as_program()
+            inner_solution=UnknownSolution(program=inner_solution),
+        ).program

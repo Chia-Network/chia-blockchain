@@ -242,18 +242,18 @@ class CRCATWallet(CATWallet):
             cr_cat = next(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))
             if (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    cr_cat.inner_puzzle.inner_puzzle.puzzle_hash
+                    cr_cat.inner_puzzle.inner_puzzle.tree_hash
                 )
                 is not None
             ):
                 self.log.info(f"Found CRCAT coin {coin.name().hex()}")
                 is_pending = False
             elif (
-                cr_cat.inner_puzzle.inner_puzzle.puzzle_hash
+                cr_cat.inner_puzzle.inner_puzzle.tree_hash
                 == PendingApprovalPuzzle(
                     target_puzzle_hash=hint_dict[coin.name()],
                     amount=uint64(coin.amount),
-                ).puzzle_hash
+                ).tree_hash
             ):
                 self.log.info(f"Found pending approval CRCAT coin {coin.name().hex()}")
                 is_pending = True
@@ -299,7 +299,7 @@ class CRCATWallet(CATWallet):
                     bytes(
                         CRCATMetadata(
                             cr_cat.lineage_proof,
-                            hint_dict[coin.name()] if is_pending else cr_cat.inner_puzzle.inner_puzzle.puzzle_hash,
+                            hint_dict[coin.name()] if is_pending else cr_cat.inner_puzzle.inner_puzzle.tree_hash,
                         )
                     ),
                 ),
@@ -463,7 +463,7 @@ class CRCATWallet(CATWallet):
             if add_authorizations_to_cr_cats:
                 change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
             else:
-                change_puzhash = origin_crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                change_puzhash = origin_crcat.inner_puzzle.inner_puzzle.tree_hash
             for payment in payments:
                 if change_puzhash == payment.puzzle_hash and change == payment.amount:
                     # We cannot create two coins has same id, create a new puzhash for the change
@@ -558,13 +558,13 @@ class CRCATWallet(CATWallet):
                 )
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                    crcat.inner_puzzle.inner_puzzle.tree_hash
                 )
             )
             if inner_derivation_record is None:
                 raise RuntimeError(  # pragma: no cover
                     f"CR-CAT {crcat} has an inner puzzle hash "
-                    f"{crcat.inner_puzzle.inner_puzzle.puzzle_hash} that we don't have the keys for"
+                    f"{crcat.inner_puzzle.inner_puzzle.tree_hash} that we don't have the keys for"
                 )
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_derivation_record.pubkey)
             inner_spends.append(
@@ -574,7 +574,7 @@ class CRCATWallet(CATWallet):
                         inner_puzzle=replace(crcat.inner_puzzle, inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle)),
                     ),
                     extra_delta if first else 0,
-                    UnknownSolution(solution=innersol),
+                    UnknownSolution(program=innersol),
                 )
             )
             first = False
@@ -643,7 +643,7 @@ class CRCATWallet(CATWallet):
                         PendingApprovalPuzzle(
                             target_puzzle_hash=puzhash,
                             amount=amount,
-                        ).puzzle_hash
+                        ).tree_hash
                         if puzhash != Offer.ph()
                         and not await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(puzhash)
                         else puzhash
@@ -760,7 +760,7 @@ class CRCATWallet(CATWallet):
                         ),
                     ),
                     0,
-                    UnknownSolution(solution=Program.to([nonce])),
+                    UnknownSolution(program=Program.to([nonce])),
                 )
                 for crcat, inner_puzhash in crcats_and_puzhashes
             ],
@@ -852,7 +852,7 @@ class CRCATWallet(CATWallet):
                 "also": {
                     "type": AssetType.CR.value,
                     "authorized_providers": ["0x" + provider.hex() for provider in self.info.authorized_providers],
-                    "proofs_checker": self.info.proofs_checker.puzzle,
+                    "proofs_checker": self.info.proofs_checker.program,
                 },
             }
         )
@@ -871,7 +871,7 @@ class CRCATWallet(CATWallet):
             CATPuzzle(
                 tail_hash=self.info.limitations_program_hash,
                 inner_puzzle=cr_layer,
-            ).puzzle_hash
+            ).tree_hash
             == coin.puzzle_hash
         ):
             return True
@@ -882,7 +882,7 @@ class CRCATWallet(CATWallet):
                 inner_puzzle=replace(
                     cr_layer, inner_puzzle=PendingApprovalPuzzle(target_puzzle_hash=hint, amount=uint64(coin.amount))
                 ),
-            ).puzzle_hash
+            ).tree_hash
             == coin.puzzle_hash
         ):
             return True

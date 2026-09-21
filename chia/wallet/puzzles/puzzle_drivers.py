@@ -14,33 +14,34 @@ from chia.wallet.conditions import Condition, parse_conditions_non_consensus
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
-class InnerPuzzle(Protocol):
+class Puzzle(Protocol):
     @property
-    def puzzle(self) -> Program: ...
+    def program(self) -> Program: ...
 
     @property
-    def puzzle_hash(self) -> bytes32: ...
+    def tree_hash(self) -> bytes32: ...
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...
 
 
-_T_InnerPuzzle_co = TypeVar("_T_InnerPuzzle_co", bound=InnerPuzzle, covariant=True)
+_T_Puzzle_co = TypeVar("_T_Puzzle_co", bound=Puzzle, covariant=True)
 
 
-class OuterPuzzle(InnerPuzzle, Protocol[_T_InnerPuzzle_co]):
+class OuterPuzzle(Puzzle, Protocol[_T_Puzzle_co]):
     @property
-    def inner_puzzle(self) -> _T_InnerPuzzle_co: ...
+    def inner_puzzle(self) -> _T_Puzzle_co: ...
 
 
 class Solution(Protocol):
-    def as_program(self) -> Program: ...
+    @property
+    def program(self) -> Program: ...
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Solution | None: ...
 
 
-class SmartCoin(InnerPuzzle, Protocol):
+class SmartCoin(Puzzle, Protocol):
     @property
     def coin(self) -> Coin: ...
 
@@ -48,7 +49,7 @@ class SmartCoin(InnerPuzzle, Protocol):
 @runtime_checkable
 class OptimizedPuzzleHashPuzzle(Protocol):
     @property
-    def puzzle_hash_optimized(self) -> bytes32: ...
+    def tree_hash_optimized(self) -> bytes32: ...
 
 
 class PuzzleWithPuzzleHash:
@@ -59,12 +60,12 @@ class PuzzleWithPuzzleHash:
     pre_computed_puzzle_hash: bytes32 | None = None
 
     @property
-    def puzzle_hash(self) -> bytes32:
+    def tree_hash(self) -> bytes32:
         if self.pre_computed_puzzle_hash is None:
             if isinstance(self, OptimizedPuzzleHashPuzzle):
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle_hash_optimized)
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.tree_hash_optimized)
             else:
-                object.__setattr__(self, "pre_computed_puzzle_hash", self.puzzle.get_tree_hash())  # type: ignore[attr-defined]
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
         assert self.pre_computed_puzzle_hash is not None
         return self.pre_computed_puzzle_hash
 
@@ -72,7 +73,7 @@ class PuzzleWithPuzzleHash:
 @dataclass(kw_only=True, frozen=True)
 class UnknownPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("UnknownPuzzle", None)
+        _protocol_check: ClassVar[Puzzle] = cast("UnknownPuzzle", None)
 
     known_puzzle: Program | None = None
     known_puzzle_hash: bytes32 | None = None
@@ -82,22 +83,22 @@ class UnknownPuzzle(PuzzleWithPuzzleHash):
             raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         if self.known_puzzle is None:
             raise ValueError("Attempting to access puzzle when only puzzle hash is known")
         return self.known_puzzle
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
-        return self.known_puzzle_hash if self.known_puzzle_hash is not None else self.puzzle.get_tree_hash()
+    def tree_hash_optimized(self) -> bytes32:
+        return self.known_puzzle_hash if self.known_puzzle_hash is not None else self.program.get_tree_hash()
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:
-        return uncurry_puzzle(self.puzzle)
+        return uncurry_puzzle(self.program)
 
     @cached_property
     def mod(self) -> Program | None:
-        if self._uncurry_result.mod == self.puzzle:
+        if self._uncurry_result.mod == self.program:
             return None
         return self._uncurry_result.mod
 
@@ -108,7 +109,7 @@ class UnknownPuzzle(PuzzleWithPuzzleHash):
         return list(self._uncurry_result.args.as_iter())
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:  # pragma: no cover
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
 
 
@@ -117,10 +118,7 @@ class UnknownSolution:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Solution] = cast("UnknownSolution", None)
 
-    solution: Program
-
-    def as_program(self) -> Program:
-        return self.solution
+    program: Program
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
@@ -130,21 +128,21 @@ class UnknownSolution:
 @dataclass(kw_only=True, frozen=True)
 class P2Conditions(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("P2Conditions", None)
+        _protocol_check: ClassVar[Puzzle] = cast("P2Conditions", None)
 
     conditions: Sequence[Condition]
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return Program.to((1, [cond.to_program() for cond in self.conditions]))
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
-        if unknown_puzzle.puzzle.at("f") != Program.to(1):
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+        if unknown_puzzle.program.at("f") != Program.to(1):
             return None
 
         try:
-            return cls(conditions=parse_conditions_non_consensus(unknown_puzzle.puzzle.at("r").as_iter()))
+            return cls(conditions=parse_conditions_non_consensus(unknown_puzzle.program.at("r").as_iter()))
         except Exception:
             return None
 
@@ -156,15 +154,15 @@ ACS_PH = ACS.get_tree_hash()
 @dataclass(kw_only=True, frozen=True)
 class ACSPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("ACSPuzzle", None)
+        _protocol_check: ClassVar[Puzzle] = cast("ACSPuzzle", None)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return ACS
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
-        if unknown_puzzle.puzzle == ACS:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+        if unknown_puzzle.program == ACS:
             return cls()
         return None
 
@@ -176,13 +174,14 @@ class ACSSolution:
 
     conditions: Sequence[Condition]
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         return Program.to([cond.to_program() for cond in self.conditions])
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
         try:
-            return cls(conditions=parse_conditions_non_consensus(unknown_solution.as_program().as_iter()))
+            return cls(conditions=parse_conditions_non_consensus(unknown_solution.program.as_iter()))
         except Exception:
             return None
 
@@ -193,19 +192,19 @@ NIL_HASH = Program.NIL.get_tree_hash()
 @dataclass(kw_only=True, frozen=True)
 class NilPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[InnerPuzzle] = cast("NilPuzzle", None)
+        _protocol_check: ClassVar[Puzzle] = cast("NilPuzzle", None)
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return Program.NIL
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return NIL_HASH
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> Self | None:
-        if unknown_puzzle.puzzle == Program.NIL:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+        if unknown_puzzle.program == Program.NIL:
             return cls()
         return None
 
@@ -215,17 +214,18 @@ class NilSolution:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Solution] = cast("NilSolution", None)
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         return Program.NIL
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
-        if unknown_solution.as_program() == Program.NIL:
+        if unknown_solution.program == Program.NIL:
             return cls()
         return None
 
 
 @dataclass
 class DelegatedPuzzleAndSolution:
-    puzzle: InnerPuzzle
+    puzzle: Puzzle
     solution: Solution

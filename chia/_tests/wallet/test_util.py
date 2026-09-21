@@ -42,7 +42,7 @@ def test_compute_spend_hints_and_additions() -> None:
                 )
                 for create_coin in hinted_coins
             ]
-        ).as_program(),
+        ).program,
     )
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
     assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
@@ -60,7 +60,7 @@ def test_compute_spend_hints_and_additions() -> None:
                         memo_blob=Program.to([["not", "a"], "hint"]),
                     )
                 ]
-            ).as_program(),
+            ).program,
         )
     )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
 
@@ -69,7 +69,7 @@ def test_compute_spend_hints_and_additions() -> None:
             make_spend(
                 parent_coin.coin,
                 Program.to(1),
-                ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).as_program(),
+                ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).program,
             )
         )
     with pytest.raises(ValidationError):
@@ -85,7 +85,7 @@ def test_compute_spend_hints_and_additions() -> None:
                         )
                         for _ in range(10000)
                     ]
-                ).as_program(),
+                ).program,
             )
         )
 
@@ -101,7 +101,7 @@ def test_offer_rejects_spend_exceeding_max_cost() -> None:
     expensive_spend = make_spend(
         parent_coin.coin,
         Program.to(1),
-        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).as_program(),
+        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(0)) for _ in range(10000)]).program,
     )
     with pytest.raises(ValidationError):
         Offer({}, WalletSpendBundle([expensive_spend], G2Element()), {})
@@ -125,7 +125,7 @@ def test_offer_enforces_remaining_max_cost_across_spends() -> None:
         make_spend(
             coin_generator.get().coin,
             Program.to(1),
-            ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1)) for _ in range(3500)]).as_program(),
+            ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1)) for _ in range(3500)]).program,
         )
         for _ in range(2)
     ]
@@ -149,12 +149,12 @@ def test_offer_maps_clvm_cost_exceeded_value_error(monkeypatch: pytest.MonkeyPat
     coin_generator = CoinGenerator()
     # Minimal first spend (~44 cost). Leave only 10 for the second so CLVM aborts
     # inside run_with_cost with ValueError("cost exceeded or below zero").
-    first = make_spend(coin_generator.get().coin, Program.to(1), ACSSolution(conditions=[]).as_program())
+    first = make_spend(coin_generator.get().coin, Program.to(1), ACSSolution(conditions=[]).program)
     _, first_cost = compute_spend_hints_and_additions(first)
     second = make_spend(
         coin_generator.get().coin,
         Program.to(1),
-        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))]).as_program(),
+        ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))]).program,
     )
     monkeypatch.setattr(
         offer_mod,

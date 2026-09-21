@@ -144,7 +144,7 @@ class VCWallet:
         derivation_record: (
             DerivationRecord | None
         ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            vc.inner_puzzle.custody_puzzle.puzzle_hash
+            vc.inner_puzzle.custody_puzzle.tree_hash
         )
         if derivation_record is None:
             wallet_state_manager.log.warning(
@@ -231,7 +231,7 @@ class VCWallet:
                 conditions=vc_launch_result.necessary_conditions if i == 0 else [announcement_hook]
             )
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            vc_launch_result.necessary_spends.append(make_spend(coin, puzzle, solution.as_program()))
+            vc_launch_result.necessary_spends.append(make_spend(coin, puzzle, solution.program))
         spend_bundle = WalletSpendBundle(vc_launch_result.necessary_spends, G2Element())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
@@ -349,7 +349,7 @@ class VCWallet:
             primaries=primaries,
             conditions=extra_conditions,
         )
-        did_announcement, coin_spend, _vc = vc.do_spend(UnknownSolution(solution=innersol), new_proof_hash)
+        did_announcement, coin_spend, _vc = vc.do_spend(UnknownSolution(program=innersol), new_proof_hash)
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
             # Need to spend DID
@@ -498,7 +498,7 @@ class VCWallet:
             # ...then whether or not we should
             our_crcat: bool = (
                 await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                    crcat_spend.crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                    crcat_spend.crcat.inner_puzzle.inner_puzzle.tree_hash
                 )
                 is not None
             )
@@ -512,7 +512,7 @@ class VCWallet:
                         is not None
                     )
                     or (  # it's going back where it came from
-                        bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle.inner_puzzle.puzzle_hash
+                        bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle.inner_puzzle.tree_hash
                     )
                     or (  # it's going to the pending state
                         cc.at("rrr") != Program.NIL
@@ -520,7 +520,7 @@ class VCWallet:
                         and bytes32(cc.at("rf").as_atom())
                         == PendingApprovalPuzzle(
                             target_puzzle_hash=bytes32(cc.at("rrrff").as_atom()), amount=uint64(cc.at("rrf").as_int())
-                        ).puzzle_hash
+                        ).tree_hash
                     )
                     or bytes32(cc.at("rf").as_atom()) == Offer.ph()  # it's going to the offer mod
                 ):
@@ -536,7 +536,7 @@ class VCWallet:
                         AssertCoinAnnouncement(
                             asserted_id=crcat_spend.crcat.coin.name(),
                             asserted_msg=b"\xcd"
-                            + std_hash(crc.inner_puzzle.inner_puzzle.puzzle_hash + int_to_bytes(crc.coin.amount)),
+                            + std_hash(crc.inner_puzzle.inner_puzzle.tree_hash + int_to_bytes(crc.coin.amount)),
                         )
                         for crc in crcat_spend.children
                     ]

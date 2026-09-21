@@ -82,7 +82,7 @@ async def mint_cr_cat(
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
     cat_puzzle: Program = CATPuzzle(
         tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
-    ).puzzle
+    ).program
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
@@ -120,12 +120,12 @@ async def mint_cr_cat(
                                         authorized_providers=authorized_providers,
                                         proofs_checker=proofs_checker,
                                         inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle),
-                                    ).puzzle_hash,
+                                    ).tree_hash,
                                     CAT_AMOUNT_0,
                                     [our_puzzle.get_tree_hash()],
                                 ],
                                 [51, None, -113, tail, None],
-                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.puzzle],
+                                [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.program],
                             ]
                         ),
                         None,

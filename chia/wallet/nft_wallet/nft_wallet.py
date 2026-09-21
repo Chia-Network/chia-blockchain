@@ -189,7 +189,7 @@ class NFTWallet:
         derivation_record: (
             DerivationRecord | None
         ) = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            coin_data.innermost_puzzle.puzzle_hash
+            coin_data.innermost_puzzle.tree_hash
         )
         if derivation_record is None:
             return
@@ -210,7 +210,7 @@ class NFTWallet:
         await self.add_coin(
             coin_data.coin,
             coin_data.launcher_id,
-            coin_data.puzzle,
+            coin_data.program,
             coin_data.lineage_proof,
             mint_height,
             minter_did,
@@ -244,12 +244,12 @@ class NFTWallet:
         new_derivation_record: (
             DerivationRecord | None
         ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            added_nft.innermost_puzzle.puzzle_hash
+            added_nft.innermost_puzzle.tree_hash
         )
         old_derivation_record: (
             DerivationRecord | None
         ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            previous_nft.innermost_puzzle.puzzle_hash
+            previous_nft.innermost_puzzle.tree_hash
         )
         if new_derivation_record is None and old_derivation_record is None:
             return wallet_identifier
@@ -453,7 +453,7 @@ class NFTWallet:
             ),
         )
         # launcher announcement
-        announcement_message = Program.to([eve_fullpuz.puzzle_hash, amount, []]).get_tree_hash()
+        announcement_message = Program.to([eve_fullpuz.tree_hash, amount, []]).get_tree_hash()
 
         self.log.debug(
             "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_message
@@ -471,13 +471,13 @@ class NFTWallet:
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
         )
-        genesis_launcher_solution = Program.to([eve_fullpuz.puzzle_hash, amount, []])
+        genesis_launcher_solution = Program.to([eve_fullpuz.tree_hash, amount, []])
 
         # launcher spend to generate the singleton
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-        eve_coin = Coin(launcher_coin.name(), eve_fullpuz.puzzle_hash, uint64(amount))
+        eve_coin = Coin(launcher_coin.name(), eve_fullpuz.tree_hash, uint64(amount))
 
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(launcher_sb)
@@ -491,7 +491,7 @@ class NFTWallet:
             nft_id=launcher_coin.name(),
             coin=eve_coin,
             lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
-            full_puzzle=eve_fullpuz.puzzle,
+            full_puzzle=eve_fullpuz.program,
             mint_height=uint32(0),
             minter_did=bytes32(did_id) if did_id is not None and did_id != b"" else None,
         )

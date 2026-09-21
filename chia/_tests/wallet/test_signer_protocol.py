@@ -201,7 +201,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         uint64(0),
     )
     not_our_coin_spend: CoinSpend = make_spend(
-        not_our_coin, ACS, ACSSolution(conditions=[AggSigUnsafe(not_our_pubkey, not_our_message)]).as_program()
+        not_our_coin, ACS, ACSSolution(conditions=[AggSigUnsafe(not_our_pubkey, not_our_message)]).program
     )
 
     not_our_utx: UnsignedTransaction = UnsignedTransaction(

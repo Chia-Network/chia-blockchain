@@ -17,8 +17,8 @@ from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 def test_cat_outer_puzzle() -> None:
     ACS = Program.to(1)
     tail = bytes32.zeros
-    cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=ACS)).puzzle
-    double_cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=cat_puzzle)).puzzle
+    cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=ACS)).program
+    double_cat_puzzle: Program = CATPuzzle(tail_hash=tail, inner_puzzle=UnknownPuzzle(known_puzzle=cat_puzzle)).program
     unknown_cat_puzzle = UnknownPuzzle(known_puzzle=double_cat_puzzle)
     cat_driver: PuzzleInfo | None = match_puzzle(unknown_cat_puzzle)
 

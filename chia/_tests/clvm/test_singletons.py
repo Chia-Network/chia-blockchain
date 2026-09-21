@@ -26,7 +26,7 @@ from chia.wallet.puzzles.singleton_drivers import (
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS = UnknownPuzzle(known_puzzle=Program.to(1))
-ACS_PH = ACS.puzzle_hash
+ACS_PH = ACS.tree_hash
 
 
 class TransactionPushError(Exception):
@@ -64,7 +64,7 @@ async def acs_fee_spend(sim_client: SimClient) -> CoinSpend:
     fee_coin = next(record.coin for record in records if record.coin.amount % 2 == 0)
     return make_spend(
         fee_coin,
-        ACS.puzzle,
+        ACS.program,
         Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, fee_coin.amount - 10]]),
     )
 
@@ -104,7 +104,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         )
 
         starting_spend = make_spend(
-            starting_coin, ACS.puzzle, Program.to([cond.to_program() for cond in launch_result.necessary_conditions])
+            starting_coin, ACS.program, Program.to([cond.to_program() for cond in launch_result.necessary_conditions])
         )
         await push_bundle(
             sim,
@@ -145,9 +145,9 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         # CLAIM A P2_SINGLETON
         assert singleton.coin == await odd_singleton_coin(sim)
         p2_singleton_puz = P2SingletonPuzzle(singleton_id=singleton.launcher_id)
-        await sim.farm_block(p2_singleton_puz.puzzle_hash)
+        await sim.farm_block(p2_singleton_puz.tree_hash)
         p2_singleton_coin = (
-            await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_puz.puzzle_hash, include_spent_coins=False)
+            await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_puz.tree_hash, include_spent_coins=False)
         )[0].coin
         p2_singleton = P2Singleton(coin=p2_singleton_coin, singleton_id=singleton.launcher_id)
         p2_singleton_spends, messages = singleton.claim_p2_singletons(
@@ -156,7 +156,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
                 DelegatedPuzzleAndSolution(
                     puzzle=ACS,
                     solution=UnknownSolution(
-                        solution=Program.to([CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(0)).to_program()])
+                        program=Program.to([CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(0)).to_program()])
                     ),
                 )
             ],
@@ -179,7 +179,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         assert singleton_coin == singleton.coin
         multi_odd_spend, _ = singleton.action_spend(
             UnknownSolution(
-                solution=Program.to(
+                program=Program.to(
                     [
                         [ConditionOpcode.CREATE_COIN, ACS_PH, 3],
                         [ConditionOpcode.CREATE_COIN, ACS_PH, 7],
@@ -198,7 +198,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         # CREATE NO ODD CHILDREN (Negative Test)
         no_odd_spend = singleton.spend(
             UnknownSolution(
-                solution=Program.to(
+                program=Program.to(
                     [
                         [ConditionOpcode.CREATE_COIN, ACS_PH, 4],
                         [ConditionOpcode.CREATE_COIN, ACS_PH, 10],
@@ -218,7 +218,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         save_height = sim.block_height
         singleton_even_spend, _ = singleton.action_spend(
             UnknownSolution(
-                solution=Program.to(
+                program=Program.to(
                     [
                         [ConditionOpcode.CREATE_COIN, singleton.coin.puzzle_hash, 2],
                         [ConditionOpcode.CREATE_COIN, ACS_PH, 1],
@@ -237,7 +237,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
             lineage_proof=replace(singleton.lineage_proof, amount=uint64(2)),
         )
         evil_spend, _ = evil_singleton.action_spend(
-            UnknownSolution(solution=Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, 1]]))
+            UnknownSolution(program=Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, 1]]))
         )
         await push_bundle(
             sim,
@@ -251,7 +251,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         await sim.rewind(save_height)
         melt_spend = singleton.spend(
             UnknownSolution(
-                solution=Program.to(
+                program=Program.to(
                     [
                         SingletonPuzzle.melt_condition.to_program(),
                         [ConditionOpcode.CREATE_COIN, ACS_PH, singleton.coin.amount - 1],

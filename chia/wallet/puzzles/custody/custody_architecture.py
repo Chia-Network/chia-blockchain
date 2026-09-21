@@ -11,8 +11,8 @@ from typing_extensions import Self, runtime_checkable
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
-    InnerPuzzle,
     OuterPuzzle,
+    Puzzle,
     PuzzleWithPuzzleHash,
     UnknownPuzzle,
 )
@@ -32,7 +32,7 @@ INDEX_WRAPPER_HASH = INDEX_WRAPPER.get_tree_hash()
 
 
 # General (inner) puzzle driver spec
-class MIPSComponent(InnerPuzzle, Protocol):
+class MIPSComponent(Puzzle, Protocol):
     @property
     def nonce(self) -> int | None: ...
 
@@ -79,15 +79,15 @@ class UnknownMember(MIPSComponentBase):
         return self.puzzle_hint.memo
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         raise NotImplementedError("An unknown puzzle type cannot generate a puzzle reveal")  # pragma: no cover
 
     @property
-    def puzzle_hash(self) -> bytes32:
+    def tree_hash(self) -> bytes32:
         return self.puzzle_hint.puzhash
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...
 
 
 # A spec for "restrictions" on specific inner puzzles
@@ -137,15 +137,15 @@ class UnknownRestriction(MIPSComponentBase):
         return self.restriction_hint.memo
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         raise NotImplementedError("An unknown restriction type cannot generate a puzzle reveal")  # pragma: no cover
 
     @property
-    def puzzle_hash(self) -> bytes32:
+    def tree_hash(self) -> bytes32:
         return self.restriction_hint.puzhash
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
         raise NotImplementedError("An unknown restriction type cannot match anything")  # pragma: no cover
 
 
@@ -223,7 +223,7 @@ class MofN(MIPSComponentBase):
 
     @property
     def _merkle_tree(self) -> MerkleTree:
-        nodes = [member.puzzle_hash for member in self.members_non_top_level]
+        nodes = [member.tree_hash for member in self.members_non_top_level]
         if self.m > 1:
             return MofNMerkleTree(nodes)
         else:
@@ -246,24 +246,24 @@ class MofN(MIPSComponentBase):
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         if self.m == self.n:
-            return NofN_MOD.curry([member.puzzle for member in self.members_non_top_level])
+            return NofN_MOD.curry([member.program for member in self.members_non_top_level])
         elif self.m > 1:
             return MofN_MOD.curry(self.m, self._merkle_tree.calculate_root())
         else:
             return OneOfN_MOD.curry(self._merkle_tree.calculate_root())
 
     @property
-    def puzzle_hash(self) -> bytes32:
+    def tree_hash(self) -> bytes32:
         if self.m == self.n:
-            member_hashes = [member.puzzle_hash for member in self.members_non_top_level]
+            member_hashes = [member.tree_hash for member in self.members_non_top_level]
             return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
         else:
-            return self.puzzle.get_tree_hash()
+            return self.program.get_tree_hash()
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> MofN | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> MofN | None:
         if unknown_puzzle.mod not in [MofN_MOD, NofN_MOD, OneOfN_MOD] or unknown_puzzle.curried_args is None:  # ruff: ignore[literal-membership]
             return None
 
@@ -313,7 +313,7 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
         restriction_hints: list[RestrictionHint] = [
             RestrictionHint(
                 member_not_dpuz=restriction.member_not_dpuz,
-                puzhash=restriction.puzzle_hash,
+                puzhash=restriction.tree_hash,
                 memo=restriction.memo,
             )
             for restriction in self.restrictions_with_nonces
@@ -327,7 +327,7 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
             )
         else:
             puzzle_hint = MemberHint(
-                puzhash=self.inner_puzzle.puzzle_hash,
+                puzhash=self.inner_puzzle.tree_hash,
                 memo=self.inner_puzzle.memo,
             )
 
@@ -423,13 +423,13 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
         )
 
     @property
-    def puzzle(self) -> Program:
-        inner_puzzle = self.inner_puzzle.puzzle
+    def program(self) -> Program:
+        inner_puzzle = self.inner_puzzle.program
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
-                [restriction.puzzle for restriction in self.restrictions if restriction.member_not_dpuz],
-                [restriction.puzzle for restriction in self.restrictions if not restriction.member_not_dpuz],
+                [restriction.program for restriction in self.restrictions if restriction.member_not_dpuz],
+                [restriction.program for restriction in self.restrictions if not restriction.member_not_dpuz],
                 inner_puzzle,
             )
         else:
@@ -443,15 +443,15 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
         return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle)
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
-        inner_puzzle_hash = self.inner_puzzle.puzzle_hash
+    def tree_hash_optimized(self) -> bytes32:
+        inner_puzzle_hash = self.inner_puzzle.tree_hash
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             member_validator_hashes = [
-                restriction.puzzle_hash for restriction in self.restrictions if restriction.member_not_dpuz
+                restriction.tree_hash for restriction in self.restrictions if restriction.member_not_dpuz
             ]
             dpuz_validator_hashes = [
-                restriction.puzzle_hash for restriction in self.restrictions if not restriction.member_not_dpuz
+                restriction.tree_hash for restriction in self.restrictions if not restriction.member_not_dpuz
             ]
             restricted_inner_puzzle_hash = (
                 Program.to(RESTRICTION_MOD_HASH)
@@ -493,8 +493,8 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
         if delegated_puzzle_and_solution is not None:
             solution = Program.to(
                 [
-                    delegated_puzzle_and_solution.puzzle.puzzle,
-                    delegated_puzzle_and_solution.solution.as_program(),
+                    delegated_puzzle_and_solution.puzzle.program,
+                    delegated_puzzle_and_solution.solution.program,
                     *solution.as_iter(),
                 ]
             )
@@ -502,7 +502,7 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
         return solution
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> PuzzleWithRestrictions | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> PuzzleWithRestrictions | None:
         if unknown_puzzle.mod != INDEX_WRAPPER or unknown_puzzle.curried_args is None:
             return None
 

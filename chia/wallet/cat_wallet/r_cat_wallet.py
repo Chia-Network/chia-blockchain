@@ -277,7 +277,7 @@ class RCATWallet(CATWallet):
             CATPuzzle(
                 tail_hash=self.info.limitations_program_hash,
                 inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint_inner_hash),
-            ).puzzle_hash
+            ).tree_hash
             == coin.puzzle_hash
         ):
             return True

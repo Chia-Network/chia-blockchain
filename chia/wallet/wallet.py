@@ -91,7 +91,7 @@ class Wallet:
         return self.wallet_id
 
     def convert_secret_key_to_synthetic(self, secret_key: PrivateKey) -> PrivateKey:
-        return calculate_synthetic_secret_key(secret_key, HiddenPuzzleInfo().puzzle_hash)
+        return calculate_synthetic_secret_key(secret_key, HiddenPuzzleInfo().tree_hash)
 
     def convert_public_key_to_synthetic(self, public_key: G1Element) -> G1Element:
         return StandardPuzzle(pre_known_original_public_key=public_key).synthetic_public_key
@@ -150,10 +150,10 @@ class Wallet:
         return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return StandardPuzzle(pre_known_original_public_key=pubkey).puzzle
+        return StandardPuzzle(pre_known_original_public_key=pubkey).program
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return StandardPuzzle(pre_known_original_public_key=pubkey).puzzle_hash
+        return StandardPuzzle(pre_known_original_public_key=pubkey).tree_hash
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets

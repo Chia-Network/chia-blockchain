@@ -11,7 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.custody.custody_architecture import MemberOrDPuz, MIPSComponent, MIPSComponentBase, Restriction
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
-    InnerPuzzle,
+    Puzzle,
     PuzzleWithPuzzleHash,
     UnknownPuzzle,
     UnknownSolution,
@@ -47,17 +47,17 @@ class ValidatorStackRestriction(MIPSComponentBase, PuzzleWithPuzzleHash):
     def required_quoted_wrappers_hashes(self) -> list[bytes32]:
         required_quoted_wrappers_hashes = []
         for wrapper in self.wrappers:
-            puzhash = wrapper.puzzle_hash
+            puzhash = wrapper.tree_hash
             required_quoted_wrappers_hashes.append(Program.to((1, puzhash)).get_tree_hash_precalc(puzhash))
 
         return required_quoted_wrappers_hashes
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return ENFORCE_DPUZ_WRAPPERS.curry(QUOTED_ADD_DPUZ_WRAPPER_HASH, self.required_quoted_wrappers_hashes)
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return (
             Program.to(ENFORCE_DPUZ_WRAPPERS_HASH)
             .curry(QUOTED_ADD_DPUZ_WRAPPER_HASH, self.required_quoted_wrappers_hashes)
@@ -76,14 +76,14 @@ class ValidatorStackRestriction(MIPSComponentBase, PuzzleWithPuzzleHash):
         for wrapper, wrapper_solution in zip(reversed(self.wrappers), reversed(wrapper_solutions)):
             delegated_puzzle_and_solution = DelegatedPuzzleAndSolution(
                 puzzle=UnknownPuzzle(
-                    known_puzzle=ADD_DPUZ_WRAPPER.curry(wrapper.puzzle, delegated_puzzle_and_solution.puzzle.puzzle)
+                    known_puzzle=ADD_DPUZ_WRAPPER.curry(wrapper.program, delegated_puzzle_and_solution.puzzle.program)
                 ),
                 solution=UnknownSolution(
-                    solution=Program.to([wrapper_solution, delegated_puzzle_and_solution.solution.as_program()])
+                    program=Program.to([wrapper_solution, delegated_puzzle_and_solution.solution.program])
                 ),
             )
 
         return delegated_puzzle_and_solution
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> InnerPuzzle | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...

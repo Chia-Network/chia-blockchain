@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.puzzle_drivers import InnerPuzzle, OuterPuzzle, PuzzleWithPuzzleHash, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import OuterPuzzle, Puzzle, PuzzleWithPuzzleHash, UnknownPuzzle
 from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
@@ -36,7 +36,7 @@ class DIDMetadata(dict[str, str]):
         return self.as_program().get_tree_hash()
 
 
-_T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -58,13 +58,11 @@ class RecoveryList:
 
 
 @dataclass(frozen=True, kw_only=True)
-class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
+class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast(
-            "DIDRecoveryPuzzle[_T_InnerPuzzle]", None
-        )
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("DIDRecoveryPuzzle[_T_Puzzle]", None)
 
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
     self_launcher_id: bytes32
     metadata: DIDMetadata
     recovery_list: RecoveryList
@@ -72,9 +70,9 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
     struct_driver: ClassVar[type[SingletonStruct]] = SingletonStruct
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return DID_INNERPUZ_MOD.curry(
-            self.inner_puzzle.puzzle,
+            self.inner_puzzle.program,
             self.recovery_list.tree_hash,
             self.num_of_backup_ids_needed,
             self.struct_driver(launcher_id=self.self_launcher_id).program,
@@ -82,10 +80,10 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         )
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         return curry_and_treehash(
             DID_INNERPUZ_MOD_HASH_QUOTED,
-            self.inner_puzzle.puzzle_hash,
+            self.inner_puzzle.tree_hash,
             self.recovery_list.pre_hashed,
             Program.to(self.num_of_backup_ids_needed).get_tree_hash(),
             self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
@@ -93,9 +91,7 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
         )
 
     @classmethod
-    def match(
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
-    ) -> DIDRecoveryPuzzle[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> DIDRecoveryPuzzle[UnknownPuzzle] | None:
         if unknown_puzzle.mod != DID_INNERPUZ_MOD or unknown_puzzle.curried_args is None:
             return None
 

@@ -39,9 +39,10 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzles.puzzle_drivers import (
     ACSSolution,
-    InnerPuzzle,
+    NilSolution,
     OuterPuzzle,
     P2Conditions,
+    Puzzle,
     PuzzleWithPuzzleHash,
     Solution,
     UnknownPuzzle,
@@ -118,12 +119,12 @@ CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 @dataclass(frozen=True)
 class ProofsChecker(PuzzleWithPuzzleHash, Streamable):
     if TYPE_CHECKING:
-        _inner_puzzle_protocol_check: ClassVar[InnerPuzzle] = cast("ProofsChecker", None)
+        _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("ProofsChecker", None)
 
     flags: list[str]
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         def byte_sort_flags(f1: str, f2: str) -> int:
             return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.NIL else -1
 
@@ -138,7 +139,7 @@ class ProofsChecker(PuzzleWithPuzzleHash, Streamable):
         )
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> ProofsChecker | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ProofsChecker | None:
         if unknown_puzzle.mod != PROOF_FLAGS_CHECKER or unknown_puzzle.curried_args is None:
             return None
 
@@ -147,53 +148,51 @@ class ProofsChecker(PuzzleWithPuzzleHash, Streamable):
         return ProofsChecker([flag.at("f").as_atom().decode("utf8") for flag in flags.as_iter()])
 
 
-_T_InnerPuzzle = TypeVar("_T_InnerPuzzle", bound=InnerPuzzle)
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class CredentialRestrictionLayer(PuzzleWithPuzzleHash, Generic[_T_InnerPuzzle]):
+class CredentialRestrictionLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
-        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[InnerPuzzle]] = cast(
-            "CredentialRestrictionLayer[_T_InnerPuzzle]", None
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "CredentialRestrictionLayer[_T_Puzzle]", None
         )
 
     authorized_providers: list[bytes32]
     proofs_checker: ProofsChecker
-    inner_puzzle: _T_InnerPuzzle
+    inner_puzzle: _T_Puzzle
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         first_curry = CREDENTIAL_RESTRICTION.curry(
             CREDENTIAL_STRUCT,
             self.authorized_providers,
-            self.proofs_checker.puzzle,
+            self.proofs_checker.program,
         )
-        return first_curry.curry(first_curry.get_tree_hash(), self.inner_puzzle.puzzle)
+        return first_curry.curry(first_curry.get_tree_hash(), self.inner_puzzle.program)
 
     @functools.cached_property
     def authorized_providers_hash(self) -> bytes32:
         return Program.to(self.authorized_providers).get_tree_hash()
 
     @property
-    def puzzle_hash_optimized(self) -> bytes32:
+    def tree_hash_optimized(self) -> bytes32:
         first_curry_hash = curry_and_treehash(
             HASH_OF_QUOTED_MOD_HASH,
             CREDENTIAL_STRUCT_HASH,
             self.authorized_providers_hash,
-            self.proofs_checker.puzzle_hash,
+            self.proofs_checker.tree_hash,
         )
         first_curry_hash_hash = Program.to(first_curry_hash).get_tree_hash()
         final_hash = curry_and_treehash(
             Program.to((1, first_curry_hash)).get_tree_hash_precalc(first_curry_hash),
             first_curry_hash_hash,
-            self.inner_puzzle.puzzle_hash,
+            self.inner_puzzle.tree_hash,
         )
         return final_hash
 
     @classmethod
-    def match(
-        cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None
-    ) -> CredentialRestrictionLayer[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> CredentialRestrictionLayer[UnknownPuzzle] | None:
         extra_uncurried_puzzle = UnknownPuzzle(known_puzzle=unknown_puzzle.mod)
         if (
             extra_uncurried_puzzle.mod != CREDENTIAL_RESTRICTION
@@ -235,16 +234,17 @@ class CredentialRestrictionLayerSolution(Generic[_T_InnerSolution, _T_ProofCheck
     my_coin_id: bytes32 | None
     inner_solution: _T_InnerSolution
 
-    def as_program(self) -> Program:
+    @property
+    def program(self) -> Program:
         return Program.to(
             [
                 self.proof_of_inclusions,
-                self.proof_checker_solution.as_program(),
+                self.proof_checker_solution.program,
                 self.provider_id,
                 self.vc_launcher_id,
                 self.vc_inner_puzhash,
                 self.my_coin_id,
-                self.inner_solution.as_program(),
+                self.inner_solution.program,
             ]
         )
 
@@ -252,7 +252,7 @@ class CredentialRestrictionLayerSolution(Generic[_T_InnerSolution, _T_ProofCheck
     def match(
         cls, unknown_solution: UnknownSolution
     ) -> CredentialRestrictionLayerSolution[UnknownSolution, UnknownSolution] | None:
-        list_of_args = list(unknown_solution.as_program().as_iter())
+        list_of_args = list(unknown_solution.program.as_iter())
         if len(list_of_args) != 7:
             return None
         (
@@ -266,40 +266,40 @@ class CredentialRestrictionLayerSolution(Generic[_T_InnerSolution, _T_ProofCheck
         ) = list_of_args
         return CredentialRestrictionLayerSolution(
             proof_of_inclusions=proof_of_inclusions,
-            proof_checker_solution=UnknownSolution(solution=proof_checker_solution),
+            proof_checker_solution=UnknownSolution(program=proof_checker_solution),
             provider_id=bytes32(provider_id.as_atom()),
             vc_launcher_id=bytes32(vc_launcher_id.as_atom()) if vc_launcher_id != Program.NIL else None,
             vc_inner_puzhash=bytes32(vc_inner_puzhash.as_atom()) if vc_inner_puzhash != Program.NIL else None,
             my_coin_id=bytes32(my_coin_id.as_atom()) if my_coin_id != Program.NIL else None,
-            inner_solution=UnknownSolution(solution=inner_solution),
+            inner_solution=UnknownSolution(program=inner_solution),
         )
 
 
 @dataclass(frozen=True)
 class PendingApprovalPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
-        _inner_puzzle_protocol_check: ClassVar[InnerPuzzle] = cast("PendingApprovalPuzzle", None)
+        _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("PendingApprovalPuzzle", None)
 
     target_puzzle_hash: bytes32
     amount: uint64
 
     @property
-    def puzzle(self) -> Program:
+    def program(self) -> Program:
         return PENDING_VC_ANNOUNCEMENT.curry(
             ACSSolution(
                 conditions=[
                     CreateCoin(amount=self.amount, puzzle_hash=self.target_puzzle_hash, memos=[self.target_puzzle_hash])
                 ]
-            ).as_program()
+            ).program
         )
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle, solution: object | None = None) -> PendingApprovalPuzzle | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> PendingApprovalPuzzle | None:
         if unknown_puzzle.mod != PENDING_VC_ANNOUNCEMENT or unknown_puzzle.curried_args is None:
             return None
 
         (acs_soltution_prog,) = unknown_puzzle.curried_args
-        acs_solution_match = ACSSolution.match(unknown_solution=UnknownSolution(solution=acs_soltution_prog))
+        acs_solution_match = ACSSolution.match(unknown_solution=UnknownSolution(program=acs_soltution_prog))
         if acs_solution_match is None or len(acs_solution_match.conditions) != 1:
             return None
 
@@ -311,8 +311,8 @@ class PendingApprovalPuzzle(PuzzleWithPuzzleHash):
 
 @dataclass(frozen=True, kw_only=True)
 class CRCAT(
-    CATPuzzle[CredentialRestrictionLayer[_T_InnerPuzzle]],
-    Generic[_T_InnerPuzzle],
+    CATPuzzle[CredentialRestrictionLayer[_T_Puzzle]],
+    Generic[_T_Puzzle],
 ):
     coin: Coin
     lineage_proof: LineageProof
@@ -323,7 +323,7 @@ class CRCAT(
         # General CAT launching info
         origin_coin: Coin,
         payment: CreateCoin,
-        tail: InnerPuzzle,
+        tail: Puzzle,
         tail_solution: Solution,
         # CR Layer params
         authorized_providers: list[bytes32],
@@ -344,31 +344,31 @@ class CRCAT(
         )
 
         new_cat_puzzle = CATPuzzle(
-            tail_hash=tail.puzzle_hash,
+            tail_hash=tail.tree_hash,
             inner_puzzle=new_cr_layer,
         )
         eve_innerpuz = P2Conditions(
             conditions=[
-                replace(payment, puzzle_hash=new_cr_layer.puzzle_hash),
-                TAILCondition(puzzle=tail, solution=tail_solution),
+                replace(payment, puzzle_hash=new_cr_layer.tree_hash),
+                TAILCondition(puzzle=tail, solution=NilSolution()),
                 CreateCoinAnnouncement(msg=b""),
-                Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker.puzzle])),
+                Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker.program])),
             ]
         )
         eve_cat_puzzle = CATPuzzle(
-            tail_hash=tail.puzzle_hash,
+            tail_hash=tail.tree_hash,
             inner_puzzle=eve_innerpuz,
         )
 
-        eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle.puzzle_hash, payment.amount)
+        eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle.tree_hash, payment.amount)
         necessary_conditions = [
-            CreateCoin(puzzle_hash=eve_cat_puzzle.puzzle_hash, amount=payment.amount),
+            CreateCoin(puzzle_hash=eve_cat_puzzle.tree_hash, amount=payment.amount),
             AssertCoinAnnouncement(asserted_msg=b"", asserted_id=eve_coin.name()),
         ]
 
         eve_proof: LineageProof = LineageProof(
             eve_coin.parent_coin_info,
-            eve_innerpuz.puzzle_hash,
+            eve_innerpuz.tree_hash,
             uint64(eve_coin.amount),
         )
 
@@ -376,7 +376,7 @@ class CRCAT(
             necessary_conditions,
             make_spend(
                 eve_coin,
-                eve_cat_puzzle.puzzle,
+                eve_cat_puzzle.program,
                 # TODO: implement a CATSolution type
                 Program.to(  # solve_cat
                     [
@@ -391,8 +391,8 @@ class CRCAT(
                 ),
             ),
             CRCAT(
-                coin=Coin(eve_coin.name(), new_cat_puzzle.puzzle_hash, payment.amount),
-                tail_hash=tail.puzzle_hash,
+                coin=Coin(eve_coin.name(), new_cat_puzzle.tree_hash, payment.amount),
+                tail_hash=tail.tree_hash,
                 lineage_proof=eve_proof,
                 inner_puzzle=new_cr_layer,
             ),
@@ -489,7 +489,7 @@ class CRCAT(
                 authorized_providers=authorized_providers,
                 proofs_checker=proofs_checker_match,
                 inner_puzzle=lineage_inner_puzzle,
-            ).puzzle_hash
+            ).tree_hash
 
         # Convert all of the old stuff into python
         new_lineage_proof: LineageProof = LineageProof(
@@ -520,7 +520,7 @@ class CRCAT(
             )
             next_cr_cats.append(
                 CRCAT(
-                    coin=Coin(coin_name, cat_puzzle.puzzle_hash, cond.amount),
+                    coin=Coin(coin_name, cat_puzzle.tree_hash, cond.amount),
                     lineage_proof=new_lineage_proof,
                     tail_hash=cat_puzzle.tail_hash,
                     inner_puzzle=cr_layer,
@@ -560,8 +560,8 @@ class CRCAT(
         announcements: list[AssertCoinAnnouncement] = []
         new_inner_puzzle_hashes_and_amounts: list[tuple[bytes32, uint64]] = []
         if conditions is None:
-            conditions = self.inner_puzzle.inner_puzzle.puzzle.run(
-                inner_solution.as_program()
+            conditions = self.inner_puzzle.inner_puzzle.program.run(
+                inner_solution.program
             ).as_iter()  # pragma: no cover
         assert conditions is not None
         for condition in conditions:
@@ -580,7 +580,7 @@ class CRCAT(
             announcements,
             make_spend(
                 self.coin,
-                self.puzzle,
+                self.program,
                 Program.to(  # solve_cat
                     [
                         CredentialRestrictionLayerSolution(
@@ -591,7 +591,7 @@ class CRCAT(
                             vc_inner_puzhash=vc_inner_puzhash,
                             my_coin_id=self.coin.name(),
                             inner_solution=inner_solution,
-                        ).as_program(),
+                        ).program,
                         self.lineage_proof.to_program(),
                         previous_coin_id,
                         coin_as_list(self.coin),
@@ -611,17 +611,17 @@ class CRCAT(
                                 new_cr_layer := replace(
                                     self.inner_puzzle,
                                     inner_puzzle=cast(
-                                        _T_InnerPuzzle, UnknownPuzzle(known_puzzle_hash=new_inner_puzzle_hash)
+                                        _T_Puzzle, UnknownPuzzle(known_puzzle_hash=new_inner_puzzle_hash)
                                     ),
                                 )
                             ),
-                        ).puzzle_hash,
+                        ).tree_hash,
                         new_amount,
                     ),
                     tail_hash=self.tail_hash,
                     lineage_proof=LineageProof(
                         self.coin.parent_coin_info,
-                        self.inner_puzzle.puzzle_hash,
+                        self.inner_puzzle.tree_hash,
                         uint64(self.coin.amount),
                     ),
                     inner_puzzle=cast(CredentialRestrictionLayer[UnknownPuzzle], new_cr_layer),
@@ -668,7 +668,7 @@ class CRCAT(
         for i, inner_spend in enumerate(sorted_inner_spends):
             crcat, extra_delta, inner_solution = inner_spend
             conditions: list[Program] = list(
-                crcat.inner_puzzle.inner_puzzle.puzzle.run(inner_solution.as_program()).as_iter()
+                crcat.inner_puzzle.inner_puzzle.program.run(inner_solution.program).as_iter()
             )
             output_amount: int = (
                 sum(
@@ -684,7 +684,7 @@ class CRCAT(
                 prev_crcat.coin.name(),
                 LineageProof(
                     next_crcat.coin.parent_coin_info,
-                    next_crcat.inner_puzzle.puzzle_hash,
+                    next_crcat.inner_puzzle.tree_hash,
                     uint64(next_crcat.coin.amount),
                 ),
                 subtotal,
@@ -713,9 +713,9 @@ class CRCAT(
 
 
 @dataclass(frozen=True)
-class CRCATSpend(Generic[_T_InnerPuzzle, _T_InnerSolution]):
-    crcat: CRCAT[_T_InnerPuzzle]
-    inner_puzzle: _T_InnerPuzzle
+class CRCATSpend(Generic[_T_Puzzle, _T_InnerSolution]):
+    crcat: CRCAT[_T_Puzzle]
+    inner_puzzle: _T_Puzzle
     inner_solution: _T_InnerSolution
     children: list[CRCAT[UnknownPuzzle]]
     incomplete: bool
@@ -737,14 +737,12 @@ class CRCATSpend(Generic[_T_InnerPuzzle, _T_InnerSolution]):
         # TODO: implement a CATSolution type
         cr_layer_solution = Program.from_serialized(spend.solution).at("f")
         cr_solution_match = CredentialRestrictionLayerSolution.match(
-            unknown_solution=UnknownSolution(solution=cr_layer_solution)
+            unknown_solution=UnknownSolution(program=cr_layer_solution)
         )
         if cr_solution_match is None:
             raise ValueError("Spend was not a CRCAT spend")
 
-        inner_conditions: Program = cr_layer_match.inner_puzzle.puzzle.run(
-            cr_solution_match.inner_solution.as_program()
-        )
+        inner_conditions: Program = cr_layer_match.inner_puzzle.program.run(cr_solution_match.inner_solution.program)
         return CRCATSpend(
             CRCAT.get_current_from_coin_spend(spend),
             cr_layer_match.inner_puzzle,

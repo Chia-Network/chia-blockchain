@@ -94,8 +94,8 @@ async def mint_plotnft(
                 *launch_result.necessary_spends,
                 make_spend(
                     coin=fund_coin.coin,
-                    puzzle_reveal=ACSPuzzle().puzzle,
-                    solution=ACSSolution(conditions=launch_result.necessary_conditions).as_program(),
+                    puzzle_reveal=ACSPuzzle().program,
+                    solution=ACSSolution(conditions=launch_result.necessary_conditions).program,
                 ),
             ],
             G2Element(),
@@ -155,8 +155,8 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                         *coin_spends,
                         make_spend(
                             fee_coin,
-                            ACSPuzzle().puzzle,
-                            ACSSolution(conditions=[fee_hook.corresponding_assertion()]).as_program(),
+                            ACSPuzzle().program,
+                            ACSSolution(conditions=[fee_hook.corresponding_assertion()]).program,
                         ),
                     ],
                     sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
@@ -189,7 +189,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.puzzle_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -215,7 +215,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.puzzle_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -234,7 +234,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 WalletSpendBundle(
                     coin_spends,
                     user_sk.sign(
-                        singing_info.puzzle.puzzle_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                        singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                     ),
                 ),
             )
@@ -262,9 +262,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
         timelocked_spend = WalletSpendBundle(
             coin_spends,
-            user_sk.sign(
-                singing_info.puzzle.puzzle_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
-            ),
+            user_sk.sign(singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
@@ -283,8 +281,8 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
 async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes32) -> PoolReward:
     reward_puzzle = P2SingletonPuzzle(singleton_id=singleton_id)
-    await sim.farm_block(reward_puzzle.puzzle_hash)
-    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash)
+    await sim.farm_block(reward_puzzle.tree_hash)
+    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.tree_hash)
     return PoolReward(
         coin=coin_1.coin if coin_1.coin.amount > coin_2.coin.amount else coin_2.coin,
         singleton_id=singleton_id,
@@ -415,12 +413,12 @@ def test_plotnft_errors() -> None:
         GetNextPlotNFTError, match=re.escape("Either genesis_challenge or previous_plotnft_puzzle must be provided")
     ):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(default_coin, NilPuzzle().puzzle, NilSolution().as_program())
+            coin_spend=make_spend(default_coin, NilPuzzle().program, NilSolution().program)
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton mod for next PlotNFT")):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(default_coin, NilPuzzle().puzzle, NilSolution().as_program()),
+            coin_spend=make_spend(default_coin, NilPuzzle().program, NilSolution().program),
             genesis_challenge=bytes32.zeros,
         )
 
@@ -437,7 +435,7 @@ def test_plotnft_errors() -> None:
                 Program.to(PlotNFT.struct_driver.singleton_puzzles.singleton_mod).curry(
                     BadLauncherStruct(launcher_id=bytes32.zeros).program
                 ),
-                NilSolution().as_program(),
+                NilSolution().program,
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -449,7 +447,7 @@ def test_plotnft_errors() -> None:
             )
         )
 
-    FAUX_SPEND = make_spend(default_coin, NilPuzzle().puzzle, Program.to([None, None, None]))
+    FAUX_SPEND = make_spend(default_coin, NilPuzzle().program, Program.to([None, None, None]))
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("PlotNFTs must make exactly one new coin")):
         PlotNFT.get_next_from_coin_spend(
@@ -460,7 +458,7 @@ def test_plotnft_errors() -> None:
                         CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)),
                         CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)),
                     ]
-                ).puzzle
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -469,7 +467,7 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                P2Conditions(conditions=[CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1))]).puzzle
+                P2Conditions(conditions=[CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1))]).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -491,7 +489,7 @@ def test_plotnft_errors() -> None:
                             ),
                         )
                     ]
-                ).puzzle
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -516,7 +514,7 @@ def test_plotnft_errors() -> None:
                             ),
                         )
                     ]
-                ).puzzle
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -547,7 +545,7 @@ def test_plotnft_errors() -> None:
                             ),
                         )
                     ]
-                ).puzzle
+                ).program
             ),
             genesis_challenge=bytes32.zeros,
         )

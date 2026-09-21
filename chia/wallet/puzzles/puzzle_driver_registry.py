@@ -17,7 +17,7 @@ into every driver class
 @dataclass(frozen=True, kw_only=True)
 class PuzzleDriverSet:
     name: str
-    puzzle: type[puzzle_drivers.InnerPuzzle]
+    puzzle: type[puzzle_drivers.Puzzle]
     solution: type[puzzle_drivers.Solution]
 
 

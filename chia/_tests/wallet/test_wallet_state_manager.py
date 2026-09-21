@@ -872,7 +872,7 @@ def _build_fake_nfts(
         launcher_id=singleton_launcher_id,
         lineage_proof=LineageProof(
             parent_name=previous_nft.coin.parent_coin_info,
-            inner_puzzle_hash=previous_nft.inner_puzzle.puzzle_hash,
+            inner_puzzle_hash=previous_nft.inner_puzzle.tree_hash,
             amount=previous_nft.coin.amount,
         ),
         inner_puzzle=MetadataLayer(

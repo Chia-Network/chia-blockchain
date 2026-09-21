@@ -192,7 +192,7 @@ class DataLayerWallet:
             full_puzhash
             != create_host_fullpuz(
                 UnknownPuzzle(known_puzzle_hash=inner_puzhash), root, launcher_spend.coin.name()
-            ).puzzle_hash
+            ).tree_hash
             or amount % 2 == 0
         ):
             return False, None
@@ -270,7 +270,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
-                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle_hash=inner_puzhash), root).puzzle_hash,
+                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle_hash=inner_puzhash), root).tree_hash,
                         amount,
                     ),
                     generation=uint32(0),
@@ -322,7 +322,7 @@ class DataLayerWallet:
         inner_puzzle: Program = await action_scope.get_puzzle(self.wallet_state_manager)
         full_puzzle: Program = create_host_fullpuz(
             UnknownPuzzle(known_puzzle=inner_puzzle), initial_root, launcher_coin.name()
-        ).puzzle
+        ).program
 
         genesis_launcher_solution: Program = Program.to(
             [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
@@ -361,7 +361,7 @@ class DataLayerWallet:
                     timestamp=uint64(0),
                     lineage_proof=LineageProof(
                         launcher_id,
-                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle=inner_puzzle), initial_root).puzzle_hash,
+                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle=inner_puzzle), initial_root).tree_hash,
                         uint64(1),
                     ),
                     generation=uint32(0),
@@ -417,7 +417,7 @@ class DataLayerWallet:
         assert new_puz_hash is not None
         next_full_puz_hash: bytes32 = create_host_fullpuz(
             UnknownPuzzle(known_puzzle_hash=new_puz_hash), root_hash, launcher_id
-        ).puzzle_hash
+        ).tree_hash
 
         # Construct the current puzzles
         current_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
@@ -425,7 +425,7 @@ class DataLayerWallet:
             UnknownPuzzle(known_puzzle=current_inner_puzzle),
             singleton_record.root,
             launcher_id,
-        ).puzzle
+        ).program
         assert singleton_record.lineage_proof.parent_name is not None
         assert singleton_record.lineage_proof.amount is not None
         current_coin = Coin(
@@ -461,12 +461,12 @@ class DataLayerWallet:
                     ),
                     CreatePuzzleAnnouncement(msg=b"$"),
                 ],
-            ).puzzle
+            ).program
             second_full_puz: Program = create_host_fullpuz(
                 UnknownPuzzle(known_puzzle=announce_only),
                 root_hash,
                 launcher_id,
-            ).puzzle
+            ).program
             second_coin = Coin(
                 current_coin.name(), second_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
             )
@@ -479,7 +479,7 @@ class DataLayerWallet:
                             current_coin.parent_coin_info,
                             create_host_layer_puzzle(
                                 UnknownPuzzle(known_puzzle=current_inner_puzzle), singleton_record.root
-                            ).puzzle_hash,
+                            ).tree_hash,
                             singleton_record.lineage_proof.amount,
                         ).to_program(),
                         singleton_record.lineage_proof.amount,
@@ -861,7 +861,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
-                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle_hash=inner_puzzle_hash), root).puzzle_hash,
+                        create_host_layer_puzzle(UnknownPuzzle(known_puzzle_hash=inner_puzzle_hash), root).tree_hash,
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),
@@ -1018,7 +1018,7 @@ class DataLayerWallet:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
         puzhash: bytes32 = create_host_fullpuz(
             UnknownPuzzle(known_puzzle_hash=record.inner_puzzle_hash), record.root, launcher_id
-        ).puzzle_hash
+        ).tree_hash
         assert record.lineage_proof.parent_name is not None
         assert record.lineage_proof.amount is not None
         return {Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)}

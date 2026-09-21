@@ -27,20 +27,20 @@ def test_cat_outer_puzzle() -> None:
     double_cr_puzzle = CredentialRestrictionLayer(
         authorized_providers=authorized_providers, proofs_checker=proofs_checker, inner_puzzle=cr_puzzle
     )
-    unknown_cr_puzzle = UnknownPuzzle(known_puzzle=double_cr_puzzle.puzzle)
+    unknown_cr_puzzle = UnknownPuzzle(known_puzzle=double_cr_puzzle.program)
     cr_driver: PuzzleInfo | None = match_puzzle(unknown_cr_puzzle)
 
     assert cr_driver is not None
     assert cr_driver.type() == "credential restricted"
     assert cr_driver["authorized_providers"] == authorized_providers
-    assert cr_driver["proofs_checker"] == proofs_checker.puzzle
+    assert cr_driver["proofs_checker"] == proofs_checker.program
     inside_cr_driver: PuzzleInfo | None = cr_driver.also()
     assert inside_cr_driver is not None
     assert inside_cr_driver.type() == "credential restricted"
     assert inside_cr_driver["authorized_providers"] == authorized_providers
-    assert inside_cr_driver["proofs_checker"] == proofs_checker.puzzle
-    assert construct_puzzle(cr_driver, ACSPuzzle().puzzle) == double_cr_puzzle.puzzle
-    assert get_inner_puzzle(cr_driver, unknown_cr_puzzle) == ACSPuzzle().puzzle
+    assert inside_cr_driver["proofs_checker"] == proofs_checker.program
+    assert construct_puzzle(cr_driver, ACSPuzzle().program) == double_cr_puzzle.program
+    assert get_inner_puzzle(cr_driver, unknown_cr_puzzle) == ACSPuzzle().program
     assert create_asset_id(cr_driver) is None
 
     # Set up for solve
@@ -48,7 +48,7 @@ def test_cat_outer_puzzle() -> None:
     coin_as_hex: str = (
         "0x" + coin.parent_coin_info.hex() + coin.puzzle_hash.hex() + uint64(coin.amount).stream_to_bytes().hex()
     )
-    inner_solution = Program.to([[51, ACSPuzzle().puzzle_hash, 100]])
+    inner_solution = Program.to([[51, ACSPuzzle().tree_hash, 100]])
     solution: Program = solve_puzzle(
         cr_driver,
         Solver(
@@ -65,7 +65,7 @@ def test_cat_outer_puzzle() -> None:
                 },
             },
         ),
-        ACSPuzzle().puzzle,
+        ACSPuzzle().program,
         inner_solution,
     )
 

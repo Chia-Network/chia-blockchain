@@ -44,7 +44,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
         all_values: list[bytes32] = [bytes32([x] * 32) for x in range(100)]
         root, proofs = build_merkle_tree(all_values)
         # A coin to create to make sure this hits the blockchain
-        p2_conditions = P2Conditions(conditions=[CreateCoin(ACS_PH, uint64(0))]).puzzle
+        p2_conditions = P2Conditions(conditions=[CreateCoin(ACS_PH, uint64(0))]).program
         desired_key_values = ((bytes32.zeros, bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
         desired_row_hashes: list[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
         fake_struct: Program = Program.to((ACS_PH, NIL_PH))
@@ -87,7 +87,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
             fake_spend = make_spend(
                 fake_coin,
                 fake_puzzle,
-                Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).as_program()]),
+                Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).program]),
             )
 
             proofs_of_inclusion = []
@@ -139,7 +139,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 new_fake_spend = make_spend(
                     fake_coin_bad_announcement,
                     fake_puzzle_bad_announcement,
-                    Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).as_program()]),
+                    Program.to([ACSSolution(conditions=[CreatePuzzleAnnouncement(msg=b"$")]).program]),
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)

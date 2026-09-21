@@ -1054,7 +1054,7 @@ class TradeManager:
                             payment,
                             puzzle_hash=PendingApprovalPuzzle(
                                 target_puzzle_hash=payment.puzzle_hash, amount=payment.amount
-                            ).puzzle_hash,
+                            ).tree_hash,
                         )
                         for payment in payments
                     ]

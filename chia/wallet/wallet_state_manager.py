@@ -940,7 +940,7 @@ class WalletStateManager:
             cat_data: CATCoinData = CATCoinData(
                 CAT_MOD_HASH,
                 matched_cat.tail_hash,
-                matched_cat.inner_puzzle.puzzle,
+                matched_cat.inner_puzzle.program,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
             )
@@ -963,7 +963,7 @@ class WalletStateManager:
         nft_match = NFT.match(unknown_puzzle=uncurried)
         if nft_match is not None and coin_state.coin.amount % 2 == 1:
             nft_solution_match = NFTSolution.match(
-                unknown_solution=UnknownSolution(solution=Program.from_serialized(coin_spend.solution))
+                unknown_solution=UnknownSolution(program=Program.from_serialized(coin_spend.solution))
             )
             if nft_solution_match is None:
                 return None, None
@@ -971,7 +971,7 @@ class WalletStateManager:
             next_nft = NFT.get_next_from_previous(
                 previous_coin=coin_spend.coin,
                 previous_nft_puzzle=uncurried,
-                previous_solution=UnknownSolution(solution=Program.from_serialized(coin_spend.solution)),
+                previous_solution=UnknownSolution(program=Program.from_serialized(coin_spend.solution)),
             )
             assert parent_coin_state.spent_height is not None
             return (
@@ -996,12 +996,12 @@ class WalletStateManager:
             did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
             if did_match is not None and coin_state.coin.amount % 2 == 1:
                 did_data: DIDCoinData = DIDCoinData(
-                    did_match.inner_puzzle.puzzle,
+                    did_match.inner_puzzle.program,
                     did_match.recovery_list.ids_hash,
                     uint16(did_match.num_of_backup_ids_needed),
                     SingletonStruct(launcher_id=singleton_match.launcher_id).program,
                     did_match.metadata.as_program(),
-                    did_match.puzzle,
+                    did_match.program,
                     parent_coin_state,
                 )
                 return (
@@ -1090,7 +1090,7 @@ class WalletStateManager:
         eve_coin = (await self.wallet_node.fetch_children(launcher_coin.name(), peer=peer))[0]
         eve_coin_spend = await fetch_coin_spend_for_coin_state(eve_coin, peer)
         eve_full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(eve_coin_spend.puzzle_reveal))
-        eve_full_solution = UnknownSolution(solution=Program.from_serialized(eve_coin_spend.solution))
+        eve_full_solution = UnknownSolution(program=Program.from_serialized(eve_coin_spend.solution))
         eve_nft_puzzle = NFT.match(unknown_puzzle=eve_full_puzzle)
         eve_solution = NFTSolution.match(unknown_solution=eve_full_solution)
         if eve_nft_puzzle is None or eve_solution is None:
@@ -2367,7 +2367,7 @@ class WalletStateManager:
         return ManualDIDSearchResults(
             launcher_id=singleton_match.launcher_id,
             latest_coin=coin_state.coin.name(),
-            p2_puzzle_hash=uncurried_p2.puzzle_hash,
+            p2_puzzle_hash=uncurried_p2.tree_hash,
             public_key=uncurried_p2.synthetic_public_key,
             recovery_list_hash=did_match.recovery_list.ids_hash,
             num_verification=uint16(did_match.num_of_backup_ids_needed),
@@ -2384,7 +2384,7 @@ class WalletStateManager:
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
-        full_solution = UnknownSolution(solution=Program.from_serialized(coin_spend.solution))
+        full_solution = UnknownSolution(program=Program.from_serialized(coin_spend.solution))
 
         nft = NFT.get_next_from_previous(
             previous_coin=coin_spend.coin, previous_nft_puzzle=full_puzzle, previous_solution=full_solution
@@ -2410,7 +2410,7 @@ class WalletStateManager:
                 ),
                 config=self.config,
             ),
-            next_p2_puzzle_hash=nft.innermost_puzzle.puzzle_hash,
+            next_p2_puzzle_hash=nft.innermost_puzzle.tree_hash,
         )
 
     async def find_lost_did(
@@ -2436,7 +2436,7 @@ class WalletStateManager:
         if did_match is None:
             raise ValueError("The coin is not a DID.")
         did_data: DIDCoinData = DIDCoinData(
-            did_match.inner_puzzle.puzzle,
+            did_match.inner_puzzle.program,
             did_match.recovery_list.ids_hash,
             uint16(did_match.num_of_backup_ids_needed),
             singleton_struct,
@@ -2457,7 +2457,7 @@ class WalletStateManager:
         if derivation_record is None:
             # This is an invalid DID, check if we are owner
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-                did_match.inner_puzzle.puzzle_hash
+                did_match.inner_puzzle.tree_hash
             )
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())

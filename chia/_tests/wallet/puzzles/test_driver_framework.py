@@ -11,8 +11,8 @@ def test_unknown_puzzle() -> None:
     unknown_puz = UnknownPuzzle(known_puzzle=no_curry)
     assert unknown_puz.mod is None
     assert unknown_puz.curried_args is None
-    assert unknown_puz.puzzle_hash == no_curry.get_tree_hash()
+    assert unknown_puz.tree_hash == no_curry.get_tree_hash()
 
     with mock.patch.object(Program, "get_tree_hash") as tree_hash_patched:
-        unknown_puz.puzzle_hash
+        unknown_puz.tree_hash
         assert tree_hash_patched.call_count == 0

@@ -93,7 +93,7 @@ async def mint_cat(
         eve_cat_puzzle = CATPuzzle(
             tail_hash=tail_hash,
             inner_puzzle=UnknownPuzzle(known_puzzle=eve_inner_puzzle),
-        ).puzzle
+        ).program
         eve_cat_puzzle_hash = eve_cat_puzzle.get_tree_hash()
         await environment.xch_wallet.generate_signed_transaction(
             amounts=[amount],
@@ -1133,7 +1133,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
             inner_puzzle = cat_2
         puzzle_hash = CATPuzzle(
             tail_hash=cat_wallet.tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle)
-        ).puzzle.get_tree_hash()
+        ).program.get_tree_hash()
         for i in range(1, 50):
             coin = Coin(spent_coin.name(), puzzle_hash, uint64(i))
             if coin.name() not in spendable_name_set:
@@ -1435,7 +1435,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         inner_puzhash = create_revocation_layer(bytes32.zeros, inner_puzhash).get_tree_hash()
     puzzlehash_unhardened = CATPuzzle(
         tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle_hash=inner_puzhash)
-    ).puzzle.get_tree_hash_precalc(inner_puzhash)
+    ).program.get_tree_hash_precalc(inner_puzhash)
     change_derivation = DerivationRecord(
         uint32(0), puzzlehash_unhardened, pubkey_unhardened, WalletType.CAT, uint32(2), False
     )
@@ -1445,7 +1445,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         our_puzzle = await action_scope.get_puzzle(wallet.wallet_state_manager)
     cat_puzzle = CATPuzzle(
         tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
-    ).puzzle
+    ).program
     addr = encode_puzzle_hash(cat_puzzle.get_tree_hash(), "txch")
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
@@ -1474,7 +1474,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         cat_coin.name(),
         CATPuzzle(
             tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle)
-        ).puzzle.get_tree_hash(),
+        ).program.get_tree_hash(),
         cat_amount_0,
     )
     eve_spend, _ = await wsm.signer.sign_bundle(
@@ -1503,7 +1503,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                 next_coin,
                 CATPuzzle(
                     tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle)
-                ).puzzle,
+                ).program,
                 Program.to(
                     [
                         [
@@ -1625,7 +1625,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     ACS = Program.to(1)
     ACS_TAIL = Program.to([])
     ACS_TAIL_HASH = ACS_TAIL.get_tree_hash()
-    CAT_w_ACS = CATPuzzle(tail_hash=ACS_TAIL_HASH, inner_puzzle=UnknownPuzzle(known_puzzle=ACS)).puzzle
+    CAT_w_ACS = CATPuzzle(tail_hash=ACS_TAIL_HASH, inner_puzzle=UnknownPuzzle(known_puzzle=ACS)).program
     CAT_w_ACS_HASH = CAT_w_ACS.get_tree_hash()
 
     from chia.simulator.simulator_protocol import GetAllCoinsProtocol
@@ -1704,7 +1704,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         lineage_proof=LineageProof(),
                     ),
                     inner_solution=UnknownSolution(
-                        solution=wallet.make_solution(
+                        program=wallet.make_solution(
                             primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
                             conditions=(
                                 TAILCondition(puzzle=UnknownPuzzle(known_puzzle=ACS_TAIL), solution=NilSolution()),
