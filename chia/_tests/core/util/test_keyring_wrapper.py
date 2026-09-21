@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 
 from chia.simulator.keyring import TempKeyring
-from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
-from chia.util.file_keyring import Key
+from chia.util.errors import (
+    KeychainFingerprintNotFound,
+    KeychainLabelError,
+    KeychainLabelExists,
+    KeychainLabelInvalid,
+    KeychainMaxUnlockAttempts,
+)
+from chia.util.file_keyring import FileKeyringContent, Key
 from chia.util.keyring_wrapper import (
     DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
     KeyringWrapper,
@@ -14,6 +21,14 @@ from chia.util.keyring_wrapper import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def fail_write_to_path(self: FileKeyringContent, path: Path) -> None:
+    raise PermissionError(f"failed to write keyring to {path}")
+
+
+def fail_obtain_current_passphrase(prompt: str = "", use_passphrase_cache: bool = False) -> str:
+    raise KeychainMaxUnlockAttempts
 
 
 # TODO: might need to use the anyio_backend fixture per https://anyio.readthedocs.io/en/stable/testing.html
@@ -509,3 +524,97 @@ class TestKeyringWrapper:
             with pytest.raises(KeychainFingerprintNotFound) as e:
                 keyring_wrapper.keyring.delete_label(i)
             assert e.value.fingerprint == i
+
+
+class TestFileKeyringWriteFailures:
+    """
+    Failed keyring writes must not be swallowed and must not leave the requested mutation
+    in the cached keyring data, where a later successful write could persist it.
+    """
+
+    def test_failed_write_isnt_swallowed_and_doesnt_mutate_cached_data(
+        self, populated_temp_file_keyring: TempKeyring, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        keyring = KeyringWrapper.get_shared_instance().keyring
+
+        with monkeypatch.context() as patch:
+            patch.setattr(FileKeyringContent, "write_to_path", fail_write_to_path)
+            with pytest.raises(PermissionError, match="failed to write keyring"):
+                keyring.set_key("service-abc", "user-xyz", Key(b"super secret key"))
+
+        # Expect: the failed write didn't leave the key in the cached data
+        assert keyring.get_key("service-abc", "user-xyz") is None
+
+        # When: performing a later successful write
+        keyring.set_key("service-abc", "another-user", Key(b"another key"))
+
+        # Expect: the failed mutation wasn't silently committed
+        assert keyring.get_key("service-abc", "user-xyz") is None
+        assert keyring.get_key("service-abc", "another-user") == Key(b"another key")
+
+    def test_failed_delete_isnt_committed_by_later_write(
+        self, populated_temp_file_keyring: TempKeyring, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        keyring = KeyringWrapper.get_shared_instance().keyring
+        key = Key(b"super secret key")
+        keyring.set_key("service-abc", "user-xyz", key)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(FileKeyringContent, "write_to_path", fail_write_to_path)
+            with pytest.raises(PermissionError, match="failed to write keyring"):
+                keyring.delete_key("service-abc", "user-xyz")
+
+        # Expect: the failed delete didn't remove the key from the cached data
+        assert keyring.get_key("service-abc", "user-xyz") == key
+
+        # When: performing a later successful write
+        keyring.set_key("service-abc", "another-user", Key(b"another key"))
+
+        # Expect: the failed delete wasn't silently committed to the keyring file
+        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+        file_content = FileKeyringContent.create_from_path(keyring.keyring_path)
+        assert file_content.get_decrypted_data_dict(passphrase)["keys"] == {
+            "service-abc": {
+                "user-xyz": key.to_data(),
+                "another-user": Key(b"another key").to_data(),
+            }
+        }
+
+    def test_failed_passphrase_acquisition_doesnt_mutate_cached_data(
+        self, populated_temp_file_keyring: TempKeyring, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        keyring = KeyringWrapper.get_shared_instance().keyring
+        key = Key(b"super secret key")
+
+        # Expect: key lookup should return None
+        assert keyring.get_key("service-abc", "user-xyz") is None
+
+        with monkeypatch.context() as patch:
+            patch.setattr("chia.util.keyring_wrapper.obtain_current_passphrase", fail_obtain_current_passphrase)
+            with pytest.raises(KeychainMaxUnlockAttempts):
+                keyring.set_key("service-abc", "user-xyz", key)
+
+        # Expect: failing to obtain the passphrase didn't leave the key in the cached data
+        assert keyring.get_key("service-abc", "user-xyz") is None
+
+        # When: performing a later successful write
+        keyring.set_label(1, "one")
+
+        # Expect: the failed mutation wasn't silently committed to the keyring file
+        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+        file_content = FileKeyringContent.create_from_path(keyring.keyring_path)
+        assert file_content.get_decrypted_data_dict(passphrase)["keys"] == {}
+
+    def test_failed_passphrase_acquisition_restores_cached_file_content(
+        self, populated_temp_file_keyring: TempKeyring, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        keyring = KeyringWrapper.get_shared_instance().keyring
+        keyring.set_passphrase_hint("new passphrase hint")
+
+        with monkeypatch.context() as patch:
+            patch.setattr("chia.util.keyring_wrapper.obtain_current_passphrase", fail_obtain_current_passphrase)
+            with pytest.raises(KeychainMaxUnlockAttempts):
+                keyring.write_keyring()
+
+        # Expect: failing to obtain the passphrase didn't update the cached file content
+        assert keyring.cached_file_content.passphrase_hint is None
