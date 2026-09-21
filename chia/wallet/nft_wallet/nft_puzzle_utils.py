@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast
 
 from chia_puzzles_py.programs import (
     NFT_INTERMEDIATE_LAUNCHER,
@@ -22,6 +22,7 @@ from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from clvm_tools.binutils import disassemble
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program, run
 from chia.util.bech32m import encode_puzzle_hash

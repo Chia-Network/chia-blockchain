@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast
 
 from chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
