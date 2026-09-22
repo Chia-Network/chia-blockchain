@@ -331,6 +331,10 @@ full_node:
   # measure to not spend too much time building the block generator.
   # block_creation_timeout: 2.0
 
+  # Maximum number of coin spends allowed in a single mempool transaction.
+  # Bundles that exceed this limit are rejected. Defaults to 1000 if unset.
+  # max_spends_per_item: 1000
+
   # the number of threads used to read from the blockchain database
   # concurrently. There's always only 1 writer, but the number of readers is
   # configurable

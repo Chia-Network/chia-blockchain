@@ -42,6 +42,7 @@ from chia.full_node.eligible_coin_spends import (
 )
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
+    DEFAULT_MAX_SPENDS_PER_ITEM,
     MEMPOOL_MIN_FEE_INCREASE,
     LogMempoolMode,
     MempoolManager,
@@ -266,6 +267,7 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
+    max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
     validation_timeout: float = 10,
     log_mempool: LogMempoolMode = "false",
     root_path: Path | None = None,
@@ -276,6 +278,7 @@ async def instantiate_mempool_manager(
         constants,
         InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
+        max_spends_per_item=max_spends_per_item,
         validation_timeout=validation_timeout,
         log_mempool=log_mempool,
         root_path=root_path,
@@ -725,6 +728,20 @@ async def test_block_cost_exceeds_max(zero_mempool_manager: MempoolManager) -> N
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
         await zero_mempool_manager.pre_validate_spendbundle(sb)
+
+
+@pytest.mark.anyio
+async def test_too_many_spends_per_item() -> None:
+    async with instantiate_mempool_manager(zero_calls_get_coin_records, max_spends_per_item=2) as mempool_manager:
+        coins = [Coin(bytes32(i.to_bytes(32, "big")), IDENTITY_PUZZLE_HASH, uint64(1)) for i in range(3)]
+        spends = [make_spend(c, IDENTITY_PUZZLE, SerializedProgram.to([])) for c in coins]
+        sb = SpendBundle(spends, G2Element())
+        with pytest.raises(ValidationError, match="TOO_MANY_SPENDS"):
+            await mempool_manager.pre_validate_spendbundle(sb)
+
+        # Exactly at the limit is accepted through pre-validation
+        sb_ok = SpendBundle(spends[:2], G2Element())
+        await mempool_manager.pre_validate_spendbundle(sb_ok)
 
 
 @pytest.mark.anyio
