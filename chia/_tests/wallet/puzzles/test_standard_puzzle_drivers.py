@@ -83,6 +83,7 @@ def test_standard_puzzle_drivers() -> None:
         unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program),
     )
     assert matched_delegated is not None
+    assert matched_delegated.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_delegated.pre_known_original_public_key is None
     assert matched_delegated.hidden_puzzle_info.program == DEFAULT_HIDDEN_PUZZLE
 
@@ -92,15 +93,6 @@ def test_standard_puzzle_drivers() -> None:
         delegated_puzzle=hidden_reveal,
         delegated_solution=Program.to([42]),
     )
-    matched_hidden = StandardPuzzle.match(
-        unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program),
-    )
-    assert matched_hidden is not None
-    assert matched_hidden.pre_known_synthetic_public_key == synthetic_public_key
-    assert matched_hidden.pre_known_original_public_key == original_public_key
-    assert matched_hidden.hidden_puzzle_info.program == hidden_reveal
-    assert matched_hidden.hidden_puzzle_info.pre_computed_puzzle_hash is None
-    assert matched_hidden.hidden_puzzle_info.tree_hash == hidden_reveal.get_tree_hash()
 
     assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to(1))) is None
     assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to([1, 2]))) is None

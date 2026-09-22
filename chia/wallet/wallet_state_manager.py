@@ -1020,7 +1020,7 @@ class WalletStateManager:
             )
 
         # Check if the coin is a VC
-        is_vc = VerifiedCredential.match(unknown_puzzle=uncurried)
+        is_vc = VerifiedCredential.is_vc(unknown_puzzle=uncurried)
         if is_vc:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spend)
             return await VCWallet.identify(self, vc), vc  # type: ignore[return-value]

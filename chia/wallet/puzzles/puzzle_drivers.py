@@ -138,7 +138,7 @@ class P2Conditions(PuzzleWithPuzzleHash):
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
-        if unknown_puzzle.program.at("f") != Program.to(1):
+        if unknown_puzzle.program.atom is not None or unknown_puzzle.program.at("f") != Program.to(1):
             return None
 
         try:
@@ -180,6 +180,9 @@ class ACSSolution:
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+        if unknown_solution.program.atom is not None:
+            return None
+
         try:
             return cls(conditions=parse_conditions_non_consensus(unknown_solution.program.as_iter()))
         except Exception:

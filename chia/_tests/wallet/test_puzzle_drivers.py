@@ -26,17 +26,17 @@ def test_puzzle_with_puzzle_hash() -> None:
     @dataclass
     class SomePuzzleDriverWithoutOptimizedPuzzleHash(PuzzleWithPuzzleHash):
         @property
-        def puzzle(self) -> Program:
+        def program(self) -> Program:
             return Program.to("cache me")
 
     @dataclass
     class SomePuzzleDriverWithOptimizedPuzzleHash(PuzzleWithPuzzleHash):
         @property
-        def puzzle(self) -> Program:
+        def program(self) -> Program:
             return Program.to("unused")
 
         @property
-        def puzzle_hash_optimized(self) -> bytes32:
+        def tree_hash_optimized(self) -> bytes32:
             return bytes32.zeros
 
     without_optimized_hash = SomePuzzleDriverWithoutOptimizedPuzzleHash()

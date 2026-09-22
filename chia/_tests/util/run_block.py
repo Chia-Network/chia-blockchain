@@ -118,7 +118,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
         coin = Coin(bytes32(parent.as_atom()), puzzle_hash, uint64(amount.as_int()))
         cat_list.append(
             CAT(
-                asset_id=bytes(asset_id).hex()[2:],
+                asset_id=bytes(asset_id).hex(),
                 memo=memo,
                 npc=NPC(coin.name(), puzzle_hash, [(op, cond) for op, cond in conds.items()]),
             )
