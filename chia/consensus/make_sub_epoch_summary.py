@@ -237,7 +237,7 @@ def next_sub_epoch_summary(
         if with_challenge_root and not first_sub_epoch
         else None
     )
-    if challenge_root_end_height is not None:
+    if challenge_root_end_height is not None and prev_b.overflow and overflow:
         prev_ses_block = prev_b
         while prev_ses_block.sub_epoch_summary_included is None:
             prev_ses_block = blocks.block_record(prev_ses_block.prev_hash)
@@ -249,7 +249,6 @@ def next_sub_epoch_summary(
         )
         if challenge_root_start_height == challenge_root_end_height:
             assert can_finish_soon
-            assert prev_b.overflow and overflow
             return None
 
     return make_sub_epoch_summary(
