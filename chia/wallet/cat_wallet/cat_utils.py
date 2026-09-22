@@ -17,7 +17,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     SmartCoin,
     Solution,
     UnknownPuzzle,
@@ -65,7 +65,7 @@ _T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
+class CATPuzzle(PuzzleBase, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("CATPuzzle[_T_Puzzle]", None)
 

@@ -42,7 +42,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     P2Conditions,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -86,7 +86,7 @@ REVOCATION_LAYER_HASH: bytes32 = bytes32(REVOCATION_LAYER_HASH_BYTES)
 
 
 @dataclass(frozen=True, kw_only=True)
-class StandardBrickPuzzle(PuzzleWithPuzzleHash):
+class StandardBrickPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("StandardBrickPuzzle", None)
 
@@ -127,7 +127,7 @@ _T_CovenantPuzzle = TypeVar("_T_CovenantPuzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class CovenantLayer(PuzzleWithPuzzleHash, Generic[_T_ParentMorpher, _T_CovenantPuzzle]):
+class CovenantLayer(PuzzleBase, Generic[_T_ParentMorpher, _T_CovenantPuzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "CovenantLayer[_T_ParentMorpher, _T_CovenantPuzzle]", None
@@ -205,7 +205,7 @@ class CovenantLayerSolution(Generic[_T_MorpherSolution, _T_InnerSolution]):
 
 
 @dataclass(frozen=True, kw_only=True)
-class StdParentMorpher(PuzzleWithPuzzleHash):
+class StdParentMorpher(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("StdParentMorpher", None)
 
@@ -236,7 +236,7 @@ _T_CovenantLayer = TypeVar("_T_CovenantLayer", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class TransferProgramCovenantAdapter(PuzzleWithPuzzleHash, Generic[_T_CovenantLayer]):
+class TransferProgramCovenantAdapter(PuzzleBase, Generic[_T_CovenantLayer]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "TransferProgramCovenantAdapter[_T_CovenantLayer]", None
@@ -262,7 +262,7 @@ class TransferProgramCovenantAdapter(PuzzleWithPuzzleHash, Generic[_T_CovenantLa
 
 
 @dataclass(frozen=True, kw_only=True)
-class DidTransferProgram(PuzzleWithPuzzleHash):
+class DidTransferProgram(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("DidTransferProgram", None)
 
@@ -330,7 +330,7 @@ _T_RevocationHiddenPuzzle = TypeVar("_T_RevocationHiddenPuzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class RevocationLayer(PuzzleWithPuzzleHash, Generic[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]):
+class RevocationLayer(PuzzleBase, Generic[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "RevocationLayer[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]", None
@@ -403,7 +403,7 @@ _T_EmlCovenantMorpherTp = TypeVar("_T_EmlCovenantMorpherTp", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class EmlCovenantMorpher(PuzzleWithPuzzleHash, Generic[_T_EmlCovenantMorpherTp]):
+class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("EmlCovenantMorpher[_T_EmlCovenantMorpherTp]", None)
 
@@ -468,7 +468,7 @@ _T_EMLPuzzle = TypeVar("_T_EMLPuzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class ExigentMetadataLayer(PuzzleWithPuzzleHash, Generic[_T_TransferProgram, _T_EMLPuzzle]):
+class ExigentMetadataLayer(PuzzleBase, Generic[_T_TransferProgram, _T_EMLPuzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "ExigentMetadataLayer[_T_TransferProgram, _T_EMLPuzzle]", None
@@ -667,7 +667,7 @@ _T_VCPuzzle = TypeVar("_T_VCPuzzle", bound=Puzzle)
 
 
 @dataclass(kw_only=True, frozen=True)
-class VerifiedCredentialPuzzle(PuzzleWithPuzzleHash, Generic[_T_VCPuzzle]):
+class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     """
     This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will

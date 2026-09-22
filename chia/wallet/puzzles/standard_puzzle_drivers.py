@@ -21,7 +21,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     NilSolution,
     P2Conditions,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     SmartCoin,
     Solution,
     UnknownPuzzle,
@@ -31,13 +31,13 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash, shatree_atom
 
 
 @dataclass(kw_only=True, frozen=True)
-class HiddenPuzzleInfo(PuzzleWithPuzzleHash):
+class HiddenPuzzleInfo(PuzzleBase):
     program: Program = field(default_factory=lambda: DEFAULT_HIDDEN_PUZZLE)
     pre_computed_puzzle_hash: bytes32 | None = field(default=DEFAULT_HIDDEN_PUZZLE_HASH, kw_only=True)
 
 
 @dataclass(kw_only=True, frozen=True)
-class StandardPuzzle(PuzzleWithPuzzleHash):
+class StandardPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("StandardPuzzle", None)
 

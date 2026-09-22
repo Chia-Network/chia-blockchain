@@ -43,7 +43,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     P2Conditions,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     Solution,
     UnknownPuzzle,
     UnknownSolution,
@@ -117,7 +117,7 @@ CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 
 @streamable
 @dataclass(frozen=True)
-class ProofsChecker(PuzzleWithPuzzleHash, Streamable):
+class ProofsChecker(PuzzleBase, Streamable):
     if TYPE_CHECKING:
         _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("ProofsChecker", None)
 
@@ -152,7 +152,7 @@ _T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class CredentialRestrictionLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
+class CredentialRestrictionLayer(PuzzleBase, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "CredentialRestrictionLayer[_T_Puzzle]", None
@@ -279,7 +279,7 @@ class CredentialRestrictionLayerSolution(Generic[_T_InnerSolution, _T_ProofCheck
 
 
 @dataclass(frozen=True)
-class PendingApprovalPuzzle(PuzzleWithPuzzleHash):
+class PendingApprovalPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("PendingApprovalPuzzle", None)
 

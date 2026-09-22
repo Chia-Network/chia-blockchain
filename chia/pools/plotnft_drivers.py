@@ -40,7 +40,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     NilSolution,
     P2Conditions,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     UnknownPuzzle,
     UnknownSolution,
 )
@@ -80,7 +80,7 @@ class UserConfig:
 
 
 @dataclass(kw_only=True, frozen=True)
-class PlotNFTInnerPuzzle(PuzzleWithPuzzleHash):
+class PlotNFTInnerPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[Puzzle] = cast("PlotNFTInnerPuzzle", None)
 

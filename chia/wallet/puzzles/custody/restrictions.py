@@ -9,7 +9,7 @@ from chia_rs.sized_ints import uint32
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.custody.custody_architecture import MIPSComponent, MIPSComponentBase
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleWithPuzzleHash, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, UnknownPuzzle
 
 FIXED_CREATE_COIN_DESTINATIONS = load_clvm_maybe_recompile(
     "fixed_create_coin_destinations.clsp", package_or_requirement="chia.wallet.puzzles.custody"
@@ -21,7 +21,7 @@ HEIGHTLOCK_WRAPPER = load_clvm_maybe_recompile("heightlock.clsp", package_or_req
 
 
 @dataclass(kw_only=True, frozen=True)
-class Heightlock(MIPSComponentBase, PuzzleWithPuzzleHash):
+class Heightlock(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("Heightlock", None)
     heightlock: uint32
@@ -39,7 +39,7 @@ class Heightlock(MIPSComponentBase, PuzzleWithPuzzleHash):
 
 
 @dataclass(kw_only=True, frozen=True)
-class FixedCreateCoinDestinations(MIPSComponentBase, PuzzleWithPuzzleHash):
+class FixedCreateCoinDestinations(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("FixedCreateCoinDestinations", None)
     allowed_ph: bytes32
@@ -57,7 +57,7 @@ class FixedCreateCoinDestinations(MIPSComponentBase, PuzzleWithPuzzleHash):
 
 
 @dataclass(kw_only=True, frozen=True)
-class SendMessageBanned(MIPSComponentBase, PuzzleWithPuzzleHash):
+class SendMessageBanned(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("SendMessageBanned", None)
 

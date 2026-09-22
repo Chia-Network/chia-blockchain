@@ -12,7 +12,7 @@ from chia.wallet.puzzles.custody.custody_architecture import MemberOrDPuz, MIPSC
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     UnknownPuzzle,
     UnknownSolution,
 )
@@ -26,7 +26,7 @@ QUOTED_ADD_DPUZ_WRAPPER_HASH = Program.to((1, ADD_DPUZ_WRAPPER)).get_tree_hash()
 
 
 @dataclass(kw_only=True, frozen=True)
-class ValidatorStackRestriction(MIPSComponentBase, PuzzleWithPuzzleHash):
+class ValidatorStackRestriction(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _restriction_protocol_check: ClassVar[Restriction[MemberOrDPuz]] = cast("ValidatorStackRestriction", None)
     required_wrappers: Sequence[MIPSComponent]

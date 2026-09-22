@@ -13,7 +13,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import PuzzleWithPuzzleHash, Solution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import PuzzleBase, Solution, UnknownPuzzle, UnknownSolution
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD_HASH
 
 BLS_WITH_TAPROOT_MEMBER_MOD = Program.from_bytes(puzzle_mods.BLS_WITH_TAPROOT_MEMBER)
@@ -24,7 +24,7 @@ FIXED_PUZZLE_MEMBER_MOD = Program.from_bytes(puzzle_mods.FIXED_PUZZLE_MEMBER)
 
 
 @dataclass(kw_only=True, frozen=True)
-class BLSWithTaprootMember(MIPSComponentBase, PuzzleWithPuzzleHash):
+class BLSWithTaprootMember(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("BLSWithTaprootMember", None)
     synthetic_key: G1Element | None = None
@@ -111,7 +111,7 @@ class BLSWithTaprootMemberSolution:
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonMember(MIPSComponentBase, PuzzleWithPuzzleHash):
+class SingletonMember(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("SingletonMember", None)
     singleton_id: bytes32
@@ -135,7 +135,7 @@ class SingletonMember(MIPSComponentBase, PuzzleWithPuzzleHash):
 
 
 @dataclass(kw_only=True, frozen=True)
-class FixedPuzzleMember(MIPSComponentBase, PuzzleWithPuzzleHash):
+class FixedPuzzleMember(MIPSComponentBase, PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[MIPSComponent] = cast("FixedPuzzleMember", None)
     fixed_puzzle_hash: bytes32

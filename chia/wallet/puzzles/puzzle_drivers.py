@@ -52,7 +52,7 @@ class OptimizedPuzzleHashPuzzle(Protocol):
     def tree_hash_optimized(self) -> bytes32: ...
 
 
-class PuzzleWithPuzzleHash:
+class PuzzleBase:
     """
     This is designed to be a base class to `Inner/OuterPuzzle`s which provides caching on the puzzle hash generation
     """
@@ -71,7 +71,7 @@ class PuzzleWithPuzzleHash:
 
 
 @dataclass(kw_only=True, frozen=True)
-class UnknownPuzzle(PuzzleWithPuzzleHash):
+class UnknownPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("UnknownPuzzle", None)
 
@@ -126,7 +126,7 @@ class UnknownSolution:
 
 
 @dataclass(kw_only=True, frozen=True)
-class P2Conditions(PuzzleWithPuzzleHash):
+class P2Conditions(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("P2Conditions", None)
 
@@ -152,7 +152,7 @@ ACS_PH = ACS.get_tree_hash()
 
 
 @dataclass(kw_only=True, frozen=True)
-class ACSPuzzle(PuzzleWithPuzzleHash):
+class ACSPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("ACSPuzzle", None)
 
@@ -193,7 +193,7 @@ NIL_HASH = Program.NIL.get_tree_hash()
 
 
 @dataclass(kw_only=True, frozen=True)
-class NilPuzzle(PuzzleWithPuzzleHash):
+class NilPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("NilPuzzle", None)
 

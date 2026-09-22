@@ -29,7 +29,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     OptimizedPuzzleHashPuzzle,
     OuterPuzzle,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     SmartCoin,
     Solution,
     UnknownPuzzle,
@@ -101,7 +101,7 @@ _T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
 
 
 @dataclass(kw_only=True, frozen=True)
-class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
+class SingletonPuzzle(PuzzleBase, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("SingletonPuzzle[_T_Puzzle]", None)
         _optimized_ph_protocol_check: ClassVar[OptimizedPuzzleHashPuzzle] = cast("SingletonPuzzle[_T_Puzzle]", None)
@@ -330,7 +330,7 @@ class Singleton(SingletonPuzzle[_T_Puzzle]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class P2SingletonPuzzle(PuzzleWithPuzzleHash):
+class P2SingletonPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("P2SingletonPuzzle", None)
 

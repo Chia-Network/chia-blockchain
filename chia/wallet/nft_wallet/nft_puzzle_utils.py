@@ -32,7 +32,7 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.puzzles.puzzle_drivers import (
     OuterPuzzle,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     SmartCoin,
     Solution,
     UnknownPuzzle,
@@ -65,7 +65,7 @@ INTERMEDIATE_LAUNCHER_MOD = Program.from_bytes(NFT_INTERMEDIATE_LAUNCHER)
 
 
 @dataclass(frozen=True, kw_only=True)
-class DefaultMetadataUpdater(PuzzleWithPuzzleHash):
+class DefaultMetadataUpdater(PuzzleBase):
     if TYPE_CHECKING:
         _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("DefaultMetadataUpdater", None)
 
@@ -249,7 +249,7 @@ _T_MetadataUpdater = TypeVar("_T_MetadataUpdater", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class MetadataLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_MetadataUpdater]):
+class MetadataLayer(PuzzleBase, Generic[_T_Puzzle, _T_MetadataUpdater]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "MetadataLayer[_T_Puzzle, _T_MetadataUpdater]", None
@@ -351,7 +351,7 @@ class TransferProgramCondition(Condition):
 
 
 @dataclass(frozen=True, kw_only=True)
-class DefaultTransferProgram(PuzzleWithPuzzleHash):
+class DefaultTransferProgram(PuzzleBase):
     if TYPE_CHECKING:
         _inner_puzzle_protocol_check: ClassVar[Puzzle] = cast("DefaultTransferProgram", None)
 
@@ -393,7 +393,7 @@ _T_TransferProgram = TypeVar("_T_TransferProgram", bound=Puzzle)
 
 
 @dataclass(frozen=True, kw_only=True)
-class OwnershipLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_TransferProgram]):
+class OwnershipLayer(PuzzleBase, Generic[_T_Puzzle, _T_TransferProgram]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "OwnershipLayer[_T_Puzzle, _T_TransferProgram]", None

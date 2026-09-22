@@ -13,7 +13,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
     OuterPuzzle,
     Puzzle,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     UnknownPuzzle,
 )
 from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
@@ -286,7 +286,7 @@ class MofN(MIPSComponentBase):
 
 # The top-level object inside every "outer" puzzle
 @dataclass(kw_only=True, frozen=True)
-class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
+class PuzzleWithRestrictions(PuzzleBase):
     if TYPE_CHECKING:
         _mips_component_protocol_check: ClassVar[OuterPuzzle[MIPSComponent]] = cast("PuzzleWithRestrictions", None)
 

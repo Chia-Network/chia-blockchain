@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.puzzle_drivers import OuterPuzzle, Puzzle, PuzzleWithPuzzleHash, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import OuterPuzzle, Puzzle, PuzzleBase, UnknownPuzzle
 from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
@@ -58,7 +58,7 @@ class RecoveryList:
 
 
 @dataclass(frozen=True, kw_only=True)
-class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
+class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
     if TYPE_CHECKING:
         _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("DIDRecoveryPuzzle[_T_Puzzle]", None)
 

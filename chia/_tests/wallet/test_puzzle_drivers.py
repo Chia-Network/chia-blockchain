@@ -16,7 +16,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     NilPuzzle,
     NilSolution,
     P2Conditions,
-    PuzzleWithPuzzleHash,
+    PuzzleBase,
     UnknownPuzzle,
     UnknownSolution,
 )
@@ -24,13 +24,13 @@ from chia.wallet.puzzles.puzzle_drivers import (
 
 def test_puzzle_with_puzzle_hash() -> None:
     @dataclass
-    class SomePuzzleDriverWithoutOptimizedPuzzleHash(PuzzleWithPuzzleHash):
+    class SomePuzzleDriverWithoutOptimizedPuzzleHash(PuzzleBase):
         @property
         def program(self) -> Program:
             return Program.to("cache me")
 
     @dataclass
-    class SomePuzzleDriverWithOptimizedPuzzleHash(PuzzleWithPuzzleHash):
+    class SomePuzzleDriverWithOptimizedPuzzleHash(PuzzleBase):
         @property
         def program(self) -> Program:
             return Program.to("unused")
