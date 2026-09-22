@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import logging
 import secrets
 import sqlite3
 import sys
@@ -23,6 +24,45 @@ else:
 
 # integers in sqlite are limited by int64
 SQLITE_INT_MAX = 2**63 - 1
+
+log = logging.getLogger(__name__)
+
+# Dedupes logging when the same sqlite3.Error bubbles through nested
+# writer/reader contexts (e.g. savepoints): without this mark, each level's
+# _log_sqlite_errors handler would call log.exception again.
+_SQLITE_ERROR_LOGGED_ATTR = "_chia_sqlite_error_logged"
+
+
+def _is_missing_savepoint_error(error: sqlite3.Error) -> bool:
+    return isinstance(error, sqlite3.OperationalError) and bool(error.args) and "no such savepoint" in error.args[0]
+
+
+def _log_sqlite_error(error: sqlite3.Error, where: str) -> None:
+    # Expected when SAVEPOINT creation was cancelled before aiosqlite ran it:
+    # except/finally still issue ROLLBACK TO / RELEASE, and SQLite reports
+    # "no such savepoint" because the savepoint never existed. Not a DB fault;
+    # the original exception (usually cancellation) is still raised.
+    if _is_missing_savepoint_error(error):
+        return
+    if getattr(error, _SQLITE_ERROR_LOGGED_ATTR, False):
+        return
+    setattr(error, _SQLITE_ERROR_LOGGED_ATTR, True)
+    log.exception(
+        "SQLite error during %s: %s (sqlite_errorcode=%s sqlite_errorname=%s)",
+        where,
+        error,
+        getattr(error, "sqlite_errorcode", None),
+        getattr(error, "sqlite_errorname", None),
+    )
+
+
+@contextlib.asynccontextmanager
+async def _log_sqlite_errors(where: str) -> AsyncIterator[None]:
+    try:
+        yield
+    except sqlite3.Error as error:
+        _log_sqlite_error(error, where)
+        raise
 
 
 class DBWrapperError(Exception):
@@ -334,16 +374,26 @@ class DBWrapper2:
         # orphan savepoints even when _must_cancel is True.
         try:
             await self._write_connection.execute(f"SAVEPOINT {name}")
-            yield
-        except:
+            async with _log_sqlite_errors("writer"):
+                yield
+        except BaseException as error:
+            if isinstance(error, sqlite3.Error):
+                _log_sqlite_error(error, "writer")
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"ROLLBACK TO {name}")
-            except sqlite3.OperationalError:
-                # Catches "no such savepoint" when the SAVEPOINT was never
+            except sqlite3.OperationalError as rollback_error:
+                # Ignore "no such savepoint" when the SAVEPOINT was never
                 # created (e.g. CancelledError interrupted execute before
-                # aiosqlite ran it). All other errors are propagated.
-                pass
+                # aiosqlite ran it). Propagate all other SQLite errors.
+                if _is_missing_savepoint_error(rollback_error):
+                    pass
+                else:
+                    _log_sqlite_error(rollback_error, "writer savepoint rollback")
+                    raise
+            except sqlite3.Error as rollback_error:
+                _log_sqlite_error(rollback_error, "writer savepoint rollback")
+                raise
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
@@ -351,10 +401,17 @@ class DBWrapper2:
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"RELEASE {name}")
-            except sqlite3.OperationalError:
-                # Catches "no such savepoint" when the SAVEPOINT was never
-                # created. All other errors are propagated.
-                pass
+            except sqlite3.OperationalError as release_error:
+                # Ignore "no such savepoint" when the SAVEPOINT was never
+                # created. Propagate all other SQLite errors.
+                if _is_missing_savepoint_error(release_error):
+                    pass
+                else:
+                    _log_sqlite_error(release_error, "writer savepoint release")
+                    raise
+            except sqlite3.Error as release_error:
+                _log_sqlite_error(release_error, "writer savepoint release")
+                raise
 
     @contextlib.asynccontextmanager
     async def writer(
@@ -469,7 +526,11 @@ class DBWrapper2:
                 finally:
                     # close the transaction with a rollback instead of commit just in
                     # case any modifications were submitted through this reader
-                    await connection.rollback()
+                    try:
+                        await connection.rollback()
+                    except sqlite3.Error as error:
+                        _log_sqlite_error(error, "reader rollback")
+                        raise
 
     @contextlib.asynccontextmanager
     async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
@@ -488,10 +549,12 @@ class DBWrapper2:
         if self._current_writer == task:
             # we allow nesting reading while also having a writer connection
             # open, within the same task
-            yield self._write_connection
+            async with _log_sqlite_errors("reader"):
+                yield self._write_connection
             return
 
         if task in self._in_use:
+            # Nested reader in the same task: the outermost reader logs.
             yield self._in_use[task]
         else:
             c = await self._read_connections.get()
@@ -499,7 +562,8 @@ class DBWrapper2:
                 # record our connection in this dict to allow nested calls in
                 # the same task to use the same connection
                 self._in_use[task] = c
-                yield c
+                async with _log_sqlite_errors("reader"):
+                    yield c
             finally:
                 del self._in_use[task]
                 self._read_connections.put_nowait(c)
