@@ -84,6 +84,9 @@ class V2Prover:
     def get_strength(self) -> uint8:
         return uint8(self._prover.get_strength())
 
+    def get_size(self) -> uint8:
+        return uint8(self._prover.size())
+
     def get_meta_group(self) -> uint8:
         return uint8(self._prover.get_meta_group())
 

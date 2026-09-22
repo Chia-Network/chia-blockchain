@@ -12,7 +12,8 @@ from chia_rs import G1Element, solve_proof, validate_proof_v2
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.constants import replace_str_to_bytes
+from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.plotting.manager import PlotManager
 from chia.plotting.prover import QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
@@ -48,6 +49,9 @@ def check_plots(
 ) -> None:
     config = load_config(root_path, "config.yaml")
     selected_network = config["selected_network"]
+    overrides = dict(config["network_overrides"]["constants"].get(selected_network, {}))
+    update_testnet_overrides(selected_network, overrides)
+    required_v2_size = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides).PLOT_SIZE_V2
     address_prefix = config["network_overrides"]["config"][selected_network]["address_prefix"]
     plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=uint32(0))
     plot_manager: PlotManager = PlotManager(
@@ -141,6 +145,7 @@ def check_plots(
     total_good_plots_v2: int = 0
     total_size = 0
     bad_plots_list: list[Path] = []
+    unsupported_plots: list[Path] = []
 
     with plot_manager:
 
@@ -151,6 +156,15 @@ def check_plots(
             nonlocal bad_plots_list
 
             pr = plot_info.prover
+
+            if isinstance(pr, V2Prover) and pr.get_size() != required_v2_size:
+                with lock:
+                    log.error(
+                        f"Skipping plot {plot_path}: it has k={pr.get_size()}, but {selected_network} "
+                        f"requires k={required_v2_size}. This plot cannot be farmed on the selected network."
+                    )
+                    unsupported_plots.append(plot_path)
+                return
 
             # Look up local_sk from plot to save locked memory
             (
@@ -165,7 +179,9 @@ def check_plots(
                     plot_description = f"k={pr.get_param()}"
                 else:
                     assert isinstance(pr, V2Prover)
-                    plot_description = f"strength={pr.get_strength()}, group_size={pr.get_group_size()}"
+                    plot_description = (
+                        f"k={pr.get_size()}, strength={pr.get_strength()}, group_size={pr.get_group_size()}"
+                    )
                 log.info(f"Testing plot {plot_path} {plot_description}")
                 if plot_info.pool_public_key is not None:
                     log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
@@ -225,7 +241,7 @@ def check_plots(
                                 quality.get_partial_proof(),
                                 pr.plot_id_for_index(quality.get_plot_index()),
                                 pr.get_strength(),
-                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                pr.get_size(),
                             )
 
                         proof_spent_time = round(monotonic() * 1000) - proof_start_time
@@ -247,7 +263,7 @@ def check_plots(
                             ver_quality_str = validate_proof_v2(
                                 pr.get_id(),
                                 quality.get_plot_index(),
-                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                pr.get_size(),
                                 pr.get_strength(),
                                 pr.get_meta_group(),
                                 challenge,
@@ -318,9 +334,13 @@ def check_plots(
     for k, count in sorted(dict(total_good_plots_v1).items()):
         log.info(f"{count} v1 plots of size {k}")
     log.info(f"{total_good_plots_v2} v2 plots")
-    grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
+    grand_total_bad = len(bad_plots_list) + len(unsupported_plots) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
-        log.warning(f"{grand_total_bad} invalid plots found:")
+        log.warning(f"{grand_total_bad} invalid or unsupported plots found:")
+        if len(unsupported_plots) > 0:
+            log.warning(f"    {len(unsupported_plots)} plots unsupported on {selected_network}:")
+            for unsupported_plot_path in unsupported_plots:
+                log.warning(f"{unsupported_plot_path}")
         if len(bad_plots_list) > 0:
             log.warning(f"    {len(bad_plots_list)} bad plots:")
             for bad_plot_path in bad_plots_list:
