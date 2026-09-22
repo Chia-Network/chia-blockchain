@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from chia_rs import ConsensusConstants, compute_merkle_set_root
+from chia_rs import BlockRecord, ConsensusConstants, compute_merkle_set_root
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -115,10 +115,9 @@ def extract_slot_challenge_data(
 def get_challenge_start_height(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
-    prev_b_hash: bytes32,
+    prev_b: BlockRecord,
     challenge_hash: bytes32 | None = None,
 ) -> uint32:
-    prev_b = blocks.block_record(prev_b_hash)
     end_height = int(prev_b.height) + 1
     # A challenge run may contain normal blocks from one sub-slot and overflow blocks from the next.
     max_challenge_blocks = 2 * constants.MAX_SUB_SLOT_BLOCKS

@@ -67,7 +67,7 @@ def block_to_block_record(
                 get_challenge_start_height(
                     constants,
                     blocks,
-                    prev_b.header_hash,
+                    prev_b,
                 )
                 if with_challenge_hash
                 else None

@@ -561,7 +561,7 @@ class FullNodeStore:
                         get_challenge_start_height(
                             self.constants,
                             blocks,
-                            peak.header_hash,
+                            peak,
                         )
                         if post_hard_fork
                         else None

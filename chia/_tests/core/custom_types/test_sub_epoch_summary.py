@@ -270,7 +270,7 @@ def test_challenge_root_ranges_roll_over_whole_challenges(
 
     def trigger_boundary(carrier: FullBlock) -> uint32:
         trigger = blocks.height_to_block_record(uint32(carrier.height - 1))
-        return get_challenge_start_height(constants, blocks, trigger.header_hash)
+        return get_challenge_start_height(constants, blocks, trigger)
 
     def challenge_at_height(height: int) -> bytes32:
         block = fork_height2_500_1000_blocks[height]
@@ -287,7 +287,7 @@ def test_challenge_root_ranges_roll_over_whole_challenges(
         get_challenge_start_height(
             constants,
             blocks,
-            new_challenge_block.prev_header_hash,
+            blocks.block_record(new_challenge_block.prev_header_hash),
             challenge_at_height(new_challenge_height),
         )
         == new_challenge_height
@@ -375,13 +375,13 @@ def test_challenge_root_range_on_noncanonical_fork(
     )
     previous_trigger = fork_records[fork_blocks[previous_carrier.height - 1].header_hash]
     trigger = fork_records[fork_blocks[carrier.height - 1].header_hash]
-    range_start = get_challenge_start_height(constants, augmented_blocks, previous_trigger.header_hash)
-    range_end = get_challenge_start_height(constants, augmented_blocks, trigger.header_hash)
+    range_start = get_challenge_start_height(constants, augmented_blocks, previous_trigger)
+    range_end = get_challenge_start_height(constants, augmented_blocks, trigger)
 
     assert range_start <= fork_height < range_end
     assert canonical_blocks.height_to_block_record(trigger.height).header_hash != trigger.header_hash
-    assert range_start == get_challenge_start_height(constants, fork_cache, previous_trigger.header_hash)
-    assert range_end == get_challenge_start_height(constants, fork_cache, trigger.header_hash)
+    assert range_start == get_challenge_start_height(constants, fork_cache, previous_trigger)
+    assert range_end == get_challenge_start_height(constants, fork_cache, trigger)
     summary = fork_records[carrier.header_hash].sub_epoch_summary_included
     assert summary is not None
     assert summary.challenge_merkle_root == compute_challenge_merkle_root(

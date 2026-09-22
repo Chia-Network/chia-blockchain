@@ -450,7 +450,7 @@ def validate_unfinished_header_block(
                             get_challenge_start_height(
                                 constants,
                                 blocks,
-                                prev_b.header_hash,
+                                prev_b,
                             )
                             if make_challenge_root
                             else None

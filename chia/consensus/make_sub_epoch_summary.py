@@ -73,7 +73,7 @@ def make_sub_epoch_summary(
         challenge_root_start = get_challenge_start_height(
             constants,
             blocks,
-            previous_trigger.header_hash,
+            previous_trigger,
         )
         assert challenge_root_start < challenge_root_end_height
         challenge_root = compute_challenge_merkle_root(blocks, challenge_root_end_height, challenge_root_start)
@@ -231,12 +231,26 @@ def next_sub_epoch_summary(
         get_challenge_start_height(
             constants,
             blocks,
-            block.prev_header_hash,
+            prev_b,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
         )
         if with_challenge_root and not first_sub_epoch
         else None
     )
+    if challenge_root_end_height is not None:
+        prev_ses_block = prev_b
+        while prev_ses_block.sub_epoch_summary_included is None:
+            prev_ses_block = blocks.block_record(prev_ses_block.prev_hash)
+        previous_trigger = blocks.block_record(prev_ses_block.prev_hash)
+        challenge_root_start_height = get_challenge_start_height(
+            constants,
+            blocks,
+            previous_trigger,
+        )
+        if challenge_root_start_height == challenge_root_end_height:
+            assert can_finish_soon
+            assert prev_b.overflow and overflow
+            return None
 
     return make_sub_epoch_summary(
         constants,
