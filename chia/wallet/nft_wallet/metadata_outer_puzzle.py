@@ -42,7 +42,7 @@ class MetadataOuterPuzzle:
                 "metadata": metadata,
                 "updater_hash": "0x" + updater_hash.as_atom().hex(),
             }
-            next_constructor = self._match(UnknownPuzzle(known_puzzle=inner_puzzle))
+            next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
             if next_constructor is not None:
                 constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
@@ -67,7 +67,7 @@ class MetadataOuterPuzzle:
             also = constructor.also()
             if also is not None:
                 deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                    also, UnknownPuzzle(known_puzzle=inner_puzzle), None
+                    also, UnknownPuzzle(known_program=inner_puzzle), None
                 )
                 return deep_inner_puzzle
             else:

@@ -25,7 +25,7 @@ from chia.wallet.puzzles.singleton_drivers import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-ACS = UnknownPuzzle(known_puzzle=Program.to(1))
+ACS = UnknownPuzzle(known_program=Program.to(1))
 ACS_PH = ACS.tree_hash
 
 

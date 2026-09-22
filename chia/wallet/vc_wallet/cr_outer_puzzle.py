@@ -38,7 +38,7 @@ class CROuterPuzzle:
             "authorized_providers": ["0x" + ap.hex() for ap in cr_match.authorized_providers],
             "proofs_checker": disassemble(cr_match.proofs_checker.program),
         }
-        next_constructor = self._match(UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.program))
+        next_constructor = self._match(UnknownPuzzle(known_program=cr_match.inner_puzzle.program))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
@@ -54,7 +54,7 @@ class CROuterPuzzle:
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also, UnknownPuzzle(known_puzzle=cr_match.inner_puzzle.program), None
+                also, UnknownPuzzle(known_program=cr_match.inner_puzzle.program), None
             )
             return deep_inner_puzzle
         else:
@@ -77,14 +77,14 @@ class CROuterPuzzle:
         if also is not None:
             inner_puzzle = self._construct(also, inner_puzzle)
         proof_checker_match = ProofsChecker.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=constructor["proofs_checker"])
+            unknown_puzzle=UnknownPuzzle(known_program=constructor["proofs_checker"])
         )
         if proof_checker_match is None:
             raise ValueError("An unknown proofs checker was supplied to constructor")
         return CredentialRestrictionLayer(
             authorized_providers=constructor["authorized_providers"],
             proofs_checker=proof_checker_match,
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
         ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
@@ -96,7 +96,7 @@ class CROuterPuzzle:
                 solver["vc_authorizations"][coin_name]
             )
         else:
-            proofs_checker_args = UnknownPuzzle(known_puzzle=constructor["proofs_checker"]).curried_args
+            proofs_checker_args = UnknownPuzzle(known_program=constructor["proofs_checker"]).curried_args
             assert proofs_checker_args is not None
             vc_info = (
                 # TODO: This is something of a hack here, doesn't really work for proofs checkers generally.

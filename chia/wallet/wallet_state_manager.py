@@ -932,7 +932,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        uncurried = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
+        uncurried = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
 
         # Check if the coin is a CAT
         matched_cat = CATPuzzle.match(unknown_puzzle=uncurried)
@@ -1089,7 +1089,7 @@ class WalletStateManager:
         # Get minter DID
         eve_coin = (await self.wallet_node.fetch_children(launcher_coin.name(), peer=peer))[0]
         eve_coin_spend = await fetch_coin_spend_for_coin_state(eve_coin, peer)
-        eve_full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(eve_coin_spend.puzzle_reveal))
+        eve_full_puzzle = UnknownPuzzle(known_program=Program.from_serialized(eve_coin_spend.puzzle_reveal))
         eve_full_solution = UnknownSolution(program=Program.from_serialized(eve_coin_spend.solution))
         eve_nft_puzzle = NFT.match(unknown_puzzle=eve_full_puzzle)
         eve_solution = NFTSolution.match(unknown_solution=eve_full_solution)
@@ -1126,7 +1126,7 @@ class WalletStateManager:
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
             uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             singleton_match = SingletonPuzzle.match(
-                unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+                unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
             )
             if singleton_match is not None:
                 did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
@@ -1342,7 +1342,7 @@ class WalletStateManager:
                                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                 # Check if the parent coin is a Clawback coin
                                 uncurried = UnknownPuzzle(
-                                    known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal)
+                                    known_program=Program.from_serialized(coin_spend.puzzle_reveal)
                                 )
                                 clawback_metadata = match_clawback_puzzle(
                                     uncurried, coin_spend.puzzle_reveal, coin_spend.solution
@@ -2347,7 +2347,7 @@ class WalletStateManager:
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         singleton_match = SingletonPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+            unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
         )
         if singleton_match is None:
             raise ValueError("The coin is not a DID.")
@@ -2383,7 +2383,7 @@ class WalletStateManager:
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
         # convert to NFTInfo
         # Check if the metadata is updated
-        full_puzzle = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
+        full_puzzle = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
         full_solution = UnknownSolution(program=Program.from_serialized(coin_spend.solution))
 
         nft = NFT.get_next_from_previous(
@@ -2402,7 +2402,7 @@ class WalletStateManager:
                 # Note: This is not the actual unspent NFT full puzzle.
                 # There is no way to rebuild the full puzzle in a different wallet.
                 # But it shouldn't have impact on generating the UX info, since inner_puzzle is not used there.
-                nft.replace_inner_most_puzzle(UnknownPuzzle(known_puzzle=Program.NIL)).to_db_object(
+                nft.replace_inner_most_puzzle(UnknownPuzzle(known_program=Program.NIL)).to_db_object(
                     mint_height=launcher_coin[0].spent_height,
                     minter_did=minter_did,
                     latest_height=coin_state.created_height,
@@ -2428,7 +2428,7 @@ class WalletStateManager:
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         singleton_struct = uncurried.args.at("f")
         singleton_match = SingletonPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+            unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
         )
         if singleton_match is None:
             raise ValueError("The coin is not a DID.")

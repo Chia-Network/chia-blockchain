@@ -58,20 +58,20 @@ def test_standard_puzzle_drivers() -> None:
     assert from_custom_hidden.synthetic_public_key == custom_synthetic
     assert from_custom_hidden.hidden_puzzle_info.tree_hash == custom_hidden.get_tree_hash()
 
-    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=ACSPuzzle().program)) is None
+    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
     assert (
-        StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=MOD.curry(synthetic_public_key, Program.to(2))))
+        StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=MOD.curry(synthetic_public_key, Program.to(2))))
         is None
     )
 
-    matched_without_solution = StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.program))
+    matched_without_solution = StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program))
     assert matched_without_solution is not None
     assert matched_without_solution.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_without_solution.pre_known_original_public_key is None
     assert matched_without_solution.hidden_puzzle_info.program == DEFAULT_HIDDEN_PUZZLE
 
     with mock.patch.object(UnknownPuzzle, "curried_args", new_callable=mock.PropertyMock, return_value=None):
-        assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.program)) is None
+        assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program)) is None
 
     delegated_reveal = P2Conditions(conditions=[Remark(Program.to("delegated"))]).program
     delegated_solution = NilSolution().program
@@ -80,7 +80,7 @@ def test_standard_puzzle_drivers() -> None:
         delegated_solution=delegated_solution,
     )
     matched_delegated = StandardPuzzle.match(
-        unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.program),
+        unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program),
     )
     assert matched_delegated is not None
     assert matched_delegated.pre_known_original_public_key is None
@@ -93,7 +93,7 @@ def test_standard_puzzle_drivers() -> None:
         delegated_solution=Program.to([42]),
     )
     matched_hidden = StandardPuzzle.match(
-        unknown_puzzle=UnknownPuzzle(known_puzzle=from_synthetic.program),
+        unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program),
     )
     assert matched_hidden is not None
     assert matched_hidden.pre_known_synthetic_public_key == synthetic_public_key
@@ -156,8 +156,8 @@ def test_p2_conditions() -> None:
 
     assert p2.program == Program.to((1, [create_coin.to_program(), remark.to_program()]))
     assert p2.tree_hash == p2.program.get_tree_hash()
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=p2.program)) == p2
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=ACS)) is None
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=p2.program)) == p2
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) is None
 
 
 def test_acs_puzzle() -> None:
@@ -165,8 +165,8 @@ def test_acs_puzzle() -> None:
 
     assert acs.program == ACS
     assert acs.tree_hash == ACS_PH
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=ACS)) == ACSPuzzle()
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to(2))) is None
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) == ACSPuzzle()
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(2))) is None
 
 
 def test_acs_solution() -> None:
@@ -183,8 +183,8 @@ def test_nil_puzzle() -> None:
 
     assert nil.program == Program.NIL
     assert nil.tree_hash == Program.NIL.get_tree_hash()
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.NIL)) == NilPuzzle()
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=ACS)) is None
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) == NilPuzzle()
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) is None
 
 
 def test_nil_solution() -> None:

@@ -467,7 +467,7 @@ class CATWallet:
             our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = CATPuzzle(
-                tail_hash=asset_id, inner_puzzle=UnknownPuzzle(known_puzzle=our_inner_puzzle)
+                tail_hash=asset_id, inner_puzzle=UnknownPuzzle(known_program=our_inner_puzzle)
             ).program
             wallet_type: type[CATWallet] = CATWallet
             crcat = None
@@ -915,7 +915,7 @@ class CATWallet:
                     coin=coin,
                     lineage_proof=lineage_proof,
                     tail_hash=self.tail_hash,
-                    inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+                    inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
                 ),
                 inner_solution=UnknownSolution(program=innersol),
                 extra_delta=extra_delta,
@@ -1031,7 +1031,7 @@ class CATWallet:
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return (
             CATPuzzle(
-                tail_hash=self.tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint)
+                tail_hash=self.tail_hash, inner_puzzle=UnknownPuzzle(known_tree_hash=hint)
             ).program.get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )

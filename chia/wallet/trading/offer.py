@@ -249,7 +249,7 @@ class Offer:
             coins_for_this_spend: list[Coin] = []
 
             parent_puzzle: UnknownPuzzle = UnknownPuzzle(
-                known_puzzle=Program.from_serialized(parent_spend.puzzle_reveal)
+                known_program=Program.from_serialized(parent_spend.puzzle_reveal)
             )
             parent_solution = Program.from_serialized(parent_spend.solution)
             additions: list[Coin] = self._additions[parent_spend.coin]
@@ -640,7 +640,7 @@ class Offer:
         driver_dict: dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: list[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal)))
+            driver = match_puzzle(UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal)))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None

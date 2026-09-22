@@ -74,9 +74,9 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
     cat_puzzles: ClassVar[CATCorePuzzles] = CATCorePuzzles()
 
     def _inner_curry_arg(self) -> Program | bytes32:
-        if isinstance(self.inner_puzzle, UnknownPuzzle) and self.inner_puzzle.known_puzzle is None:
-            assert self.inner_puzzle.known_puzzle_hash is not None
-            return self.inner_puzzle.known_puzzle_hash
+        if isinstance(self.inner_puzzle, UnknownPuzzle) and self.inner_puzzle.known_program is None:
+            assert self.inner_puzzle.known_tree_hash is not None
+            return self.inner_puzzle.known_tree_hash
         return self.inner_puzzle.program
 
     @property
@@ -103,7 +103,7 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
 
     @classmethod
     def match_uncurried(cls, uncurried: UncurriedPuzzle) -> CATPuzzle[UnknownPuzzle] | None:
-        return cls.match(unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter())))
+        return cls.match(unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter())))
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> CATPuzzle[UnknownPuzzle] | None:
@@ -113,7 +113,7 @@ class CATPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
         _, tail_hash_prog, inner_puzzle_prog = unknown_puzzle.curried_args
         return CATPuzzle(
             tail_hash=bytes32(tail_hash_prog.as_atom()),
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle_prog),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle_prog),
         )
 
 
@@ -160,7 +160,7 @@ class TAILCondition(Condition, Generic[_T_Puzzle, _T_Solution]):
     @classmethod
     def from_program(cls, program: Program) -> TAILCondition[UnknownPuzzle, UnknownSolution]:  # type: ignore[override]
         return TAILCondition(
-            puzzle=UnknownPuzzle(known_puzzle=program.at("rrrf")),
+            puzzle=UnknownPuzzle(known_program=program.at("rrrf")),
             solution=UnknownSolution(program=program.at("rrrrf")),
         )
 

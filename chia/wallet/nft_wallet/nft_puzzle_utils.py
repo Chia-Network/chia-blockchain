@@ -287,9 +287,9 @@ class MetadataLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_MetadataUpdater]
         (_, metadata, metadata_updater_puzhash, inner_puzzle) = unknown_puzzle.curried_args
 
         return MetadataLayer(
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
             metadata=metadata,
-            metadata_updater=UnknownPuzzle(known_puzzle_hash=bytes32(metadata_updater_puzhash.as_atom())),
+            metadata_updater=UnknownPuzzle(known_tree_hash=bytes32(metadata_updater_puzhash.as_atom())),
         )
 
 
@@ -343,7 +343,7 @@ class TransferProgramCondition(Condition):
             },
             new_owner=SingletonPuzzle(
                 launcher_id=bytes32(launcher_id.as_atom()),
-                inner_puzzle=UnknownPuzzle(known_puzzle_hash=bytes32(inner_puzzle_hash.as_atom())),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=bytes32(inner_puzzle_hash.as_atom())),
             )
             if launcher_id != Program.NIL
             else None,
@@ -427,9 +427,9 @@ class OwnershipLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle, _T_TransferProgram
         (_, current_owner, transfer_program, inner_puzzle) = unknown_puzzle.curried_args
 
         return OwnershipLayer(
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
             current_owner=bytes32(current_owner.as_atom()) if current_owner != Program.NIL else None,
-            transfer_program=UnknownPuzzle(known_puzzle=transfer_program),
+            transfer_program=UnknownPuzzle(known_program=transfer_program),
         )
 
 
@@ -594,10 +594,10 @@ class NFT(
                     if tp_condition is not None
                     else previous_nft.inner_puzzle.inner_puzzle.current_owner,
                     transfer_program=previous_nft.inner_puzzle.inner_puzzle.transfer_program,
-                    inner_puzzle=UnknownPuzzle(known_puzzle_hash=next_singleton_coin.puzzle_hash),
+                    inner_puzzle=UnknownPuzzle(known_tree_hash=next_singleton_coin.puzzle_hash),
                 )
                 if isinstance(previous_nft.inner_puzzle.inner_puzzle, OwnershipLayer)
-                else UnknownPuzzle(known_puzzle_hash=next_singleton_coin.puzzle_hash),
+                else UnknownPuzzle(known_tree_hash=next_singleton_coin.puzzle_hash),
             ),
         )
         return NFT(
@@ -615,7 +615,7 @@ class NFT(
 
     @classmethod
     def from_db_object(cls, nft: NFTCoinInfo) -> NFT[UnknownPuzzle]:
-        puzzle_match = NFT.match(unknown_puzzle=UnknownPuzzle(known_puzzle=nft.full_puzzle))
+        puzzle_match = NFT.match(unknown_puzzle=UnknownPuzzle(known_program=nft.full_puzzle))
         if puzzle_match is None:
             raise RuntimeError("Unexpected DB object for NFT parsing")
         return NFT(

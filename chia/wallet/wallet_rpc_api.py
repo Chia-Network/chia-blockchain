@@ -2022,7 +2022,7 @@ class WalletRpcApi:
                                 "also": {
                                     **info.info["also"],
                                     "flags": ProofsChecker.match(
-                                        unknown_puzzle=UnknownPuzzle(known_puzzle=info.info["also"]["proofs_checker"])
+                                        unknown_puzzle=UnknownPuzzle(known_program=info.info["also"]["proofs_checker"])
                                     ).flags,  # type: ignore[union-attr]
                                 },
                             }

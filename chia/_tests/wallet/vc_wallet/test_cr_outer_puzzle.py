@@ -27,7 +27,7 @@ def test_cat_outer_puzzle() -> None:
     double_cr_puzzle = CredentialRestrictionLayer(
         authorized_providers=authorized_providers, proofs_checker=proofs_checker, inner_puzzle=cr_puzzle
     )
-    unknown_cr_puzzle = UnknownPuzzle(known_puzzle=double_cr_puzzle.program)
+    unknown_cr_puzzle = UnknownPuzzle(known_program=double_cr_puzzle.program)
     cr_driver: PuzzleInfo | None = match_puzzle(unknown_cr_puzzle)
 
     assert cr_driver is not None

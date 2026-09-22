@@ -75,22 +75,22 @@ class UnknownPuzzle(PuzzleWithPuzzleHash):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("UnknownPuzzle", None)
 
-    known_puzzle: Program | None = None
-    known_puzzle_hash: bytes32 | None = None
+    known_program: Program | None = None
+    known_tree_hash: bytes32 | None = None
 
     def __post_init__(self) -> None:
-        if self.known_puzzle is None and self.known_puzzle_hash is None:
+        if self.known_program is None and self.known_tree_hash is None:
             raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
 
     @property
     def program(self) -> Program:
-        if self.known_puzzle is None:
+        if self.known_program is None:
             raise ValueError("Attempting to access puzzle when only puzzle hash is known")
-        return self.known_puzzle
+        return self.known_program
 
     @property
     def tree_hash_optimized(self) -> bytes32:
-        return self.known_puzzle_hash if self.known_puzzle_hash is not None else self.program.get_tree_hash()
+        return self.known_tree_hash if self.known_tree_hash is not None else self.program.get_tree_hash()
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:

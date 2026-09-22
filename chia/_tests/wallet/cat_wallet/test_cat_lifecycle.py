@@ -37,7 +37,7 @@ def cat_puzzle_for_tail(tail: Program) -> CATPuzzle[ACSPuzzle]:
 
 def tail_condition(tail: Program, checker_solution: Program) -> TAILCondition[UnknownPuzzle, UnknownSolution]:
     return TAILCondition(
-        puzzle=UnknownPuzzle(known_puzzle=tail),
+        puzzle=UnknownPuzzle(known_program=tail),
         solution=UnknownSolution(program=checker_solution),
     )
 

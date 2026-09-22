@@ -76,7 +76,7 @@ class ValidatorStackRestriction(MIPSComponentBase, PuzzleWithPuzzleHash):
         for wrapper, wrapper_solution in zip(reversed(self.wrappers), reversed(wrapper_solutions)):
             delegated_puzzle_and_solution = DelegatedPuzzleAndSolution(
                 puzzle=UnknownPuzzle(
-                    known_puzzle=ADD_DPUZ_WRAPPER.curry(wrapper.program, delegated_puzzle_and_solution.puzzle.program)
+                    known_program=ADD_DPUZ_WRAPPER.curry(wrapper.program, delegated_puzzle_and_solution.puzzle.program)
                 ),
                 solution=UnknownSolution(
                     program=Program.to([wrapper_solution, delegated_puzzle_and_solution.solution.program])

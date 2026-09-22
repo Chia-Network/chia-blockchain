@@ -40,7 +40,7 @@ def str_to_tail_hash(tail_str: str) -> bytes32:
 
 def str_to_cat_hash(tail_str: str) -> bytes32:
     return CATPuzzle(
-        tail_hash=str_to_tail_hash(tail_str), inner_puzzle=UnknownPuzzle(known_puzzle=acs)
+        tail_hash=str_to_tail_hash(tail_str), inner_puzzle=UnknownPuzzle(known_program=acs)
     ).program.get_tree_hash()
 
 
@@ -59,7 +59,7 @@ async def generate_coins(
             if tail_str:
                 tail = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 tail_hash = tail.get_tree_hash()
-                cat_puzzle = CATPuzzle(tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle=acs)).program
+                cat_puzzle = CATPuzzle(tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_program=acs)).program
                 cat_puzzle_hash = cat_puzzle.get_tree_hash()
                 payments.append(CreateCoin(cat_puzzle_hash, uint64(amount)))
                 cat_bundles.append(
@@ -75,7 +75,7 @@ async def generate_coins(
                                 inner_solution=ACSSolution(
                                     conditions=[
                                         CreateCoin(puzzle_hash=acs_ph, amount=uint64(amount)),
-                                        TAILCondition(puzzle=UnknownPuzzle(known_puzzle=tail), solution=NilSolution()),
+                                        TAILCondition(puzzle=UnknownPuzzle(known_program=tail), solution=NilSolution()),
                                     ]
                                 ),
                             )
@@ -100,7 +100,7 @@ async def generate_coins(
         if tail_str:
             tail_hash = str_to_tail_hash(tail_str)
             cat_ph = CATPuzzle(
-                tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_puzzle=acs)
+                tail_hash=tail_hash, inner_puzzle=UnknownPuzzle(known_program=acs)
             ).program.get_tree_hash()
             coin_dict[tail_str] = [
                 cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
@@ -158,7 +158,9 @@ def generate_secure_bundle(
                 ),
                 inner_solution=ACSSolution(
                     conditions=[
-                        TAILCondition(puzzle=UnknownPuzzle(known_puzzle=str_to_tail(tail_str)), solution=NilSolution()),
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=str_to_tail(tail_str)), solution=NilSolution()
+                        ),
                         *(inner_solution if c == selected_coins[0] else []),
                     ]
                 ),
@@ -267,7 +269,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
 
         # Test preventing TAIL from running during exchange
         blue_cat_puz = CATPuzzle(
-            tail_hash=str_to_tail_hash("blue"), inner_puzzle=UnknownPuzzle(known_puzzle=OFFER_MOD)
+            tail_hash=str_to_tail_hash("blue"), inner_puzzle=UnknownPuzzle(known_program=OFFER_MOD)
         ).program
         random_hash = bytes32.zeros
         blue_spend = make_spend(

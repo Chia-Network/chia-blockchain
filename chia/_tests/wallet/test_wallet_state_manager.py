@@ -862,7 +862,7 @@ def _build_fake_nfts(
             metadata_updater=DefaultMetadataUpdater(),
             inner_puzzle=OwnershipLayer(
                 current_owner=None,
-                inner_puzzle=UnknownPuzzle(known_puzzle_hash=old_p2_puzhash),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=old_p2_puzhash),
                 transfer_program=transfer_program,
             ),
         ),
@@ -880,7 +880,7 @@ def _build_fake_nfts(
             metadata_updater=DefaultMetadataUpdater(),
             inner_puzzle=OwnershipLayer(
                 current_owner=new_did_id,
-                inner_puzzle=UnknownPuzzle(known_puzzle_hash=new_p2_puzhash),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=new_p2_puzhash),
                 transfer_program=transfer_program,
             ),
         ),

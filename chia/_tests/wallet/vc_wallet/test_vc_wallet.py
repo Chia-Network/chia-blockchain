@@ -81,7 +81,7 @@ async def mint_cr_cat(
     async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
     cat_puzzle: Program = CATPuzzle(
-        tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+        tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_program=Program.to(1))
     ).program
     CAT_AMOUNT_0 = uint64(100)
 
@@ -119,7 +119,7 @@ async def mint_cr_cat(
                                     CredentialRestrictionLayer(
                                         authorized_providers=authorized_providers,
                                         proofs_checker=proofs_checker,
-                                        inner_puzzle=UnknownPuzzle(known_puzzle=our_puzzle),
+                                        inner_puzzle=UnknownPuzzle(known_program=our_puzzle),
                                     ).tree_hash,
                                     CAT_AMOUNT_0,
                                     [our_puzzle.get_tree_hash()],

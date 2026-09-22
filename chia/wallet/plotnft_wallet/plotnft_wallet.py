@@ -160,7 +160,7 @@ class PlotNFT2Wallet:
             reward_delegated_puzzles_and_solutions=[
                 DelegatedPuzzleAndSolution(
                     puzzle=UnknownPuzzle(
-                        known_puzzle=self.xch_wallet.make_solution(
+                        known_program=self.xch_wallet.make_solution(
                             primaries=[
                                 CreateCoin(
                                     puzzle_hash=self.rewards_claim_puzhash,
@@ -178,7 +178,7 @@ class PlotNFT2Wallet:
                 if i == 0
                 else DelegatedPuzzleAndSolution(
                     puzzle=UnknownPuzzle(
-                        known_puzzle=Program.to(
+                        known_program=Program.to(
                             (
                                 1,
                                 [
@@ -313,7 +313,7 @@ class PlotNFT2Wallet:
         exit_create_coin = plotnft.inner_puzzle.exit_to_waiting_room_condition
         exit_to_waiting_room_dpuz_and_sol = DelegatedPuzzleAndSolution(
             puzzle=UnknownPuzzle(
-                known_puzzle=self.xch_wallet.make_solution(
+                known_program=self.xch_wallet.make_solution(
                     primaries=[exit_create_coin],
                     conditions=(*extra_conditions, fee_hook),
                 ).at("rf")
@@ -371,7 +371,7 @@ class PlotNFT2Wallet:
         heightlock, exit_create_coin = plotnft.inner_puzzle.exit_from_waiting_room_conditions
         exit_to_waiting_room_dpuz_and_sol = DelegatedPuzzleAndSolution(
             puzzle=UnknownPuzzle(
-                known_puzzle=self.xch_wallet.make_solution(
+                known_program=self.xch_wallet.make_solution(
                     primaries=[exit_create_coin],
                     conditions=(fee_hook, heightlock, *extra_conditions),
                 ).at("rf")

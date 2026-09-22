@@ -3869,7 +3869,7 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
     cat_puzzle: Program = CATPuzzle(
-        tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))
+        tail_hash=Program.NIL.get_tree_hash(), inner_puzzle=UnknownPuzzle(known_program=Program.to(1))
     ).program
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),

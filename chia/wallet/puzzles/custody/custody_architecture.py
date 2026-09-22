@@ -270,7 +270,7 @@ class MofN(MIPSComponentBase):
         if unknown_puzzle.mod == NofN_MOD:
             list_of_members = [_ for _ in unknown_puzzle.curried_args]
             pwr_matches = [
-                PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=member))
+                PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_program=member))
                 for member in list_of_members
             ]
             if None in pwr_matches:
@@ -507,12 +507,12 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
             return None
 
         nonce, fed_inner_puzzle_prog = unknown_puzzle.curried_args
-        fed_inner_puzzle = UnknownPuzzle(known_puzzle=fed_inner_puzzle_prog)
+        fed_inner_puzzle = UnknownPuzzle(known_program=fed_inner_puzzle_prog)
         if fed_inner_puzzle != DELEGATED_PUZZLE_FEEDER or fed_inner_puzzle.curried_args is None:
             return None
 
         (potentially_restricted_puzzle_prog,) = fed_inner_puzzle.curried_args
-        potentially_restricted_puzzle = UnknownPuzzle(known_puzzle=potentially_restricted_puzzle_prog)
+        potentially_restricted_puzzle = UnknownPuzzle(known_program=potentially_restricted_puzzle_prog)
         if potentially_restricted_puzzle == RESTRICTION_MOD:
             if potentially_restricted_puzzle.curried_args is None:
                 return None
@@ -530,7 +530,7 @@ class PuzzleWithRestrictions(PuzzleWithPuzzleHash):
                     for restriction_prog in restriction_set.as_iter()
                 ),
             ]
-            inner_puzzle = UnknownPuzzle(known_puzzle=inner_puzzle_prog)
+            inner_puzzle = UnknownPuzzle(known_program=inner_puzzle_prog)
         else:
             restrictions = []
             inner_puzzle = potentially_restricted_puzzle

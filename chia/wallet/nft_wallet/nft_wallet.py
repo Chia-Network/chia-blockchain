@@ -194,7 +194,7 @@ class NFTWallet:
         if derivation_record is None:
             return
         coin_data = coin_data.replace_inner_most_puzzle(
-            UnknownPuzzle(known_puzzle=puzzle_for_pk(derivation_record.pubkey))
+            UnknownPuzzle(known_program=puzzle_for_pk(derivation_record.pubkey))
         )
         launcher_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [coin_data.launcher_id], peer=peer
@@ -431,7 +431,7 @@ class NFTWallet:
             #          to any DID without approval
             inner_puzzle: OwnershipLayer[UnknownPuzzle, DefaultTransferProgram] | UnknownPuzzle = OwnershipLayer(
                 current_owner=None,
-                inner_puzzle=UnknownPuzzle(known_puzzle=p2_inner_puzzle),
+                inner_puzzle=UnknownPuzzle(known_program=p2_inner_puzzle),
                 transfer_program=DefaultTransferProgram(
                     self_launcher_id=launcher_coin.name(),
                     royalty_address=royalty_puzzle_hash,
@@ -441,7 +441,7 @@ class NFTWallet:
             self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
-            inner_puzzle = UnknownPuzzle(known_puzzle=p2_inner_puzzle)
+            inner_puzzle = UnknownPuzzle(known_program=p2_inner_puzzle)
 
         # singleton eve puzzle
         eve_fullpuz = SingletonPuzzle(
@@ -570,7 +570,7 @@ class NFTWallet:
         nft_coin: NFTCoinInfo | None = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
-        puzzle_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_puzzle=nft_coin.full_puzzle))
+        puzzle_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_program=nft_coin.full_puzzle))
         if puzzle_info is None:
             raise ValueError("Internal Error: NFT wallet is tracking a non NFT coin")
         else:
@@ -746,7 +746,7 @@ class NFTWallet:
                             trade_prices_list=trade_prices_list,
                             new_owner=SingletonPuzzle(
                                 launcher_id=bytes32(new_owner),
-                                inner_puzzle=UnknownPuzzle(known_puzzle_hash=bytes32(new_did_inner_hash)),  # type: ignore[arg-type]
+                                inner_puzzle=UnknownPuzzle(known_tree_hash=bytes32(new_did_inner_hash)),  # type: ignore[arg-type]
                             )
                             if new_owner != b""
                             else None,

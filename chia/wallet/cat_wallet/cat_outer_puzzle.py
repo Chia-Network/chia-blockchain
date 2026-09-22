@@ -38,7 +38,7 @@ class CATOuterPuzzle:
             "type": "CAT",
             "tail": "0x" + matched_cat.tail_hash.hex(),
         }
-        next_constructor = self._match(UnknownPuzzle(known_puzzle=inner_puzzle))
+        next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
@@ -53,7 +53,7 @@ class CATOuterPuzzle:
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                also, UnknownPuzzle(known_puzzle=inner_puzzle), solution.first() if solution is not None else None
+                also, UnknownPuzzle(known_program=inner_puzzle), solution.first() if solution is not None else None
             )
             return deep_inner_puzzle
         else:
@@ -77,7 +77,7 @@ class CATOuterPuzzle:
             inner_puzzle = self._construct(also, inner_puzzle)
         return CATPuzzle(
             tail_hash=bytes32(constructor["tail"]),
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
         ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
@@ -114,7 +114,7 @@ class CATOuterPuzzle:
                 constructed_solution = solution
                 constructed_puzzle = puzzle
             matched_cat = CATPuzzle.match(
-                unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(parent_spend.puzzle_reveal))
+                unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(parent_spend.puzzle_reveal))
             )
             assert matched_cat is not None
             parent_inner_puzzle = matched_cat.inner_puzzle.program
@@ -123,7 +123,7 @@ class CATOuterPuzzle:
                     cat=CAT(
                         coin=coin,
                         tail_hash=tail_hash,
-                        inner_puzzle=UnknownPuzzle(known_puzzle=constructed_puzzle),
+                        inner_puzzle=UnknownPuzzle(known_program=constructed_puzzle),
                         lineage_proof=LineageProof(
                             parent_coin.parent_coin_info,
                             parent_inner_puzzle.get_tree_hash(),

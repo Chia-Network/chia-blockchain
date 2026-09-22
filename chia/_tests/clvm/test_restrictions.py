@@ -58,7 +58,7 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 
         # Attempt to just use any old dpuz
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [[1, "foo"]]))),
+            puzzle=UnknownPuzzle(known_program=Program.to((1, [[1, "foo"]]))),
             solution=UnknownSolution(program=Program.to(None)),
         )
         not_wrapped_attempt = WalletSpendBundle(
@@ -115,7 +115,7 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
 
         # Attempt to just use any old dpuz
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [[1, "foo"]]))),
+            puzzle=UnknownPuzzle(known_program=Program.to((1, [[1, "foo"]]))),
             solution=UnknownSolution(program=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
@@ -137,7 +137,7 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
         # Now actually put a timelock in the dpuz
         timelocked_dpuz = DelegatedPuzzleAndSolution(
             puzzle=UnknownPuzzle(
-                known_puzzle=Program.to(
+                known_program=Program.to(
                     (1, [AssertHeightRelative(height=uint32(10)).to_program(), [1, "foo"], [1, "bat"]])
                 )
             ),
@@ -195,7 +195,9 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
 
         # Attempt to create a coin somewhere else
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_puzzle=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()]))),
+            puzzle=UnknownPuzzle(
+                known_program=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()]))
+            ),
             solution=UnknownSolution(program=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
@@ -217,7 +219,7 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
         # Now send it to the correct place
         correct_dpuz = DelegatedPuzzleAndSolution(
             puzzle=UnknownPuzzle(
-                known_puzzle=Program.to(
+                known_program=Program.to(
                     (1, [CreateCoin(bytes32.zeros, uint64(1)).to_program(), Remark(Program.to("foo")).to_program()])
                 )
             ),
@@ -268,7 +270,7 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
         # Attempt to send a message
         send_message_dpuz = DelegatedPuzzleAndSolution(
             puzzle=UnknownPuzzle(
-                known_puzzle=Program.to(
+                known_program=Program.to(
                     (
                         1,
                         [
@@ -304,7 +306,7 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
 
         # Now send it to the correct place
         self_destruct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_puzzle=Program.to(None)),
+            puzzle=UnknownPuzzle(known_program=Program.to(None)),
             solution=UnknownSolution(program=Program.to(None)),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(self_destruct_dpuz, [Program.to(None)])

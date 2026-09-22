@@ -46,7 +46,7 @@ class SingletonOuterPuzzle:
                 "launcher_id": "0x" + launcher_id.hex(),
                 "launcher_ph": "0x" + launcher_ph.hex(),
             }
-            next_constructor = self._match(UnknownPuzzle(known_puzzle=inner_puzzle))
+            next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
             if next_constructor is not None:
                 constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
@@ -72,7 +72,7 @@ class SingletonOuterPuzzle:
             also = constructor.also()
             if also is not None:
                 deep_inner_puzzle: Program | None = self._get_inner_puzzle(
-                    also, UnknownPuzzle(known_puzzle=inner_puzzle), None
+                    also, UnknownPuzzle(known_program=inner_puzzle), None
                 )
                 return deep_inner_puzzle
             else:
@@ -98,7 +98,7 @@ class SingletonOuterPuzzle:
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
         matched, curried_args = match_singleton_puzzle(
-            UnknownPuzzle(known_puzzle=Program.from_serialized(parent_spend.puzzle_reveal))
+            UnknownPuzzle(known_program=Program.from_serialized(parent_spend.puzzle_reveal))
         )
         assert matched
         _, parent_inner_puzzle = curried_args

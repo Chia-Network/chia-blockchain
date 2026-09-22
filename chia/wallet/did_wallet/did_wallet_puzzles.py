@@ -99,7 +99,7 @@ class DIDRecoveryPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
             unknown_puzzle.curried_args
         )
         return DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
             self_launcher_id=cls.struct_driver.from_program(singleton_struct).launcher_id,
             metadata=DIDMetadata.from_program(metadata),
             recovery_list=RecoveryList(

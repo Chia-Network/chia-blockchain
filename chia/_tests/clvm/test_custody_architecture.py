@@ -382,7 +382,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                             [],
                                             m_of_n.inner_puzzle.solve(proven_spends),  # pylint: disable=no-member
                                             DelegatedPuzzleAndSolution(
-                                                puzzle=UnknownPuzzle(known_puzzle=Program.to(1)),
+                                                puzzle=UnknownPuzzle(known_program=Program.to(1)),
                                                 solution=UnknownSolution(
                                                     program=Program.to(
                                                         [
@@ -492,7 +492,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                     ]
                                 ),
                                 DelegatedPuzzleAndSolution(
-                                    puzzle=UnknownPuzzle(known_puzzle=dpuz),
+                                    puzzle=UnknownPuzzle(known_program=dpuz),
                                     solution=UnknownSolution(
                                         program=Program.to(
                                             [

@@ -442,7 +442,7 @@ def test_plotnft_errors() -> None:
 
     def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
         return UnknownPuzzle(
-            known_puzzle=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
+            known_program=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
                 SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz
             )
         )

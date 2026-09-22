@@ -141,7 +141,7 @@ class SingletonPuzzle(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
         singleton_struct, inner_puzzle = unknown_puzzle.curried_args
         return SingletonPuzzle(
             launcher_id=bytes32(singleton_struct.at("rf").as_atom()),
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
         )
 
     def with_inner_puzzle(self, inner_puzzle: Puzzle) -> Any:
@@ -287,7 +287,7 @@ class Singleton(SingletonPuzzle[_T_Puzzle]):
     def action_spend(self, inner_solution: Solution) -> tuple[CoinSpend, Singleton[UnknownPuzzle]]:
         next_create_coin = new_create_coin_from_inner_puzzle_and_solution(self.inner_puzzle, inner_solution)
         next_singleton_puzzle = SingletonPuzzle(
-            launcher_id=self.launcher_id, inner_puzzle=UnknownPuzzle(known_puzzle_hash=next_create_coin.puzzle_hash)
+            launcher_id=self.launcher_id, inner_puzzle=UnknownPuzzle(known_tree_hash=next_create_coin.puzzle_hash)
         )
         return self.spend(inner_solution), Singleton(
             coin=Coin(self.coin.name(), puzzle_hash=next_singleton_puzzle.tree_hash, amount=next_create_coin.amount),

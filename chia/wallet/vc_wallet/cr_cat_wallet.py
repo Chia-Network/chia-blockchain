@@ -149,7 +149,7 @@ class CRCATWallet(CATWallet):
         if cr_layer is None:  # pragma: no cover
             raise ValueError("create_from_puzzle_info called on CRCATWallet with a non CR-CAT puzzle driver")
         proofs_checker_match = ProofsChecker.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=cr_layer["proofs_checker"])
+            unknown_puzzle=UnknownPuzzle(known_program=cr_layer["proofs_checker"])
         )
         if proofs_checker_match is None:
             raise ValueError("Unknown proofs checker found in CR-CAT puzzle driver")
@@ -394,7 +394,7 @@ class CRCATWallet(CATWallet):
                             target_puzzle_hash=metadata.inner_puzzle_hash, amount=uint64(coin_record.coin.amount)
                         )
                         if coin_record.coin_type == CoinType.CRCAT_PENDING
-                        else UnknownPuzzle(known_puzzle_hash=metadata.inner_puzzle_hash)
+                        else UnknownPuzzle(known_tree_hash=metadata.inner_puzzle_hash)
                     ),
                 ),
             )
@@ -571,7 +571,9 @@ class CRCATWallet(CATWallet):
                 (
                     replace(
                         crcat,
-                        inner_puzzle=replace(crcat.inner_puzzle, inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle)),
+                        inner_puzzle=replace(
+                            crcat.inner_puzzle, inner_puzzle=UnknownPuzzle(known_program=inner_puzzle)
+                        ),
                     ),
                     extra_delta if first else 0,
                     UnknownSolution(program=innersol),
@@ -836,7 +838,7 @@ class CRCATWallet(CATWallet):
                 == self.info.authorized_providers
                 and (
                     pc_match := ProofsChecker.match(
-                        unknown_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle_driver["proofs_checker"])
+                        unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle_driver["proofs_checker"])
                     )
                 )
                 is not None
@@ -865,7 +867,7 @@ class CRCATWallet(CATWallet):
         cr_layer: CredentialRestrictionLayer[PendingApprovalPuzzle | UnknownPuzzle] = CredentialRestrictionLayer(
             authorized_providers=self.info.authorized_providers,
             proofs_checker=self.info.proofs_checker,
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=hint),
         )
         if (
             CATPuzzle(

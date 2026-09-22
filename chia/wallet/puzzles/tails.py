@@ -112,7 +112,7 @@ class GenesisById(LimitationsProgram):
         await wallet.add_lineage(origin_id, LineageProof())
 
         minted_cat_puzzle_hash: bytes32 = CATPuzzle(
-            tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner)
+            tail_hash=bytes32(tail.get_tree_hash()), inner_puzzle=UnknownPuzzle(known_program=cat_inner)
         ).program.get_tree_hash()
 
         async with wallet.wallet_state_manager.new_action_scope(
@@ -154,7 +154,7 @@ class GenesisById(LimitationsProgram):
                         ),
                         lineage_proof=LineageProof(),
                         tail_hash=tail.get_tree_hash(),
-                        inner_puzzle=UnknownPuzzle(known_puzzle=cat_inner),
+                        inner_puzzle=UnknownPuzzle(known_program=cat_inner),
                     ),
                     inner_solution=UnknownSolution(program=inner_solution),
                     limitations_program_reveal=tail,

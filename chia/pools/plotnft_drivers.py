@@ -146,7 +146,7 @@ class PlotNFTInnerPuzzle(PuzzleWithPuzzleHash):
 
     def claim_pool_reward_dpuz_and_solution(self, reward: PoolReward) -> DelegatedPuzzleAndSolution:
         return DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_puzzle=self.claim_pool_reward_dpuz),
+            puzzle=UnknownPuzzle(known_program=self.claim_pool_reward_dpuz),
             solution=UnknownSolution(program=Program.to([self.tree_hash, reward.height, reward.coin.amount])),
         )
 
@@ -427,7 +427,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             assert previous_plotnft_puzzle is not None  # mypy I guess can't figure this out
             genesis_challenge = previous_plotnft_puzzle.genesis_challenge
         if pre_uncurry is None:
-            singleton = UnknownPuzzle(known_puzzle=Program.from_serialized(coin_spend.puzzle_reveal))
+            singleton = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
         else:
             singleton = pre_uncurry
 
@@ -598,7 +598,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             rewards_to_claim=[reward],
             reward_delegated_puzzles_and_solutions=[
                 DelegatedPuzzleAndSolution(
-                    puzzle=UnknownPuzzle(known_puzzle=self.inner_puzzle.forward_pool_reward_dpuz),
+                    puzzle=UnknownPuzzle(known_program=self.inner_puzzle.forward_pool_reward_dpuz),
                     solution=UnknownSolution(program=Program.to([reward.coin.amount])),
                 )
             ],

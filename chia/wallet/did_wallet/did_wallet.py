@@ -208,7 +208,7 @@ class DIDWallet:
 
         self.log.info(f"Creating DID wallet from a coin spend {launch_coin}  ...")
         # Create did info from the coin spend
-        recovery_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle))
+        recovery_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
         if recovery_match is None:
             raise ValueError("Cannot uncurry the DID puzzle.")
         full_solution: Program = Program.from_bytes(bytes(solution))
@@ -370,7 +370,7 @@ class DIDWallet:
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
             uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
             singleton_match = SingletonPuzzle.match(
-                unknown_puzzle=UnknownPuzzle(known_puzzle=uncurried.mod.curry(*uncurried.args.as_iter()))
+                unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
             )
             assert singleton_match is not None
             did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
@@ -496,7 +496,7 @@ class DIDWallet:
 
             wallet_state_manager.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DIDRecoveryPuzzle(
-                inner_puzzle=UnknownPuzzle(known_puzzle=our_inner_puzzle),
+                inner_puzzle=UnknownPuzzle(known_program=our_inner_puzzle),
                 self_launcher_id=launch_id,
                 recovery_list=RecoveryList(tree_hash=parent_data.recovery_list_hash),
                 num_of_backup_ids_needed=uint64(parent_data.num_verification),
@@ -605,7 +605,7 @@ class DIDWallet:
             assert did_info.origin_coin is not None
             assert did_info.current_inner is not None
             new_did_inner_puzhash = DIDRecoveryPuzzle(
-                inner_puzzle=UnknownPuzzle(known_puzzle_hash=new_puzhash),
+                inner_puzzle=UnknownPuzzle(known_tree_hash=new_puzhash),
                 self_launcher_id=did_info.origin_coin.name(),
                 metadata=DIDMetadata(json.loads(self.did_info.metadata)),
                 recovery_list=RecoveryList(ids=did_info.backup_ids),
@@ -660,7 +660,7 @@ class DIDWallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = DIDRecoveryPuzzle(
-                inner_puzzle=UnknownPuzzle(known_puzzle=puzzle_for_pk(pubkey)),
+                inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(pubkey)),
                 self_launcher_id=self.did_info.origin_coin.name(),
                 metadata=DIDMetadata(json.loads(self.did_info.metadata)),
                 recovery_list=RecoveryList(ids=self.did_info.backup_ids),
@@ -680,7 +680,7 @@ class DIDWallet:
             return create_singleton_puzzle_hash(innerpuz_hash, bytes32.zeros)
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=puzzle_hash_for_pk(pubkey)),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=puzzle_hash_for_pk(pubkey)),
             self_launcher_id=origin_coin_name,
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
             recovery_list=RecoveryList(ids=self.did_info.backup_ids),
@@ -712,7 +712,7 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         new_inner_puzzle = await self.get_did_innerpuz(action_scope)
-        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=new_inner_puzzle))
+        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=new_inner_puzzle))
         assert matched is not None
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
@@ -808,7 +808,7 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         new_did_puzhash = DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=new_puzhash),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=new_puzhash),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
             recovery_list=RecoveryList(ids=self.did_info.backup_ids),
@@ -880,12 +880,12 @@ class DIDWallet:
             ).get_tree_hash()
             == coin.puzzle_hash
         )
-        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=innerpuz))
+        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=innerpuz))
         assert matched is not None
         # Quote message puzzle & solution
         p2_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         new_innerpuzzle_hash = DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=p2_ph),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=p2_ph),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
             recovery_list=matched.recovery_list,
@@ -947,7 +947,7 @@ class DIDWallet:
 
         return DIDRecoveryPuzzle(
             inner_puzzle=UnknownPuzzle(
-                known_puzzle=await action_scope.get_puzzle(
+                known_program=await action_scope.get_puzzle(
                     self.wallet_state_manager, override_reuse_puzhash_with=override_reuse_puzhash_with
                 )
             ),
@@ -967,7 +967,7 @@ class DIDWallet:
         # In a selling case, the seller should clean the recovery list then transfer to the new owner.
         assert self.did_info.origin_coin is not None
         return DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle=puzzle_for_pk(pubkey)),
+            inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(pubkey)),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
             recovery_list=RecoveryList(ids=self.did_info.backup_ids),
@@ -978,7 +978,7 @@ class DIDWallet:
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
-        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=self.did_info.current_inner))
+        matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=self.did_info.current_inner))
         assert matched is not None
         if record is None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -987,7 +987,7 @@ class DIDWallet:
         if record is None:
             raise RuntimeError(f"Could not find derived inner puzzle for did_hash {did_hash}")
         return DIDRecoveryPuzzle(
-            inner_puzzle=UnknownPuzzle(known_puzzle=puzzle_for_pk(record.pubkey)),
+            inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(record.pubkey)),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
             recovery_list=RecoveryList(ids=self.did_info.backup_ids),
@@ -1005,7 +1005,7 @@ class DIDWallet:
     async def current_p2_puzzle_hash(self) -> bytes32:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
-        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=self.did_info.current_inner))
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=self.did_info.current_inner))
         if did_match is not None:
             return did_match.inner_puzzle.tree_hash
         else:
@@ -1113,7 +1113,7 @@ class DIDWallet:
         self, coin: Coin, full_puzzle: Program, innerpuz: Program, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> WalletSpendBundle:
         assert self.did_info.origin_coin is not None
-        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=innerpuz))
+        did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=innerpuz))
         assert did_match is not None
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
@@ -1275,7 +1275,7 @@ class DIDWallet:
         return (
             SingletonPuzzle(
                 inner_puzzle=DIDRecoveryPuzzle(
-                    inner_puzzle=UnknownPuzzle(known_puzzle_hash=hint),
+                    inner_puzzle=UnknownPuzzle(known_tree_hash=hint),
                     self_launcher_id=self.did_info.origin_coin.name(),
                     metadata=DIDMetadata(json.loads(self.did_info.metadata)),
                     recovery_list=RecoveryList(ids=self.did_info.backup_ids),

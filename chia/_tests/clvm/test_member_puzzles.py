@@ -73,7 +73,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
+                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [
@@ -111,7 +111,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(True),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
+                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [
@@ -173,7 +173,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(True),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
+                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [
@@ -335,7 +335,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                         [],
                         singleton_member.solve(singleton_inner_puzzle_hash=singleton_innerpuz.get_tree_hash()),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),
+                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [
@@ -411,7 +411,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         [],
                         Program.to(0),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=Program.to(0)),  # not the fixed puzzle
+                            puzzle=UnknownPuzzle(known_program=Program.to(0)),  # not the fixed puzzle
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [
@@ -446,7 +446,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         [],
                         fixed_puzzle_member.solve(),
                         DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_puzzle=delegated_puzzle),  # the fixed puzzle
+                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),  # the fixed puzzle
                             solution=UnknownSolution(
                                 program=Program.to(
                                     [

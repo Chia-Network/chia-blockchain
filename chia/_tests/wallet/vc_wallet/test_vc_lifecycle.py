@@ -47,8 +47,8 @@ from chia.wallet.vc_wallet.vc_drivers import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-ACS = UnknownPuzzle(known_puzzle=Program.to([3, (1, "entropy"), 1, None]))
-ACS_2 = UnknownPuzzle(known_puzzle=Program.to([3, (1, "entropy2"), 1, None]))
+ACS = UnknownPuzzle(known_program=Program.to([3, (1, "entropy"), 1, None]))
+ACS_2 = UnknownPuzzle(known_program=Program.to([3, (1, "entropy2"), 1, None]))
 ACS_PH = ACS.tree_hash
 ACS_2_PH = ACS_2.tree_hash
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
@@ -65,12 +65,12 @@ MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
 async def test_covenant_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Create a puzzle that will not pass the initial covenant check
-        FAKE_ACS = UnknownPuzzle(known_puzzle=Program.to([3, (1, "fake"), 1, None]))
+        FAKE_ACS = UnknownPuzzle(known_program=Program.to([3, (1, "fake"), 1, None]))
         # The output puzzle will be the same for both
         covenant_puzzle = CovenantLayer(
             initial_puzzle_hash=ACS_PH, parent_morpher=StdParentMorpher(initial_puzzle_hash=ACS_PH), inner_puzzle=ACS
         )
-        matched_covenant = CovenantLayer.match(unknown_puzzle=UnknownPuzzle(known_puzzle=covenant_puzzle.program))
+        matched_covenant = CovenantLayer.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_puzzle.program))
         assert matched_covenant is not None
         assert matched_covenant.program == covenant_puzzle.program
 
@@ -219,7 +219,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # Create it with mock singleton info
         transfer_program_puzzle = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
         assert (
-            DidTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_puzzle=transfer_program_puzzle))
+            DidTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_program=transfer_program_puzzle))
             == DidTransferProgram()
         )
         eml_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry((MOCK_LAUNCHER_ID, None), transfer_program_puzzle)
@@ -338,10 +338,10 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 async def test_revocation_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
-        hidden_puzzle = UnknownPuzzle(known_puzzle=Program.to((1, [[61, 1]])))  # assert a coin announcement
+        hidden_puzzle = UnknownPuzzle(known_program=Program.to((1, [[61, 1]])))  # assert a coin announcement
         hidden_puzzle_hash: bytes32 = hidden_puzzle.tree_hash
         p2_either_puzzle = RevocationLayer(hidden_puzzle=hidden_puzzle, inner_puzzle=ACS)
-        matched_revocation = RevocationLayer.match(unknown_puzzle=UnknownPuzzle(known_puzzle=p2_either_puzzle.program))
+        matched_revocation = RevocationLayer.match(unknown_puzzle=UnknownPuzzle(known_program=p2_either_puzzle.program))
         assert matched_revocation is not None
         assert matched_revocation.hidden_puzzle.tree_hash == hidden_puzzle_hash
         assert matched_revocation.inner_puzzle.tree_hash == ACS_PH
@@ -392,8 +392,8 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
         # Spend the inner puzzle
         brick_hash: bytes32 = bytes32.zeros
         wrapped_brick_hash: bytes32 = RevocationLayer(
-            hidden_puzzle=UnknownPuzzle(known_puzzle_hash=hidden_puzzle_hash),
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=brick_hash),
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=hidden_puzzle_hash),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=brick_hash),
         ).tree_hash
         result = await client.push_tx(
             cost_logger.add_cost(
@@ -860,7 +860,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             vc.launcher_id,
             ExigentMetadataLayer(
                 metadata=None,
-                transfer_program=UnknownPuzzle(known_puzzle=ACS_TRANSFER_PROGRAM),
+                transfer_program=UnknownPuzzle(known_program=ACS_TRANSFER_PROGRAM),
                 inner_puzzle=ACS,
             ).program,
         )
@@ -914,7 +914,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             vc.launcher_id,
             ExigentMetadataLayer(
                 metadata=None,
-                transfer_program=UnknownPuzzle(known_puzzle=ACS_TRANSFER_PROGRAM),
+                transfer_program=UnknownPuzzle(known_program=ACS_TRANSFER_PROGRAM),
                 inner_puzzle=vc.inner_puzzle.revocation_layer,
             ).program,
         )

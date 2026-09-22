@@ -151,7 +151,9 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         TARGET_TP = Program.to([8])  # (x)
         # (a (i 11 (q 4 19 (c 43 (q ()))) (q 8)) 1) or
         # (mod (_ _ solution) (if solution (list (f solution) (f (r solution)) ()) (x)))
-        transfer_program = UnknownPuzzle(known_puzzle=Program.to([2, [3, 11, [1, 4, 19, [4, 43, [1, []]]], [1, 8]], 1]))
+        transfer_program = UnknownPuzzle(
+            known_program=Program.to([2, [3, 11, [1, 4, 19, [4, 43, [1, []]]], [1, 8]], 1])
+        )
 
         ownership_puzzle = OwnershipLayer(
             current_owner=None, transfer_program=transfer_program, inner_puzzle=ACSPuzzle()
@@ -254,7 +256,7 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             0
         ].coin.puzzle_hash == OwnershipLayer(
             current_owner=TARGET_OWNER,
-            transfer_program=UnknownPuzzle(known_puzzle=TARGET_TP),
+            transfer_program=UnknownPuzzle(known_program=TARGET_TP),
             inner_puzzle=ACSPuzzle(),
         ).tree_hash
 

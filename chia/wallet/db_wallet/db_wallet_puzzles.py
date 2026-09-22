@@ -39,7 +39,7 @@ def create_host_layer_puzzle(
     # some hard coded metadata formatting and metadata updater for now
     return MetadataLayer(
         metadata=Program.to((current_root, None)),
-        metadata_updater=UnknownPuzzle(known_puzzle=ACS_MU),
+        metadata_updater=UnknownPuzzle(known_program=ACS_MU),
         inner_puzzle=innerpuz,
     )
 

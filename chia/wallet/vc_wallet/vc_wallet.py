@@ -218,7 +218,7 @@ class VCWallet:
         vc_launch_result = VerifiedCredential.launch_vc(
             coins,
             provider_did,
-            UnknownPuzzle(known_puzzle_hash=inner_puzzle_hash),
+            UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
             [inner_puzzle_hash],
             fee=fee,
             extra_conditions=extra_conditions,
@@ -322,7 +322,9 @@ class VCWallet:
             extra_conditions += (CreateCoinAnnouncement(coin_name),)
 
         vc = VerifiedCredential.from_streamable(vc_record.vc)
-        vc = replace(vc, inner_puzzle=replace(vc.inner_puzzle, custody_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle)))
+        vc = replace(
+            vc, inner_puzzle=replace(vc.inner_puzzle, custody_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+        )
 
         if new_proof_hash is not None:
             if self_revoke:

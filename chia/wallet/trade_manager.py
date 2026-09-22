@@ -1034,7 +1034,7 @@ class TradeManager:
                     ]
                 ):
                     proofs_checker_match = ProofsChecker.match(
-                        unknown_puzzle=UnknownPuzzle(known_puzzle=puzzle_info["also"]["proofs_checker"])
+                        unknown_puzzle=UnknownPuzzle(known_program=puzzle_info["also"]["proofs_checker"])
                     )
                     if proofs_checker_match is None:
                         raise ValueError("Unknown proofs checker for CRCAT")

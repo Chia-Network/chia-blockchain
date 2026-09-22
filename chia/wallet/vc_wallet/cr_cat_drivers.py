@@ -193,7 +193,10 @@ class CredentialRestrictionLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> CredentialRestrictionLayer[UnknownPuzzle] | None:
-        extra_uncurried_puzzle = UnknownPuzzle(known_puzzle=unknown_puzzle.mod)
+        if unknown_puzzle.mod is None:
+            return None
+
+        extra_uncurried_puzzle = UnknownPuzzle(known_program=unknown_puzzle.mod)
         if (
             extra_uncurried_puzzle.mod != CREDENTIAL_RESTRICTION
             or extra_uncurried_puzzle.curried_args is None
@@ -204,14 +207,14 @@ class CredentialRestrictionLayer(PuzzleWithPuzzleHash, Generic[_T_Puzzle]):
         (_, authorized_providers_prog, proofs_checker_prog) = extra_uncurried_puzzle.curried_args
         (_, inner_puzzle_prog) = unknown_puzzle.curried_args
 
-        matched_proofs_checker = ProofsChecker.match(unknown_puzzle=UnknownPuzzle(known_puzzle=proofs_checker_prog))
+        matched_proofs_checker = ProofsChecker.match(unknown_puzzle=UnknownPuzzle(known_program=proofs_checker_prog))
         if matched_proofs_checker is None:
             return None
 
         return CredentialRestrictionLayer(
             authorized_providers=[bytes32(provider.as_atom()) for provider in authorized_providers_prog.as_iter()],
             proofs_checker=matched_proofs_checker,
-            inner_puzzle=UnknownPuzzle(known_puzzle=inner_puzzle_prog),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle_prog),
         )
 
 
@@ -340,7 +343,7 @@ class CRCAT(
         new_cr_layer = CredentialRestrictionLayer(
             authorized_providers=authorized_providers,
             proofs_checker=proofs_checker,
-            inner_puzzle=UnknownPuzzle(known_puzzle_hash=payment.puzzle_hash),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=payment.puzzle_hash),
         )
 
         new_cat_puzzle = CATPuzzle(
@@ -415,7 +418,7 @@ class CRCAT(
     @classmethod
     def get_current_from_coin_spend(cls, spend: CoinSpend) -> CRCAT[UnknownPuzzle]:
         cat_puzzle = CATPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(spend.puzzle_reveal))
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(spend.puzzle_reveal))
         )
         if cat_puzzle is None:
             raise ValueError("Spend did not contain a CAT puzzle")
@@ -458,10 +461,10 @@ class CRCAT(
                 conditions = potential_cr_layer.run(inner_solution)
             for condition in conditions.as_iter():
                 if condition.at("f") == Program.to(1):
-                    new_inner_puzzle = UnknownPuzzle(known_puzzle_hash=bytes32(condition.at("rf").as_atom()))
+                    new_inner_puzzle = UnknownPuzzle(known_tree_hash=bytes32(condition.at("rf").as_atom()))
                     authorized_providers_as_prog: Program = condition.at("rrf")
                     proofs_checker_match = ProofsChecker.match(
-                        unknown_puzzle=UnknownPuzzle(known_puzzle=condition.at("rrrf"))
+                        unknown_puzzle=UnknownPuzzle(known_program=condition.at("rrrf"))
                     )
                     if proofs_checker_match is None:
                         raise ValueError("Unknown proofs checker in next CRCAT")
@@ -481,10 +484,10 @@ class CRCAT(
             if conditions is None:
                 conditions = inner_puzzle.run(inner_solution)
             authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
-            proofs_checker_match = ProofsChecker.match(unknown_puzzle=UnknownPuzzle(known_puzzle=proofs_checker))
+            proofs_checker_match = ProofsChecker.match(unknown_puzzle=UnknownPuzzle(known_program=proofs_checker))
             if proofs_checker_match is None:
                 raise ValueError("Unknown proofs checker in next CRCAT")
-            lineage_inner_puzzle = UnknownPuzzle(known_puzzle=inner_puzzle)
+            lineage_inner_puzzle = UnknownPuzzle(known_program=inner_puzzle)
             lineage_inner_puzhash = CredentialRestrictionLayer(
                 authorized_providers=authorized_providers,
                 proofs_checker=proofs_checker_match,
@@ -512,7 +515,7 @@ class CRCAT(
                 proofs_checker=proofs_checker_match,
                 inner_puzzle=new_inner_puzzle
                 if new_inner_puzzle is not None
-                else UnknownPuzzle(known_puzzle_hash=cond.puzzle_hash),
+                else UnknownPuzzle(known_tree_hash=cond.puzzle_hash),
             )
             cat_puzzle = CATPuzzle(
                 tail_hash=bytes32(tail_hash_as_prog.as_atom()),
@@ -610,9 +613,7 @@ class CRCAT(
                             inner_puzzle=(
                                 new_cr_layer := replace(
                                     self.inner_puzzle,
-                                    inner_puzzle=cast(
-                                        _T_Puzzle, UnknownPuzzle(known_puzzle_hash=new_inner_puzzle_hash)
-                                    ),
+                                    inner_puzzle=cast(_T_Puzzle, UnknownPuzzle(known_tree_hash=new_inner_puzzle_hash)),
                                 )
                             ),
                         ).tree_hash,
@@ -725,10 +726,10 @@ class CRCATSpend(Generic[_T_Puzzle, _T_InnerSolution]):
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend[UnknownPuzzle, UnknownSolution]:
         cat_match = CATPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(spend.puzzle_reveal))
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(spend.puzzle_reveal))
         )
         if cat_match is None:
-            CATPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.from_serialized(spend.puzzle_reveal)))
+            CATPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(spend.puzzle_reveal)))
             raise ValueError("Spend was not a CRCAT spend")
         cr_layer_match = CredentialRestrictionLayer.match(unknown_puzzle=cat_match.inner_puzzle)
         if cr_layer_match is None:

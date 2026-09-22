@@ -65,7 +65,7 @@ def test_puzzle_with_puzzle_hash() -> None:
 def test_unknown_puzzle() -> None:
     # Test the None-ness of non-curried puzzles
     no_curry = Program.to("this is a program without curried params")
-    unknown_puz = UnknownPuzzle(known_puzzle=no_curry)
+    unknown_puz = UnknownPuzzle(known_program=no_curry)
     assert unknown_puz.mod is None
     assert unknown_puz.curried_args is None
     assert unknown_puz.tree_hash == no_curry.get_tree_hash()
@@ -73,7 +73,7 @@ def test_unknown_puzzle() -> None:
     # Test the most common utilities
     with_curry = Program.to("mod").curry("arg1", "arg2", "arg3")
     with_curry_hash = with_curry.get_tree_hash()
-    unknown_puz_with_curry = UnknownPuzzle(known_puzzle=with_curry)
+    unknown_puz_with_curry = UnknownPuzzle(known_program=with_curry)
     assert unknown_puz_with_curry.mod == Program.to("mod")
     assert list(unknown_puz_with_curry.curried_args or []) == [
         Program.to("arg1"),
@@ -83,7 +83,7 @@ def test_unknown_puzzle() -> None:
     assert unknown_puz_with_curry.tree_hash == with_curry_hash
 
     # Test using only a puzzle hash
-    unknown_puz_zeros = UnknownPuzzle(known_puzzle_hash=bytes32.zeros)
+    unknown_puz_zeros = UnknownPuzzle(known_tree_hash=bytes32.zeros)
     with mock.patch.object(Program, "get_tree_hash") as tree_hash_patched:
         unknown_puz_zeros.tree_hash
         unknown_puz_zeros.tree_hash
@@ -95,12 +95,12 @@ def test_unknown_puzzle() -> None:
 
     # Check post init
     with pytest.raises(ValueError, match="Must specify either a puzzle or puzzle hash that is unknown"):
-        UnknownPuzzle(known_puzzle=None, known_puzzle_hash=None)
+        UnknownPuzzle(known_program=None, known_tree_hash=None)
 
 
 def test_acs_puzzle() -> None:
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to(0))) is None
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to(1))) == ACSPuzzle()
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(0))) is None
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == ACSPuzzle()
     # Atoms are treated as an empty condition list by the parser
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) == ACSSolution(
         conditions=[]
@@ -116,8 +116,8 @@ def test_acs_puzzle() -> None:
 
 
 def test_nil_puzzle() -> None:
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.NIL)) == NilPuzzle()
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to("not a ()"))) is None
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) == NilPuzzle()
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to("not a ()"))) is None
     assert NilSolution.match(unknown_solution=UnknownSolution(program=Program.to("not a ()"))) is None
     assert (
         NilSolution.match(unknown_solution=UnknownSolution(program=run(NilPuzzle().program, NilSolution().program)))
@@ -126,11 +126,11 @@ def test_nil_puzzle() -> None:
 
 
 def test_p2_conditions() -> None:
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to((1, None)))) == P2Conditions(
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, None)))) == P2Conditions(
         conditions=[]
     )
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to((2, None)))) is None
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_puzzle=Program.to((1, ["not a condition"])))) is None
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((2, None)))) is None
+    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, ["not a condition"])))) is None
     assert ACSSolution.match(
         unknown_solution=UnknownSolution(
             program=run(P2Conditions(conditions=[Remark(rest=Program.to("foo"))]).program, NilSolution().program)
