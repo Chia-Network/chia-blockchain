@@ -176,7 +176,7 @@ class TestCommitments:
                 assert peak is not None and peak.header_hash == block.header_hash
                 if peak.sub_epoch_summary_included is not None:
                     trigger = blockchain.height_to_block_record(uint32(block.height - 1))
-                    range_end = get_challenge_start_height(constants, blockchain, trigger.header_hash)
+                    range_end = get_challenge_start_height(constants, blockchain, trigger)
                     if previous_ses_end is None:
                         assert peak.sub_epoch_summary_included.challenge_merkle_root is None
                     elif peak.sub_epoch_summary_included.challenge_merkle_root is None:
@@ -220,7 +220,7 @@ class TestCommitments:
 
         def trigger_boundary(carrier: FullBlock) -> uint32:
             trigger = canonical_blocks.height_to_block_record(uint32(carrier.height - 1))
-            return get_challenge_start_height(constants, canonical_blocks, trigger.header_hash)
+            return get_challenge_start_height(constants, canonical_blocks, trigger)
 
         def has_challenge_root(carrier: FullBlock) -> bool:
             ses = block_records[carrier.header_hash].sub_epoch_summary_included
@@ -268,7 +268,7 @@ class TestCommitments:
         prospective_end = get_challenge_start_height(
             constants,
             canonical_blocks,
-            unfinished_a.prev_header_hash,
+            canonical_blocks.block_record(unfinished_a.prev_header_hash),
             unfinished_a.reward_chain_block.pos_ss_cc_challenge_hash,
         )
         prospective_root = compute_challenge_merkle_root(canonical_blocks, prospective_end, current_start)
