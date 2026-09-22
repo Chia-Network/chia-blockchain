@@ -8,8 +8,10 @@ from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_store_protocol import MMRState
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.mmr import MerkleMountainRange
+from chia.consensus.coin_commitments import compute_mmr_leaf
+from chia.consensus.mmr import MerkleMountainRange, leaf_index_to_pos
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +20,27 @@ log = logging.getLogger(__name__)
 class BlockchainMMRManager:
     """
     Manages MMR state for blockchain operations.
+
+    Post-HF2, MMR leaves are composite: H(header_hash || coin_commitments_root).
+    The composite leaf of every validated block must be registered via
+    register_block_commitment() before the block can be appended to the MMR or
+    take part in an MMR rebuild. Registrations are retained across rollbacks so
+    that fork blocks and re-added canonical blocks do not need to be recomputed.
+
+    Note on retention: this in-memory map is intentionally not bounded. It holds
+    the composite leaf of every validated block (canonical and orphan) and is
+    repopulated on startup hydration. The 1B MMR persistence makes the canonical
+    leaves durable and re-derivable from disk, which is the foundation for
+    bounding this map, but does not by itself complete it: the canonical
+    validation path (_build_mmr_to_block case 2, reached with fork_height=None)
+    still rebuilds the MMR from scratch by reading this map for the full
+    canonical range. Bounding the map requires changing that path to read
+    canonical leaves from the (now persisted and hydrated) in-memory MMR by
+    position — which needs care around fork views, since the augmented-chain
+    from-scratch path can reach case 2 with a fork overlay — plus an eviction
+    and replay-recovery design for peer-driven orphan leaves. Consensus
+    correctness takes priority over closing this; see
+    docs/coin-commitments-mmr-persistence.md.
     """
 
     genesis_challenge: bytes32
@@ -25,20 +48,55 @@ class BlockchainMMRManager:
     _last_header_hash: bytes32 | None = None
     _last_height: uint32 | None = None
     aggregate_from: uint32 = field(default=uint32(0))  # Height from which to start aggregating blocks into MMR
+    # composite MMR leaf by block header hash, for every registered block
+    _block_leaves: dict[bytes32, bytes32] = field(default_factory=dict)
+    # Snapshot taken by begin_canonical_update() so a failed canonical update
+    # (an exception inside the block-store write transaction) can restore the
+    # in-memory MMR. None when no canonical update is in progress.
+    # (truncation, removed_suffix, leaf_count, last_height, last_header_hash)
+    _canonical_snapshot: tuple[int, list[bytes32], uint32, uint32 | None, bytes32 | None] | None = None
 
     def __repr__(self) -> str:
         return f"BlockchainMMRManager(height={self._last_height}, root={self.compute_current_mmr_root()!r})"
 
     def copy(self) -> BlockchainMMRManager:
         """Create a deep copy of this MMR manager."""
-        return copy.deepcopy(self)
+        new = copy.deepcopy(self)
+        # a copy is never part of an in-progress canonical update
+        new._canonical_snapshot = None
+        return new
 
     def get_aggrtegate_from(self) -> uint32:
         return self.aggregate_from
 
+    def register_block_commitment(self, header_hash: bytes32, coin_commitments_root: bytes32) -> None:
+        """
+        Register the composite MMR leaf for a validated block. This does not
+        append anything to the MMR; it only makes the leaf available for a
+        later canonical append or speculative MMR rebuild.
+
+        Registration is idempotent for the same computed leaf. A conflicting
+        leaf for an already-registered block is rejected: the leaf is
+        deterministic for a validated block, so a conflict means corruption or
+        a caller bug, and silently overwriting it would split the live MMR
+        (appended leaf) from future scratch/fork rebuilds (registered leaf).
+        """
+        leaf = compute_mmr_leaf(header_hash, coin_commitments_root)
+        existing = self._block_leaves.get(header_hash)
+        if existing is not None:
+            assert existing == leaf, f"Conflicting coin commitment registration for block {header_hash.hex()}"
+            return
+        self._block_leaves[header_hash] = leaf
+
+    def _get_block_leaf(self, header_hash: bytes32) -> bytes32:
+        leaf = self._block_leaves.get(header_hash)
+        assert leaf is not None, f"Missing coin commitment registration for block {header_hash.hex()}"
+        return leaf
+
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         """
-        Add a block to the MMR in sequential order.
+        Add a block to the MMR in sequential order. The block's composite leaf
+        must have been registered with register_block_commitment() first.
         """
         if height < self.aggregate_from:
             return
@@ -52,13 +110,100 @@ class BlockchainMMRManager:
             assert self._last_height is not None
             assert height == self._last_height + 1
 
-        # Add block's header hash to the MMR
-        self._mmr.append(header_hash)
+        # Add block's composite leaf to the MMR
+        self._mmr.append(self._get_block_leaf(header_hash))
         # Store minimal block info for validation
         self._last_header_hash = header_hash
         self._last_height = height
 
         log.debug(f"Added block {height} to MMR, new root: {self.compute_current_mmr_root()}")
+
+    def _node_count_at_height(self, height: int) -> int:
+        """The flat-node count of an MMR whose leaves are the blocks up to `height`."""
+        if height < self.aggregate_from:
+            return 0
+        leaves = height - self.aggregate_from + 1
+        return 2 * leaves - leaves.bit_count()
+
+    def begin_canonical_update(self, fork_height: int, blocks: BlockRecordsProtocol) -> int:
+        """
+        Begin a canonical MMR update (a canonical append or a reorg), rolling the
+        in-memory MMR back to `fork_height` when this is a reorg. Returns the
+        flat-node truncation point from which the update appends; the persisted
+        node array should be truncated at and above this position.
+
+        Must be paired with commit_canonical_update() once the enclosing database
+        transaction commits, or rollback_canonical_update() if it fails.
+        """
+        assert self._canonical_snapshot is None, "nested canonical MMR update"
+        pre_leaf_count = self._mmr.leaf_count
+        pre_last_height = self._last_height
+        pre_last_header_hash = self._last_header_hash
+        if self._last_height is not None and fork_height < self._last_height:
+            # reorg: the MMR is truncated back to the fork height
+            truncation = self._node_count_at_height(fork_height)
+            removed = self._mmr.nodes[truncation:]
+            self.rollback_to_height(fork_height, blocks)
+            assert len(self._mmr.nodes) == truncation
+        else:
+            truncation = len(self._mmr.nodes)
+            removed = []
+        self._canonical_snapshot = (truncation, removed, pre_leaf_count, pre_last_height, pre_last_header_hash)
+        return truncation
+
+    def canonical_new_nodes(self, truncation: int) -> list[bytes32]:
+        """The flat nodes appended since `truncation` by the in-progress update."""
+        return self._mmr.nodes[truncation:]
+
+    def canonical_state(self, canonical_height: uint32, canonical_header_hash: bytes32) -> MMRState:
+        """The persistable singleton state for the in-progress canonical update."""
+        return MMRState(
+            aggregate_from=self.aggregate_from,
+            leaf_count=self._mmr.leaf_count,
+            canonical_height=canonical_height,
+            canonical_header_hash=canonical_header_hash,
+        )
+
+    def commit_canonical_update(self) -> None:
+        """Discard the rollback snapshot after the database transaction commits."""
+        self._canonical_snapshot = None
+
+    def rollback_canonical_update(self) -> None:
+        """
+        Restore the in-memory MMR to its state before begin_canonical_update().
+        No-op if the update was already committed (the database transaction and
+        the in-memory MMR are then both already at the new state).
+        """
+        snapshot = self._canonical_snapshot
+        if snapshot is None:
+            return
+        truncation, removed, pre_leaf_count, pre_last_height, pre_last_header_hash = snapshot
+        del self._mmr.nodes[truncation:]
+        self._mmr.nodes.extend(removed)
+        self._mmr.leaf_count = pre_leaf_count
+        self._last_height = pre_last_height
+        self._last_header_hash = pre_last_header_hash
+        self._canonical_snapshot = None
+
+    def hydrate(self, nodes: list[bytes32], state: MMRState, blocks: BlockRecordsProtocol) -> None:
+        """
+        Hydrate the in-memory canonical MMR from persisted state, and populate
+        the block-leaves map from the hydrated leaves so later MMR rebuilds can
+        resolve canonical blocks by hash. The caller must have verified `state`
+        against the canonical peak and the node count (the MerkleMountainRange
+        constructor re-validates the node count against `leaf_count`).
+        """
+        self._mmr = MerkleMountainRange(list(nodes), state.leaf_count)
+        if state.leaf_count == 0:
+            self._last_height = None
+            self._last_header_hash = None
+            return
+        self._last_height = uint32(self.aggregate_from + state.leaf_count - 1)
+        self._last_header_hash = state.canonical_header_hash
+        for i in range(state.leaf_count):
+            header_hash = blocks.height_to_hash(uint32(self.aggregate_from + i))
+            assert header_hash is not None
+            self._block_leaves[header_hash] = self._mmr.nodes[leaf_index_to_pos(i)]
 
     def compute_current_mmr_root(self) -> bytes32 | None:
         """Compute the current MMR root representing all blocks added so far."""
@@ -91,7 +236,7 @@ class BlockchainMMRManager:
             for height in range(self.aggregate_from, target_height + 1):
                 header_hash = blocks.height_to_hash(uint32(height))
                 assert header_hash is not None
-                mmr.append(header_hash)
+                mmr.append(self._get_block_leaf(header_hash))
 
             return mmr.compute_root()
 
@@ -119,7 +264,7 @@ class BlockchainMMRManager:
         new_hashes.reverse()
 
         for hh in new_hashes:
-            mmr.append(hh)
+            mmr.append(self._get_block_leaf(hh))
 
         return mmr.compute_root()
 

@@ -163,6 +163,22 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         print(f"-- Peak: {peak_hash} Height: {peak_height}")
         conn.execute("INSERT INTO out_db.current_peak VALUES(?, ?)", (0, bytes.fromhex(peak_hash)))
         conn.commit()
+        # The canonical header MMR (post-HF2 composite leaves). Created empty: a
+        # converted database has no persisted MMR, so the first startup rebuilds
+        # it from the coin store and persists it.
+        conn.execute("CREATE TABLE out_db.mmr_nodes(position INTEGER PRIMARY KEY, hash BLOB NOT NULL)")
+        conn.execute(
+            """
+            CREATE TABLE out_db.mmr_state(
+                key INTEGER PRIMARY KEY CHECK(key = 0),
+                aggregate_from INTEGER NOT NULL,
+                leaf_count INTEGER NOT NULL,
+                canonical_height INTEGER NOT NULL,
+                canonical_header_hash BLOB NOT NULL
+            )
+            """
+        )
+        conn.commit()
         print("-- DB v1 to v2 conversion started")
         print("-- [1/4] Converting full_blocks")
         conn.execute(

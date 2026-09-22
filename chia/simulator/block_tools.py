@@ -39,6 +39,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    additions_and_removals,
     get_flags_for_height_and_constants,
     solution_generator,
     solve_proof,
@@ -53,10 +54,11 @@ from chia.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block_with_mmr,
 )
-from chia.consensus.block_generator_info import block_has_transactions_generator
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -344,6 +346,10 @@ class BlockTools:
         self.mmr_manager = BlockchainMMRManager(
             self.constants.GENESIS_CHALLENGE, aggregate_from=updated_constants.HARD_FORK2_HEIGHT
         )
+        # coin commitments roots of blocks created by this instance, keyed by
+        # header hash. Used to register composite MMR leaves when a chain is
+        # reloaded from a block list.
+        self._block_commitment_roots: dict[bytes32, bytes32] = {}
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -415,6 +421,46 @@ class BlockTools:
     ) -> None:
         if self._tempdir is not None:
             self._tempdir.cleanup()
+
+    def _commitment_root_for_block(
+        self,
+        full_block: FullBlock,
+        blocks: dict[bytes32, BlockRecord],
+        block_list_by_height: dict[uint32, FullBlock],
+    ) -> bytes32:
+        """
+        Returns the coin commitments root of an existing block. Roots of blocks
+        created by this instance are cached at creation time; other blocks have
+        their generator replayed to derive the same root consensus computes
+        from the validated SpendBundleConditions.
+        """
+        cached = self._block_commitment_roots.get(full_block.header_hash)
+        if cached is not None:
+            return cached
+
+        generator_bytes = get_transactions_generator_bytes(full_block)
+        if generator_bytes is None:
+            root = EMPTY_MERKLE_SET_ROOT
+        else:
+            generator_refs: list[bytes] = []
+            for ref_height in full_block.transactions_generator_ref_list:
+                ref_block = block_list_by_height[ref_height]
+                ref_bytes = get_transactions_generator_bytes(ref_block)
+                assert ref_bytes is not None
+                generator_refs.append(ref_bytes)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=BlockCache(blocks, self.mmr_manager),
+                prev_b_hash=full_block.prev_header_hash,
+                sp_index=full_block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(full_block.finished_sub_slots),
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
+            additions, removals = additions_and_removals(generator_bytes, generator_refs, flags, self.constants)
+            root = compute_coin_commitments_root([coin_id for coin_id, _ in removals], [coin for coin, _ in additions])
+
+        self._block_commitment_roots[full_block.header_hash] = root
+        return root
 
     def setup_new_gen(
         self,
@@ -947,8 +993,12 @@ class BlockTools:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         # Populate MMR from existing BlockRecords
+        block_list_by_height = {full_block.height: full_block for full_block in block_list}
         for full_block in block_list:
             block_record = blocks[full_block.header_hash]
+            if full_block.height >= self.mmr_manager.get_aggrtegate_from():
+                root = self._commitment_root_for_block(full_block, blocks, block_list_by_height)
+                self.mmr_manager.register_block_commitment(full_block.header_hash, root)
             self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
@@ -1185,6 +1235,20 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Register the block's coin commitment so the MMR can
+                        # append its composite leaf. The additions and removals
+                        # of the block generator match the conditions consensus
+                        # validation computes from the generator.
+                        if full_block.height >= self.mmr_manager.get_aggrtegate_from():
+                            if block_has_transactions_generator(full_block):
+                                assert new_gen is not None
+                                commitment_root = compute_coin_commitments_root(
+                                    [coin.name() for coin in new_gen.removals], new_gen.additions
+                                )
+                            else:
+                                commitment_root = EMPTY_MERKLE_SET_ROOT
+                            self._block_commitment_roots[full_block.header_hash] = commitment_root
+                            self.mmr_manager.register_block_commitment(full_block.header_hash, commitment_root)
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
                             block_record.header_hash, block_record.prev_hash, block_record.height
@@ -1524,6 +1588,20 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Register the block's coin commitment so the MMR can
+                        # append its composite leaf. The additions and removals
+                        # of the block generator match the conditions consensus
+                        # validation computes from the generator.
+                        if full_block.height >= self.mmr_manager.get_aggrtegate_from():
+                            if block_has_transactions_generator(full_block):
+                                assert new_gen is not None
+                                commitment_root = compute_coin_commitments_root(
+                                    [coin.name() for coin in new_gen.removals], new_gen.additions
+                                )
+                            else:
+                                commitment_root = EMPTY_MERKLE_SET_ROOT
+                            self._block_commitment_roots[full_block.header_hash] = commitment_root
+                            self.mmr_manager.register_block_commitment(full_block.header_hash, commitment_root)
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
                             block_record.header_hash, block_record.prev_hash, block_record.height

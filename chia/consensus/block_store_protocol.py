@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager
+from dataclasses import dataclass
 from typing import Protocol
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment
@@ -65,3 +66,46 @@ class BlockStoreProtocol(Protocol):
     async def get_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32
     ) -> list[SubEpochChallengeSegment] | None: ...
+
+
+@dataclass(frozen=True)
+class MMRState:
+    """
+    Singleton metadata describing the persisted canonical header MMR.
+
+    `canonical_height`/`canonical_header_hash` identify the canonical peak the
+    persisted MMR was written for; they are used on startup to detect a stale
+    store (one written for a different peak). `leaf_count` is the number of MMR
+    leaves (post-`aggregate_from` canonical blocks); the flat node count must be
+    `2 * leaf_count - popcount(leaf_count)`.
+    """
+
+    aggregate_from: uint32
+    leaf_count: uint32
+    canonical_height: uint32
+    canonical_header_hash: bytes32
+
+
+class MMRStoreProtocol(Protocol):
+    """
+    Persistence boundary for the canonical header MMR (post-HF2 composite
+    leaves). The flat node array is stored so historical MMR states are implicit
+    prefixes; only canonical appends and reorg truncations modify it, and they
+    do so within the enclosing block-store write transaction so the persisted
+    MMR commits atomically with the canonical peak change.
+    """
+
+    async def get_state(self) -> MMRState | None: ...
+
+    async def get_nodes(self) -> list[bytes32]:
+        """Return the full flat node array, ordered by position."""
+        ...
+
+    async def apply_canonical_update(self, truncation: int, new_nodes: list[bytes32], state: MMRState) -> None:
+        """
+        Persist a canonical MMR update: drop every node at flat position
+        >= `truncation`, insert `new_nodes` starting at `truncation`, and store
+        the new singleton `state`. Must be called within the enclosing
+        block-store write transaction.
+        """
+        ...

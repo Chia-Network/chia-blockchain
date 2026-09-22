@@ -47,6 +47,13 @@ class CoinStoreProtocol(Protocol):
         Returns the coins removed at a specific height
         """
 
+    async def get_coin_commitments_root(self, height: uint32) -> bytes32:
+        """
+        Reconstructs the canonical block's coin commitments root at the given
+        height from the coin store (spent_index and confirmed_index/coinbase
+        indexed queries over a single reader snapshot).
+        """
+
     async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
         """
         Rolls back the blockchain to the specified block index

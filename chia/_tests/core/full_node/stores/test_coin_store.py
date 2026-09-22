@@ -6,19 +6,29 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import (
+    CoinRecord,
+    CoinState,
+    FullBlock,
+    additions_and_removals,
+    compute_merkle_set_root,
+    get_flags_for_height_and_constants,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.coin_store import add_coin_records_to_db
 from chia._tests.util.db_connection import DBConnection
 from chia._tests.util.misc import Marks, datacases
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -1059,3 +1069,237 @@ async def test_rollback_to_block_spent_index_update() -> None:
             assert await get_spent_index(conn, reward_coin.name()) == 0
             # The potential ff singleton child should be marked with -1
             assert await get_spent_index(conn, same_as_parent_child.name()) == -1
+
+
+def _commitment_test_coin(seed: int, parent: bytes32 | None = None, amount: int = 1000) -> Coin:
+    return Coin(
+        std_hash(b"commitment-parent" + seed.to_bytes(4, "big")) if parent is None else parent,
+        std_hash(b"commitment-puzzle" + seed.to_bytes(4, "big")),
+        uint64(amount),
+    )
+
+
+def _commitment_test_reward_coins(height: int) -> list[Coin]:
+    return [
+        create_pool_coin(
+            uint32(height), std_hash(b"pool"), calculate_pool_reward(uint32(height)), constants.GENESIS_CHALLENGE
+        ),
+        create_farmer_coin(
+            uint32(height),
+            std_hash(b"farmer"),
+            calculate_base_farmer_reward(uint32(height)),
+            constants.GENESIS_CHALLENGE,
+        ),
+    ]
+
+
+async def _new_tx_block(
+    coin_store: CoinStore,
+    height: int,
+    tx_additions: list[Coin],
+    tx_removals: list[Coin],
+) -> None:
+    # every block also creates reward coins; they are coinbase and must be
+    # excluded from the commitment, so the expected roots below are computed
+    # from the transaction additions and removals only
+    await coin_store.new_block(
+        uint32(height),
+        uint64(1000 + height),
+        _commitment_test_reward_coins(height),
+        [(coin.name(), coin, False) for coin in tx_additions],
+        [coin.name() for coin in tx_removals],
+    )
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_empty_store(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        # height 0 cannot be queried (spent_index=0 means unspent) and commits
+        # the canonical empty Merkle-set root
+        assert await coin_store.get_coin_commitments_root(uint32(0)) == EMPTY_MERKLE_SET_ROOT
+        assert await coin_store.get_coin_commitments_root(uint32(1)) == EMPTY_MERKLE_SET_ROOT
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_reward_only_block(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        await coin_store.new_block(uint32(1), uint64(1001), _commitment_test_reward_coins(1), [], [])
+        # reward coins are excluded: a reward-only block commits the empty root
+        assert await coin_store.get_coin_commitments_root(uint32(1)) == EMPTY_MERKLE_SET_ROOT
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_spend_with_no_outputs(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        rewards_1 = _commitment_test_reward_coins(1)
+        await coin_store.new_block(uint32(1), uint64(1001), rewards_1, [], [])
+        coin_a = _commitment_test_coin(1, parent=rewards_1[1].name())
+        await _new_tx_block(coin_store, 2, [coin_a], [rewards_1[1]])
+        # spend coin_a, creating no outputs
+        await _new_tx_block(coin_store, 3, [], [coin_a])
+
+        # a spend with no outputs commits H(spent_coin_id || empty Merkle-set root)
+        expected = compute_coin_commitments_root([coin_a.name()], [])
+        assert expected == bytes32(compute_merkle_set_root([std_hash(coin_a.name() + EMPTY_MERKLE_SET_ROOT)]))
+        assert await coin_store.get_coin_commitments_root(uint32(3)) == expected
+
+        # block 2 spent rewards_1[1] and created coin_a
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == compute_coin_commitments_root(
+            [rewards_1[1].name()], [coin_a]
+        )
+        # block 1 spent nothing: the empty root
+        assert await coin_store.get_coin_commitments_root(uint32(1)) == EMPTY_MERKLE_SET_ROOT
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_multiple_spends_grouped_by_parent(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        rewards_1 = _commitment_test_reward_coins(1)
+        await coin_store.new_block(uint32(1), uint64(1001), rewards_1, [], [])
+
+        spent_pool, spent_farmer = rewards_1[0], rewards_1[1]
+        out_a1 = _commitment_test_coin(1, parent=spent_farmer.name())
+        out_a2 = _commitment_test_coin(2, parent=spent_farmer.name())
+        out_b1 = _commitment_test_coin(3, parent=spent_pool.name())
+        # interleave the outputs of both spends; grouping must follow the parent
+        await _new_tx_block(coin_store, 2, [out_a1, out_b1, out_a2], [spent_farmer, spent_pool])
+
+        expected = compute_coin_commitments_root([spent_farmer.name(), spent_pool.name()], [out_a1, out_b1, out_a2])
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == expected
+        # the same outputs in a different order must give the same root
+        assert expected == compute_coin_commitments_root(
+            [spent_pool.name(), spent_farmer.name()], [out_b1, out_a2, out_a1]
+        )
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_ephemeral_create_and_spend(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        rewards_1 = _commitment_test_reward_coins(1)
+        await coin_store.new_block(uint32(1), uint64(1001), rewards_1, [], [])
+
+        spent = rewards_1[1]
+        ephemeral = _commitment_test_coin(1, parent=spent.name())
+        child = _commitment_test_coin(2, parent=ephemeral.name())
+        # one block: spend `spent`, create `ephemeral`, spend `ephemeral`, create `child`
+        await _new_tx_block(coin_store, 2, [ephemeral, child], [spent, ephemeral])
+
+        expected = compute_coin_commitments_root([spent.name(), ephemeral.name()], [ephemeral, child])
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == expected
+
+
+@pytest.mark.anyio
+async def test_coin_commitments_root_rollback(db_version: int) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        rewards_1 = _commitment_test_reward_coins(1)
+        await coin_store.new_block(uint32(1), uint64(1001), rewards_1, [], [])
+        coin_a = _commitment_test_coin(1, parent=rewards_1[1].name())
+        await _new_tx_block(coin_store, 2, [coin_a], [rewards_1[1]])
+        coin_b = _commitment_test_coin(2, parent=coin_a.name())
+        await _new_tx_block(coin_store, 3, [coin_b], [coin_a])
+
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == compute_coin_commitments_root(
+            [rewards_1[1].name()], [coin_a]
+        )
+        assert await coin_store.get_coin_commitments_root(uint32(3)) == compute_coin_commitments_root(
+            [coin_a.name()], [coin_b]
+        )
+
+        # rolling back to height 1 removes the later blocks' spends and creations
+        await coin_store.rollback_to_block(1)
+        assert await coin_store.get_coin_commitments_root(uint32(1)) == EMPTY_MERKLE_SET_ROOT
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == EMPTY_MERKLE_SET_ROOT
+        assert await coin_store.get_coin_commitments_root(uint32(3)) == EMPTY_MERKLE_SET_ROOT
+
+        # applying a different block 2 (as in a reorg) reconstructs the new root
+        coin_c = _commitment_test_coin(3, parent=rewards_1[0].name())
+        await _new_tx_block(coin_store, 2, [coin_c], [rewards_1[0]])
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == compute_coin_commitments_root(
+            [rewards_1[0].name()], [coin_c]
+        )
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_coin_commitments_root_reorg_reconstruction(
+    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: ConsensusMode
+) -> None:
+    """
+    End-to-end agreement between the roots derived from validated spend
+    conditions and the roots reconstructed from the coin store, across a reorg
+    that swaps which spend is canonical.
+    """
+    wallet_a = WALLET_A
+    reward_ph = wallet_a.get_new_puzzlehash()
+
+    async with DBConnection(db_version) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        store = await BlockStore.create(db_wrapper)
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, InlineExecutor())
+        try:
+            base_blocks = bt.get_consecutive_blocks(
+                8,
+                farmer_reward_puzzle_hash=reward_ph,
+                pool_reward_puzzle_hash=reward_ph,
+                guarantee_transaction_block=True,
+            )
+            spend_coin = None
+            for coin in base_blocks[2].get_included_reward_coins():
+                if coin.puzzle_hash == reward_ph:
+                    spend_coin = coin
+            assert spend_coin is not None
+
+            receiver_ph = wallet_a.get_new_puzzlehash()
+            # two spends of the same coin differing only in their outputs
+            bundle_a = wallet_a.generate_signed_transaction(uint64(1000), receiver_ph, spend_coin)
+            bundle_b = wallet_a.generate_signed_transaction(uint64(2000), receiver_ph, spend_coin)
+            root_a = compute_coin_commitments_root([c.name() for c in bundle_a.removals()], bundle_a.additions())
+            root_b = compute_coin_commitments_root([c.name() for c in bundle_b.removals()], bundle_b.additions())
+            assert root_a != root_b
+
+            chain_a = bt.get_consecutive_blocks(
+                3,
+                block_list_input=base_blocks,
+                transaction_data=bundle_a,
+                farmer_reward_puzzle_hash=reward_ph,
+                pool_reward_puzzle_hash=reward_ph,
+                guarantee_transaction_block=True,
+            )
+            # the fork is one block longer, so it overtakes chain A
+            chain_b = bt.get_consecutive_blocks(
+                4,
+                block_list_input=base_blocks,
+                transaction_data=bundle_b,
+                farmer_reward_puzzle_hash=reward_ph,
+                pool_reward_puzzle_hash=reward_ph,
+                guarantee_transaction_block=True,
+                seed=b"fork",
+            )
+            spend_height = chain_a[len(base_blocks)].height
+
+            for block in chain_a:
+                await _validate_and_add_block(b, block)
+
+            # the canonical reconstruction matches chain A's validated spend
+            assert await coin_store.get_coin_commitments_root(spend_height) == root_a
+
+            fork_info = ForkInfo(base_blocks[-1].height, base_blocks[-1].height, base_blocks[-1].header_hash)
+            aug_chain = AugmentedBlockchain(b)
+            for block in chain_b[len(base_blocks) :]:
+                await _validate_and_add_block_no_error(b, block, fork_info=fork_info, augmented_blockchain=aug_chain)
+
+            peak = b.get_peak()
+            assert peak is not None
+            assert peak.header_hash == chain_b[-1].header_hash
+
+            # after the reorg, the reconstruction follows chain B's spend
+            assert await coin_store.get_coin_commitments_root(spend_height) == root_b
+        finally:
+            b.shut_down()

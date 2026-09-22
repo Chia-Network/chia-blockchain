@@ -71,6 +71,7 @@ async def test_prevalidation_error_returns_err_not_assert() -> None:
         required_iters=None,
         conds=None,
         timing=uint32(0),
+        coin_commitments_root=None,
     )
     blockchain = SimpleNamespace(block_record=lambda _: None, remove_extra_block=lambda _: None)
     peer_info = PeerInfo("127.0.0.1", uint16(8444))
@@ -102,6 +103,7 @@ async def test_prevalidation_none_required_iters_returns_err() -> None:
         required_iters=None,
         conds=None,
         timing=uint32(0),
+        coin_commitments_root=None,
     )
     blockchain = SimpleNamespace(block_record=lambda _: None, remove_extra_block=lambda _: None)
     peer_info = PeerInfo("127.0.0.1", uint16(8444))

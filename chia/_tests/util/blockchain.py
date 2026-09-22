@@ -14,6 +14,7 @@ from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.mmr_store import MMRStore
 from chia.simulator.block_tools import BlockTools
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -28,9 +29,12 @@ async def create_blockchain(
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
         store = await BlockStore.create(wrapper)
+        mmr_store = await MMRStore.create(wrapper)
         path = Path(".")
         height_map = await BlockHeightMap.create(path, wrapper)
-        bc1 = await Blockchain.create(coin_store, store, height_map, constants, InlineExecutor(), log_coins=True)
+        bc1 = await Blockchain.create(
+            coin_store, store, height_map, constants, InlineExecutor(), log_coins=True, mmr_store=mmr_store
+        )
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper

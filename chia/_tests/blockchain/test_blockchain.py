@@ -1962,6 +1962,10 @@ class TestPreValidation:
                     empty_blockchain.pool,
                     None,
                     vs,
+                    # parallel workers can't check header MMR commitments: a
+                    # block's commitment covers earlier batch blocks whose
+                    # composite leaves only exist after their generators ran
+                    skip_commitment_validation=True,
                 )
             )
 
@@ -2906,7 +2910,7 @@ class TestBodyValidation:
             await b.add_block(
                 blocks[-1],
                 PreValidationResult(
-                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)
+                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
                 ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
@@ -2984,7 +2988,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3019,7 +3025,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3055,7 +3063,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3673,6 +3683,10 @@ class TestReorgs:
                     b.pool,
                     None,
                     vs,
+                    # parallel workers can't check header MMR commitments: a
+                    # block's commitment covers earlier batch blocks whose
+                    # composite leaves only exist after their generators ran
+                    skip_commitment_validation=True,
                 )
             )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
@@ -4421,6 +4435,10 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
                 bc.pool,
                 None,
                 vs,
+                # parallel workers can't check header MMR commitments: a block's
+                # commitment covers earlier batch blocks whose composite leaves
+                # only exist after their generators ran
+                skip_commitment_validation=True,
             )
         )
 

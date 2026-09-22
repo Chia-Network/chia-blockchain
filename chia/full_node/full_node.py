@@ -45,6 +45,7 @@ from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
 )
+from chia.consensus.block_header_validation import validate_header_mmr_root
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -64,6 +65,7 @@ from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mmr_store import MMRStore
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -207,6 +209,7 @@ class FullNode:
     _hint_store: HintStore | None = None
     _block_store: BlockStore | None = None
     _coin_store: CoinStore | None = None
+    _mmr_store: MMRStore | None = None
     _mempool_manager: MempoolManager | None = None
     _init_weight_proof: asyncio.Task[None] | None = None
     _blockchain: Blockchain | None = None
@@ -312,6 +315,7 @@ class FullNode:
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
+            self._mmr_store = await MMRStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -341,6 +345,7 @@ class FullNode:
                 height_map=height_map,
                 pool=self.pool,
                 log_coins=log_coins,
+                mmr_store=self._mmr_store,
             )
 
             async with MempoolManager.managed(
@@ -1458,10 +1463,6 @@ class FullNode:
             nonlocal first_batch, blockchain, fork_info
             peer, blocks = item
 
-            # Keep the augmented chain's MMR snapshot aligned with the
-            # underlying blockchain before validating each fetched batch.
-            blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
-
             # skip_blocks is only relevant at the start of the sync,
             # to skip blocks we already have in the database (and have
             # been validated). Once we start validating blocks, we
@@ -1498,6 +1499,13 @@ class FullNode:
             peer, vs, futures, blocks = item
             start_height = blocks[0].height
             end_height = blocks[-1].height
+
+            # Align the augmented chain's MMR snapshot with the underlying
+            # blockchain now, when the previous batch has been fully committed
+            # (ingest batches run in order). The header MMR commitment checks
+            # in add_prevalidated_blocks() need the composite leaves of all
+            # prior blocks, including those of the previous batch.
+            blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
 
             if block_rate_height == -1:
                 block_rate_height = start_height
@@ -1666,12 +1674,14 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
-        # Keep the augmented chain's MMR snapshot aligned with the underlying
-        # blockchain between batches.
-        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
-
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
+
+        # Keep the augmented chain's MMR snapshot aligned with the underlying
+        # blockchain between batches. This happens after skip_blocks() so coin
+        # commitments registered while replaying already-known fork blocks are
+        # included.
+        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
 
         if len(blocks_to_validate) == 0:
             return True, None
@@ -1777,6 +1787,11 @@ class FullNode:
                     None,
                     vs,
                     wp_summaries=wp_summaries,
+                    # Parallel workers cannot check header MMR commitments: a
+                    # block's commitment covers earlier batch blocks whose
+                    # composite leaves only exist after their generators ran.
+                    # add_prevalidated_blocks() runs the check sequentially.
+                    skip_commitment_validation=True,
                     nice=(20,),
                 )
             )
@@ -1807,6 +1822,22 @@ class FullNode:
                     f"required_iters is None for block {header_hash.hex()} height {block.height} from peer {peer_info}"
                 )
                 return agg_state_change_summary, Err.UNKNOWN
+
+            # The header MMR commitment check was deferred from the parallel
+            # prevalidation workers (see prevalidate_blocks). Run it now,
+            # sequentially in height order: the composite leaves of all prior
+            # blocks in the batch have been registered below by the time this
+            # block is checked.
+            mmr_error = validate_header_mmr_root(self.constants, blockchain, block)
+            if mmr_error is not None:
+                self.log.error(
+                    f"header MMR root validation failed for block {header_hash.hex()} height {block.height} "
+                    f"from peer {peer_info}"
+                )
+                return agg_state_change_summary, mmr_error.code
+            coin_commitments_root = pre_validation_results[i].coin_commitments_root
+            if coin_commitments_root is not None:
+                blockchain.mmr_manager.register_block_commitment(header_hash, coin_commitments_root)
             state_change_summary: StateChangeSummary | None
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
@@ -1820,6 +1851,7 @@ class FullNode:
                     assert cc_sub_slot.new_difficulty is not None
                     vs.difficulty = cc_sub_slot.new_difficulty
             block_rec = blockchain.block_record(block.header_hash)
+            peak_before = self.blockchain.get_peak()
             result, error, state_change_summary = await self.blockchain.add_block(
                 block,
                 pre_validation_results[i],
@@ -1836,6 +1868,15 @@ class FullNode:
                 # fork history from fork_info anymore
                 fork_info.reset(block.height, header_hash)
                 assert state_change_summary is not None
+                # If this block changed the canonical branch (a reorg), the
+                # augmented chain's MMR snapshot is now based on the old branch.
+                # Refresh it from the canonical manager before validating the
+                # next block in the batch, or that block's header MMR check
+                # would compute against the old branch's state and be rejected.
+                # (Only done on branch changes; for plain extensions the
+                # augmented snapshot already tracks the committed block.)
+                if peak_before is None or block.prev_header_hash != peak_before.header_hash:
+                    blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
                 if agg_state_change_summary is None:
                     agg_state_change_summary = state_change_summary
@@ -2323,6 +2364,16 @@ class FullNode:
                     await self.blockchain.run_single_block(block, fork_info)
                 return None
             validation_start = time.monotonic()
+            # If this block extends a stored fork branch, replay its ancestry to
+            # cache its block records and register its coin commitments before
+            # prevalidation. Otherwise the header MMR check would run before
+            # add_block() can replay the stored ancestry and fail on the missing
+            # composite leaves. Only done on the default respond_block path; the
+            # batch sync and backtrack paths replay fork ancestry themselves.
+            if fork_info is None:
+                prepared_fork_info = await self.blockchain.prepare_stored_fork_ancestry(block)
+                if prepared_fork_info is not None:
+                    fork_info = prepared_fork_info
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             conds = None
             if pre_validation_result is not None and pre_validation_result.conds is not None:

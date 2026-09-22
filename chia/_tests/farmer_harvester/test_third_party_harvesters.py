@@ -475,6 +475,10 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
                 full_node.blockchain.pool,
                 None,
                 ValidationState(ssi, diff, prev_ses_block),
+                # parallel workers can't check header MMR commitments: a block's
+                # commitment covers earlier batch blocks whose composite leaves
+                # only exist after their generators ran
+                skip_commitment_validation=True,
             )
         )
     pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))

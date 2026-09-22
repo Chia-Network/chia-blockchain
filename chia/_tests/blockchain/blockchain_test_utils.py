@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from chia_rs import FullBlock, SpendBundleConditions
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.coin_commitments import coin_commitments_root_from_conds
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.full_node.block_store import BlockStore
@@ -82,7 +84,10 @@ async def _validate_and_add_block(
         else:
             # fake the signature validation. Just say True here.
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
-        results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
+        coin_commitments_root: bytes32 | None = None
+        if block.height >= blockchain.constants.HARD_FORK2_HEIGHT:
+            coin_commitments_root = coin_commitments_root_from_conds(conds)
+        results = PreValidationResult(None, None, uint64(1), conds, uint32(0), coin_commitments_root)
     else:
         future = await pre_validate_block(
             blockchain.constants,
@@ -108,6 +113,12 @@ async def _validate_and_add_block(
         return None
     if fork_info is None:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+
+    # Mirror full-node add_prevalidated_blocks(): register the block's coin
+    # commitment into the overlay's MMR manager so subsequent blocks validated
+    # against the same overlay can check their header MMR roots.
+    if results.coin_commitments_root is not None:
+        aug_blockchain.mmr_manager.register_block_commitment(block.header_hash, results.coin_commitments_root)
 
     # Match full-node add_prevalidated_blocks() by passing the prevalidated
     # overlay record into add_block().

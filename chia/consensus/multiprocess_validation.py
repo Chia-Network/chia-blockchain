@@ -27,6 +27,7 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.coin_commitments import coin_commitments_root_from_conds
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
@@ -60,6 +61,9 @@ class PreValidationResult(Streamable):
     required_iters: uint64 | None  # Iff error is None
     conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
+    # Iff error is None and block height >= HARD_FORK2_HEIGHT. Derived from the
+    # already-validated conds so generator execution remains single-pass.
+    coin_commitments_root: bytes32 | None
 
     @property
     def validated_signature(self) -> bool:
@@ -121,7 +125,7 @@ def _pre_validate_block(
 
     def error_result(error: Err, error_msg: str | None = None) -> PreValidationResult:
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(error.value), error_msg, None, None, uint32(validation_time * 1000))
+        return PreValidationResult(uint16(error.value), error_msg, None, None, uint32(validation_time * 1000), None)
 
     try:
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
@@ -179,6 +183,13 @@ def _pre_validate_block(
         )
         error_int = None if error is None else uint16(error.code.value)
 
+        # Derive the coin commitments root only after successful generator
+        # execution and header validation; invalid blocks must not have their
+        # data registered or appended anywhere.
+        coin_commitments_root: bytes32 | None = None
+        if error is None and block.height >= constants.HARD_FORK2_HEIGHT:
+            coin_commitments_root = coin_commitments_root_from_conds(conds)
+
         validation_time = time.monotonic() - validation_start
         return PreValidationResult(
             error_int,
@@ -186,6 +197,7 @@ def _pre_validate_block(
             required_iters,
             conds,
             uint32(validation_time * 1000),
+            coin_commitments_root,
         )
     except Exception:
         error_stack = traceback.format_exc()
@@ -233,7 +245,7 @@ async def pre_validate_block(
     prev_b: BlockRecord | None = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
-        return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
+        return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0), None)
 
     if block.height == 0:
         if block.prev_header_hash != constants.GENESIS_CHALLENGE:

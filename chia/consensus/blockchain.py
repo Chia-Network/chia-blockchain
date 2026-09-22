@@ -32,9 +32,10 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
-from chia.consensus.block_store_protocol import BlockStoreProtocol
+from chia.consensus.block_store_protocol import BlockStoreProtocol, MMRStoreProtocol
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import coin_commitments_root_from_conds, compute_coin_commitments_root
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -112,6 +113,9 @@ class Blockchain:
     # Store
     block_store: BlockStoreProtocol
     mmr_manager: MMRManagerProtocol
+    # Persists the canonical header MMR so startup can hydrate it directly.
+    # Optional: when None, the MMR is rebuilt from the coin store on startup.
+    mmr_store: MMRStoreProtocol | None
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -135,6 +139,7 @@ class Blockchain:
         pool: Executor,
         *,
         log_coins: bool = False,
+        mmr_store: MMRStoreProtocol | None = None,
     ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -151,6 +156,7 @@ class Blockchain:
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
+        self.mmr_store = mmr_store
         self.mmr_manager = BlockchainMMRManager(
             consensus_constants.GENESIS_CHALLENGE, aggregate_from=consensus_constants.HARD_FORK2_HEIGHT
         )
@@ -187,13 +193,87 @@ class Blockchain:
         assert self.__height_map.contains_height(self._peak_height)
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
-        # Build MMR from canonical chain (height_map), starting from aggregate_from
-        # todo WPv2: persist MMR state to avoid rebuilding on startup
+        # Load the canonical header MMR. Post-HF2 leaves are composite:
+        # H(header_hash || coin_commitments_root). The fast path hydrates the MMR
+        # from the persisted store; the fallback rebuilds it from the coin store
+        # (two indexed queries per post-HF2 height) and persists the result.
+        if not await self._try_hydrate_mmr():
+            await self._rebuild_and_persist_mmr()
+
+    async def _try_hydrate_mmr(self) -> bool:
+        """
+        Try to hydrate the canonical header MMR from the persisted store. Returns
+        True on success. Returns False when there is no usable persisted state
+        (absent, or written for a different peak), in which case the caller
+        rebuilds from the coin store. Raises when the persisted state cannot be
+        reconciled with the canonical chain (structural corruption), to fail
+        closed rather than accept it silently.
+        """
+        if self.mmr_store is None or self._peak_height is None:
+            return False
+        state = await self.mmr_store.get_state()
+        if state is None:
+            return False
+        if state.aggregate_from != self.constants.HARD_FORK2_HEIGHT:
+            raise RuntimeError(
+                f"persisted MMR aggregate_from {state.aggregate_from} does not match the active "
+                f"consensus constant {self.constants.HARD_FORK2_HEIGHT}; the database is corrupt or "
+                "was built with different consensus constants"
+            )
+        peak_hash = self.__height_map.get_hash(self._peak_height)
+        assert peak_hash is not None
+        if state.canonical_height != self._peak_height:
+            # stale: written for a different peak (e.g. a downgrade added blocks
+            # without MMR persistence). Fall back to the coin-store rebuild.
+            log.info(
+                f"persisted MMR is stale (peak height {state.canonical_height} != {self._peak_height}); "
+                "rebuilding from the coin store"
+            )
+            return False
+        if state.canonical_header_hash != peak_hash:
+            raise RuntimeError(
+                f"persisted MMR peak hash {state.canonical_header_hash} does not match the canonical "
+                f"peak {peak_hash} at height {self._peak_height}; the database is corrupt"
+            )
+        expected_leaves = (
+            self._peak_height - state.aggregate_from + 1 if self._peak_height >= state.aggregate_from else 0
+        )
+        if state.leaf_count != expected_leaves:
+            raise RuntimeError(
+                f"persisted MMR leaf count {state.leaf_count} does not match the expected "
+                f"{expected_leaves} for peak height {self._peak_height}; the database is corrupt"
+            )
+        nodes = await self.mmr_store.get_nodes()
+        expected_nodes = 2 * state.leaf_count - state.leaf_count.bit_count()
+        if len(nodes) != expected_nodes:
+            raise RuntimeError(
+                f"persisted MMR node count {len(nodes)} does not match the expected "
+                f"{expected_nodes} for {state.leaf_count} leaves; the database is corrupt"
+            )
+        self.mmr_manager.hydrate(nodes, state, self)
+        log.info(f"Hydrated canonical MMR from disk: {state.leaf_count} leaves, {len(nodes)} nodes")
+        return True
+
+    async def _rebuild_and_persist_mmr(self) -> None:
+        """
+        Rebuild the canonical header MMR from the coin store (the recovery and
+        migration path), then persist the result so the next startup hydrates it
+        directly. This costs two indexed coin-store queries per post-HF2 height.
+        """
+        assert self._peak_height is not None
         for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
             header_hash = self.__height_map.get_hash(uint32(height))
             block_record = await self.get_block_record_from_db(header_hash)
             assert block_record is not None
+            coin_commitments_root = await self.coin_store.get_coin_commitments_root(uint32(height))
+            self.mmr_manager.register_block_commitment(header_hash, coin_commitments_root)
             self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
+        if self.mmr_store is not None:
+            peak_hash = self.__height_map.get_hash(self._peak_height)
+            assert peak_hash is not None
+            state = self.mmr_manager.canonical_state(self._peak_height, peak_hash)
+            # the rebuilt MMR is written wholesale: truncate at 0, insert all nodes
+            await self.mmr_store.apply_canonical_update(0, self.mmr_manager.canonical_new_nodes(0), state)
 
     def get_peak(self) -> BlockRecord | None:
         """
@@ -299,7 +379,79 @@ class Blockchain:
                 self.constants,
             )
 
+        if block.height >= self.mmr_manager.get_aggrtegate_from():
+            # register the composite MMR leaf of this replayed block. This is
+            # how leaves of old orphan blocks become available again after a
+            # restart, without persisting orphan roots.
+            coin_commitments_root = compute_coin_commitments_root(
+                [coin_id for coin_id, _ in removals], [coin for coin, _ in additions]
+            )
+            self.mmr_manager.register_block_commitment(block.header_hash, coin_commitments_root)
+
         fork_info.include_block(additions, removals, block, block.header_hash)
+
+    async def prepare_stored_fork_ancestry(self, block: FullBlock) -> ForkInfo | None:
+        """
+        If `block` extends a stored fork branch (its parent is in the database
+        but not on the canonical chain), load the branch's block records into
+        the in-memory cache and replay each branch block to register its coin
+        commitment, so that prevalidating `block` can resolve the ancestry and
+        check its header MMR commitment. Returns a ForkInfo advanced to the
+        block's parent, which the caller should pass to add_block().
+
+        This must be called before prevalidating `block` (normal prevalidation
+        otherwise runs before add_block() could replay the stored ancestry, and
+        the header MMR check would fail on the missing composite leaves).
+
+        Returns None when there is nothing to prepare: the block extends the
+        canonical peak, its parent is canonical, or its parent is unknown.
+
+        Note on cost: replaying the branch runs each block's generator once to
+        compute its coin commitment and to build the fork's additions/removals
+        for the returned ForkInfo. This is a single generator pass per branch
+        block per submitted child — the same work add_block()'s
+        advance_fork_info() would otherwise do after prevalidation — and it only
+        happens for blocks extending a stored fork, after the cheap
+        contains_block checks. A peer sending a malformed child of a stored fork
+        is banned on the first consensus failure, which bounds repeated-replay
+        attempts. Fully avoiding re-replay across repeated children of the same
+        branch would require caching per-block fork state (additions/removals),
+        which is deferred to the MMR-persistence milestone.
+        """
+        peak = self.get_peak()
+        if peak is None or block.prev_header_hash == peak.header_hash:
+            return None
+
+        # Walk back from the parent to the fork point (the first canonical
+        # ancestor), collecting the stored fork branch blocks.
+        branch: list[bytes32] = []
+        curr_hash = block.prev_header_hash
+        curr = await self.get_block_record_from_db(curr_hash)
+        if curr is None:
+            return None
+        while self.height_to_hash(curr.height) != curr_hash:
+            branch.append(curr_hash)
+            if curr.height == 0:
+                break
+            curr_hash = curr.prev_hash
+            curr = await self.get_block_record_from_db(curr_hash)
+            assert curr is not None
+        if not branch:
+            # the parent is on the canonical chain; its ancestry's commitments
+            # are already registered
+            return None
+
+        fork_info = ForkInfo(curr.height, curr.height, curr_hash)
+        for header_hash in reversed(branch):
+            fork_block = await self.block_store.get_full_block(header_hash)
+            assert fork_block is not None
+            # make the block record resolvable for prevalidation
+            record = await self.get_block_record_from_db(header_hash)
+            assert record is not None
+            self.add_block_record(record)
+            # replay the block, registering its coin commitment
+            await self.run_single_block(fork_block, fork_info)
+        return fork_info
 
     async def add_block(
         self,
@@ -386,6 +538,15 @@ class Blockchain:
             # removals in fork_info.
             await self.advance_fork_info(block, fork_info)
             fork_info.include_spends(pre_validation_result.conds, block, header_hash)
+            # The block was validated before, so registering its composite MMR
+            # leaf here does not persist or append invalid data. After a
+            # restart, this is how leaves of previously validated fork blocks
+            # become available again.
+            if block.height >= self.mmr_manager.get_aggrtegate_from():
+                coin_commitments_root = pre_validation_result.coin_commitments_root
+                if coin_commitments_root is None:
+                    coin_commitments_root = coin_commitments_root_from_conds(pre_validation_result.conds)
+                self.mmr_manager.register_block_commitment(header_hash, coin_commitments_root)
             self.add_block_record(block_rec_from_db)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -411,6 +572,17 @@ class Blockchain:
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
+
+        # The block is valid: register its composite MMR leaf so it can be
+        # appended when the block becomes canonical. Pre-validation derives the
+        # root from the already-validated SpendBundleConditions; when it's
+        # missing (e.g. results constructed without prevalidation), derive it
+        # from the same conds here, keeping generator execution single-pass.
+        if block.height >= self.mmr_manager.get_aggrtegate_from():
+            coin_commitments_root = pre_validation_result.coin_commitments_root
+            if coin_commitments_root is None:
+                coin_commitments_root = coin_commitments_root_from_conds(pre_validation_result.conds)
+            self.mmr_manager.register_block_commitment(header_hash, coin_commitments_root)
 
         # commit the additions and removals from this block into the ForkInfo, in
         # case we're validating blocks on a fork, the next block validation will
@@ -448,15 +620,35 @@ class Blockchain:
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
 
+                # Update the canonical header MMR and persist it in the same
+                # transaction as the peak change, so the two commit (or roll back)
+                # atomically. The in-memory update is rolled back if the
+                # transaction fails (see the except block below).
+                if state_change_summary is not None:
+                    truncation = self.mmr_manager.begin_canonical_update(fork_info.fork_height, self)
+                    for fetched_block_record in records:
+                        self.mmr_manager.add_block_to_mmr(
+                            fetched_block_record.header_hash,
+                            fetched_block_record.prev_hash,
+                            fetched_block_record.height,
+                        )
+                    if self.mmr_store is not None:
+                        await self.mmr_store.apply_canonical_update(
+                            truncation,
+                            self.mmr_manager.canonical_new_nodes(truncation),
+                            self.mmr_manager.canonical_state(block_record.height, block_record.header_hash),
+                        )
+
             # there's a suspension point here, as we leave the async context
             # manager
+
+            # the in-memory MMR update committed along with the transaction
+            self.mmr_manager.commit_canonical_update()
 
             # make sure to update _peak_height after the transaction is committed,
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
-                if self._peak_height is not None and fork_info.fork_height < self._peak_height:
-                    self.mmr_manager.rollback_to_height(fork_info.fork_height, self)
                 # pre-allocate memory for height to hash map. We don't want it
                 # to fail once the DB transaction is committed.
                 self.__height_map.ensure_capacity(records[-1].height)
@@ -466,14 +658,14 @@ class Blockchain:
                     fetched_block_record.header_hash,
                     fetched_block_record.sub_epoch_summary_included,
                 )
-                self.mmr_manager.add_block_to_mmr(
-                    fetched_block_record.header_hash, fetched_block_record.prev_hash, fetched_block_record.height
-                )
 
             if state_change_summary is not None:
                 self._peak_height = block_record.height
 
         except BaseException as e:
+            # restore the in-memory MMR if its update did not commit (no-op once
+            # commit_canonical_update() has run)
+            self.mmr_manager.rollback_canonical_update()
             # depending on exactly when the failure of adding the block
             # happened, we may not have added it to the block record cache
             try:
@@ -799,7 +991,7 @@ class Blockchain:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.value), None, None, None, uint32(0))
+            return PreValidationResult(uint16(error.value), None, None, None, uint32(0), None)
 
         prev_height = (
             -1
@@ -821,9 +1013,13 @@ class Blockchain:
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
+            return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0), None)
 
-        return PreValidationResult(None, None, required_iters, conds, uint32(0))
+        coin_commitments_root: bytes32 | None = None
+        if uint32(prev_height + 1) >= self.mmr_manager.get_aggrtegate_from():
+            coin_commitments_root = coin_commitments_root_from_conds(conds)
+
+        return PreValidationResult(None, None, required_iters, conds, uint32(0), coin_commitments_root)
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
         block_hash_from_hh = self.height_to_hash(height)

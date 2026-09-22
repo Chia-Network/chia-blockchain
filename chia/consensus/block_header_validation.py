@@ -9,6 +9,7 @@ from chia_rs import (
     ChallengeChainSubSlot,
     ConsensusConstants,
     EndOfSubSlotBundle,
+    FullBlock,
     HeaderBlock,
     RewardChainSubSlot,
     SubSlotProofs,
@@ -1091,7 +1092,31 @@ def validate_finished_header_block(
         return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_PRESENCE)
 
     # 34. Validate header MMR commitment (skip for weight proof validation)
+    if not skip_commitment_validation:
+        mmr_error = validate_header_mmr_root(constants, blocks, header_block)
+        if mmr_error is not None:
+            return None, mmr_error
 
+    return required_iters, None
+
+
+def validate_header_mmr_root(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    header_block: HeaderBlock | FullBlock,
+) -> ValidationError | None:
+    """
+    Validate the header MMR commitment of a block against the MMR of the
+    finalized blocks it covers. Post-HF2, MMR leaves are composite:
+    H(header_hash || coin_commitments_root).
+
+    This is extracted from validate_finished_header_block() so batch validation
+    can defer the check: parallel workers execute generators and validate
+    headers concurrently, but a block's MMR check requires the composite leaves
+    of earlier blocks in the batch, which only exist after those blocks'
+    generators have run. Batch callers must run this check sequentially in
+    height order, registering each prior block's coin commitment first.
+    """
     pre_sp_tx_height = pre_sp_tx_block_height(
         constants=constants,
         blocks=blocks,
@@ -1099,22 +1124,21 @@ def validate_finished_header_block(
         sp_index=header_block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(header_block.finished_sub_slots),
     )
-    if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-        sp_index = header_block.reward_chain_block.signage_point_index
-        starts_new_slot = len(header_block.finished_sub_slots) > 0
+    if pre_sp_tx_height < constants.HARD_FORK2_HEIGHT:
+        return None
 
-        expected_mmr_root = blocks.get_mmr_root_for_block(
-            header_block.prev_header_hash,
-            sp_index,
-            starts_new_slot,
+    expected_mmr_root = blocks.get_mmr_root_for_block(
+        header_block.prev_header_hash,
+        header_block.reward_chain_block.signage_point_index,
+        len(header_block.finished_sub_slots) > 0,
+    )
+    mmr_root = header_block.reward_chain_block.header_mmr_root
+
+    if mmr_root != expected_mmr_root:
+        expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
+        log.error(
+            f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
         )
-        mmr_root = header_block.reward_chain_block.header_mmr_root
+        return ValidationError(Err.INVALID_HEADER_MMR_ROOT)
 
-        if mmr_root != expected_mmr_root:
-            expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
-            log.error(
-                f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
-            )
-            return None, ValidationError(Err.INVALID_HEADER_MMR_ROOT)
-
-    return required_iters, None
+    return None
