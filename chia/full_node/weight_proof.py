@@ -307,8 +307,9 @@ class WeightProofHandler:
         try:
             for sub_epoch_n, ses_height in enumerate(summary_heights):
                 log.debug(f"check db for sub epoch {sub_epoch_n}")
-                if ses_height > view.peak_height:
-                    break
+                # summary_heights already comes from view.get_ses_heights(), which is
+                # filtered to <= the pinned peak, so ses_height > view.peak_height can
+                # never be true here.
                 ses_block = ses_blocks[sub_epoch_n]
                 if ses_block.sub_epoch_summary_included is None:
                     log.error("error while building proof")
