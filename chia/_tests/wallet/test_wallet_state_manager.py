@@ -684,7 +684,6 @@ async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, se
     original_network = wsm.config["selected_network"]
 
     # SYNCED via simulator shortcut (line 742)
-    wsm.config["selected_network"] = "simulator0"
     try:
         assert await wsm.get_sync_status() == SyncStatus.SYNCED
     finally:
@@ -794,13 +793,8 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
         await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
 
     # Check the no-peers early exit.
-    original_network = wsm.config["selected_network"]
-    wsm.config["selected_network"] = "simulator0"
-    try:
-        with pytest.raises(ValueError, match="No full node peers connected"):
-            await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
-    finally:
-        wsm.config["selected_network"] = original_network
+    with pytest.raises(ValueError, match="No full node peers connected"):
+        await rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=[bytes32.zeros]))
 
 
 @pytest.mark.parametrize(

@@ -143,6 +143,7 @@ async def setup_full_node(
     service_config["reserved_cores"] = available_logical_cores() - 1
     service_config["port"] = 0
     service_config["rpc_port"] = 0
+    service_config["selected_network"] = "simulator"
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
     config["simulator"]["use_current_time"] = False  # Disable Real timestamps when running tests
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -190,7 +191,7 @@ async def setup_crawler(
     config = load_config(root_path_populated_with_config, "config.yaml")
     service_config = config["seeder"]
 
-    service_config["selected_network"] = "testnet0"
+    service_config["selected_network"] = "simulator"
     service_config["port"] = 0
     service_config["crawler"]["start_rpc_server"] = False
     service_config["other_peers_port"] = 58444
@@ -218,7 +219,7 @@ async def setup_seeder(root_path_populated_with_config: Path, database_uri: str)
     config = load_config(root_path_populated_with_config, "config.yaml")
     service_config = config["seeder"]
 
-    service_config["selected_network"] = "testnet0"
+    service_config["selected_network"] = "simulator"
     if service_config["domain_name"].endswith("."):  # remove the trailing . so that we can test that logic.
         service_config["domain_name"] = service_config["domain_name"][:-1]
     service_config["dns_port"] = 0
@@ -255,6 +256,7 @@ async def setup_wallet_node(
         service_config["initial_num_public_keys"] = initial_num_public_keys
         service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
         service_config["xch_spam_amount"] = xch_spam_amount
+        service_config["selected_network"] = "simulator"
 
         entropy = bytes32.secret()
         if key_seed is None:
@@ -342,8 +344,8 @@ async def setup_harvester(
 ) -> AsyncGenerator[HarvesterService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
-        config["selected_network"] = "testnet0"
-        config["harvester"]["selected_network"] = "testnet0"
+        config["selected_network"] = "simulator"
+        config["harvester"]["selected_network"] = "simulator"
         config["harvester"]["port"] = 0
         config["harvester"]["rpc_port"] = 0
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
@@ -375,8 +377,8 @@ async def setup_farmer(
 ) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
-        root_config["selected_network"] = "testnet0"
-        root_config["farmer"]["selected_network"] = "testnet0"
+        root_config["selected_network"] = "simulator"
+        root_config["farmer"]["selected_network"] = "simulator"
         save_config(root_path, "config.yaml", root_config)
     service_config = root_config["farmer"]
     config_pool = root_config["pool"]
@@ -542,7 +544,7 @@ async def setup_solver(
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
         config["solver"]["enable_upnp"] = True
-        config["solver"]["selected_network"] = "testnet0"
+        config["solver"]["selected_network"] = "simulator"
         config["solver"]["port"] = 0
         config["solver"]["rpc_port"] = 0
         config["solver"]["num_threads"] = 1
