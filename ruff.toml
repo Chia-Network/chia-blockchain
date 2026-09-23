@@ -74,6 +74,7 @@ ignore = [
     "RET",  # return linting: ~700 errors
     "B",  # potential bugs linting: ~600 errors
     "PT",  # pytest styling: ~600 errors
+    "pytest-fixture-autouse",  # autouse fixtures are used extensively across the codebase
     "SIM",  # code simplifications: ~500 errors
     "A",  # bad behavior relative to builtins: ~200 errors
     "PTH",  # pathlib linting: ~200 errors
