@@ -58,7 +58,7 @@ class KeychainProxy(DaemonProxy):
         if local_keychain:
             self.keychain = local_keychain
         else:
-            self.keychain = None  # type: ignore
+            self.keychain = None  # type: ignore[assignment]
         self.keychain_user = user
         self.keychain_service = service
         # these are used to track and close the keychain connection
