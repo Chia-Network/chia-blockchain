@@ -9,7 +9,6 @@ import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import (
@@ -417,7 +416,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
+def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path], tmp_path: Path) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -530,18 +529,20 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "Transaction submitted to nodes: [{'peer_id': 'aaaaa'",
         f"-f 789101 -tx 0x{get_bytes32(2).hex()}",
     ]
-    with CliRunner().isolated_filesystem():
-        run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, FINGERPRINT_ARG, "--transaction-file-out=temp"], assert_list
-        )
-        run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file-out=temp2"], cat_assert_list
-        )
+    run_cli_command_and_assert(
+        capsys, root_dir, [*command_args, FINGERPRINT_ARG, f"--transaction-file-out={tmp_path / 'temp'}"], assert_list
+    )
+    run_cli_command_and_assert(
+        capsys,
+        root_dir,
+        [*command_args, CAT_FINGERPRINT_ARG, f"--transaction-file-out={tmp_path / 'temp2'}"],
+        cat_assert_list,
+    )
 
-        with open("temp", "rb") as file:
-            assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
-        with open("temp2", "rb") as file:
-            assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
+    with open(tmp_path / "temp", "rb") as file:
+        assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
+    with open(tmp_path / "temp2", "rb") as file:
+        assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX])
 
     # these are various things that should be in the output
     expected_calls: logType = {
