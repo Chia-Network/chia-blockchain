@@ -1,5 +1,3 @@
-# Package: utils
-
 from __future__ import annotations
 
 from hashlib import sha256
