@@ -4,6 +4,7 @@ import re
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
@@ -39,9 +40,15 @@ from chia.wallet.puzzles.puzzle_drivers import (
     NilPuzzle,
     NilSolution,
     P2Conditions,
+    UnknownPuzzle,
     UnknownSolution,
 )
-from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -459,3 +466,60 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
+
+
+def test_match() -> None:
+    sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
+    pk = sk.get_g1()
+
+    # BLSWithTaprootMember: reject unrelated puzzles; match recovers synthetic key only
+    assert BLSWithTaprootMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    bls_member = BLSWithTaprootMember(public_key=pk, hidden_puzzle=ACSPuzzle())
+    assert BLSWithTaprootMember.match(unknown_puzzle=UnknownPuzzle(known_program=bls_member.program)) == (
+        BLSWithTaprootMember(synthetic_key=bls_member.guaranteed_synthetic_key)
+    )
+
+    # BLSWithTaprootMemberSolution: atom / wrong arity -> None; 1- and 2-element lists match
+    assert BLSWithTaprootMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert BLSWithTaprootMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2, 3]))) is None
+    assert (
+        BLSWithTaprootMemberSolution.match(
+            unknown_solution=UnknownSolution(program=BLSWithTaprootMemberSolution().program)
+        )
+        == BLSWithTaprootMemberSolution()
+    )
+    taproot_solution = BLSWithTaprootMemberSolution(original_public_key=pk, hidden_puzzle=ACSPuzzle())
+    assert BLSWithTaprootMemberSolution.match(
+        unknown_solution=UnknownSolution(program=taproot_solution.program)
+    ) == BLSWithTaprootMemberSolution(
+        original_public_key=pk,
+        hidden_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program),
+    )
+
+    # SingletonMember: reject unrelated puzzles; round-trip curry args
+    assert SingletonMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    singleton_member = SingletonMember(singleton_id=bytes32.zeros)
+    assert SingletonMember.match(unknown_puzzle=UnknownPuzzle(known_program=singleton_member.program)) == (
+        SingletonMember(
+            singleton_id=bytes32.zeros,
+            singleton_mod_hash=SINGLETON_TOP_LAYER_MOD_HASH,
+            singleton_launcher_hash=SINGLETON_LAUNCHER_PUZZLE_HASH,
+        )
+    )
+
+    # SingletonMemberSolution: atom / wrong arity / bad hash -> None; valid hash matches
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([b"not32"]))) is None
+    singleton_solution = SingletonMemberSolution(singleton_inner_puzzle_hash=ACS_PH)
+    assert (
+        SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=singleton_solution.program))
+        == singleton_solution
+    )
+
+    # FixedPuzzleMember: reject unrelated puzzles; round-trip fixed puzzle hash
+    assert FixedPuzzleMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=ACS_PH)
+    assert FixedPuzzleMember.match(unknown_puzzle=UnknownPuzzle(known_program=fixed_puzzle_member.program)) == (
+        fixed_puzzle_member
+    )

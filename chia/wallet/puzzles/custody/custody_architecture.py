@@ -167,7 +167,7 @@ class MofNMerkleTree:
     known_root: bytes32 | None = None
 
     def __post_init__(self) -> None:
-        if self.nodes is None and self.root is None:
+        if self.nodes is None and self.known_root is None:
             raise ValueError("Must specify either known nodes or known root")
 
     def split_list(self, puzzle_hashes: list[bytes32]) -> tuple[list[bytes32], list[bytes32]]:
@@ -296,7 +296,8 @@ class MofN(MIPSComponentBase):
             return None
 
         if unknown_puzzle.mod == NofN_MOD:
-            list_of_members = [_ for _ in unknown_puzzle.curried_args]
+            (list_of_members_prog,) = unknown_puzzle.curried_args
+            list_of_members = list(list_of_members_prog.as_iter())
             pwr_matches = [
                 PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_program=member))
                 for member in list_of_members

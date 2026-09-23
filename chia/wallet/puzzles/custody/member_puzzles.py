@@ -126,7 +126,15 @@ class SingletonMember(MIPSComponentBase):
         return SINGLETON_MEMBER_MOD.curry(singleton_struct)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> SingletonMember | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> SingletonMember | None:
+        if unknown_puzzle.mod != SINGLETON_MEMBER_MOD or unknown_puzzle.curried_args is None:
+            return None
+        (singleton_struct,) = unknown_puzzle.curried_args
+        return SingletonMember(
+            singleton_mod_hash=bytes32(singleton_struct.first().as_atom()),
+            singleton_id=bytes32(singleton_struct.rest().first().as_atom()),
+            singleton_launcher_hash=bytes32(singleton_struct.rest().rest().as_atom()),
+        )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -163,4 +171,8 @@ class FixedPuzzleMember(MIPSComponentBase):
         return FIXED_PUZZLE_MEMBER_MOD.curry(self.fixed_puzzle_hash)
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> FixedPuzzleMember | None: ...
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> FixedPuzzleMember | None:
+        if unknown_puzzle.mod != FIXED_PUZZLE_MEMBER_MOD or unknown_puzzle.curried_args is None:
+            return None
+        (fixed_puzzle_hash_prog,) = unknown_puzzle.curried_args
+        return FixedPuzzleMember(fixed_puzzle_hash=bytes32(fixed_puzzle_hash_prog.as_atom()))
