@@ -34,7 +34,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
-from chia.wallet.conditions import CreateCoin, UnknownCondition
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
@@ -84,8 +84,9 @@ async def mint_cat(
                 1,
                 [
                     CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]).to_program(),
-                    UnknownCondition(
-                        opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]
+                    TAILCondition(
+                        puzzle=UnknownPuzzle(known_program=tail),
+                        solution=UnknownSolution(program=Program.NIL),
                     ).to_program(),
                 ],
             )

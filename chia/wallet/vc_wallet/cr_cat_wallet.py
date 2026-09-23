@@ -20,6 +20,7 @@ from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CATPuzzle,
+    TAILCondition,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
@@ -29,7 +30,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
     parse_timelock_info,
 )
 from chia.wallet.lineage_proof import LineageProof
@@ -503,14 +503,9 @@ class CRCATWallet(CATWallet):
                 )
 
             if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.NIL,
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                cat_condition = TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail_reveal),
+                    solution=UnknownSolution(program=tail_solution),
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)

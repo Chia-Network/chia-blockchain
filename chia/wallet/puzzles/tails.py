@@ -22,10 +22,11 @@ from chia.wallet.cat_wallet.cat_utils import (
     CAT,
     CATPuzzle,
     SpendableCAT,
+    TAILCondition,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.conditions import CreateCoin, UnknownCondition
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -129,7 +130,10 @@ class GenesisById(LimitationsProgram):
         inner_solution = wallet.standard_wallet.make_solution(
             primaries=[CreateCoin(inner_tree_hash, amount, [inner_tree_hash])],
             conditions=(
-                UnknownCondition(opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]),
+                TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail),
+                    solution=UnknownSolution(program=Program.NIL),
+                ),
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(

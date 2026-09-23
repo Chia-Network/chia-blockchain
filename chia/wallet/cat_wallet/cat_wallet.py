@@ -29,6 +29,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     QUOTED_CAT_MOD_HASH,
     CATPuzzle,
     SpendableCAT,
+    TAILCondition,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
@@ -39,7 +40,6 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -854,14 +854,9 @@ class CATWallet:
 
         for coin in cat_coins:
             if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.NIL,
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                cat_condition = TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail_reveal),
+                    solution=UnknownSolution(program=tail_solution),
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)
