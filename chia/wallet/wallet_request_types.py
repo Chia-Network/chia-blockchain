@@ -2143,6 +2143,30 @@ class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_tx: TransactionRecord
 
 
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class CreateFeeTransaction(TransactionEndpointRequest):
+    coins: list[Coin] | None = None
+
+    def __post_init__(self) -> None:
+        if self.fee == 0:
+            raise ValueError("Must specify a non-zero fee")
+        super().__post_init__()
+
+    @property
+    def coin_set(self) -> set[Coin] | None:
+        if self.coins is None:
+            return None
+        else:
+            return set(self.coins)
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class CreateFeeTransactionResponse(TransactionEndpointResponse):
+    pass
+
+
 _T_SendTransactionMultiProxy = TypeVar("_T_SendTransactionMultiProxy", CATSpend, CreateSignedTransaction)
 
 

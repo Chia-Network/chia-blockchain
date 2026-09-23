@@ -88,6 +88,7 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
     ConditionValidTimes,
     ConditionValidTimesAbsolute,
     CreateCoin,
@@ -138,6 +139,7 @@ from chia.wallet.wallet_request_types import (
     CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
+    CreateFeeTransaction,
     CreateNewWallet,
     CreateNewWalletType,
     CreateOfferForIDs,
@@ -1004,6 +1006,164 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
 
     await it_does_not_include_the_excluded_coins()
     await it_throws_an_error_when_all_spendable_coins_are_excluded()
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_fee_transaction(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+
+    env.wallet_aliases = {"xch": 1}
+
+    amount_fee = uint64(1000000)
+
+    with pytest.raises(ValueError, match="Must specify a non-zero fee"):
+        CreateFeeTransaction(fee=uint64(0))
+
+    with pytest.raises(ResponseFailureError, match="Must specify a non-zero fee"):
+        await wallet_1_rpc.fetch("create_fee_transaction", {"fee": 0, **wallet_environments.tx_config.to_json_dict()})
+
+    txs = (
+        await wallet_1_rpc.create_fee_transaction(
+            CreateFeeTransaction(fee=amount_fee),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).transactions
+    assert len(txs) == 1
+    fee_tx = txs[0]
+    assert fee_tx.amount == 0
+    assert fee_tx.fee_amount == amount_fee
+    removed = sum(removal.amount for removal in fee_tx.removals)
+    added = sum(addition.amount for addition in fee_tx.additions)
+    assert removed - added == amount_fee
+
+    # The default is to construct without broadcasting
+    assert fee_tx.spend_bundle is not None
+    assert full_node_api.full_node.mempool_manager.get_spendbundle(fee_tx.spend_bundle.name()) is None
+    with pytest.raises(ResponseFailureError, match="not found"):
+        await wallet_1_rpc.get_transaction(GetTransaction(transaction_id=fee_tx.name))
+
+    select_coins_response = await wallet_1_rpc.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1750000000000),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(select_coins_response.coins) == 1
+    coin_specified_tx = (
+        await wallet_1_rpc.create_fee_transaction(
+            CreateFeeTransaction(fee=amount_fee, coins=select_coins_response.coins),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).transactions[0]
+    assert coin_specified_tx.removals == select_coins_response.coins
+
+    pushed_txs = (
+        await wallet_1_rpc.create_fee_transaction(
+            CreateFeeTransaction(fee=amount_fee, push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).transactions
+    assert len(pushed_txs) == 1
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -amount_fee,
+                        "<=#spendable_balance": -amount_fee,
+                        "<=#max_send_amount": -amount_fee,
+                        ">=#pending_change": 0,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -amount_fee,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    }
+                },
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_fee_transaction_with_extra_conditions(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_1: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+    full_node_rpc: FullNodeRpcClient = wallet_environments.full_node_rpc_client
+
+    amount_fee = uint64(1000000)
+    announcement_message = std_hash(b"bind the fee to this spend")
+
+    # Stands in for a spend bundle built outside of the wallet that the fee needs to be bound to
+    select_coins_response = await wallet_1_rpc.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(1750000000000),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+        )
+    )
+    assert len(select_coins_response.coins) == 1
+    announcing_coin = select_coins_response.coins[0]
+    outputs = await create_tx_outputs(wallet_1, wallet_environments.tx_config, [(1337, None)])
+    announcing_tx = (
+        await wallet_1_rpc.create_signed_transactions(
+            CreateSignedTransaction(additions=outputs, coins=[announcing_coin]),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(CreateCoinAnnouncement(announcement_message, announcing_coin.name()),),
+        )
+    ).signed_tx
+
+    fee_tx = (
+        await wallet_1_rpc.create_fee_transaction(
+            CreateFeeTransaction(fee=amount_fee),
+            tx_config=wallet_environments.tx_config.override(excluded_coin_ids=[announcing_coin.name()]),
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=announcing_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+    ).transactions[0]
+    assert fee_tx.removals != [announcing_coin]
+
+    # Alone the fee spend is invalid because nothing makes the announcement it asserts
+    assert fee_tx.spend_bundle is not None
+    with pytest.raises(ResponseFailureError, match="ASSERT_ANNOUNCE_CONSUMED_FAILED"):
+        await full_node_rpc.push_tx(fee_tx.spend_bundle)
+    assert full_node_api.full_node.mempool_manager.get_spendbundle(fee_tx.spend_bundle.name()) is None
+
+    assert announcing_tx.spend_bundle is not None
+    aggregate = WalletSpendBundle.aggregate([announcing_tx.spend_bundle, fee_tx.spend_bundle])
+    await full_node_rpc.push_tx(aggregate)
+    await farm_transaction(full_node_api, wallet_node, aggregate)
+
+    for removal in [*announcing_tx.removals, *fee_tx.removals]:
+        coin_record = await full_node_rpc.get_coin_record_by_name(removal.name())
+        assert coin_record is not None
+        assert coin_record.spent
 
 
 @pytest.mark.parametrize(
