@@ -103,8 +103,17 @@ class CoinStore:
             log.info("DB: Creating index coin_confirmed_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
 
+            # Partial index: only spent coins (spent_index > 0). Unspent coins use
+            # spent_index 0 or -1 and are never looked up by this index; height-0
+            # removals are rejected in get_coins_removed_at_height. SQLite only
+            # uses a partial index when the query WHERE implies the index
+            # predicate, so lookups must include `spent_index>0` explicitly.
+            # Existing DBs that already have a full coin_spent_index keep it
+            # (CREATE IF NOT EXISTS); rebuilding would be too expensive.
             log.info("DB: Creating index coin_spent_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index) WHERE spent_index>0"
+            )
 
             log.info("DB: Creating index coin_puzzle_hash")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
@@ -285,8 +294,10 @@ class CoinStore:
             return []
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
+                # `spent_index>0` is required for SQLite to use the partial coin_spent_index.
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index=?",
+                "coin_parent, amount, timestamp FROM coin_record "
+                "WHERE spent_index=? AND spent_index>0",
                 (height,),
             ) as cursor:
                 coins = []
@@ -658,9 +669,12 @@ class CoinStore:
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
             # Add coins that are confirmed in the reverted blocks to the list of changed coins.
+            # `spent_index>0` is required for SQLite to use the partial coin_spent_index
+            # (and correctly excludes unspent sentinels 0 / -1 for negative block_index).
             rows = await conn.execute_fetchall(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp, coin_name FROM coin_record WHERE spent_index>?",
+                "coin_parent, amount, timestamp, coin_name FROM coin_record "
+                "WHERE spent_index>? AND spent_index>0",
                 (block_index,),
             )
             for row in rows:
@@ -692,7 +706,7 @@ class CoinStore:
                     THEN -1
                     ELSE 0
                 END
-                WHERE spent_index > ?
+                WHERE spent_index > ? AND spent_index > 0
                 """,
                 (block_index,),
             )
