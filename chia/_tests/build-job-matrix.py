@@ -10,6 +10,8 @@ from typing import Any
 
 import testconfig
 
+log = logging.getLogger(__name__)
+
 root_path = Path(__file__).parent.absolute()
 project_root_path = root_path.parent.parent
 
@@ -32,9 +34,9 @@ def subdirs(per: str) -> list[Path]:
         filtered_paths = []
         for path in paths:
             relative_path = path.relative_to(root_path)
-            logging.info(f"Considering: {relative_path}")
+            log.info(f"Considering: {relative_path}")
             if len([f for f in path.glob("test_*.py")]) == 0:
-                logging.info(f"Skipping {relative_path}: no tests collected")
+                log.info(f"Skipping {relative_path}: no tests collected")
                 continue
 
             filtered_paths.append(path)
@@ -182,16 +184,16 @@ messages: list[str] = []
 if len(specified_defaults) > 0:
     message = f"Found {len(specified_defaults)} directories with specified defaults"
     messages.append(message)
-    logging.error(f"{message}:")
+    log.error(f"{message}:")
     for path, overlap in sorted(specified_defaults.items()):
-        logging.error(f" {path} : {overlap}")
+        log.error(f" {path} : {overlap}")
 
 if len(pytest_monitor_enabling_paths) > 0:
     message = f"Found {len(pytest_monitor_enabling_paths)} directories with pytest-monitor enabled"
     messages.append(message)
-    logging.error(f"{message}:")
+    log.error(f"{message}:")
     for path in sorted(pytest_monitor_enabling_paths):
-        logging.error(f" {path}")
+        log.error(f" {path}")
 
 if len(messages) > 0:
     raise Exception("\n".join(messages))
@@ -199,6 +201,6 @@ if len(messages) > 0:
 configuration_json = json.dumps(configuration)
 
 for line in json.dumps(configuration, indent=2).splitlines():
-    logging.info(line)
+    log.info(line)
 
 print(f"{configuration_json}")
