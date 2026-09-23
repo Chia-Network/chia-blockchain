@@ -26,10 +26,10 @@ from chia.types.coin_spend import make_spend
 from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreateCoinAnnouncement, Remark, UnknownCondition
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, TAILCondition, construct_cat_puzzle
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
@@ -221,7 +221,10 @@ class CRCAT:
         eve_innerpuz: Program = P2Conditions(
             conditions=[
                 CreateCoin(new_cr_layer_hash, payment.amount, payment.memos),
-                UnknownCondition(opcode=Program.to(51), args=[Program.to(None), Program.to(-113), tail, tail_solution]),
+                TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail),
+                    solution=UnknownSolution(program=tail_solution),
+                ),
                 CreateCoinAnnouncement(msg=b""),
                 Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker])),
             ],

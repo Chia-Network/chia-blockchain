@@ -84,7 +84,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, TAILCondition, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
@@ -94,7 +94,6 @@ from chia.wallet.conditions import (
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     Remark,
-    UnknownCondition,
     conditions_to_json_dicts,
 )
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
@@ -104,7 +103,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
@@ -3910,9 +3909,9 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
                         ACSSolution(
                             conditions=[
                                 CreateCoin(our_ph, tx_amount, [our_ph]),
-                                UnknownCondition(
-                                    opcode=Program.to(51),
-                                    args=[Program.NIL, Program.to(-113), Program.NIL, Program.NIL],
+                                TAILCondition(
+                                    puzzle=UnknownPuzzle(known_program=Program.NIL),
+                                    solution=UnknownSolution(program=Program.NIL),
                                 ),
                             ]
                         ).program,

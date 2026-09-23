@@ -15,13 +15,14 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin, UnknownCondition
+from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, NilSolution
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, NilSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -71,9 +72,9 @@ async def generate_coins(
                                 ACSSolution(
                                     conditions=[
                                         CreateCoin(acs_ph, uint64(amount)),
-                                        UnknownCondition(
-                                            opcode=Program.to(51),
-                                            args=[Program.NIL, Program.to(-113), tail, NilSolution().program],
+                                        TAILCondition(
+                                            puzzle=UnknownPuzzle(known_program=tail),
+                                            solution=UnknownSolution(program=NilSolution().program),
                                         ),
                                     ]
                                 ).program,
