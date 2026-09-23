@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import dataclasses
 import logging
@@ -223,7 +224,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                     f" ('q' to quit, or Enter to use {logged_in_fingerprint}): "
                 )
                 while val is None:
-                    val = input(prompt)
+                    val = await asyncio.get_running_loop().run_in_executor(None, input, prompt)
                     if val == "q":
                         raise CliRpcConnectionError("No Fingerprint Selected")
                     elif val == "" and logged_in_fingerprint is not None:
