@@ -180,6 +180,8 @@ class ACSSolution:
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+        if unknown_solution.program == Program.NIL:
+            return cls(conditions=[])
         if unknown_solution.program.atom is not None:
             return None
 

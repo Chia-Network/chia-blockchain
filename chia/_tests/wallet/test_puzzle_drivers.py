@@ -102,9 +102,7 @@ def test_acs_puzzle() -> None:
     assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(0))) is None
     assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == ACSPuzzle()
     # Atoms are treated as an empty condition list by the parser
-    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) == ACSSolution(
-        conditions=[]
-    )
+    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) is None
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not an ACS"]))) is None
     acs_solution = ACSSolution(conditions=[Remark(rest=Program.to("foo")), Remark(rest=Program.to("bar"))])
     assert (

@@ -885,10 +885,9 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
 
     for reference_proof in dl_proof.store_proofs.proofs:
         inner_puz_hash = dl_proof.inner_puzzle_hash
-        host_fullpuz_program = create_host_fullpuz(
+        expected_puzzle_hash = create_host_fullpuz(
             UnknownPuzzle(known_tree_hash=inner_puz_hash), reference_proof.root(), dl_proof.store_proofs.store_id
-        ).program
-        expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
+        ).tree_hash
 
         if puzzle_hash != expected_puzzle_hash:
             raise ProofIntegrityError(

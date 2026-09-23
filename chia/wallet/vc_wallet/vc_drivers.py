@@ -803,11 +803,11 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
 
         assert isinstance(singleton_match.inner_puzzle, UnknownPuzzle)
 
-        vc_inner = VerifiedCredentialPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
-        if vc_inner is None:
-            return False
+        # Eve launcher (OWNERSHIP_LAYER_LAUNCHER) is the parent spend that creates the first real VC coin.
+        if singleton_match.inner_puzzle.program == OWNERSHIP_LAYER_LAUNCHER.program:
+            return True
 
-        return True
+        return VerifiedCredentialPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle) is not None
 
     @classmethod
     def launch_vc(
