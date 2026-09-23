@@ -84,8 +84,16 @@ async def ignore_block_validation(
 
         return new_create
 
+    # Monkeypatch for chia.consensus.multiprocess_validation._run_block; keep the
+    # signature in sync (including validate_signatures for assumevalid) even though
+    # this stub always skips signature checks.
     def run_block(
-        block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
+        block: FullBlock,
+        prev_generators: list[bytes],
+        prev_tx_height: uint32,
+        constants: ConsensusConstants,
+        *,
+        validate_signatures: bool = True,
     ) -> tuple[Err | None, str | None, SpendBundleConditions | None]:
         generator_bytes = get_transactions_generator_bytes(block)
         assert generator_bytes is not None
