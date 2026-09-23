@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import BinaryIO
 
@@ -48,6 +49,7 @@ OfferSpecification = dict[int | bytes32, int]
 
 OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
+log = logging.getLogger(__name__)
 
 
 def detect_dependent_coin(
@@ -177,7 +179,8 @@ class Offer:
                 if e.args and e.args[0] == "cost exceeded or below zero":
                     raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend") from e
                 continue
-            except Exception:
+            except Exception as e:
+                log.debug("Failed to compute additions for coin %s: %s", cs.coin.name(), e)
                 continue
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
@@ -194,7 +197,8 @@ class Offer:
                     cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
-                except Exception:  # pragma: no cover
+                except Exception as e:  # pragma: no cover
+                    log.debug("Failed to compute conditions for coin %s: %s", cs.coin.name(), e)
                     continue
                 if max_cost < 0:  # pragma: no cover
                     raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend")
