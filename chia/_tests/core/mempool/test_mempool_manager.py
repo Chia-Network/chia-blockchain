@@ -736,12 +736,15 @@ async def test_too_many_spends_per_item() -> None:
         coins = [Coin(bytes32(i.to_bytes(32, "big")), IDENTITY_PUZZLE_HASH, uint64(1)) for i in range(3)]
         spends = [make_spend(c, IDENTITY_PUZZLE, SerializedProgram.to([])) for c in coins]
         sb = SpendBundle(spends, G2Element())
-        with pytest.raises(ValidationError, match="TOO_MANY_SPENDS"):
+        with pytest.raises(ValidationError, match="TOO_MANY_SPENDS") as exc_info:
             await mempool_manager.pre_validate_spendbundle(sb)
+        assert exc_info.value.code == Err.TOO_MANY_SPENDS
 
         # Exactly at the limit is accepted through pre-validation
         sb_ok = SpendBundle(spends[:2], G2Element())
-        await mempool_manager.pre_validate_spendbundle(sb_ok)
+        conds = await mempool_manager.pre_validate_spendbundle(sb_ok)
+        assert len(conds.spends) == 2
+        assert {bytes32(s.coin_id) for s in conds.spends} == {c.name() for c in coins[:2]}
 
 
 @pytest.mark.anyio
