@@ -316,7 +316,7 @@ class BlockTools:
             if config_overrides is None:
                 config_overrides = {}
             config_overrides["logging.log_stdout"] = True
-            config_overrides["selected_network"] = "testnet0"
+            config_overrides["selected_network"] = "simulator0"
             for service in [
                 "harvester",
                 "farmer",
@@ -327,7 +327,7 @@ class BlockTools:
                 "pool",
                 "simulator",
             ]:
-                config_overrides[service + ".selected_network"] = "testnet0"
+                config_overrides[service + ".selected_network"] = "simulator0"
 
             # some tests start the daemon, make sure it's on a free port
             config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
