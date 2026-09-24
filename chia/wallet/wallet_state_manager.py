@@ -745,22 +745,26 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network", ""):
-            return True  # sim is always synced if we have a genesis block.
-
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
 
-        latest_timestamp = self.blockchain.get_latest_timestamp()
         has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
+        if has_pending_queue_items:
+            return False
 
-        if latest_timestamp > block_is_current_at and not has_pending_queue_items:
+        # Simulator blocks often use non-wall-clock timestamps, so skip the
+        # recency check
+        if "simulator" in self.config.get("selected_network", ""):
             return True
-        return False
+
+        latest_timestamp = self.blockchain.get_latest_timestamp()
+        return latest_timestamp > block_is_current_at
 
     async def get_sync_status(self) -> SyncStatus:
         peak = self.blockchain._peak
         if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            if self.wallet_node.new_peak_queue.has_pending_data_process_items():
+                return SyncStatus.SLIGHTLY_BEHIND
             return SyncStatus.SYNCED
 
         if peak is None or len(self.wallet_node.server.get_connections(NodeType.FULL_NODE)) == 0:

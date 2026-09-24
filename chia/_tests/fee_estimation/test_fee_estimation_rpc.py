@@ -97,7 +97,7 @@ async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeR
         "current_fee_rate": 0,
         "mempool_size": 0,
         "mempool_max_size": 0,
-        "full_node_synced": False,
+        "full_node_synced": True,
         "peak_height": 0,
         "last_peak_timestamp": 0,
         "fee_rate_last_block": 0.0,
