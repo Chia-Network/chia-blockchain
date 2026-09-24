@@ -799,6 +799,11 @@ class FullNodeSimulator(FullNodeAPI):
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
+        # synced() already requires an empty queue, but keep this explicit so
+        # wait_for_wallet_synced never returns while coin states are in flight
+        # (especially under the simulator selected_network shortcut).
+        if wallet_node.new_peak_queue.has_pending_data_process_items():
+            return False
         all_states_retried = await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry() == []
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
         if peak_height is not None:

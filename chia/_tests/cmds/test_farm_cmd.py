@@ -63,7 +63,7 @@ async def test_farm_summary_command(
     assert match is not None
     lines = match.group(1).split("\n")
 
-    assert lines[0] == "Farming status: Not synced or not connected to peers"
+    assert lines[0] == "Farming status: Farming"
     assert "Total chia farmed:" in lines[1]
     assert "User transaction fees:" in lines[2]
     assert "Block rewards:" in lines[3]
