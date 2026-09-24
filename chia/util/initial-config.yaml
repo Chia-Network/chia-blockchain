@@ -70,6 +70,9 @@ network_overrides: &network_overrides
     testnet0:
       address_prefix: "txch"
       default_full_node_port: 58444
+    simulator0:
+      address_prefix: "txch"
+      default_full_node_port: 58444
     testnet11:
       address_prefix: "txch"
       default_full_node_port: 58444

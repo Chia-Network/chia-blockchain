@@ -668,7 +668,7 @@ async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy)
     response = await client.get_network_info()
     assert response["data"] == {
         "success": True,
-        "network_name": "testnet0",
+        "network_name": "simulator0",
         "network_prefix": "txch",
         "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     }
