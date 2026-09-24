@@ -59,7 +59,6 @@ jobs:
             emoji: 🌀
             matrix: intel
         python:
-          - major_dot_minor: "3.10"
           - major_dot_minor: "3.11"
           - major_dot_minor: "3.12"
           - major_dot_minor: "3.13"

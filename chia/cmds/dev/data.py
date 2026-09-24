@@ -51,7 +51,7 @@ def data_group() -> None:
 
 def print_date(*args: Any, **kwargs: Any) -> None:
     kwargs.setdefault("flush", True)
-    s = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    s = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
     print(f"{s}:", *args, **kwargs)
 
 

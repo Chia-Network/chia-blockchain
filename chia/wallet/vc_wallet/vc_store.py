@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 from functools import cmp_to_key
+from typing import Self
 
 from aiosqlite import Row
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
