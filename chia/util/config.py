@@ -162,7 +162,7 @@ def apply_config_cli_overrides(config: dict[str, Any]) -> dict[str, Any]:
     for prop_name, value in flattened_props.items():
         if type(value) is list:
             continue
-        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore
+        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore[type-arg]
         parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
 
     for key, value in vars(parser.parse_args()).items():

@@ -20,7 +20,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.debug_spend_bundle import disassemble
 
 
-async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ignore
+async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ignore[no-untyped-def]
     trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
     return TradeStatus(trade_rec.status)
 

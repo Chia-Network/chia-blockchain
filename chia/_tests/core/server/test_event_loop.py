@@ -68,10 +68,10 @@ def test_base_event_loop_has_methods() -> None:
         assert str(inspect.signature(_chia_create_server)) == expected_signature
 
         class EchoProtocol(asyncio.Protocol):
-            def connection_made(self, transport):  # type: ignore
+            def connection_made(self, transport):  # type: ignore[no-untyped-def]
                 self.transport = transport
 
-            def data_received(self, data):  # type: ignore
+            def data_received(self, data):  # type: ignore[no-untyped-def]
                 self.transport.write(data)
 
         pausable_server = None

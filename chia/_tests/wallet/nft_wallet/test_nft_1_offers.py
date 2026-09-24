@@ -161,7 +161,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
 
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_program=nft_to_offer.full_puzzle))
-    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore[assignment,arg-type]
     xch_requested = 1000
     maker_fee = uint64(433)
 
@@ -687,7 +687,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     assert await nft_wallet_taker.get_nft_count() == 0
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_program=nft_to_offer.full_puzzle))
-    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore[assignment,arg-type]
     xch_requested = 1000
     maker_fee = uint64(433)
 
@@ -994,7 +994,7 @@ async def test_nft_offer_sell_nft_for_cat(
     await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: PuzzleInfo | None = match_puzzle(UnknownPuzzle(known_program=nft_to_offer.full_puzzle))
-    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore[assignment,arg-type]
     cats_requested = 1000
     maker_fee = uint64(433)
 
@@ -1850,7 +1850,7 @@ async def test_complex_nft_offer(
                     action_scope,
                     target_puzhash_maker,
                     royalty_puzhash_maker,
-                    royalty_basis_pts_maker,  # type: ignore
+                    royalty_basis_pts_maker,  # type: ignore[arg-type]
                     did_id_maker,
                 )
         return

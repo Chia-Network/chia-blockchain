@@ -664,8 +664,8 @@ class NFTWallet:
         return (
             AssetType(puzzle_driver.type()) == AssetType.SINGLETON
             and puzzle_driver.also() is not None
-            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
-            and puzzle_driver.also().also() is None  # type: ignore
+            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore[union-attr]
+            and puzzle_driver.also().also() is None  # type: ignore[union-attr]
             and await self.get_nft(puzzle_driver["launcher_id"]) is not None
         )
 
@@ -905,7 +905,7 @@ class NFTWallet:
         required_royalty_info: list[tuple[bytes32, bytes32, uint16]] = []  # [(launcher_id, address, percentage)]
         offered_royalty_percentages: dict[bytes32, uint16] = {}
         for asset, amount in royalty_nft_asset_dict.items():  # royalty enabled NFTs
-            transfer_info = driver_dict[asset].also().also()  # type: ignore
+            transfer_info = driver_dict[asset].also().also()  # type: ignore[union-attr]
             assert isinstance(transfer_info, PuzzleInfo)
             royalty_percentage_raw = transfer_info["transfer_program"]["royalty_percentage"]
             assert royalty_percentage_raw is not None
