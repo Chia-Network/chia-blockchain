@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from typing import Literal
+from unittest import mock
 
 import pytest
 from chia_rs import Coin, CoinSpend, G1Element, G2Element, PrivateKey
@@ -13,12 +14,9 @@ from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_
 from chia.pools.plotnft_drivers import (
     GetNextPlotNFTError,
     PlotNFT,
-    PlotNFTPuzzle,
+    PlotNFTInnerPuzzle,
     PoolConfig,
     PoolReward,
-    RewardPuzzle,
-    SingletonPuzzles,
-    SingletonStruct,
     UserConfig,
 )
 from chia.types.blockchain_format.program import Program, run
@@ -35,13 +33,23 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.custody_architecture import MofN, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import NilSolution, P2Conditions, UnknownPuzzle
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACS_PH,
+    ACSPuzzle,
+    ACSSolution,
+    DelegatedPuzzleAndSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+)
+from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle, SingletonCorePuzzles, SingletonStruct
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 user_sk = calculate_synthetic_secret_key(
@@ -50,8 +58,6 @@ user_sk = calculate_synthetic_secret_key(
     ),
     DEFAULT_HIDDEN_PUZZLE_HASH,
 )
-ACS = Program.to(1)
-ACS_PH = ACS.get_tree_hash()
 POOL_PUZZLE = Program.to("I'm a pool :)")
 POOL_PUZZLE_HASH = POOL_PUZZLE.get_tree_hash()
 
@@ -73,7 +79,7 @@ async def mint_plotnft(
 
     fund_coin, _ = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    conditions, spends, plotnft = PlotNFT.launch(
+    launch_result = PlotNFT.launch_plotnft(
         origin_coins=[fund_coin.coin],
         user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
         pool_config=None
@@ -83,23 +89,16 @@ async def mint_plotnft(
         hint=bytes32.zeros,
         exiting=desired_state == "waiting_room",
     )
+    plotnft = launch_result.launched_singleton
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
             [
-                *spends,
+                *launch_result.necessary_spends,
                 make_spend(
                     coin=fund_coin.coin,
-                    puzzle_reveal=ACS,
-                    solution=Program.to(
-                        [condition.to_program() for condition in conditions]
-                        + [
-                            CreateCoin(
-                                puzzle_hash=plotnft.singleton_struct.singleton_puzzles.singleton_launcher_hash,
-                                amount=uint64(1),
-                            ).to_program()
-                        ]
-                    ),
+                    puzzle_reveal=ACSPuzzle().program,
+                    solution=ACSSolution(conditions=launch_result.necessary_conditions).program,
                 ),
             ],
             G2Element(),
@@ -110,7 +109,9 @@ async def mint_plotnft(
 
     # Test syncing from launcher
     assert (
-        PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=launch_result.necessary_spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE
+        )
         == plotnft
     )
     return plotnft
@@ -125,14 +126,16 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match=re.escape("Cannot exit to waiting room while self pooling.")):
             plotnft.exit_to_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
+                    puzzle=NilPuzzle(),
+                    solution=NilSolution(),
                 )
             )
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while self pooling.")):
             plotnft.exit_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
+                    puzzle=NilPuzzle(),
+                    solution=NilSolution(),
                 )
             )
 
@@ -140,7 +143,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         url_remark = Remark(rest=Program.to("url"))
         coin_spends = plotnft.join_pool(
-            user_config=plotnft.user_config,
+            user_config=plotnft.inner_puzzle.user_config,
             pool_config=PoolConfig(
                 pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
             ),
@@ -153,7 +156,11 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 WalletSpendBundle(
                     [
                         *coin_spends,
-                        make_spend(fee_coin, ACS, Program.to([fee_hook.corresponding_assertion().to_program()])),
+                        make_spend(
+                            fee_coin,
+                            ACSPuzzle().program,
+                            ACSSolution(conditions=[fee_hook.corresponding_assertion()]).program,
+                        ),
                     ],
                     sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
                 ),
@@ -169,21 +176,29 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while not in it")):
             plotnft.exit_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
+                    puzzle=NilPuzzle(),
+                    solution=NilSolution(),
                 )
             )
 
+        with pytest.raises(ValueError, match=re.escape("Cannot create a new user config for a pooling PlotNFT")):
+            plotnft.new_user_config(user_config=plotnft.inner_puzzle.user_config, hint=bytes32.zeros)
+
+        with pytest.raises(ValueError, match=re.escape("Cannot melt a pooling PlotNFT")):
+            plotnft.melt()
+
         # Attempt to leave without waiting room
         quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))]),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(quick_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -191,25 +206,25 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # # Attempt to make a message while leaving
         message_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to(
-                [
-                    plotnft.exit_to_waiting_room_condition().to_program(),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(
+                conditions=[
+                    plotnft.inner_puzzle.exit_to_waiting_room_condition,
                     SendMessage(
                         bytes32.zeros,
                         sender=MessageParticipant(parent_id_committed=bytes32.zeros),
                         receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
-                    ).to_program(),
+                    ),
                 ]
             ),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(message_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
                 coin_spends,
                 user_sk.sign(
-                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                 ),
             )
         )
@@ -217,10 +232,10 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # Leave honestly
         honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to([plotnft.exit_to_waiting_room_condition().to_program()]),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=[plotnft.inner_puzzle.exit_to_waiting_room_condition]),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             cost_logger.add_cost(
@@ -228,54 +243,55 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 WalletSpendBundle(
                     coin_spends,
                     user_sk.sign(
-                        singing_info.puzzle.get_tree_hash()
-                        + plotnft.coin.name()
-                        + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                        singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
                     ),
                 ),
             )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+        plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft.inner_puzzle
+        )
 
         with pytest.raises(ValueError, match=re.escape("Already exiting to waiting room, cannot exit again")):
             plotnft.exit_to_waiting_room(
                 delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                    puzzle=Program.to(None), solution=NilSolution().program
+                    puzzle=NilPuzzle(),
+                    solution=NilSolution(),
                 )
             )
 
         # Return to self-pooling
         exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
-            puzzle=ACS,
-            solution=Program.to([cond.to_program() for cond in plotnft.exit_from_waiting_room_conditions()]),
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=list(plotnft.inner_puzzle.exit_from_waiting_room_conditions)),
         )
-        singing_info = plotnft.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
+        singing_info = plotnft.inner_puzzle.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
         timelocked_spend = WalletSpendBundle(
             coin_spends,
-            user_sk.sign(
-                singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
-            ),
+            user_sk.sign(singing_info.puzzle.tree_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
-        for _ in range(plotnft.guaranteed_pool_config.heightlock):
+        for _ in range(plotnft.inner_puzzle.guaranteed_pool_config.heightlock):
             await sim.farm_block()
         result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
 
         # Check that it's there
-        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+        plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft.inner_puzzle
+        )
         assert await sim_client.get_coin_record_by_name(plotnft.coin.name()) is not None
 
 
 async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes32) -> PoolReward:
-    reward_puzzle = RewardPuzzle(singleton_id=singleton_id)
-    await sim.farm_block(reward_puzzle.puzzle_hash())
-    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash())
+    reward_puzzle = P2SingletonPuzzle(singleton_id=singleton_id)
+    await sim.farm_block(reward_puzzle.tree_hash)
+    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.tree_hash)
     return PoolReward(
         coin=coin_1.coin if coin_1.coin.amount > coin_2.coin.amount else coin_2.coin,
         singleton_id=singleton_id,
@@ -301,7 +317,8 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
             plotnft.claim_pool_rewards(rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[])
 
         reward_dpuz_and_sol = DelegatedPuzzleAndSolution(
-            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+            puzzle=ACSPuzzle(),
+            solution=ACSSolution(conditions=[CreateCoin(bytes32.zeros, uint64(1))]),
         )
         coin_spends = plotnft.claim_pool_rewards(
             rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[reward_dpuz_and_sol]
@@ -322,7 +339,9 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
         assert len(await sim_client.get_coin_records_by_puzzle_hash(bytes32.zeros)) == 1
 
         # Make sure we can find the plotnft
-        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+        plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft.inner_puzzle
+        )
 
 
 # PlotNFT claims pooling rewards while pooling
@@ -342,7 +361,10 @@ async def test_plotnft_pooling_claim(
             plotnft.claim_pool_rewards(
                 rewards_to_claim=[reward],
                 reward_delegated_puzzles_and_solutions=[
-                    DelegatedPuzzleAndSolution(puzzle=Program.to(None), solution=NilSolution().program)
+                    DelegatedPuzzleAndSolution(
+                        puzzle=NilPuzzle(),
+                        solution=NilSolution(),
+                    )
                 ],
             )
 
@@ -361,96 +383,172 @@ async def test_plotnft_pooling_claim(
 
         # Make sure the pooling reward did what it was supposed to
         assert (
-            len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.guaranteed_pool_config.pool_puzzle_hash)) == 1
+            len(
+                await sim_client.get_coin_records_by_puzzle_hash(
+                    plotnft.inner_puzzle.guaranteed_pool_config.pool_puzzle_hash
+                )
+            )
+            == 1
         )
 
         # Make sure we can find the plotnft
-        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+        plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft.inner_puzzle
+        )
 
 
 def test_plotnft_errors() -> None:
     with pytest.raises(
         ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
     ):
-        PlotNFTPuzzle(
-            launcher_id=bytes32.zeros,
+        PlotNFTInnerPuzzle(
+            self_launcher_id=bytes32.zeros,
             genesis_challenge=bytes32.zeros,
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=True,
         )
 
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to initialize a pooling PlotNFT without required information")
+    ):
+        PlotNFTInnerPuzzle(
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
+            ),
+        )
+
+    self_custody_inner = PlotNFTInnerPuzzle(
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        exiting=False,
+    )
+    with pytest.raises(ValueError, match=re.escape("Launcher ID is not present because PlotNFT is not pooling")):
+        _ = self_custody_inner.launcher_id
+
+    matched_self_custody = PlotNFTInnerPuzzle.match(
+        unknown_puzzle=UnknownPuzzle(known_program=self_custody_inner.program)
+    )
+    # PuzzleWithRestrictions.match currently does not round-trip these puzzles
+    assert matched_self_custody is None
+    assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=NilPuzzle().program)) is None
+
+    pooling_inner = PlotNFTInnerPuzzle(
+        self_launcher_id=bytes32.zeros,
+        genesis_challenge=bytes32.zeros,
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        pool_config=PoolConfig(
+            pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
+        ),
+        exiting=False,
+    )
+
+    # Force match success / NotImplemented paths via mocked PuzzleWithRestrictions.match
+
+    bls_member = BLSWithTaprootMember(synthetic_key=user_sk.get_g1())
+    bls_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_member)
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(
+            PuzzleWithRestrictions,
+            "program",
+            new_callable=mock.PropertyMock,
+            return_value=UnknownPuzzle(known_program=bls_member.program),
+        ),
+    ):
+        matched_bls = PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+        assert matched_bls is not None
+        assert matched_bls.user_config.synthetic_pubkey == user_sk.get_g1()
+
+    member_a = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_member, _top_level=False)
+    member_b = PuzzleWithRestrictions(
+        nonce=0, restrictions=[], member=pooling_inner.fixed_puzzle_member, _top_level=False
+    )
+    mofn_two = MofN(m=2, members=[member_a, member_b])
+    mofn_one = MofN(m=1, members=[member_a])
+    # Member program that is not a BLS member so MofN.match is consulted
+    non_bls_prog = UnknownPuzzle(known_program=Program.to("not bls"))
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=mofn_two),
+    ):
+        with pytest.raises(NotImplementedError, match="Currently unimplemented"):
+            PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=mofn_one),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=None),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    pooling_plotnft = PlotNFT(
+        coin=Coin(bytes32.zeros, pooling_inner.tree_hash, uint64(1)),
+        lineage_proof=LineageProof(),
+        launcher_id=bytes32.zeros,
+        inner_puzzle=pooling_inner,
+    )
+    with pytest.raises(ValueError, match=re.escape("Cannot create a new user config for a pooling PlotNFT")):
+        pooling_plotnft.new_user_config(user_config=pooling_inner.user_config, hint=bytes32.zeros)
+    with pytest.raises(ValueError, match=re.escape("Cannot melt a pooling PlotNFT")):
+        pooling_plotnft.melt()
+
     with pytest.raises(ValueError, match=re.escape("Plot NFT is not pooling, cannot retrieve pool config")):
-        PlotNFTPuzzle(
-            launcher_id=bytes32.zeros,
+        PlotNFTInnerPuzzle(
+            self_launcher_id=bytes32.zeros,
             genesis_challenge=bytes32.zeros,
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=False,
         ).guaranteed_pool_config
-
-    with pytest.raises(ValueError, match="Cannot create a new user config for a pooling PlotNFT"):
-        PlotNFT(
-            coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
-            singleton_lineage_proof=LineageProof(),
-            launcher_id=bytes32.zeros,
-            genesis_challenge=bytes32.zeros,
-            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
-            pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(0), pool_memoization=Program.to(None)
-            ),
-            exiting=False,
-        ).new_user_config(user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()), hint=bytes32.zeros)
-
-    with pytest.raises(ValueError, match="Cannot melt a pooling PlotNFT"):
-        PlotNFT(
-            coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
-            singleton_lineage_proof=LineageProof(),
-            launcher_id=bytes32.zeros,
-            genesis_challenge=bytes32.zeros,
-            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
-            pool_config=PoolConfig(
-                pool_puzzle_hash=bytes32.zeros, heightlock=uint32(0), pool_memoization=Program.to(None)
-            ),
-            exiting=False,
-        ).melt()
 
     default_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 
     with pytest.raises(
         GetNextPlotNFTError, match=re.escape("Either genesis_challenge or previous_plotnft_puzzle must be provided")
     ):
-        PlotNFT.get_next_from_coin_spend(coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)))
-
-    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton puzzle for next PlotNFT")):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)), genesis_challenge=bytes32.zeros
+            coin_spend=make_spend(default_coin, NilPuzzle().program, NilSolution().program)
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton mod for next PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=make_spend(default_coin, NilPuzzle().program, NilSolution().program),
+            genesis_challenge=bytes32.zeros,
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
+
+        class BadLauncherStruct(SingletonStruct):
+            singleton_puzzles = SingletonCorePuzzles(
+                singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+            )
+
         PlotNFT.get_next_from_coin_spend(
             coin_spend=make_spend(
                 default_coin,
-                Program.to(PlotNFT.singleton_puzzles.singleton_mod).curry(
-                    SingletonStruct(
-                        launcher_id=bytes32.zeros,
-                        singleton_puzzles=SingletonPuzzles(
-                            singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
-                        ),
-                    ).to_program()
+                Program.to(PlotNFT.struct_driver.singleton_puzzles.singleton_mod).curry(
+                    BadLauncherStruct(launcher_id=bytes32.zeros).program
                 ),
-                Program.to(None),
+                NilSolution().program,
             ),
             genesis_challenge=bytes32.zeros,
         )
 
     def wrap_inner_puz(inner_puz: Program) -> UnknownPuzzle:
-        return UnknownPuzzle.from_uncurried(
-            UncurriedPuzzle(
-                mod=PlotNFT.singleton_puzzles.singleton_mod,
-                args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
+        return UnknownPuzzle(
+            known_program=PlotNFT.struct_driver.singleton_puzzles.singleton_mod.curry(
+                SingletonStruct(launcher_id=bytes32.zeros).program, inner_puz
             )
         )
 
-    FAUX_SPEND = make_spend(default_coin, Program.to(None), Program.to([None, None, None]))
+    FAUX_SPEND = make_spend(default_coin, NilPuzzle().program, Program.to([None, None, None]))
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("PlotNFTs must make exactly one new coin")):
         PlotNFT.get_next_from_coin_spend(
@@ -460,7 +558,7 @@ def test_plotnft_errors() -> None:
                     conditions=[
                         CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)),
                         CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)),
-                    ],
+                    ]
                 ).program
             ),
             genesis_challenge=bytes32.zeros,
@@ -470,11 +568,7 @@ def test_plotnft_errors() -> None:
         PlotNFT.get_next_from_coin_spend(
             coin_spend=FAUX_SPEND,
             pre_uncurry=wrap_inner_puz(
-                P2Conditions(
-                    conditions=[
-                        CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)),
-                    ],
-                ).program
+                P2Conditions(conditions=[CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1))]).program
             ),
             genesis_challenge=bytes32.zeros,
         )
@@ -495,7 +589,7 @@ def test_plotnft_errors() -> None:
                                 )
                             ),
                         )
-                    ],
+                    ]
                 ).program
             ),
             genesis_challenge=bytes32.zeros,
@@ -514,16 +608,13 @@ def test_plotnft_errors() -> None:
                                 (
                                     bytes32.zeros,
                                     (
-                                        bytes32.zeros,
-                                        (
-                                            PuzzleWithRestrictions.spec_namespace,
-                                            [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
-                                        ),
+                                        PuzzleWithRestrictions.spec_namespace,
+                                        [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
                                     ),
-                                ),
+                                )
                             ),
                         )
-                    ],
+                    ]
                 ).program
             ),
             genesis_challenge=bytes32.zeros,
@@ -554,7 +645,7 @@ def test_plotnft_errors() -> None:
                                 )
                             ),
                         )
-                    ],
+                    ]
                 ).program
             ),
             genesis_challenge=bytes32.zeros,
@@ -563,10 +654,10 @@ def test_plotnft_errors() -> None:
 
 def test_singleton_constructs() -> None:
     assert (
-        SingletonPuzzles(singleton_mod_hash_pre_computed=None).singleton_mod_hash
-        == SingletonPuzzles().singleton_mod_hash
+        SingletonCorePuzzles(singleton_mod_hash_pre_computed=None).singleton_mod_hash
+        == SingletonCorePuzzles().singleton_mod_hash
     )
     assert (
-        SingletonPuzzles(singleton_launcher_hash_pre_computed=None).singleton_launcher_hash
-        == SingletonPuzzles().singleton_launcher_hash
+        SingletonCorePuzzles(singleton_launcher_hash_pre_computed=None).singleton_launcher_hash
+        == SingletonCorePuzzles().singleton_launcher_hash
     )

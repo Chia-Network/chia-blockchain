@@ -14,7 +14,8 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.merkle_utils import list_to_binary_tree
-from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
+from chia.wallet.vc_wallet.vc_drivers import StreamableVerifiedCredential as VerifiedCredential
+from chia.wallet.vc_wallet.vc_drivers import VCLineageProof
 
 
 @dataclasses.dataclass(frozen=True)

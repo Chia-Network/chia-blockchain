@@ -1371,10 +1371,13 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: dict[bytes, type[Condition]] = {
 def parse_conditions_non_consensus(
     conditions: Iterable[Program],
     abstractions: bool = True,  # Use abstractions like *Announcement or Timelock instead of specific condition class
+    additional_conditions: dict[bytes, type[Condition]] | None = None,
 ) -> list[Condition]:
     driver_dictionary: dict[bytes, type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
+    if additional_conditions is not None:
+        driver_dictionary.update(additional_conditions)
     final_condition_list: list[Condition] = []
     for condition in conditions:
         try:
