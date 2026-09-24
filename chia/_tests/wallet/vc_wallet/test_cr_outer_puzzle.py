@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -70,3 +71,18 @@ def test_cat_outer_puzzle() -> None:
     )
 
     assert get_inner_solution(cr_driver, solution) == inner_solution
+
+
+def test_cr_outer_puzzle_unknown_proofs_checker() -> None:
+
+    with pytest.raises(ValueError, match="An unknown proofs checker was supplied to constructor"):
+        construct_puzzle(
+            PuzzleInfo(
+                {
+                    "type": "credential restricted",
+                    "authorized_providers": ["0x" + bytes32.zeros.hex()],
+                    "proofs_checker": Program.to([1]),
+                }
+            ),
+            ACSPuzzle().program,
+        )

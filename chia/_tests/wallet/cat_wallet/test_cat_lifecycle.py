@@ -576,3 +576,11 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
             cost_logger=cost_logger,
             cost_log_msg="Cat Eve Spend - create one child (TAIL: delegated_tail - genesis_by_id)",
         )
+
+
+def test_tail_condition_from_program() -> None:
+    original = TAILCondition(
+        puzzle=UnknownPuzzle(known_program=Program.to("tail")),
+        solution=UnknownSolution(program=Program.to("solution")),
+    )
+    assert TAILCondition.from_program(original.to_program()) == original

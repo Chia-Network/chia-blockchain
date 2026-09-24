@@ -4,7 +4,7 @@ import re
 from dataclasses import replace
 
 import pytest
-from chia_rs import CoinSpend, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -15,6 +15,9 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
 from chia.wallet.conditions import Condition, CreateCoin
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import (
     P2Singleton,
@@ -22,6 +25,7 @@ from chia.wallet.puzzles.singleton_drivers import (
     Singleton,
     SingletonLaunchInfo,
     SingletonPuzzle,
+    SingletonSolution,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -267,3 +271,70 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
             if coin.puzzle_hash == ACS_PH and coin.amount == START_AMOUNT - 1
         )
         assert melted_coin.puzzle_hash == ACS_PH
+
+
+def test_singleton_driver_edge_cases() -> None:
+
+    assert SingletonSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert SingletonSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    matched = SingletonSolution.match(
+        unknown_solution=UnknownSolution(program=Program.to([[bytes32.zeros, bytes32.zeros, 1], 1, Program.to([])]))
+    )
+    assert matched is not None
+    assert matched.coin_amount == uint64(1)
+
+    with pytest.raises(ValueError, match="Coin amount cannot be even"):
+        Singleton.launch(
+            origin_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(100)),
+            launch_info=SingletonLaunchInfo(desired_inner_puzzle=ACS, key_value_hints={}, amount=uint64(2)),
+        )
+
+    singleton = Singleton(
+        coin=Coin(bytes32.zeros, bytes32.zeros, uint64(1)),
+        launcher_id=bytes32.zeros,
+        lineage_proof=LineageProof(),
+        inner_puzzle=ACS,
+    )
+    with pytest.raises(ValueError, match="Number of rewards and delegated puzzles and solutions must match"):
+        singleton.claim_p2_singletons(
+            rewards_to_claim=[],
+            reward_delegated_puzzles_and_solutions=[
+                DelegatedPuzzleAndSolution(puzzle=ACS, solution=UnknownSolution(program=Program.to([])))
+            ],
+        )
+
+    p2 = P2SingletonPuzzle(singleton_id=bytes32.zeros)
+    assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS.program)) is None
+
+    from unittest import mock
+
+    from chia.wallet.puzzles.custody.member_puzzles import SingletonMember
+
+    singleton_member = SingletonMember(singleton_id=bytes32.zeros)
+    pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=singleton_member)
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=pwr),
+        mock.patch.object(
+            PuzzleWithRestrictions,
+            "program",
+            new_callable=mock.PropertyMock,
+            return_value=UnknownPuzzle(known_program=singleton_member.program),
+        ),
+    ):
+        assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == p2
+
+    bls_pwr = PuzzleWithRestrictions(
+        nonce=0,
+        restrictions=[],
+        member=BLSWithTaprootMember(synthetic_key=G1Element()),
+    )
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(
+            PuzzleWithRestrictions,
+            "program",
+            new_callable=mock.PropertyMock,
+            return_value=UnknownPuzzle(known_program=BLSWithTaprootMember(synthetic_key=G1Element()).program),
+        ),
+    ):
+        assert P2SingletonPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None

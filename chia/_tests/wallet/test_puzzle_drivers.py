@@ -54,6 +54,7 @@ def test_puzzle_with_puzzle_hash() -> None:
         assert tree_hash_patched.call_count == 1
 
     with_optimized_hash = SomePuzzleDriverWithOptimizedPuzzleHash()
+    assert with_optimized_hash.program == Program.to("unused")
     with mock.patch.object(Program, "get_tree_hash") as tree_hash_patched:
         with_optimized_hash.tree_hash
         with_optimized_hash.tree_hash
@@ -101,6 +102,7 @@ def test_unknown_puzzle() -> None:
 def test_acs_puzzle() -> None:
     assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(0))) is None
     assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == ACSPuzzle()
+    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.NIL)) == ACSSolution(conditions=[])
     # Atoms are treated as an empty condition list by the parser
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) is None
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not an ACS"]))) is None

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from typing import Literal
+from unittest import mock
 
 import pytest
 from chia_rs import Coin, CoinSpend, G1Element, G2Element, PrivateKey
@@ -31,7 +32,9 @@ from chia.wallet.conditions import (
     SendMessage,
     parse_conditions_non_consensus,
 )
-from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.custody.custody_architecture import MofN, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -177,6 +180,12 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                     solution=NilSolution(),
                 )
             )
+
+        with pytest.raises(ValueError, match=re.escape("Cannot create a new user config for a pooling PlotNFT")):
+            plotnft.new_user_config(user_config=plotnft.inner_puzzle.user_config, hint=bytes32.zeros)
+
+        with pytest.raises(ValueError, match=re.escape("Cannot melt a pooling PlotNFT")):
+            plotnft.melt()
 
         # Attempt to leave without waiting room
         quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
@@ -398,6 +407,98 @@ def test_plotnft_errors() -> None:
             user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
             exiting=True,
         )
+
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to initialize a pooling PlotNFT without required information")
+    ):
+        PlotNFTInnerPuzzle(
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
+            ),
+        )
+
+    self_custody_inner = PlotNFTInnerPuzzle(
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        exiting=False,
+    )
+    with pytest.raises(ValueError, match=re.escape("Launcher ID is not present because PlotNFT is not pooling")):
+        _ = self_custody_inner.launcher_id
+
+    matched_self_custody = PlotNFTInnerPuzzle.match(
+        unknown_puzzle=UnknownPuzzle(known_program=self_custody_inner.program)
+    )
+    # PuzzleWithRestrictions.match currently does not round-trip these puzzles
+    assert matched_self_custody is None
+    assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=NilPuzzle().program)) is None
+
+    pooling_inner = PlotNFTInnerPuzzle(
+        self_launcher_id=bytes32.zeros,
+        genesis_challenge=bytes32.zeros,
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        pool_config=PoolConfig(
+            pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
+        ),
+        exiting=False,
+    )
+
+    # Force match success / NotImplemented paths via mocked PuzzleWithRestrictions.match
+
+    bls_member = BLSWithTaprootMember(synthetic_key=user_sk.get_g1())
+    bls_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_member)
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(
+            PuzzleWithRestrictions,
+            "program",
+            new_callable=mock.PropertyMock,
+            return_value=UnknownPuzzle(known_program=bls_member.program),
+        ),
+    ):
+        matched_bls = PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+        assert matched_bls is not None
+        assert matched_bls.user_config.synthetic_pubkey == user_sk.get_g1()
+
+    member_a = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_member, _top_level=False)
+    member_b = PuzzleWithRestrictions(
+        nonce=0, restrictions=[], member=pooling_inner.fixed_puzzle_member, _top_level=False
+    )
+    mofn_two = MofN(m=2, members=[member_a, member_b])
+    mofn_one = MofN(m=1, members=[member_a])
+    # Member program that is not a BLS member so MofN.match is consulted
+    non_bls_prog = UnknownPuzzle(known_program=Program.to("not bls"))
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=mofn_two),
+    ):
+        with pytest.raises(NotImplementedError, match="Currently unimplemented"):
+            PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=mofn_one),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    with (
+        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
+        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
+        mock.patch.object(MofN, "match", return_value=None),
+    ):
+        assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    pooling_plotnft = PlotNFT(
+        coin=Coin(bytes32.zeros, pooling_inner.tree_hash, uint64(1)),
+        lineage_proof=LineageProof(),
+        launcher_id=bytes32.zeros,
+        inner_puzzle=pooling_inner,
+    )
+    with pytest.raises(ValueError, match=re.escape("Cannot create a new user config for a pooling PlotNFT")):
+        pooling_plotnft.new_user_config(user_config=pooling_inner.user_config, hint=bytes32.zeros)
+    with pytest.raises(ValueError, match=re.escape("Cannot melt a pooling PlotNFT")):
+        pooling_plotnft.melt()
 
     with pytest.raises(ValueError, match=re.escape("Plot NFT is not pooling, cannot retrieve pool config")):
         PlotNFTInnerPuzzle(

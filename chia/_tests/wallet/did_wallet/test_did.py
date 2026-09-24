@@ -502,6 +502,15 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     assert found_coin == coin
     assert did_wallet.did_info.current_inner != new_inner_puzzle
 
+    # Cover puzzle_for_pk / get_innerpuz_for_new_innerhash once origin is known
+    assert did_wallet.did_info.origin_coin is not None
+    derivation = await did_wallet.wallet_state_manager.puzzle_store.get_derivation_record(uint32(0), uint32(1), False)
+    assert derivation is not None
+    puz = did_wallet.puzzle_for_pk(derivation.pubkey)
+    assert puz.get_tree_hash() == did_wallet.puzzle_hash_for_pk(derivation.pubkey)
+    inner = await did_wallet.get_innerpuz_for_new_innerhash(derivation.pubkey)
+    assert inner.get_tree_hash() is not None
+
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
@@ -1509,3 +1518,13 @@ async def test_did_resync(
 def test_did_recovery_is_nil(program: Program, result: bool) -> None:
     # test that the alternate wallet nil recovery list bytes are used
     assert did_recovery_is_nil(program) is result
+
+
+def test_recovery_list_ids_hash() -> None:
+    from chia.wallet.did_wallet.did_wallet_puzzles import RecoveryList
+
+    assert RecoveryList(ids=None).ids_hash is None
+    assert RecoveryList(ids=[]).ids_hash is None
+    ids = [bytes32.zeros, bytes32([1] * 32)]
+    assert RecoveryList(ids=ids).ids_hash == Program.to(ids).get_tree_hash()
+    assert RecoveryList(ids=ids, tree_hash=bytes32([2] * 32)).ids_hash == bytes32([2] * 32)

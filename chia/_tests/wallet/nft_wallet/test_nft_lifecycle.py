@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import itertools
+from typing import Any, cast
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program, run
@@ -19,18 +20,22 @@ from chia.wallet.conditions import (
     CreatePuzzleAnnouncement,
     UnknownCondition,
 )
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    NFT,
     DefaultMetadataUpdater,
     DefaultTransferProgram,
     MetadataLayer,
     MetadataLayerSolution,
     NFTMetadata,
+    NFTSolution,
     OwnershipLayer,
     OwnershipLayerSolution,
     TransferProgramCondition,
     UpdateMetadataCondition,
 )
-from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, ACSSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import (
     SingletonCorePuzzles,
     SingletonPuzzle,
@@ -423,3 +428,98 @@ async def test_default_transfer_program(cost_logger: CostLogger, monkeypatch: py
         result = await sim_client.push_tx(empty_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
+
+
+def test_nft_puzzle_utils_edge_cases() -> None:
+
+    # other_update path is covered by lifecycle tests; unreachable else needs bypass of __post_init__
+    unreachable = object.__new__(UpdateMetadataCondition)
+    object.__setattr__(unreachable, "data_uri", None)
+    object.__setattr__(unreachable, "meta_uri", None)
+    object.__setattr__(unreachable, "license_uri", None)
+    object.__setattr__(unreachable, "other_update", None)
+    object.__setattr__(unreachable, "metadata_updater", DefaultMetadataUpdater())
+    with pytest.raises(ValueError, match="One of data_uri, meta_uri, or license_uri must be provided"):
+        unreachable.to_program()
+
+    metadata = NFTMetadata(data_uris=["https://example.com"], data_hash=b"\x01" * 32)
+    assert metadata.prepend_value(key=b"u", value="new").data_uris == ["new", "https://example.com"]
+    assert metadata.prepend_value(key=b"mu", value="meta").meta_uris == ["meta"]
+    assert metadata.prepend_value(key=b"lu", value="lic").license_uris == ["lic"]
+    with pytest.raises(ValueError, match="Unsupported metadata key"):
+        metadata.prepend_value(key=cast(Any, b"bad"), value="x")
+
+    # other_update path in to_program
+    assert UpdateMetadataCondition(other_update=("custom", "uri")).to_program() is not None
+
+    # Atom and list forms of unrecognized metadata keys
+    with_other = NFTMetadata.from_program(
+        Program.to(
+            [
+                (b"u", ["https://a"]),
+                (b"h", b"\x02" * 32),
+                (b"custom-atom", b"value"),
+                (b"custom-list", [b"a", b"b"]),
+            ]
+        )
+    )
+    assert with_other.other_metadata[b"custom-atom"] == b"value"
+    assert with_other.other_metadata[b"custom-list"] == ["a", "b"]
+
+    assert MetadataLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert MetadataLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    assert OwnershipLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert OwnershipLayerSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+
+    assert DefaultTransferProgram.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    assert NFTSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    # Valid singleton solution shape but invalid metadata layer solution (atom inner)
+    singleton_shaped = Program.to([[bytes32.zeros, bytes32.zeros, 1], 1, Program.to(1)])
+    assert NFTSolution.match(unknown_solution=UnknownSolution(program=singleton_shaped)) is None
+
+    # Ownership layer with a non-default transfer program is rejected by NFT.match
+    ownership_non_default = OwnershipLayer(
+        current_owner=None,
+        transfer_program=UnknownPuzzle(known_program=Program.to("not default tp")),
+        inner_puzzle=ACSPuzzle(),
+    )
+    metadata_layer = MetadataLayer(
+        metadata=NFTMetadata(data_uris=["u"], data_hash=b"\x00" * 32).program,
+        metadata_updater=DefaultMetadataUpdater(),
+        inner_puzzle=ownership_non_default,
+    )
+    singleton_puz = SingletonPuzzle(launcher_id=bytes32.zeros, inner_puzzle=metadata_layer)
+    assert NFT.match(unknown_puzzle=UnknownPuzzle(known_program=singleton_puz.program)) is None
+
+    with pytest.raises(ValueError, match="Invalid puzzle for NFT"):
+        NFT.get_next_from_previous(
+            previous_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(1)),
+            previous_nft_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program),
+            previous_solution=UnknownSolution(program=Program.to([1, 2, 3])),
+        )
+
+    valid_nft_puzzle = SingletonPuzzle(
+        launcher_id=bytes32.zeros,
+        inner_puzzle=MetadataLayer(
+            metadata=NFTMetadata(data_uris=["u"], data_hash=b"\x00" * 32).program,
+            metadata_updater=DefaultMetadataUpdater(),
+            inner_puzzle=ACSPuzzle(),
+        ),
+    )
+    with pytest.raises(ValueError, match="Invalid solution for NFT"):
+        NFT.get_next_from_previous(
+            previous_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(1)),
+            previous_nft_puzzle=UnknownPuzzle(known_program=valid_nft_puzzle.program),
+            previous_solution=UnknownSolution(program=Program.to(1)),
+        )
+
+    with pytest.raises(RuntimeError, match="Unexpected DB object for NFT parsing"):
+        NFT.from_db_object(
+            NFTCoinInfo(
+                nft_id=bytes32.zeros,
+                coin=Coin(bytes32.zeros, bytes32.zeros, uint64(1)),
+                lineage_proof=LineageProof(),
+                full_puzzle=ACSPuzzle().program,
+                mint_height=uint32(0),
+            )
+        )

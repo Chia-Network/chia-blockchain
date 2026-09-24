@@ -44,6 +44,13 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
     ).program.get_tree_hash()
 
 
+def test_str_to_cat_hash() -> None:
+    assert (
+        str_to_cat_hash("red")
+        == CATPuzzle(tail_hash=str_to_tail_hash("red"), inner_puzzle=UnknownPuzzle(known_program=acs)).tree_hash
+    )
+
+
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
 async def generate_coins(
     sim: SpendSim, sim_client: SimClient, requested_coins: dict[str | None, list[int]]
