@@ -21,9 +21,9 @@ from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import (
-    final_eos_is_already_included,
     get_block_challenge,
     get_filter_challenge_from_chain,
+    get_unfinished_block_finished_sub_slots,
     pre_sp_tx_block_height,
 )
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -86,11 +86,14 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        if final_eos_is_already_included(header_block, blocks, expected_vs.ssi):
+        finished_sub_slots_since_prev = get_unfinished_block_finished_sub_slots(
+            constants,
+            blocks,
+            header_block,
+            expected_vs.ssi,
+        )
+        if finished_sub_slots_since_prev == len(header_block.finished_sub_slots):
             skip_overflow_last_ss_validation = False
-            finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
-        else:
-            finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
     else:
         finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
 
@@ -537,13 +540,7 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        pre_sp_tx_block_height(
-            constants=constants,
-            blocks=blocks,
-            prev_b_hash=header_block.prev_header_hash,
-            sp_index=header_block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(header_block.finished_sub_slots),
-        ),
+        pre_sp_tx_height,
         height_agnostic=height_agnostic,
         filter_challenge=filter_challenge,
         signage_point_index=header_block.reward_chain_block.signage_point_index,

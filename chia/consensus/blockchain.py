@@ -41,7 +41,7 @@ from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.generator_validation import validate_tx_generator
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import get_unfinished_block_finished_sub_slots, pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.blockchain_format.coin import Coin
@@ -731,12 +731,20 @@ class Blockchain:
         if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            self.constants, len(block.finished_sub_slots) > 0, prev_b, self
+        )
+        finished_sub_slots = (
+            get_unfinished_block_finished_sub_slots(self.constants, self, block, sub_slot_iters)
+            if skip_overflow_ss_validation
+            else len(block.finished_sub_slots)
+        )
         prev_tx_height = pre_sp_tx_block_height(
             constants=self.constants,
             blocks=self,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(block.finished_sub_slots),
+            finished_sub_slots=finished_sub_slots,
         )
 
         version_error = validate_tx_generator(self.constants, block, prev_tx_height)
@@ -777,9 +785,6 @@ class Blockchain:
             b"",
         )
         prev_b = self.try_block_record(unfinished_header_block.prev_header_hash)
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
-        )
         expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,

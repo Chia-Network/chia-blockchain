@@ -199,6 +199,22 @@ def pre_sp_tx_block_height(
     return latest_tx_block.height
 
 
+def get_unfinished_block_finished_sub_slots(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    block: UnfinishedHeaderBlock | UnfinishedBlock,
+    sub_slot_iters: uint64,
+) -> int:
+    finished_sub_slots = len(block.finished_sub_slots)
+    if is_overflow_block(constants, block.reward_chain_block.signage_point_index) and (
+        block.prev_header_hash == constants.GENESIS_CHALLENGE
+        or not final_eos_is_already_included(block, blocks, sub_slot_iters)
+    ):
+        finished_sub_slots += 1
+
+    return finished_sub_slots
+
+
 def get_filter_challenge_from_chain(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
