@@ -80,6 +80,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.network import is_in_network, is_localhost
 from chia.util.task_referencer import create_referenced_task
 
@@ -145,12 +146,17 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             if peer_id not in full_node.server.all_connections:
                 continue
             random_peer = full_node.server.all_connections[peer_id]
-            try:
+            response = None
+            with log_exceptions(
+                full_node.log,
+                consume=True,
+                level=logging.DEBUG,
+                show_traceback=False,
+                message=f"Failed to fetch tx {transaction_id} from {random_peer.get_peer_logging()}",
+            ):
                 response = await random_peer.call_api(
                     FullNodeAPI.request_transaction, full_node_protocol.RequestTransaction(transaction_id), timeout=5
                 )
-            except Exception:
-                continue
             if not isinstance(response, full_node_protocol.RespondTransaction):
                 continue
             entry = TransactionQueueEntry(
