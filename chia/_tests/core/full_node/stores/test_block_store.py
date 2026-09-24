@@ -32,11 +32,22 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.util.casts import int_to_bytes
-from chia.util.db_wrapper import get_host_parameter_limit
+from chia.util.db_wrapper import DBWrapper2, get_host_parameter_limit
 from chia.util.inline_executor import InlineExecutor
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
+
+
+async def assert_chain_index_matches_main_chain(db_wrapper: DBWrapper2) -> None:
+    # chain_index (height -> header_hash) is dual-written with
+    # in_main_chain, in the same transaction. The two must always agree.
+    async with db_wrapper.reader_no_transaction() as conn:
+        async with conn.execute("SELECT height, header_hash FROM full_blocks WHERE in_main_chain=1") as cursor:
+            main_chain_rows = {(row[0], row[1]) for row in await cursor.fetchall()}
+        async with conn.execute("SELECT height, header_hash FROM chain_index") as cursor:
+            chain_index_rows = {(row[0], row[1]) for row in await cursor.fetchall()}
+    assert chain_index_rows == main_chain_rows
 
 
 @pytest.fixture(scope="function", params=[True, False])
@@ -98,6 +109,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
             await store.set_peak(block_record.header_hash)
+            await assert_chain_index_matches_main_chain(db_wrapper)
 
             assert await store.get_full_block_bytes(block.header_hash) == bytes(block)
             buf = await store.get_full_block_bytes(block.header_hash)
@@ -298,7 +310,9 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
                     assert len(rows) == 1
                     assert not rows[0][0]
 
+        await assert_chain_index_matches_main_chain(db_wrapper)
         await block_store.rollback(5)
+        await assert_chain_index_matches_main_chain(db_wrapper)
 
         count = 0
         async with db_wrapper.reader_no_transaction() as conn:
@@ -320,6 +334,61 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
                     rows = list(await cursor.fetchall())
                     assert len(rows) == 1
                     assert not rows[0][0]
+
+        await assert_chain_index_matches_main_chain(db_wrapper)
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_chain_index_no_backfill_on_reopen(bt: BlockTools, use_cache: bool) -> None:
+    """
+    chain_index is not backfilled for a database that predates it: it
+    only dual-writes going forward. Reopening a store with existing
+    in_main_chain rows and an emptied chain_index leaves the historical gap
+    in place -- a future migration fills it in by walking prev_hash from
+    peak, not by trusting in_main_chain.
+    """
+    blocks = bt.get_consecutive_blocks(4)
+
+    async with DBConnection(2) as db_wrapper:
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
+
+        for block in blocks[:3]:
+            block_record = header_block_to_sub_block_record(
+                DEFAULT_CONSTANTS, uint64(0), block, uint64(0), False, uint8(0), uint32(max(0, block.height - 1)), None
+            )
+            await store.add_full_block(block.header_hash, block, block_record)
+            await store.set_in_chain([(block_record.header_hash,)])
+            await store.set_peak(block_record.header_hash)
+
+        await assert_chain_index_matches_main_chain(db_wrapper)
+
+        # simulate a database from before chain_index existed: drop the
+        # rows it accumulated, as if this store had never dual-written them.
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM chain_index")
+
+        # reopening is idempotent (CREATE TABLE IF NOT EXISTS) and does not
+        # backfill -- the gap is left for a future migration to fill.
+        await BlockStore.create(db_wrapper, use_cache=use_cache)
+        async with db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT COUNT(*) FROM chain_index") as cursor:
+                row = await cursor.fetchone()
+        assert row == (0,)
+
+        # a write from this point on is still consistent, it just doesn't
+        # cover the pre-existing history.
+        new_block_record = header_block_to_sub_block_record(
+            DEFAULT_CONSTANTS, uint64(0), blocks[3], uint64(0), False, uint8(0), uint32(2), None
+        )
+        await store.add_full_block(blocks[3].header_hash, blocks[3], new_block_record)
+        await store.set_in_chain([(new_block_record.header_hash,)])
+        await store.set_peak(new_block_record.header_hash)
+
+        async with db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT height, header_hash FROM chain_index") as cursor:
+                rows = await cursor.fetchall()
+        assert rows == [(blocks[3].height, blocks[3].header_hash)]
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
