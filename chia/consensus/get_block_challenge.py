@@ -4,7 +4,7 @@ import logging
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.pot_iterations import is_overflow_block
@@ -12,6 +12,27 @@ from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
+
+
+def is_first_overflow(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    prev_b: BlockRecord | None,
+    sp_index: uint8,
+    sp_sub_slot_total_iters: uint128,
+) -> bool:
+    if not is_overflow_block(constants, sp_index):
+        return False
+    if prev_b is None:
+        return True
+
+    curr = prev_b
+    while True:
+        if curr.overflow and curr.sp_sub_slot_total_iters(constants) == sp_sub_slot_total_iters:
+            return False
+        if curr.first_in_sub_slot or curr.height == 0:
+            return True
+        curr = blocks.block_record(curr.prev_hash)
 
 
 def final_eos_is_already_included(

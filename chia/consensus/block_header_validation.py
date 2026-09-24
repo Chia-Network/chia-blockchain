@@ -124,7 +124,7 @@ def validate_unfinished_header_block(
         blocks=blocks,
         prev_b_hash=header_block.prev_header_hash,
         sp_index=header_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(header_block.finished_sub_slots),
+        finished_sub_slots=finished_sub_slots_since_prev,
     )
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
