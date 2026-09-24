@@ -22,7 +22,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -335,7 +334,7 @@ class VCWallet:
             magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
-        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
+        extra_conditions = (*extra_conditions, magic_condition)
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
@@ -534,7 +533,7 @@ class VCWallet:
                 coin_args[coin_name] = (
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
-                        vc.proof_hash,  # type: ignore
+                        vc.proof_hash,  # type: ignore[arg-type]
                         ProofsChecker.from_program(UnknownPuzzle(known_program=crcat_spend.crcat.proofs_checker)).flags,
                     ),
                     vc.proof_provider,

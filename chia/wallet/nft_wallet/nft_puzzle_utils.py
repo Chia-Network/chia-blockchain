@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal
+from dataclasses import dataclass
+from typing import Any, ClassVar, Literal
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
-from clvm.SExp import CastableType
 from clvm_tools.binutils import disassemble
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.bech32m import encode_puzzle_hash
+from chia.wallet.conditions import Condition, CreateCoin
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_METADATA_UPDATER,
+    NFT_METADATA_UPDATER_HASH,
     NFT_OWNERSHIP_LAYER,
     NFT_OWNERSHIP_LAYER_HASH,
     NFT_STATE_LAYER_MOD,
@@ -21,6 +25,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.puzzles.puzzle_drivers import Puzzle, UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_TOP_LAYER_MOD,
@@ -212,7 +217,7 @@ def create_ownership_layer_puzzle(
 
 
 def create_ownership_layer_transfer_solution(
-    new_did: bytes, new_did_inner_hash: bytes, trade_prices_list: list[list[int]], new_puzhash: bytes32
+    new_did: bytes, new_did_inner_hash: bytes, trade_prices_list: list[tuple[int, bytes32]], new_puzhash: bytes32
 ) -> Program:
     log.debug(
         "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s puzhash:%s",
@@ -221,9 +226,13 @@ def create_ownership_layer_transfer_solution(
         trade_prices_list,
         new_puzhash.hex(),
     )
-    condition_list: list[list[CastableType]] = [
-        [51, new_puzhash, 1, [new_puzhash]],
-        [-10, new_did, trade_prices_list, new_did_inner_hash],
+    condition_list = [
+        CreateCoin(new_puzhash, uint64(1), [new_puzhash]).to_program(),
+        TransferProgramCondition(
+            trade_prices_list={tp[1]: tp[0] for tp in trade_prices_list},
+            new_owner=bytes32(new_did) if new_did else None,
+            new_owner_inner_puzzle_hash=bytes32(new_did_inner_hash) if new_did_inner_hash else None,
+        ).to_program(),
     ]
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to([[solution_for_conditions(condition_list)]])
@@ -295,3 +304,88 @@ def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Literal[b""] | b
             else:
                 new_did_id = bytes32(atom)
     return new_did_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class UpdateMetadataCondition(Condition):
+    data_uri: str | None = None
+    meta_uri: str | None = None
+    license_uri: str | None = None
+    other_update: tuple[str, str] | None = None
+    metadata_updater: Puzzle = UnknownPuzzle(
+        known_program=NFT_METADATA_UPDATER, known_tree_hash=NFT_METADATA_UPDATER_HASH
+    )
+
+    data_key: ClassVar[Literal[b"u"]] = b"u"
+    meta_key: ClassVar[Literal[b"mu"]] = b"mu"
+    license_key: ClassVar[Literal[b"lu"]] = b"lu"
+
+    def __post_init__(self) -> None:
+        args_list = [self.data_uri, self.meta_uri, self.license_uri, self.other_update]
+        non_none_args = [_ for _ in args_list if _ is not None]
+        if len(non_none_args) != 1:
+            raise ValueError("Only one of data_uri, meta_uri, license_uri, or other_update can be provided")
+
+    def to_program(self) -> Program:
+        key: bytes
+        uri: str
+        if self.data_uri is not None:
+            key = self.data_key
+            uri = self.data_uri
+        elif self.meta_uri is not None:
+            key = self.meta_key
+            uri = self.meta_uri
+        elif self.license_uri is not None:
+            key = self.license_key
+            uri = self.license_uri
+        elif self.other_update is not None:
+            other_key, uri = self.other_update
+            key = other_key.encode("utf8")
+        else:
+            raise ValueError("One of data_uri, meta_uri, license_uri, or other_update must be provided")
+
+        return Program.to([-24, self.metadata_updater.program, (key, uri)])
+
+    @classmethod
+    def from_program(cls, program: Program) -> Self:
+        key = program.at("rrff")
+        uri = program.at("rrfr")
+        if key == cls.data_key:
+            return cls(data_uri=str(uri.as_atom(), "utf8"))
+        elif key == cls.meta_key:
+            return cls(meta_uri=str(uri.as_atom(), "utf8"))
+        elif key == cls.license_key:
+            return cls(license_uri=str(uri.as_atom(), "utf8"))
+        else:
+            raise ValueError("Invalid key")
+
+
+@dataclass(frozen=True, kw_only=True)
+class TransferProgramCondition(Condition):
+    trade_prices_list: dict[bytes32, int]
+    new_owner: bytes32 | None = None
+    new_owner_inner_puzzle_hash: bytes32 | None = None
+
+    def __post_init__(self) -> None:
+        # Driver-only condition; fields are not streamable-serializable.
+        return None
+
+    def to_program(self) -> Program:
+        return Program.to(
+            [-10, self.new_owner, [[v, k] for k, v in self.trade_prices_list.items()], self.new_owner_inner_puzzle_hash]
+        )
+
+    @classmethod
+    def from_program(cls, program: Program) -> Self:
+        _, launcher_id, trade_prices_list, inner_puzzle_hash = program.as_iter()
+        return cls(
+            # Conditions are serialized as [price, puzzle_hash]
+            trade_prices_list={
+                bytes32(tp_tuple.at("rf").as_atom()): tp_tuple.at("f").as_int()
+                for tp_tuple in trade_prices_list.as_iter()
+            },
+            new_owner=bytes32(launcher_id.as_atom()) if launcher_id != Program.NIL else None,
+            new_owner_inner_puzzle_hash=bytes32(inner_puzzle_hash.as_atom())
+            if inner_puzzle_hash != Program.NIL
+            else None,
+        )

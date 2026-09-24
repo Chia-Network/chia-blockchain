@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import random
-from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from clvm.SExp import CastableType
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
-from chia.wallet.conditions import CreateCoin, UnknownCondition
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    TransferProgramCondition,
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
@@ -83,7 +82,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     transfer_conditions = ACSSolution(
         conditions=[
             CreateCoin(taker_p2_ph, uint64(1), [taker_p2_ph]),
-            UnknownCondition(opcode=Program.to(-10), args=[Program.NIL] * 3),
+            TransferProgramCondition(trade_prices_list={}),
         ]
     ).program
 
@@ -119,13 +118,13 @@ def make_a_new_solution() -> tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list: list[list[CastableType]] = [[200, OFFER_MOD_HASH]]
     condition_list = ACSSolution(
         conditions=[
             CreateCoin(puzhash, uint64(1), [puzhash]),
-            UnknownCondition(
-                opcode=Program.to(-10),
-                args=[Program.to(new_did), Program.to(trade_prices_list), Program.to(new_did_inner_hash)],
+            TransferProgramCondition(
+                trade_prices_list={bytes32(OFFER_MOD_HASH): 200},
+                new_owner=bytes32(new_did),
+                new_owner_inner_puzzle_hash=bytes32(new_did_inner_hash),
             ),
         ]
     ).program
@@ -193,7 +192,7 @@ def test_create_ownership_layer_transfer_solution() -> None:
     new_puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list: list[list[Any]] = [[200, OFFER_MOD_HASH]]
+    trade_prices_list: list[tuple[int, bytes32]] = [(200, OFFER_MOD_HASH)]
 
     solution = create_ownership_layer_transfer_solution(new_did, new_did_inner_hash, trade_prices_list, new_puzhash)
 

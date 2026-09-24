@@ -223,7 +223,10 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                     f" ('q' to quit, or Enter to use {logged_in_fingerprint}): "
                 )
                 while val is None:
-                    val = input(prompt)
+                    # Keep input() on the main thread so Ctrl+C interrupts the prompt.
+                    # run_in_executor(None, input) leaves a blocked default-executor
+                    # worker; asyncio.run then hangs on shutdown until another line is typed.
+                    val = input(prompt)  # ruff: ignore[blocking-input-in-async-function]
                     if val == "q":
                         raise CliRpcConnectionError("No Fingerprint Selected")
                     elif val == "" and logged_in_fingerprint is not None:

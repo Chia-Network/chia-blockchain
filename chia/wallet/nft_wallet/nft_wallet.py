@@ -21,7 +21,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -30,11 +29,13 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    TransferProgramCondition,
+    UpdateMetadataCondition,
     create_ownership_layer_puzzle,
     get_metadata_and_phs,
     get_new_owner_did,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER_HASH
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -513,7 +514,7 @@ class NFTWallet:
 
         # singleton eve puzzle
         eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-            launcher_coin.name(), metadata, NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
+            launcher_coin.name(), metadata, NFT_METADATA_UPDATER_HASH, inner_puzzle
         )
         eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
         # launcher announcement
@@ -663,8 +664,8 @@ class NFTWallet:
         return (
             AssetType(puzzle_driver.type()) == AssetType.SINGLETON
             and puzzle_driver.also() is not None
-            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
-            and puzzle_driver.also().also() is None  # type: ignore
+            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore[union-attr]
+            and puzzle_driver.also().also() is None  # type: ignore[union-attr]
             and await self.get_nft(puzzle_driver["launcher_id"]) is not None
         )
 
@@ -798,26 +799,26 @@ class NFTWallet:
                     new_owner = unft.owner_did
             extra_conditions = (
                 *extra_conditions,
-                UnknownCondition(
-                    opcode=Program.to(-10),
-                    args=[
-                        Program.to(new_owner),
-                        Program.to(trade_prices_list),
-                        Program.to(new_did_inner_hash),
-                    ],
+                TransferProgramCondition(
+                    trade_prices_list={
+                        bytes32(tp.at("rf").as_atom()): tp.at("f").as_int()
+                        for tp in Program.to(trade_prices_list if trade_prices_list is not None else []).as_iter()
+                    },
+                    new_owner=bytes32(new_owner) if new_owner else None,
+                    new_owner_inner_puzzle_hash=bytes32(new_did_inner_hash) if new_did_inner_hash else None,
                 ),
             )
         if metadata_update is not None:
-            extra_conditions = (
-                *extra_conditions,
-                UnknownCondition(
-                    opcode=Program.to(-24),
-                    args=[
-                        NFT_METADATA_UPDATER,
-                        Program.to(metadata_update),
-                    ],
-                ),
-            )
+            key, uri = metadata_update
+            if key == "u":
+                metadata_condition: Condition = UpdateMetadataCondition(data_uri=uri)
+            elif key == "mu":
+                metadata_condition = UpdateMetadataCondition(meta_uri=uri)
+            elif key == "lu":
+                metadata_condition = UpdateMetadataCondition(license_uri=uri)
+            else:
+                metadata_condition = UpdateMetadataCondition(other_update=(key, uri))
+            extra_conditions = (*extra_conditions, metadata_condition)
 
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,
@@ -904,7 +905,7 @@ class NFTWallet:
         required_royalty_info: list[tuple[bytes32, bytes32, uint16]] = []  # [(launcher_id, address, percentage)]
         offered_royalty_percentages: dict[bytes32, uint16] = {}
         for asset, amount in royalty_nft_asset_dict.items():  # royalty enabled NFTs
-            transfer_info = driver_dict[asset].also().also()  # type: ignore
+            transfer_info = driver_dict[asset].also().also()  # type: ignore[union-attr]
             assert isinstance(transfer_info, PuzzleInfo)
             royalty_percentage_raw = transfer_info["transfer_program"]["royalty_percentage"]
             assert royalty_percentage_raw is not None

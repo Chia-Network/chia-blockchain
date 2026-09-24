@@ -1033,7 +1033,7 @@ class DataLayerWallet:
             driver = driver_dict.get(asset_id)
             if driver is None or not (
                 driver.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
-                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore[index]
             ):
                 raise ValueError(
                     f"DataLayer update offers only support DL singleton legs; "

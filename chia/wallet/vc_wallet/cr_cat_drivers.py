@@ -26,10 +26,10 @@ from chia.types.coin_spend import make_spend
 from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreateCoinAnnouncement, Remark, UnknownCondition
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, TAILCondition, construct_cat_puzzle
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.vc_wallet.vc_drivers import (
@@ -212,7 +212,7 @@ class CRCAT:
         new_cr_layer_hash: bytes32 = construct_cr_layer(
             authorized_providers,
             proofs_checker,
-            payment.puzzle_hash,  # type: ignore
+            payment.puzzle_hash,  # type: ignore[arg-type]
         ).get_tree_hash_precalc(payment.puzzle_hash)
         new_cat_puzhash = construct_cat_puzzle(CAT_MOD, tail_hash, new_cr_layer_hash).get_tree_hash_precalc(
             new_cr_layer_hash
@@ -221,7 +221,10 @@ class CRCAT:
         eve_innerpuz: Program = P2Conditions(
             conditions=[
                 CreateCoin(new_cr_layer_hash, payment.amount, payment.memos),
-                UnknownCondition(opcode=Program.to(51), args=[Program.to(None), Program.to(-113), tail, tail_solution]),
+                TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail),
+                    solution=UnknownSolution(program=tail_solution),
+                ),
                 CreateCoinAnnouncement(msg=b""),
                 Remark(rest=Program.to([payment.puzzle_hash, authorized_providers, proofs_checker])),
             ],
@@ -389,7 +392,7 @@ class CRCAT:
             lineage_inner_puzhash = construct_cr_layer(
                 authorized_providers,
                 proofs_checker,
-                inner_puzzle_hash,  # type: ignore
+                inner_puzzle_hash,  # type: ignore[arg-type]
             ).get_tree_hash_precalc(inner_puzzle_hash)
 
         # Convert all of the old stuff into python
@@ -422,7 +425,7 @@ class CRCAT:
                 crcat,
                 coin=Coin(
                     crcat.coin.parent_coin_info,
-                    crcat.construct_puzzle(crcat.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                    crcat.construct_puzzle(crcat.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore[arg-type]
                         crcat.inner_puzzle_hash
                     ),
                     crcat.coin.amount,
@@ -506,7 +509,7 @@ class CRCAT:
                 CRCAT(
                     Coin(
                         self.coin.name(),
-                        self.construct_puzzle(new_inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                        self.construct_puzzle(new_inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore[arg-type]
                             new_inner_puzzle_hash
                         ),
                         new_amount,
@@ -514,7 +517,7 @@ class CRCAT:
                     self.tail_hash,
                     LineageProof(
                         self.coin.parent_coin_info,
-                        self.construct_cr_layer(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                        self.construct_cr_layer(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore[arg-type]
                             self.inner_puzzle_hash
                         ),
                         uint64(self.coin.amount),
@@ -580,7 +583,7 @@ class CRCAT:
                 LineageProof(
                     next_crcat.coin.parent_coin_info,
                     next_crcat.construct_cr_layer(
-                        next_crcat.inner_puzzle_hash,  # type: ignore
+                        next_crcat.inner_puzzle_hash,  # type: ignore[arg-type]
                     ).get_tree_hash_precalc(next_crcat.inner_puzzle_hash),
                     uint64(next_crcat.coin.amount),
                 ),

@@ -37,7 +37,6 @@ ignore = [
     # Should probably fix these
     "ASYNC230", # blocking-open-call-in-async-function
     "ASYNC240", # pathlib for async operations
-    "ASYNC250", # blocking-input-call-in-async-function
     # Should probably fix these after dealing with shielding for anyio
     "ASYNC109", # async-function-with-timeout
 
@@ -59,7 +58,6 @@ ignore = [
     # Should probably fix this
     "S104", # hardcoded-bind-all-interfaces
     "S110", # try-except-pass
-    "S112", # try-except-continue
     "S311", # suspicious-non-cryptographic-random-usage
     "S608", # hardcoded-sql-expression
     # Need review on which of these we can/should fix
@@ -77,7 +75,6 @@ ignore = [
     "SIM",  # code simplifications: ~500 errors
     "A",  # bad behavior relative to builtins: ~200 errors
     "PTH",  # pathlib linting: ~200 errors
-    "PGH",  # cheap code quality improvements: ~100 errors
     # Might be nice, might be annoying
     "BLE001",  # blind exceptions: ~300 errors
     "D",  # docstrings: ~9000 errors,

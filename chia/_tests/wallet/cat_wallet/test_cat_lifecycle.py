@@ -17,12 +17,13 @@ from chia.util.errors import Err
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import CreateCoin, UnknownCondition
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.puzzle_drivers import ACSSolution
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -107,9 +108,9 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                         CreateCoin(acs_ph, uint64(starting_coin.amount - 3), [b"memo"]),
                         CreateCoin(acs_ph, uint64(1)),
                         CreateCoin(acs_ph, uint64(2)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -138,17 +139,17 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(coins[0].amount + coins[1].amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
@@ -175,25 +176,25 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(total_amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
@@ -235,9 +236,9 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(total_amount - 1)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -266,9 +267,9 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(total_amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -310,18 +311,18 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(parent_of_mint.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(parent_of_melt.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
@@ -354,36 +355,36 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(eve_to_mint.amount + 13)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(eve_to_melt.amount - 21)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(standard_to_mint.amount + 21)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(standard_to_melt.amount - 13)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program,
@@ -432,9 +433,9 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(starting_coin.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -482,9 +483,9 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(starting_coin.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -522,9 +523,9 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(starting_coin.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -550,9 +551,9 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(coin.amount - 1)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -587,9 +588,9 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(coin.amount + 1)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -652,9 +653,9 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
                 ACSSolution(
                     conditions=[
                         CreateCoin(acs_ph, uint64(starting_coin.amount)),
-                        UnknownCondition(
-                            opcode=Program.to(51),
-                            args=[Program.NIL, Program.to(-113), tail, checker_solution],
+                        TAILCondition(
+                            puzzle=UnknownPuzzle(known_program=tail),
+                            solution=UnknownSolution(program=checker_solution),
                         ),
                     ]
                 ).program
@@ -665,3 +666,17 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
             cost_logger=cost_logger,
             cost_log_msg="Cat Eve Spend - create one child (TAIL: delegated_tail - genesis_by_id)",
         )
+
+
+def test_tail_condition() -> None:
+    tail = Program.to("tail")
+    solution = Program.to(["args", 1])
+    condition = TAILCondition(
+        puzzle=UnknownPuzzle(known_program=tail),
+        solution=UnknownSolution(program=solution),
+    )
+    assert condition.to_program() == Program.to([51, None, -113, tail, solution])
+
+    parsed = TAILCondition.from_program(condition.to_program())
+    assert parsed.puzzle.program == tail
+    assert parsed.solution.program == solution

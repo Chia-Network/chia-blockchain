@@ -28,17 +28,18 @@ from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
-from chia.wallet.conditions import CreateCoin, UnknownCondition
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
-from chia.wallet.puzzles.puzzle_drivers import P2Conditions
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer
@@ -81,7 +82,7 @@ async def mint_cat(
         eve_inner_puzzle = P2Conditions(
             conditions=[
                 CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]),
-                UnknownCondition(opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]),
+                TAILCondition(puzzle=UnknownPuzzle(known_program=tail), solution=UnknownSolution(program=Program.NIL)),
             ]
         ).program
         eve_cat_puzzle = construct_cat_puzzle(
@@ -1619,7 +1620,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
 
     from chia.simulator.simulator_protocol import GetAllCoinsProtocol
     from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
-    from chia.wallet.conditions import CreateCoin, UnknownCondition
+    from chia.wallet.conditions import CreateCoin
 
     await simulator.farm_blocks_to_puzzlehash(count=1, farm_to=CAT_w_ACS_HASH, guarantee_transaction_blocks=True)
     await simulator.farm_blocks_to_puzzlehash(count=1)
@@ -1689,9 +1690,9 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     inner_solution=wallet.make_solution(
                         primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
                         conditions=(
-                            UnknownCondition(
-                                opcode=Program.to(51),
-                                args=[Program.NIL, Program.to(-113), Program.to(ACS_TAIL), Program.NIL],
+                            TAILCondition(
+                                puzzle=UnknownPuzzle(known_program=Program.to(ACS_TAIL)),
+                                solution=UnknownSolution(program=Program.NIL),
                             ),
                         ),
                     ),

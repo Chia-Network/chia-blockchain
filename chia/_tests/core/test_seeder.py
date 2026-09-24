@@ -356,11 +356,11 @@ async def test_static_peers(
 def get_mock_resolver() -> AsyncMock:
     # Mock IPv4 response
     mock_rrset_a = RRset(from_text("node.example.com."), IN, A_TYPE)
-    mock_rrset_a.add(A(IN, A_TYPE, "1.2.3.4"))  # type: ignore
+    mock_rrset_a.add(A(IN, A_TYPE, "1.2.3.4"))  # type: ignore[no-untyped-call]
 
     # Mock IPv6 response
     mock_rrset_aaaa = RRset(from_text("node.example.com."), IN, AAAA_TYPE)
-    mock_rrset_aaaa.add(AAAA(IN, AAAA_TYPE, "2001:db8::5"))  # type: ignore
+    mock_rrset_aaaa.add(AAAA(IN, AAAA_TYPE, "2001:db8::5"))  # type: ignore[no-untyped-call]
 
     # Create a mock Resolver
     mock_resolver = AsyncMock()

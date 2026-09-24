@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterator
+from typing import Generic, TypeVar
 
 from chia_puzzles_py.programs import CAT_PUZZLE, CAT_PUZZLE_HASH
 from chia_rs import G2Element
@@ -12,8 +13,9 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.wallet.conditions import Condition
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import Puzzle, Solution, UnknownPuzzle, UnknownSolution
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -162,3 +164,27 @@ def unsigned_spend_bundle_for_spendable_cats(
         coin_spends.append(coin_spend)
 
     return WalletSpendBundle(coin_spends, NULL_SIGNATURE)
+
+
+_T_Puzzle = TypeVar("_T_Puzzle", bound=Puzzle)
+_T_Solution = TypeVar("_T_Solution", bound=Solution)
+
+
+@dataclasses.dataclass(kw_only=True, frozen=True)
+class TAILCondition(Condition, Generic[_T_Puzzle, _T_Solution]):
+    puzzle: _T_Puzzle
+    solution: _T_Solution
+
+    def __post_init__(self) -> None:
+        # Driver-only condition; fields are not streamable-serializable.
+        return
+
+    def to_program(self) -> Program:
+        return Program.to([ConditionOpcode.CREATE_COIN, None, -113, self.puzzle.program, self.solution.program])
+
+    @classmethod
+    def from_program(cls, program: Program) -> TAILCondition[UnknownPuzzle, UnknownSolution]:  # type: ignore[override]
+        return TAILCondition(
+            puzzle=UnknownPuzzle(known_program=program.at("rrrf")),
+            solution=UnknownSolution(program=program.at("rrrrf")),
+        )
