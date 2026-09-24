@@ -202,6 +202,7 @@ class Err(Enum):
     # CLVM / spend-bundle validation exceeded the configured wall-clock timeout
     TIMEOUT = 152
     COMPLEX_GENERATOR_RECEIVED = 153
+    ASSUMEVALID_BLOCK_MISMATCH = 154
 
 
 class ValidationError(Exception):

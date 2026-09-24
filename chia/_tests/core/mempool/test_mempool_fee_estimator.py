@@ -71,7 +71,7 @@ async def test_fee_increase() -> None:
             validation_timeout=10,
         ) as mempool_manager:
             assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
-            btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
+            btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore[assignment]
             fee_tracker = btc_fee_estimator.get_tracker()
             estimator = SmartFeeEstimator(fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
             random = Random(x=1)

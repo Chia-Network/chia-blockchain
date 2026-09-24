@@ -548,7 +548,7 @@ class VCWallet:
                 coin_args[coin_name] = (
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
-                        vc.inner_puzzle.proof_hash,  # type: ignore
+                        vc.inner_puzzle.proof_hash,  # type: ignore[arg-type]
                         crcat_spend.crcat.inner_puzzle.proofs_checker.flags,
                     ),
                     vc.inner_puzzle.proof_provider,

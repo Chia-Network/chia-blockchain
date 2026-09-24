@@ -21,4 +21,4 @@ def find_available_listen_port(name: str = "free") -> int:
 
         recent_ports.add(port)
         print(f"{name} port: {port}")
-        return port  # type: ignore
+        return port  # type: ignore[no-any-return]
