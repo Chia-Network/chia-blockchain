@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+from itertools import pairwise
 
 import pytest
 from chia_rs import FullBlock, SubEpochSummary
@@ -8,15 +9,19 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     SlotChallengeData,
     build_challenge_merkle_tree,
+    compute_challenge_merkle_root,
     extract_slot_challenge_data,
+    get_challenge_start_height,
 )
 from chia.consensus.get_block_challenge import get_block_challenge
-from chia.simulator.block_tools import BlockTools, load_block_list
+from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
@@ -240,3 +245,147 @@ async def test_compute_challenge_merkle_root_sub_epoch_boundaries(
                 assert slot == expected_slot_data[idx]
 
             ses_start = ses_height
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_challenge_root_ranges_roll_over_whole_challenges(
+    fork_height2_500_1000_blocks: list[FullBlock],
+) -> None:
+    constants = test_constants.replace(
+        HARD_FORK2_HEIGHT=uint32(500),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+    )
+    _, _, block_records = load_block_list(fork_height2_500_1000_blocks, constants)
+    blocks = BlockCache(
+        block_records,
+        BlockchainMMRManager(constants.GENESIS_CHALLENGE),
+    )
+    carriers = [
+        block
+        for block in fork_height2_500_1000_blocks
+        if len(block.finished_sub_slots) > 0
+        and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
+    ]
+
+    def trigger_boundary(carrier: FullBlock) -> uint32:
+        trigger = blocks.height_to_block_record(uint32(carrier.height - 1))
+        return get_challenge_start_height(constants, blocks, trigger)
+
+    def challenge_at_height(height: int) -> bytes32:
+        block = fork_height2_500_1000_blocks[height]
+        block_record = blocks.height_to_block_record(uint32(height))
+        return get_block_challenge(constants, block, blocks, height == 0, block_record.overflow, False)
+
+    new_challenge_height = next(
+        height
+        for height in range(1, len(fork_height2_500_1000_blocks))
+        if challenge_at_height(height - 1) != challenge_at_height(height)
+    )
+    new_challenge_block = fork_height2_500_1000_blocks[new_challenge_height]
+    assert (
+        get_challenge_start_height(
+            constants,
+            blocks,
+            blocks.block_record(new_challenge_block.prev_header_hash),
+            challenge_at_height(new_challenge_height),
+        )
+        == new_challenge_height
+    )
+
+    previous_end: uint32 | None = None
+    previous_slot_data: list[SlotChallengeData] | None = None
+    saw_partial_range = False
+    saw_overflow = False
+    roots_checked = 0
+    for previous_carrier, carrier in pairwise(carriers):
+        range_start = trigger_boundary(previous_carrier)
+        range_end = trigger_boundary(carrier)
+        if previous_end is not None:
+            assert previous_end == range_start
+        previous_end = range_end
+
+        assert range_start < range_end < carrier.height
+        range_end_int = int(range_end)
+        assert challenge_at_height(range_end_int - 1) != challenge_at_height(range_end_int)
+        assert challenge_at_height(range_end_int) == challenge_at_height(int(carrier.height) - 1)
+        saw_partial_range = saw_partial_range or range_end - range_start < constants.SUB_EPOCH_BLOCKS
+        slot_data = extract_slot_challenge_data(blocks, range_start, range_end)
+        expected_slot_data: list[SlotChallengeData] = []
+        for height in range(range_start, range_end):
+            block_record = blocks.height_to_block_record(uint32(height))
+            saw_overflow = saw_overflow or block_record.overflow
+            block_challenge = challenge_at_height(height)
+            if not expected_slot_data or expected_slot_data[-1].challenge_hash != block_challenge:
+                expected_slot_data.append(SlotChallengeData(block_challenge, uint32(1)))
+            else:
+                previous = expected_slot_data[-1]
+                expected_slot_data[-1] = SlotChallengeData(
+                    block_challenge,
+                    uint32(previous.block_count + 1),
+                )
+        assert slot_data == expected_slot_data
+        assert sum(slot.block_count for slot in slot_data) == range_end - range_start
+        if previous_slot_data is not None:
+            assert previous_slot_data[-1].challenge_hash != slot_data[0].challenge_hash
+        previous_slot_data = slot_data
+
+        summary = blocks.block_record(carrier.header_hash).sub_epoch_summary_included
+        assert summary is not None
+        if summary.challenge_merkle_root is not None:
+            assert summary.challenge_merkle_root == compute_challenge_merkle_root(blocks, range_end, range_start)
+            roots_checked += 1
+
+    assert saw_partial_range
+    assert saw_overflow
+    assert roots_checked >= 3
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_challenge_root_range_on_noncanonical_fork(
+    fork_height2_500_1000_blocks: list[FullBlock],
+    fork_height2_500_block_tools: BlockTools,
+) -> None:
+    constants = fork_height2_500_block_tools.constants
+    fork_height = uint32(450)
+    fork_blocks = fork_height2_500_block_tools.get_consecutive_blocks(
+        250,
+        block_list_input=fork_height2_500_1000_blocks[: fork_height + 1],
+        seed=b"challenge-root-fork",
+    )
+    _, _, canonical_records = load_block_list(fork_height2_500_1000_blocks, constants)
+    _, _, fork_records = load_block_list(fork_blocks, constants)
+    canonical_blocks = BlockCache(canonical_records, BlockchainMMRManager(constants.GENESIS_CHALLENGE))
+    fork_cache = BlockCache(fork_records, BlockchainMMRManager(constants.GENESIS_CHALLENGE))
+    # BlockCache only implements BlockRecordsProtocol, but the BlocksProtocol-only
+    # methods (generator lookup) are never used through this overlay.
+    augmented_blocks = AugmentedBlockchain(canonical_blocks)  # type: ignore[arg-type]
+    for block in fork_blocks[fork_height + 1 :]:
+        augmented_blocks.add_extra_block(block, fork_records[block.header_hash])
+
+    def has_challenge_root(block: FullBlock) -> bool:
+        ses = fork_records[block.header_hash].sub_epoch_summary_included
+        return ses is not None and ses.challenge_merkle_root is not None
+
+    carrier = next(block for block in fork_blocks[fork_height + 1 :] if has_challenge_root(block))
+    previous_carrier = next(
+        block
+        for block in reversed(fork_blocks[: carrier.height])
+        if fork_records[block.header_hash].sub_epoch_summary_included is not None
+    )
+    previous_trigger = fork_records[fork_blocks[previous_carrier.height - 1].header_hash]
+    trigger = fork_records[fork_blocks[carrier.height - 1].header_hash]
+    range_start = get_challenge_start_height(constants, augmented_blocks, previous_trigger)
+    range_end = get_challenge_start_height(constants, augmented_blocks, trigger)
+
+    assert range_start <= fork_height < range_end
+    assert canonical_blocks.height_to_block_record(trigger.height).header_hash != trigger.header_hash
+    assert range_start == get_challenge_start_height(constants, fork_cache, previous_trigger)
+    assert range_end == get_challenge_start_height(constants, fork_cache, trigger)
+    summary = fork_records[carrier.header_hash].sub_epoch_summary_included
+    assert summary is not None
+    assert summary.challenge_merkle_root == compute_challenge_merkle_root(
+        augmented_blocks,
+        range_end,
+        range_start,
+    )

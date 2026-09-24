@@ -5,6 +5,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import post_hard_fork2
@@ -62,6 +63,15 @@ def block_to_block_record(
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
             make_challenge_root=with_challenge_hash,
+            challenge_root_end_height=(
+                get_challenge_start_height(
+                    constants,
+                    blocks,
+                    prev_b,
+                )
+                if with_challenge_hash
+                else None
+            ),
             prev_ses_block=prev_ses_block,
         )
         if ses.get_hash() != found_ses_hash:
