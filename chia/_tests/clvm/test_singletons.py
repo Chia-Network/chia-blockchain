@@ -15,7 +15,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
 from chia.wallet.conditions import Condition, CreateCoin
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.singleton_drivers import (
     P2Singleton,
     P2SingletonPuzzle,
@@ -216,7 +216,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
 
         # ATTEMPT TO CREATE AN EVEN SINGLETON (Negative test)
         save_height = sim.block_height
-        singleton_even_spend, _ = singleton.action_spend(
+        singleton_even_spend, evil_singleton = singleton.action_spend(
             UnknownSolution(
                 program=Program.to(
                     [
@@ -229,13 +229,7 @@ async def test_singleton_top_layer(cost_logger: CostLogger) -> None:
         await push_bundle(sim, sim_client, [singleton_even_spend, await acs_fee_spend(sim_client)])
 
         # Now try a perfectly innocent spend
-        evil_coin = next(filter(lambda c: c.amount == 2, await sim.all_non_reward_coins()))
-        evil_singleton = Singleton(
-            coin=evil_coin,
-            launcher_id=singleton.launcher_id,
-            inner_puzzle=ACS,
-            lineage_proof=replace(singleton.lineage_proof, amount=uint64(2)),
-        )
+        evil_singleton = replace(evil_singleton, inner_puzzle=ACSPuzzle())
         evil_spend, _ = evil_singleton.action_spend(
             UnknownSolution(program=Program.to([[ConditionOpcode.CREATE_COIN, ACS_PH, 1]]))
         )
