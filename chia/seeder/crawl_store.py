@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import random
+import sqlite3
 import time
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
@@ -262,7 +263,11 @@ class CrawlStore:
             if peer_id in self.host_to_reliability and peer_id in self.host_to_records:
                 reliability = self.host_to_reliability[peer_id]
                 record = self.host_to_records[peer_id]
-                await self.add_peer(record, reliability, True)
+                try:
+                    await self.add_peer(record, reliability, True)
+                except (OverflowError, ValueError, sqlite3.InterfaceError) as e:
+                    # A single record that sqlite cannot bind must not abandon the whole batch.
+                    log.error(f"Skipping peer {peer_id} that could not be saved to DB: {e}")
         await self.crawl_db.commit()
         log.warning(" - Done saving peers to DB")
 
