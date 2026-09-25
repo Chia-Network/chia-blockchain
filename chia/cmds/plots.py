@@ -41,7 +41,7 @@ def plots_cmd(ctx: click.Context) -> None:
     initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
 
 
-@plots_cmd.command("create", help="Create plots")
+@plots_cmd.command("create", help="Create v1 plots")
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
@@ -154,6 +154,109 @@ def create_cmd(
     )
 
     asyncio.run(create_plots(params, plot_keys))
+    if not exclude_final_dir:
+        try:
+            add_plot_directory(root_path, final_dir)
+        except ValueError as e:
+            print(e)
+
+
+@plots_cmd.command("create2", help="Create v2 plots")
+@click.option("-s", "--strength", help="Plot strength", type=int, default=2, show_default=True)
+@click.option("-n", "--num", help="Number of plots to create", type=int, default=1, show_default=True)
+@click.option(
+    "-a",
+    "--alt_fingerprint",
+    type=int,
+    default=None,
+    help="Enter the alternative fingerprint of the key you want to use",
+)
+@click.option(
+    "-c",
+    "--pool_contract_address",
+    type=str,
+    default=None,
+    help="Address of where the pool reward will be sent to. Only used if alt_fingerprint and pool public key are None",
+)
+@click.option("-f", "--farmer_public_key", help="Hex farmer public key", type=str, default=None)
+@click.option("-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None)
+@click.option(
+    "-d",
+    "--final_dir",
+    help="Final directory for plots (relative or absolute)",
+    type=click.Path(),
+    default=Path("."),
+    show_default=True,
+)
+@click.option(
+    "-x", "--exclude_final_dir", help="Skips adding [final dir] to harvester for farming", default=False, is_flag=True
+)
+@click.option(
+    "-D",
+    "--connect_to_daemon",
+    help="Connects to the daemon for keychain operations",
+    default=False,
+    is_flag=True,
+    hidden=True,  # -D is only set when launched by the daemon
+)
+@click.pass_context
+def create2_cmd(
+    ctx: click.Context,
+    strength: int,
+    num: int,
+    alt_fingerprint: int,
+    pool_contract_address: str,
+    farmer_public_key: str,
+    pool_public_key: str,
+    final_dir: str,
+    exclude_final_dir: bool,
+    connect_to_daemon: bool,
+) -> None:
+    from chia.consensus.constants import replace_str_to_bytes
+    from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
+    from chia.plotting.create_plots import create_v2_plots, resolve_plot_keys
+    from chia.plotting.util import validate_v2_plot_params
+    from chia.util.config import load_config
+
+    root_path = ChiaCliContext.set_default(ctx).root_path
+    config = load_config(root_path, "config.yaml")
+    network_id = config["selected_network"]
+    overrides = dict(config["network_overrides"]["constants"].get(network_id, {}))
+    update_testnet_overrides(network_id, overrides)
+    constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
+
+    try:
+        validate_v2_plot_params(
+            strength=strength,
+            min_strength=constants.MIN_PLOT_STRENGTH,
+            max_strength=constants.MAX_PLOT_STRENGTH,
+        )
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
+
+    plot_keys = asyncio.run(
+        resolve_plot_keys(
+            farmer_public_key,
+            alt_fingerprint,
+            pool_public_key,
+            pool_contract_address,
+            root_path,
+            log,
+            connect_to_daemon,
+        )
+    )
+
+    asyncio.run(
+        create_v2_plots(
+            Path(final_dir),
+            plot_keys,
+            size=constants.PLOT_SIZE_V2,
+            strength=strength,
+            num=num,
+            testnet=constants.TESTNET,
+        )
+    )
     if not exclude_final_dir:
         try:
             add_plot_directory(root_path, final_dir)
