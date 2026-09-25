@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
+import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -563,3 +565,60 @@ async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> N
             with pytest.raises(NestedForeignKeyDelayedRequestError):
                 async with db_wrapper.writer(foreign_key_enforcement_enabled=True):
                     pass  # pragma: no cover
+
+
+@pytest.mark.anyio
+async def test_sqlite_error_is_logged_and_reraised(caplog: pytest.LogCaptureFixture) -> None:
+    async with DBConnection(2) as db_wrapper:
+        async with db_wrapper.writer() as connection:
+            await connection.execute("CREATE TABLE t(x BLOB)")
+            await connection.execute("PRAGMA max_page_count=2")
+
+        with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
+            with pytest.raises(sqlite3.OperationalError, match="database or disk is full"):
+                async with db_wrapper.writer() as connection:
+                    await connection.execute("INSERT INTO t VALUES (?)", (b"x" * 100_000,))
+
+        matching = [r for r in caplog.records if "SQLite error during writer" in r.message]
+        assert len(matching) == 1
+        assert matching[0].exc_info is not None
+
+
+@pytest.mark.anyio
+async def test_nested_writer_logs_sqlite_error_once(caplog: pytest.LogCaptureFixture) -> None:
+    async with DBConnection(2) as db_wrapper:
+        async with db_wrapper.writer() as connection:
+            await connection.execute("CREATE TABLE t(x BLOB)")
+            await connection.execute("PRAGMA max_page_count=2")
+
+        with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
+            with pytest.raises(sqlite3.OperationalError, match="database or disk is full"):
+                async with db_wrapper.writer():
+                    async with db_wrapper.writer() as connection:
+                        await connection.execute("INSERT INTO t VALUES (?)", (b"x" * 100_000,))
+
+        matching = [r for r in caplog.records if "SQLite error during writer" in r.message]
+        assert len(matching) == 1
+
+
+@pytest.mark.anyio
+async def test_reader_sqlite_error_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    async with DBConnection(2) as db_wrapper:
+        with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
+            with pytest.raises(sqlite3.OperationalError, match="no such table"):
+                async with db_wrapper.reader() as connection:
+                    await connection.execute("SELECT * FROM missing_table")
+
+        matching = [r for r in caplog.records if "SQLite error during reader" in r.message]
+        assert len(matching) == 1
+        assert matching[0].exc_info is not None
+
+
+def test_missing_savepoint_is_not_logged_as_error(caplog: pytest.LogCaptureFixture) -> None:
+    from chia.util.db_wrapper import _log_sqlite_error
+
+    error = sqlite3.OperationalError("no such savepoint: s0")
+    with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
+        _log_sqlite_error(error, "writer savepoint rollback")
+
+    assert caplog.records == []
