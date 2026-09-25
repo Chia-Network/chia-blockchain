@@ -906,9 +906,17 @@ async def test_add_coin_records_to_db() -> None:
 
 @pytest.mark.anyio
 async def test_get_coin_records_by_parent_ids_max_items() -> None:
-    parent_id = bytes32(std_hash(b"parent"))
+    parent_coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        parent_coin_record = CoinRecord(
+            coin=parent_coin,
+            confirmed_block_index=uint32(0),
+            spent_block_index=uint32(1),
+            coinbase=False,
+            timestamp=uint64(1),
+        )
         records = [
             CoinRecord(
                 coin=Coin(parent_id, std_hash(i.to_bytes(4, byteorder="big")), uint64(i + 1)),
@@ -919,7 +927,7 @@ async def test_get_coin_records_by_parent_ids_max_items() -> None:
             )
             for i in range(200)
         ]
-        await add_coin_records_to_db(coin_store, records)
+        await add_coin_records_to_db(coin_store, [parent_coin_record, *records])
 
         all_results = await coin_store.get_coin_records_by_parent_ids(True, [parent_id])
         assert len(all_results) == 200
@@ -933,15 +941,29 @@ async def test_get_coin_records_by_parent_ids_max_items() -> None:
 
 
 @pytest.mark.anyio
-async def test_get_coin_records_by_parent_ids_max_items_across_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("with_coin_parent_index", [False, True])
+async def test_get_coin_records_by_parent_ids_max_items_across_batches(
+    with_coin_parent_index: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Force multiple batches so we verify the global limit is enforced across batches.
     monkeypatch.setattr("chia.full_node.coin_store.SQLITE_MAX_VARIABLE_NUMBER", 5)
-    parent_ids = [bytes32(std_hash(i.to_bytes(4, byteorder="big"))) for i in range(8)]
+    parent_coins = [Coin(bytes32.random(), bytes32.random(), uint64(1000)) for _ in range(8)]
+    parent_ids = [coin.name() for coin in parent_coins]
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        parents_coin_records = [
+            CoinRecord(
+                coin=parent_coin,
+                confirmed_block_index=uint32(0),
+                spent_block_index=uint32(1),
+                coinbase=False,
+                timestamp=uint64(1),
+            )
+            for parent_coin in parent_coins
+        ]
         records = [
             CoinRecord(
-                coin=Coin(parent_id, std_hash(b"shared-ph"), uint64(i + 1)),
+                coin=Coin(parent_id, bytes32.random(), uint64(i + 1)),
                 confirmed_block_index=uint32(1),
                 spent_block_index=uint32(0),
                 coinbase=False,
@@ -949,17 +971,28 @@ async def test_get_coin_records_by_parent_ids_max_items_across_batches(monkeypat
             )
             for i, parent_id in enumerate(parent_ids)
         ]
-        await add_coin_records_to_db(coin_store, records)
-
+        await add_coin_records_to_db(coin_store, [*parents_coin_records, *records])
+        if with_coin_parent_index:
+            async with db_wrapper.writer_maybe_transaction() as conn:
+                await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
+            coin_store = await CoinStore.create(db_wrapper)
         results = await coin_store.get_coin_records_by_parent_ids(True, parent_ids, max_items=7)
         assert len(results) == 7
 
 
 @pytest.mark.anyio
 async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit() -> None:
-    parent_id = bytes32(std_hash(b"spent-filter-parent"))
+    parent_coin = Coin(bytes32.random(), bytes32.random(), uint64(1))
+    parent_id = parent_coin.name()
     async with DBConnection(2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
+        parent_record = CoinRecord(
+            coin=parent_coin,
+            confirmed_block_index=uint32(0),
+            spent_block_index=uint32(1),
+            coinbase=False,
+            timestamp=uint64(1),
+        )
         records = [
             CoinRecord(
                 coin=Coin(parent_id, std_hash(i.to_bytes(4, byteorder="big")), uint64(i + 1)),
@@ -970,7 +1003,7 @@ async def test_get_coin_records_by_parent_ids_respects_spent_filter_under_limit(
             )
             for i in range(10)
         ]
-        await add_coin_records_to_db(coin_store, records)
+        await add_coin_records_to_db(coin_store, [parent_record, *records])
 
         unspent_only = await coin_store.get_coin_records_by_parent_ids(False, [parent_id], max_items=3)
         assert len(unspent_only) == 3
@@ -1073,3 +1106,62 @@ async def test_rollback_to_block_spent_index_update() -> None:
             assert await get_spent_index(conn, reward_coin.name()) == 0
             # The potential ff singleton child should be marked with -1
             assert await get_spent_index(conn, same_as_parent_child.name()) == -1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("with_coin_parent_index", [False, True])
+async def test_get_coin_records_by_parent_ids(with_coin_parent_index: bool) -> None:
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        parent_coin = Coin(bytes32.random(), bytes32.random(), uint64(1337))
+        parent_coin_id = parent_coin.name()
+        child_coin = Coin(parent_coin_id, bytes32.random(), uint64(1))
+        # The reward coin's parent encodes height 7, while the reward itself is
+        # incorporated and confirmed at height 10.
+        reward_coin = create_pool_coin(
+            block_height=uint32(7),
+            puzzle_hash=bytes32.random(),
+            reward=uint64(42),
+            genesis_challenge=constants.GENESIS_CHALLENGE,
+        )
+        parent_record = CoinRecord(
+            coin=parent_coin,
+            confirmed_block_index=uint32(1),
+            spent_block_index=uint32(10),
+            coinbase=False,
+            timestamp=uint64(0),
+        )
+        child_record = CoinRecord(
+            coin=child_coin,
+            confirmed_block_index=uint32(10),
+            spent_block_index=uint32(0),
+            coinbase=False,
+            timestamp=uint64(42),
+        )
+        reward_record = CoinRecord(
+            coin=reward_coin,
+            confirmed_block_index=uint32(10),
+            spent_block_index=uint32(0),
+            coinbase=True,
+            timestamp=uint64(42),
+        )
+        await add_coin_records_to_db(coin_store, [parent_record, child_record, reward_record])
+        if with_coin_parent_index:
+            async with db_wrapper.writer_maybe_transaction() as conn:
+                await conn.execute("CREATE INDEX coin_parent_index ON coin_record(coin_parent)")
+            # Reopen to trigger index detection
+            coin_store = await CoinStore.create(db_wrapper)
+        records = await coin_store.get_coin_records_by_parent_ids(
+            include_spent_coins=True,
+            parent_ids=[parent_coin_id, reward_coin.parent_coin_info],
+            start_height=uint32(10),
+            end_height=uint32(11),
+        )
+        if with_coin_parent_index:
+            # We should find both the child and the reward coins via the index
+            assert len(records) == 2
+            assert set(records) == {child_record, reward_record}
+        else:
+            # The reward coin won't be found by its parent
+            assert len(records) == 1
+            assert set(records) == {child_record}
