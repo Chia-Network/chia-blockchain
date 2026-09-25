@@ -509,8 +509,10 @@ class CoinStore:
                 coin_ids_db: tuple[Any, ...] = tuple(batch.entries)
 
                 max_height_sql = ""
+                max_height_params: tuple[Any, ...] = ()
                 if max_height != uint32.MAXIMUM:
-                    max_height_sql = f"AND confirmed_index<={max_height} AND spent_index<={max_height}"
+                    max_height_sql = "AND confirmed_index<=? AND spent_index<=? "
+                    max_height_params = (max_height, max_height)
 
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
@@ -518,7 +520,7 @@ class CoinStore:
                     f"AND (confirmed_index>=? OR spent_index>=?) {max_height_sql}"
                     f"{'' if include_spent_coins else 'AND spent_index <= 0'}"
                     " LIMIT ?",
-                    (*coin_ids_db, min_height, min_height, max_items - len(coins)),
+                    (*coin_ids_db, min_height, min_height, *max_height_params, max_items - len(coins)),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         coins.append(self.row_to_coin_state(row))
