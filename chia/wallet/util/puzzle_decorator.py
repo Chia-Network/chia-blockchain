@@ -47,13 +47,13 @@ class PuzzleDecoratorManager:
         self.decorator_list = []
         for decorator in config:
             if "decorator" not in decorator:
-                logging.error(f"Undefined decorator: {decorator}")
+                self.log.error(f"Undefined decorator: {decorator}")
                 continue
             decorator_name = decorator["decorator"]
             if decorator_name == PuzzleDecoratorType.CLAWBACK.name:
                 self.decorator_list.append(ClawbackPuzzleDecorator.create(decorator))
             else:
-                logging.error(f"Unknown puzzle decorator type: {decorator}")
+                self.log.error(f"Unknown puzzle decorator type: {decorator}")
         return self
 
     def decorate(self, inner_puzzle: Program) -> Program:
