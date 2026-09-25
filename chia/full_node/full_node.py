@@ -352,6 +352,7 @@ class FullNode:
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
                 log_mempool=self._log_mempool_mode(),
                 root_path=self.root_path,
+                minimum_block_fee_per_cost=uint64(self.config.get("minimum_block_fee_per_cost", 0)),
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(
