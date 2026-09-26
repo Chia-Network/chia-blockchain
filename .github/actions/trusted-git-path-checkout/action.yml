@@ -1,0 +1,37 @@
+# Managed by repo-content-updater — composite action shipped to consumer repos.
+name: Trusted git path checkout
+description: Fetch a trusted branch ref over HTTPS Basic auth and checkout one repository path from FETCH_HEAD.
+inputs:
+  token:
+    description: GitHub token for git fetch (e.g. github.token)
+    required: true
+  ref:
+    description: Branch ref to fetch (e.g. default branch name)
+    required: true
+  path:
+    description: Repository-relative path to checkout from FETCH_HEAD
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Fetch trusted ref and checkout path
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TRUSTED_REF: ${{ inputs.ref }}
+        CHECKOUT_PATH: ${{ inputs.path }}
+      run: |
+        set -euo pipefail
+        script="${CHECKOUT_PATH}"
+        default_branch="${TRUSTED_REF}"
+        echo "Installing trusted file from origin/${default_branch} (never executing PR head copy)."
+        # checkout uses persist-credentials: false; one-shot Basic auth for this fetch only.
+        auth_basic="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
+        git -c "http.extraheader=AUTHORIZATION: basic ${auth_basic}" \
+          fetch --no-tags --depth=1 origin "${default_branch}"
+        mkdir -p "$(dirname "${script}")"
+        git checkout "FETCH_HEAD" -- "${script}"
+        if [ ! -f "$script" ]; then
+          echo "Trusted file missing on origin/${default_branch} at ${script}."
+          exit 1
+        fi
