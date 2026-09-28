@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.stub_mmr_manager import StubMMRManager
@@ -84,10 +84,9 @@ class BlockchainMock:
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
     ) -> bytes32 | None:
-        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, sp_total_iters, self)
 
     async def warmup(self, fork_point: uint32) -> None:
         return
