@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 
 import pytest
@@ -141,6 +142,106 @@ async def test_backpressure() -> None:
     await pipeline.run()
 
     assert results == list(range(20))
+
+
+@pytest.mark.anyio
+async def test_backpressure_logged_when_waiting_on_downstream(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A middle stage logs when blocked putting into a slow consumer's queue."""
+    results: list[int] = []
+
+    async def identity(x: int) -> int:
+        return x
+
+    async def slow_collect(x: int) -> None:
+        await asyncio.sleep(1.05)
+        results.append(x)
+
+    logger = logging.getLogger("test_task_pipeline_backpressure")
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        pipeline = TaskPipeline(
+            source=_count_up(3),
+            stages=[identity, slow_collect],
+            queue_size=1,
+            names=["fetching", "validating", "database"],
+            log=logger,
+        )
+        await pipeline.run()
+
+    assert results == [0, 1, 2]
+    assert any(
+        "sync pipeline back-pressure" in record.message and "seconds on database" in record.message
+        for record in caplog.records
+    )
+    # Upstream cascade (fetch waiting on validate) must not be logged.
+    assert not any("seconds on validating" in record.message for record in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_backpressure_logged_when_feeder_waits_on_first_stage(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The feeder logs when blocked putting into a slow first stage's queue."""
+    results: list[int] = []
+
+    async def slow_collect(x: int) -> None:
+        await asyncio.sleep(1.05)
+        results.append(x)
+
+    logger = logging.getLogger("test_task_pipeline_feeder_backpressure")
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        pipeline = TaskPipeline(
+            source=_count_up(3),
+            stages=[slow_collect],
+            queue_size=1,
+            names=["fetching", "database"],
+            log=logger,
+        )
+        await pipeline.run()
+
+    assert results == [0, 1, 2]
+    assert any(
+        "sync pipeline back-pressure" in record.message and "seconds on database" in record.message
+        for record in caplog.records
+    )
+
+
+@pytest.mark.anyio
+async def test_backpressure_logged_for_slow_middle_stage(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A slow middle stage is logged; feeder cascade and fast final stage are not."""
+    results: list[int] = []
+
+    async def identity(x: int) -> int:
+        return x
+
+    async def slow_middle(x: int) -> int:
+        await asyncio.sleep(1.05)
+        return x
+
+    async def collect(x: int) -> None:
+        results.append(x)
+
+    logger = logging.getLogger("test_task_pipeline_middle_backpressure")
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        pipeline = TaskPipeline(
+            source=_count_up(3),
+            stages=[identity, slow_middle, collect],
+            queue_size=1,
+            names=["fetching", "validating", "prevalidating", "collecting"],
+            log=logger,
+        )
+        await pipeline.run()
+
+    assert results == [0, 1, 2]
+    assert any(
+        "sync pipeline back-pressure" in record.message and "seconds on prevalidating" in record.message
+        for record in caplog.records
+    )
+    assert not any("seconds on validating" in record.message for record in caplog.records)
+    assert not any("seconds on collecting" in record.message for record in caplog.records)
 
 
 @pytest.mark.anyio
