@@ -47,12 +47,13 @@ def _log_sqlite_error(error: sqlite3.Error, where: str) -> None:
     if getattr(error, _SQLITE_ERROR_LOGGED_ATTR, False):
         return
     setattr(error, _SQLITE_ERROR_LOGGED_ATTR, True)
-    log.exception(
+    log.error(
         "SQLite error during %s: %s (sqlite_errorcode=%s sqlite_errorname=%s)",
         where,
         error,
         getattr(error, "sqlite_errorcode", None),
         getattr(error, "sqlite_errorname", None),
+        exc_info=error,
     )
 
 
