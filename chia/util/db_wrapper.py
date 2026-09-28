@@ -382,18 +382,13 @@ class DBWrapper2:
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"ROLLBACK TO {name}")
-            except sqlite3.OperationalError as rollback_error:
+            except sqlite3.Error as rollback_error:
                 # Ignore "no such savepoint" when the SAVEPOINT was never
                 # created (e.g. CancelledError interrupted execute before
                 # aiosqlite ran it). Propagate all other SQLite errors.
-                if _is_missing_savepoint_error(rollback_error):
-                    pass
-                else:
+                if not _is_missing_savepoint_error(rollback_error):
                     _log_sqlite_error(rollback_error, "writer savepoint rollback")
                     raise
-            except sqlite3.Error as rollback_error:
-                _log_sqlite_error(rollback_error, "writer savepoint rollback")
-                raise
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
@@ -401,17 +396,12 @@ class DBWrapper2:
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"RELEASE {name}")
-            except sqlite3.OperationalError as release_error:
+            except sqlite3.Error as release_error:
                 # Ignore "no such savepoint" when the SAVEPOINT was never
                 # created. Propagate all other SQLite errors.
-                if _is_missing_savepoint_error(release_error):
-                    pass
-                else:
+                if not _is_missing_savepoint_error(release_error):
                     _log_sqlite_error(release_error, "writer savepoint release")
                     raise
-            except sqlite3.Error as release_error:
-                _log_sqlite_error(release_error, "writer savepoint release")
-                raise
 
     @contextlib.asynccontextmanager
     async def writer(
