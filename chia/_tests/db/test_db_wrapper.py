@@ -567,49 +567,64 @@ async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> N
                     pass  # pragma: no cover
 
 
+@dataclass
+class SqliteErrorLogCase:
+    id: str
+    where: str
+    nested: bool
+    error_match: str
+    setup_full_disk: bool
+    marks: Marks = ()
+
+
+sqlite_error_log_cases: list[SqliteErrorLogCase] = [
+    SqliteErrorLogCase(
+        id="writer",
+        where="writer",
+        nested=False,
+        error_match="database or disk is full",
+        setup_full_disk=True,
+    ),
+    SqliteErrorLogCase(
+        id="nested writer",
+        where="writer",
+        nested=True,
+        error_match="database or disk is full",
+        setup_full_disk=True,
+    ),
+    SqliteErrorLogCase(
+        id="reader",
+        where="reader",
+        nested=False,
+        error_match="no such table",
+        setup_full_disk=False,
+    ),
+]
+
+
+@datacases(*sqlite_error_log_cases)
 @pytest.mark.anyio
-async def test_sqlite_error_is_logged_and_reraised(caplog: pytest.LogCaptureFixture) -> None:
+async def test_sqlite_error_is_logged_and_reraised(caplog: pytest.LogCaptureFixture, case: SqliteErrorLogCase) -> None:
     async with DBConnection(2) as db_wrapper:
-        async with db_wrapper.writer() as connection:
-            await connection.execute("CREATE TABLE t(x BLOB)")
-            await connection.execute("PRAGMA max_page_count=2")
+        if case.setup_full_disk:
+            async with db_wrapper.writer() as connection:
+                await connection.execute("CREATE TABLE t(x BLOB)")
+                await connection.execute("PRAGMA max_page_count=2")
 
         with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
-            with pytest.raises(sqlite3.OperationalError, match="database or disk is full"):
-                async with db_wrapper.writer() as connection:
-                    await connection.execute("INSERT INTO t VALUES (?)", (b"x" * 100_000,))
-
-        matching = [r for r in caplog.records if "SQLite error during writer" in r.message]
-        assert len(matching) == 1
-        assert matching[0].exc_info is not None
-
-
-@pytest.mark.anyio
-async def test_nested_writer_logs_sqlite_error_once(caplog: pytest.LogCaptureFixture) -> None:
-    async with DBConnection(2) as db_wrapper:
-        async with db_wrapper.writer() as connection:
-            await connection.execute("CREATE TABLE t(x BLOB)")
-            await connection.execute("PRAGMA max_page_count=2")
-
-        with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
-            with pytest.raises(sqlite3.OperationalError, match="database or disk is full"):
-                async with db_wrapper.writer():
+            with pytest.raises(sqlite3.OperationalError, match=case.error_match):
+                if case.where == "reader":
+                    async with db_wrapper.reader() as connection:
+                        await connection.execute("SELECT * FROM missing_table")
+                elif case.nested:
+                    async with db_wrapper.writer():
+                        async with db_wrapper.writer() as connection:
+                            await connection.execute("INSERT INTO t VALUES (?)", (b"x" * 100_000,))
+                else:
                     async with db_wrapper.writer() as connection:
                         await connection.execute("INSERT INTO t VALUES (?)", (b"x" * 100_000,))
 
-        matching = [r for r in caplog.records if "SQLite error during writer" in r.message]
-        assert len(matching) == 1
-
-
-@pytest.mark.anyio
-async def test_reader_sqlite_error_is_logged(caplog: pytest.LogCaptureFixture) -> None:
-    async with DBConnection(2) as db_wrapper:
-        with caplog.at_level(logging.ERROR, logger="chia.util.db_wrapper"):
-            with pytest.raises(sqlite3.OperationalError, match="no such table"):
-                async with db_wrapper.reader() as connection:
-                    await connection.execute("SELECT * FROM missing_table")
-
-        matching = [r for r in caplog.records if "SQLite error during reader" in r.message]
+        matching = [r for r in caplog.records if f"SQLite error during {case.where}" in r.message]
         assert len(matching) == 1
         assert matching[0].exc_info is not None
 
