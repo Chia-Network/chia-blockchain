@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_generator_info import get_transactions_generator_program
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.types.block_protocol import BlockInfo
 from chia.types.generator_types import BlockGenerator
 
@@ -15,7 +15,7 @@ async def get_block_generator(
     block: BlockInfo,
 ) -> BlockGenerator | None:
     ref_list = block.transactions_generator_ref_list
-    program = get_transactions_generator_program(block)
+    program = get_transactions_generator_bytes(block)
     if program is None:
         assert len(ref_list) == 0
         return None

@@ -14,8 +14,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions
 
 """
 This test suite aims to test:
@@ -145,18 +147,9 @@ async def test_singleton_top_layer(version, cost_logger):
         )
         launcher_id: bytes32 = launcher_coin.name()
         # This delegated puzzle just recreates the coin exactly
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        adapted_puzzle_hash,
-                        singleton_eve.amount,
-                    ]
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[CreateCoin(adapted_puzzle_hash, singleton_eve.amount)]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         # Generate the lineage proof we will need from the launcher coin
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(launcher_coinsol)
@@ -225,16 +218,13 @@ async def test_singleton_top_layer(version, cost_logger):
             adapted_puzzle_hash,
             launcher_id,
         )
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
-                    assertion,
-                    announcement,
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(adapted_puzzle_hash, singleton_eve.amount),
+                AssertCoinAnnouncement.from_program(assertion),
+                CreatePuzzleAnnouncement.from_program(announcement),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
@@ -283,16 +273,13 @@ async def test_singleton_top_layer(version, cost_logger):
             DELAY_TIME,
             DELAY_PH,
         )
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
-                    assertion,
-                    announcement,
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(adapted_puzzle_hash, singleton_eve.amount),
+                AssertCoinAnnouncement.from_program(assertion),
+                CreatePuzzleAnnouncement.from_program(announcement),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
@@ -342,15 +329,12 @@ async def test_singleton_top_layer(version, cost_logger):
 
         # CREATE MULTIPLE ODD CHILDREN (Negative Test)
         singleton_child: Coin = (await sim.all_non_reward_coins())[0]
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 3],
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 7],
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(adapted_puzzle_hash, uint64(3)),
+                CreateCoin(adapted_puzzle_hash, uint64(7)),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
@@ -378,15 +362,12 @@ async def test_singleton_top_layer(version, cost_logger):
         )
 
         # CREATE NO ODD CHILDREN (Negative Test)
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 4],
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 10],
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(adapted_puzzle_hash, uint64(4)),
+                CreateCoin(adapted_puzzle_hash, uint64(10)),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
@@ -416,19 +397,12 @@ async def test_singleton_top_layer(version, cost_logger):
         # ATTEMPT TO CREATE AN EVEN SINGLETON (Negative test)
         await sim.rewind(save_height)
 
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        singleton_child.puzzle_hash,
-                        2,
-                    ],
-                    [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 1],
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(singleton_child.puzzle_hash, uint64(2)),
+                CreateCoin(adapted_puzzle_hash, uint64(1)),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
@@ -455,18 +429,11 @@ async def test_singleton_top_layer(version, cost_logger):
 
         # Now try a perfectly innocent spend
         evil_coin: Coin = next(filter(lambda c: c.amount == 2, (await sim.all_non_reward_coins())))
-        delegated_puzzle: Program = Program.to(
-            (
-                1,
-                [
-                    [
-                        ConditionOpcode.CREATE_COIN,
-                        adapted_puzzle_hash,
-                        1,
-                    ],
-                ],
-            )
-        )
+        delegated_puzzle: Program = P2Conditions(
+            conditions=[
+                CreateCoin(adapted_puzzle_hash, uint64(1)),
+            ]
+        ).program
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(

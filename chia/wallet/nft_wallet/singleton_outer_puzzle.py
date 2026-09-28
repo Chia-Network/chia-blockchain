@@ -12,24 +12,24 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER_HASH,
     match_singleton_puzzle,
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
 @dataclass(frozen=True)
 class SingletonOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_singleton_puzzle(puzzle)
         if matched:
             singleton_struct, inner_puzzle = curried_args
@@ -46,7 +46,7 @@ class SingletonOuterPuzzle:
                 "launcher_id": "0x" + launcher_id.hex(),
                 "launcher_ph": "0x" + launcher_ph.hex(),
             }
-            next_constructor = self._match(uncurry_puzzle(inner_puzzle))
+            next_constructor = self._match(UnknownPuzzle(known_program=inner_puzzle))
             if next_constructor is not None:
                 constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
@@ -64,14 +64,16 @@ class SingletonOuterPuzzle:
         return puzzle_for_singleton(constructor["launcher_id"], inner_puzzle, launcher_hash)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         matched, curried_args = match_singleton_puzzle(puzzle_reveal)
         if matched:
             _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+                deep_inner_puzzle: Program | None = self._get_inner_puzzle(
+                    also, UnknownPuzzle(known_program=inner_puzzle), None
+                )
                 return deep_inner_puzzle
             else:
                 return inner_puzzle
@@ -95,7 +97,7 @@ class SingletonOuterPuzzle:
         also = constructor.also()
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
-        matched, curried_args = match_singleton_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal))
+        matched, curried_args = match_singleton_puzzle(UnknownPuzzle(known_program=parent_spend.puzzle_reveal))
         assert matched
         _, parent_inner_puzzle = curried_args
         return solution_for_singleton(

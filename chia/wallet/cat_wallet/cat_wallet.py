@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from chia_rs import G1Element
+from chia_rs import CoinSpend, CoinState, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Self, Unpack
@@ -20,12 +20,14 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
+from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    CAT_MOD_HASH,
     CAT_MOD_HASH_HASH,
     QUOTED_CAT_MOD_HASH,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
@@ -38,26 +40,29 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
-    UnknownCondition,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions_with_cost
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -363,7 +368,9 @@ class CATWallet:
     def get_asset_id(self) -> bytes32:
         return self.tail_hash
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
         if coin_data is not None:
@@ -384,7 +391,7 @@ class CATWallet:
                     )
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
-                    cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
+                    cat_curried_args = match_cat_puzzle(UnknownPuzzle(known_program=coin_spend.puzzle_reveal))
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
                         coin_data = CATCoinData(
@@ -419,6 +426,172 @@ class CATWallet:
                         await self.remove_lineage(record.coin.name())
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
+
+    @classmethod
+    async def identify(
+        cls,
+        wallet_state_manager: WalletStateManager,
+        sync_scope: WalletSyncScope,
+        parent_data: CATCoinData,
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+        fork_height: uint32 | None,
+    ) -> WalletIdentifier | None:
+        """
+        Handle the new coin when it is a CAT
+        :param parent_data: Parent CAT coin uncurried metadata
+        :param parent_coin_state: Parent coin state
+        :param coin_state: Current coin state
+        :param coin_spend: New coin spend
+        :param fork_height: Current block height
+        :return: Wallet ID & Wallet Type
+        """
+        # This function living here is a smidge problematic because it handles all the types of CATWallets
+        from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
+        from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
+
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
+        assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
+        derivation_record = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            hinted_coin.hint
+        )
+
+        if derivation_record is None:
+            wallet_state_manager.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+            return None
+        else:
+            our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            asset_id: bytes32 = parent_data.tail_program_hash
+            cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
+            wallet_type: type[CATWallet] = CATWallet
+            crcat = None
+            if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                # Check if it is a special type of CAT
+                uncurried_puzzle_reveal = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+                if uncurried_puzzle_reveal.mod != CAT_MOD or uncurried_puzzle_reveal.curried_args is None:
+                    return None
+                revocation_layer_match = match_revocation_layer(
+                    UnknownPuzzle(known_program=uncurried_puzzle_reveal.curried_args[2])
+                )
+                if revocation_layer_match is not None:
+                    wallet_type = RCATWallet
+                else:
+                    try:
+                        next_crcats = CRCAT.get_next_from_coin_spend(coin_spend)
+
+                    except ValueError:
+                        return None
+
+                    crcat = next(crc for crc in next_crcats if crc.coin == coin_state.coin)
+
+                    wallet_type = CRCATWallet
+            if wallet_type is CRCATWallet:
+                assert crcat is not None  # mypy doesn't get the semantics
+                # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
+                # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
+                if (
+                    await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                        crcat.inner_puzzle_hash
+                    )
+                    is None
+                    and crcat.inner_puzzle_hash
+                    != construct_pending_approval_state(
+                        hinted_coin.hint,
+                        uint64(coin_state.coin.amount),
+                    ).get_tree_hash()
+                ):
+                    wallet_state_manager.log.error(
+                        f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}"
+                    )  # pragma: no cover
+                    return None  # pragma: no cover
+
+                # Check if we already have a wallet
+                for wallet_info in await wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT):
+                    crcat_info: CRCATInfo = CRCATInfo.from_bytes(bytes.fromhex(wallet_info.data))
+                    if crcat_info.limitations_program_hash == asset_id:
+                        return WalletIdentifier(wallet_info.id, WalletType(wallet_info.type))
+
+            if wallet_type in {CRCATWallet, RCATWallet}:
+                # We didn't find a matching alt-CAT wallet, but maybe we have a matching CAT wallet that we can convert
+                for wallet_info in await wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CAT):
+                    cat_info: CATInfo = CATInfo.from_bytes(bytes.fromhex(wallet_info.data))
+                    found_cat_wallet = wallet_state_manager.wallets[wallet_info.id]
+                    assert isinstance(found_cat_wallet, CATWallet)
+                    if cat_info.limitations_program_hash == asset_id:
+                        if wallet_type is CRCATWallet:
+                            assert crcat is not None  # again, mypy isn't this smart
+                            await CRCATWallet.convert_to_cr(
+                                found_cat_wallet,
+                                crcat.authorized_providers,
+                                ProofsChecker.from_program(UnknownPuzzle(known_program=crcat.proofs_checker)),
+                            )
+                            async with sync_scope.use() as interface:
+                                interface.side_effects.websocket_events.append(
+                                    WebSocketEvent(name="converted cat wallet to cr", wallet_id=wallet_info.id)
+                                )
+                            return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
+                        elif wallet_type is RCATWallet:
+                            success = await RCATWallet.convert_to_revocable(
+                                found_cat_wallet,
+                                # too complicated for mypy but semantics guarantee this not to be None
+                                hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                            )
+                            if success:
+                                async with sync_scope.use() as interface:
+                                    interface.side_effects.websocket_events.append(
+                                        WebSocketEvent(
+                                            name="converted cat wallet to revocable", wallet_id=wallet_info.id
+                                        )
+                                    )
+                                return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
+                            else:
+                                return None
+
+            if (
+                parent_data.tail_program_hash.hex() in wallet_state_manager.default_cats
+                or wallet_state_manager.config.get("automatically_add_unknown_cats", False)
+            ):
+                if wallet_type is CRCATWallet:
+                    assert crcat is not None
+                    cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
+                        wallet_state_manager,
+                        wallet_state_manager.main_wallet,
+                        crcat.tail_hash,
+                        authorized_providers=crcat.authorized_providers,
+                        proofs_checker=ProofsChecker.from_program(UnknownPuzzle(known_program=crcat.proofs_checker)),
+                    )
+                elif wallet_type is RCATWallet:
+                    cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(
+                        wallet_state_manager,
+                        wallet_state_manager.main_wallet,
+                        parent_data.tail_program_hash,
+                        # too complicated for mypy but semantics guarantee this not to be None
+                        hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                    )
+                else:
+                    cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+                        wallet_state_manager,
+                        wallet_state_manager.main_wallet,
+                        parent_data.tail_program_hash,
+                    )
+                return WalletIdentifier.create(cat_wallet)
+            else:
+                # Found unacknowledged CAT, save it in the database.
+                await wallet_state_manager.interested_store.add_unacknowledged_token(
+                    asset_id,
+                    CATWallet.default_wallet_name_for_unknown_cat(asset_id),
+                    None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+                    parent_coin_state.coin.puzzle_hash,
+                )
+                await wallet_state_manager.interested_store.add_unacknowledged_coin_state(
+                    asset_id,
+                    coin_state,
+                    fork_height,
+                )
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(WebSocketEvent(name="added_stray_cat"))
+                return None
 
     def require_derivation_paths(self) -> bool:
         return True
@@ -678,14 +851,9 @@ class CATWallet:
 
         for coin in cat_coins:
             if cat_discrepancy is not None:
-                cat_condition = UnknownCondition(
-                    opcode=Program.to(51),
-                    args=[
-                        Program.NIL,
-                        Program.to(-113),
-                        tail_reveal,
-                        tail_solution,
-                    ],
+                cat_condition = TAILCondition(
+                    puzzle=UnknownPuzzle(known_program=tail_reveal),
+                    solution=UnknownSolution(program=tail_solution),
                 )
                 if first:
                     extra_conditions = (*extra_conditions, cat_condition)

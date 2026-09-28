@@ -67,7 +67,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mempool_manager import LogMempoolMode, MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -93,12 +93,14 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import process_config_start_method
 from chia.util.cpu import available_logical_cores
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
+from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -314,7 +316,7 @@ class FullNode:
 
             self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
-            self._coin_store = await CoinStore.create(self.db_wrapper)
+            self._coin_store = await CoinStore.create(self.db_wrapper, block_store=self._block_store)
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             single_threaded = self.config.get("single_threaded", False)
@@ -352,6 +354,8 @@ class FullNode:
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
+                log_mempool=self._log_mempool_mode(),
+                root_path=self.root_path,
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(
@@ -1009,6 +1013,8 @@ class FullNode:
             block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
+        if not self.assumevalid_satisfied():
+            return False
         curr: BlockRecord | None = self.blockchain.get_peak()
         if curr is None:
             return False
@@ -1025,6 +1031,45 @@ class FullNode:
             return False
         else:
             return True
+
+    def get_assumevalid(self) -> tuple[bytes32, uint32] | None:
+        """
+        Returns (assumevalid_hash, assumevalid_height) only when both config values
+        are set. If only one is set, the feature is disabled and a warning is logged.
+        """
+        height = self.config.get("assumevalid_height", None)
+        hash_hex = self.config.get("assumevalid_hash", None)
+        height_set = height is not None
+        hash_set = hash_hex is not None and hash_hex != ""
+        if height_set != hash_set:
+            self.log.warning(
+                "assumevalid requires both assumevalid_height and assumevalid_hash; "
+                "ignoring incomplete config "
+                f"(height={'set' if height_set else 'unset'}, "
+                f"hash={'set' if hash_set else 'unset'})"
+            )
+            return None
+        if height is None or hash_hex is None or hash_hex == "":
+            return None
+        try:
+            return bytes32(hexstr_to_bytes(str(hash_hex))), uint32(int(height))
+        except (ValueError, TypeError, OverflowError) as e:
+            self.log.error(f"invalid assumevalid config: {e}")
+            return None
+
+    def assumevalid_satisfied(self) -> bool:
+        """
+        When assumevalid is configured, the node is not considered synced until the
+        block at assumevalid_height is present and matches assumevalid_hash.
+        """
+        assumevalid = self.get_assumevalid()
+        if assumevalid is None:
+            return True
+        av_hash, av_height = assumevalid
+        peak_height = self.blockchain.get_peak_height()
+        if peak_height is None or peak_height < av_height:
+            return False
+        return self.blockchain.height_to_hash(av_height) == av_hash
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
         """
@@ -1058,7 +1103,7 @@ class FullNode:
                 except Exception:
                     old_peer = True
                 if old_peer:
-                    connection.expected_mempool_responses = 100
+                    connection.expected_mempool_responses = 200
 
         peak_full: FullBlock | None = await self.blockchain.get_full_peak()
 
@@ -1118,6 +1163,13 @@ class FullNode:
         self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
+            assumevalid = self.get_assumevalid()
+            if assumevalid is not None:
+                av_hash, av_height = assumevalid
+                self.log.info(
+                    f"assumevalid enabled: skipping aggregate signature validation for "
+                    f"blocks below height {av_height} (hash {av_hash.hex()})"
+                )
 
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
@@ -1528,7 +1580,16 @@ class FullNode:
                 )
                 await self.hint_store.add_hints(hints_to_add)
             if err is not None:
-                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+                # ASSUMEVALID_BLOCK_MISMATCH is local checkpoint policy (wrong/stale
+                # assumevalid_hash, or a reorg at that height), not evidence the peer
+                # sent an invalid block. Still abort sync as a fatal error.
+                if err == Err.ASSUMEVALID_BLOCK_MISMATCH:
+                    self.log.error(
+                        f"Aborting sync due to assumevalid mismatch at batch "
+                        f"{start_height}-{end_height}; not banning peer {peer.peer_info}"
+                    )
+                else:
+                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                 if state_change_summary is not None:
                     committed_end = state_change_summary.peak.height
                     self.log.info(
@@ -1769,8 +1830,12 @@ class FullNode:
         # We have to copy the ValidationState object to preserve it for the add_block()
         # call below. pre_validate_block() will update the
         # object we pass in.
+        assumevalid = self.get_assumevalid()
         ret: list[Awaitable[PreValidationResult]] = []
         for block in blocks_to_validate:
+            validate_signatures = True
+            if assumevalid is not None and block.height < assumevalid[1]:
+                validate_signatures = False
             ret.append(
                 await pre_validate_block(
                     self.constants,
@@ -1780,6 +1845,7 @@ class FullNode:
                     None,
                     vs,
                     wp_summaries=wp_summaries,
+                    validate_signatures=validate_signatures,
                     nice=(20,),
                 )
             )
@@ -1794,10 +1860,19 @@ class FullNode:
         peer_info: PeerInfo,
         vs: ValidationState,  # in-out parameter
     ) -> tuple[StateChangeSummary | None, Err | None]:
+        assumevalid = self.get_assumevalid()
         agg_state_change_summary: StateChangeSummary | None = None
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
+            if assumevalid is not None:
+                av_hash, av_height = assumevalid
+                if block.height == av_height and header_hash != av_hash:
+                    self.log.error(
+                        f"assumevalid mismatch at height {block.height}: "
+                        f"got {header_hash.hex()}, expected {av_hash.hex()} from peer {peer_info}"
+                    )
+                    return agg_state_change_summary, Err.ASSUMEVALID_BLOCK_MISMATCH
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"prevalidation failed for block {header_hash.hex()} height {block.height} "
@@ -1830,6 +1905,7 @@ class FullNode:
                 fork_info,
                 prev_ses_block=vs.prev_ses_block,
                 block_record=block_rec,
+                assumevalid_height=None if assumevalid is None else assumevalid[1],
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
@@ -2242,10 +2318,10 @@ class FullNode:
             block.is_transaction_block()
             and block.transactions_info is not None
             and block.transactions_info.generator_root != bytes([0] * 32)
-            and not block_has_transactions_generator(block)
         ):
-            # This is the case where we already had the unfinished block, and asked for this block without
-            # the transactions (since we already had them). Therefore, here we add the transactions.
+            # This is a transaction block with a generator. Look up the matching unfinished block in the
+            # cache; if it's there, use its pre-validation result. If the finished block arrived without
+            # its generator, take the generator and ref list from the cached unfinished block.
             pos = block.reward_chain_block.proof_of_space
             if pos.version == 1 and pos.quality_string() is None:
                 raise ConsensusError(Err.INVALID_POSPACE)
@@ -2269,13 +2345,21 @@ class FullNode:
                 assert foliage_hash is not None
                 pre_validation_result = unf_entry.result
                 assert pre_validation_result is not None
+                # If the block arrived with a generator, reject it if it doesn't match generator_root
+                # before replacing it with the cached one.
+                incoming_generator = get_transactions_generator_bytes(block)
+                if (
+                    incoming_generator is not None
+                    and std_hash(incoming_generator) != block.transactions_info.generator_root
+                ):
+                    raise ConsensusError(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
                 block = block.replace(
                     transactions_generator=unf_entry.unfinished_block.transactions_generator,
                     transactions_generator_ref_list=unf_entry.unfinished_block.transactions_generator_ref_list,
                     transactions_generator_buffer=unf_entry.unfinished_block.transactions_generator_buffer,
                     version=unf_entry.unfinished_block.version,
                 )
-            else:
+            elif not block_has_transactions_generator(block):
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
                 # with the same unfinished block hash in the cache, so we need to fetch the correct one
                 if peer is None:
@@ -2304,6 +2388,8 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because the generator is present
                 return await self.add_block(new_block, peer, bls_cache)
+            # else: the block carries its generator but we have no cached result, so it is validated
+            # normally during pre-validation below.
         state_change_summary: StateChangeSummary | None = None
         ppp_result: PeakPostProcessingResult | None = None
         async with (
@@ -3025,6 +3111,15 @@ class FullNode:
                 )
         return None, False
 
+    def _log_mempool_mode(self) -> LogMempoolMode:
+        """Normalize log_mempool config: YAML bools or strings \"true\"/\"false\"/\"timeout\"."""
+        v = self.config.get("log_mempool", False)
+        if v is True or v == "true":
+            return "true"
+        if v == "timeout":
+            return "timeout"
+        return "false"
+
     async def add_transaction(
         self,
         transaction: SpendBundle,
@@ -3056,6 +3151,8 @@ class FullNode:
             if peer_info.advertised_cost > 0:
                 fee_per_cost = max(fee_per_cost, peer_info.advertised_fee / peer_info.advertised_cost)
 
+        log_mempool_mode = self._log_mempool_mode()
+
         # Mark as in-flight before the expensive pre_validate call so
         # concurrent workers processing the same tx from different peers are
         # deduplicated without churning the bounded seen cache.
@@ -3066,7 +3163,8 @@ class FullNode:
             )
         except ValueError as e:
             # ValueError is used to indicate a soft failure. We don't want to
-            # ban the peer.
+            # ban the peer. Timeouts are logged by MempoolManager when
+            # log_mempool is "timeout".
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
@@ -3079,7 +3177,7 @@ class FullNode:
 
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
 
-        if self.config.get("log_mempool", False):  # pragma: no cover
+        if log_mempool_mode == "true":
             try:
                 mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{self.blockchain.get_peak_height()}"
                 mempool_dir.mkdir(parents=True, exist_ok=True)

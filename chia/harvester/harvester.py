@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import concurrent
 import contextlib
-import dataclasses
 import logging
 from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -72,16 +71,7 @@ class Harvester:
     def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
-        # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
-        if "plot_loading_frequency_seconds" in config:
-            self.log.info(
-                "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
-                "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
-            )
-            refresh_parameter = dataclasses.replace(
-                refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
-            )
         if "plots_refresh_parameter" in config:
             refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
 

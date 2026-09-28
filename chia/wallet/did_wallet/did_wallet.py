@@ -16,6 +16,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
@@ -31,6 +32,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     puzzle_hash_for_pk,
 )
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE,
     create_singleton_puzzle,
@@ -38,18 +40,20 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -350,7 +354,9 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if coin_data is not None:
@@ -363,15 +369,16 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-            did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+            uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+            assert uncurried.mod is not None and uncurried.curried_args is not None
+            did_curried_args = match_did_puzzle(uncurried.mod, Program.to(uncurried.curried_args))
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, _, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
                 recovery_list_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 num_verification=uint16(num_verification.as_int()),
-                singleton_struct=uncurried.args.at("f"),
+                singleton_struct=uncurried.curried_args[0],
                 metadata=metadata,
                 inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,
@@ -400,7 +407,10 @@ class DIDWallet:
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
 
         if self.did_info.temp_coin is not None:
-            self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
+            async with sync_scope.use() as interface:
+                interface.side_effects.websocket_events.append(
+                    WebSocketEvent(name="did_coin_added", wallet_id=self.wallet_info.id)
+                )
 
         new_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
@@ -424,6 +434,147 @@ class DIDWallet:
 
         await self.add_parent(coin.name(), future_parent)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+
+    @classmethod
+    async def identify(
+        cls,
+        wallet_state_manager: WalletStateManager,
+        sync_scope: WalletSyncScope,
+        parent_data: DIDCoinData,
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+        peer: WSChiaConnection,
+    ) -> WalletIdentifier | None:
+        """
+        Handle the new coin when it is a DID
+        :param parent_data: Curried data of the DID coin
+        :param parent_coin_state: Parent coin state
+        :param coin_state: Current coin state
+        :param coin_spend: New coin spend
+        :return: Wallet ID & Wallet Type
+        """
+
+        inner_puzzle_hash = parent_data.p2_puzzle.get_tree_hash()
+        wallet_state_manager.log.info(
+            f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}"
+        )
+
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
+        assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
+        derivation_record = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            hinted_coin.hint
+        )
+
+        launch_id = bytes32(parent_data.singleton_struct.rest().first().as_atom())
+        if derivation_record is None:
+            wallet_state_manager.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+            # Check if it was owned by us
+            # If the puzzle inside is no longer recognised then delete the wallet associated
+            removed_wallet_ids = []
+            for wallet in wallet_state_manager.wallets.values():
+                if not isinstance(wallet, DIDWallet):
+                    continue
+                if (
+                    wallet.did_info.origin_coin is not None
+                    and launch_id == wallet.did_info.origin_coin.name()
+                    and not wallet.did_info.sent_recovery_transaction
+                ):
+                    await wallet_state_manager.delete_wallet(wallet.id())
+                    removed_wallet_ids.append(wallet.id())
+            for remove_id in removed_wallet_ids:
+                wallet_state_manager.wallets.pop(remove_id)
+                wallet_state_manager.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(name="wallet_removed", wallet_id=remove_id)
+                    )
+            return None
+        else:
+            our_inner_puzzle: Program = wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+
+            wallet_state_manager.log.info(f"Found DID, launch_id {launch_id}.")
+            did_puzzle = did_wallet_puzzles.DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle,
+                parent_data.recovery_list_hash,
+                parent_data.num_verification,
+                parent_data.singleton_struct,
+                parent_data.metadata,
+            )
+            full_puzzle = create_singleton_puzzle(did_puzzle, launch_id)
+            did_puzzle_empty_recovery = did_wallet_puzzles.DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle,
+                NIL_TREEHASH,
+                uint64(0),
+                parent_data.singleton_struct,
+                parent_data.metadata,
+            )
+            alt_did_puzzle_empty_recovery = did_wallet_puzzles.DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle,
+                Program.NIL,
+                uint64(0),
+                parent_data.singleton_struct,
+                parent_data.metadata,
+            )
+
+            full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launch_id)
+            alt_full_puzzle_empty_recovery = create_singleton_puzzle(alt_did_puzzle_empty_recovery, launch_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = did_puzzle_empty_recovery
+                    wallet_state_manager.log.info("DID recovery list was reset by the previous owner.")
+                elif alt_full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = alt_did_puzzle_empty_recovery
+                    wallet_state_manager.log.info("DID recovery list was reset by the previous owner.")
+                else:
+                    wallet_state_manager.log.error("DID puzzle hash doesn't match, please check curried parameters.")
+                    return None
+            # Create DID wallet
+            response: list[CoinState] = await wallet_state_manager.wallet_node.get_coin_state([launch_id], peer=peer)
+            if len(response) == 0:
+                wallet_state_manager.log.warning(f"Could not find the launch coin with ID: {launch_id}")
+                return None
+            launch_coin: CoinState = response[0]
+            origin_coin = launch_coin.coin
+
+            did_wallet_count = 0
+            for wallet in wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.DECENTRALIZED_ID:
+                    assert isinstance(wallet, DIDWallet)
+                    assert wallet.did_info.origin_coin is not None
+                    if origin_coin.name() == wallet.did_info.origin_coin.name():
+                        return WalletIdentifier.create(wallet)
+                    did_wallet_count += 1
+            if coin_state.spent_height is not None:
+                # The first coin we received for DID wallet is spent.
+                # This means the wallet is in a resync process, skip the coin
+                return None
+            # check we aren't above the auto-add wallet limit
+            limit = wallet_state_manager.config.get("did_auto_add_limit", 10)
+            if did_wallet_count < limit:
+                did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
+                    wallet_state_manager,
+                    wallet_state_manager.main_wallet,
+                    launch_coin.coin,
+                    did_puzzle,
+                    coin_spend,
+                    f"DID {encode_puzzle_hash(launch_id, AddressType.DID.hrp(wallet_state_manager.config))}",
+                )
+                wallet_identifier = WalletIdentifier.create(did_wallet)
+                async with sync_scope.use() as interface:
+                    interface.side_effects.websocket_events.append(
+                        WebSocketEvent(
+                            name="wallet_created",
+                            wallet_id=wallet_identifier.id,
+                            data={"did_id": did_wallet.get_my_DID()},
+                        )
+                    )
+                return wallet_identifier
+            # we are over the limit
+            wallet_state_manager.log.warning(
+                f"You are at the max configured limit of {limit} DIDs. Ignoring received DID {launch_id.hex()}"
+            )
+            return None
 
     def create_backup(self) -> str:
         """
@@ -818,24 +969,6 @@ class DIDWallet:
             recovery_list=self.did_info.backup_ids,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
             launcher_id=launcher_id,
-            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            recovery_list_hash=self.reset_recovery_list(),
-        )
-
-    async def get_innerpuz_for_new_innerhash(self, pubkey: G1Element) -> Program:
-        """
-        Get the inner puzzle for a new owner
-        :param pubkey: Pubkey
-        :return: Inner puzzle
-        """
-        # Note: the recovery list will be kept.
-        # In a selling case, the seller should clean the recovery list then transfer to the new owner.
-        assert self.did_info.origin_coin is not None
-        return did_wallet_puzzles.create_innerpuz(
-            p2_puzzle_or_hash=puzzle_for_pk(pubkey),
-            recovery_list=self.did_info.backup_ids,
-            num_of_backup_ids_needed=uint64(self.did_info.num_of_backup_ids_needed),
-            launcher_id=self.did_info.origin_coin.name(),
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             recovery_list_hash=self.reset_recovery_list(),
         )

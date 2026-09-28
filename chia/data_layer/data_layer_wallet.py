@@ -27,6 +27,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
     UnknownCondition,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import (
@@ -47,6 +48,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -60,6 +62,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -445,20 +448,16 @@ class DataLayerWallet:
 
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
-            announce_only: Program = Program.to(
-                (
-                    1,
-                    [
-                        [
-                            51,
-                            new_puz_hash,
-                            singleton_record.lineage_proof.amount,
-                            [launcher_id, root_hash, new_puz_hash],
-                        ],
-                        [62, b"$"],
-                    ],
-                )
-            )
+            announce_only: Program = P2Conditions(
+                conditions=[
+                    CreateCoin(
+                        new_puz_hash,
+                        singleton_record.lineage_proof.amount,
+                        memos=[launcher_id, root_hash, new_puz_hash],
+                    ),
+                    CreatePuzzleAnnouncement(msg=b"$"),
+                ],
+            ).program
             second_full_puz: Program = create_host_fullpuz(
                 announce_only,
                 root_hash,
@@ -771,7 +770,9 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
@@ -1032,7 +1033,7 @@ class DataLayerWallet:
             driver = driver_dict.get(asset_id)
             if driver is None or not (
                 driver.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value])
-                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                and driver.also()["updater_hash"] == ACS_MU_PH  # type: ignore[index]
             ):
                 raise ValueError(
                     f"DataLayer update offers only support DL singleton legs; "

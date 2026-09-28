@@ -721,6 +721,20 @@ async def test_unsupported_version() -> None:
             await CoinStore.create(db_wrapper)
 
 
+@pytest.mark.anyio
+async def test_coin_spent_index_is_partial() -> None:
+    async with DBConnection(2) as db_wrapper:
+        await CoinStore.create(db_wrapper)
+        async with db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'coin_spent_index'"
+            ) as cursor:
+                row = await cursor.fetchone()
+        assert row is not None
+        assert row[0] is not None
+        assert "spent_index>0" in row[0].replace(" ", "").lower()
+
+
 TEST_COIN_ID = b"c" * 32
 TEST_PUZZLEHASH = b"p" * 32
 TEST_AMOUNT = uint64(1337)

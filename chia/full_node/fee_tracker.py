@@ -111,7 +111,7 @@ class FeeStat:  # TxConfirmStats
         self.decay = decay
         self.scale = scale
         self.max_confirms = self.scale * len(self.confirmed_average)
-        self.log = logging.Logger(__name__)
+        self.log = logging.getLogger(__name__)
         self.fee_store = fee_store
         self.type = my_type
         self.max_periods = max_periods
@@ -423,7 +423,7 @@ class FeeTracker:
     buckets: list[float]
 
     def __init__(self, fee_store: FeeStore):
-        self.log = logging.Logger(__name__)
+        self.log = logging.getLogger(__name__)
         self.latest_seen_height = uint32(0)
         self.first_recorded_height = uint32(0)
         self.fee_store = fee_store

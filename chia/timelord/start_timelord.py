@@ -19,7 +19,7 @@ from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_rpc_api import TimelordRpcApi
 from chia.timelord.timelord_service import TimelordService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
@@ -66,9 +66,8 @@ def create_timelord_service(
 
 
 async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 

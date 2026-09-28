@@ -22,15 +22,15 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
-    UnknownCondition,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.trading.offer import Offer
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
@@ -40,6 +40,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -94,7 +95,9 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None, sync_scope: WalletSyncScope
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
@@ -122,12 +125,38 @@ class VCWallet:
             )
             return
         vc_record: VCRecord = VCRecord(vc, height)
-        self.wallet_state_manager.state_changed(
-            "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
-        )
+
+        async with sync_scope.use() as interface:
+            interface.side_effects.websocket_events.append(
+                WebSocketEvent(
+                    name="vc_coin_added", wallet_id=self.id(), data=dict(launcher_id=vc_record.vc.launcher_id.hex())
+                )
+            )
         await self.store.add_or_replace_vc_record(vc_record)
 
-    async def remove_coin(self, coin: Coin, height: uint32) -> None:
+    @classmethod
+    async def identify(
+        cls, wallet_state_manager: WalletStateManager, vc: VerifiedCredential
+    ) -> WalletIdentifier | None:
+        # Check the ownership
+        derivation_record: (
+            DerivationRecord | None
+        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(vc.inner_puzzle_hash)
+        if derivation_record is None:
+            wallet_state_manager.log.warning(
+                f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet."
+            )  # pragma: no cover
+            return None  # pragma: no cover
+        wallet_state_manager.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
+        for wallet_info in await wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC):
+            return WalletIdentifier(wallet_info.id, WalletType.VC)
+        # Create a new VC wallet
+        vc_wallet = await VCWallet.create_new_vc_wallet(
+            wallet_state_manager, wallet_state_manager.main_wallet
+        )  # pragma: no cover
+        return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
+
+    async def remove_coin(self, coin: Coin, height: uint32, sync_scope: WalletSyncScope) -> None:
         """
         remove the VC if it is transferred to another key
         :param coin:
@@ -137,9 +166,14 @@ class VCWallet:
         vc_record: VCRecord | None = await self.store.get_vc_record_by_coin_id(coin.name())
         if vc_record is not None:
             await self.store.delete_vc_record(vc_record.vc.launcher_id)
-            self.wallet_state_manager.state_changed(
-                "vc_coin_removed", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
-            )
+            async with sync_scope.use() as interface:
+                interface.side_effects.websocket_events.append(
+                    WebSocketEvent(
+                        name="vc_coin_removed",
+                        wallet_id=self.id(),
+                        data=dict(launcher_id=vc_record.vc.launcher_id.hex()),
+                    )
+                )
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
         """
@@ -300,7 +334,7 @@ class VCWallet:
             magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
-        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
+        extra_conditions = (*extra_conditions, magic_condition)
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
@@ -421,7 +455,7 @@ class VCWallet:
         other_spends: list[CoinSpend] = []
         spends_to_fix: dict[bytes32, CoinSpend] = {}
         for spend in offer.to_valid_spend().coin_spends:
-            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0]:
+            if CRCAT.is_cr_cat(UnknownPuzzle(known_program=spend.puzzle_reveal))[0]:
                 crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
                 if crcat_spend.incomplete:
                     crcat_spends.append(crcat_spend)
@@ -499,8 +533,8 @@ class VCWallet:
                 coin_args[coin_name] = (
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
-                        vc.proof_hash,  # type: ignore
-                        ProofsChecker.from_program(uncurry_puzzle(crcat_spend.crcat.proofs_checker)).flags,
+                        vc.proof_hash,  # type: ignore[arg-type]
+                        ProofsChecker.from_program(UnknownPuzzle(known_program=crcat_spend.crcat.proofs_checker)).flags,
                     ),
                     vc.proof_provider,
                     vc.launcher_id,

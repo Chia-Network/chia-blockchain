@@ -9,13 +9,13 @@ from chia_rs.sized_ints import uint16
 from chia.types.blockchain_format.program import Program
 from chia.wallet.nft_wallet.nft_puzzles import NFT_TRANSFER_PROGRAM_DEFAULT
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 
-def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
-    if puzzle.mod == NFT_TRANSFER_PROGRAM_DEFAULT:
-        return True, list(puzzle.args.as_iter())
+def match_transfer_program_puzzle(puzzle: UnknownPuzzle) -> tuple[bool, list[Program]]:
+    if puzzle.mod == NFT_TRANSFER_PROGRAM_DEFAULT and puzzle.curried_args is not None:
+        return True, puzzle.curried_args
     return False, []
 
 
@@ -40,13 +40,13 @@ def solution_for_transfer_program(
 
 @dataclass(frozen=True)
 class TransferProgramPuzzle:
-    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
+    _match: Callable[[UnknownPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UnknownPuzzle, Program | None], Program | None]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+    def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_transfer_program_puzzle(puzzle)
         if matched:
             singleton_struct, royalty_puzzle_hash, percentage = curried_args
@@ -69,7 +69,7 @@ class TransferProgramPuzzle:
         )
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+        self, constructor: PuzzleInfo, puzzle_reveal: UnknownPuzzle, solution: Program | None = None
     ) -> Program | None:
         return None
 

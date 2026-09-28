@@ -5,8 +5,9 @@ import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import TracebackType
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
@@ -42,6 +43,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
+from chia.util.path import path_from_root
 from chia.util.priority_thread_pool_executor import Executor
 
 log = logging.getLogger(__name__)
@@ -244,19 +246,32 @@ def check_removals(
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
-        conflicting_items = get_items_by_coin_ids([coin_id])
+        # Fast forward spends rebase onto the latest singleton coin, so look
+        # that up as well.
+        latest_ff_id = None if coin_bcs.latest_singleton_lineage is None else coin_bcs.latest_singleton_lineage.coin_id
+        coin_ids = [coin_id]
+        if latest_ff_id is not None and latest_ff_id != coin_id:
+            coin_ids.append(latest_ff_id)
+        conflicting_items = get_items_by_coin_ids(coin_ids)
         for item in conflicting_items:
             if item in conflicts:
                 continue
             conflict_bcs = item.bundle_coin_spends.get(coin_id)
+            if conflict_bcs is None and latest_ff_id is not None:
+                conflict_bcs = item.bundle_coin_spends.get(latest_ff_id)
             if conflict_bcs is None:
                 # Check if this is an item that spends an older ff singleton
-                # version with a latest version that matches our coin ID.
+                # version with a latest version that matches our coin ID or the
+                # same latest version we rebase onto.
                 conflict_bcs = next(
                     (
                         bcs
                         for bcs in item.bundle_coin_spends.values()
-                        if bcs.latest_singleton_lineage is not None and bcs.latest_singleton_lineage.coin_id == coin_id
+                        if bcs.latest_singleton_lineage is not None
+                        and (
+                            bcs.latest_singleton_lineage.coin_id == coin_id
+                            or (latest_ff_id is not None and bcs.latest_singleton_lineage.coin_id == latest_ff_id)
+                        )
                     ),
                     None,
                 )
@@ -264,31 +279,37 @@ def check_removals(
                 if conflict_bcs is None:
                     log.warning(f"Coin ID {coin_id} expected but not found in mempool item {item.name}")
                     return Err.INVALID_SPEND_BUNDLE, []
+            same_coin = coin_id == conflict_bcs.coin_spend.coin.name()
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
             if not coin_bcs.supports_fast_forward and not coin_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
-            # if the spend we're adding is FF, but there's a conflicting spend
-            # that isn't FF, they can't be chained, so that's a conflict
-            elif coin_bcs.supports_fast_forward and not conflict_bcs.supports_fast_forward:
+            # If one spend is FF and the other isn't FF, they can't be chained
+            # so that's a conflict.
+            elif coin_bcs.supports_fast_forward != conflict_bcs.supports_fast_forward:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP, but there's a conflicting spend
             # that isn't DEDUP, we cannot merge them, so that's a conflict
-            elif coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup:
+            elif same_coin and coin_bcs.eligible_for_dedup and not conflict_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP but the existing spend has a
             # different solution, we cannot merge them, so that's a conflict
-            elif coin_bcs.eligible_for_dedup and bytes(coin_bcs.coin_spend.solution) != bytes(
-                conflict_bcs.coin_spend.solution
+            elif (
+                same_coin
+                and coin_bcs.eligible_for_dedup
+                and bytes(coin_bcs.coin_spend.solution) != bytes(conflict_bcs.coin_spend.solution)
             ):
                 conflicts.add(item)
 
     if len(conflicts) > 0:
         return Err.MEMPOOL_CONFLICT, list(conflicts)
     return None, []
+
+
+LogMempoolMode = Literal["true", "false", "timeout"]
 
 
 class MempoolManager:
@@ -313,6 +334,8 @@ class MempoolManager:
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
     validation_timeout: float
+    log_mempool: LogMempoolMode
+    root_path: Path | None
 
     def __init__(
         self,
@@ -323,8 +346,12 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        log_mempool: LogMempoolMode = "false",
+        root_path: Path | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
+        self.log_mempool = log_mempool
+        self.root_path = root_path
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
@@ -380,6 +407,8 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        log_mempool: LogMempoolMode = "false",
+        root_path: Path | None = None,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
@@ -388,6 +417,8 @@ class MempoolManager:
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
             validation_timeout=validation_timeout,
+            log_mempool=log_mempool,
+            root_path=root_path,
         )
         try:
             yield self
@@ -483,6 +514,19 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
+    def _maybe_log_timeout_spend_bundle(self, spend_name: bytes32, spend_bundle: SpendBundle) -> None:
+        """Dump a spend bundle when log_mempool is "timeout" and CLVM/sig validation timed out."""
+        if self.log_mempool != "timeout" or self.root_path is None:
+            return
+        try:
+            height = self.peak.height if self.peak is not None else 0
+            mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{height}"
+            mempool_dir.mkdir(parents=True, exist_ok=True)
+            with open(mempool_dir / f"{spend_name}.bundle", "wb+") as f:
+                f.write(bytes(spend_bundle))
+        except Exception:
+            log.exception(f"Failed to log mempool item: {spend_name}")
+
     async def pre_validate_spendbundle(
         self,
         spend_bundle: SpendBundle,
@@ -511,6 +555,7 @@ class MempoolManager:
                 self.max_tx_clvm_cost,
                 self.constants,
                 flags | MEMPOOL_MODE,
+                self.validation_timeout,
                 nice=(5, -fee_per_cost),
             )
         # validate_clvm_and_signature raises a ValueError with an error code
@@ -518,6 +563,12 @@ class MempoolManager:
             # Convert that to a ValidationError
             if len(e.args) > 1:
                 error = Err(e.args[1])
+                # Timeout is a soft rejection; preserve the ValueError("timeout") API.
+                if error is Err.TIMEOUT:
+                    if spend_bundle_id is None:
+                        spend_bundle_id = spend_bundle.name()
+                    self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
+                    raise ValueError("timeout") from e
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
@@ -530,18 +581,16 @@ class MempoolManager:
         if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
             raise ValueError("too many pairs")
 
-        if duration > self.validation_timeout:
-            raise ValueError(f"timeout {duration:0.4} s")
+        if spend_bundle_id is None:
+            spend_bundle_id = spend_bundle.name()
 
         cost = sbc.execution_cost + sbc.condition_cost
         if cost == 0 or (duration > 0.1 and duration * 1e9 / cost > self.validation_timeout * 5.0):
-            raise ValueError(f"timeout ({duration * 1e9 / cost:0.4} ns/cost)")
+            self._maybe_log_timeout_spend_bundle(spend_bundle_id, spend_bundle)
+            raise ValueError("timeout")
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
-
-        if spend_bundle_id is None:
-            spend_bundle_id = spend_bundle.name()
 
         log.log(
             logging.DEBUG if duration < self.validation_timeout else logging.WARNING,
@@ -674,7 +723,9 @@ class MempoolManager:
             # SpendBundleConditions.
             spend_conds = spend_conditions.pop(coin_id)
 
-            if bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP) and not is_clvm_canonical(bytes(coin_spend.solution)):
+            if not is_clvm_canonical(bytes(coin_spend.puzzle_reveal)) or not is_clvm_canonical(
+                bytes(coin_spend.solution)
+            ):
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
@@ -710,25 +761,28 @@ class MempoolManager:
                 additions=spend_additions,
                 cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
+                atom_count=spend_conds.atom_count,
+                pair_count=spend_conds.pair_count,
             )
 
         non_ff_spend_ids = set()
-        ff_latest_ids = set()
+        effective_spend_ids = set()
         for coin_id, spend_data in bundle_coin_spends.items():
             if spend_data.latest_singleton_lineage is None:
                 non_ff_spend_ids.add(coin_id)
+                effective_spend_id = coin_id
             else:
-                ff_latest_ids.add(spend_data.latest_singleton_lineage.coin_id)
+                effective_spend_id = spend_data.latest_singleton_lineage.coin_id
+            # Fast forward spends are only allowed to be spent once in a spend bundle
+            if effective_spend_id in effective_spend_ids:
+                return Err.INVALID_SPEND_BUNDLE, None, []
+            effective_spend_ids.add(effective_spend_id)
         # Fast forward spends are only allowed when bundled with other, non-FF
         # spends in order to evict an FF spend, it must be associated with a
         # normal spend that can be included in a block or invalidated some
         # other way.
         if len(non_ff_spend_ids) == 0:
             return Err.INVALID_SPEND_BUNDLE, None, []
-        # Fast forward spends rebase onto latest unspent coin IDs so a non-FF
-        # spend of the same coin is a double spend after rebase.
-        if len(ff_latest_ids.intersection(non_ff_spend_ids)) > 0:
-            return Err.DOUBLE_SPEND, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0

@@ -13,7 +13,7 @@ from clvm_tools import binutils
 from chia._tests.core.make_block_generator import make_block_generator
 from chia._tests.util.get_name_puzzle_conditions import NPCResult, get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
-from chia.consensus.block_generator_info import get_transactions_generator_program
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -36,7 +36,7 @@ def large_block_generator(size: int) -> bytes:
     # the idea is, if the algorithm for building the big block changes,
     # the name of the cache file will also change
 
-    name = SMALL_BLOCK_GENERATOR.program.get_tree_hash().hex()[:16]
+    name = SerializedProgram.from_bytes(SMALL_BLOCK_GENERATOR.program).get_tree_hash().hex()[:16]
 
     my_dir = pathlib.Path(__file__).absolute().parent
     hex_path = my_dir / f"large-block-{name}-{size}.hex"
@@ -88,7 +88,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert npc_result.conds is not None
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
     puzzle, solution = get_puzzle_and_solution_for_coin(
-        program.program,
+        SerializedProgram.from_bytes(program.program),
         program.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin_spend.coin,
@@ -149,7 +149,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
             f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
         ).as_bin()
     )
-    generator = BlockGenerator(program, [])
+    generator = BlockGenerator(bytes(program), [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
         bt.constants.MAX_BLOCK_COST_CLVM,
@@ -173,7 +173,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         uint64(300),
     )
     puz, _solution = get_puzzle_and_solution_for_coin(
-        generator.program,
+        SerializedProgram.from_bytes(generator.program),
         generator.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin,
@@ -191,7 +191,7 @@ async def test_clvm_mempool_mode(softfork_height: int) -> None:
     # ("0xfe"). In mempool mode, this should fail, but in non-mempool
     # mode, the unknown operator should be treated as if it returns ().
     program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-    generator = BlockGenerator(program, [])
+    generator = BlockGenerator(bytes(program), [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
         test_constants.MAX_BLOCK_COST_CLVM,
@@ -214,10 +214,9 @@ async def test_clvm_mempool_mode(softfork_height: int) -> None:
 async def test_tx_generator_speed(softfork_height: int, benchmark_runner: BenchmarkRunner) -> None:
     LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
-    program = SerializedProgram.from_bytes(generator_bytes)
 
     with benchmark_runner.assert_runtime(seconds=1.25):
-        generator = BlockGenerator(program, [])
+        generator = BlockGenerator(generator_bytes, [])
         npc_result = get_name_puzzle_conditions(
             generator,
             test_constants.MAX_BLOCK_COST_CLVM,
@@ -245,7 +244,7 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     )
 
     # ensure we fail if the program exceeds the cost
-    generator = BlockGenerator(program, [])
+    generator = BlockGenerator(bytes(program), [])
     npc_result = get_name_puzzle_conditions(
         generator, 10000000, mempool_mode=False, height=uint32(softfork_height), constants=test_constants
     )
@@ -296,10 +295,12 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
 
     DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
-    generator = get_transactions_generator_program(LARGE_BLOCK)
+    generator = get_transactions_generator_bytes(LARGE_BLOCK)
     assert generator is not None
     # first, list all spent coins in the block
-    _, result = run_with_cost(generator, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []])
+    _, result = run_with_cost(
+        SerializedProgram.from_bytes(generator), DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
+    )
 
     coin_spends = result.first()
     spent_coins: list[Coin] = []
@@ -320,7 +321,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
         for _ in range(3):
             for c in spent_coins:
                 puz, _solution = get_puzzle_and_solution_for_coin(
-                    block_generator.program,
+                    SerializedProgram.from_bytes(block_generator.program),
                     block_generator.generator_refs,
                     test_constants.MAX_BLOCK_COST_CLVM,
                     c,

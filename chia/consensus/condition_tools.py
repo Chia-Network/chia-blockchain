@@ -4,7 +4,6 @@ from collections.abc import Callable
 from functools import lru_cache
 
 from chia_rs import G1Element, SpendBundleConditions, SpendConditions
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
@@ -12,7 +11,7 @@ from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.casts import int_from_bytes, int_to_bytes
+from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 
@@ -159,19 +158,6 @@ def pkm_pairs_for_conditions_dict(
             ret.append((G1Element.from_bytes(cwa.vars[0]), make_aggsig_final_message(opcode, cwa.vars[1], coin, data)))
 
     return ret
-
-
-def created_outputs_for_conditions_dict(
-    conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]],
-    input_coin_name: bytes32,
-) -> list[Coin]:
-    output_coins = []
-    for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
-        puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
-        amount = int_from_bytes(amount_bin)
-        coin = Coin(input_coin_name, bytes32(puzzle_hash), uint64(amount))
-        output_coins.append(coin)
-    return output_coins
 
 
 def conditions_dict_for_solution(

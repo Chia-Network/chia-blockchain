@@ -45,10 +45,6 @@ RpcInfo = tuple[type[_T_RpcApiProtocol], int]
 log = logging.getLogger(__name__)
 
 
-class ServiceException(Exception):
-    pass
-
-
 class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol]):
     def __init__(
         self,

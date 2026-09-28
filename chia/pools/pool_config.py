@@ -37,6 +37,8 @@ class PoolingShareState:
     owner_public_key: G1Element
     key_derivation_index: int
     version: int = 1
+    _allowed_to_remove: bool = False
+    _slated_for_removal: bool = False
 
     @staticmethod
     def state_path(root_path: Path) -> Path:
@@ -83,6 +85,13 @@ class PoolingShareState:
                 raise ValueError("Can only call .add() for new singleton entries")
             loaded_list.append(self.to_json_dict())
 
+    def remove(self) -> None:
+        if not self._allowed_to_remove:
+            raise ValueError("Can only remove a config entry if you have acquired it")
+        if self._slated_for_removal:
+            raise ValueError("Config entry was already slated for removal")
+        self._slated_for_removal = True
+
     @classmethod
     @contextmanager
     def acquire(cls, *, root_path: Path, p2_singleton_puzzle_hash: bytes32, read_only: bool = False) -> Iterator[Self]:
@@ -105,12 +114,22 @@ class PoolingShareState:
                 owner_public_key=G1Element.from_bytes(hexstr_to_bytes(config["owner_public_key"])),
                 key_derivation_index=config["key_derivation_index"],
                 version=config.get("version", 1),
+                _allowed_to_remove=True,
             )
-            yield self  # ruff: ignore[fallible-context-manager]  # update in-memory entry only on successful exit
-            for i, conf in enumerate(loaded_list):
-                if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
-                    loaded_list[i] = self.to_json_dict()
-                    break
+            try:
+                yield self
+            except:
+                raise
+            else:
+                for i, conf in enumerate(loaded_list):
+                    if conf["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex():
+                        if self._slated_for_removal:
+                            loaded_list.pop(i)
+                        else:
+                            loaded_list[i] = self.to_json_dict()
+                        break
+            finally:
+                self._allowed_to_remove = False
 
     def to_json_dict(self) -> _PoolConfig:
         return {

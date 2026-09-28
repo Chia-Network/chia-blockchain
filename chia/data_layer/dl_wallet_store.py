@@ -104,10 +104,6 @@ class DataLayerStore:
 
         return self
 
-    async def _clear_database(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await (await conn.execute("DELETE FROM singleton_records")).close()
-
     async def add_singleton_record(self, record: SingletonRecord) -> None:
         """
         Store SingletonRecord in DB.
@@ -202,20 +198,6 @@ class DataLayerStore:
             return _row_to_singleton_record(row)
         return None
 
-    async def get_unconfirmed_singletons(self, launcher_id: bytes32) -> list[SingletonRecord]:
-        """
-        Returns all singletons with a specific launcher id that have not yet been marked confirmed
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                "SELECT * from singleton_records WHERE launcher_id=? AND confirmed=0", (launcher_id,)
-            )
-            rows = await cursor.fetchall()
-            await cursor.close()
-        records = [_row_to_singleton_record(row) for row in rows]
-
-        return records
-
     async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
@@ -242,10 +224,6 @@ class DataLayerStore:
         await self.add_singleton_record(
             dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp)
         )
-
-    async def delete_singleton_record(self, coin_id: bytes32) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await (await conn.execute("DELETE FROM singleton_records WHERE coin_id=?", (coin_id,))).close()
 
     async def delete_singleton_records_by_launcher_id(self, launcher_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
