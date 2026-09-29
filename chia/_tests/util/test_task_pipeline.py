@@ -170,12 +170,10 @@ async def test_backpressure_logged_when_waiting_on_downstream(
         await pipeline.run()
 
     assert results == [0, 1, 2]
-    assert any(
-        "sync pipeline back-pressure" in record.message and "seconds on database" in record.message
-        for record in caplog.records
-    )
+    assert "sync pipeline back-pressure" in caplog.text
+    assert "seconds on database" in caplog.text
     # Upstream cascade (fetch waiting on validate) must not be logged.
-    assert not any("seconds on validating" in record.message for record in caplog.records)
+    assert "seconds on validating" not in caplog.text
 
 
 @pytest.mark.anyio
@@ -201,10 +199,8 @@ async def test_backpressure_logged_when_feeder_waits_on_first_stage(
         await pipeline.run()
 
     assert results == [0, 1, 2]
-    assert any(
-        "sync pipeline back-pressure" in record.message and "seconds on database" in record.message
-        for record in caplog.records
-    )
+    assert "sync pipeline back-pressure" in caplog.text
+    assert "seconds on database" in caplog.text
 
 
 @pytest.mark.anyio
@@ -236,12 +232,10 @@ async def test_backpressure_logged_for_slow_middle_stage(
         await pipeline.run()
 
     assert results == [0, 1, 2]
-    assert any(
-        "sync pipeline back-pressure" in record.message and "seconds on prevalidating" in record.message
-        for record in caplog.records
-    )
-    assert not any("seconds on validating" in record.message for record in caplog.records)
-    assert not any("seconds on collecting" in record.message for record in caplog.records)
+    assert "sync pipeline back-pressure" in caplog.text
+    assert "seconds on prevalidating" in caplog.text
+    assert "seconds on validating" not in caplog.text
+    assert "seconds on collecting" not in caplog.text
 
 
 @pytest.mark.anyio
