@@ -62,7 +62,6 @@ def block_to_block_record(
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
-            make_challenge_root=with_challenge_hash,
             challenge_root_end_height=(
                 get_challenge_start_height(
                     constants,

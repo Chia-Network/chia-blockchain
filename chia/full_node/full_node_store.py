@@ -556,7 +556,6 @@ class FullNodeStore:
                     blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
-                    make_challenge_root=post_hard_fork,
                     challenge_root_end_height=(
                         get_challenge_start_height(
                             self.constants,

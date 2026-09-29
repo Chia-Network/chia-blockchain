@@ -1117,10 +1117,9 @@ class Blockchain:
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
     ) -> bytes32 | None:
-        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, sp_total_iters, self)
 
     def compute_current_mmr_root(self) -> bytes32 | None:
         return self.mmr_manager.compute_current_mmr_root()
