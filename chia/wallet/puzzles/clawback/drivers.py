@@ -30,7 +30,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
@@ -136,12 +136,12 @@ def create_merkle_solution(
 
 
 def match_clawback_puzzle(
-    uncurried: UncurriedPuzzle,
+    unknown_puzzle: UnknownPuzzle,
     inner_puzzle: Program | SerializedProgram,
     inner_solution: Program | SerializedProgram,
 ) -> ClawbackMetadata | None:
     # Check if the inner puzzle is a P2 puzzle
-    if MOD != uncurried.mod:
+    if MOD != unknown_puzzle.mod:
         return None
     if not isinstance(inner_puzzle, SerializedProgram):
         inner_puzzle = inner_puzzle.to_serialized()

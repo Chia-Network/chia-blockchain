@@ -6,30 +6,35 @@ from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, replace
 
-from chia_rs import Coin, CoinSpend, G2Element
+from chia_rs import Coin, CoinSpend, CoinState, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.hash import std_hash
-from chia.util.streamable import UInt32Range, UInt64Range
+from chia.util.streamable import UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
+    ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
     parse_timelock_info,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle
-from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
-from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_blockchain import WalletBlockchain
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -49,6 +54,125 @@ class ClawbackManager:
     timestamp_for_height: Callable[[uint32], Awaitable[uint64]]
     puzzle_hash_encoder: Callable[[bytes32], str]
     action_scope_sandbox: Callable[[TXConfig, bool], AbstractAsyncContextManager[WalletActionScope]]
+    add_interested_coin_ids: Callable[[list[bytes32]], Awaitable[None]]
+
+    async def identify(
+        self,
+        metadata: ClawbackMetadata,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+        peer: WSChiaConnection,
+    ) -> WalletIdentifier | None:
+        """
+        Handle Clawback coins
+        :param metadata: Clawback metadata for spending the merkle coin
+        :param coin_state: Clawback merkle coin
+        :param coin_spend: Parent coin spend
+        :param peer: Fullnode peer
+        :return:
+        """
+        # Record metadata
+        assert coin_state.created_height is not None
+        is_recipient: bool | None = None
+        # Check if the wallet is the sender
+        sender_derivation_record: (
+            DerivationRecord | None
+        ) = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        # Check if the wallet is the recipient
+        recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            metadata.recipient_puzzle_hash
+        )
+        if sender_derivation_record is not None:
+            self.log.info("Found Clawback merkle coin %s as the sender.", coin_state.coin.name().hex())
+            is_recipient = False
+        elif recipient_derivation_record is not None:
+            self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
+            is_recipient = True
+            # For the recipient we need to manually subscribe the merkle coin
+            await self.add_interested_coin_ids([coin_state.coin.name()])
+        if is_recipient is not None:
+            spend_bundle = WalletSpendBundle([coin_spend], G2Element())
+            memos = compute_memos(spend_bundle)
+            spent_height: uint32 = uint32(0)
+            if coin_state.spent_height is not None:
+                self.log.debug("Resync clawback coin: %s", coin_state.coin.name().hex())
+                # Resync case
+                spent_height = uint32(coin_state.spent_height)
+                # Create Clawback outgoing transaction
+                created_timestamp = await self.timestamp_for_height(uint32(coin_state.spent_height))
+                clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                clawback_spend_bundle = WalletSpendBundle([clawback_coin_spend], G2Element())
+                if await self.puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
+                    to_ph = (
+                        metadata.sender_puzzle_hash
+                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                        else metadata.recipient_puzzle_hash
+                    )
+                    tx_record = TransactionRecord(
+                        confirmed_at_height=uint32(coin_state.spent_height),
+                        created_at_time=created_timestamp,
+                        to_puzzle_hash=to_ph,
+                        to_address=self.puzzle_hash_encoder(to_ph),
+                        amount=uint64(coin_state.coin.amount),
+                        fee_amount=uint64(0),
+                        confirmed=True,
+                        sent=uint32(0),
+                        spend_bundle=clawback_spend_bundle,
+                        additions=clawback_spend_bundle.additions(),
+                        removals=clawback_spend_bundle.removals(),
+                        wallet_id=uint32(1),
+                        sent_to=[],
+                        trade_id=None,
+                        type=uint32(TransactionType.OUTGOING_CLAWBACK),
+                        name=clawback_spend_bundle.name(),
+                        memos=compute_memos(clawback_spend_bundle),
+                        valid_times=ConditionValidTimes(),
+                    )
+                    await self.transaction_store.add_transaction_record(tx_record)
+            coin_record = WalletCoinRecord(
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                spent_height,
+                spent_height != 0,
+                False,
+                WalletType.STANDARD_WALLET,
+                1,
+                CoinType.CLAWBACK,
+                VersionedBlob(ClawbackVersion.V1.value, bytes(metadata)),
+            )
+            # Add merkle coin
+            await self.coin_store.add_coin_record(coin_record)
+            # Add tx record
+            # We use TransactionRecord.confirmed to indicate if a Clawback transaction is claimable
+            # If the Clawback coin is unspent, confirmed should be false
+            created_timestamp = await self.timestamp_for_height(uint32(coin_state.created_height))
+            tx_record = TransactionRecord(
+                confirmed_at_height=uint32(coin_state.created_height),
+                created_at_time=uint64(created_timestamp),
+                to_puzzle_hash=metadata.recipient_puzzle_hash,
+                to_address=self.puzzle_hash_encoder(metadata.recipient_puzzle_hash),
+                amount=uint64(coin_state.coin.amount),
+                fee_amount=uint64(0),
+                confirmed=spent_height != 0,
+                sent=uint32(0),
+                spend_bundle=None,
+                additions=[coin_state.coin],
+                removals=[coin_spend.coin],
+                wallet_id=uint32(1),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(
+                    TransactionType.INCOMING_CLAWBACK_RECEIVE
+                    if is_recipient
+                    else TransactionType.INCOMING_CLAWBACK_SEND
+                ),
+                # Use coin ID as the TX ID to mapping with the coin table
+                name=coin_record.coin.name(),
+                memos=memos,
+                valid_times=ConditionValidTimes(),
+            )
+            await self.transaction_store.add_transaction_record(tx_record)
+        return None
 
     async def auto_claim_coins(self, action_scope: WalletActionScope) -> None:
         # Get unspent clawback coin

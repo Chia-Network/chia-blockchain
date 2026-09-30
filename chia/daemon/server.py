@@ -83,6 +83,10 @@ log = logging.getLogger(__name__)
 
 service_plotter = "chia_plotter"
 
+# Destinations the services broadcast state changes to (see the _state_changed methods of the rpc apis).  Nobody
+# waits for an answer to those, so a broadcast to a subscriber that is not connected is dropped silently.
+broadcast_destinations = frozenset({"wallet_ui", "metrics", "unfinished_block_info"})
+
 
 class PlotState(str, Enum):
     SUBMITTED = "SUBMITTED"
@@ -415,11 +419,22 @@ class WebSocketServer:
         command = message["command"]
         destination = message["destination"]
         if destination != "daemon":
-            if destination in self.connections:
-                sockets = self.connections[destination]
+            # remove_connection() leaves an empty set behind for a service whose session was closed
+            sockets = self.connections.get(destination)
+            if sockets:
                 return dict_to_json_str(message), sockets
 
-            return None
+            if message["ack"] or destination in broadcast_destinations:
+                # A reply routed to a client that has gone, or a state change broadcast to a subscriber that is
+                # not connected: nothing is waiting for these, so there is nothing to say.
+                return None
+
+            # A request for a service that has no connection, for example one that is still starting or one
+            # whose session this daemon closed after missed heartbeats.  Answer the sender so it can retry or
+            # report the failure instead of waiting for a reply that will never come.
+            self.log.debug(f"Request '{command}' from {message['origin']} for {destination}, which is not connected")
+            response = {"success": False, "error": f"{destination} is not connected to the daemon"}
+            return format_response(message, response), {websocket}
 
         data = message["data"]
         commands_with_data = [

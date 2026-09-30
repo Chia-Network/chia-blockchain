@@ -197,23 +197,6 @@ class WalletPuzzleStore:
 
         return None
 
-    async def record_for_pubkey(self, pubkey: G1Element) -> DerivationRecord | None:
-        """
-        Returns derivation record for the given pubkey.
-        Returns None if not present.
-        """
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened "
-                "FROM derivation_paths "
-                "WHERE pubkey=?",
-                (bytes(pubkey).hex(),),
-            )
-
-        return None if row is None else self.row_to_record(row)
-
     async def index_for_puzzle_hash(self, puzzle_hash: bytes32) -> uint32 | None:
         """
         Returns the derivation path for the puzzle_hash.

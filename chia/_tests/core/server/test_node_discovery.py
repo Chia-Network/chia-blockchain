@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from logging import Logger
+import logging
 from pathlib import Path
 
 import pytest
@@ -30,7 +30,7 @@ async def test_enable_private_networks(
         peer_connect_interval=0,
         selected_network=chia_server.config["selected_network"],
         default_port=None,
-        log=Logger("node_discovery_tests"),
+        log=logging.getLogger("node_discovery_tests"),
     )
     assert discovery0 is not None
     assert discovery0.enable_private_networks is False
@@ -48,7 +48,7 @@ async def test_enable_private_networks(
         peer_connect_interval=0,
         selected_network="testnet7",
         default_port=None,
-        log=Logger("node_discovery_tests"),
+        log=logging.getLogger("node_discovery_tests"),
     )
     assert discovery0.default_port == 58444
 
@@ -62,7 +62,7 @@ async def test_enable_private_networks(
         peer_connect_interval=0,
         selected_network=chia_server.config["selected_network"],
         default_port=None,
-        log=Logger("node_discovery_tests"),
+        log=logging.getLogger("node_discovery_tests"),
     )
     assert discovery1 is not None
     assert discovery1.enable_private_networks is False
@@ -80,7 +80,7 @@ async def test_enable_private_networks(
         peer_connect_interval=0,
         selected_network=chia_server.config["selected_network"],
         default_port=None,
-        log=Logger("node_discovery_tests"),
+        log=logging.getLogger("node_discovery_tests"),
     )
     assert discovery2 is not None
     assert discovery2.enable_private_networks is True
@@ -107,7 +107,7 @@ class TestPeerHostValidation:
             peer_connect_interval=0,
             selected_network=chia_server.config["selected_network"],
             default_port=8444,
-            log=Logger("test_host_validation"),
+            log=logging.getLogger("test_host_validation"),
         )
         await discovery.initialize_address_manager()
         assert discovery.address_manager is not None
@@ -136,7 +136,7 @@ class TestPeerHostValidation:
             peer_connect_interval=0,
             selected_network=chia_server.config["selected_network"],
             default_port=8444,
-            log=Logger("test_host_validation"),
+            log=logging.getLogger("test_host_validation"),
         )
         await discovery.initialize_address_manager()
         assert discovery.address_manager is not None
@@ -162,7 +162,7 @@ class TestPeerHostValidation:
             peer_connect_interval=0,
             selected_network=chia_server.config["selected_network"],
             default_port=8444,
-            log=Logger("test_host_validation"),
+            log=logging.getLogger("test_host_validation"),
         )
         await discovery.initialize_address_manager()
         assert discovery.address_manager is not None
@@ -190,7 +190,7 @@ class TestPeerHostValidation:
             peer_connect_interval=0,
             selected_network=chia_server.config["selected_network"],
             default_port=8444,
-            log=Logger("test_host_validation"),
+            log=logging.getLogger("test_host_validation"),
         )
         await discovery.initialize_address_manager()
         assert discovery.address_manager is not None
@@ -220,7 +220,7 @@ class TestPeerHostValidation:
             peer_connect_interval=0,
             selected_network=chia_server.config["selected_network"],
             default_port=8444,
-            log=Logger("test_host_validation"),
+            log=logging.getLogger("test_host_validation"),
         )
         await discovery.initialize_address_manager()
 

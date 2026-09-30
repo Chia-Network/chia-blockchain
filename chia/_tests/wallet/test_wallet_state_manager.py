@@ -29,6 +29,7 @@ from chia.util.timing import adjusted_timeout
 from chia.wallet import wallet_state_manager as wsm_mod
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.nft_wallet import nft_wallet as nft_wallet_mod
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
@@ -198,9 +199,13 @@ async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
-    assert (None, None) == await wallet_state_manager.determine_coin_type(
-        peer, CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)), None
-    )
+    async with wallet_state_manager.new_sync_scope() as sync_scope:
+        assert (None, None) == await wallet_state_manager.determine_coin_type(
+            peer,
+            CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)),
+            None,
+            sync_scope,
+        )
 
 
 @pytest.mark.parametrize(
@@ -978,8 +983,8 @@ async def test_handle_nft_auto_add_limit(
     def fake_get_new_owner_did(_unft: UncurriedNFT, _solution: Program) -> bytes32:
         return foreign_did_id
 
-    monkeypatch.setattr(wsm_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
-    monkeypatch.setattr(wsm_mod, "get_new_owner_did", fake_get_new_owner_did)
+    monkeypatch.setattr(nft_wallet_mod, "get_metadata_and_phs", fake_get_metadata_and_phs)
+    monkeypatch.setattr(nft_wallet_mod, "get_new_owner_did", fake_get_new_owner_did)
 
     nft_data = _build_fake_nft_data(
         old_p2_puzhash=old_p2_puzhash,
@@ -991,7 +996,8 @@ async def test_handle_nft_auto_add_limit(
 
     before = nft_wallet_count()
     with caplog.at_level(logging.WARNING, logger=wsm.log.name):
-        result = await wsm.handle_nft(nft_data)
+        async with wsm.new_sync_scope() as sync_scope:
+            result = await NFTWallet.identify(wsm, nft_data, sync_scope)
     after = nft_wallet_count()
 
     if seed_matching_wallet:

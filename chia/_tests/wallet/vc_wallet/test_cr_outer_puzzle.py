@@ -5,6 +5,7 @@ from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
@@ -14,7 +15,7 @@ from chia.wallet.outer_puzzles import (
     solve_puzzle,
 )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import construct_cr_layer
 
 
@@ -24,7 +25,7 @@ def test_cat_outer_puzzle() -> None:
     ACS: Program = Program.to(1)
     cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, ACS)
     double_cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, cr_puzzle)
-    uncurried_cr_puzzle = uncurry_puzzle(double_cr_puzzle)
+    uncurried_cr_puzzle = UnknownPuzzle(known_program=double_cr_puzzle)
     cr_driver: PuzzleInfo | None = match_puzzle(uncurried_cr_puzzle)
 
     assert cr_driver is not None
@@ -45,7 +46,7 @@ def test_cat_outer_puzzle() -> None:
     coin_as_hex: str = (
         "0x" + coin.parent_coin_info.hex() + coin.puzzle_hash.hex() + uint64(coin.amount).stream_to_bytes().hex()
     )
-    inner_solution = Program.to([[51, ACS.get_tree_hash(), 100]])
+    inner_solution = ACSSolution(conditions=[CreateCoin(ACS.get_tree_hash(), uint64(100))]).program
     solution: Program = solve_puzzle(
         cr_driver,
         Solver(

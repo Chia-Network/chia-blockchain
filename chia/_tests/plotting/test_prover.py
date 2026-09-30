@@ -5,10 +5,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from chia_rs import PartialProof
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8
+from chia_rs.sized_ints import uint8, uint64
 
-from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, get_prover_from_bytes, get_prover_from_file
+from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality, get_prover_from_bytes, get_prover_from_file
 
 
 class TestProver:
@@ -83,6 +84,22 @@ class TestV1Prover:
         mock_disk_prover = MagicMock()
         prover = V1Prover(mock_disk_prover)
         assert prover.get_version() == PlotVersion.V1
+
+
+class TestActiveV2Prover:
+    def test_get_qualities_deduplicates_repeated_partial_proofs(self) -> None:
+        duplicate = PartialProof([uint64(1)] * 16)
+        distinct = PartialProof([uint64(2)] * 16)
+        inner_prover = MagicMock()
+        inner_prover.plot_id.return_value = bytes32(b"4" * 32)
+        inner_prover.get_strength.return_value = 2
+        inner_prover.get_qualities_for_challenge.return_value = [duplicate, duplicate, distinct, duplicate]
+        prover = V2Prover(inner_prover)
+
+        with patch.dict("chia._tests.util.plot_cache._qualities", {}, clear=True):
+            qualities = prover.get_qualities_for_challenge(bytes32(b"4" * 32))
+
+        assert qualities == [V2Quality(duplicate, uint8(2)), V2Quality(distinct, uint8(2))]
 
 
 class TestGetProverFromBytes:

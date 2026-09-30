@@ -10,7 +10,8 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.types.condition_opcodes import ConditionOpcode
+from chia.wallet.conditions import AggSigUnsafe, CreateCoinAnnouncement
+from chia.wallet.puzzles.puzzle_drivers import P2Conditions
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
@@ -143,15 +144,9 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
     :param pubkey: New wallet pubkey
     :return: Message puzzle
     """
-    puzzle = Program.to(
-        (
-            1,
-            [
-                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, recovering_coin_id],
-                [ConditionOpcode.AGG_SIG_UNSAFE, bytes(pubkey), newpuz],
-            ],
-        )
-    )
+    puzzle = P2Conditions(
+        conditions=[CreateCoinAnnouncement(msg=recovering_coin_id), AggSigUnsafe(pubkey=pubkey, msg=newpuz)]
+    ).program
     return puzzle
 
 

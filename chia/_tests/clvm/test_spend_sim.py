@@ -3,11 +3,13 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.types.condition_opcodes import ConditionOpcode
+from chia.wallet.conditions import CreateCoin
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution
 from chia.wallet.util.compute_additions import compute_additions
 
 
@@ -57,13 +59,13 @@ async def test_all_endpoints():
         acs_hint_spent = make_spend(
             coin,
             acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]]),
+            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), 2, [hint])]).program,
         )
         hinted_coin = compute_additions(acs_hint_spent)[0]
         acs_hint_unspent = make_spend(
             hinted_coin,
             acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 1, [hint]]]),
+            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), 1, [hint])]).program,
         )
         await sim_client.push_tx(SpendBundle([acs_hint_spent, acs_hint_unspent], G2Element()))
         await sim.farm_block(acs_ph)
@@ -79,7 +81,7 @@ async def test_all_endpoints():
         acs_hint_next_coin = make_spend(
             next_coin,
             acs,
-            Program.to([[ConditionOpcode.CREATE_COIN, acs.get_tree_hash(), 2, [hint]]]),
+            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), 2, [hint])]).program,
         )
         await sim_client.push_tx(SpendBundle([acs_hint_next_coin], G2Element()))
         await sim.farm_block(acs_ph)
@@ -145,7 +147,7 @@ async def test_all_endpoints():
                 make_spend(
                     spendable_coin,
                     Program.to(1),
-                    Program.to([[51, puzzle_hash, 1]]),
+                    ACSSolution(conditions=[CreateCoin(bytes32(puzzle_hash), uint64(1))]).program,
                 )
             ],
             G2Element(),

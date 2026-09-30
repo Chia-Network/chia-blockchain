@@ -149,6 +149,29 @@ def _load_config_maybe_locked(
     raise RuntimeError("Was not able to read config file successfully")
 
 
+def apply_config_cli_overrides(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Overrides any properties of the given (already loaded) config section
+    using command line arguments. Nested properties can be used on the
+    command line with ".", for example --farmer_peer.host. Does not
+    support lists.
+    """
+    flattened_props = flatten_properties(config)
+    parser = argparse.ArgumentParser()
+
+    for prop_name, value in flattened_props.items():
+        if type(value) is list:
+            continue
+        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore[type-arg]
+        parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
+
+    for key, value in vars(parser.parse_args()).items():
+        if value is not None:
+            flattened_props[key] = value
+
+    return unflatten_properties(flattened_props)
+
+
 def load_config_cli(
     root_path: Path,
     filename: str,
@@ -158,25 +181,9 @@ def load_config_cli(
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
-    Nested properties in the config file can be used in the command line with ".",
-    for example --farmer_peer.host. Does not support lists.
     """
     config = load_config(root_path, filename, sub_config, fill_missing_services=fill_missing_services)
-
-    flattened_props = flatten_properties(config)
-    parser = argparse.ArgumentParser()
-
-    for prop_name, value in flattened_props.items():
-        if type(value) is list:
-            continue
-        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore
-        parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
-
-    for key, value in vars(parser.parse_args()).items():
-        if value is not None:
-            flattened_props[key] = value
-
-    return unflatten_properties(flattened_props)
+    return apply_config_cli_overrides(config)
 
 
 def flatten_properties(config: dict[str, Any]) -> dict[str, Any]:

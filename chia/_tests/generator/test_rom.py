@@ -60,7 +60,7 @@ def to_sp(sexp: bytes) -> SerializedProgram:
 
 def block_generator() -> BlockGenerator:
     generator_list = [FIRST_GENERATOR, SECOND_GENERATOR]
-    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list)
+    return BlockGenerator(COMPILED_GENERATOR_CODE, generator_list)
 
 
 EXPECTED_ABBREVIATED_COST = 108379
@@ -77,7 +77,7 @@ EXPECTED_OUTPUT = (
 def run_generator(self: BlockGenerator) -> tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([self.generator_refs])
-    return run_with_cost(GENERATOR_MOD, MAX_COST, [self.program, args])
+    return run_with_cost(GENERATOR_MOD, MAX_COST, [Program.from_bytes(self.program), args])
 
 
 def as_atom_list(prg: CLVMStorage) -> list[bytes]:
@@ -134,6 +134,7 @@ class TestROM:
             len(bytes(gen.program)) * COST_PER_BYTE
         )
         assert npc_result.conds is not None
+        assert len(npc_result.conds.spends) == 1
 
         spend = SpendConditions(
             coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
@@ -159,6 +160,8 @@ class TestROM:
             # execution cost, just in run_block_generator2()
             execution_cost=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 44,
             condition_cost=1800000,
+            atom_count=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 1,
+            pair_count=0,
             fingerprint=b"",
         )
 

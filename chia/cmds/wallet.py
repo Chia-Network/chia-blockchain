@@ -10,12 +10,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.cmd_classes import ChiaCliContext, argument, chia_command, get_chia_command_metadata, option
-from chia.cmds.cmd_helpers import (
-    NeedsWalletRPC,
-    TransactionEndpoint,
-    TransactionEndpointWithTimelocks,
-    transaction_endpoint_runner,
-)
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionEndpointWithTimelocks, transaction_endpoint_runner
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
     AddressParamType,
@@ -119,7 +114,7 @@ class GetTransactionsCMD:
     short_help="Send chia or other assets to another wallet",
     help="Send chia or other assets to another wallet",
 )
-class SendCMD(TransactionEndpoint):
+class SendCMD(TransactionEndpointWithTimelocks):
     wallet_id: int = option(
         "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
     )
@@ -210,7 +205,7 @@ class GetAddressCMD:
     help="Claim or revert a Clawback transaction. "
     "The wallet will automatically detect if you are able to revert or claim.",
 )
-class ClawbackCMD(TransactionEndpoint):
+class ClawbackCMD(TransactionEndpointWithTimelocks):
     fee: uint64 = option(
         "-m",
         "--fee",
@@ -507,7 +502,7 @@ class GetOffersCMD:
 @chia_command(
     group=wallet_cmd, name="take_offer", short_help="Examine or take an offer", help="Examine or take an offer"
 )
-class TakeOfferCMD(TransactionEndpoint):
+class TakeOfferCMD(TransactionEndpointWithTimelocks):
     fee: uint64 = option(
         "-m",
         "--fee",
@@ -545,7 +540,7 @@ class TakeOfferCMD(TransactionEndpoint):
 @chia_command(
     group=wallet_cmd, name="cancel_offer", short_help="Cancel an existing offer", help="Cancel an existing offer"
 )
-class CancelOfferCMD(TransactionEndpoint):
+class CancelOfferCMD(TransactionEndpointWithTimelocks):
     fee: uint64 = option(
         "-m",
         "--fee",
@@ -1174,7 +1169,7 @@ def notification_cmd(ctx: click.Context) -> None:
     short_help="Send a notification to the owner of an address",
     help="Send a notification to the owner of an address",
 )
-class SendNotificationCMD(TransactionEndpoint):
+class SendNotificationCMD(TransactionEndpointWithTimelocks):
     to_address: CliAddress = option(
         "-t",
         "--to-address",

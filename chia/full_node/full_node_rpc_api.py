@@ -32,6 +32,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -522,7 +523,7 @@ class FullNodeRpcApi:
         spends = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block,
             self.service.constants,
-            block_generator.program,
+            SerializedProgram.from_bytes(block_generator.program),
             block_generator.generator_refs,
             flags,
             nice=(5,),
@@ -552,7 +553,7 @@ class FullNodeRpcApi:
         spends_with_conditions = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block_with_conditions,
             self.service.constants,
-            block_generator.program,
+            SerializedProgram.from_bytes(block_generator.program),
             block_generator.generator_refs,
             flags,
             nice=(5,),
@@ -881,7 +882,7 @@ class FullNodeRpcApi:
         try:
             flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=block)
             puzzle, solution = get_puzzle_and_solution_for_coin(
-                block_generator.program,
+                SerializedProgram.from_bytes(block_generator.program),
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
@@ -966,7 +967,8 @@ class FullNodeRpcApi:
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
     async def create_block_generator(self, _: dict[str, Any]) -> EndpointResult:
-        gen = NewBlockGenerator()
+        # placeholder for "no peak yet" (empty CLVM program)
+        gen = NewBlockGenerator(b"\x80")
 
         # Grab best transactions from Mempool for given tip target
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):

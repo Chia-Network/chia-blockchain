@@ -15,12 +15,14 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
+    TAILCondition,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.conditions import AssertPuzzleAnnouncement, ConditionValidTimes, CreateCoin
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, NilSolution, UnknownPuzzle, UnknownSolution
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -67,7 +69,15 @@ async def generate_coins(
                                 Coin(parent_coin.name(), cat_puzzle_hash, uint64(amount)),
                                 tail_hash,
                                 acs,
-                                Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
+                                ACSSolution(
+                                    conditions=[
+                                        CreateCoin(acs_ph, uint64(amount)),
+                                        TAILCondition(
+                                            puzzle=UnknownPuzzle(known_program=tail),
+                                            solution=UnknownSolution(program=NilSolution().program),
+                                        ),
+                                    ]
+                                ).program,
                             )
                         ],
                     )
@@ -77,7 +87,14 @@ async def generate_coins(
 
     # This bundle creates all of the initial coins
     parent_bundle = WalletSpendBundle(
-        [make_spend(parent_coin, acs, Program.to([[51, p.puzzle_hash, p.amount] for p in payments]))], G2Element()
+        [
+            make_spend(
+                parent_coin,
+                acs,
+                ACSSolution(conditions=[CreateCoin(p.puzzle_hash, uint64(p.amount)) for p in payments]).program,
+            )
+        ],
+        G2Element(),
     )
 
     # Then we aggregate it with all of the eve spends

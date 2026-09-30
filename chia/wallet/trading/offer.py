@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import BinaryIO
 
@@ -35,7 +36,7 @@ from chia.wallet.outer_puzzles import (
     solve_puzzle,
 )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
@@ -48,6 +49,7 @@ OfferSpecification = dict[int | bytes32, int]
 
 OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
+log = logging.getLogger(__name__)
 
 
 def detect_dependent_coin(
@@ -177,7 +179,8 @@ class Offer:
                 if e.args and e.args[0] == "cost exceeded or below zero":
                     raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend") from e
                 continue
-            except Exception:
+            except Exception as e:
+                log.debug("Failed to compute additions for coin %s: %s", cs.coin.name(), e)
                 continue
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
@@ -194,7 +197,8 @@ class Offer:
                     cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
-                except Exception:  # pragma: no cover
+                except Exception as e:  # pragma: no cover
+                    log.debug("Failed to compute conditions for coin %s: %s", cs.coin.name(), e)
                     continue
                 if max_cost < 0:  # pragma: no cover
                     raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend")
@@ -248,7 +252,7 @@ class Offer:
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: list[Coin] = []
 
-            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
+            parent_puzzle: UnknownPuzzle = UnknownPuzzle(known_program=parent_spend.puzzle_reveal)
             parent_solution = Program.from_serialized(parent_spend.solution)
             additions: list[Coin] = self._additions[parent_spend.coin]
 
@@ -638,7 +642,7 @@ class Offer:
         driver_dict: dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: list[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
+            driver = match_puzzle(UnknownPuzzle(known_program=coin_spend.puzzle_reveal))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None

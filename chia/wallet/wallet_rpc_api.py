@@ -64,15 +64,12 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
-from chia.wallet.singleton import (
-    SINGLETON_LAUNCHER_PUZZLE_HASH,
-)
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_valid_address
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
@@ -253,8 +250,6 @@ from chia.wallet.wallet_request_types import (
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
     NFTGetWalletsWithDIDsResponse,
-    NFTMintBulk,
-    NFTMintBulkResponse,
     NFTMintNFTRequest,
     NFTMintNFTResponse,
     NFTSetDIDBulk,
@@ -267,6 +262,10 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     NFTTransferNFTResponse,
     NFTWalletWithDID,
+    PlotNFTMelt,
+    PlotNFTMeltResponse,
+    PlotNFTTransfer,
+    PlotNFTTransferResponse,
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
@@ -327,6 +326,7 @@ from chia.wallet.wallet_request_types import (
 from chia.wallet.wallet_rpc_metadata import WALLET_RPC_ENDPOINT_METADATA, WalletRpcMetadata
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import SyncStatus
+from chia.wallet.wallet_sync_scope import WebSocketEvent
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -537,7 +537,7 @@ def tx_endpoint(
                     await self.service.wallet_state_manager.trade_manager.trade_store.delete_trade_record(
                         old_trade_record.trade_id
                     )
-                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer)
+                    await self.service.wallet_state_manager.trade_manager.save_trade(new_trade, new_offer, action_scope)
                 for tx in await self.service.wallet_state_manager.tx_store.get_transactions_by_trade_id(
                     old_trade_record.trade_id
                 ):
@@ -2022,7 +2022,9 @@ class WalletRpcApi:
                                 "also": {
                                     **info.info["also"],
                                     "flags": ProofsChecker.from_program(
-                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
+                                        UnknownPuzzle(
+                                            known_program=Program(assemble(info.info["also"]["proofs_checker"]))
+                                        )
                                     ).flags,
                                 },
                             }
@@ -2256,12 +2258,14 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(request.coin_id)
 
-        await self.service.wallet_state_manager.find_lost_did(
-            coin_id=coin_id,
-            override_recovery_list_hash=request.recovery_list_hash,
-            override_num_verification=request.num_verification,
-            override_metadata=request.metadata,
-        )
+        async with self.service.wallet_state_manager.new_sync_scope() as sync_scope:
+            await self.service.wallet_state_manager.find_lost_did(
+                coin_id=coin_id,
+                sync_scope=sync_scope,
+                override_recovery_list_hash=request.recovery_list_hash,
+                override_num_verification=request.num_verification,
+                override_metadata=request.metadata,
+            )
 
         return DIDFindLostDIDResponse(latest_coin_id=coin_id)
 
@@ -2540,7 +2544,9 @@ class WalletRpcApi:
         for id in coin_ids:
             await self.service.wallet_state_manager.nft_store.update_pending_transaction(id, True)
         for wallet_id in nft_dict.keys():
-            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            action_scope.dispatch_websocket_event(
+                self.service.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=wallet_id)
+            )
 
         async with action_scope.use() as interface:
             return NFTSetDIDBulkResponse(
@@ -2604,7 +2610,9 @@ class WalletRpcApi:
         for id in coin_ids:
             await self.service.wallet_state_manager.nft_store.update_pending_transaction(id, True)
         for wallet_id in nft_dict.keys():
-            self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            action_scope.dispatch_websocket_event(
+                self.service.wallet_state_manager, WebSocketEvent(name="nft_coin_did_set", wallet_id=wallet_id)
+            )
         async with action_scope.use() as interface:
             return NFTTransferBulkResponse(
                 unsigned_transactions=[],
@@ -2746,96 +2754,6 @@ class WalletRpcApi:
                 },
                 {asset.asset: asset.amount for asset in request.fungible_assets},
             )
-        )
-
-    async def nft_mint_bulk(
-        self,
-        request: NFTMintBulk,
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> NFTMintBulkResponse:
-        if action_scope.config.push:
-            raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
-        nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
-        if request.royalty_address in {None, ""}:
-            royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
-        else:
-            assert request.royalty_address is not None  # hello mypy
-            royalty_puzhash = decode_puzzle_hash(request.royalty_address)
-        metadata_list = []
-        for meta in request.metadata_list:
-            nft_metadata = [
-                ("u", meta.uris),
-                ("h", meta.hash),
-                ("mu", meta.meta_uris),
-                ("lu", meta.license_uris),
-                ("sn", meta.edition_number),
-                ("st", meta.edition_total),
-            ]
-            if meta.meta_hash is not None:
-                nft_metadata.append(("mh", meta.meta_hash))
-            if meta.license_hash is not None:
-                nft_metadata.append(("lh", meta.license_hash))
-            metadata_program = Program.to(nft_metadata)
-            metadata_dict = {
-                "program": metadata_program,
-                "royalty_pc": request.royalty_percentage,
-                "royalty_ph": royalty_puzhash,
-            }
-            metadata_list.append(metadata_dict)
-        target_list = [decode_puzzle_hash(target) for target in request.target_list]
-        if request.xch_change_target is not None:
-            if request.xch_change_target.startswith(AddressType.XCH.hrp(self.service.config)):
-                xch_change_ph = decode_puzzle_hash(request.xch_change_target)
-            else:
-                xch_change_ph = bytes32.from_hexstr(request.xch_change_target)
-        else:
-            xch_change_ph = None
-
-        if request.mint_from_did:
-            await nft_wallet.mint_from_did(
-                metadata_list,
-                mint_number_start=request.mint_number_start,
-                mint_total=request.mint_total,
-                target_list=target_list,
-                xch_coins=set(request.xch_coins) if request.xch_coins is not None else None,
-                xch_change_ph=xch_change_ph,
-                new_innerpuzhash=request.new_innerpuzhash,
-                new_p2_puzhash=request.new_p2_puzhash,
-                did_coin=request.did_coin,
-                did_lineage_parent=request.did_lineage_parent,
-                fee=request.fee,
-                action_scope=action_scope,
-                extra_conditions=extra_conditions,
-            )
-        else:
-            await nft_wallet.mint_from_xch(
-                metadata_list,
-                mint_number_start=request.mint_number_start,
-                mint_total=request.mint_total,
-                target_list=target_list,
-                xch_coins=set(request.xch_coins) if request.xch_coins is not None else None,
-                xch_change_ph=xch_change_ph,
-                fee=request.fee,
-                action_scope=action_scope,
-                extra_conditions=extra_conditions,
-            )
-        async with action_scope.use() as interface:
-            sb = WalletSpendBundle.aggregate(
-                [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
-                + [sb for sb in interface.side_effects.extra_spends]
-            )
-        nft_id_list = []
-        for cs in sb.coin_spends:
-            if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
-                nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
-
-        # tx_endpoint will take care of the default values here
-        return NFTMintBulkResponse(
-            unsigned_transactions=[],
-            transactions=[],
-            spend_bundle=WalletSpendBundle([], G2Element()),
-            nft_id_list=nft_id_list,
         )
 
     async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
@@ -3147,6 +3065,41 @@ class WalletRpcApi:
             state=state,
             unconfirmed_transactions=unconfirmed_transactions,
         )
+
+    async def plotnft_transfer(
+        self,
+        request: PlotNFTTransfer,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> PlotNFTTransferResponse:
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+
+        if not isinstance(wallet, PlotNFT2Wallet):
+            raise ValueError("`plotnft_transfer` called on a non-pooling v2 wallet")
+
+        await wallet.transfer_plotnft(
+            target_wallet_fingerprint=request.target_wallet_fingerprint,
+            action_scope=action_scope,
+            fee=request.fee,
+            extra_conditions=extra_conditions,
+        )
+
+        return PlotNFTTransferResponse(unsigned_transactions=[], transactions=[])
+
+    async def plotnft_melt(
+        self,
+        request: PlotNFTMelt,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> PlotNFTMeltResponse:
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+
+        if not isinstance(wallet, PlotNFT2Wallet):
+            raise ValueError("`plotnft_melt` called on a non-pooling v2 wallet")
+
+        await wallet.melt_plotnft(action_scope=action_scope, fee=request.fee, extra_conditions=extra_conditions)
+
+        return PlotNFTMeltResponse(unsigned_transactions=[], transactions=[])
 
     ##########################################################################################
     # DataLayer Wallet

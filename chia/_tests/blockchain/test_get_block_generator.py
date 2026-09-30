@@ -70,4 +70,4 @@ async def test_no_generator() -> None:
 async def test_no_refs() -> None:
     br = BR(bytes32.zeros, DUMMY_PROGRAM, [])
     bg = await get_block_generator(never_called, br)
-    assert bg == BlockGenerator(DUMMY_PROGRAM, [])
+    assert bg == BlockGenerator(bytes(DUMMY_PROGRAM), [])

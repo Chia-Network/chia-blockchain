@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import random
-from typing import Any
 
 from chia_rs.sized_bytes import bytes32
-from clvm.SExp import CastableType
+from chia_rs.sized_ints import uint64
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    TransferProgramCondition,
     construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
@@ -25,6 +26,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 )
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.wallet.puzzles.puzzle_drivers import ACSSolution, UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH as LAUNCHER_PUZZLE_HASH,
 )
@@ -35,7 +37,6 @@ from chia.wallet.singleton import (
     SINGLETON_TOP_LAYER_MOD_HASH,
 )
 from chia.wallet.trading.offer import OFFER_MOD_HASH
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 
@@ -60,7 +61,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
         NFT_STATE_LAYER_MOD.get_tree_hash(), metadata, metadata_updater_hash, ownership_puz
     )
     nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, metadata_puz)
-    nft_info = match_puzzle(uncurry_puzzle(nft_puz))
+    nft_info = match_puzzle(UnknownPuzzle(known_program=nft_puz))
     assert nft_info is not None
     also = nft_info.also()
     assert also is not None
@@ -77,8 +78,13 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     taker_p2_ph = taker_p2_puz.get_tree_hash()
 
     # make nft solution
-    fake_lineage_proof = Program.to([bytes32.random(seeded_random), maker_p2_ph, 1])
-    transfer_conditions = Program.to([[51, taker_p2_ph, 1, [taker_p2_ph]], [-10, [], [], []]])
+    fake_lineage_proof = Program.to([bytes32.random(seeded_random), maker_p2_ph, uint64(1)])
+    transfer_conditions = ACSSolution(
+        conditions=[
+            CreateCoin(taker_p2_ph, uint64(1), [taker_p2_ph]),
+            TransferProgramCondition(trade_prices_list={}),
+        ]
+    ).program
 
     ownership_sol = Program.to([solution_for_conditions(transfer_conditions)])
 
@@ -112,11 +118,16 @@ def make_a_new_solution() -> tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list: list[list[CastableType]] = [[200, OFFER_MOD_HASH]]
-    condition_list: list[list[CastableType]] = [
-        [51, puzhash, 1, [puzhash]],
-        [-10, new_did, trade_prices_list, new_did_inner_hash],
-    ]
+    condition_list = ACSSolution(
+        conditions=[
+            CreateCoin(puzhash, uint64(1), [puzhash]),
+            TransferProgramCondition(
+                trade_prices_list={bytes32(OFFER_MOD_HASH): 200},
+                new_owner=bytes32(new_did),
+                new_owner_inner_puzzle_hash=bytes32(new_did_inner_hash),
+            ),
+        ]
+    ).program
     solution = Program.to([[], [], [[solution_for_conditions(condition_list)]]])
     return p2_puzzle, solution
 
@@ -181,7 +192,7 @@ def test_create_ownership_layer_transfer_solution() -> None:
     new_puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list: list[list[Any]] = [[200, OFFER_MOD_HASH]]
+    trade_prices_list: list[tuple[int, bytes32]] = [(200, OFFER_MOD_HASH)]
 
     solution = create_ownership_layer_transfer_solution(new_did, new_did_inner_hash, trade_prices_list, new_puzhash)
 

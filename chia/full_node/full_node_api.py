@@ -72,6 +72,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -79,6 +80,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore, LimitedSemaphoreFullError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.network import is_in_network, is_localhost
 from chia.util.task_referencer import create_referenced_task
 
@@ -144,12 +146,17 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             if peer_id not in full_node.server.all_connections:
                 continue
             random_peer = full_node.server.all_connections[peer_id]
-            try:
+            response = None
+            with log_exceptions(
+                full_node.log,
+                consume=True,
+                level=logging.DEBUG,
+                show_traceback=False,
+                message=f"Failed to fetch tx {transaction_id} from {random_peer.get_peer_logging()}",
+            ):
                 response = await random_peer.call_api(
                     FullNodeAPI.request_transaction, full_node_protocol.RequestTransaction(transaction_id), timeout=5
                 )
-            except Exception:
-                continue
             if not isinstance(response, full_node_protocol.RespondTransaction):
                 continue
             entry = TransactionQueueEntry(
@@ -347,8 +354,10 @@ class FullNodeAPI:
             return None
         return None
 
-    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
-    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction], peer_required=True)
+    async def request_transaction(
+        self, request: full_node_protocol.RequestTransaction, peer: WSChiaConnection
+    ) -> Message | None:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -357,6 +366,12 @@ class FullNodeAPI:
         if spend_bundle is None:
             return None
 
+        if not is_localhost(peer.peer_info.host) and not is_in_network(
+            peer.peer_info.host, self.full_node.server.exempt_peer_networks
+        ):
+            # Pace successful replies. Coupled with a rate limits v3 receive
+            # window of 3, 0.5s per fetch is ~360 replies per minute.
+            await asyncio.sleep(0.5)
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
@@ -385,6 +400,7 @@ class FullNodeAPI:
                 f"Received unsolicited transaction {spend_name} from peer "
                 f"{peer.peer_node_id} / {peer.peer_info.host} version {peer.version}"
             )
+            await peer.close(RATE_LIMITER_BAN_SECONDS)
             return None
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
@@ -1678,7 +1694,7 @@ class FullNodeAPI:
         try:
             puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
-                block_generator.program,
+                SerializedProgram.from_bytes(block_generator.program),
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,

@@ -17,6 +17,8 @@ from chia.util.errors import Err
 class DedupCoinSpend:
     solution: SerializedProgram
     cost: uint64
+    atom_count: int = 0
+    pair_count: int = 0
 
 
 def set_next_singleton_version(
@@ -145,7 +147,7 @@ class IdenticalSpendDedup:
 
     def get_deduplication_info(
         self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
-    ) -> tuple[list[CoinSpend], uint64, list[Coin], dict[bytes32, DedupCoinSpend]]:
+    ) -> tuple[list[CoinSpend], uint64, int, int, list[Coin], dict[bytes32, DedupCoinSpend]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
         provides the caller with the necessary information that allows it to perform
@@ -163,6 +165,8 @@ class IdenticalSpendDedup:
         Returns:
             list[CoinSpend]: list of unique coin spends in this mempool item
             uint64: the cost we're saving by deduplicating eligible coins
+            int: the atoms we're saving by deduplicating eligible coins
+            int: the pairs we're saving by deduplicating eligible coins
             list[Coin]: list of unique additions in this mempool item
             dict[bytes32, DedupCoinSpend]: the deduplication state update to
                 commit via `update_deduplication_spends()` if the item ends up
@@ -174,6 +178,8 @@ class IdenticalSpendDedup:
             one we're already deduplicating on.
         """
         cost_saving = 0
+        atoms_saving = 0
+        pairs_saving = 0
         unique_coin_spends: list[CoinSpend] = []
         unique_additions: list[Coin] = []
         # Map of coin ID to deduplication information
@@ -189,7 +195,12 @@ class IdenticalSpendDedup:
             if dedup_coin_spend is None:
                 # We didn't process an item with this coin before. If we end up including
                 # this item, add this pair to deduplication_spends
-                new_dedup_spends[coin_id] = DedupCoinSpend(spend_data.coin_spend.solution, spend_data.cost)
+                new_dedup_spends[coin_id] = DedupCoinSpend(
+                    spend_data.coin_spend.solution,
+                    spend_data.cost,
+                    spend_data.atom_count,
+                    spend_data.pair_count,
+                )
                 unique_coin_spends.append(spend_data.coin_spend)
                 unique_additions.extend(spend_data.additions)
                 continue
@@ -199,7 +210,16 @@ class IdenticalSpendDedup:
                 # different solutions are rejected in check_removals().
                 raise SkipDedup("Solution is different from what we're deduplicating on")
             cost_saving += dedup_coin_spend.cost
-        return unique_coin_spends, uint64(cost_saving), unique_additions, new_dedup_spends
+            atoms_saving += spend_data.atom_count
+            pairs_saving += spend_data.pair_count
+        return (
+            unique_coin_spends,
+            uint64(cost_saving),
+            atoms_saving,
+            pairs_saving,
+            unique_additions,
+            new_dedup_spends,
+        )
 
     def update_deduplication_spends(self, new_dedup_spends: dict[bytes32, DedupCoinSpend]) -> None:
         self.deduplication_spends.update(new_dedup_spends)
@@ -286,6 +306,8 @@ class SingletonFastForward:
                     additions=patched_additions,
                     cost=spend_data.cost,
                     latest_singleton_lineage=ff_state_update.get(spend_data.coin_spend.coin.puzzle_hash),
+                    atom_count=spend_data.atom_count,
+                    pair_count=spend_data.pair_count,
                 )
                 # Update the list of coins spends that will make the new fast
                 # forward spend bundle
@@ -309,6 +331,8 @@ class SingletonFastForward:
                 additions=patched_additions,
                 cost=spend_data.cost,
                 latest_singleton_lineage=ff_state_update.get(spend_data.coin_spend.coin.puzzle_hash),
+                atom_count=spend_data.atom_count,
+                pair_count=spend_data.pair_count,
             )
             # Update the list of coins spends that make the new fast forward bundle
             new_coin_spends.append(new_coin_spend)

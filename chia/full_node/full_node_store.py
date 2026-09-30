@@ -371,11 +371,6 @@ class FullNodeStore:
         for ph in del_partial:
             del self._unfinished_blocks[ph]
 
-    # TODO: this should be removed. It's only used by a test
-    def remove_unfinished_block(self, partial_reward_hash: bytes32) -> None:
-        if partial_reward_hash in self._unfinished_blocks:
-            del self._unfinished_blocks[partial_reward_hash]
-
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
         self.future_ip_cache.append(ch, infusion_point)
@@ -405,9 +400,6 @@ class FullNodeStore:
         if not self.future_sp_cache.append(challenge, (index, signage_point)):
             return None
         log.info(f"Don't have rc hash {challenge.hex()}. caching signage point {index}.")
-
-    def get_future_ip(self, rc_challenge_hash: bytes32) -> list[timelord_protocol.NewInfusionPointVDF]:
-        return self.future_ip_cache.get(rc_challenge_hash, [])
 
     def clear_old_cache_entries(self) -> None:
         self.future_ip_cache.evict_expired()

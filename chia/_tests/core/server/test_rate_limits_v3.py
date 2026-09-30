@@ -271,6 +271,7 @@ async def test_unsolicited_unlimited_v3_messages(
         ProtocolMessageTypes.respond_proof_of_weight: network_protocol_data.respond_proof_of_weight,
         ProtocolMessageTypes.respond_puzzle_solution: network_protocol_data.respond_puzzle_solution,
         ProtocolMessageTypes.reject_puzzle_solution: network_protocol_data.reject_puzzle_solution,
+        ProtocolMessageTypes.respond_transaction: network_protocol_data.respond_transaction,
     }
     expected_unlimited = {msg_type for msg_type, settings in rate_limits_v3.items() if settings.window_size is None}
     current_unlimited = set(unsolicited_messages)

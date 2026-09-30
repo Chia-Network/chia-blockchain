@@ -68,6 +68,8 @@ rate_limits_v3: dict[ProtocolMessageTypes, RLSettingsV3] = {
     ProtocolMessageTypes.request_puzzle_solution: RLSettingsV3(window_size=2),
     ProtocolMessageTypes.respond_puzzle_solution: RLSettingsV3(window_size=None),
     ProtocolMessageTypes.reject_puzzle_solution: RLSettingsV3(window_size=None),
+    ProtocolMessageTypes.request_transaction: RLSettingsV3(window_size=3),
+    ProtocolMessageTypes.respond_transaction: RLSettingsV3(window_size=None),
 }
 
 # Maximum number of window sizes we allow to be set by the

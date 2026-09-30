@@ -721,23 +721,6 @@ class DataStore:
 
         return (kid, vid)
 
-    async def get_terminal_node_by_hash(
-        self,
-        node_hash: bytes32,
-        store_id: bytes32,
-        root_hash: bytes32 | Unspecified = unspecified,
-    ) -> TerminalNode:
-        resolved_root_hash: bytes32 | None
-        if root_hash is unspecified:
-            root = await self.get_tree_root(store_id=store_id)
-            resolved_root_hash = root.node_hash
-        else:
-            resolved_root_hash = root_hash
-
-        merkle_blob = await self.get_merkle_blob(store_id=store_id, root_hash=resolved_root_hash)
-        kid, vid = merkle_blob.get_node_by_hash(node_hash)
-        return await self.get_terminal_node(kid, vid, store_id)
-
     async def get_terminal_nodes_by_hashes(
         self,
         node_hashes: list[bytes32],

@@ -971,7 +971,6 @@ def _validate_sub_epoch_segments(
         if len(segments) > max_segments:
             log.error(f"sub_epoch {sub_epoch_n} has {len(segments)} segments, maximum allowed is {max_segments}")
             return None
-        prev_ssi = curr_ssi
         curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, sub_epoch_n, summaries)
         log.debug(f"validate sub epoch {sub_epoch_n}")
         # recreate RewardChainSubSlot for next ses rc_hash
@@ -996,7 +995,6 @@ def _validate_sub_epoch_segments(
                 constants,
                 segment,
                 curr_ssi,
-                prev_ssi,
                 curr_difficulty,
                 prev_ses,
                 idx == 0,
@@ -1019,7 +1017,6 @@ def _validate_segment(
     constants: ConsensusConstants,
     segment: SubEpochChallengeSegment,
     curr_ssi: uint64,
-    prev_ssi: uint64,
     curr_difficulty: uint64,
     ses: SubEpochSummary | None,
     first_segment_in_se: bool,
@@ -1797,8 +1794,8 @@ async def validate_weight_proof_inner(
             # give other stuff a turn
             await asyncio.sleep(0)
 
-        for vdf_task in asyncio.as_completed(fs=vdf_tasks):
-            validated = await vdf_task
+        for completed in asyncio.as_completed(fs=vdf_tasks):
+            validated = await completed
             if not validated:
                 return False, []
 

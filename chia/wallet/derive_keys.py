@@ -73,10 +73,6 @@ def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 3, 0])
 
 
-def master_sk_to_backup_sk(master: PrivateKey) -> PrivateKey:
-    return _derive_path(master, [12381, 8444, 4, 0])
-
-
 def master_sk_to_singleton_owner_sk(master: PrivateKey, pool_wallet_index: uint32) -> PrivateKey:
     """
     This key controls a singleton on the blockchain, allowing for dynamic pooling (changing pools)

@@ -3,9 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from chia_rs import (
-    EndOfSubSlotBundle,
     HeaderBlock,
-    RewardChainBlock,
     SubEpochChallengeSegment,
     SubEpochData,
 )
@@ -28,13 +26,6 @@ from chia.util.streamable import Streamable, streamable
 # this is used only for serialization to database
 class RecentChainData(Streamable):
     recent_chain_data: list[HeaderBlock]
-
-
-@streamable
-@dataclass(frozen=True)
-class ProofBlockHeader(Streamable):
-    finished_sub_slots: list[EndOfSubSlotBundle]
-    reward_chain_block: RewardChainBlock
 
 
 @streamable

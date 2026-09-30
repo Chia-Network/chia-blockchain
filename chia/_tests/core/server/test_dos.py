@@ -145,16 +145,19 @@ class TestDos:
             large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
             with monkeypatch.context() as monkey_patch_context:
                 monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
-                await ws.send_bytes(large_msg)
-
-                response = await ws.receive()
+                # aiohttp rejects the oversized frame from its header before
+                # reading the payload, so the server tears down the socket
+                # while the ~60MB message is still in flight. The resulting TCP
+                # reset can raise ConnectionError on send and/or discard the
+                # server's close frame, leaving the client with an abrupt
+                # CLOSED instead of a clean CLOSE carrying MESSAGE_TOO_BIG.
+                try:
+                    await ws.send_bytes(large_msg)
+                    response = await ws.receive()
+                except ConnectionError:  # pragma: no cover
+                    await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+                    return
                 await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
-
-            print(response)
-            # aiohttp rejects the oversized frame from its header before reading the payload, so the
-            # server tears down the socket while the ~60MB message is still in flight. The resulting
-            # TCP reset can discard the server's close frame, leaving the client with an abrupt CLOSED
-            # instead of a clean CLOSE carrying the MESSAGE_TOO_BIG code.
             assert response.type in {WSMsgType.CLOSE, WSMsgType.CLOSED}
             if response.type == WSMsgType.CLOSE:
                 assert response.data == WSCloseCode.MESSAGE_TOO_BIG

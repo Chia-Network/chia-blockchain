@@ -10,6 +10,7 @@ import random
 import sqlite3
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -57,7 +58,6 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_generator_info import (
     block_has_transactions_generator,
     get_transactions_generator_bytes,
-    get_transactions_generator_program,
 )
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
@@ -268,9 +268,7 @@ async def test_block_compression(
     await time_out_assert(30, check_transaction_confirmed, True, tr)
 
     # Confirm generator is not compressed
-    program: SerializedProgram | None = get_transactions_generator_program(
-        (await full_node_1.get_all_full_blocks())[-1]
-    )
+    program: bytes | None = get_transactions_generator_bytes((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -299,7 +297,7 @@ async def test_block_compression(
     await time_out_assert(10, check_transaction_confirmed, True, tr)
 
     # Confirm generator is compressed
-    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
+    program = get_transactions_generator_bytes((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
     # since the hard fork, we don't use this compression mechanism
@@ -380,7 +378,7 @@ async def test_block_compression(
     await time_out_assert(10, check_transaction_confirmed, True, tr)
 
     # Confirm generator is compressed
-    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
+    program = get_transactions_generator_bytes((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
     # since the hard fork, we don't use this compression mechanism
@@ -433,7 +431,7 @@ async def test_block_compression(
 
     # Confirm generator is not compressed, #CAT creation has a cat spend
     all_blocks = await full_node_1.get_all_full_blocks()
-    program = get_transactions_generator_program(all_blocks[-1])
+    program = get_transactions_generator_bytes(all_blocks[-1])
     assert program is not None
     assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
@@ -480,7 +478,7 @@ async def test_block_compression(
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
     # Confirm generator is not compressed
-    program = get_transactions_generator_program((await full_node_1.get_all_full_blocks())[-1])
+    program = get_transactions_generator_bytes((await full_node_1.get_all_full_blocks())[-1])
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -827,7 +825,7 @@ async def test_respond_unfinished(
     ],
     self_hostname: str,
 ) -> None:
-    full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+    full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
@@ -881,22 +879,58 @@ async def test_respond_unfinished(
     await full_node_1.full_node.add_unfinished_block(unf, None)
     assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
-    # This next section tests making unfinished block with transactions, and then submitting the finished block
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0],
+    reason="exercises the block-generator cache, which is not consensus-mode specific",
+)
+@pytest.mark.parametrize("scenario", ["hit_stripped", "hit_attached", "miss_attached", "miss_stripped_fetch"])
+async def test_respond_block_generator_execution_paths(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+    scenario: str,
+) -> None:
+    # Exercises every branch of add_block()'s generator handling for a transaction FullBlock. In each case
+    # pre_validate_block is invoked once, with cached conds on a cache hit and conds=None on a cache miss:
+    #   hit_stripped        cache hit,  generator stripped  -> use cached result, take generator from cache
+    #   hit_attached        cache hit,  generator attached  -> use cached result
+    #   miss_attached       cache miss, generator attached  -> validate normally
+    #   miss_stripped_fetch cache miss, generator stripped  -> fetch the generator from a peer, then recurse
+    full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
     ph = wallet_a.get_new_puzzlehash()
     ph_receiver = wallet_receiver.get_new_puzzlehash()
+
+    # Farm several transaction blocks so we have a matured, spendable reward coin owned by `ph`.
     blocks = await full_node_1.get_all_full_blocks()
     blocks = bt.get_consecutive_blocks(
-        2,
+        4,
         block_list_input=blocks,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=ph,
     )
-    await full_node_1.full_node.add_block(blocks[-2])
-    await full_node_1.full_node.add_block(blocks[-1])
-    coin_to_spend = find_reward_coin(blocks[-1], ph)
+    for b in blocks[-4:]:
+        await full_node_1.full_node.add_block(b, peer)
+
+    coin_to_spend: Coin | None = None
+    for b in reversed(blocks[-4:]):
+        for c in b.get_included_reward_coins():
+            if c.puzzle_hash == ph:
+                coin_to_spend = c
+                break
+        if coin_to_spend is not None:
+            break
+    assert coin_to_spend is not None
 
     spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
+    # Build the transaction block that spends the coin, plus its unfinished form.
     blocks = bt.get_consecutive_blocks(
         1,
         block_list_input=blocks,
@@ -906,27 +940,68 @@ async def test_respond_unfinished(
         seed=b"random seed",
     )
     block = blocks[-1]
+    assert block_has_transactions_generator(block)
     unf = make_unfinished_block(block, bt.constants, force_overflow=True)
-    assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
-    await full_node_1.full_node.add_unfinished_block(unf, None)
-    assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
-    assert unf.foliage.foliage_transaction_block_hash is not None
-    entry = full_node_1.full_node.full_node_store.get_unfinished_block_result(
-        unf.partial_hash, unf.foliage.foliage_transaction_block_hash
-    )
-    assert entry is not None
-    result = entry.result
-    assert result is not None
-    assert result.conds is not None
-    assert result.conds.cost > 0
+
+    cached = scenario.startswith("hit")
+    attached = scenario in {"hit_attached", "miss_attached"}
+
+    # For cache-hit scenarios, validate + cache the unfinished block first (this runs the generator once).
+    expected_conds: Any = None
+    if cached:
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+        await full_node_1.full_node.add_unfinished_block(unf, None)
+        assert unf.foliage.foliage_transaction_block_hash is not None
+        entry = full_node_1.full_node.full_node_store.get_unfinished_block_result(
+            unf.partial_hash, unf.foliage.foliage_transaction_block_hash
+        )
+        assert entry is not None and entry.result is not None and entry.result.conds is not None
+        assert entry.result.conds.cost > 0
+        expected_conds = entry.result.conds
+
+    # Spy on pre_validate_block to observe whether conds are supplied (cache hit) or computed (cache miss).
+    captured_conds: list[Any] = []
+    real_pre_validate_block = pre_validate_block
+
+    async def spy_pre_validate_block(
+        constants: Any, blockchain: Any, blk: Any, pool: Any, conds: Any, vs: Any, **kwargs: Any
+    ) -> Any:
+        captured_conds.append(conds)
+        return await real_pre_validate_block(constants, blockchain, blk, pool, conds, vs, **kwargs)
+
+    monkeypatch.setattr("chia.full_node.full_node.pre_validate_block", spy_pre_validate_block)
+
+    stripped_block = block.replace(transactions_generator=None, transactions_generator_buffer=None)
+    finished_block = block if attached else stripped_block
+
+    # For the fetch scenario, simulate a peer that serves the full block (with generator) when we ask for it.
+    fetch_calls: list[Any] = []
+    add_peer: WSChiaConnection | None = None
+    if scenario == "miss_stripped_fetch":
+
+        async def fake_call_api(method: Any, message: Any, **kwargs: Any) -> Any:
+            fetch_calls.append(message)
+            return fnp.RespondBlock(block)
+
+        monkeypatch.setattr(peer, "call_api", fake_call_api)
+        add_peer = peer
 
     assert not full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
-    assert block_has_transactions_generator(block)
-    block_no_transactions = block.replace(transactions_generator=None, transactions_generator_buffer=None)
-    assert not block_has_transactions_generator(block_no_transactions)
+    await full_node_1.full_node.add_block(finished_block, add_peer)
 
-    await full_node_1.full_node.add_block(block_no_transactions)
+    # In every scenario the block is accepted and pre_validate_block runs exactly once.
     assert full_node_1.full_node.blockchain.contains_block(block.header_hash, block.height)
+    assert len(captured_conds) == 1
+    if cached:
+        # Cache hit: the cached conds object is passed through and reused.
+        assert captured_conds[0] is expected_conds
+    else:
+        # Cache miss: conds are computed during validation.
+        assert captured_conds[0] is None
+
+    if scenario == "miss_stripped_fetch":
+        # The generator was requested from the peer once before recursing.
+        assert len(fetch_calls) == 1
 
 
 @pytest.mark.anyio
@@ -1220,7 +1295,7 @@ async def test_new_transaction_and_mempool(
         await full_node_1.send_transaction(respond_transaction, fake_peer)
 
         request = fnp.RequestTransaction(spend_bundle.get_hash())
-        req = await full_node_1.request_transaction(request)
+        req = await full_node_1.request_transaction(request, fake_peer)
 
         fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
         fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000000)
@@ -1336,7 +1411,7 @@ async def test_request_respond_transaction(
 
     tx_id = bytes32.random(seeded_random)
     request_transaction = fnp.RequestTransaction(tx_id)
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is None
 
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1353,7 +1428,7 @@ async def test_request_respond_transaction(
     await time_out_assert(10, time_out_messages(incoming_queue, "new_transaction"))
 
     request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is not None
     assert msg.data == bytes(fnp.RespondTransaction(spend_bundle))
 
@@ -1375,7 +1450,7 @@ async def test_respond_transaction_fail(
 
     tx_id = bytes32.random(seeded_random)
     request_transaction = fnp.RequestTransaction(tx_id)
-    msg = await full_node_1.request_transaction(request_transaction)
+    msg = await full_node_1.request_transaction(request_transaction, peer)
     assert msg is None
 
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1588,6 +1663,92 @@ async def test_add_transaction_remove_seen_on_unexpected_exception(
     assert not fn.mempool_manager.seen(spend_name)
 
 
+def _mempool_log_path(fn: FullNode, spend_name: bytes32) -> Path:
+    return path_from_root(fn.root_path, "mempool-log") / f"{fn.blockchain.get_peak_height()}" / f"{spend_name}.bundle"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "log_mempool,expect_log",
+    [
+        (True, True),
+        (False, False),
+        ("timeout", False),
+    ],
+)
+async def test_log_mempool_true_logs_spend_bundle(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    log_mempool: bool | str,
+    expect_log: bool,
+) -> None:
+    full_node_1, _, bt = one_node_one_block
+    fn = full_node_1.full_node
+    fn.config["log_mempool"] = log_mempool
+
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
+    spend_name = spend_bundle.name()
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+
+    log_path = _mempool_log_path(fn, spend_name)
+    assert log_path.exists() == expect_log
+    if expect_log:
+        assert log_path.read_bytes() == bytes(spend_bundle)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (True, "true"),
+        ("true", "true"),
+        (False, "false"),
+        ("false", "false"),
+        ("timeout", "timeout"),
+        (None, "false"),
+        ("other", "false"),
+        # Integers users may try (e.g. 0/1 as off/on); only exact bool/string forms count.
+        (0, "false"),
+        (1, "false"),
+        (2, "false"),
+        # Capitalization matters: only lowercase "true" / "timeout" are recognized.
+        ("True", "false"),
+        ("TRUE", "false"),
+        ("False", "false"),
+        ("FALSE", "false"),
+        ("Timeout", "false"),
+        ("TIMEOUT", "false"),
+        # Surrounding whitespace is not stripped.
+        (" true", "false"),
+        ("true ", "false"),
+        ("true\n", "false"),
+        (" timeout", "false"),
+        ("timeout ", "false"),
+    ],
+)
+async def test_log_mempool_mode_normalization(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    value: object,
+    expected: str,
+) -> None:
+    full_node_1, _server_1, _bt = one_node_one_block
+    fn = full_node_1.full_node
+    if value is None:
+        fn.config.pop("log_mempool", None)
+    else:
+        fn.config["log_mempool"] = value
+    assert fn._log_mempool_mode() == expected
+
+
 @pytest.mark.anyio
 async def test_unsolicited_transaction_ignored(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -1624,7 +1785,7 @@ async def test_malformed_peer_version_on_connect(
         await full_node_1.full_node.on_connect(peer)
 
         # Unparseable version should be treated as old, so the counter is incremented
-        assert peer.expected_mempool_responses == 100
+        assert peer.expected_mempool_responses == 200
     finally:
         full_node_1.full_node.config["selected_network"] = original_network
 

@@ -113,7 +113,7 @@ class TestPerformance:
                 await full_node_1.respond_transaction(respond_transaction, fake_peer)
 
                 request_transaction = fnp.RequestTransaction(spend_bundle_id)
-                req = await full_node_1.request_transaction(request_transaction)
+                req = await full_node_1.request_transaction(request_transaction, fake_peer)
 
                 if req is None:
                     break

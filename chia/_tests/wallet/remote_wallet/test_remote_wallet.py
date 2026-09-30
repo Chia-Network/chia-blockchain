@@ -242,7 +242,7 @@ async def test_reorged_interested_remote_coin_state_does_not_crash(wallet_enviro
     peer.closed = False
 
     # A reorged-out coin state has created_height=None.
-    await wsm._add_coin_states([CoinState(coin, None, None)], peer, None)
+    await wsm.add_coin_states([CoinState(coin, None, None)], peer, None)
 
     assert await wsm.coin_store.get_coin_record(coin_id) is None
 
@@ -299,7 +299,7 @@ async def test_remote_record_transitions_to_real_wallet_on_reprocess(
     # lines 1751-1760 should clear local_record and let coin_added() store a
     # STANDARD_WALLET record instead.
     peer = env.node.server.get_connections(NodeType.FULL_NODE)[0]
-    await wsm._add_coin_states([CoinState(coin, None, uint32(1))], peer, None)
+    await wsm.add_coin_states([CoinState(coin, None, uint32(1))], peer, None)
 
     record = await wsm.coin_store.get_coin_record(coin_id)
     assert record is not None

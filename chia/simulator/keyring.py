@@ -84,11 +84,13 @@ class TempKeyring:
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
         # Stash the temp_dir in the keychain instance
-        keychain._temp_dir = temp_dir  # type: ignore
+        keychain._temp_dir = temp_dir  # type: ignore[attr-defined]
 
         # Stash the patches in the keychain instance
-        keychain._mock_supports_os_passphrase_storage_patch = mock_supports_os_passphrase_storage_patch  # type: ignore
-        keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
+        keychain._mock_supports_os_passphrase_storage_patch = (  # type: ignore[attr-defined]
+            mock_supports_os_passphrase_storage_patch
+        )
+        keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore[attr-defined]
 
         return keychain
 

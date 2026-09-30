@@ -37,6 +37,10 @@ class BundleCoinSpend:
     # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
     latest_singleton_lineage: UnspentLineageInfo | None
 
+    # Per-spend atom/pair counts from SpendConditions.
+    atom_count: int = 0
+    pair_count: int = 0
+
     @property
     def supports_fast_forward(self) -> bool:
         return self.latest_singleton_lineage is not None

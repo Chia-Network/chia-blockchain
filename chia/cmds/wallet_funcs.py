@@ -1493,22 +1493,6 @@ async def get_nft_royalty_percentage_and_address(
     return uint16(percentage), info.royalty_puzzle_hash
 
 
-def calculate_nft_royalty_amount(
-    offered: dict[str, Any], requested: dict[str, Any], nft_coin_id: bytes32, nft_royalty_percentage: int
-) -> tuple[str, int, int]:
-    nft_asset_id = nft_coin_id.hex()
-    amount_dict: dict[str, Any] = requested if nft_asset_id in offered else offered
-    amounts: list[tuple[str, int]] = list(amount_dict.items())
-
-    if len(amounts) != 1 or not isinstance(amounts[0][1], int):
-        raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
-
-    royalty_amount: uint64 = uint64(amounts[0][1] * nft_royalty_percentage / 10000)
-    royalty_asset_id = amounts[0][0]
-    total_amount_requested = (requested[royalty_asset_id] if amount_dict == requested else 0) + royalty_amount
-    return royalty_asset_id, royalty_amount, total_amount_requested
-
-
 def driver_dict_asset_is_nft_supporting_royalties(driver_dict: dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
     asset_dict: PuzzleInfo = driver_dict[asset_id]
     return asset_dict.check_type(
