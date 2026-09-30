@@ -26,7 +26,8 @@ from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_bl
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.full_node.full_node_store import FullNodeStore
 from chia.protocols import full_node_protocol
-from chia.protocols.timelord_protocol import NewInfusionPointVDF
+from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.timelord_protocol import NewInfusionPointVDF, NewUnfinishedBlockTimelord
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import load_block_list, make_unfinished_block, test_constants
 from chia.types.peer_info import PeerInfo
@@ -43,12 +44,14 @@ def _late_parent_candidate(
     constants: ConsensusConstants,
     *,
     minimum_height: uint32,
+    minimum_signage_point_index: uint8 = uint8(0),
 ) -> FullBlock:
     candidate = next(
         (
             block
             for block in blocks[2:]
             if block.height >= minimum_height
+            if block.reward_chain_block.signage_point_index >= minimum_signage_point_index
             if block.reward_chain_block.header_mmr_root is not None
             if block_cache.get_mmr_root_for_block(
                 block.prev_header_hash,
@@ -223,6 +226,74 @@ class TestCommitments:
 
         assert saw_pre_hf2_ses
         assert post_hf2_ses_roots >= 3
+
+    @pytest.mark.anyio
+    async def test_timelord_mmr_includes_peak_parent_before_sp(
+        self,
+        fork_height2_500_1000_blocks: list[FullBlock],
+        self_hostname: str,
+        db_version: int,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        blocks = fork_height2_500_1000_blocks
+        constants = test_constants.replace(
+            HARD_FORK2_HEIGHT=uint32(500),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+        )
+        _, _, block_records = load_block_list(blocks, constants)
+        block_cache = BlockCache(
+            block_records,
+            BlockchainMMRManager(
+                constants.GENESIS_CHALLENGE,
+                aggregate_from=constants.HARD_FORK2_HEIGHT,
+            ),
+        )
+        candidate = _late_parent_candidate(
+            blocks,
+            block_records,
+            block_cache,
+            constants,
+            minimum_height=constants.HARD_FORK2_HEIGHT,
+            minimum_signage_point_index=uint8(1),
+        )
+        candidate_record = block_records[candidate.header_hash]
+        parent = block_records[candidate.prev_header_hash]
+        unfinished = make_unfinished_block(candidate, constants).replace(
+            foliage=candidate.foliage.replace(prev_block_hash=parent.prev_hash)
+        )
+        expected_root = block_cache.get_mmr_root_for_block(
+            parent.header_hash,
+            candidate_record.sp_total_iters(constants),
+        )
+        stale_root = block_cache.get_mmr_root_for_block(
+            parent.prev_hash,
+            candidate_record.sp_total_iters(constants),
+        )
+        assert candidate.reward_chain_block.header_mmr_root == expected_root
+        assert expected_root != stale_root
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node, _, _, _, _):
+            for block in blocks[: int(candidate.height)]:
+                await full_node.full_node.add_block(block)
+
+            timelord_requests: list[NewUnfinishedBlockTimelord] = []
+
+            async def capture_timelord_request(
+                messages: list[Message],
+                node_type: NodeType,
+                *_args: object,
+            ) -> None:
+                if node_type == NodeType.TIMELORD:
+                    timelord_requests.extend(
+                        NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages
+                    )
+
+            monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture_timelord_request)
+            await full_node.full_node.add_unfinished_block(unfinished, None)
+
+        assert len(timelord_requests) == 1
+        assert timelord_requests[0].header_mmr_root == expected_root
 
     @pytest.mark.anyio
     async def test_same_sp_competing_blocks_preserve_ses_challenge_root(
