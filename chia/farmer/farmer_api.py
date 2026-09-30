@@ -567,7 +567,7 @@ class FarmerAPI:
                 if key in self.farmer.pending_solver_requests:
                     del self.farmer.pending_solver_requests[key]
 
-    @metadata.request()
+    @metadata.request(peer_required=True)
     async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
         """
         Handle solution response from solver service.
