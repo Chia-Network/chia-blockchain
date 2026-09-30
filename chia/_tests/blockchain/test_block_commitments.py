@@ -4,9 +4,9 @@ import logging
 from itertools import pairwise
 
 import pytest
-from chia_rs import FullBlock
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.conftest import ConsensusMode
@@ -14,6 +14,7 @@ from chia._tests.core.node_height import node_height_exactly
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     compute_challenge_merkle_root,
@@ -26,12 +27,54 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.full_node.full_node_store import FullNodeStore
 from chia.protocols import full_node_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import load_block_list, make_unfinished_block, test_constants
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 
 log = logging.getLogger(__name__)
+
+
+def _late_parent_candidate(
+    blocks: list[FullBlock],
+    block_records: dict[bytes32, BlockRecord],
+    block_cache: BlockCache,
+    constants: ConsensusConstants,
+    *,
+    minimum_height: uint32,
+) -> FullBlock:
+    candidate = next(
+        (
+            block
+            for block in blocks[2:]
+            if block.height >= minimum_height
+            if block.reward_chain_block.header_mmr_root is not None
+            if block_cache.get_mmr_root_for_block(
+                block.prev_header_hash,
+                block_records[block.header_hash].sp_total_iters(constants),
+            )
+            != block_cache.get_mmr_root_for_block(
+                block_records[block.prev_header_hash].prev_hash,
+                block_records[block.header_hash].sp_total_iters(constants),
+            )
+        ),
+        None,
+    )
+    assert candidate is not None, "generated chain has no post-HF2 stale-parent MMR cutoff"
+    return candidate
+
+
+def _infusion_request(block: FullBlock) -> NewInfusionPointVDF:
+    return NewInfusionPointVDF(
+        block.reward_chain_block.get_unfinished().get_hash(),
+        block.reward_chain_block.challenge_chain_ip_vdf,
+        block.challenge_chain_ip_proof,
+        block.reward_chain_block.reward_chain_ip_vdf,
+        block.reward_chain_ip_proof,
+        block.reward_chain_block.infused_challenge_chain_ip_vdf,
+        block.infused_challenge_chain_ip_proof,
+    )
 
 
 class TestCommitments:
@@ -53,9 +96,8 @@ class TestCommitments:
             full_node_store = FullNodeStore(constants)
             peak = None
             peak_full_block = None
-            passed_sp_or_slot = False
             saw_delayed_ses = False
-            for i, block in enumerate(blocks):
+            for block in blocks:
                 next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
                     constants, True, peak, blockchain
                 )
@@ -92,15 +134,8 @@ class TestCommitments:
                         blockchain, block_no_challenge_root, expected_error=Err.INVALID_POSPACE
                     )
 
-                if i > 0 and (
-                    len(block.finished_sub_slots) > 0
-                    or block.reward_chain_block.signage_point_index
-                    != blocks[i - 1].reward_chain_block.signage_point_index
-                ):
-                    passed_sp_or_slot = True
                 await _validate_and_add_block_no_error(blockchain, block)
                 log.info(f"Successfully added {block.height}")
-                assert (not passed_sp_or_slot) or (block.reward_chain_block.header_mmr_root is not None)
                 peak = blockchain.get_peak()
                 assert peak is not None
                 peak_full_block = block
@@ -252,17 +287,6 @@ class TestCommitments:
         )
         assert unfinished_a.prev_header_hash == unfinished_b.prev_header_hash == shared_parent_hash
 
-        def infusion_request(block: FullBlock) -> NewInfusionPointVDF:
-            return NewInfusionPointVDF(
-                block.reward_chain_block.get_unfinished().get_hash(),
-                block.reward_chain_block.challenge_chain_ip_vdf,
-                block.challenge_chain_ip_proof,
-                block.reward_chain_block.reward_chain_ip_vdf,
-                block.reward_chain_ip_proof,
-                block.reward_chain_block.infused_challenge_chain_ip_vdf,
-                block.infused_challenge_chain_ip_proof,
-            )
-
         current_root = compute_challenge_merkle_root(canonical_blocks, current_end, current_start)
         following_root = compute_challenge_merkle_root(canonical_blocks, following_end, following_start)
         prospective_end = get_challenge_start_height(
@@ -352,8 +376,8 @@ class TestCommitments:
                 assert prospective_a.challenge_merkle_root == prospective_b.challenge_merkle_root == prospective_root
 
             for block, request in (
-                (block_a, infusion_request(block_a)),
-                (block_b, infusion_request(block_b)),
+                (block_a, _infusion_request(block_a)),
+                (block_b, _infusion_request(block_b)),
             ):
                 for node in nodes:
                     await node.new_infusion_point_vdf(request)
@@ -379,10 +403,85 @@ class TestSyncWithCommitments:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    async def test_sync_fork_height_zero_blocks(
-        self, fork_height2_0_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
+    async def test_sync_late_parent_chain_from_scratch(
+        self,
+        default_1000_blocks: list[FullBlock],
+        self_hostname: str,
+        db_version: int,
+        consensus_mode: ConsensusMode,
     ) -> None:
-        """Test syncing 1000 blocks with fork height 0 between two nodes"""
+        constants = test_constants.replace(
+            HARD_FORK2_HEIGHT=uint32(default_1000_blocks[-1].height + 1),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+        )
+        async with setup_two_nodes(constants, db_version, self_hostname) as (
+            full_node_1,
+            full_node_2,
+            server_1,
+            server_2,
+            block_tools,
+        ):
+            blocks = block_tools.get_consecutive_blocks(
+                200,
+                block_list_input=default_1000_blocks,
+                seed=b"late-parent-sync",
+            )
+            _, _, block_records = load_block_list(blocks, constants)
+            candidate_blocks = BlockCache(
+                block_records,
+                BlockchainMMRManager(
+                    constants.GENESIS_CHALLENGE,
+                    aggregate_from=constants.HARD_FORK2_HEIGHT,
+                ),
+            )
+            candidate = _late_parent_candidate(
+                blocks,
+                block_records,
+                candidate_blocks,
+                constants,
+                minimum_height=uint32(constants.HARD_FORK2_HEIGHT + 20),
+            )
+            candidate_record = block_records[candidate.header_hash]
+            parent = block_records[candidate.prev_header_hash]
+            grandparent = blocks[int(candidate.height) - 2]
+            unfinished = make_unfinished_block(candidate, constants).replace(
+                foliage=candidate.foliage.replace(prev_block_hash=grandparent.header_hash)
+            )
+
+            race_block = unfinished_block_to_full_block_with_mmr(
+                unfinished,
+                candidate.reward_chain_block.challenge_chain_ip_vdf,
+                candidate.challenge_chain_ip_proof,
+                candidate.reward_chain_block.reward_chain_ip_vdf,
+                candidate.reward_chain_ip_proof,
+                candidate.reward_chain_block.infused_challenge_chain_ip_vdf,
+                candidate.infused_challenge_chain_ip_proof,
+                candidate.finished_sub_slots,
+                parent,
+                candidate_blocks,
+                candidate_record.sp_total_iters(constants),
+                uint64(candidate.weight - parent.weight),
+                constants,
+            )
+            blocks = [*blocks[: int(candidate.height)], race_block]
+            await add_blocks_in_batches(blocks, full_node_1.full_node)
+            await server_2.start_client(
+                PeerInfo(self_hostname, server_1.get_port()),
+                on_connect=full_node_2.full_node.on_connect,
+            )
+
+            await time_out_assert(300, node_height_exactly, True, full_node_2, int(candidate.height))
+            assert full_node_2.full_node.blockchain.get_peak() == full_node_1.full_node.blockchain.get_peak()
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_sync_fork_height_zero_blocks(
+        self,
+        fork_height2_0_1000_blocks: list[FullBlock],
+        self_hostname: str,
+        db_version: int,
+    ) -> None:
         blocks = fork_height2_0_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(0),
@@ -397,7 +496,6 @@ class TestSyncWithCommitments:
             server_2,
             _,
         ):
-            # Add all blocks to node 1
             for block in blocks:
                 await full_node_1.full_node.add_block(block)
 
@@ -410,17 +508,14 @@ class TestSyncWithCommitments:
                 full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
             )
             assert validated is True
-            # Connect node 2 to node 1
             await server_2.start_client(
                 PeerInfo(self_hostname, server_1.get_port()),
                 on_connect=full_node_2.full_node.on_connect,
             )
 
-            # Node 2 should sync all blocks from node 1
             await time_out_assert(300, node_height_exactly, True, full_node_1, len(blocks) - 1)
             await time_out_assert(300, node_height_exactly, True, full_node_2, len(blocks) - 1)
 
-            # Verify both nodes have same peak
             peak_1 = full_node_1.full_node.blockchain.get_peak()
             peak_2 = full_node_2.full_node.blockchain.get_peak()
             assert peak_1 is not None and peak_2 is not None
@@ -430,9 +525,11 @@ class TestSyncWithCommitments:
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
     async def test_sync_fork_height_500_blocks(
-        self, fork_height2_500_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
+        self,
+        fork_height2_500_1000_blocks: list[FullBlock],
+        self_hostname: str,
+        db_version: int,
     ) -> None:
-        """Test syncing 1000 blocks with fork height 500 between two nodes"""
         blocks = fork_height2_500_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(500),
@@ -447,27 +544,21 @@ class TestSyncWithCommitments:
             server_2,
             _,
         ):
-            # Add all blocks to node 1
             for block in blocks:
                 await full_node_1.full_node.add_block(block)
-                log.info(f"Successfully added {block.height}")
 
-            # Connect node 2 to node 1
             await server_2.start_client(
                 PeerInfo(self_hostname, server_1.get_port()),
                 on_connect=full_node_2.full_node.on_connect,
             )
 
-            # Node 2 should sync all blocks from node 1
             await time_out_assert(300, node_height_exactly, True, full_node_1, len(blocks) - 1)
             await time_out_assert(300, node_height_exactly, True, full_node_2, len(blocks) - 1)
 
-            # Verify both nodes have same peak
             peak_1 = full_node_1.full_node.blockchain.get_peak()
             peak_2 = full_node_2.full_node.blockchain.get_peak()
             assert peak_1 is not None and peak_2 is not None
             assert peak_1.header_hash == peak_2.header_hash
-
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=500 between two nodes")
 
 

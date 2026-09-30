@@ -216,26 +216,43 @@ def test_validate_default_10000_compact(bt: BlockTools, default_10000_blocks_com
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-def test_validate_fork_height2_0(
-    fork_height2_0_block_tools: BlockTools,
-    fork_height2_0_1000_blocks: list[FullBlock],
-) -> None:
-    validate_chain(fork_height2_0_block_tools, fork_height2_0_1000_blocks, seed=b"fork_zero")
-
-
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-def test_validate_fork_height2_500(
-    fork_height2_500_block_tools: BlockTools,
-    fork_height2_500_1000_blocks: list[FullBlock],
-) -> None:
-    validate_chain(
-        fork_height2_500_block_tools,
-        fork_height2_500_1000_blocks,
-        seed=b"fork_500",
-        validation_length=int(
-            fork_height2_500_block_tools.constants.HARD_FORK2_HEIGHT
-            + fork_height2_500_block_tools.constants.SUB_EPOCH_BLOCKS
+@pytest.mark.parametrize(
+    ("fork_height", "block_tools_fixture", "blocks_fixture", "seed"),
+    [
+        pytest.param(
+            0,
+            "fork_height2_0_block_tools",
+            "fork_height2_0_1000_blocks",
+            b"fork_zero",
+            id="hf2-0",
         ),
+        pytest.param(
+            500,
+            "fork_height2_500_block_tools",
+            "fork_height2_500_1000_blocks",
+            b"fork_500",
+            id="hf2-500",
+        ),
+    ],
+)
+def test_validate_fork_height2(
+    fork_height: int,
+    block_tools_fixture: str,
+    blocks_fixture: str,
+    seed: bytes,
+    request: pytest.FixtureRequest,
+    consensus_mode: ConsensusMode,
+) -> None:
+    block_tools: BlockTools = request.getfixturevalue(block_tools_fixture)
+    blocks: list[FullBlock] = request.getfixturevalue(blocks_fixture)
+    validation_length = 80
+    if fork_height > 0:
+        validation_length = int(block_tools.constants.HARD_FORK2_HEIGHT + block_tools.constants.SUB_EPOCH_BLOCKS)
+    validate_chain(
+        block_tools,
+        blocks,
+        seed=seed,
+        validation_length=validation_length,
     )
 
 
