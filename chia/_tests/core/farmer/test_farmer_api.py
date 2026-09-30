@@ -21,6 +21,7 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMetadata
 from chia.util.hash import std_hash
 from chia.util.task_referencer import create_referenced_task
 
@@ -33,6 +34,11 @@ async def begin_task(coro: Coroutine[Any, Any, T]) -> Task[T]:
     await sleep(0)
 
     return task
+
+
+def test_solution_response_requires_peer() -> None:
+    request = ApiMetadata.from_bound_method(FarmerAPI.solution_response)
+    assert request.peer_required
 
 
 @pytest.mark.anyio
