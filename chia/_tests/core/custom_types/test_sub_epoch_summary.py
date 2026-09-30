@@ -21,7 +21,8 @@ from chia.consensus.challenge_tree import (
     get_challenge_start_height,
 )
 from chia.consensus.get_block_challenge import get_block_challenge
-from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
+from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
@@ -388,4 +389,42 @@ def test_challenge_root_range_on_noncanonical_fork(
         augmented_blocks,
         range_end,
         range_start,
+    )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+def test_next_sub_epoch_summary_defers_empty_challenge_range(
+    bt: BlockTools,
+    consensus_mode: ConsensusMode,
+    default_1000_blocks: list[FullBlock],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    constants = bt.constants
+    _, _, block_records = load_block_list(default_1000_blocks, constants)
+    blocks = BlockCache(block_records, BlockchainMMRManager(constants.GENESIS_CHALLENGE))
+    previous_block, block = next(
+        (previous_block, block)
+        for previous_block, block in pairwise(default_1000_blocks)
+        if block.height >= 2 * constants.SUB_EPOCH_BLOCKS
+        and block_records[previous_block.header_hash].overflow
+        and block_records[block.header_hash].overflow
+    )
+    boundary = uint32(previous_block.height)
+
+    def same_challenge_boundary(*_args: object, **_kwargs: object) -> uint32:
+        return boundary
+
+    monkeypatch.setattr("chia.consensus.make_sub_epoch_summary.get_challenge_start_height", same_challenge_boundary)
+    unfinished = make_unfinished_block(block, constants)
+
+    assert (
+        next_sub_epoch_summary(
+            constants,
+            blocks,
+            block_records[block.header_hash].required_iters,
+            unfinished,
+            can_finish_soon=True,
+            with_challenge_root=True,
+        )
+        is None
     )
