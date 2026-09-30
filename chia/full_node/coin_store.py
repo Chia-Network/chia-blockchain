@@ -242,7 +242,7 @@ class CoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index=?",
+                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index=? AND spent_index>0",
                 (height,),
             ) as cursor:
                 coins = []
@@ -590,7 +590,8 @@ class CoinStore:
             # Add coins that are confirmed in the reverted blocks to the list of changed coins.
             rows = await conn.execute_fetchall(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp, coin_name FROM coin_record WHERE spent_index>?",
+                "coin_parent, amount, timestamp, coin_name FROM coin_record "
+                "WHERE spent_index>? AND spent_index>0",
                 (block_index,),
             )
             for row in rows:
@@ -622,7 +623,7 @@ class CoinStore:
                     THEN -1
                     ELSE 0
                 END
-                WHERE spent_index > ?
+                WHERE spent_index > ? AND spent_index > 0
                 """,
                 (block_index,),
             )
