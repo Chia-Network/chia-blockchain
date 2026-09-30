@@ -4,7 +4,6 @@ import pytest
 from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
 
-from chia._tests.conftest import ConsensusMode
 from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.simulator.block_tools import BlockTools
 
@@ -64,13 +63,11 @@ def test_trigger_default_10000_compact(default_10000_blocks_compact: list[FullBl
 
 
 @pytest.mark.build_test_chains
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 def test_trigger_fork_height2_0(fork_height2_0_1000_blocks: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 def test_trigger_fork_height2_500(fork_height2_500_1000_blocks: list[FullBlock]) -> None:
     pass
 
@@ -215,7 +212,6 @@ def test_validate_default_10000_compact(bt: BlockTools, default_10000_blocks_com
     )
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
     ("fork_height", "block_tools_fixture", "blocks_fixture", "seed"),
     [
@@ -241,7 +237,6 @@ def test_validate_fork_height2(
     blocks_fixture: str,
     seed: bytes,
     request: pytest.FixtureRequest,
-    consensus_mode: ConsensusMode,
 ) -> None:
     block_tools: BlockTools = request.getfixturevalue(block_tools_fixture)
     blocks: list[FullBlock] = request.getfixturevalue(blocks_fixture)

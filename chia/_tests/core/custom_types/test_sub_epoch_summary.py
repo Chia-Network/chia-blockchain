@@ -248,7 +248,6 @@ async def test_compute_challenge_merkle_root_sub_epoch_boundaries(
             ses_start = ses_height
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 def test_challenge_root_ranges_roll_over_whole_challenges(
     fork_height2_500_1000_blocks: list[FullBlock],
 ) -> None:
@@ -342,7 +341,6 @@ def test_challenge_root_ranges_roll_over_whole_challenges(
     assert roots_checked >= 3
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 def test_challenge_root_range_on_noncanonical_fork(
     fork_height2_500_1000_blocks: list[FullBlock],
     fork_height2_500_block_tools: BlockTools,

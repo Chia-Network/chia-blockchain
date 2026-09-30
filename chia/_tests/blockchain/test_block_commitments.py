@@ -81,10 +81,7 @@ class TestCommitments:
     """Tests for blocks with HARD_FORK2_HEIGHT=0 (all blocks have new commitments)"""
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    async def test_add_fork_height_zero_blocks(
-        self, fork_height2_0_1000_blocks: list[FullBlock], consensus_mode: ConsensusMode
-    ) -> None:
+    async def test_add_fork_height_zero_blocks(self, fork_height2_0_1000_blocks: list[FullBlock]) -> None:
         """Test that all 1000 blocks with fork height 0 can be added to the blockchain"""
         blocks = fork_height2_0_1000_blocks
         constants = test_constants.replace(
@@ -151,10 +148,7 @@ class TestCommitments:
             print(f"Successfully added all {len(blocks)} blocks with fork_height=0")
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
-    async def test_verify_fork_transition_point(
-        self, fork_height2_500_1000_blocks: list[FullBlock], consensus_mode: ConsensusMode
-    ) -> None:
+    async def test_verify_fork_transition_point(self, fork_height2_500_1000_blocks: list[FullBlock]) -> None:
         blocks = fork_height2_500_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(500),
@@ -231,7 +225,6 @@ class TestCommitments:
         assert post_hf2_ses_roots >= 3
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
     async def test_same_sp_competing_blocks_preserve_ses_challenge_root(
         self, fork_height2_500_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
     ) -> None:
@@ -475,7 +468,6 @@ class TestSyncWithCommitments:
             assert full_node_2.full_node.blockchain.get_peak() == full_node_1.full_node.blockchain.get_peak()
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
     async def test_sync_fork_height_zero_blocks(
         self,
         fork_height2_0_1000_blocks: list[FullBlock],
@@ -523,7 +515,6 @@ class TestSyncWithCommitments:
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=0 between two nodes")
 
     @pytest.mark.anyio
-    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
     async def test_sync_fork_height_500_blocks(
         self,
         fork_height2_500_1000_blocks: list[FullBlock],
