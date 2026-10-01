@@ -602,10 +602,11 @@ class FarmerAPI:
             proof_data.challenge_hash,
             proof_data.sp_hash,
         )
+        plot_identifier = response.partial_proof.get_string(proof_data.strength).hex() + proof_data.plot_identifier
         new_proof_of_space = harvester_protocol.NewProofOfSpace(
             proof_data.challenge_hash,
             proof_data.sp_hash,
-            proof_data.plot_identifier,
+            plot_identifier,
             ProofOfSpace(
                 sp_challenge_hash,
                 proof_data.pool_public_key,

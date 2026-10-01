@@ -504,6 +504,9 @@ async def test_solution_response_handler(
             partial_proofs.challenge_hash,
             partial_proofs.sp_hash,
         )
+        assert new_proof_of_space.plot_identifier == (
+            partial_proofs.partial_proofs[0].get_string(partial_proofs.strength).hex() + partial_proofs.plot_identifier
+        )
         assert original_peer == harvester_peer
 
         # verify pending request was removed
