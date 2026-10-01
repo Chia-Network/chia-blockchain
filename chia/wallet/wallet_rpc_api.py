@@ -1952,7 +1952,21 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CreateOfferForIDsResponse:
-        if action_scope.config.push:
+        return await self.create_spendbundle_for_ids(
+            request,
+            action_scope,
+            extra_conditions,
+            push=False,
+        )
+
+    async def create_spendbundle_for_ids(
+        self,
+        request: CreateOfferForIDs,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        push: bool | None = None,
+    ) -> CreateOfferForIDsResponse:
+        if push is False and action_scope.config.push:
             raise ValueError("Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT

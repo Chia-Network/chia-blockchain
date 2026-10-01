@@ -1742,6 +1742,13 @@ async def test_offer_endpoints(
     with pytest.raises(ValueError, match=re.escape("Attempting to access trade_record on `offer_only` request")):
         offer_only_res.trade_record
 
+    # create_offer_for_ids refuses to push the incomplete maker spend
+    with pytest.raises(ValueError, match=re.escape("Cannot push an incomplete spend")):
+        await env_1.rpc_client.create_offer_for_ids(
+            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
     driver_dict = {
         cat_asset_id: PuzzleInfo(
             {
@@ -2149,6 +2156,69 @@ async def test_offer_endpoints(
             wallet_environments.tx_config,
             timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
         )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_spendbundle_for_ids_push(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    cat_wallet = await mint_cat(
+        wallet_environments,
+        env,
+        "xch",
+        "cat",
+        uint64(20),
+        CATWallet,
+        "cat",
+    )
+    cat_asset_id = cat_wallet.tail_hash
+
+    # create_offer_for_ids refuses to push the incomplete maker spend
+    with pytest.raises(ValueError, match=re.escape("Cannot push an incomplete spend")):
+        await env.rpc_client.create_offer_for_ids(
+            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # create_spendbundle_for_ids returns the offer and records the pending transaction when pushed.
+    # The maker spend is incomplete (it only becomes valid once taken), so we don't wait for
+    # mempool acceptance here.
+    push_res = await env.rpc_client.create_spendbundle_for_ids(
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert push_res.offer is not None
+    assert len(push_res.transactions) > 0
+
+    pushed_trade_id = push_res.trade_record.trade_id
+    saved_trade_record = (await env.rpc_client.get_offer(GetOffer(trade_id=pushed_trade_id))).trade_record
+    assert saved_trade_record.trade_id == pushed_trade_id
+    assert TradeStatus(saved_trade_record.status) == TradeStatus.PENDING_ACCEPT
+
+    # The pushed spend is recorded as a pending transaction in the wallet's transaction store.
+    pending_tx = await env.wallet_state_manager.get_transaction(push_res.transactions[0].name)
+    assert pending_tx is not None
+    assert not pending_tx.confirmed
+
+    # Without push, the same request builds and returns the spend but does not save it to the
+    # transaction store.
+    no_push_res = await env.rpc_client.create_spendbundle_for_ids(
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert no_push_res.offer is not None
+    assert len(no_push_res.transactions) > 0
+    assert await env.wallet_state_manager.get_transaction(no_push_res.transactions[0].name) is None
 
 
 @pytest.mark.parametrize(
