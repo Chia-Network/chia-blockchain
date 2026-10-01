@@ -2849,8 +2849,9 @@ class FullNode:
         )
 
         # The MMR commits only to blocks infused before this block's signage point.
+        mmr_peak = self.blockchain.get_peak()
         header_mmr_root = self.blockchain.get_mmr_root_for_block(
-            block.prev_header_hash,
+            block.prev_header_hash if mmr_peak is None else mmr_peak.header_hash,
             sp_total_iters,
         )
 
