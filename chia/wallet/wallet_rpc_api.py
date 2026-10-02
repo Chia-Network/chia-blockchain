@@ -118,6 +118,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoinsResponse,
     CRCATApprovePending,
     CRCATApprovePendingResponse,
+    CreateFeeTransaction,
+    CreateFeeTransactionResponse,
     CreateNewDL,
     CreateNewDLResponse,
     CreateNewWallet,
@@ -2934,6 +2936,25 @@ class WalletRpcApi:
                 return await _generate_signed_transaction()
         else:
             return await _generate_signed_transaction()
+
+    # this is designed to be used by things that are creating their own spendbundles but want to attach a fee
+    # from their own wallet.
+    async def create_fee_transaction(
+        self,
+        request: CreateFeeTransaction,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> CreateFeeTransactionResponse:
+        async with self.service.wallet_state_manager.lock:
+            await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                request.fee,
+                action_scope,
+                coins=request.coin_set,
+                extra_conditions=extra_conditions,
+            )
+
+        # tx_endpoint wrapper will take care of these default values
+        return CreateFeeTransactionResponse(unsigned_transactions=[], transactions=[])
 
     ##########################################################################################
     # Pool Wallet
