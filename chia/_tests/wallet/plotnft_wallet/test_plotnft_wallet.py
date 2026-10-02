@@ -613,7 +613,6 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     await env.peer_server.start_client(
         PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
     )
-    env.node.config["selected_network"] = "simulator"
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
     rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
     assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)

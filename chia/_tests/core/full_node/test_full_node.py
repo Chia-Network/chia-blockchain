@@ -1778,7 +1778,6 @@ async def test_malformed_peer_version_on_connect(
 
     # Make synced() return True so on_connect reaches the version check
     original_network = full_node_1.full_node.config.get("selected_network")
-    full_node_1.full_node.config["selected_network"] = "simulator0"
     try:
         peer.version = "2.7.0-custom"
         peer.expected_mempool_responses = 0

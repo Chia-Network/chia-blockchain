@@ -676,6 +676,7 @@ async def test_get_sync_status(simulator_and_wallet: OldSimulatorsAndWallets, se
     wallet_node, wallet_server = wallets[0]
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     wsm: WalletStateManager = wallet_node.wallet_state_manager
+    wsm.config["selected_network"] = "testnet0"
 
     # Farm enough blocks so peak height > 10 (needed for LONG_SYNC test)
     await full_node_api.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
@@ -764,6 +765,7 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
     env = wallet_environments.environments[0]
     rpc_client = env.rpc_client
     wsm = env.wallet_state_manager
+    wsm.config["selected_network"] = "testnet0"
 
     # Build a dummy PushTransactions request while still connected
     async with wsm.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
