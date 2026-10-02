@@ -20,7 +20,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config, load_config_cli, override_config
+from chia.util.config import apply_config_cli_overrides, load_config, override_config
 from chia.util.default_root import resolve_root_path
 
 SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
@@ -86,7 +86,7 @@ async def async_main(
 
     # Same as full node, but the root_path is defined above
     config = load_config(root_path, "config.yaml")
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
     # THIS IS Simulator specific.
     fingerprint: int | None = None
