@@ -39,6 +39,7 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.timing import adjusted_timeout
+from chia.wallet.conditions import CreateCoin
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -1280,6 +1281,21 @@ async def test_nft_with_did_wallet_creation(
     )
     assert did_nft.owner_did is not None
     assert did_nft.owner_did.hex() == hex_did_id
+
+    # Setting a new DID owner requires the new DID inner hash
+    nft_coins = await nft_wallet.get_current_nfts()
+    assert len(nft_coins) == 1
+    async with nft_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
+        with pytest.raises(ValueError, match="Must specify new_did_inner_hash when setting a new owner"):
+            await nft_wallet.generate_unsigned_spendbundle(
+                [CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(nft_coins[0].coin.amount))],
+                action_scope,
+                coins={nft_coins[0].coin},
+                new_owner=bytes32([1] * 32),
+            )
+
     # Check unassigned NFT
     nft_wallets = await env.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 2
