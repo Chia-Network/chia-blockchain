@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 import pytest
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
@@ -60,9 +60,7 @@ class NullBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
-    def get_mmr_root_for_block(
-        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
-    ) -> bytes32 | None:
+    def get_mmr_root_for_block(self, prev_header_hash: bytes32, sp_total_iters: uint128) -> bytes32 | None:
         return None  # pragma: no cover
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:

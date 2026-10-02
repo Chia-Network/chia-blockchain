@@ -26,6 +26,7 @@ from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.solver.solver_service import SolverService
+from chia.types.blockchain_format.proof_of_space import calculate_pos_challenge
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
@@ -498,6 +499,11 @@ async def test_solution_response_handler(
         original_peer = call_args[1]
 
         assert new_proof_of_space.proof.proof == b"test_proof_from_solver"
+        assert new_proof_of_space.proof.challenge == calculate_pos_challenge(
+            partial_proofs.plot_id,
+            partial_proofs.challenge_hash,
+            partial_proofs.sp_hash,
+        )
         assert original_peer == harvester_peer
 
         # verify pending request was removed
