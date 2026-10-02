@@ -534,16 +534,24 @@ class MempoolManager:
         bls_cache: BLSCache | None = None,
         *,
         fee_per_cost: float = 0.0,
+        max_cost: uint64 | None = None,
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
-        This runs in another process so we don't block the main thread
+        This runs in another process so we don't block the main thread.
+
+        max_cost limits CLVM execution. When None, uses max_tx_clvm_cost. Callers
+        that learned a peer-advertised cost should pass that (capped by
+        max_tx_clvm_cost) so under-advertised spends fail cheaply with
+        BLOCK_COST_EXCEEDS_MAX (CostExceeded) instead of running to the full limit.
         """
 
         if spend_bundle.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
 
         assert self.peak is not None
+
+        cost_limit = self.max_tx_clvm_cost if max_cost is None else min(max_cost, self.max_tx_clvm_cost)
 
         self._worker_queue_size += 1
         try:
@@ -552,7 +560,7 @@ class MempoolManager:
             sbc, new_cache_entries, duration = await self.pool.run_in_loop(
                 validate_clvm_and_signature,
                 spend_bundle,
-                self.max_tx_clvm_cost,
+                cost_limit,
                 self.constants,
                 flags | MEMPOOL_MODE,
                 self.validation_timeout,

@@ -728,6 +728,18 @@ async def test_block_cost_exceeds_max(zero_mempool_manager: MempoolManager) -> N
 
 
 @pytest.mark.anyio
+async def test_pre_validate_respects_max_cost(zero_mempool_manager: MempoolManager) -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    # Succeeds with the default limit
+    sbc = await zero_mempool_manager.pre_validate_spendbundle(sb)
+    assert sbc.cost > 1
+    # Fails when the caller-supplied limit is below the spend's cost
+    with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
+        await zero_mempool_manager.pre_validate_spendbundle(sb, max_cost=uint64(1))
+
+
+@pytest.mark.anyio
 async def test_double_spend_prevalidation(zero_mempool_manager: MempoolManager) -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb = spend_bundle_from_conditions(conditions)

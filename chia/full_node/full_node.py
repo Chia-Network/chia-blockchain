@@ -3090,6 +3090,24 @@ class FullNode:
             return "timeout"
         return "false"
 
+    async def _ban_peers_advertising_cost(
+        self,
+        peers_with_tx: dict[bytes32, PeerWithTx],
+        advertised_cost: uint64,
+        *,
+        reason: str,
+    ) -> None:
+        """Ban peers that advertised ``advertised_cost`` or less for this transaction."""
+        for peer_id, entry in peers_with_tx.items():
+            if entry.advertised_cost > advertised_cost:
+                continue
+            self.log.warning(f"Banning peer {peer_id}. {reason}")
+            peer = self.server.all_connections.get(peer_id)
+            if peer is None:
+                self.server.ban_peer(entry.peer_host, CONSENSUS_ERROR_BAN_SECONDS)
+            else:
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+
     async def add_transaction(
         self,
         transaction: SpendBundle,
@@ -3117,9 +3135,23 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
         fee_per_cost = 0.0
+        max_advertised_cost: uint64 | None = None
         for peer_info in peers_with_tx.values():
             if peer_info.advertised_cost > 0:
+                # Prefer max FPC so a peer cannot deflate validation priority.
                 fee_per_cost = max(fee_per_cost, peer_info.advertised_fee / peer_info.advertised_cost)
+                if max_advertised_cost is None or peer_info.advertised_cost > max_advertised_cost:
+                    max_advertised_cost = peer_info.advertised_cost
+
+        # Cap CLVM execution at the highest peer-advertised cost (clamped to the
+        # per-tx limit) when available, so under-advertised spends fail with
+        # CostExceeded instead of burning the full max_tx_clvm_cost budget. Using
+        # the max — not the min — avoids dropping a valid tx when a liar
+        # co-advertises a low cost alongside an honest peer.
+        if max_advertised_cost is None:
+            max_cost = self.mempool_manager.max_tx_clvm_cost
+        else:
+            max_cost = min(max_advertised_cost, self.mempool_manager.max_tx_clvm_cost)
 
         log_mempool_mode = self._log_mempool_mode()
 
@@ -3129,7 +3161,11 @@ class FullNode:
         self.mempool_manager.add_in_flight(spend_name)
         try:
             cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                transaction, spend_name, self._bls_cache, fee_per_cost=fee_per_cost
+                transaction,
+                spend_name,
+                self._bls_cache,
+                fee_per_cost=fee_per_cost,
+                max_cost=max_cost,
             )
         except ValueError as e:
             # ValueError is used to indicate a soft failure. We don't want to
@@ -3138,6 +3174,25 @@ class FullNode:
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
             return MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
         except ValidationError as e:
+            # CostExceeded may be caused by peers under-advertising cost rather
+            # than an inherently invalid spend. By default do not mark the tx as
+            # seen, so a later attempt with a higher advertisement (or no
+            # advertisement) can still be admitted. Ban peers that advertised
+            # the cost limit we validated against or less. If we already ran at
+            # max_tx_clvm_cost, the spend can never be accepted — mark seen.
+            if e.code is Err.BLOCK_COST_EXCEEDS_MAX:
+                if max_advertised_cost is not None:
+                    await self._ban_peers_advertising_cost(
+                        peers_with_tx,
+                        max_cost,
+                        reason=(
+                            f"Sent us a new tx {spend_name} that exceeded advertised cost {max_cost} (CostExceeded)."
+                        ),
+                    )
+                if max_cost >= self.mempool_manager.max_tx_clvm_cost:
+                    self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+                self.log.info(f"Rejecting transaction {spend_name}: {e}")
+                return MempoolInclusionStatus.FAILED, e.code
             # Keep known-invalid bundles in seen-cache to prevent re-validation.
             self.mempool_manager.add_and_maybe_pop_seen(spend_name)
             self.log.info(f"Rejecting transaction {spend_name}: {e}")
