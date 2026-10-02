@@ -157,8 +157,8 @@ class SyncStatus(IntEnum):
 
 
 class WalletStateManager:
-    # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
-    interested_coin_cache: dict[bytes32, list[int]]
+    # Map of coin ID or puzzle hash to wallet IDs that are interested in it
+    subscription_cache: dict[bytes32, list[int]]
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -219,7 +219,7 @@ class WalletStateManager:
     ) -> WalletStateManager:
         self = WalletStateManager()
 
-        self.interested_coin_cache = {}
+        self.subscription_cache = {}
         self.config = config
         self.constants = constants
         self.root_path = root_path
@@ -392,10 +392,10 @@ class WalletStateManager:
 
         return self
 
-    def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
+    def get_subscription_cache(self) -> dict[bytes32, list[int]]:
         # Warning: this is a shallow copy of the cache
         # Do not modify the cache directly, use the add_interested_coin_ids method instead
-        return copy.copy(self.interested_coin_cache)
+        return copy.copy(self.subscription_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
@@ -1174,10 +1174,10 @@ class WalletStateManager:
             local_record = None
 
         if wallet_identifier is None:
-            cache = self.get_interested_coin_cache()
-            if coin_name in cache:
+            subscription_cache = self.get_subscription_cache()
+            if coin_name in subscription_cache:
                 interested_wallet_ids = [
-                    wallet_id for w in cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
+                    wallet_id for w in subscription_cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
                 ]
                 remote_wallet = self.get_existing_remote_wallet()
                 if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
@@ -2138,11 +2138,11 @@ class WalletStateManager:
         # the elements of wallet_ids. It only stores one wallet_id per puzzle hash in the interested_store
         # but the coin_cache keeps all wallet_ids for each puzzle hash
         for puzzle_hash in puzzle_hashes:
-            if puzzle_hash in self.interested_coin_cache:
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})
-                self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
+            if puzzle_hash in self.subscription_cache:
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.subscription_cache[puzzle_hash]})
+                self.subscription_cache[puzzle_hash].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
+                self.subscription_cache[puzzle_hash] = list(set(wallet_ids))
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
         if len(puzzle_hashes) > 0:
@@ -2151,12 +2151,12 @@ class WalletStateManager:
     async def add_interested_coin_ids(self, coin_ids: list[bytes32], wallet_ids: list[int] = []) -> None:
         # TODO: FIX: wallet_ids is sometimes populated unexpectedly when called from add_pending_transaction
         for coin_id in coin_ids:
-            if coin_id in self.interested_coin_cache:
+            if coin_id in self.subscription_cache:
                 # prevent repeated wallet_ids from appearing in the coin cache
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]})
-                self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.subscription_cache[coin_id]})
+                self.subscription_cache[coin_id].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[coin_id] = list(set(wallet_ids))
+                self.subscription_cache[coin_id] = list(set(wallet_ids))
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id)
         if len(coin_ids) > 0:
