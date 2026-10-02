@@ -1952,7 +1952,21 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CreateOfferForIDsResponse:
-        if action_scope.config.push:
+        return await self.create_spendbundle_for_ids(
+            request,
+            action_scope,
+            extra_conditions,
+            push=False,
+        )
+
+    async def create_spendbundle_for_ids(
+        self,
+        request: CreateOfferForIDs,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        push: bool | None = None,
+    ) -> CreateOfferForIDsResponse:
+        if push is False and action_scope.config.push:
             raise ValueError("Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
@@ -1974,6 +1988,18 @@ class WalletRpcApi:
                 validate_only=request.validate_only,
                 extra_conditions=extra_conditions,
             )
+
+        if request.extra_spend_bundle is not None:
+            # Merge the caller-supplied spend bundle into the generated spend before it is pushed.
+            # We do not re-sign it: its coin spends and signature are aggregated in as-is. Injecting
+            # the signature as a signing response preserves it through the signer (which would
+            # otherwise rebuild each transaction's signature) and enables partial signing so foreign
+            # coin spends we cannot sign do not error. This mirrors how `take_offer` merges a bundle.
+            async with action_scope.use() as interface:
+                interface.side_effects.extra_spends.append(request.extra_spend_bundle)
+                interface.side_effects.signing_responses.append(
+                    SigningResponse(bytes(request.extra_spend_bundle.aggregated_signature), result[1].trade_id)
+                )
 
         return CreateOfferForIDsResponse(
             unsigned_transactions=[],

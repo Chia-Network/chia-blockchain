@@ -2282,6 +2282,17 @@ class CreateOfferForIDs(TransactionEndpointRequest):
     solver: Solver | None = None
     validate_only: bool = False
     offer_only: bool = False
+    extra_spend_bundle: WalletSpendBundle | None = None
+
+    # We allow for flexibility in spend bundle parsing here so we need to override
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> CreateOfferForIDs:
+        extra_spend_bundle = json_dict.get("extra_spend_bundle")
+        if isinstance(extra_spend_bundle, str):
+            json_dict["extra_spend_bundle"] = WalletSpendBundle.from_bytes(
+                hexstr_to_bytes(extra_spend_bundle)
+            ).to_json_dict()
+        return super().from_json_dict(json_dict)
 
     @property
     def offer_spec(self) -> dict[int | bytes32, int]:
