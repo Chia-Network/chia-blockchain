@@ -1484,13 +1484,7 @@ class FullNode:
                                 new_peers_with_peak[idx][0],
                                 end,
                             )
-                        start = time.monotonic()
                         yield (peer, response.blocks)
-                        end = time.monotonic()
-                        if end - start > 1:
-                            self.log.info(
-                                f"sync pipeline back-pressure. stalled {end - start:0.2f} seconds on prevalidate block"
-                            )
                         fetched = True
                         break
                 if fetched is False:
@@ -1628,7 +1622,7 @@ class FullNode:
             source=fetch_blocks(),
             stages=[validate_batch, ingest_batch],
             queue_size=10,
-            names=["fetching", "validating", "ingesting"],
+            names=["fetching", "validating", "database"],
             log=self.log,
             cleanup=drain_pending_futures,
         )

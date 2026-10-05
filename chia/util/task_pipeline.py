@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from typing import Any
 
 
@@ -46,6 +47,11 @@ class TaskPipeline:
         self._dropped: list[list[Any]] = []
         self._failed = asyncio.Event()
         self._exception: BaseException | None = None
+        # Per put-hop (feeder=0, stage0->1=1, ...): currently blocked on a full
+        # downstream queue, and whether that hop should suppress its back-pressure
+        # log because a deeper hop is the real bottleneck.
+        self._put_stalled: list[bool] = []
+        self._suppress_bp_log: list[bool] = []
 
     @property
     def queues(self) -> list[asyncio.Queue[Any]]:
@@ -73,6 +79,9 @@ class TaskPipeline:
         """Run the pipeline to completion. Re-raises the first stage exception."""
         self._queues = [asyncio.Queue(maxsize=self._queue_size) for _ in range(len(self._stages))]
         self._dropped = [[] for _ in range(len(self._stages))]
+        # One put-hop per stage input queue (feeder + each non-final stage).
+        self._put_stalled = [False] * len(self._stages)
+        self._suppress_bp_log = [False] * len(self._stages)
         self._failed.clear()
         self._exception = None
 
@@ -138,6 +147,51 @@ class TaskPipeline:
             with contextlib.suppress(asyncio.CancelledError):
                 await fail_task
 
+    @contextlib.contextmanager
+    def _put_stall(self, hop: int) -> Iterator[None]:
+        """Mark ``hop`` as stalled for the duration of the block; clear on exit.
+
+        Also coordinates cascade suppression with neighboring hops.
+        """
+        self._suppress_bp_log[hop] = False
+        try:
+            self._put_stalled[hop] = True
+            # Downstream is already stuck further along - our wait is cascade.
+            if hop + 1 < len(self._put_stalled) and self._put_stalled[hop + 1]:
+                self._suppress_bp_log[hop] = True
+            # Tell an already-waiting upstream hop that we are the deeper stall.
+            if hop > 0 and self._put_stalled[hop - 1]:
+                self._suppress_bp_log[hop - 1] = True
+            yield
+        finally:
+            self._put_stalled[hop] = False
+
+    async def _put_or_bail_log_bp(self, queue: asyncio.Queue[Any], item: object, hop: int) -> bool:
+        """Like ``_put_or_bail``, but logs back-pressure for the bottleneck hop only.
+
+        When this hop blocks on a full queue, it marks itself stalled and signals
+        any already-stalled upstream hop to suppress logging (cascade). An upstream
+        hop that starts waiting while we are stalled also suppresses itself.
+        """
+        if self._failed.is_set():
+            return False
+        try:
+            queue.put_nowait(item)
+            return True
+        except asyncio.QueueFull:
+            pass
+
+        stalled_on = self._names[hop + 1] if self._names is not None and hop + 1 < len(self._names) else None
+
+        put_start = time.monotonic()
+        with self._put_stall(hop):
+            try:
+                return await self._put_or_bail(queue, item)
+            finally:
+                wait = time.monotonic() - put_start
+                if self._log is not None and not self._suppress_bp_log[hop] and stalled_on is not None and wait > 1:
+                    self._log.info(f"sync pipeline back-pressure. stalled {wait:.2f} seconds on {stalled_on}")
+
     async def _get_or_bail(self, queue: asyncio.Queue[Any]) -> tuple[bool, Any]:
         """Get item from queue. Returns (False, None) if the pipeline has failed."""
         if self._failed.is_set():
@@ -171,7 +225,7 @@ class TaskPipeline:
         output_queue = self._queues[0]
         try:
             async for item in self._source:
-                if not await self._put_or_bail(output_queue, item):
+                if not await self._put_or_bail_log_bp(output_queue, item, hop=0):
                     return
         except Exception as e:
             if self._names is not None and self._log is not None:
@@ -202,8 +256,9 @@ class TaskPipeline:
                     continue
                 # Defensive: run() cancels tasks on failure before
                 # _put_or_bail can return False from its slow path,
-                # so this branch is not reachable in practice.
-                if not await self._put_or_bail(output_queue, result):  # pragma: no cover
+                # so the False branch is not reachable in practice.
+                put_ok = await self._put_or_bail_log_bp(output_queue, result, hop=idx + 1)
+                if not put_ok:  # pragma: no cover
                     self._dropped[idx + 1].append(result)
                     return
         except Exception as e:
