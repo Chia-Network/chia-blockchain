@@ -5,28 +5,38 @@ import logging
 import random
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, Mock
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, PlotParam
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from packaging.version import Version
 
 from chia._tests.plot_sync.util import get_dummy_connection
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
+from chia.plot_sync.sender import _convert_plot_info_list2
 from chia.plot_sync.util import ErrorCodes, State
-from chia.plotting.util import HarvestingMode
+from chia.plotting.prover import V1Prover, V2Prover
+from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotList2,
     PlotSyncResponse,
     PlotSyncStart,
+    RequestPlots,
+    RespondPlots2,
 )
 from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import _T_Streamable
@@ -50,6 +60,66 @@ def assert_default_values(receiver: Receiver) -> None:
 
 async def dummy_callback(_: bytes32, __: Delta) -> None:
     pass
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("group_size", [1, 8])
+async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: int) -> None:
+    plot_infos: list[PlotInfo] = []
+    for v2 in [False, True]:
+        prover = Mock(spec=V2Prover if v2 else V1Prover)
+        prover.get_filename.return_value = str(tmp_path / ("group.gplot" if v2 else "v1.plot"))
+        prover.get_id.return_value = bytes32.zeros
+        prover.get_compression_level.return_value = uint8(0)
+        if v2:
+            prover.get_strength.return_value = uint8(3)
+            prover.get_meta_group.return_value = uint8(5)
+            prover.get_group_size.return_value = uint16(group_size)
+        else:
+            prover.get_param.return_value = PlotParam.make_v1(uint8(32))
+        plot_infos.append(PlotInfo(prover, None, bytes32.zeros, G1Element(), 100, 0))
+
+    harvester = Mock(spec=Harvester)
+    harvester.log = log
+    harvester.plot_manager = MagicMock()
+    harvester.plot_manager.plots = {Path(plot.prover.get_filename()): plot for plot in plot_infos}
+    harvester.plot_manager.failed_to_open_filenames = {}
+    harvester.plot_manager.no_key_filenames = set()
+    harvester.get_plots.side_effect = lambda: Harvester.get_plots(harvester)
+    plots, _, _ = harvester.get_plots()
+    assert [plot["group_size"] for plot in plots] == [1, group_size]
+
+    response = await HarvesterAPI(harvester).request_plots(RequestPlots(), Mock(protocol_version=Version("0.0.38")))
+    inventory = RespondPlots2.from_bytes(response.data)
+    synced_plots = _convert_plot_info_list2(plot_infos)
+    assert inventory.plots == synced_plots
+
+    connection = get_dummy_connection(NodeType.HARVESTER, bytes32.zeros)
+    receiver = Receiver(connection, dummy_callback, DEFAULT_CONSTANTS)  # type: ignore[arg-type]
+    await receiver.sync_started(
+        PlotSyncStart(plot_sync_identifier(uint64(1), uint64(0)), True, uint64(0), uint32(2), uint8(HarvestingMode.CPU))
+    )
+    payload = PlotSyncPlotList2(plot_sync_identifier(uint64(1), uint64(1)), synced_plots, True)
+    await receiver.process_loaded2(PlotSyncPlotList2.from_bytes(bytes(payload)))
+    for message_id, process in enumerate(
+        [
+            receiver.process_removed,
+            receiver.process_invalid,
+            receiver.process_keys_missing,
+            receiver.process_duplicates,
+        ],
+        start=2,
+    ):
+        await process(PlotSyncPathList(plot_sync_identifier(uint64(1), uint64(message_id)), [], True))
+    await receiver.sync_done(PlotSyncDone(plot_sync_identifier(uint64(1), uint64(6)), uint64(0)))
+
+    assert len(receiver.plots()) == 2
+    assert receiver.total_plot_size() == 200
+    assert receiver.total_effective_plot_size() == int(
+        UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(synced_plots[0].param(), DEFAULT_CONSTANTS)
+        + UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(synced_plots[1].param(), DEFAULT_CONSTANTS) * group_size
+    )
+    assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [1, group_size]
 
 
 class SyncStepData:

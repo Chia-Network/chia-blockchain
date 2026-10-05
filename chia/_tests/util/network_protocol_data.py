@@ -973,6 +973,7 @@ plot2 = harvester_protocol.Plot2(
     uint8(0),
     uint16(3145),
     uint8(5),
+    uint16(8),
 )
 
 request_plots = harvester_protocol.RequestPlots()
