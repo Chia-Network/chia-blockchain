@@ -358,12 +358,14 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
 
-        self._total_effective_plot_size = int(
-            sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), self._constants)
-                for plot in self._plots.values()
-            )
-        )
+        def effective_plot_size(plot: Plot | Plot2) -> float:
+            plot_param = plot.param()
+            size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
+            if isinstance(plot, Plot2) and plot_param.strength_v2 is not None:
+                size *= plot.group_size
+            return size
+
+        self._total_effective_plot_size = int(sum(effective_plot_size(plot) for plot in self._plots.values()))
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync
         self._current_sync = Sync()

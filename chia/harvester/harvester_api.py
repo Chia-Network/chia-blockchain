@@ -581,6 +581,7 @@ class HarvesterAPI:
                         plot["compression_level"],
                         plot["plot_index"],
                         plot["meta_group"],
+                        plot["group_size"],
                     )
                 )
             response2 = harvester_protocol.RespondPlots2(plots_response2, failed_to_open_filenames, no_key_filenames)

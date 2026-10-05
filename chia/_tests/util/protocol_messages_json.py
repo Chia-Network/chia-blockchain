@@ -2389,6 +2389,7 @@ plot2_json: dict[str, Any] = {
     "compression_level": 0,
     "plot_index": 3145,
     "meta_group": 5,
+    "group_size": 8,
 }
 
 request_plots_json: dict[str, Any] = {}
@@ -2425,6 +2426,7 @@ respond_plots2_json: dict[str, Any] = {
             "compression_level": 0,
             "plot_index": 3145,
             "meta_group": 5,
+            "group_size": 8,
         }
     ],
     "failed_to_open_filenames": ["str"],

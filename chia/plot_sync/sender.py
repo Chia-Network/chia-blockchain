@@ -73,6 +73,11 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
     converted: list[Plot2] = []
     for plot_info in plot_infos:
         k, plot_index, meta_group = _plot_fields(plot_info)
+        group_size: uint16
+        if isinstance(plot_info.prover, V2Prover):
+            group_size = plot_info.prover.get_group_size()
+        else:
+            group_size = uint16(1)
 
         converted.append(
             Plot2(
@@ -87,6 +92,7 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
                 compression_level=plot_info.prover.get_compression_level(),
                 plot_index=plot_index,
                 meta_group=meta_group,
+                group_size=group_size,
             )
         )
     return converted
