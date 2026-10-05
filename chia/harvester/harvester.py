@@ -188,12 +188,14 @@ class Harvester:
                     plot_id = prover.get_id()
                     plot_index = uint16(0)
                     meta_group = uint8(0)
+                    group_size = uint16(1)
                 else:
                     assert isinstance(prover, V2Prover)
                     k = uint8(0x80 | prover.get_strength())
                     plot_id = prover.get_id()
                     plot_index = uint16(0)
                     meta_group = prover.get_meta_group()
+                    group_size = prover.get_group_size()
                 response_plots.append(
                     {
                         "filename": str(path),
@@ -207,6 +209,7 @@ class Harvester:
                         "compression_level": prover.get_compression_level(),
                         "plot_index": plot_index,
                         "meta_group": meta_group,
+                        "group_size": group_size,
                     }
                 )
             self.log.debug(

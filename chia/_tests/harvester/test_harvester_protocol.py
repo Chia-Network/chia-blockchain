@@ -42,6 +42,7 @@ def test_v2_plot2_param_preserves_index_and_meta_group() -> None:
         compression_level=uint8(0),
         plot_index=uint16(1234),
         meta_group=uint8(56),
+        group_size=uint16(8),
     )
 
     param = plot.param()

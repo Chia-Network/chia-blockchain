@@ -190,6 +190,7 @@ class Plot2(Streamable):
     compression_level: uint8 | None
     plot_index: uint16
     meta_group: uint8
+    group_size: uint16
 
     def param(self) -> PlotParam:
         if (self.size & 0x80) != 0:
