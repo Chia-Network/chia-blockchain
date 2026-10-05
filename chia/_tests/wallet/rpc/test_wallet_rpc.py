@@ -553,9 +553,7 @@ async def test_push_transactions_sign_fee_only(wallet_environments: WalletTestFr
         tx_config=wallet_environments.tx_config,
     )
 
-    merged = WalletSpendBundle.aggregate(
-        [tx.spend_bundle for tx in resp.transactions if tx.spend_bundle is not None]
-    )
+    merged = WalletSpendBundle.aggregate([tx.spend_bundle for tx in resp.transactions if tx.spend_bundle is not None])
     # Wallet A's coin spend is still present and a new fee spend was added on top of it.
     assert all(cs in merged.coin_spends for cs in tx_a.spend_bundle.coin_spends)
     assert len(merged.coin_spends) > len(tx_a.spend_bundle.coin_spends)
