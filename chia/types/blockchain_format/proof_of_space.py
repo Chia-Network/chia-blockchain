@@ -362,3 +362,13 @@ def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element, include_
         return local_pk + farmer_pk + taproot_sk.get_g1()
     else:
         return local_pk + farmer_pk
+
+
+def generate_taproot_sk_v2(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
+    # V2 omits the standalone local key from the taproot message.
+    return AugSchemeMPL.key_gen(std_hash(bytes(local_pk + farmer_pk) + bytes(farmer_pk)))
+
+
+def generate_plot_public_key_v2(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
+    # All V2 plots include taproot.
+    return local_pk + farmer_pk + generate_taproot_sk_v2(local_pk, farmer_pk).get_g1()

@@ -31,6 +31,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     compute_plot_group_id,
     generate_plot_public_key,
+    generate_plot_public_key_v2,
     is_v1_phased_out,
     make_pos,
     passes_plot_filter,
@@ -537,7 +538,10 @@ class HarvesterAPI:
             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
             include_taproot = True
 
-        agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+        if plot_info.prover.get_version() == PlotVersion.V2:
+            agg_pk = generate_plot_public_key_v2(local_sk.get_g1(), farmer_public_key)
+        else:
+            agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
