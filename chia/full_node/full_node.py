@@ -57,7 +57,7 @@ from chia.consensus.get_block_challenge import (
 )
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
@@ -2813,11 +2813,26 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
-        # MMR might be diffrent from the peak mmr depending on whether we have a new sub slot or new SP
-        header_mmr_root = self.blockchain.get_mmr_root_for_block(
-            block.prev_header_hash,
+        sp_iters = calculate_sp_iters(
+            self.constants,
+            sub_slot_iters,
             block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+        )
+        ip_iters = calculate_ip_iters(
+            self.constants,
+            sub_slot_iters,
+            block.reward_chain_block.signage_point_index,
+            validate_result.required_iters,
+        )
+        sp_total_iters = uint128(
+            block.total_iters - ip_iters + sp_iters - (sub_slot_iters if sp_iters > ip_iters else 0)
+        )
+
+        # The MMR commits only to blocks infused before this block's signage point.
+        mmr_peak = self.blockchain.get_peak()
+        header_mmr_root = self.blockchain.get_mmr_root_for_block(
+            block.prev_header_hash if mmr_peak is None else mmr_peak.header_hash,
+            sp_total_iters,
         )
 
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(

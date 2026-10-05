@@ -570,18 +570,18 @@ def unfinished_block_to_full_block_with_mmr(
     This maintains backward compatibility while adding MMR support.
     """
     # Before fork, use None for MMR root.
+    prev_header_hash = constants.GENESIS_CHALLENGE if prev_block is None else prev_block.header_hash
     header_mmr_root = None
     if post_hard_fork2(
         constants=constants,
         blocks=blocks,
-        prev_b_hash=unfinished_block.prev_header_hash,
+        prev_b_hash=prev_header_hash,
         sp_index=unfinished_block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(finished_sub_slots),
     ):
         header_mmr_root = blocks.get_mmr_root_for_block(
-            unfinished_block.prev_header_hash,
-            unfinished_block.reward_chain_block.signage_point_index,
-            len(finished_sub_slots) > 0,
+            prev_header_hash,
+            total_iters_sp,
         )
 
     return unfinished_block_to_full_block(

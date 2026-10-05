@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
@@ -211,11 +211,10 @@ class AugmentedBlockchain:
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
     ) -> bytes32 | None:
         return self.mmr_manager.get_mmr_root_for_block(
-            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._fork_height
+            prev_header_hash, sp_total_iters, self, fork_height=self._fork_height
         )
 
     def compute_current_mmr_root(self) -> bytes32 | None:
