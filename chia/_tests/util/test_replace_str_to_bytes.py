@@ -134,6 +134,19 @@ def test_replace_str_to_bytes_uint8() -> None:
     assert test2.MIN_BLOCKS_PER_CHALLENGE_BLOCK == 8
 
 
+def test_replace_str_to_bytes_list() -> None:
+    # config.yaml loads lists as plain Python ints
+    new_heights = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    test2 = replace_str_to_bytes(test_constants, PLOT_FILTER_V2_RELATIVE_HEIGHT=new_heights)
+    assert test2 == test_constants.replace(PLOT_FILTER_V2_RELATIVE_HEIGHT=[uint32(h) for h in new_heights])
+    assert test2.PLOT_FILTER_V2_RELATIVE_HEIGHT == new_heights
+
+
+def test_replace_str_to_bytes_list_wrong_length() -> None:
+    with pytest.raises(ValueError, match="expected a sequence of length 9"):
+        replace_str_to_bytes(test_constants, PLOT_FILTER_V2_RELATIVE_HEIGHT=[1, 2, 3])
+
+
 def test_replace_str_to_bytes_invalid_field(caplog: pytest.LogCaptureFixture) -> None:
     # invalid field
     test2 = replace_str_to_bytes(
