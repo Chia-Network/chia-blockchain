@@ -1237,7 +1237,9 @@ async def test_new_transaction_and_mempool(
         condition_dic=conditions_dict,
     )
     assert spend_bundle is not None
-    new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+    spend_name = spend_bundle.name()
+    sbc = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+    new_transaction = fnp.NewTransaction(spend_name, uint64(sbc.cost), uint64(estimate_fees(spend_bundle)))
 
     await full_node_1.new_transaction(new_transaction, fake_peer)
     await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
