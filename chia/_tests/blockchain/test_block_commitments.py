@@ -315,7 +315,8 @@ class TestCommitments:
             HARD_FORK_HEIGHT=uint32(0),
             PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
-        _, _, block_records = load_block_list(blocks, constants)
+        chain_constants = constants.replace(HARD_FORK2_HEIGHT=uint32(500))
+        _, _, block_records = load_block_list(blocks, chain_constants)
         block_cache = BlockCache(
             block_records,
             BlockchainMMRManager(
