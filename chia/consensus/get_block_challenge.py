@@ -253,3 +253,20 @@ def post_hard_fork2(
         )
         >= constants.HARD_FORK2_HEIGHT
     )
+
+
+def post_hard_fork2_for_block_record(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    block: BlockRecord,
+) -> bool:
+    """Evaluate HF2 activation at this block's signage point."""
+    return post_hard_fork2(
+        constants,
+        blocks,
+        prev_b_hash=block.prev_hash,
+        sp_index=block.signage_point_index,
+        finished_sub_slots=(
+            len(block.finished_challenge_slot_hashes) if block.finished_challenge_slot_hashes is not None else 0
+        ),
+    )
