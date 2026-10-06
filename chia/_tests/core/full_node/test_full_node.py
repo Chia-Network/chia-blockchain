@@ -652,8 +652,6 @@ async def test_basic_chain(
 
     incoming_queue, _ = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
     blocks = bt.get_consecutive_blocks(1)
@@ -686,8 +684,6 @@ async def test_respond_end_of_sub_slot(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -750,8 +746,6 @@ async def test_respond_end_of_sub_slot_no_reorg(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -793,8 +787,6 @@ async def test_respond_end_of_sub_slot_race(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -829,8 +821,6 @@ async def test_respond_unfinished(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1016,8 +1006,6 @@ async def test_new_peak(
     incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
