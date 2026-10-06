@@ -11,6 +11,7 @@ on:
     tags:
       - "**"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "**.md"
     branches:
@@ -255,6 +256,7 @@ jobs:
         id: alls-green
         with:
           jobs: ${{ toJSON(needs) }}
+          allowed-skips: ${{ github.event.repository.visibility == 'private' && 'macos-intel,ubuntu-arm' || '[]' }}
 
       - uses: actions/checkout@v7
         with:

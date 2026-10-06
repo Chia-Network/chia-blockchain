@@ -2,6 +2,7 @@ name: 🚨 pre-commit
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - "long_lived/**"
@@ -45,11 +46,8 @@ jobs:
       !cancelled() &&
       (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
       !(github.event.repository.visibility == 'private' && github.event_name == 'pull_request' && github.event.pull_request.draft) &&
-      (
-        github.event.repository.visibility != 'private' ||
-        (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'intel' && matrix.python.major_dot_minor == '3.12')
-      )
-    runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || matrix.os.runs-on[matrix.arch.matrix] }}
+      github.event.repository.visibility != 'private'
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -108,6 +106,42 @@ jobs:
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - env:
+          CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
+          CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
+        run: pre-commit run --all-files --verbose
+
+  pre-commit-private:
+    name: Linux Intel 3.12
+    needs: public-sync
+    if: |
+      !cancelled() &&
+      github.event.repository.visibility == 'private' &&
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
+      !(github.event_name == 'pull_request' && github.event.pull_request.draft)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: Chia-Network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: "3.12"
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: "3.12"
           development: true
 
       - uses: chia-network/actions/activate-venv@main
