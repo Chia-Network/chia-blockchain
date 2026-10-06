@@ -46,6 +46,7 @@ jobs:
       !cancelled() &&
       (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
       !(github.event.repository.visibility == 'private' && github.event_name == 'pull_request' && github.event.pull_request.draft) &&
+      (github.event.action != 'ready_for_review' || github.event.repository.visibility == 'private') &&
       github.event.repository.visibility != 'private'
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
