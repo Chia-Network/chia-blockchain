@@ -89,6 +89,46 @@ class BlockchainMutexPriority(enum.IntEnum):
     high = 0
 
 
+def is_better_foliage_hash(new: bytes32 | None, current: bytes32 | None) -> bool:
+    """
+    None (non-transaction block) is considered worst, since its quality is
+    unknown compared to a real foliage hash.
+    """
+    if new is None:
+        return False
+    if current is None:
+        return True
+    return new < current
+
+
+def should_replace_peak(
+    new_weight: uint128,
+    new_height: uint32,
+    new_total_iters: uint128,
+    new_foliage_hash: bytes32 | None,
+    peak_weight: uint128,
+    peak_height: uint32,
+    peak_total_iters: uint128,
+    peak_foliage_hash: bytes32 | None,
+) -> bool:
+    """
+    The foliage-hash tie-break exists so nodes converge when several farmers
+    farm the same plots. Those blocks share weight, total_iters, and height, but
+    differ in foliage; without a deterministic pick, each node keeps the first
+    one it saw and the network flip-flops through short reorgs. This is the same
+    lowest-foliage-hash rule used for unfinished blocks.
+    """
+    if new_weight > peak_weight:
+        return True
+    if new_weight < peak_weight:
+        return False
+    if new_total_iters < peak_total_iters:
+        return True
+    if new_total_iters > peak_total_iters:
+        return False
+    return new_height == peak_height and is_better_foliage_hash(new_foliage_hash, peak_foliage_hash)
+
+
 # implements BlockchainInterface
 class Blockchain:
     if TYPE_CHECKING:
@@ -448,7 +488,7 @@ class Blockchain:
             async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
-                records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
+                records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info, block)
 
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
@@ -512,6 +552,7 @@ class Blockchain:
         block_record: BlockRecord,
         genesis: bool,
         fork_info: ForkInfo,
+        block: FullBlock,
     ) -> tuple[list[BlockRecord], StateChangeSummary | None]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -527,19 +568,40 @@ class Blockchain:
             return [], None
 
         if peak is not None:
-            if block_record.weight < peak.weight:
-                # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-                return [], None
-            if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
-                # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
+            peak_foliage_hash: bytes32 | None = None
+            if (
+                block_record.weight == peak.weight
+                and block_record.total_iters == peak.total_iters
+                and block_record.height == peak.height
+            ):
+                peak_block = await self.get_full_peak()
+                assert peak_block is not None
+                peak_foliage_hash = peak_block.foliage.foliage_transaction_block_hash
+            if not should_replace_peak(
+                block_record.weight,
+                block_record.height,
+                block_record.total_iters,
+                block.foliage.foliage_transaction_block_hash,
+                peak.weight,
+                peak.height,
+                peak.total_iters,
+                peak_foliage_hash,
+            ):
                 return [], None
             if block_record.weight == peak.weight:
-                log.info(
-                    f"block has equal weight as our peak ({peak.weight}), but fewer "
-                    f"total iterations {block_record.total_iters} "
-                    f"peak: {peak.total_iters} "
-                    f"peak-hash: {peak.header_hash}"
-                )
+                if block_record.total_iters < peak.total_iters:
+                    log.info(
+                        f"block has equal weight as our peak ({peak.weight}), but fewer "
+                        f"total iterations {block_record.total_iters} "
+                        f"peak: {peak.total_iters} "
+                        f"peak-hash: {peak.header_hash}"
+                    )
+                else:
+                    log.info(
+                        f"block has equal weight, total iters, and height as our peak "
+                        f"({peak.weight}, {peak.total_iters}, {peak.height}), "
+                        f"but lower foliage hash, reorging to {block_record.header_hash}"
+                    )
 
             if block_record.prev_hash != peak.header_hash:
                 rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)

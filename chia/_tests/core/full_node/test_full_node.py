@@ -1073,6 +1073,76 @@ async def test_new_peak(
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(
     allowed=[ConsensusMode.HARD_FORK_2_0],
+    reason="foliage peak tie-break is consensus-mode independent",
+)
+async def test_new_peak_foliage_tie_break(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    self_hostname: str,
+) -> None:
+    full_node_1, full_node_2, server_1, server_2, wallet_a, _wallet_receiver, bt = wallet_nodes
+
+    blocks = await full_node_1.get_all_full_blocks()
+    blocks = bt.get_consecutive_blocks(
+        3,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+        pool_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+        await full_node_2.full_node.add_block(block)
+
+    coin = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx_a = wallet_a.generate_signed_transaction(uint64(10), wallet_a.get_new_puzzlehash(), coin)
+    tx_b = wallet_a.generate_signed_transaction(uint64(20), wallet_a.get_new_puzzlehash(), coin)
+    block_a = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_a
+    )[-1]
+    block_b = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_b
+    )[-1]
+    assert block_a.height == block_b.height
+    assert block_a.weight == block_b.weight
+    assert block_a.total_iters == block_b.total_iters
+    assert block_a.reward_chain_block.get_hash() == block_b.reward_chain_block.get_hash()
+    foliage_a = block_a.foliage.foliage_transaction_block_hash
+    foliage_b = block_b.foliage.foliage_transaction_block_hash
+    assert foliage_a is not None and foliage_b is not None
+    if foliage_a < foliage_b:
+        worse, better = block_b, block_a
+    else:
+        worse, better = block_a, block_b
+
+    await full_node_1.full_node.add_block(worse)
+    await full_node_2.full_node.add_block(better)
+    peak_1 = full_node_1.full_node.blockchain.get_peak()
+    peak_2 = full_node_2.full_node.blockchain.get_peak()
+    assert peak_1 is not None and peak_1.header_hash == worse.header_hash
+    assert peak_2 is not None and peak_2.header_hash == better.header_hash
+
+    peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+    new_peak = fnp.NewPeak(
+        better.header_hash,
+        better.height,
+        better.weight,
+        uint32(0),
+        better.reward_chain_block.get_unfinished().get_hash(),
+    )
+    await full_node_1.full_node.new_peak(new_peak, peer)
+    peak = full_node_1.full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == better.header_hash
+    peak = full_node_2.full_node.blockchain.get_peak()
+    assert peak is not None
+    assert peak.header_hash == better.header_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0],
     reason="admission control is consensus-mode independent",
 )
 async def test_new_peak_admission_gate(

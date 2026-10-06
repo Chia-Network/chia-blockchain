@@ -31,7 +31,7 @@ from chia_rs import (
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
@@ -52,7 +52,7 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.blockchain import AddBlockResult, Blockchain, is_better_foliage_hash, should_replace_peak
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -3555,6 +3555,121 @@ def maybe_header_hash(block: BlockRecord | None) -> bytes32 | None:
     return block.header_hash
 
 
+async def expected_add_block_result(b: Blockchain, block: FullBlock) -> AddBlockResult:
+    peak = b.get_peak()
+    if peak is None:
+        return AddBlockResult.NEW_PEAK
+    peak_block = await b.get_full_peak()
+    assert peak_block is not None
+    if should_replace_peak(
+        block.weight,
+        block.height,
+        block.total_iters,
+        block.foliage.foliage_transaction_block_hash,
+        peak.weight,
+        peak.height,
+        peak.total_iters,
+        peak_block.foliage.foliage_transaction_block_hash,
+    ):
+        return AddBlockResult.NEW_PEAK
+    return AddBlockResult.ADDED_AS_ORPHAN
+
+
+@pytest.mark.parametrize(
+    "new, current, expected",
+    [
+        pytest.param(bytes32(b"\x00" * 32), bytes32(b"\xff" * 32), True, id="lower_hash"),
+        pytest.param(bytes32(b"\xff" * 32), bytes32(b"\x00" * 32), False, id="higher_hash"),
+        pytest.param(None, bytes32(b"\x00" * 32), False, id="none_is_worse"),
+        pytest.param(bytes32(b"\x00" * 32), None, True, id="hash_beats_none"),
+    ],
+)
+def test_is_better_foliage_hash(new: bytes32 | None, current: bytes32 | None, expected: bool) -> None:
+    assert is_better_foliage_hash(new, current) is expected
+
+
+@pytest.mark.parametrize(
+    "new_weight, new_height, new_total_iters, new_foliage_hash, peak_foliage_hash, expected",
+    [
+        pytest.param(
+            uint128(100),
+            uint32(10),
+            uint128(500),
+            bytes32(b"\xff" * 32),
+            bytes32(b"\x00" * 32),
+            True,
+            id="lower_iters",
+        ),
+        pytest.param(
+            uint128(100),
+            uint32(10),
+            uint128(2000),
+            bytes32(b"\x00" * 32),
+            bytes32(b"\xff" * 32),
+            False,
+            id="higher_iters",
+        ),
+        pytest.param(
+            uint128(100),
+            uint32(10),
+            uint128(1000),
+            bytes32(b"\x00" * 32),
+            bytes32(b"\xff" * 32),
+            True,
+            id="lower_foliage",
+        ),
+        pytest.param(
+            uint128(100),
+            uint32(10),
+            uint128(1000),
+            bytes32(b"\xff" * 32),
+            bytes32(b"\x00" * 32),
+            False,
+            id="higher_foliage",
+        ),
+        pytest.param(
+            uint128(100),
+            uint32(9),
+            uint128(1000),
+            bytes32(b"\x00" * 32),
+            bytes32(b"\xff" * 32),
+            False,
+            id="different_height",
+        ),
+        pytest.param(
+            uint128(101),
+            uint32(10),
+            uint128(2000),
+            bytes32(b"\xff" * 32),
+            bytes32(b"\x00" * 32),
+            True,
+            id="heavier_weight",
+        ),
+    ],
+)
+def test_should_replace_peak_foliage_tie_break(
+    new_weight: uint128,
+    new_height: uint32,
+    new_total_iters: uint128,
+    new_foliage_hash: bytes32,
+    peak_foliage_hash: bytes32,
+    expected: bool,
+) -> None:
+    assert (
+        should_replace_peak(
+            new_weight,
+            new_height,
+            new_total_iters,
+            new_foliage_hash,
+            uint128(100),
+            uint32(10),
+            uint128(1000),
+            peak_foliage_hash,
+        )
+        is expected
+    )
+
+
 class TestReorgs:
     @pytest.mark.anyio
     async def test_basic_reorg(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -3584,7 +3699,7 @@ class TestReorgs:
                 await _validate_and_add_block(
                     b,
                     reorg_block,
-                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    expected_result=await expected_add_block_result(b, reorg_block),
                     fork_info=fork_info,
                     augmented_blockchain=aug_chain,
                 )
@@ -3593,6 +3708,70 @@ class TestReorgs:
         peak = b.get_peak()
         assert peak is not None
         assert peak.height == 16
+
+    @pytest.mark.anyio
+    async def test_equal_height_weight_foliage_tie_break(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+        # Several farmers of the same plots can produce equal-weight/iters/height
+        # peaks with different foliage; the lowest foliage hash is the tie-break
+        # so nodes do not keep flip-flopping between them.
+        b = empty_blockchain
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        for block in blocks:
+            await _validate_and_add_block(b, block)
+
+        coin = find_reward_coin(blocks[-1], bt.pool_ph)
+        tx_a = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+        tx_b = wt.generate_signed_transaction(uint64(20), wt.get_new_puzzlehash(), coin)
+
+        block_a = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_a
+        )[-1]
+        block_b = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_b
+        )[-1]
+
+        assert block_a.height == block_b.height
+        assert block_a.weight == block_b.weight
+        assert block_a.total_iters == block_b.total_iters
+        assert block_a.header_hash != block_b.header_hash
+        foliage_a = block_a.foliage.foliage_transaction_block_hash
+        foliage_b = block_b.foliage.foliage_transaction_block_hash
+        assert foliage_a is not None
+        assert foliage_b is not None
+        assert foliage_a != foliage_b
+        if foliage_a < foliage_b:
+            worse, better = block_b, block_a
+        else:
+            worse, better = block_a, block_b
+
+        await _validate_and_add_block(b, worse)
+        peak = b.get_peak()
+        assert peak is not None
+        assert peak.header_hash == worse.header_hash
+
+        fork_info = ForkInfo(blocks[-1].height, blocks[-1].height, blocks[-1].header_hash)
+        await _validate_and_add_block(b, better, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info)
+        peak = b.get_peak()
+        assert peak is not None
+        assert peak.header_hash == better.header_hash
+
+        async with make_empty_blockchain(bt.constants) as b2:
+            for block in blocks:
+                await _validate_and_add_block(b2, block)
+            await _validate_and_add_block(b2, better)
+            fork_info = ForkInfo(blocks[-1].height, blocks[-1].height, blocks[-1].header_hash)
+            await _validate_and_add_block(
+                b2, worse, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+            )
+            peak = b2.get_peak()
+            assert peak is not None
+            assert peak.header_hash == better.header_hash
 
     @pytest.mark.anyio
     async def test_get_tx_peak_reorg(
@@ -3631,23 +3810,24 @@ class TestReorgs:
         aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
-                await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, augmented_blockchain=aug_chain
-                )
+                expected = AddBlockResult.ALREADY_HAVE_BLOCK
+                await _validate_and_add_block(b, reorg_block, expected_result=expected, augmented_blockchain=aug_chain)
             elif reorg_block.height < reorg_point:
+                expected = await expected_add_block_result(b, reorg_block)
                 await _validate_and_add_block(
                     b,
                     reorg_block,
-                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    expected_result=expected,
                     fork_info=fork_info,
                     augmented_blockchain=aug_chain,
                 )
-            elif reorg_block.height >= reorg_point:
+            else:
+                expected = await expected_add_block_result(b, reorg_block)
                 await _validate_and_add_block(b, reorg_block, fork_info=fork_info, augmented_blockchain=aug_chain)
 
             if reorg_block.is_transaction_block():
                 reorg_last_tx_block = reorg_block.header_hash
-            if reorg_block.height >= reorg_point:
+            if expected == AddBlockResult.NEW_PEAK:
                 last_tx_block = reorg_last_tx_block
 
             assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
@@ -3772,19 +3952,7 @@ class TestReorgs:
             else:
                 if fork_info2 is None:
                     fork_info2 = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
-                if consensus_mode < ConsensusMode.HARD_FORK_3_0:
-                    expected_result = (
-                        AddBlockResult.ADDED_AS_ORPHAN
-                        if reorg_block.weight <= chain_1_weight
-                        else AddBlockResult.NEW_PEAK
-                    )
-                else:
-                    peak = b.get_peak()
-                    assert peak is not None
-                    is_new_peak = reorg_block.weight > peak.weight or (
-                        reorg_block.weight == peak.weight and reorg_block.total_iters < peak.total_iters
-                    )
-                    expected_result = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
+                expected_result = await expected_add_block_result(b, reorg_block)
                 if expected_result == AddBlockResult.NEW_PEAK:
                     aug_chain = None
                 # Create fresh instance for each NEW_PEAK block like the full node
@@ -3844,15 +4012,8 @@ class TestReorgs:
                 print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
-            elif consensus_mode < ConsensusMode.HARD_FORK_3_0:
-                expect = AddBlockResult.ADDED_AS_ORPHAN if block.weight < chain_2_weight else AddBlockResult.NEW_PEAK
             else:
-                peak = b.get_peak()
-                assert peak is not None
-                is_new_peak = block.weight > peak.weight or (
-                    block.weight == peak.weight and block.total_iters < peak.total_iters
-                )
-                expect = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
+                expect = await expected_add_block_result(b, block)
             await _validate_and_add_block(
                 b,
                 block,
@@ -3910,7 +4071,11 @@ class TestReorgs:
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
-                    expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
+                    expected_result=[
+                        AddBlockResult.ADDED_AS_ORPHAN,
+                        AddBlockResult.ALREADY_HAVE_BLOCK,
+                        AddBlockResult.NEW_PEAK,
+                    ],
                     fork_info=fork_info,
                     augmented_blockchain=aug_chain,
                 )
@@ -3937,7 +4102,7 @@ class TestReorgs:
                 await _validate_and_add_block(
                     b,
                     reorg_block,
-                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    expected_result=await expected_add_block_result(b, reorg_block),
                     fork_info=fork_info,
                     augmented_blockchain=aug_chain2,
                 )
@@ -4156,11 +4321,20 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, conse
         elif i < 19:
             expected = AddBlockResult.ADDED_AS_ORPHAN
         elif i == 19:
-            # same height as peak decide by iterations
             peak = b.get_peak()
             assert peak is not None
-            # same height as peak should be ADDED_AS_ORPHAN if block.total_iters >= peak.total_iters
-            if block.total_iters < peak.total_iters:
+            peak_block = await b.get_full_peak()
+            assert peak_block is not None
+            if should_replace_peak(
+                block.weight,
+                block.height,
+                block.total_iters,
+                block.foliage.foliage_transaction_block_hash,
+                peak.weight,
+                peak.height,
+                peak.total_iters,
+                peak_block.foliage.foliage_transaction_block_hash,
+            ):
                 expected = AddBlockResult.NEW_PEAK
             else:
                 expected = AddBlockResult.ADDED_AS_ORPHAN
@@ -4277,7 +4451,8 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
     fork_block = blocks_reorg_chain[9]
     fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
-    for block in blocks_reorg_chain[10:-1]:
+    # Stop before the equal-height block; foliage tie-break can make that a NEW_PEAK.
+    for block in blocks_reorg_chain[10:-2]:
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
@@ -4290,7 +4465,11 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
     fork_block = blocks_reorg_chain[10 - 1]
     # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
     with pytest.raises(ValueError, match="Invalid operation to set spent"):
-        await _validate_and_add_block(b, blocks_reorg_chain[-1], fork_info=fork_info)
+        # Equal-height may orphan or reorg (foliage); the heavier tip always reorgs.
+        for block in blocks_reorg_chain[-2:]:
+            await _validate_and_add_block(
+                b, block, expected_result=await expected_add_block_result(b, block), fork_info=fork_info
+            )
 
     peak = b.get_peak()
     assert peak is not None
