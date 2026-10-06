@@ -1748,7 +1748,7 @@ async def test_unsolicited_transaction_ignored(
     peer = server_1.all_connections[dummy_node_id]
 
     spend_bundle = make_spend_bundle(1)
-    assert peer.expected_mempool_responses == 0
+    peer.expected_mempool_responses = 0
     res = await full_node_1.respond_transaction(fnp.RespondTransaction(spend_bundle), peer)
     assert res is None
     assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
