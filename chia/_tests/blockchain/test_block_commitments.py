@@ -296,6 +296,87 @@ class TestCommitments:
         assert timelord_requests[0].header_mmr_root == expected_root
 
     @pytest.mark.anyio
+    async def test_timelord_mmr_omitted_before_fork_activation(
+        self,
+        fork_height2_500_1000_blocks: list[FullBlock],
+        self_hostname: str,
+        db_version: int,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        blocks = fork_height2_500_1000_blocks
+        constants = test_constants.replace(
+            HARD_FORK2_HEIGHT=uint32(501),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+        )
+        _, _, block_records = load_block_list(blocks, constants)
+        block_cache = BlockCache(
+            block_records,
+            BlockchainMMRManager(
+                constants.GENESIS_CHALLENGE,
+                aggregate_from=constants.HARD_FORK2_HEIGHT,
+            ),
+        )
+        candidate = next(
+            (
+                block
+                for block in blocks
+                if block.height >= constants.HARD_FORK2_HEIGHT
+                if pre_sp_tx_block_height(
+                    constants=constants,
+                    blocks=block_cache,
+                    prev_b_hash=block.prev_header_hash,
+                    sp_index=block.reward_chain_block.signage_point_index,
+                    finished_sub_slots=len(block.finished_sub_slots),
+                )
+                < constants.HARD_FORK2_HEIGHT
+                if block_cache.get_mmr_root_for_block(
+                    block.prev_header_hash,
+                    block_records[block.header_hash].sp_total_iters(constants),
+                )
+                is not None
+            ),
+            None,
+        )
+        assert candidate is not None, (
+            "generated chain has no delayed HF2 activation candidate with an available MMR root"
+        )
+        unfinished = make_unfinished_block(candidate, constants).replace(version=uint8(0))
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node, _, _, _, _):
+            for block in blocks[: int(candidate.height)]:
+                await full_node.full_node.add_block(block)
+
+            assert (
+                pre_sp_tx_block_height(
+                    constants=constants,
+                    blocks=full_node.full_node.blockchain,
+                    prev_b_hash=candidate.prev_header_hash,
+                    sp_index=candidate.reward_chain_block.signage_point_index,
+                    finished_sub_slots=len(candidate.finished_sub_slots),
+                )
+                < constants.HARD_FORK2_HEIGHT
+            )
+
+            timelord_requests: list[NewUnfinishedBlockTimelord] = []
+
+            async def capture_timelord_request(
+                messages: list[Message],
+                node_type: NodeType,
+                *_args: object,
+            ) -> None:
+                if node_type == NodeType.TIMELORD:
+                    timelord_requests.extend(
+                        NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages
+                    )
+
+            monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture_timelord_request)
+            await full_node.full_node.add_unfinished_block(unfinished, None)
+
+        assert len(timelord_requests) == 1
+        assert timelord_requests[0].header_mmr_root is None
+
+    @pytest.mark.anyio
     async def test_same_sp_competing_blocks_preserve_ses_challenge_root(
         self, fork_height2_500_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
     ) -> None:
