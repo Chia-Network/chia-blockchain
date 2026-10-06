@@ -20,6 +20,7 @@ from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 from chia.wallet.wallet_request_types import (
+    GetWallets,
     PlotNFTMelt,
     PlotNFTTransfer,
     PushTX,
@@ -902,3 +903,67 @@ async def test_plotnft_errors(wallet_environments: WalletTestFramework, self_hos
         await env.rpc_client.plotnft_melt(
             request=PlotNFTMelt(wallet_id=uint32(1)), tx_config=wallet_environments.tx_config
         )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "config_overrides": {"enable_plot_nft": False}}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_plotnft_disabled(wallet_environments: WalletTestFramework, self_hostname: str) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1, "plotnft": 2}
+
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await PlotNFT2Wallet.create_new(
+            wallet_state_manager=env.wallet_state_manager,
+            xch_wallet=env.xch_wallet,
+            action_scope=action_scope,
+            fee=uint64(0),
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={"xch": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}},
+            )
+        ]
+    )
+
+    # Resync start
+    env.node._close()
+    await env.node._await_closed()
+    env.node.config["database_path"] = "wallet/db/blockchain_wallet_v2_test1_CHALLENGE_KEY.sqlite"
+    env.node.config["enable_plot_nft"] = True
+
+    # use second node to start the same wallet, reusing config
+    await env.node._start()
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    await env.change_balances({"plotnft": {"init": True, "set_remainder": True}})
+    await env.check_balances()
+
+    rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
+    assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
+
+    env.wallet_state_manager.config["enable_plot_nft"] = False
+
+    response = await env.rpc_client.get_wallets(request=GetWallets())
+    assert len(response.wallets) == 1
+
+    # normal restart
+    env.node._close()
+    await env.node._await_closed()
+    await env.node._start()
+    await env.peer_server.start_client(
+        PeerInfo(self_hostname, wallet_environments.full_node.full_node.server.get_port()), None
+    )
+    env.node.config["selected_network"] = "simulator"
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+    await env.check_balances()
+    assert len(env.wallet_state_manager.wallets) == 1
