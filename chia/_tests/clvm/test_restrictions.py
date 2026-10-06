@@ -57,6 +57,23 @@ class EasyDPuzWrapper(MIPSComponentBase):
     def match(cls, unknown_puzzle: UnknownPuzzle) -> EasyDPuzWrapper | None: ...
 
 
+def test_validator_stack_restriction_solution_match() -> None:
+    dpuz = P2Conditions(conditions=[Remark(rest=Program.to("foo"))])
+    solution = ValidatorStackRestrictionSolution.from_dpuz(dpuz)
+    assert ValidatorStackRestrictionSolution.from_dpuz(dpuz.program) == solution
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=solution.program)) == (
+        solution
+    )
+
+    # atoms, wrong arity, and non-bytes32 atoms are unmatched
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    assert (
+        ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not 32 bytes"])))
+        is None
+    )
+
+
 @pytest.mark.anyio
 async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
