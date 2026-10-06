@@ -26,6 +26,7 @@ from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.solver.solver_service import SolverService
+from chia.types.blockchain_format.proof_of_space import calculate_pos_challenge
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
@@ -309,7 +310,7 @@ async def test_missing_signage_point(
         number_of_missing_sps = data["missing_signage_points"][1]
         original_state_changed_callback(change, data)
 
-    farmer.state_changed_callback = state_changed  # type: ignore
+    farmer.state_changed_callback = state_changed  # type: ignore[assignment]
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
     await farmer_api.new_signage_point(sp_for_farmer_api)
     assert number_of_missing_sps == uint32(1)
@@ -498,6 +499,14 @@ async def test_solution_response_handler(
         original_peer = call_args[1]
 
         assert new_proof_of_space.proof.proof == b"test_proof_from_solver"
+        assert new_proof_of_space.proof.challenge == calculate_pos_challenge(
+            partial_proofs.plot_id,
+            partial_proofs.challenge_hash,
+            partial_proofs.sp_hash,
+        )
+        assert new_proof_of_space.plot_identifier == (
+            partial_proofs.partial_proofs[0].get_string(partial_proofs.strength).hex() + partial_proofs.plot_identifier
+        )
         assert original_peer == harvester_peer
 
         # verify pending request was removed

@@ -424,7 +424,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         )
         print("-- [4/4] Creating coin_record coin_spent_index index")
         coin_spent_index_start_time = monotonic()
-        conn.execute("CREATE INDEX out_db.coin_spent_index ON coin_record(spent_index)")
+        conn.execute("CREATE INDEX out_db.coin_spent_index ON coin_record(spent_index) WHERE spent_index>0")
         conn.commit()
         end_time = monotonic()
         print(
@@ -439,14 +439,5 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         print(
             "\r-- [4/4] Creating coin_record coin_puzzle_hash index SUCCEEDED in "
             f"{end_time - coin_puzzle_hash_index_start_time:.2f} seconds                             "
-        )
-        print("-- [4/4] Creating coin_record coin_parent_index index")
-        coin_parent_index_start_time = monotonic()
-        conn.execute("CREATE INDEX out_db.coin_parent_index ON coin_record(coin_parent)")
-        conn.commit()
-        end_time = monotonic()
-        print(
-            "\r-- [4/4] Creating coin_record coin_parent_index index SUCCEEDED in "
-            f"{end_time - coin_parent_index_start_time:.2f} seconds                             "
         )
         conn.execute("DETACH DATABASE out_db")

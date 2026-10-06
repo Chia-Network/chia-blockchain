@@ -72,6 +72,7 @@ class CoinStore:
     # Fall back to the `coin_puzzle_hash` index if the ff unspent index
     # does not exist.
     _unspent_lineage_for_ph_idx: str = "coin_puzzle_hash"
+    _has_coin_parent_index: bool = False
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, block_store: BlockStore | None = None) -> CoinStore:
@@ -103,14 +104,26 @@ class CoinStore:
             log.info("DB: Creating index coin_confirmed_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
 
+            # Partial index: only spent coins (spent_index > 0). Unspent coins use
+            # spent_index 0 or -1 and are never looked up by this index; height-0
+            # removals are rejected in get_coins_removed_at_height. SQLite only
+            # uses a partial index when the query WHERE implies the index
+            # predicate, so lookups must include `spent_index>0` explicitly.
+            # Existing DBs that already have a full coin_spent_index keep it
+            # (CREATE IF NOT EXISTS); rebuilding would be too expensive.
             log.info("DB: Creating index coin_spent_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index) WHERE spent_index>0"
+            )
 
             log.info("DB: Creating index coin_puzzle_hash")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
-            log.info("DB: Creating index coin_parent_index")
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
+            # Check if legacy coin_parent_index index exists
+            async with conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'coin_parent_index'"
+            ) as cursor:
+                self._has_coin_parent_index = await cursor.fetchone() is not None
 
             async with conn.execute("SELECT 1 FROM coin_record LIMIT 1") as cursor:
                 is_new_db = await cursor.fetchone() is None
@@ -285,8 +298,10 @@ class CoinStore:
             return []
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
+                # `spent_index>0` is required for SQLite to use the partial coin_spent_index.
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index=?",
+                "coin_parent, amount, timestamp FROM coin_record "
+                "WHERE spent_index=? AND spent_index>0",
                 (height,),
             ) as cursor:
                 coins = []
@@ -461,15 +476,41 @@ class CoinStore:
 
         coins: set[CoinRecord] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            for batch in to_batches(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
-                parent_ids_db: tuple[Any, ...] = tuple(batch.entries)
+            for batch in to_batches(parent_ids, SQLITE_MAX_VARIABLE_NUMBER - 3):
+                parent_ids_db = tuple(batch.entries)
+                parent_ids_placeholders = ",".join("?" * len(parent_ids_db))
+                if self._has_coin_parent_index:
+                    query = f"""
+                        SELECT
+                            confirmed_index, spent_index, coinbase,
+                            puzzle_hash, coin_parent, amount, timestamp
+                        FROM coin_record INDEXED BY coin_parent_index
+                        WHERE
+                            coin_parent IN ({parent_ids_placeholders})
+                            AND confirmed_index >= ? AND confirmed_index < ?
+                            {"" if include_spent_coins else "AND spent_index <= 0"}
+                        LIMIT ?
+                    """
+                else:
+                    query = f"""
+                        SELECT
+                            child.confirmed_index, child.spent_index,
+                            child.coinbase, child.puzzle_hash,
+                            child.coin_parent, child.amount, child.timestamp
+                        FROM coin_record AS parent INDEXED BY sqlite_autoindex_coin_record_1
+                        JOIN coin_record AS child INDEXED BY coin_confirmed_index
+                            ON child.confirmed_index = parent.spent_index
+                            AND child.coin_parent = parent.coin_name
+                        WHERE
+                            parent.coin_name IN ({parent_ids_placeholders})
+                            AND parent.spent_index > 0
+                            AND parent.spent_index >= ?
+                            AND parent.spent_index < ?
+                            {"" if include_spent_coins else "AND child.spent_index <= 0"}
+                        LIMIT ?
+                    """
                 async with conn.execute(
-                    f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
-                    f"FROM coin_record WHERE coin_parent in ({'?,' * (len(batch.entries) - 1)}?) "
-                    f"AND confirmed_index>=? AND confirmed_index<? "
-                    f"{'' if include_spent_coins else 'AND spent_index <= 0'}"
-                    " LIMIT ?",
-                    (*parent_ids_db, start_height, end_height, max_items - len(coins)),
+                    query, (*parent_ids_db, start_height, end_height, max_items - len(coins))
                 ) as cursor:
                     async for row in cursor:
                         coin = self.row_to_coin(row)
@@ -658,9 +699,12 @@ class CoinStore:
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
             # Add coins that are confirmed in the reverted blocks to the list of changed coins.
+            # `spent_index>0` is required for SQLite to use the partial coin_spent_index
+            # (and correctly excludes unspent sentinels 0 / -1 for negative block_index).
             rows = await conn.execute_fetchall(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp, coin_name FROM coin_record WHERE spent_index>?",
+                "coin_parent, amount, timestamp, coin_name FROM coin_record "
+                "WHERE spent_index>? AND spent_index>0",
                 (block_index,),
             )
             for row in rows:
@@ -692,7 +736,7 @@ class CoinStore:
                     THEN -1
                     ELSE 0
                 END
-                WHERE spent_index > ?
+                WHERE spent_index > ? AND spent_index > 0
                 """,
                 (block_index,),
             )

@@ -928,8 +928,8 @@ class TradeManager:
         for puzzle_info in driver_dict.values():
             if (
                 puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
-                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore
-                and puzzle_info.also().also()["transfer_program"].type()  # type: ignore
+                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore[union-attr,index]
+                and puzzle_info.also().also()["transfer_program"].type()  # type: ignore[union-attr,index]
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
@@ -942,7 +942,7 @@ class TradeManager:
                         AssetType.METADATA.value,
                     ]
                 )
-                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore[index]
             ):
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager,
@@ -969,8 +969,8 @@ class TradeManager:
                 AssetType.OWNERSHIP.value,
             ]
         ):
-            old_owner = driver_info.also().also().info["owner"]  # type: ignore
-            puzzle_info.also().also().info["owner"] = old_owner  # type: ignore
+            old_owner = driver_info.also().also().info["owner"]  # type: ignore[union-attr]
+            puzzle_info.also().also().info["owner"] = old_owner  # type: ignore[union-attr]
             if driver_info == puzzle_info:
                 return True
         return False
@@ -984,7 +984,7 @@ class TradeManager:
                         AssetType.METADATA.value,
                     ]
                 )
-                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore[index]
             ):
                 return await DataLayerWallet.get_offer_summary(offer)
         return None
@@ -1000,7 +1000,7 @@ class TradeManager:
                         AssetType.METADATA.value,
                     ]
                 )
-                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore[index]
             ):
                 return (await DataLayerWallet.finish_graftroot_solutions(offer, solver), Solver({}))
             elif puzzle_info.check_type(

@@ -176,7 +176,7 @@ def initialize_logging(
             log_systemd_handler.setFormatter(logging.Formatter(fmt="%(message)s"))
             handlers.append(log_systemd_handler)
         except OSError:
-            logging.warning(
+            logging.getLogger(__name__).warning(
                 f"{service_name}: log_systemd enabled but {systemd_journal_socket_path} is unavailable. "
                 "Skipping systemd journal logging."
             )

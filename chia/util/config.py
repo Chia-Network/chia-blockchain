@@ -162,7 +162,7 @@ def apply_config_cli_overrides(config: dict[str, Any]) -> dict[str, Any]:
     for prop_name, value in flattened_props.items():
         if type(value) is list:
             continue
-        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore
+        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore[type-arg]
         parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
 
     for key, value in vars(parser.parse_args()).items():
@@ -170,20 +170,6 @@ def apply_config_cli_overrides(config: dict[str, Any]) -> dict[str, Any]:
             flattened_props[key] = value
 
     return unflatten_properties(flattened_props)
-
-
-def load_config_cli(
-    root_path: Path,
-    filename: str,
-    sub_config: str | None = None,
-    fill_missing_services: bool = False,
-) -> dict[str, Any]:
-    """
-    Loads configuration from the specified filename, in the config directory,
-    and then overrides any properties using the passed in command line arguments.
-    """
-    config = load_config(root_path, filename, sub_config, fill_missing_services=fill_missing_services)
-    return apply_config_cli_overrides(config)
 
 
 def flatten_properties(config: dict[str, Any]) -> dict[str, Any]:

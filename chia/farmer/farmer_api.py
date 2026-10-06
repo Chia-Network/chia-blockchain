@@ -43,6 +43,7 @@ from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
@@ -567,7 +568,7 @@ class FarmerAPI:
                 if key in self.farmer.pending_solver_requests:
                     del self.farmer.pending_solver_requests[key]
 
-    @metadata.request()
+    @metadata.request(peer_required=True)
     async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
         """
         Handle solution response from solver service.
@@ -596,11 +597,16 @@ class FarmerAPI:
             self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.fragments[:5]}...")
             return
 
-        sp_challenge_hash = proof_data.challenge_hash
+        sp_challenge_hash = calculate_pos_challenge(
+            proof_data.plot_id,
+            proof_data.challenge_hash,
+            proof_data.sp_hash,
+        )
+        plot_identifier = response.partial_proof.get_string(proof_data.strength).hex() + proof_data.plot_identifier
         new_proof_of_space = harvester_protocol.NewProofOfSpace(
             proof_data.challenge_hash,
             proof_data.sp_hash,
-            proof_data.plot_identifier,
+            plot_identifier,
             ProofOfSpace(
                 sp_challenge_hash,
                 proof_data.pool_public_key,

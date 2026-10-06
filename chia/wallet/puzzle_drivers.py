@@ -42,7 +42,7 @@ class PuzzleInfo:
     def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
-                if self[key] != other[key]:  # type: ignore
+                if self[key] != other[key]:  # type: ignore[index]
                     return False
             except Exception:
                 return False
@@ -72,7 +72,7 @@ class PuzzleInfo:
         elif self.type() == types[0]:
             types.pop(0)
             if self.also():
-                return self.also().check_type(types)  # type: ignore
+                return self.also().check_type(types)  # type: ignore[union-attr]
             else:
                 return self.check_type(types)
         else:
@@ -104,7 +104,7 @@ class Solver:
     def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
-                if self[key] != other[key]:  # type: ignore
+                if self[key] != other[key]:  # type: ignore[index]
                     return False
             except Exception:
                 return False

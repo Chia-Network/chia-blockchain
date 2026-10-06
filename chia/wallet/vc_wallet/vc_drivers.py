@@ -374,11 +374,11 @@ class VerifiedCredential(Streamable):
         metadata_layer_hash: bytes32 = construct_exigent_metadata_layer(
             Program.to((provider_id, None)),
             transfer_program,
-            wrapped_inner_puzzle_hash,  # type: ignore
+            wrapped_inner_puzzle_hash,  # type: ignore[arg-type]
         ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
         curried_singleton_hash: bytes32 = puzzle_for_singleton(
             launcher_coin.name(),
-            metadata_layer_hash,  # type: ignore
+            metadata_layer_hash,  # type: ignore[arg-type]
         ).get_tree_hash_precalc(metadata_layer_hash)
         launch_dpuz: Program = P2Conditions(
             conditions=[

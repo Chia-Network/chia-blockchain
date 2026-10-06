@@ -36,7 +36,7 @@ def create_host_layer_puzzle(innerpuz: Program | bytes32, current_root: bytes32)
         Program.to((current_root, None)),
         ACS_MU_PH,
         # TODO: the nft driver doesn't like the Union yet, but changing that is out of scope for me rn - Quex
-        innerpuz,  # type: ignore
+        innerpuz,  # type: ignore[arg-type]
     )
 
 

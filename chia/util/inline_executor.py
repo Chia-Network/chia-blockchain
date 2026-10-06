@@ -1,5 +1,3 @@
-# Package: utils
-
 from __future__ import annotations
 
 import asyncio
@@ -13,7 +11,7 @@ _T = TypeVar("_T")
 class InlineExecutor(Executor):
     _closing: bool = False
 
-    def submit(self, fn: Callable[..., _T], *args: Any, **kwargs: Any) -> Future[_T]:  # type: ignore
+    def submit(self, fn: Callable[..., _T], *args: Any, **kwargs: Any) -> Future[_T]:  # type: ignore[override]
         if self._closing:
             raise RuntimeError("executor shutting down")
 

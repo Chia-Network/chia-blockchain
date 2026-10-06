@@ -95,7 +95,13 @@ class V2Prover:
         return self._prover.plot_id()
 
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]:
-        return [V2Quality(q, self.get_strength()) for q in self._prover.get_qualities_for_challenge(challenge)]
+        return [
+            V2Quality(partial_proof, self.get_strength())
+            for partial_proof in {
+                partial_proof.to_bytes(): partial_proof
+                for partial_proof in self._prover.get_qualities_for_challenge(challenge)
+            }.values()
+        ]
 
 
 @dataclass(frozen=True)

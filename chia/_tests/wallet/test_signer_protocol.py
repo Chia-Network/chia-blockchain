@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 
 import click
 import pytest
@@ -614,7 +615,7 @@ def test_blind_signer_translation_layer() -> None:
 )
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
 @pytest.mark.anyio
-async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
+async def test_signer_commands(wallet_environments: WalletTestFramework, tmp_path: Path) -> None:
     wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -631,72 +632,70 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
-    runner = CliRunner()
-    with runner.isolated_filesystem():
-        with open("./temp-tb", "wb") as file:
-            file.write(bytes(TransactionBundle([tx])))
+    with open(tmp_path / "temp-tb", "wb") as file:
+        file.write(bytes(TransactionBundle([tx])))
 
-        await GatherSigningInfoCMD(
-            rpc_info=NeedsWalletRPC(client_info=client_info),
-            sp_out=SPOut(
-                translation="CHIP-0028",
-                output_format="file",
-                output_file=["./temp-si"],
-            ),
-            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
-        ).run()
+    await GatherSigningInfoCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+        sp_out=SPOut(
+            translation="CHIP-0028",
+            output_format="file",
+            output_file=[str(tmp_path / "temp-si")],
+        ),
+        txs_in=TransactionsIn(transaction_file_in=str(tmp_path / "temp-tb")),
+    ).run()
 
-        await ExecuteSigningInstructionsCMD(
-            rpc_info=NeedsWalletRPC(client_info=client_info),
-            sp_in=SPIn(
-                translation="CHIP-0028",
-                signer_protocol_input=["./temp-si"],
-            ),
-            sp_out=SPOut(
-                translation="CHIP-0028",
-                output_format="file",
-                output_file=["./temp-sr"],
-            ),
-        ).run()
+    await ExecuteSigningInstructionsCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+        sp_in=SPIn(
+            translation="CHIP-0028",
+            signer_protocol_input=[str(tmp_path / "temp-si")],
+        ),
+        sp_out=SPOut(
+            translation="CHIP-0028",
+            output_format="file",
+            output_file=[str(tmp_path / "temp-sr")],
+        ),
+    ).run()
 
-        await ApplySignaturesCMD(
-            rpc_info=NeedsWalletRPC(client_info=client_info),
-            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
-            sp_in=SPIn(
-                translation="CHIP-0028",
-                signer_protocol_input=["./temp-sr"],
-            ),
-            txs_out=TransactionsOut(transaction_file_out="./temp-stb"),
-        ).run()
+    await ApplySignaturesCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+        txs_in=TransactionsIn(transaction_file_in=str(tmp_path / "temp-tb")),
+        sp_in=SPIn(
+            translation="CHIP-0028",
+            signer_protocol_input=[str(tmp_path / "temp-sr")],
+        ),
+        txs_out=TransactionsOut(transaction_file_out=str(tmp_path / "temp-stb")),
+    ).run()
 
-        await PushTransactionsCMD(
-            rpc_info=NeedsWalletRPC(client_info=client_info),
-            txs_in=TransactionsIn(transaction_file_in="./temp-stb"),
-        ).run()
+    await PushTransactionsCMD(
+        rpc_info=NeedsWalletRPC(client_info=client_info),
+        txs_in=TransactionsIn(transaction_file_in=str(tmp_path / "temp-stb")),
+    ).run()
 
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {
-                            "unconfirmed_wallet_balance": -1 * AMOUNT,
-                            "<=#spendable_balance": -1 * AMOUNT,
-                            "<=#max_send_amount": -1 * AMOUNT,
-                            "pending_change": sum(c.amount for c in tx.removals) - AMOUNT,
-                            "pending_coin_removal_count": 1,
-                        }
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "unconfirmed_wallet_balance": -1 * AMOUNT,
+                        "<=#spendable_balance": -1 * AMOUNT,
+                        "<=#max_send_amount": -1 * AMOUNT,
+                        "pending_change": sum(c.amount for c in tx.removals) - AMOUNT,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -1 * AMOUNT,
+                        "pending_change": -1 * (sum(c.amount for c in tx.removals) - AMOUNT),
+                        "pending_coin_removal_count": -1,
+                        "set_remainder": True,
                     },
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": -1 * AMOUNT,
-                            "pending_change": -1 * (sum(c.amount for c in tx.removals) - AMOUNT),
-                            "pending_coin_removal_count": -1,
-                            "set_remainder": True,
-                        },
-                    },
-                ),
-            ]
-        )
+                },
+            ),
+        ]
+    )
 
 
 @pytest.mark.filterwarnings("ignore:The parameter .* is used more than once:UserWarning")
@@ -760,7 +759,7 @@ def test_signer_command_default_parsing() -> None:
     )
 
 
-def test_transactions_in() -> None:
+def test_transactions_in(tmp_path: Path) -> None:
     @click.group()
     def cmd() -> None:
         pass
@@ -771,15 +770,16 @@ def test_transactions_in() -> None:
             assert self.transaction_bundle == TransactionBundle([STD_TX])
 
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        with open("some file", "wb") as file:
-            file.write(bytes(TransactionBundle([STD_TX])))
+    with open(tmp_path / "some file", "wb") as file:
+        file.write(bytes(TransactionBundle([STD_TX])))
 
-        result = runner.invoke(cmd, ["temp_cmd", "--transaction-file-in", "some file"], catch_exceptions=False)
-        assert result.output == ""
+    result = runner.invoke(
+        cmd, ["temp_cmd", "--transaction-file-in", str(tmp_path / "some file")], catch_exceptions=False
+    )
+    assert result.output == ""
 
 
-def test_transactions_out() -> None:
+def test_transactions_out(tmp_path: Path) -> None:
     @click.group()
     def cmd() -> None:
         pass
@@ -790,12 +790,13 @@ def test_transactions_out() -> None:
             self.handle_transaction_output([STD_TX])
 
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        result = runner.invoke(cmd, ["temp_cmd", "--transaction-file-out", "some file"], catch_exceptions=False)
-        assert result.output == ""
+    result = runner.invoke(
+        cmd, ["temp_cmd", "--transaction-file-out", str(tmp_path / "some file")], catch_exceptions=False
+    )
+    assert result.output == ""
 
-        with open("some file", "rb") as file:
-            file.read() == bytes(TransactionBundle([STD_TX]))
+    with open(tmp_path / "some file", "rb") as file:
+        file.read() == bytes(TransactionBundle([STD_TX]))
 
 
 @clvm_streamable
@@ -828,7 +829,7 @@ FOO_COIN_TRANSLATION = TranslationLayer(
 )
 
 
-def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
 
     @click.group()
@@ -843,48 +844,59 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
             assert self.read_sp_input(Coin) == [coin, coin]
 
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        with open("some file", "wb") as file:
-            file.write(byte_serialize_clvm_streamable(coin))
+    with open(tmp_path / "some file", "wb") as file:
+        file.write(byte_serialize_clvm_streamable(coin))
 
-        with open("some file2", "wb") as file:
-            file.write(byte_serialize_clvm_streamable(coin))
+    with open(tmp_path / "some file2", "wb") as file:
+        file.write(byte_serialize_clvm_streamable(coin))
 
-        result = runner.invoke(
-            cmd,
-            ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"],
-            catch_exceptions=False,
-        )
-        assert result.output == ""
+    result = runner.invoke(
+        cmd,
+        [
+            "temp_cmd",
+            "--signer-protocol-input",
+            str(tmp_path / "some file"),
+            "--signer-protocol-input",
+            str(tmp_path / "some file2"),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.output == ""
 
-    with runner.isolated_filesystem():
-        with open("some file", "wb") as file:
-            file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+    with open(tmp_path / "some file", "wb") as file:
+        file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
-            with open("some file2", "wb") as file2:
-                file2.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+        with open(tmp_path / "some file2", "wb") as file2:
+            file2.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
-        result = runner.invoke(
-            cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]
-        )
-        assert result.exception is not None
-        result = runner.invoke(
-            cmd,
-            [
-                "temp_cmd",
-                "--signer-protocol-input",
-                "some file",
-                "--signer-protocol-input",
-                "some file2",
-                "--translation",
-                "CHIP-0028",
-            ],
-            catch_exceptions=False,
-        )
-        assert result.output == ""
+    result = runner.invoke(
+        cmd,
+        [
+            "temp_cmd",
+            "--signer-protocol-input",
+            str(tmp_path / "some file"),
+            "--signer-protocol-input",
+            str(tmp_path / "some file2"),
+        ],
+    )
+    assert result.exception is not None
+    result = runner.invoke(
+        cmd,
+        [
+            "temp_cmd",
+            "--signer-protocol-input",
+            str(tmp_path / "some file"),
+            "--signer-protocol-input",
+            str(tmp_path / "some file2"),
+            "--translation",
+            "CHIP-0028",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.output == ""
 
 
-def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
 
     @click.group()
@@ -900,40 +912,49 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
             self.handle_clvm_output([coin, coin])
 
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "hex"], catch_exceptions=False)
-        assert result.output.strip() == coin_bytes.hex() + "\n" + coin_bytes.hex()
+    result = runner.invoke(cmd, ["temp_cmd", "--output-format", "hex"], catch_exceptions=False)
+    assert result.output.strip() == coin_bytes.hex() + "\n" + coin_bytes.hex()
 
-        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "file"], catch_exceptions=False)
-        assert result.output == "--output-format=file specified without any --output-file\n"
+    result = runner.invoke(cmd, ["temp_cmd", "--output-format", "file"], catch_exceptions=False)
+    assert result.output == "--output-format=file specified without any --output-file\n"
 
-        result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "file", "--output-file", "some file"], catch_exceptions=False
-        )
-        assert "Incorrect number of file outputs specified" in result.output
+    result = runner.invoke(
+        cmd,
+        ["temp_cmd", "--output-format", "file", "--output-file", str(tmp_path / "some file")],
+        catch_exceptions=False,
+    )
+    assert "Incorrect number of file outputs specified" in result.output
 
-        result = runner.invoke(
-            cmd,
-            ["temp_cmd", "--output-format", "file", "--output-file", "some file", "--output-file", "some file2"],
-            catch_exceptions=False,
-        )
-        assert result.output == ""
+    result = runner.invoke(
+        cmd,
+        [
+            "temp_cmd",
+            "--output-format",
+            "file",
+            "--output-file",
+            str(tmp_path / "some file"),
+            "--output-file",
+            str(tmp_path / "some file2"),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.output == ""
 
-        with open("some file", "rb") as file:
-            file.read() == coin_bytes
+    with open(tmp_path / "some file", "rb") as file:
+        file.read() == coin_bytes
 
-        with open("some file2", "rb") as file:
-            file.read() == coin_bytes
+    with open(tmp_path / "some file2", "rb") as file:
+        file.read() == coin_bytes
 
-        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "qr"], catch_exceptions=False)
-        assert result.output != ""  # separate test for QrCodeDisplay
+    result = runner.invoke(cmd, ["temp_cmd", "--output-format", "qr"], catch_exceptions=False)
+    assert result.output != ""  # separate test for QrCodeDisplay
 
-        result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"], catch_exceptions=False
-        )
-        assert result.output.strip() != coin_bytes.hex()
-        coin_hex = byte_serialize_clvm_streamable(coin, translation_layer=ALL_TRANSLATION_LAYERS["CHIP-0028"]).hex()
-        assert result.output.strip() == coin_hex + "\n" + coin_hex
+    result = runner.invoke(
+        cmd, ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"], catch_exceptions=False
+    )
+    assert result.output.strip() != coin_bytes.hex()
+    coin_hex = byte_serialize_clvm_streamable(coin, translation_layer=ALL_TRANSLATION_LAYERS["CHIP-0028"]).hex()
+    assert result.output.strip() == coin_hex + "\n" + coin_hex
 
 
 def test_qr_code_display() -> None:
