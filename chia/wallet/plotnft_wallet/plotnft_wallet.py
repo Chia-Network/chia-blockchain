@@ -567,6 +567,8 @@ class PlotNFT2Wallet:
                 )
                 if new_wallet is not None:
                     wallet_state_manager.wallets[matched_plotnft_wallet_id] = new_wallet
+                else:
+                    return None
             if matched_plotnft_wallet_id is None or not user_key_is_owned:
                 wallet_state_manager.log.warning(
                     f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet"

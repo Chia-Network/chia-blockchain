@@ -801,6 +801,10 @@ class WalletRpcApi:
 
             wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
+                if isinstance(w, PlotNFT2Wallet) and not self.service.wallet_state_manager.config.get(
+                    "enable_plot_nft", True
+                ):
+                    continue
                 wallet = self.service.wallet_state_manager.wallets[w.id]
                 unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
                 balance = await wallet.get_confirmed_balance(unspent)
