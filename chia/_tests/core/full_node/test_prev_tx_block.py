@@ -6,7 +6,12 @@ from chia_rs.sized_ints import uint8, uint32
 
 import chia.consensus.get_block_challenge as get_block_challenge_module
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
-from chia.consensus.get_block_challenge import is_infused_before_sp, post_hard_fork2, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import (
+    is_infused_before_sp,
+    post_hard_fork2,
+    post_hard_fork2_for_block_record,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
 from chia.util.block_cache import BlockCache
@@ -306,6 +311,30 @@ def test_post_hard_fork2_matches_real_chain_cutoff(bt: BlockTools) -> None:
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(block.finished_sub_slots),
+    )
+
+
+def test_post_hard_fork2_for_trigger_uses_trigger_sp_context(bt: BlockTools) -> None:
+    block_list = bt.get_consecutive_blocks(8, guarantee_transaction_block=True)
+    block_list = bt.get_consecutive_blocks(
+        1,
+        block_list_input=block_list,
+        guarantee_transaction_block=True,
+        skip_slots=1,
+    )
+    _, _, block_records = load_block_list(block_list, bt.constants)
+    block_cache = BlockCache(block_records, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
+    trigger = block_records[block_list[-2].header_hash]
+    carrier = block_list[-1]
+    constants = bt.constants.replace(HARD_FORK2_HEIGHT=trigger.height)
+
+    assert not post_hard_fork2_for_block_record(constants, block_cache, trigger)
+    assert post_hard_fork2(
+        constants,
+        block_cache,
+        prev_b_hash=carrier.prev_header_hash,
+        sp_index=carrier.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(carrier.finished_sub_slots),
     )
 
 
