@@ -52,7 +52,7 @@ from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import (
     post_hard_fork2,
-    post_hard_fork2_for_block_record,
+    post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -954,7 +954,7 @@ class FullNode:
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
-            post_hard_fork = post_hard_fork2_for_block_record(self.constants, self.blockchain, peak)
+            post_hard_fork = post_hard_fork2_block_record(self.constants, self.blockchain, peak)
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,

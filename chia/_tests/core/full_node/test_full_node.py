@@ -587,7 +587,7 @@ async def test_send_peak_to_timelords_uses_peak_as_hard_fork_trigger(
     peak = full_node.blockchain.block_record(peak_block.header_hash)
     captured_triggers: list[BlockRecord] = []
 
-    def capture_post_hard_fork2_for_block_record(
+    def capture_post_hard_fork2_block_record(
         constants: ConsensusConstants,
         blocks: Any,
         trigger: BlockRecord,
@@ -600,8 +600,8 @@ async def test_send_peak_to_timelords_uses_peak_as_hard_fork_trigger(
 
     monkeypatch.setattr(
         full_node_module,
-        "post_hard_fork2_for_block_record",
-        capture_post_hard_fork2_for_block_record,
+        "post_hard_fork2_block_record",
+        capture_post_hard_fork2_block_record,
     )
     monkeypatch.setattr(full_node.server, "send_to_all", noop_send_to_all)
 

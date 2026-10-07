@@ -9,7 +9,7 @@ from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import (
     is_infused_before_sp,
     post_hard_fork2,
-    post_hard_fork2_for_block_record,
+    post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
 from chia.consensus.pot_iterations import is_overflow_block
@@ -328,7 +328,7 @@ def test_post_hard_fork2_for_trigger_uses_trigger_sp_context(bt: BlockTools) -> 
     carrier = block_list[-1]
     constants = bt.constants.replace(HARD_FORK2_HEIGHT=trigger.height)
 
-    assert not post_hard_fork2_for_block_record(constants, block_cache, trigger)
+    assert not post_hard_fork2_block_record(constants, block_cache, trigger)
     assert post_hard_fork2(
         constants,
         block_cache,

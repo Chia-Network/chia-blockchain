@@ -24,7 +24,7 @@ from chia.consensus.get_block_challenge import (
     final_eos_is_already_included,
     get_block_challenge,
     get_filter_challenge_from_chain,
-    post_hard_fork2_for_block_record,
+    post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -435,7 +435,7 @@ def validate_unfinished_header_block(
 
                 # 3c. Check the actual sub-epoch is correct
                 if check_sub_epoch_summary:
-                    make_challenge_root = post_hard_fork2_for_block_record(constants, blocks, prev_b)
+                    make_challenge_root = post_hard_fork2_block_record(constants, blocks, prev_b)
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
                         blocks,
