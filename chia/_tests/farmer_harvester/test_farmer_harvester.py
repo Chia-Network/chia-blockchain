@@ -8,7 +8,7 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from chia_rs import G1Element, PartialProof
+from chia_rs import G1Element, PartialProof, compute_plot_id_v2
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -326,8 +326,8 @@ async def test_harvester_has_no_server(
     assert harvester_server.webserver is None
 
 
-test_partial_proof = PartialProof([uint64(256)] * 16)
-test_partial_proof2 = PartialProof([uint64(4096)] * 16)
+test_partial_proof = PartialProof([uint64(256)] * 16, uint16(7))
+test_partial_proof2 = test_partial_proof.replace(plot_index=uint16(1000))
 
 
 @pytest.mark.anyio
@@ -346,7 +346,6 @@ async def test_v2_partial_proofs_new_sp_hash(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         strength=uint8(5),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -379,7 +378,6 @@ async def test_v2_partial_proofs_missing_sp_hash(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         strength=uint8(5),
@@ -428,7 +426,6 @@ async def test_v2_partial_proofs_with_existing_sp(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         strength=uint8(5),
@@ -438,9 +435,22 @@ async def test_v2_partial_proofs_with_existing_sp(
     )
 
     harvester_peer = await get_harvester_peer(farmer)
-    await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+    with unittest.mock.patch.object(farmer.server, "send_to_all", new_callable=AsyncMock) as send:
+        await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+    assert send.call_count == 2
+    for call, partial in zip(send.call_args_list, partial_proofs.partial_proofs):
+        request = solver_protocol.SolverInfo.from_bytes(call.args[0][0].data)
+        assert request.partial_proof == partial
+        assert request.plot_id == compute_plot_id_v2(
+            partial_proofs.strength,
+            partial_proofs.plot_public_key,
+            partial_proofs.pool_public_key,
+            partial_proofs.pool_contract_puzzle_hash,
+            partial.plot_index,
+            partial_proofs.meta_group,
+        )
 
-    # should store 2 pending requests (one per partial proof)
+    # Equal fragments at different indices must remain separate requests.
     assert len(farmer.pending_solver_requests) == 2
     assert sp_hash in farmer.cache_add_time
 
@@ -464,7 +474,6 @@ async def test_solution_response_handler(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         strength=uint8(5),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -498,6 +507,7 @@ async def test_solution_response_handler(
         new_proof_of_space = call_args[0]
         original_peer = call_args[1]
 
+        assert new_proof_of_space.proof.plot_index == test_partial_proof.plot_index
         assert new_proof_of_space.proof.proof == b"test_proof_from_solver"
         assert new_proof_of_space.proof.challenge == calculate_pos_challenge(
             partial_proofs.plot_group_id,
@@ -561,7 +571,6 @@ async def test_solution_response_empty_proof(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         strength=uint8(5),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -631,7 +640,6 @@ async def test_v2_partial_proofs_solver_exception(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_index=uint16(0),
         meta_group=uint8(0),
         strength=uint8(5),
         plot_group_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),

@@ -2,7 +2,7 @@
 Persistent cache for expensive plot operations: get_qualities_for_challenge(),
 get_full_proof(), and solve_proof().
 
-The cache is stored in the plots directory as `plot_cache.pickle` and is keyed
+The cache is stored in the plots directory as `plot_cache_indexed.pickle` and is keyed
 by (plot or plot-group ID, challenge) for qualities and full proofs, and by
 (partial_proof_bytes, plot_id) for solve_proof.
 
@@ -27,11 +27,11 @@ from chia.plotting.prover import QualityProtocol, V1Prover, V1Quality, V2Prover,
 
 log = logging.getLogger(__name__)
 
-CACHE_FILENAME = "plot_cache.pickle"
+CACHE_FILENAME = "plot_cache_indexed.pickle"
 
 # (plot or plot-group ID, challenge) -> list of serialized quality data
 # V1: each entry is 32 bytes (quality bytes32)
-# V2: each entry is (plot_index, serialized PartialProof bytes)
+# V2: each entry is serialized PartialProof bytes, including the plot index.
 _qualities: dict[tuple[bytes, bytes], list[Any]] = {}
 
 # (plot_id, challenge, index) -> proof bytes
@@ -139,15 +139,11 @@ def install(plot_dir: Path) -> None:
         global _hits, _misses
         key = (bytes(self.get_id()), bytes(challenge))
         cached = _qualities.get(key)
-        if cached is not None and all(isinstance(q, tuple) and len(q) == 2 for q in cached):
+        if cached is not None:
             _hits += 1
-            return [V2Quality(PartialProof.from_bytes(q[1]), q[0], self.get_strength()) for q in cached]
+            return [V2Quality(PartialProof.from_bytes(q), self.get_strength()) for q in cached]
         result = orig_v2_quals(self, challenge)
-        _qualities[key] = [
-            (q.get_plot_index(), q.get_partial_proof().to_bytes())
-            for q in result
-            if isinstance(q, V2Quality)
-        ]
+        _qualities[key] = [q.get_partial_proof().to_bytes() for q in result if isinstance(q, V2Quality)]
         _misses += 1
         return result
 

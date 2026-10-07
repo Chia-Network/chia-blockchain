@@ -549,15 +549,15 @@ class FarmerAPI:
         )
 
         # Process each partial proof chain through solver service to get full proofs
-        plot_id = compute_plot_id_v2(
-            partial_proof_data.strength,
-            partial_proof_data.plot_public_key,
-            partial_proof_data.pool_public_key,
-            partial_proof_data.pool_contract_puzzle_hash,
-            partial_proof_data.plot_index,
-            partial_proof_data.meta_group,
-        )
         for partial_proof in partial_proof_data.partial_proofs:
+            plot_id = compute_plot_id_v2(
+                partial_proof_data.strength,
+                partial_proof_data.plot_public_key,
+                partial_proof_data.pool_public_key,
+                partial_proof_data.pool_contract_puzzle_hash,
+                partial_proof.plot_index,
+                partial_proof_data.meta_group,
+            )
             solver_info = SolverInfo(
                 partial_proof=partial_proof,
                 plot_id=plot_id,
@@ -631,7 +631,7 @@ class FarmerAPI:
                 proof_data.pool_contract_puzzle_hash,
                 proof_data.plot_public_key,
                 uint8(1),  # we only use this for v2 plots
-                proof_data.plot_index,
+                partial_proof.plot_index,
                 proof_data.meta_group,
                 proof_data.strength,
                 uint8(0),  # size is unused for v2 proofs

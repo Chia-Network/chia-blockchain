@@ -5,7 +5,6 @@ from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -120,7 +119,7 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             yield
     elif isinstance(plot_info.prover, V2Prover):
         with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
-            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint16(0), uint8(2))]
+            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16, uint16(0)), uint8(2))]
             yield
 
 
@@ -168,7 +167,8 @@ async def test_v2_partial_proof_path_supports_per_quality_signature_identifier(
     inner_prover.get_strength.return_value = uint8(2)
     inner_prover.get_memo.return_value = original_prover.get_memo()
     inner_prover.get_qualities_for_challenge.return_value = [
-        SimpleNamespace(chain=PartialProof([uint64(1)] * 16), plot_index=uint16(0))
+        PartialProof([uint64(1)] * 16, uint16(7)),
+        PartialProof([uint64(2)] * 16, uint16(1000)),
     ]
     plot_info.prover = V2Prover(inner_prover)
     with plot_manager:
@@ -190,6 +190,7 @@ async def test_v2_partial_proof_path_supports_per_quality_signature_identifier(
         assert len(partial_proof_messages) == 1
         partial_proofs = harvester_protocol.PartialProofsData.from_bytes(partial_proof_messages[0].data)
         assert partial_proofs.plot_identifier == str(env.plot_path.resolve())
+        assert [proof.plot_index for proof in partial_proofs.partial_proofs] == [7, 1000]
         quality_string = partial_proofs.partial_proofs[0].get_string(partial_proofs.strength)
         plot_identifier = quality_string.hex() + partial_proofs.plot_identifier
 

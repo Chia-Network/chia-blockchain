@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pytest
 from chia_rs import ConsensusConstants, PartialProof
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint8, uint16, uint64
 
 from chia.protocols.outbound_message import Message
-from chia.protocols.solver_protocol import SolverInfo
+from chia.protocols.solver_protocol import SolverInfo, SolverResponse
 from chia.simulator.block_tools import create_block_tools_async
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_solver
@@ -26,7 +26,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
             solver_api = solver_service._api
             assert solver_api.ready() is True
             test_info = SolverInfo(
-                PartialProof([uint64(256)] * 16),
+                PartialProof([uint64(256)] * 16, uint16(1000)),
                 plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
                 strength=uint8(5),
                 size=uint8(28),
@@ -36,3 +36,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
                 api_result = await solver_api.solve(test_info)
                 assert api_result is not None
                 assert isinstance(api_result, Message)
+                response = SolverResponse.from_bytes(api_result.data)
+                assert response.partial_proof == test_info.partial_proof
+                assert response.partial_proof.plot_index == 1000
+                assert response.proof == expected_proof

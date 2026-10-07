@@ -10,13 +10,13 @@ from chia.util.streamable import Streamable, streamable
 
 protocol_version = {
     NodeType.FULL_NODE: "0.0.36",
-    NodeType.HARVESTER: "0.0.38",
-    NodeType.FARMER: "0.0.38",
+    NodeType.HARVESTER: "0.0.39",
+    NodeType.FARMER: "0.0.39",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
     NodeType.WALLET: "0.0.38",
     NodeType.DATA_LAYER: "0.0.36",
-    NodeType.SOLVER: "0.0.37",
+    NodeType.SOLVER: "0.0.38",
 }
 
 """

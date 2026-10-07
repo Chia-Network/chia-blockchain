@@ -75,12 +75,17 @@ partial_proof_json: dict[str, Any] = {
     "sp_hash": "0x8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_identifier": "plot-filename",
     "partial_proofs": [
-        {"fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]},
-        {"fragments": [257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257]},
+        {
+            "fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256],
+            "plot_index": 3145,
+        },
+        {
+            "fragments": [257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257, 257],
+            "plot_index": 1000,
+        },
     ],
     "signage_point_index": 4,
     "plot_size": 32,
-    "plot_index": 3145,
     "meta_group": 5,
     "strength": 3,
     "plot_group_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
@@ -2864,13 +2869,19 @@ error_without_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "dat
 error_with_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}
 
 solver_info_json: dict[str, Any] = {
-    "partial_proof": {"fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]},
+    "partial_proof": {
+        "fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256],
+        "plot_index": 3145,
+    },
     "plot_id": "0x071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442",
     "strength": 5,
     "size": 28,
 }
 
 solver_response_json: dict[str, Any] = {
-    "partial_proof": {"fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]},
+    "partial_proof": {
+        "fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256],
+        "plot_index": 3145,
+    },
     "proof": "0x66756c6c2d70726f6f66",
 }

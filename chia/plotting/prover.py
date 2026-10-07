@@ -40,7 +40,6 @@ class ProverProtocol(Protocol):
 @dataclass(frozen=True)
 class V2Quality(QualityProtocol):
     _partial_proof: PartialProof
-    _plot_index: uint16
     _strength: uint8
 
     def get_string(self) -> bytes32:
@@ -50,7 +49,7 @@ class V2Quality(QualityProtocol):
         return self._partial_proof
 
     def get_plot_index(self) -> uint16:
-        return self._plot_index
+        return self._partial_proof.plot_index
 
 
 class V2Prover:
@@ -79,9 +78,7 @@ class V2Prover:
         raise AssertionError("V2 plot groups do not have a single-plot PlotParam")
 
     def get_param_for_index(self, plot_index: uint16) -> PlotParam:
-        return PlotParam.make_v2(
-            plot_index, self._prover.get_meta_group(), self._prover.get_strength()
-        )
+        return PlotParam.make_v2(plot_index, self._prover.get_meta_group(), self._prover.get_strength())
 
     def get_strength(self) -> uint8:
         return uint8(self._prover.get_strength())
@@ -113,11 +110,8 @@ class V2Prover:
 
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]:
         return [
-            V2Quality(q.chain, q.plot_index, self.get_strength())
-            for q in {
-                (q.plot_index, q.chain.to_bytes()): q
-                for q in self._prover.get_qualities_for_challenge(challenge)
-            }.values()
+            V2Quality(q, self.get_strength())
+            for q in {q.to_bytes(): q for q in self._prover.get_qualities_for_challenge(challenge)}.values()
         ]
 
 
@@ -143,7 +137,7 @@ class V1Prover:
 
     def get_param(self) -> PlotParam:
         return PlotParam.make_v1(uint8(self._disk_prover.get_size()))
-    
+
     def get_param_for_index(self, plot_index: uint16) -> PlotParam:
         raise AssertionError("V1 plots do not have plot group PlotParam")
 

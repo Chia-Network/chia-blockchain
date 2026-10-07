@@ -15,6 +15,8 @@ Protocol between harvester and farmer.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
+MAX_PARTIAL_PROOFS_MESSAGE_SIZE = 3 * 1024
+
 NEW_PLOT_SERIALIZATION_VERSION = Version("0.0.38")
 
 
@@ -96,7 +98,6 @@ class PartialProofsData(Streamable):
     partial_proofs: list[PartialProof]
     signage_point_index: uint8
     plot_size: uint8
-    plot_index: uint16
     meta_group: uint8
     strength: uint8
     plot_group_id: bytes32

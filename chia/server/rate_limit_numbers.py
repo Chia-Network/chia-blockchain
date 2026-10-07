@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 
+from chia.protocols.harvester_protocol import MAX_PARTIAL_PROOFS_MESSAGE_SIZE
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 
@@ -178,7 +179,7 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, RLSettings | Unlimited]] = {
         ProtocolMessageTypes.respond_fee_estimates: RLSettings(True, 10, 100),
         ProtocolMessageTypes.solve: RLSettings(False, 120, 1024),
         ProtocolMessageTypes.solution_response: RLSettings(False, 120, 1024),
-        ProtocolMessageTypes.partial_proofs: RLSettings(False, 120, 3 * 1024),
+        ProtocolMessageTypes.partial_proofs: RLSettings(False, 120, MAX_PARTIAL_PROOFS_MESSAGE_SIZE),
     },
     2: {
         ProtocolMessageTypes.request_block_header: RLSettings(False, 500, 100),

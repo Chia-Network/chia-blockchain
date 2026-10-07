@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -89,28 +88,31 @@ class TestV1Prover:
 
 class TestActiveV2Prover:
     def test_get_qualities_deduplicates_repeated_partial_proofs(self) -> None:
-        duplicate = PartialProof([uint64(1)] * 16)
-        distinct = PartialProof([uint64(2)] * 16)
+        duplicate = PartialProof([uint64(1)] * 16, uint16(0))
+        distinct = PartialProof([uint64(2)] * 16, uint16(0))
         inner_prover = MagicMock()
         inner_prover.plot_group_id.return_value = bytes32(b"4" * 32)
         inner_prover.get_strength.return_value = 2
-        duplicate_quality = SimpleNamespace(chain=duplicate, plot_index=uint16(0))
+        duplicate_quality = duplicate
         inner_prover.get_qualities_for_challenge.return_value = [
             duplicate_quality,
             duplicate_quality,
-            SimpleNamespace(chain=distinct, plot_index=uint16(0)),
+            distinct,
             duplicate_quality,
-            SimpleNamespace(chain=duplicate, plot_index=uint16(1)),
+            duplicate.replace(plot_index=uint16(1)),
         ]
         prover = V2Prover(inner_prover)
 
         with patch.dict("chia._tests.util.plot_cache._qualities", {}, clear=True):
             qualities = prover.get_qualities_for_challenge(bytes32(b"4" * 32))
+            cached_qualities = prover.get_qualities_for_challenge(bytes32(b"4" * 32))
+            assert cached_qualities == qualities
+            inner_prover.get_qualities_for_challenge.assert_called_once()
 
         assert qualities == [
-            V2Quality(duplicate, uint16(0), uint8(2)),
-            V2Quality(distinct, uint16(0), uint8(2)),
-            V2Quality(duplicate, uint16(1), uint8(2)),
+            V2Quality(duplicate, uint8(2)),
+            V2Quality(distinct, uint8(2)),
+            V2Quality(duplicate.replace(plot_index=uint16(1)), uint8(2)),
         ]
 
 

@@ -162,12 +162,11 @@ partial_proof = harvester_protocol.PartialProofsData(
     bytes32.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
     "plot-filename",
     [
-        PartialProof([uint64(256)] * 16),
-        PartialProof([uint64(257)] * 16),
+        PartialProof([uint64(256)] * 16, uint16(3145)),
+        PartialProof([uint64(257)] * 16, uint16(1000)),
     ],
     uint8(4),  # signage point
     uint8(32),  # plot size
-    uint16(3145),  # plot_index
     uint8(5),  # meta_group
     uint8(3),  # strength
     bytes32.fromhex("346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a"),
@@ -1171,13 +1170,13 @@ respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
 
 # SOLVER PROTOCOL
 solver_info = solver_protocol.SolverInfo(
-    partial_proof=PartialProof([uint64(256)] * 16),
+    partial_proof=PartialProof([uint64(256)] * 16, uint16(3145)),
     plot_id=bytes32.fromhex("071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442"),
     strength=uint8(5),
     size=uint8(28),
 )
 
 solver_response = solver_protocol.SolverResponse(
-    PartialProof([uint64(256)] * 16),
+    PartialProof([uint64(256)] * 16, uint16(3145)),
     b"full-proof",
 )
