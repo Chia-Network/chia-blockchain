@@ -11,16 +11,13 @@ on:
   release:
     types: [published]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "**.md"
     branches:
       - "**"
 
 concurrency:
-  # A public ready_for_review run only skips jobs. Keep it out of the pull request
-  # group so it does not cancel the in-flight opened or synchronize run.
-  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}{2}', github.workflow_ref, github.event.pull_request.number, github.event.action == 'ready_for_review' && !(github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private') && '-noop' || '') || github.run_id }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -60,8 +57,6 @@ jobs:
       !cancelled() &&
       github.repository_owner == 'Chia-Network' &&
       (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
-      !(github.event.repository.visibility == 'private' && github.event_name == 'pull_request' && github.event.pull_request.draft) &&
-      (github.event.action != 'ready_for_review' || github.event.repository.visibility == 'private') &&
       github.event.repository.visibility != 'private'
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -149,8 +144,7 @@ jobs:
       !cancelled() &&
       github.repository_owner == 'Chia-Network' &&
       github.event.repository.visibility == 'private' &&
-      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
-      !(github.event_name == 'pull_request' && github.event.pull_request.draft)
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true')
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     steps:
@@ -187,9 +181,7 @@ jobs:
     if: |
       !cancelled() &&
       github.repository_owner == 'Chia-Network' &&
-      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
-      !(github.event.repository.visibility == 'private' && github.event_name == 'pull_request' && github.event.pull_request.draft) &&
-      (github.event.action != 'ready_for_review' || github.event.repository.visibility == 'private')
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true')
     runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
