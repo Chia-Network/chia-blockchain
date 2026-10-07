@@ -9,7 +9,7 @@ import logging
 import multiprocessing.context
 import time
 import traceback
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from enum import IntEnum
 from pathlib import Path
@@ -117,7 +117,13 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope, new_wallet_action_scope
+from chia.wallet.wallet_action_scope import (
+    CoinSubscription,
+    PlotNFTTargetStateInfo,
+    PuzzleHashSubscription,
+    WalletActionScope,
+    new_wallet_action_scope,
+)
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecordsResult, WalletCoinStore
@@ -309,7 +315,7 @@ class WalletStateManager:
             timestamp_for_height=self.wallet_node.get_timestamp_for_height,
             puzzle_hash_encoder=self.encode_puzzle_hash,
             action_scope_sandbox=self.new_action_scope,
-            add_interested_coin_ids=self.add_interested_coin_ids,
+            _add_subscriptions=self._add_subscriptions,
         )
         self.fungibility_manager = FungibilityManager(coin_store=self.coin_store, wallet_state_manager=self)
 
@@ -1232,7 +1238,8 @@ class WalletStateManager:
                     coin_data,
                     sync_scope,
                 )
-                await self.add_interested_coin_ids([coin_name])
+                # TODO: waiting for addition to sync_scope
+                await self._add_subscriptions([CoinSubscription(target=coin_name)])
 
         # if the coin has been spent
         else:
@@ -1324,10 +1331,12 @@ class WalletStateManager:
                                 )
                             if clawback_metadata is not None:
                                 # Add the Clawback coin as the interested coin for the sender
-                                await self.add_interested_coin_ids([coin.name()])
+                                # TODO: waiting for addition to sync_scope
+                                await self._add_subscriptions([CoinSubscription(target=coin.name())])
                         elif wallet_identifier.type == WalletType.CAT:
                             # We subscribe to change for CATs since they didn't hint previously
-                            await self.add_interested_coin_ids([coin.name()])
+                            # TODO: waiting for addition to sync_scope
+                            await self._add_subscriptions([CoinSubscription(target=coin.name())])
 
                     if to_puzzle_hash is None:
                         to_puzzle_hash = additions[0].puzzle_hash
@@ -1434,7 +1443,8 @@ class WalletStateManager:
                         await self.coin_store.set_spent(
                             curr_coin_state.coin.name(), uint32(curr_coin_state.spent_height)
                         )
-                        await self.add_interested_coin_ids([new_singleton_coin.name()])
+                        # TODO: waiting for addition to sync_scope
+                        await self._add_subscriptions([CoinSubscription(target=new_singleton_coin.name())])
                         new_coin_state: list[CoinState] = await self.wallet_node.get_coin_state(
                             [new_singleton_name], peer=peer, fork_height=fork_height
                         )
@@ -1478,7 +1488,8 @@ class WalletStateManager:
                         sync_scope,
                     )
                     await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
-                    await self.add_interested_coin_ids([coin_name])
+                    # TODO: waiting for addition to sync_scope
+                    await self._add_subscriptions([CoinSubscription(target=coin_name)])
                 else:
                     await self.plotnft2_store.mark_pool_reward_as_spent(
                         reward_id=coin_name,
@@ -1554,7 +1565,9 @@ class WalletStateManager:
                         coin_data,
                         sync_scope,
                     )
-                await self.add_interested_coin_ids([coin_added_name])
+
+                # TODO: waiting for addition to sync_scope
+                await self._add_subscriptions([CoinSubscription(target=coin_added_name)])
 
         return used_up_to
 
@@ -1811,6 +1824,7 @@ class WalletStateManager:
         extra_spends: list[WalletSpendBundle] | None = None,
         singleton_records: list[SingletonRecord] = [],
         plotnft_exiting_info: PlotNFTTargetStateInfo | None = None,
+        puzzle_hash_and_coin_subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -1863,7 +1877,9 @@ class WalletStateManager:
                 if plotnft_exiting_info is not None:
                     await self.plotnft2_store.add_exiting_info(exiting_info=plotnft_exiting_info)
 
-            await self.add_interested_coin_ids(all_coins_names)
+            await self._add_subscriptions(
+                [*puzzle_hash_and_coin_subscriptions, *(CoinSubscription(target=name) for name in all_coins_names)]
+            )
 
             if actual_spend_involved:
                 self.tx_pending_changed()
@@ -1929,7 +1945,10 @@ class WalletStateManager:
                                 "Subscribing to unspendable offer coins: %s",
                                 [x.hex() for x in trade_coins_removed],
                             )
-                            await self.add_interested_coin_ids(list(trade_coins_removed))
+                            # TODO: waiting for addition to sync_scope
+                            await self._add_subscriptions(
+                                [CoinSubscription(target=name) for name in trade_coins_removed]
+                            )
 
                     async with sync_scope.use() as interface:
                         interface.side_effects.websocket_events.append(
@@ -2133,10 +2152,39 @@ class WalletStateManager:
         if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
             self.tx_pending_changed()
 
-    async def add_interested_puzzle_hashes(self, puzzle_hashes: list[bytes32], wallet_ids: list[int]) -> None:
+    async def _add_subscriptions(self, subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription]) -> None:
         # TODO: It's unclear if the intended use for this is that each puzzle hash should store all
         # the elements of wallet_ids. It only stores one wallet_id per puzzle hash in the interested_store
         # but the coin_cache keeps all wallet_ids for each puzzle hash
+        for subscription in subscriptions:
+            if subscription.target in self.interested_coin_cache:
+                wallet_ids_to_add = list(
+                    {
+                        sub.wallet_id
+                        for sub in subscriptions
+                        if sub.wallet_id not in self.interested_coin_cache[subscription.target]
+                        and sub.wallet_id is not None
+                    }
+                )
+                self.interested_coin_cache[subscription.target].extend(wallet_ids_to_add)
+            else:
+                self.interested_coin_cache[subscription.target] = list(
+                    {sub.wallet_id for sub in subscriptions if sub.wallet_id is not None}
+                )
+        for subscription in subscriptions:
+            if isinstance(subscription, PuzzleHashSubscription):
+                await self.interested_store.add_interested_puzzle_hash(subscription.target, subscription.wallet_id)
+            else:
+                await self.interested_store.add_interested_coin_id(subscription.target)
+        await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+            [s.target for s in subscriptions if isinstance(s, PuzzleHashSubscription)]
+        )
+        await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(
+            [s.target for s in subscriptions if isinstance(s, CoinSubscription)]
+        )
+
+    async def add_interested_puzzle_hashes(self, puzzle_hashes: list[bytes32], wallet_ids: list[int]) -> None:
+
         for puzzle_hash in puzzle_hashes:
             if puzzle_hash in self.interested_coin_cache:
                 wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})

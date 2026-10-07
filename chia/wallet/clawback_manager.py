@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, replace
 
@@ -32,7 +32,7 @@ from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -54,7 +54,7 @@ class ClawbackManager:
     timestamp_for_height: Callable[[uint32], Awaitable[uint64]]
     puzzle_hash_encoder: Callable[[bytes32], str]
     action_scope_sandbox: Callable[[TXConfig, bool], AbstractAsyncContextManager[WalletActionScope]]
-    add_interested_coin_ids: Callable[[list[bytes32]], Awaitable[None]]
+    _add_subscriptions: Callable[[Sequence[CoinSubscription]], Awaitable[None]]
 
     async def identify(
         self,
@@ -89,7 +89,8 @@ class ClawbackManager:
             self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
             is_recipient = True
             # For the recipient we need to manually subscribe the merkle coin
-            await self.add_interested_coin_ids([coin_state.coin.name()])
+            # TODO: waiting for addition to sync_scope
+            await self._add_subscriptions([CoinSubscription(target=coin_state.coin.name())])
         if is_recipient is not None:
             spend_bundle = WalletSpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)

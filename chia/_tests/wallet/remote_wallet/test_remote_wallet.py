@@ -14,6 +14,7 @@ from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import CoinSubscription
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
@@ -206,7 +207,9 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     coin_id = created_coin.name()
 
     # Register interest without associating it to any RemoteWallet id.
-    await wallet_node.wallet_state_manager.add_interested_coin_ids([coin_id])
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        async with action_scope.use() as interface:
+            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=created_coin.puzzle_hash))
 
     await wallet_environments.process_pending_states(
         [WalletStateTransition(pre_block_balance_updates={1: {"set_remainder": True}})]
