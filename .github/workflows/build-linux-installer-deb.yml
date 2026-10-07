@@ -1,4 +1,4 @@
-name: 📦🚀 Build Installer - Linux DEB
+name: 📦 Build Installer - Linux DEB
 
 on:
   workflow_dispatch:

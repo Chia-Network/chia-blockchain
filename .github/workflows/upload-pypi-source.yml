@@ -1,4 +1,4 @@
-name: 🚨🚀 Lint and upload source distribution
+name: Lint and upload source distribution
 
 on:
   push:
