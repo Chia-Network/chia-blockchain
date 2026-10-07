@@ -16,7 +16,7 @@ jobs:
   # Private pushes that only mirror public main skip this workflow.
   # On a public repo this job is skipped and the matrix below is unchanged.
   public-sync:
-    name: Public sync (private only)
+    name: "private only: public sync"
     if: github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && github.event_name == 'push'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
@@ -114,7 +114,7 @@ jobs:
         run: pre-commit run --all-files --verbose
 
   pre-commit-private:
-    name: Linux Intel 3.12 (private only)
+    name: "private only: Linux Intel 3.12"
     needs: public-sync
     if: |
       !cancelled() &&
