@@ -143,7 +143,13 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos-intel:
-    if: (github.event_name != 'workflow_dispatch' || inputs.run-macos-intel) && github.event.repository.visibility != 'private'
+    # !cancelled() drops the default success() check. That check is false when
+    # public-sync is skipped, which would skip these jobs on every public PR.
+    if: |
+      !cancelled() &&
+      needs.configure.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.run-macos-intel) &&
+      github.event.repository.visibility != 'private'
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -159,7 +165,10 @@ jobs:
       arch-emoji: 🌀
       collect-junit: false
   macos-arm:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
+    if: |
+      !cancelled() &&
+      needs.configure.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.run-macos-arm)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -175,7 +184,10 @@ jobs:
       arch-emoji: 💪
       collect-junit: false
   ubuntu-intel:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-linux-intel
+    if: |
+      !cancelled() &&
+      needs.configure.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.run-linux-intel)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -191,7 +203,11 @@ jobs:
       arch-emoji: 🌀
       collect-junit: false
   ubuntu-arm:
-    if: (github.event_name != 'workflow_dispatch' || inputs.run-linux-arm) && github.event.repository.visibility != 'private'
+    if: |
+      !cancelled() &&
+      needs.configure.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.run-linux-arm) &&
+      github.event.repository.visibility != 'private'
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -207,7 +223,10 @@ jobs:
       arch-emoji: 💪
       collect-junit: false
   windows:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-windows
+    if: |
+      !cancelled() &&
+      needs.configure.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.run-windows)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
