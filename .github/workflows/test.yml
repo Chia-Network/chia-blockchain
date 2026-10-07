@@ -81,7 +81,7 @@ jobs:
   # Private pushes that only mirror public main skip the test matrix.
   # On a public repo this job is skipped and the rest of the workflow is unchanged.
   public-sync:
-    name: Public sync
+    name: Public sync (private only)
     if: github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && github.event_name == 'push'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
