@@ -18,7 +18,12 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import (
+    DelegatedPuzzleAndSolution,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+)
 from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle, SingletonStruct
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
@@ -173,23 +178,16 @@ class PlotNFT2Wallet:
                             else extra_conditions,
                         ).at("rf")
                     ),  # strips away to just the delegated puzzle (bit of a hack)
-                    solution=UnknownSolution(program=Program.to(None)),
+                    solution=NilSolution(),
                 )
                 if i == 0
                 else DelegatedPuzzleAndSolution(
-                    puzzle=UnknownPuzzle(
-                        known_program=Program.to(
-                            (
-                                1,
-                                [
-                                    AssertCoinAnnouncement(
-                                        asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b""
-                                    ).to_program()
-                                ],
-                            )
-                        )
+                    puzzle=P2Conditions(
+                        conditions=[
+                            AssertCoinAnnouncement(asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b"")
+                        ]
                     ),
-                    solution=UnknownSolution(program=Program.to(None)),
+                    solution=NilSolution(),
                 )
                 for i, reward in enumerate(rewards_to_claim)
             ],
@@ -318,7 +316,7 @@ class PlotNFT2Wallet:
                     conditions=(*extra_conditions, fee_hook),
                 ).at("rf")
             ),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=UnknownSolution(program=Program.to(None)),
+            solution=NilSolution(),
         )
         coin_spends = plotnft.exit_to_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         if fee > 0:
@@ -376,7 +374,7 @@ class PlotNFT2Wallet:
                     conditions=(fee_hook, heightlock, *extra_conditions),
                 ).at("rf")
             ),  # strips away to just the delegated puzzle (bit of a hack)
-            solution=UnknownSolution(program=Program.to(None)),
+            solution=NilSolution(),
         )
         coin_spends = plotnft.exit_waiting_room(exit_to_waiting_room_dpuz_and_sol)
         next_plotnft = PlotNFT.get_next_from_coin_spend(

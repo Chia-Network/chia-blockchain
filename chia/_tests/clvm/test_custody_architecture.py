@@ -22,14 +22,26 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     MIPSComponent,
     MIPSComponentBase,
     MofN,
+    MofNHint,
+    MofNMerkleTree,
+    MofNSolution,
+    NofN_MOD,
     ProvenSpend,
     PuzzleWithRestrictions,
+    PuzzleWithRestrictionsSolution,
     Restriction,
     RestrictionHint,
     UnknownMember,
     UnknownRestriction,
 )
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, Puzzle, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACSPuzzle,
+    ACSSolution,
+    DelegatedPuzzleAndSolution,
+    NilSolution,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 BUNCH_OF_ZEROS = bytes32([0] * 32)
@@ -75,63 +87,81 @@ ANY_PROGRAM = Program.to(None)
         # 1 of 2 (w/ & w/o restrictions)
         MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(
-                    nonce=1,
-                    restrictions=[],
-                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
-                ),
-                PuzzleWithRestrictions(
-                    nonce=2,
-                    restrictions=[
-                        UnknownRestriction(
-                            restriction_hint=RestrictionHint(
-                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
-                            )
-                        ),
-                        UnknownRestriction(
-                            restriction_hint=RestrictionHint(
-                                member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
-                            )
-                        ),
-                    ],
-                    member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
-                ),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(
+                        nonce=1,
+                        restrictions=[],
+                        member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+                        _top_level=False,
+                    ),
+                    PuzzleWithRestrictions(
+                        nonce=2,
+                        restrictions=[
+                            UnknownRestriction(
+                                restriction_hint=RestrictionHint(
+                                    member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                                )
+                            ),
+                            UnknownRestriction(
+                                restriction_hint=RestrictionHint(
+                                    member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM
+                                )
+                            ),
+                        ],
+                        member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                        _top_level=False,
+                    ),
+                ],
+            ),
         ),
         # 2 of 2 (further 1 of 1s)
         MofN(
             m=2,
-            members=[
-                PuzzleWithRestrictions(
-                    nonce=1,
-                    restrictions=[],
-                    member=MofN(
-                        m=1,
-                        members=[
-                            PuzzleWithRestrictions(
-                                nonce=3,
-                                restrictions=[],
-                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
-                            )
-                        ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(
+                        nonce=1,
+                        restrictions=[],
+                        member=MofN(
+                            m=1,
+                            merkle_tree=MofNMerkleTree(
+                                nodes=[
+                                    PuzzleWithRestrictions(
+                                        nonce=3,
+                                        restrictions=[],
+                                        member=UnknownMember(
+                                            puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                                        ),
+                                        _top_level=False,
+                                    )
+                                ],
+                            ),
+                        ),
+                        _top_level=False,
                     ),
-                ),
-                PuzzleWithRestrictions(
-                    nonce=4,
-                    restrictions=[],
-                    member=MofN(
-                        m=1,
-                        members=[
-                            PuzzleWithRestrictions(
-                                nonce=5,
-                                restrictions=[],
-                                member=UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
-                            )
-                        ],
+                    PuzzleWithRestrictions(
+                        nonce=4,
+                        restrictions=[],
+                        member=MofN(
+                            m=1,
+                            merkle_tree=MofNMerkleTree(
+                                nodes=[
+                                    PuzzleWithRestrictions(
+                                        nonce=5,
+                                        restrictions=[],
+                                        member=UnknownMember(
+                                            puzzle_hint=MemberHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)
+                                        ),
+                                        _top_level=False,
+                                    )
+                                ],
+                            ),
+                        ),
+                        _top_level=False,
                     ),
-                ),
-            ],
+                ]
+            ),
         ),
     ],
 )
@@ -147,7 +177,7 @@ def test_back_and_forth_hint_parsing(restrictions: list[Restriction[MemberOrDPuz
         member=puzzle,
     )
 
-    assert PuzzleWithRestrictions.from_memo(cwr.memo()) == cwr
+    assert PuzzleWithRestrictions.from_memo(cwr.memo) == cwr
 
 
 def test_unknown_puzzle_behavior() -> None:
@@ -173,13 +203,12 @@ def test_unknown_puzzle_behavior() -> None:
             raise NotImplementedError  # pragma: no cover
 
         @property
-        def tree_hash(self) -> bytes32:
+        def tree_hash_optimized(self) -> bytes32:
             assert self.nonce is not None
             return bytes32([self.nonce] * 32)
 
         @classmethod
-        def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
-            raise NotImplementedError  # pragma: no cover
+        def match(cls, *, unknown_puzzle: UnknownPuzzle) -> PlaceholderPuzzle | None: ...
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
     unknown_puzzle_0 = UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
@@ -218,10 +247,12 @@ def test_unknown_puzzle_behavior() -> None:
         pwr,
         member=MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], member=unknown_puzzle_3),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=unknown_puzzle_0, _top_level=False),
+                    PuzzleWithRestrictions(nonce=1, restrictions=[], member=unknown_puzzle_3, _top_level=False),
+                ],
+            ),
         ),
     )
     assert pwr.unknown_puzzles == {
@@ -247,10 +278,12 @@ def test_unknown_puzzle_behavior() -> None:
         restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()],
         member=MofN(
             m=1,
-            members=[
-                PuzzleWithRestrictions(nonce=0, restrictions=[], member=PlaceholderPuzzle()),
-                PuzzleWithRestrictions(nonce=1, restrictions=[], member=PlaceholderPuzzle()),
-            ],
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=PlaceholderPuzzle(), _top_level=False),
+                    PuzzleWithRestrictions(nonce=1, restrictions=[], member=PlaceholderPuzzle(), _top_level=False),
+                ],
+            ),
         ),
     )
     assert filled_in.unknown_puzzles == {}
@@ -269,17 +302,11 @@ class ACSMember(MIPSComponentBase):
 
     @property
     def program(self) -> Program:
-        assert self.nonce is not None
         # (r (c (q . nonce) ACS_MEMBER_PH))
         return Program.to([6, [4, (1, self.nonce), ACS_MEMBER]])
 
-    @property
-    def tree_hash(self) -> bytes32:
-        return self.program.get_tree_hash()
-
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
-        raise NotImplementedError  # pragma: no cover
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ACSMember | None: ...
 
 
 @dataclass(frozen=True)
@@ -295,13 +322,8 @@ class ACSDPuzValidator(MIPSComponentBase):
         # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
-    @property
-    def tree_hash(self) -> bytes32:
-        return self.program.get_tree_hash()
-
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
-        raise NotImplementedError  # pragma: no cover
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ACSMember | None: ...
 
 
 @pytest.mark.anyio
@@ -329,10 +351,14 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                     restrictions=[],
                     member=MofN(
                         m=m,
-                        members=[
-                            PuzzleWithRestrictions(nonce=n_i, restrictions=restrictions, member=ACSMember())
-                            for n_i in range(n)
-                        ],
+                        merkle_tree=MofNMerkleTree(
+                            nodes=[
+                                PuzzleWithRestrictions(
+                                    nonce=n_i, restrictions=restrictions, member=ACSMember(), _top_level=False
+                                )
+                                for n_i in range(n)
+                            ],
+                        ),
                     ),
                 )
 
@@ -356,19 +382,19 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                             puzzle_reveal=PuzzleWithRestrictions(
                                 nonce=index, restrictions=restrictions, member=ACSMember(), _top_level=False
                             ).program,
-                            solution=PuzzleWithRestrictions(
-                                nonce=index, restrictions=restrictions, member=ACSMember()
-                            ).solve(
-                                [],
-                                [Program.to(None)] if with_restrictions else [],
-                                Program.to(
-                                    [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
+                            solution=PuzzleWithRestrictionsSolution(
+                                dpuz_validator_solutions=[NilSolution()] if with_restrictions else [],
+                                member_solution=ACSSolution(
+                                    conditions=[
+                                        announcement_1,
+                                        announcement_2.corresponding_assertion(),
+                                    ]
                                 ),
                             ),
                         )
                         for index in indexes
                     }
-                    assert isinstance(m_of_n.inner_puzzle, MofN)
+                    assert isinstance(m_of_n.member, MofN)
                     result = await client.push_tx(
                         cost_logger.add_cost(
                             f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
@@ -377,22 +403,20 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                     make_spend(
                                         m_of_n_coin,
                                         m_of_n.program,
-                                        m_of_n.solve(
-                                            [],
-                                            [],
-                                            m_of_n.inner_puzzle.solve(proven_spends),  # pylint: disable=no-member
-                                            DelegatedPuzzleAndSolution(
-                                                puzzle=UnknownPuzzle(known_program=Program.to(1)),
-                                                solution=UnknownSolution(
-                                                    program=Program.to(
-                                                        [
-                                                            announcement_2.to_program(),
-                                                            announcement_1.corresponding_assertion().to_program(),
-                                                        ]
-                                                    )
+                                        PuzzleWithRestrictionsSolution(
+                                            member_solution=MofNSolution(
+                                                puzzle=m_of_n.member, spends_to_prove=proven_spends
+                                            ),
+                                            delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                                                puzzle=ACSPuzzle(),
+                                                solution=ACSSolution(
+                                                    conditions=[
+                                                        announcement_2,
+                                                        announcement_1.corresponding_assertion(),
+                                                    ]
                                                 ),
                                             ),
-                                        ),
+                                        ).program,
                                     )
                                 ],
                                 G2Element(),
@@ -405,18 +429,20 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
 
         # couple of error cases
         with pytest.raises(ValueError, match=re.escape("M cannot be greater than N")):
-            MofN(m=50, members=[])
+            MofN(m=50, merkle_tree=MofNMerkleTree(nodes=[]))
 
         with pytest.raises(ValueError, match=re.escape("M must be greater than 0")):
-            MofN(m=0, members=[])
+            MofN(m=0, merkle_tree=MofNMerkleTree(nodes=[]))
 
         with pytest.raises(ValueError, match=re.escape("Duplicate nodes not currently supported by MofN drivers")):
             MofN(
                 m=2,
-                members=[
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
-                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember()),
-                ],
+                merkle_tree=MofNMerkleTree(
+                    nodes=[
+                        PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                        PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                    ],
+                ),
             )
 
 
@@ -430,16 +456,11 @@ class ACSMemberValidator(MIPSComponentBase):
 
     @property
     def program(self) -> Program:
-        # (mod (dpuz . program) (a program conditions))
+        # (mod (conditions . program) (a program conditions))
         return Program.to([2, 3, 2])
 
-    @property
-    def tree_hash(self) -> bytes32:
-        return self.program.get_tree_hash()
-
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
-        raise NotImplementedError  # pragma: no cover
+    def match(cls, unknown_puzzle: UnknownPuzzle) -> ACSMemberValidator | None: ...
 
 
 @pytest.mark.anyio
@@ -462,8 +483,8 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
         announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=pwr_coin.name())
         announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=pwr_coin.name())
 
-        dpuz = Program.to(1)
-        dpuzhash = dpuz.get_tree_hash()
+        dpuz = ACSPuzzle()
+        dpuzhash = dpuz.tree_hash
         result = await client.push_tx(
             cost_logger.add_cost(
                 "Puzzle with 4 restrictions (2 member validators & 2 dpuz validators) all ACS",
@@ -472,37 +493,34 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                         make_spend(
                             pwr_coin,
                             pwr.program,
-                            pwr.solve(
-                                [
-                                    Program.to(None),
+                            PuzzleWithRestrictionsSolution(
+                                member_validator_solutions=[
+                                    NilSolution(),
                                     # (mod conditions (r (r conditions)))
                                     # checks length >= 2
-                                    Program.to(7),
+                                    UnknownSolution(program=Program.to(7)),
                                 ],
-                                [
-                                    Program.to(None),
+                                dpuz_validator_solutions=[
+                                    NilSolution(),
                                     # (mod dpuzhash (if (= dpuzhash <dpuzhash>) () (x)))
                                     # (a (i (= 1 (q . <dpuzhash>)) () (q 8)) 1)
-                                    Program.to([2, [3, [9, 1, (1, dpuzhash)], None, [1, 8]], 1]),
+                                    UnknownSolution(
+                                        program=Program.to([2, [3, [9, 1, (1, dpuzhash)], None, [1, 8]], 1])
+                                    ),
                                 ],
-                                Program.to(
-                                    [
-                                        announcement_1.to_program(),
-                                        announcement_2.corresponding_assertion().to_program(),
+                                member_solution=ACSSolution(
+                                    conditions=[
+                                        announcement_1,
+                                        announcement_2.corresponding_assertion(),
                                     ]
                                 ),
-                                DelegatedPuzzleAndSolution(
-                                    puzzle=UnknownPuzzle(known_program=dpuz),
-                                    solution=UnknownSolution(
-                                        program=Program.to(
-                                            [
-                                                announcement_2.to_program(),
-                                                announcement_1.corresponding_assertion().to_program(),
-                                            ]
-                                        )
+                                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                                    puzzle=dpuz,
+                                    solution=ACSSolution(
+                                        conditions=[announcement_2, announcement_1.corresponding_assertion()]
                                     ),
                                 ),
-                            ),
+                            ).program,
                         )
                     ],
                     G2Element(),
@@ -521,3 +539,234 @@ def test_pwr_errors() -> None:
 
     with pytest.raises(ValueError, match=re.escape("Attempting to parse a memo that does not belong to this spec")):
         PuzzleWithRestrictions.from_memo(Program.to(("not the namespace", None)))
+
+
+def test_custody_errors() -> None:
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to create a hint for an unknown member without the hinted memo")
+    ):
+        MemberHint(puzhash=BUNCH_OF_ZEROS, memo=None).to_program()
+
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to create a memo for an unknown member without the hinted memo")
+    ):
+        _ = UnknownMember(puzzle_hint=MemberHint(puzhash=BUNCH_OF_ZEROS, memo=None)).memo
+
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to create a hint for an unknown restriction without the hinted memo")
+    ):
+        RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=None).to_program()
+
+    with pytest.raises(
+        ValueError, match=re.escape("Trying to create a memo for an unknown restriction without the hinted memo")
+    ):
+        _ = UnknownRestriction(
+            restriction_hint=RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=None)
+        ).memo
+
+    with pytest.raises(ValueError, match=re.escape("Must specify either known nodes or known root")):
+        MofNMerkleTree()
+
+    with pytest.raises(ValueError, match=re.escape("Nodes must be known to generate a proof")):
+        MofNMerkleTree(known_root=BUNCH_OF_ZEROS).generate_m_of_n_proof({})
+
+    with pytest.raises(ValueError, match=re.escape("Trying to create a m-of-n hint with no member memos")):
+        MofNHint(m=1, member_memos=None).to_program()
+
+    with pytest.raises(ValueError, match=re.escape("M cannot be greater than N")):
+        MofN(m=50, merkle_tree=MofNMerkleTree(nodes=[]))
+
+    with pytest.raises(ValueError, match=re.escape("M must be greater than 0")):
+        MofN(m=0, merkle_tree=MofNMerkleTree(nodes=[]))
+
+    with pytest.raises(ValueError, match=re.escape("Top-level nodes are not supported by MofN drivers")):
+        MofN(
+            m=1,
+            merkle_tree=MofNMerkleTree(
+                nodes=[PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember())],
+            ),
+        )
+
+    with pytest.raises(ValueError, match=re.escape("Duplicate nodes not currently supported by MofN drivers")):
+        MofN(
+            m=2,
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                ],
+            ),
+        )
+
+    with pytest.raises(ValueError, match=re.escape("Merkle tree shape is unknown")):
+        _ = MofN(m=1, merkle_tree=MofNMerkleTree(known_root=BUNCH_OF_ZEROS)).nodes
+
+    with pytest.raises(ValueError, match=re.escape("OneOfN proof is not supported for MofN trees")):
+        _ = MofN(
+            m=2,
+            merkle_tree=MofNMerkleTree(
+                nodes=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                    PuzzleWithRestrictions(nonce=1, restrictions=[], member=ACSMember(), _top_level=False),
+                ],
+            ),
+        ).tree_for_one_of_n_proof
+
+    with pytest.raises(ValueError, match=re.escape("Must prove as many spends as the M value")):
+        MofNSolution(
+            puzzle=MofN(
+                m=1,
+                merkle_tree=MofNMerkleTree(
+                    nodes=[PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False)],
+                ),
+            ),
+            spends_to_prove={},
+        )
+
+    with pytest.raises(
+        ValueError, match=re.escape("Do not set nonces on members or restrictions, only on PuzzleWithRestrictions")
+    ):
+        PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember().with_nonce(1))
+
+    with pytest.raises(
+        ValueError, match=re.escape("Do not set nonces on members or restrictions, only on PuzzleWithRestrictions")
+    ):
+        PuzzleWithRestrictions(
+            nonce=0,
+            restrictions=[
+                UnknownRestriction(
+                    restriction_hint=RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                ).with_nonce(1)
+            ],
+            member=ACSMember(),
+        )
+
+    with pytest.raises(ValueError, match=re.escape("Attempting to parse a memo that does not belong to this spec")):
+        PuzzleWithRestrictions.from_memo(Program.to("atom"))
+
+    with pytest.raises(ValueError, match=re.escape("Attempting to parse a memo that does not belong to this spec")):
+        PuzzleWithRestrictions.from_memo(Program.to(("not the namespace", None)))
+
+
+def test_match() -> None:
+    # PuzzleWithRestrictions: reject non-INDEX_WRAPPER puzzles
+    assert PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+
+    # PuzzleWithRestrictions: top-level, no restrictions
+    pwr = PuzzleWithRestrictions(nonce=7, restrictions=[], member=ACSMember())
+    assert PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_program=pwr.program)) == (
+        PuzzleWithRestrictions(
+            nonce=7,
+            restrictions=[],
+            member=UnknownMember(
+                puzzle_hint=MemberHint(puzhash=ACSMember().with_nonce(7).tree_hash, memo=None),
+            ),
+        )
+    )
+
+    # PuzzleWithRestrictions: nested (_top_level=False) with member and dpuz restrictions
+    nested_pwr = PuzzleWithRestrictions(
+        nonce=3,
+        restrictions=[ACSMemberValidator(), ACSDPuzValidator()],
+        member=ACSMember(),
+        _top_level=False,
+    )
+    assert PuzzleWithRestrictions.match(unknown_puzzle=UnknownPuzzle(known_program=nested_pwr.program)) == (
+        PuzzleWithRestrictions(
+            nonce=3,
+            restrictions=[
+                UnknownRestriction(
+                    restriction_hint=RestrictionHint(
+                        member_not_dpuz=True,
+                        puzhash=ACSMemberValidator().with_nonce(3).tree_hash,
+                        memo=Program.to(None),
+                    )
+                ),
+                UnknownRestriction(
+                    restriction_hint=RestrictionHint(
+                        member_not_dpuz=False,
+                        puzhash=ACSDPuzValidator().with_nonce(3).tree_hash,
+                        memo=Program.to(None),
+                    )
+                ),
+            ],
+            member=UnknownMember(
+                puzzle_hint=MemberHint(puzhash=ACSMember().with_nonce(3).tree_hash, memo=None),
+            ),
+            _top_level=False,
+        )
+    )
+
+    # MofN: reject unrelated puzzles
+    assert MofN.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    assert MofN.match(unknown_puzzle=UnknownPuzzle(known_program=NofN_MOD.curry([Program.to(1)]))) is None
+
+    # MofN: 1-of-N matches as OneOfN with known root only
+    one_of_n = MofN(
+        m=1,
+        merkle_tree=MofNMerkleTree(
+            nodes=[
+                PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], member=ACSMember(), _top_level=False),
+            ],
+        ),
+    )
+    assert MofN.match(unknown_puzzle=UnknownPuzzle(known_program=one_of_n.program)) == MofN(
+        m=1, merkle_tree=MofNMerkleTree(known_root=one_of_n.merkle_tree.root)
+    )
+
+    # MofN: M-of-N (1 < M < N) matches with known root only
+    m_of_n = MofN(
+        m=2,
+        merkle_tree=MofNMerkleTree(
+            nodes=[
+                PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], member=ACSMember(), _top_level=False),
+                PuzzleWithRestrictions(nonce=2, restrictions=[], member=ACSMember(), _top_level=False),
+            ],
+        ),
+    )
+    assert MofN.match(unknown_puzzle=UnknownPuzzle(known_program=m_of_n.program)) == MofN(
+        m=2, merkle_tree=MofNMerkleTree(known_root=m_of_n.merkle_tree.root)
+    )
+
+    # MofN: N-of-N matches by recursively matching each member as PuzzleWithRestrictions
+    n_of_n = MofN(
+        m=2,
+        merkle_tree=MofNMerkleTree(
+            nodes=[
+                PuzzleWithRestrictions(nonce=0, restrictions=[], member=ACSMember(), _top_level=False),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], member=ACSMember(), _top_level=False),
+            ],
+        ),
+    )
+    assert MofN.match(unknown_puzzle=UnknownPuzzle(known_program=n_of_n.program)) == MofN(
+        m=2,
+        merkle_tree=MofNMerkleTree(
+            nodes=[
+                PuzzleWithRestrictions(
+                    nonce=0,
+                    restrictions=[],
+                    member=UnknownMember(
+                        puzzle_hint=MemberHint(puzhash=ACSMember().with_nonce(0).tree_hash, memo=None),
+                    ),
+                    _top_level=False,
+                ),
+                PuzzleWithRestrictions(
+                    nonce=1,
+                    restrictions=[],
+                    member=UnknownMember(
+                        puzzle_hint=MemberHint(puzhash=ACSMember().with_nonce(1).tree_hash, memo=None),
+                    ),
+                    _top_level=False,
+                ),
+            ],
+        ),
+    )
+
+    # PuzzleWithRestrictionsSolution: atoms are unmatched; cons cells wrap as UnknownSolution
+    assert PuzzleWithRestrictionsSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    solution_program = Program.to([1, 2, 3])
+    assert PuzzleWithRestrictionsSolution.match(
+        unknown_solution=UnknownSolution(program=solution_program)
+    ) == PuzzleWithRestrictionsSolution(member_solution=UnknownSolution(program=solution_program))

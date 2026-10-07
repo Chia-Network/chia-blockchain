@@ -21,10 +21,25 @@ from chia.wallet.conditions import (
     SendMessage,
     parse_conditions_non_consensus,
 )
-from chia.wallet.puzzles.custody.custody_architecture import MIPSComponentBase, PuzzleWithRestrictions
-from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
+from chia.wallet.puzzles.custody.custody_architecture import (
+    MIPSComponentBase,
+    PuzzleWithRestrictions,
+    PuzzleWithRestrictionsSolution,
+)
+from chia.wallet.puzzles.custody.restriction_utilities import (
+    ValidatorStackRestriction,
+    ValidatorStackRestrictionSolution,
+)
 from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, Puzzle, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACSSolution,
+    DelegatedPuzzleAndSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -38,12 +53,25 @@ class EasyDPuzWrapper(MIPSComponentBase):
         # (mod (conditions remark) (c (list REMARK remark) conditions)) -> (c (c (q . 1) (c 5 ())) 2)
         return Program.to([4, [4, (1, 1), [4, 5, None]], 2])
 
-    @property
-    def tree_hash(self) -> bytes32:
-        return self.program.get_tree_hash()
-
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...
+    def match(cls, unknown_puzzle: UnknownPuzzle) -> EasyDPuzWrapper | None: ...
+
+
+def test_validator_stack_restriction_solution_match() -> None:
+    dpuz = P2Conditions(conditions=[Remark(rest=Program.to("foo"))])
+    solution = ValidatorStackRestrictionSolution.from_dpuz(dpuz)
+    assert ValidatorStackRestrictionSolution.from_dpuz(dpuz.program) == solution
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=solution.program)) == (
+        solution
+    )
+
+    # atoms, wrong arity, and non-bytes32 atoms are unmatched
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    assert (
+        ValidatorStackRestrictionSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not 32 bytes"])))
+        is None
+    )
 
 
 @pytest.mark.anyio
@@ -58,11 +86,19 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 
         # Attempt to just use any old dpuz
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_program=Program.to((1, [[1, "foo"]]))),
-            solution=UnknownSolution(program=Program.to(None)),
+            puzzle=P2Conditions(conditions=[Remark(rest=Program.to(["foo"]))]), solution=NilSolution()
         )
         not_wrapped_attempt = WalletSpendBundle(
-            [make_spend(coin, pwr.program, pwr.solve([], [], Program.to([[1, "bar"]]), any_old_dpuz))],
+            [
+                make_spend(
+                    coin,
+                    pwr.program,
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=ACSSolution(conditions=[Remark(rest=Program.to(["bar"]))]),
+                        delegated_puzzle_and_solution=any_old_dpuz,
+                    ).program,
+                )
+            ],
             G2Element(),
         )
         result = await client.push_tx(not_wrapped_attempt)
@@ -70,7 +106,8 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 
         # Now actually put the dpuz in the wrapper
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
-            any_old_dpuz, [Program.to(["bat"]), Program.to(["baz"])]
+            any_old_dpuz,
+            [UnknownSolution(program=Program.to(["bat"])), UnknownSolution(program=Program.to(["baz"]))],
         )
         wrapped_spend = cost_logger.add_cost(
             "Minimal dpuz wrapper w/ wrapper stack enforcement",
@@ -79,12 +116,11 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
                     make_spend(
                         coin,
                         pwr.program,
-                        pwr.solve(
-                            [],
-                            [restriction.solve(original_dpuz=any_old_dpuz.puzzle.program)],
-                            Program.to([[1, "bar"]]),
-                            wrapped_dpuz,
-                        ),
+                        PuzzleWithRestrictionsSolution(
+                            dpuz_validator_solutions=[ValidatorStackRestrictionSolution.from_dpuz(any_old_dpuz.puzzle)],
+                            member_solution=ACSSolution(conditions=[Remark(rest=Program.to(["bar"]))]),
+                            delegated_puzzle_and_solution=wrapped_dpuz,
+                        ).program,
                     )
                 ],
                 G2Element(),
@@ -100,7 +136,9 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         with pytest.raises(
             ValueError, match=re.escape("Number of wrapper solutions does not match number of required wrappers")
         ):
-            restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(["only one"])])
+            restriction.modify_delegated_puzzle_and_solution(
+                any_old_dpuz, [UnknownSolution(program=Program.to(["only one"]))]
+            )
 
 
 @pytest.mark.anyio
@@ -115,18 +153,19 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
 
         # Attempt to just use any old dpuz
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_program=Program.to((1, [[1, "foo"]]))),
-            solution=UnknownSolution(program=Program.to(None)),
+            puzzle=P2Conditions(conditions=[Remark(rest=Program.to(["foo"]))]), solution=NilSolution()
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [NilSolution()])
         not_timelocked_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
                     pwr.program,
-                    pwr.solve(
-                        [], [Program.to([any_old_dpuz.puzzle.tree_hash])], Program.to([[1, "bar"]]), any_old_dpuz
-                    ),
+                    PuzzleWithRestrictionsSolution(
+                        dpuz_validator_solutions=[ValidatorStackRestrictionSolution.from_dpuz(any_old_dpuz.puzzle)],
+                        member_solution=ACSSolution(conditions=[Remark(rest=Program.to(["bar"]))]),
+                        delegated_puzzle_and_solution=any_old_dpuz,
+                    ).program,
                 )
             ],
             G2Element(),
@@ -136,14 +175,16 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
 
         # Now actually put a timelock in the dpuz
         timelocked_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_program=Program.to(
-                    (1, [AssertHeightRelative(height=uint32(10)).to_program(), [1, "foo"], [1, "bat"]])
-                )
+            puzzle=P2Conditions(
+                conditions=[
+                    AssertHeightRelative(height=uint32(10)),
+                    Remark(rest=Program.to(["foo"])),
+                    Remark(rest=Program.to(["bat"])),
+                ],
             ),
-            solution=UnknownSolution(program=Program.to(None)),
+            solution=NilSolution(),
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [Program.to(None)])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [NilSolution()])
         sb = cost_logger.add_cost(
             "Minimal puzzle with restrictions w/ heightlock wrapper",
             WalletSpendBundle(
@@ -151,12 +192,13 @@ async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
                     make_spend(
                         coin,
                         pwr.program,
-                        pwr.solve(
-                            [],
-                            [Program.to([timelocked_dpuz.puzzle.tree_hash])],
-                            Program.to([[1, "bar"]]),
-                            wrapped_dpuz,
-                        ),
+                        PuzzleWithRestrictionsSolution(
+                            dpuz_validator_solutions=[
+                                ValidatorStackRestrictionSolution.from_dpuz(timelocked_dpuz.puzzle)
+                            ],
+                            member_solution=ACSSolution(conditions=[Remark(rest=Program.to(["bar"]))]),
+                            delegated_puzzle_and_solution=wrapped_dpuz,
+                        ).program,
                     )
                 ],
                 G2Element(),
@@ -195,20 +237,20 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
 
         # Attempt to create a coin somewhere else
         any_old_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_program=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()]))
-            ),
-            solution=UnknownSolution(program=Program.to(None)),
+            puzzle=P2Conditions(conditions=[CreateCoin(bytes32([1] * 32), uint64(1))]),
+            solution=NilSolution(),
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [NilSolution()])
         escape_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
                     pwr.program,
-                    pwr.solve(
-                        [], [Program.to([any_old_dpuz.puzzle.tree_hash])], Program.to([[1, "bar"]]), any_old_dpuz
-                    ),
+                    PuzzleWithRestrictionsSolution(
+                        dpuz_validator_solutions=[ValidatorStackRestrictionSolution.from_dpuz(any_old_dpuz.puzzle)],
+                        member_solution=ACSSolution(conditions=[Remark(rest=Program.to(["bar"]))]),
+                        delegated_puzzle_and_solution=any_old_dpuz,
+                    ).program,
                 )
             ],
             G2Element(),
@@ -218,14 +260,10 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
 
         # Now send it to the correct place
         correct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_program=Program.to(
-                    (1, [CreateCoin(bytes32.zeros, uint64(1)).to_program(), Remark(Program.to("foo")).to_program()])
-                )
-            ),
-            solution=UnknownSolution(program=Program.to(None)),
+            puzzle=P2Conditions(conditions=[CreateCoin(bytes32.zeros, uint64(1)), Remark(Program.to("foo"))]),
+            solution=NilSolution(),
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(correct_dpuz, [Program.to(None)])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(correct_dpuz, [NilSolution()])
         sb = cost_logger.add_cost(
             "Minimal puzzle with restrictions w/ fixed create coin wrapper",
             WalletSpendBundle(
@@ -233,12 +271,11 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
                     make_spend(
                         coin,
                         pwr.program,
-                        pwr.solve(
-                            [],
-                            [Program.to([correct_dpuz.puzzle.tree_hash])],
-                            Program.to([Remark(Program.to("bar")).to_program()]),
-                            wrapped_dpuz,
-                        ),
+                        PuzzleWithRestrictionsSolution(
+                            dpuz_validator_solutions=[ValidatorStackRestrictionSolution.from_dpuz(correct_dpuz.puzzle)],
+                            member_solution=ACSSolution(conditions=[Remark(Program.to("bar"))]),
+                            delegated_puzzle_and_solution=wrapped_dpuz,
+                        ).program,
                     )
                 ],
                 G2Element(),
@@ -269,34 +306,30 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
 
         # Attempt to send a message
         send_message_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(
-                known_program=Program.to(
-                    (
-                        1,
-                        [
-                            SendMessage(
-                                bytes32.zeros,
-                                sender=MessageParticipant(parent_id_committed=bytes32.zeros),
-                                receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
-                            ).to_program()
-                        ],
+            puzzle=P2Conditions(
+                conditions=[
+                    SendMessage(
+                        bytes32.zeros,
+                        sender=MessageParticipant(parent_id_committed=bytes32.zeros),
+                        receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
                     )
-                )
+                ]
             ),
-            solution=UnknownSolution(program=Program.to(None)),
+            solution=NilSolution(),
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(send_message_dpuz, [Program.to(None)])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(send_message_dpuz, [NilSolution()])
         escape_attempt = WalletSpendBundle(
             [
                 make_spend(
                     coin,
                     pwr.program,
-                    pwr.solve(
-                        [],
-                        [Program.to([send_message_dpuz.puzzle.tree_hash])],
-                        Program.to(None),
-                        wrapped_dpuz,
-                    ),
+                    PuzzleWithRestrictionsSolution(
+                        dpuz_validator_solutions=[
+                            ValidatorStackRestrictionSolution.from_dpuz(send_message_dpuz.puzzle)
+                        ],
+                        member_solution=NilSolution(),
+                        delegated_puzzle_and_solution=wrapped_dpuz,
+                    ).program,
                 )
             ],
             G2Element(),
@@ -305,11 +338,8 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # Now send it to the correct place
-        self_destruct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=UnknownPuzzle(known_program=Program.to(None)),
-            solution=UnknownSolution(program=Program.to(None)),
-        )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(self_destruct_dpuz, [Program.to(None)])
+        self_destruct_dpuz = DelegatedPuzzleAndSolution(puzzle=NilPuzzle(), solution=NilSolution())
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(self_destruct_dpuz, [NilSolution()])
         sb = cost_logger.add_cost(
             "Minimal puzzle with restrictions w/ send message banned wrapper",
             WalletSpendBundle(
@@ -317,12 +347,13 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
                     make_spend(
                         coin,
                         pwr.program,
-                        pwr.solve(
-                            [],
-                            [Program.to([self_destruct_dpuz.puzzle.tree_hash])],
-                            Program.to(None),
-                            wrapped_dpuz,
-                        ),
+                        PuzzleWithRestrictionsSolution(
+                            dpuz_validator_solutions=[
+                                ValidatorStackRestrictionSolution.from_dpuz(self_destruct_dpuz.puzzle)
+                            ],
+                            member_solution=NilSolution(),
+                            delegated_puzzle_and_solution=wrapped_dpuz,
+                        ).program,
                     )
                 ],
                 G2Element(),

@@ -22,8 +22,8 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions
-from chia.wallet.puzzles.custody.member_puzzles import SINGLETON_MEMBER_MOD, SingletonMember
+from chia.wallet.puzzles.custody.custody_architecture import PuzzleWithRestrictions, PuzzleWithRestrictionsSolution
+from chia.wallet.puzzles.custody.member_puzzles import SingletonMember, SingletonMemberSolution
 from chia.wallet.puzzles.puzzle_drivers import (
     DelegatedPuzzleAndSolution,
     OptimizedPuzzleHashPuzzle,
@@ -356,12 +356,10 @@ class P2SingletonPuzzle(PuzzleBase):
     def solve(
         self, singleton_inner_puzzle_hash: bytes32, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
     ) -> Program:
-        return self._puzzle_with_restrictions.solve(
-            [],
-            [],
-            self.singleton_member.solve(singleton_inner_puzzle_hash),
-            delegated_puzzle_and_solution,
-        )
+        return PuzzleWithRestrictionsSolution(
+            member_solution=SingletonMemberSolution(singleton_inner_puzzle_hash=singleton_inner_puzzle_hash),
+            delegated_puzzle_and_solution=delegated_puzzle_and_solution,
+        ).program
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None:
@@ -369,11 +367,15 @@ class P2SingletonPuzzle(PuzzleBase):
         if mips_match is None:
             return None
         assert isinstance(mips_match, PuzzleWithRestrictions)
-        assert isinstance(mips_match.program, UnknownPuzzle)
-        if mips_match.program.mod != SINGLETON_MEMBER_MOD or mips_match.program.curried_args is None:
+        if isinstance(mips_match.member, SingletonMember):
+            singleton_member_match: SingletonMember | None = mips_match.member
+        elif isinstance(mips_match.member, UnknownPuzzle):
+            singleton_member_match = SingletonMember.match(unknown_puzzle=mips_match.member)
+        else:
             return None
-        (singleton_struct_prog,) = mips_match.program.curried_args
-        return cls(singleton_id=bytes32(singleton_struct_prog.at("rf").as_atom()))
+        if singleton_member_match is None:
+            return None
+        return cls(singleton_id=singleton_member_match.singleton_id)
 
 
 @dataclass(kw_only=True, frozen=True)

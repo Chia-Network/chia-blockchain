@@ -25,14 +25,21 @@ from chia.wallet.conditions import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import (
     MofN,
+    MofNMerkleTree,
+    MofNSolution,
     ProvenSpend,
     PuzzleWithRestrictions,
+    PuzzleWithRestrictionsSolution,
 )
 from chia.wallet.puzzles.custody.member_puzzles import (
     BLSWithTaprootMember,
+    BLSWithTaprootMemberSolution,
     FixedPuzzleMember,
 )
-from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
+from chia.wallet.puzzles.custody.restriction_utilities import (
+    ValidatorStackRestriction,
+    ValidatorStackRestrictionSolution,
+)
 from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.puzzle_drivers import (
@@ -120,7 +127,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         return self.pool_config
 
     @property
-    def bls_member(self) -> BLSWithTaprootMember:
+    def bls_member(self) -> BLSWithTaprootMember[None]:
         return BLSWithTaprootMember(synthetic_key=self.user_config.synthetic_pubkey)
 
     @cached_property
@@ -166,7 +173,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
     ) -> DelegatedPuzzleAndSolution:
         return self.user_restriction.modify_delegated_puzzle_and_solution(
             delegated_puzzle_and_solution,
-            [Program.to(None), Program.to(None)],
+            [NilSolution(), NilSolution()],
         )
 
     @property
@@ -179,13 +186,14 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         )
 
     def user_proven_spend(self, premodified_dpuz: Program) -> dict[bytes32, ProvenSpend]:
+        user_pwr = self.user_puzzle_with_restrictions
         return {
-            self.user_puzzle_with_restrictions.tree_hash: ProvenSpend(
-                puzzle_reveal=self.user_puzzle_with_restrictions.program,
-                solution=self.user_puzzle_with_restrictions.solve(
+            user_pwr.tree_hash: ProvenSpend(
+                puzzle_reveal=user_pwr.program,
+                solution=PuzzleWithRestrictionsSolution(
                     member_validator_solutions=[],
-                    dpuz_validator_solutions=[self.user_restriction.solve(premodified_dpuz)],
-                    member_solution=self.bls_member.solve(),
+                    dpuz_validator_solutions=[ValidatorStackRestrictionSolution.from_dpuz(premodified_dpuz)],
+                    member_solution=BLSWithTaprootMemberSolution(),
                 ),
             )
         }
@@ -204,13 +212,12 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         )
 
     def pool_proven_spend(self) -> dict[bytes32, ProvenSpend]:
+        pool_pwr = self.pool_puzzle_with_restrictions
         return {
-            self.pool_puzzle_with_restrictions.tree_hash: ProvenSpend(
-                puzzle_reveal=self.pool_puzzle_with_restrictions.program,
-                solution=self.pool_puzzle_with_restrictions.solve(
-                    member_validator_solutions=[],
-                    dpuz_validator_solutions=[],
-                    member_solution=self.fixed_puzzle_member.solve(),
+            pool_pwr.tree_hash: ProvenSpend(
+                puzzle_reveal=pool_pwr.program,
+                solution=PuzzleWithRestrictionsSolution(
+                    member_solution=NilSolution(),
                 ),
             )
         }
@@ -222,10 +229,12 @@ class PlotNFTInnerPuzzle(PuzzleBase):
             restrictions=[],
             member=MofN(
                 m=1,
-                members=[
-                    self.user_puzzle_with_restrictions,
-                    self.pool_puzzle_with_restrictions,
-                ],
+                merkle_tree=MofNMerkleTree(
+                    nodes=[
+                        self.user_puzzle_with_restrictions,
+                        self.pool_puzzle_with_restrictions,
+                    ]
+                ),
             )
             if self.pooling
             else self.bls_member,
@@ -234,7 +243,7 @@ class PlotNFTInnerPuzzle(PuzzleBase):
 
     @property
     def memo(self) -> Program:
-        return self.puzzle_with_restrictions.memo()
+        return self.puzzle_with_restrictions.memo
 
     @property
     def additional_memos(self) -> Program:
@@ -260,30 +269,27 @@ class PlotNFTInnerPuzzle(PuzzleBase):
 
     def forward_pool_reward_inner_solution(self, reward: PoolReward) -> Program:
         custody_pwr = self.puzzle_with_restrictions
-        assert isinstance(custody_pwr.inner_puzzle, MofN)
-        return custody_pwr.solve(
-            member_validator_solutions=[],
-            dpuz_validator_solutions=[],
-            member_solution=custody_pwr.inner_puzzle.solve(self.pool_proven_spend()),
+        assert isinstance(custody_pwr.member, MofN)
+        return PuzzleWithRestrictionsSolution(
+            member_solution=MofNSolution(puzzle=custody_pwr.member, spends_to_prove=self.pool_proven_spend()),
             delegated_puzzle_and_solution=self.claim_pool_reward_dpuz_and_solution(reward),
-        )
+        ).program
 
     def exit_to_from_waiting_room_inner_solution(
         self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
     ) -> Program:
         custody_pwr = self.puzzle_with_restrictions
-        assert isinstance(custody_pwr.inner_puzzle, MofN)
-        return custody_pwr.solve(
-            member_validator_solutions=[],
-            dpuz_validator_solutions=[],
-            member_solution=custody_pwr.inner_puzzle.solve(
-                self.user_proven_spend(delegated_puzzle_and_solution.puzzle.program)
+        assert isinstance(custody_pwr.member, MofN)
+        return PuzzleWithRestrictionsSolution(
+            member_solution=MofNSolution(
+                puzzle=custody_pwr.member,
+                spends_to_prove=self.user_proven_spend(delegated_puzzle_and_solution.puzzle.program),
             ),
             delegated_puzzle_and_solution=self.user_restriction.modify_delegated_puzzle_and_solution(
                 delegated_puzzle_and_solution,
-                [Program.to([]), Program.to([])],
+                [NilSolution(), NilSolution()],
             ),
-        )
+        ).program
 
     @property
     def exit_to_waiting_room_condition(self) -> CreateCoin:
@@ -312,13 +318,26 @@ class PlotNFTInnerPuzzle(PuzzleBase):
         if mips_match is None:
             return None
         assert isinstance(mips_match, PuzzleWithRestrictions)
-        assert isinstance(mips_match.program, UnknownPuzzle)
-        potential_bls_member_match = BLSWithTaprootMember.match(unknown_puzzle=mips_match.program)
+
+        member = mips_match.member
+        if isinstance(member, BLSWithTaprootMember):
+            return PlotNFTInnerPuzzle(user_config=UserConfig(synthetic_pubkey=member.guaranteed_synthetic_key))
+        if isinstance(member, MofN):
+            if member.m != 2:
+                return None
+            raise NotImplementedError("Currently unimplemented")
+
+        # PuzzleWithRestrictions.match stores UnknownMember (hash only) for unresolved members.
+        # Without a program reveal we cannot identify the concrete member driver.
+        if not isinstance(member, UnknownPuzzle):
+            return None
+
+        potential_bls_member_match = BLSWithTaprootMember.match(unknown_puzzle=member)
         if potential_bls_member_match is not None:
             return PlotNFTInnerPuzzle(
                 user_config=UserConfig(synthetic_pubkey=potential_bls_member_match.guaranteed_synthetic_key)
             )
-        potential_mofn_match = MofN.match(unknown_puzzle=mips_match.program)
+        potential_mofn_match = MofN.match(unknown_puzzle=member)
         if potential_mofn_match is None:
             return None
         if potential_mofn_match.m != 2:
@@ -370,7 +389,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
                 CreateCoin(
                     plotnft_inner_puzzle.tree_hash,
                     uint64(1),
-                    memo_blob=Program.to((hint, plotnft_inner_puzzle.puzzle_with_restrictions.memo())),
+                    memo_blob=Program.to((hint, plotnft_inner_puzzle.puzzle_with_restrictions.memo)),
                 ),
                 CreateCoinAnnouncement(msg=b""),
                 *([] if remark is None else [remark]),
@@ -481,7 +500,7 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
             if unknown_inner_puzzle.additional_memos is None:
                 raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
             pubkey = G1Element.from_bytes(unknown_inner_puzzle.additional_memos.at("f").as_atom())
-            if isinstance(unknown_inner_puzzle.inner_puzzle, MofN):
+            if isinstance(unknown_inner_puzzle.member, MofN):
                 pool_puzzle_hash = bytes32(unknown_inner_puzzle.additional_memos.at("rf").as_atom())
                 timelock = uint32(unknown_inner_puzzle.additional_memos.at("rrf").as_int())
                 pool_memoization = unknown_inner_puzzle.additional_memos.at("rrrf")
@@ -553,12 +572,10 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
-                self.inner_puzzle.puzzle_with_restrictions.solve(
-                    member_validator_solutions=[],
-                    dpuz_validator_solutions=[],
-                    member_solution=self.inner_puzzle.bls_member.solve(),
+                PuzzleWithRestrictionsSolution(
+                    member_solution=BLSWithTaprootMemberSolution(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
-                )
+                ).program
             )
         )
         return [coin_spend]
@@ -578,12 +595,10 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
-                self.inner_puzzle.puzzle_with_restrictions.solve(
-                    member_validator_solutions=[],
-                    dpuz_validator_solutions=[],
-                    member_solution=self.inner_puzzle.bls_member.solve(),
+                PuzzleWithRestrictionsSolution(
+                    member_solution=BLSWithTaprootMemberSolution(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
-                )
+                ).program
             )
         )
         return [coin_spend]
@@ -657,12 +672,10 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
-                program=self.inner_puzzle.puzzle_with_restrictions.solve(
-                    member_validator_solutions=[],
-                    dpuz_validator_solutions=[],
-                    member_solution=self.inner_puzzle.bls_member.solve(),
+                program=PuzzleWithRestrictionsSolution(
+                    member_solution=BLSWithTaprootMemberSolution(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
-                )
+                ).program
             )
         )
         return [coin_spend, *reward_spends]
@@ -693,12 +706,10 @@ class PlotNFT(Singleton[PlotNFTInnerPuzzle]):
         )
         coin_spend = self.spend(
             inner_solution=UnknownSolution(
-                self.inner_puzzle.puzzle_with_restrictions.solve(
-                    member_validator_solutions=[],
-                    dpuz_validator_solutions=[],
-                    member_solution=self.inner_puzzle.bls_member.solve(),
+                PuzzleWithRestrictionsSolution(
+                    member_solution=BLSWithTaprootMemberSolution(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
-                )
+                ).program
             )
         )
         return [coin_spend]

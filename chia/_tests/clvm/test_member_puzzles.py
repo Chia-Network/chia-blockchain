@@ -4,6 +4,7 @@ import re
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
@@ -14,33 +15,58 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.wallet.conditions import CreateCoinAnnouncement
-from chia.wallet.puzzles.custody.custody_architecture import MemberHint, PuzzleWithRestrictions
-from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember, FixedPuzzleMember, SingletonMember
+from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement
+from chia.wallet.puzzles.custody.custody_architecture import (
+    MemberHint,
+    PuzzleWithRestrictions,
+    PuzzleWithRestrictionsSolution,
+)
+from chia.wallet.puzzles.custody.member_puzzles import (
+    BLSWithTaprootMember,
+    BLSWithTaprootMemberSolution,
+    FixedPuzzleMember,
+    SingletonMember,
+    SingletonMemberSolution,
+)
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_public_key,
     puzzle_for_synthetic_public_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import DelegatedPuzzleAndSolution, UnknownPuzzle, UnknownSolution
-from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACS_PH,
+    ACSPuzzle,
+    ACSSolution,
+    DelegatedPuzzleAndSolution,
+    NilPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+    UnknownSolution,
+)
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @pytest.mark.anyio
 async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        delegated_puzzle = Program.to(1)
-        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+        delegated_puzzle = ACSPuzzle()
+        delegated_puzzle_hash = delegated_puzzle.tree_hash
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
 
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_with_taproot_member)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.tree_hash,
-            memo=bls_puzzle.inner_puzzle.memo,
+            puzhash=bls_puzzle.member.tree_hash,
+            memo=bls_puzzle.member.memo,
         )
 
-        assert bls_puzzle.memo() == Program.to(
+        assert bls_puzzle.memo == Program.to(
             (
                 bls_puzzle.spec_namespace,
                 [
@@ -68,22 +94,13 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     bls_puzzle.program,
-                    bls_puzzle.solve(
-                        [],
-                        [],
-                        bls_with_taproot_member.solve(),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
-                            solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
-                            ),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=BLSWithTaprootMemberSolution(),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=delegated_puzzle,
+                            solution=ACSSolution(conditions=[announcement, announcement.corresponding_assertion()]),
                         ),
-                    ),
+                    ).program,
                 )
             ],
             bls_with_taproot_member.sign_with_synthetic_secret_key(
@@ -106,22 +123,16 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     bls_puzzle.program,
-                    bls_puzzle.solve(
-                        [],
-                        [],
-                        bls_with_taproot_member.solve(True),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
-                            solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
-                            ),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=BLSWithTaprootMemberSolution(
+                            original_public_key=bls_with_taproot_member.public_key,
+                            hidden_puzzle=bls_with_taproot_member.hidden_puzzle,
                         ),
-                    ),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=delegated_puzzle,
+                            solution=ACSSolution(conditions=[announcement, announcement.corresponding_assertion()]),
+                        ),
+                    ).program,
                 )
             ],
             G2Element(),  # no signature required in our test hidden_puzzle
@@ -135,16 +146,18 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # test invalid taproot spend
-        illegal_taproot_puzzle = Program.to([1, [51, Program.to(1).get_tree_hash(), 1]])
-        assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
-        bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
-        bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_with_taproot_member)
+        illegal_taproot_puzzle = P2Conditions(conditions=[CreateCoin(ACS_PH, uint64(1))])
+        assert illegal_taproot_puzzle.program.run([]) == ACSSolution(conditions=[CreateCoin(ACS_PH, uint64(1))]).program
+        bls_with_taproot_member_illegal = BLSWithTaprootMember(
+            public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle
+        )
+        bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_with_taproot_member_illegal)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.tree_hash,
-            memo=bls_puzzle.inner_puzzle.memo,
+            puzhash=bls_puzzle.member.tree_hash,
+            memo=bls_puzzle.member.memo,
         )
 
-        assert bls_puzzle.memo() == Program.to(
+        assert bls_puzzle.memo == Program.to(
             (
                 bls_puzzle.spec_namespace,
                 [
@@ -168,22 +181,21 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     bls_puzzle.program,
-                    bls_puzzle.solve(
-                        [],
-                        [],
-                        bls_with_taproot_member.solve(True),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=BLSWithTaprootMemberSolution(
+                            original_public_key=bls_with_taproot_member_illegal.public_key,
+                            hidden_puzzle=bls_with_taproot_member_illegal.hidden_puzzle,
+                        ),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=delegated_puzzle,
+                            # Intentionally invalid ACS solution shape to force a taproot spend failure
                             solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
+                                program=P2Conditions(
+                                    conditions=[announcement, announcement.corresponding_assertion()]
+                                ).program
                             ),
                         ),
-                    ),
+                    ).program,
                 )
             ],
             G2Element(),  # no signature required in our test hidden_puzzle
@@ -195,13 +207,15 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
-        assert bls_with_taproot_member.hidden_puzzle is not None
-        assert bls_with_taproot_member.public_key is not None
+        assert bls_with_taproot_member_illegal.hidden_puzzle is not None
+        assert bls_with_taproot_member_illegal.public_key is not None
         synthetic_public_key = calculate_synthetic_public_key(
-            bls_with_taproot_member.public_key, bls_with_taproot_member.hidden_puzzle.get_tree_hash()
+            bls_with_taproot_member_illegal.public_key, bls_with_taproot_member_illegal.hidden_puzzle.tree_hash
         )
-        bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
-        assert bls_with_taproot_member.program == bls_with_taproot_member_synthetic.program
+        bls_with_taproot_member_synthetic: BLSWithTaprootMember[None] = BLSWithTaprootMember(
+            synthetic_key=synthetic_public_key
+        )
+        assert bls_with_taproot_member_illegal.program == bls_with_taproot_member_synthetic.program
 
         # test some errors
         with pytest.raises(
@@ -216,14 +230,22 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                 original_secret_key=sk, message=b""
             )
 
-        with pytest.raises(ValueError, match=re.escape("Hidden puzzle or original key are unknown")):
-            BLSWithTaprootMember(synthetic_key=sk.public_key()).solve(use_hidden_puzzle=True)
+        with pytest.raises(
+            ValueError, match=re.escape("Must specify both or neither of original_public_key and hidden_puzzle")
+        ):
+            BLSWithTaprootMemberSolution(
+                original_public_key=sk.public_key(),
+                hidden_puzzle=None,
+            )
+        synthetic_only: BLSWithTaprootMember[None] = BLSWithTaprootMember(synthetic_key=sk.public_key())
+        assert synthetic_only.public_key is None
+        assert synthetic_only.hidden_puzzle is None
 
 
 @pytest.mark.anyio
 async def test_singleton_member(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        delegated_puzzle = Program.to(1)
+        delegated_puzzle = ACSPuzzle()
 
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
         pk = sk.public_key()
@@ -280,11 +302,11 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         )[0].coin
 
         memo = MemberHint(
-            puzhash=singleton_member_puzzle.inner_puzzle.tree_hash,
-            memo=singleton_member_puzzle.inner_puzzle.memo,
+            puzhash=singleton_member_puzzle.member.tree_hash,
+            memo=singleton_member_puzzle.member.memo,
         )
 
-        assert singleton_member_puzzle.memo() == Program.to(
+        assert singleton_member_puzzle.memo == Program.to(
             (
                 singleton_member_puzzle.spec_namespace,
                 [
@@ -318,7 +340,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                     [
                         66,
                         0x17,
-                        delegated_puzzle.get_tree_hash(),
+                        delegated_puzzle.tree_hash,
                         coin.name(),
                     ],  # 00010111  - puzzle sender, coin receiver
                 ],  # create approval message to singleton member puzzle
@@ -330,22 +352,15 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     singleton_member_puzzle.program,
-                    singleton_member_puzzle.solve(
-                        [],
-                        [],
-                        singleton_member.solve(singleton_inner_puzzle_hash=singleton_innerpuz.get_tree_hash()),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),
-                            solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
-                            ),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=SingletonMemberSolution(
+                            singleton_inner_puzzle_hash=singleton_innerpuz.get_tree_hash()
                         ),
-                    ),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=delegated_puzzle,
+                            solution=ACSSolution(conditions=[announcement, announcement.corresponding_assertion()]),
+                        ),
+                    ).program,
                 ),
                 make_spend(
                     singleton_coin,
@@ -369,17 +384,17 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
 @pytest.mark.anyio
 async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        delegated_puzzle = Program.to(1)
-        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+        delegated_puzzle = ACSPuzzle()
+        delegated_puzzle_hash = delegated_puzzle.tree_hash
 
         fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], member=fixed_puzzle_member)
         memo = MemberHint(
-            puzhash=bls_puzzle.inner_puzzle.tree_hash,
-            memo=bls_puzzle.inner_puzzle.memo,
+            puzhash=bls_puzzle.member.tree_hash,
+            memo=bls_puzzle.member.memo,
         )
 
-        assert bls_puzzle.memo() == Program.to(
+        assert bls_puzzle.memo == Program.to(
             (
                 bls_puzzle.spec_namespace,
                 [
@@ -406,22 +421,13 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     bls_puzzle.program,
-                    bls_puzzle.solve(
-                        [],
-                        [],
-                        Program.to(0),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=Program.to(0)),  # not the fixed puzzle
-                            solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
-                            ),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=UnknownSolution(program=Program.to(0)),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=NilPuzzle(),  # not the fixed puzzle
+                            solution=ACSSolution(conditions=[announcement, announcement.corresponding_assertion()]),
                         ),
-                    ),
+                    ).program,
                 )
             ],
             G2Element(),
@@ -441,22 +447,13 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin,
                     bls_puzzle.program,
-                    bls_puzzle.solve(
-                        [],
-                        [],
-                        fixed_puzzle_member.solve(),
-                        DelegatedPuzzleAndSolution(
-                            puzzle=UnknownPuzzle(known_program=delegated_puzzle),  # the fixed puzzle
-                            solution=UnknownSolution(
-                                program=Program.to(
-                                    [
-                                        announcement.to_program(),
-                                        announcement.corresponding_assertion().to_program(),
-                                    ]
-                                )
-                            ),
+                    PuzzleWithRestrictionsSolution(
+                        member_solution=NilSolution(),
+                        delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                            puzzle=delegated_puzzle,  # the fixed puzzle
+                            solution=ACSSolution(conditions=[announcement, announcement.corresponding_assertion()]),
                         ),
-                    ),
+                    ).program,
                 )
             ],
             G2Element(),
@@ -469,3 +466,60 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
+
+
+def test_match() -> None:
+    sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
+    pk = sk.get_g1()
+
+    # BLSWithTaprootMember: reject unrelated puzzles; match recovers synthetic key only
+    assert BLSWithTaprootMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    bls_member = BLSWithTaprootMember(public_key=pk, hidden_puzzle=ACSPuzzle())
+    assert BLSWithTaprootMember.match(unknown_puzzle=UnknownPuzzle(known_program=bls_member.program)) == (
+        BLSWithTaprootMember(synthetic_key=bls_member.guaranteed_synthetic_key)
+    )
+
+    # BLSWithTaprootMemberSolution: atom / wrong arity -> None; 1- and 2-element lists match
+    assert BLSWithTaprootMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert BLSWithTaprootMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2, 3]))) is None
+    assert (
+        BLSWithTaprootMemberSolution.match(
+            unknown_solution=UnknownSolution(program=BLSWithTaprootMemberSolution().program)
+        )
+        == BLSWithTaprootMemberSolution()
+    )
+    taproot_solution = BLSWithTaprootMemberSolution(original_public_key=pk, hidden_puzzle=ACSPuzzle())
+    assert BLSWithTaprootMemberSolution.match(
+        unknown_solution=UnknownSolution(program=taproot_solution.program)
+    ) == BLSWithTaprootMemberSolution(
+        original_public_key=pk,
+        hidden_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program),
+    )
+
+    # SingletonMember: reject unrelated puzzles; round-trip curry args
+    assert SingletonMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    singleton_member = SingletonMember(singleton_id=bytes32.zeros)
+    assert SingletonMember.match(unknown_puzzle=UnknownPuzzle(known_program=singleton_member.program)) == (
+        SingletonMember(
+            singleton_id=bytes32.zeros,
+            singleton_mod_hash=SINGLETON_TOP_LAYER_MOD_HASH,
+            singleton_launcher_hash=SINGLETON_LAUNCHER_PUZZLE_HASH,
+        )
+    )
+
+    # SingletonMemberSolution: atom / wrong arity / bad hash -> None; valid hash matches
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to(1))) is None
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([1, 2]))) is None
+    assert SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=Program.to([b"not32"]))) is None
+    singleton_solution = SingletonMemberSolution(singleton_inner_puzzle_hash=ACS_PH)
+    assert (
+        SingletonMemberSolution.match(unknown_solution=UnknownSolution(program=singleton_solution.program))
+        == singleton_solution
+    )
+
+    # FixedPuzzleMember: reject unrelated puzzles; round-trip fixed puzzle hash
+    assert FixedPuzzleMember.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
+    fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=ACS_PH)
+    assert FixedPuzzleMember.match(unknown_puzzle=UnknownPuzzle(known_program=fixed_puzzle_member.program)) == (
+        fixed_puzzle_member
+    )

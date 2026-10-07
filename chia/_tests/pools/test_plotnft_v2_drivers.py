@@ -33,7 +33,13 @@ from chia.wallet.conditions import (
     parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.custody.custody_architecture import MofN, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.custody_architecture import (
+    MemberHint,
+    MofN,
+    MofNMerkleTree,
+    PuzzleWithRestrictions,
+    UnknownMember,
+)
 from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -444,17 +450,9 @@ def test_plotnft_errors() -> None:
 
     # Force match success / NotImplemented paths via mocked PuzzleWithRestrictions.match
 
-    bls_member = BLSWithTaprootMember(synthetic_key=user_sk.get_g1())
+    bls_member: BLSWithTaprootMember[None] = BLSWithTaprootMember(synthetic_key=user_sk.get_g1())
     bls_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=bls_member)
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
-        mock.patch.object(
-            PuzzleWithRestrictions,
-            "program",
-            new_callable=mock.PropertyMock,
-            return_value=UnknownPuzzle(known_program=bls_member.program),
-        ),
-    ):
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr):
         matched_bls = PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
         assert matched_bls is not None
         assert matched_bls.user_config.synthetic_pubkey == user_sk.get_g1()
@@ -463,30 +461,23 @@ def test_plotnft_errors() -> None:
     member_b = PuzzleWithRestrictions(
         nonce=0, restrictions=[], member=pooling_inner.fixed_puzzle_member, _top_level=False
     )
-    mofn_two = MofN(m=2, members=[member_a, member_b])
-    mofn_one = MofN(m=1, members=[member_a])
-    # Member program that is not a BLS member so MofN.match is consulted
-    non_bls_prog = UnknownPuzzle(known_program=Program.to("not bls"))
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
-        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
-        mock.patch.object(MofN, "match", return_value=mofn_two),
-    ):
+    mofn_two = MofN(m=2, merkle_tree=MofNMerkleTree(nodes=[member_a, member_b]))
+    mofn_one = MofN(m=1, merkle_tree=MofNMerkleTree(nodes=[member_a]))
+    mofn_two_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=mofn_two)
+    mofn_one_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], member=mofn_one)
+    unknown_member_pwr = PuzzleWithRestrictions(
+        nonce=0,
+        restrictions=[],
+        member=UnknownMember(puzzle_hint=MemberHint(puzhash=bytes32.zeros, memo=None)),
+    )
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=mofn_two_pwr):
         with pytest.raises(NotImplementedError, match="Currently unimplemented"):
             PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1)))
 
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
-        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
-        mock.patch.object(MofN, "match", return_value=mofn_one),
-    ):
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=mofn_one_pwr):
         assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
 
-    with (
-        mock.patch.object(PuzzleWithRestrictions, "match", return_value=bls_pwr),
-        mock.patch.object(PuzzleWithRestrictions, "program", new_callable=mock.PropertyMock, return_value=non_bls_prog),
-        mock.patch.object(MofN, "match", return_value=None),
-    ):
+    with mock.patch.object(PuzzleWithRestrictions, "match", return_value=unknown_member_pwr):
         assert PlotNFTInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) is None
 
     pooling_plotnft = PlotNFT(

@@ -76,7 +76,6 @@ ignore = [
     "SIM",  # code simplifications: ~500 errors
     "A",  # bad behavior relative to builtins: ~200 errors
     "PTH",  # pathlib linting: ~200 errors
-    "LOG",  # logging: <50 errors
     # Might be nice, might be annoying
     "BLE001",  # blind exceptions: ~300 errors
     "D",  # docstrings: ~9000 errors,
