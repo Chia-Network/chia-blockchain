@@ -10,8 +10,7 @@ from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD as NFT_MOD
+from chia.wallet.nft_wallet.nft_puzzle_utils import NFT_OWNERSHIP_LAYER, NFT_STATE_LAYER_MOD
 from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD
 
 log = logging.getLogger(__name__)
@@ -107,7 +106,7 @@ class UncurriedNFT(Streamable):
             return None
 
         mod, curried_args = curried_args.rest().first().uncurry()
-        if mod != NFT_MOD:
+        if mod != NFT_STATE_LAYER_MOD:
             log.debug("Cannot uncurry NFT puzzle, failed on NFT state layer: Mod %s", mod)
             return None
         try:

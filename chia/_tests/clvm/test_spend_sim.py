@@ -59,13 +59,13 @@ async def test_all_endpoints():
         acs_hint_spent = make_spend(
             coin,
             acs,
-            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), 2, [hint])]).program,
+            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), uint64(2), [hint])]).program,
         )
         hinted_coin = compute_additions(acs_hint_spent)[0]
         acs_hint_unspent = make_spend(
             hinted_coin,
             acs,
-            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), 1, [hint])]).program,
+            ACSSolution(conditions=[CreateCoin(acs.get_tree_hash(), uint64(1), [hint])]).program,
         )
         await sim_client.push_tx(SpendBundle([acs_hint_spent, acs_hint_unspent], G2Element()))
         await sim.farm_block(acs_ph)

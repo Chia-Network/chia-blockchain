@@ -6,7 +6,7 @@ from chia_puzzles_py.programs import SETTLEMENT_PAYMENT
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
-from chia.wallet.nft_wallet.nft_puzzles import (
+from chia.wallet.nft_wallet.nft_puzzle_utils import (
     NFT_METADATA_UPDATER,
     NFT_OWNERSHIP_LAYER,
     NFT_STATE_LAYER_MOD,

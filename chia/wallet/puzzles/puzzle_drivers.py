@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
-from typing import Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar, cast
 
+from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import runtime_checkable
+from typing_extensions import Self, runtime_checkable
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.wallet.conditions import Condition, parse_conditions_non_consensus
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
@@ -25,12 +25,25 @@ class Puzzle(Protocol):
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Puzzle | None: ...
 
 
+_T_Puzzle_co = TypeVar("_T_Puzzle_co", bound=Puzzle, covariant=True)
+
+
+class OuterPuzzle(Puzzle, Protocol[_T_Puzzle_co]):
+    @property
+    def inner_puzzle(self) -> _T_Puzzle_co: ...
+
+
 class Solution(Protocol):
     @property
     def program(self) -> Program: ...
 
     @classmethod
     def match(cls, *, unknown_solution: UnknownSolution) -> Solution | None: ...
+
+
+class SmartCoin(Puzzle, Protocol):
+    @property
+    def coin(self) -> Coin: ...
 
 
 @runtime_checkable
@@ -44,42 +57,36 @@ class PuzzleBase:
     This is designed to be a base class to `Inner/OuterPuzzle`s which provides caching on the puzzle hash generation
     """
 
-    pre_computed_tree_hash: bytes32 | None = None
+    pre_computed_puzzle_hash: bytes32 | None = None
 
     @property
     def tree_hash(self) -> bytes32:
-        if self.pre_computed_tree_hash is None:
+        if self.pre_computed_puzzle_hash is None:
             if isinstance(self, OptimizedPuzzleHashPuzzle):
-                object.__setattr__(self, "pre_computed_tree_hash", self.tree_hash_optimized)
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.tree_hash_optimized)
             else:
-                object.__setattr__(self, "pre_computed_tree_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
-        assert self.pre_computed_tree_hash is not None
-        return self.pre_computed_tree_hash
+                object.__setattr__(self, "pre_computed_puzzle_hash", self.program.get_tree_hash())  # type: ignore[attr-defined]
+        assert self.pre_computed_puzzle_hash is not None
+        return self.pre_computed_puzzle_hash
 
 
 @dataclass(kw_only=True, frozen=True)
 class UnknownPuzzle(PuzzleBase):
-    known_program: Program | SerializedProgram | None = None
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("UnknownPuzzle", None)
+
+    known_program: Program | None = None
     known_tree_hash: bytes32 | None = None
-    _uncurried_puzzle: UncurriedPuzzle | None = None
 
     def __post_init__(self) -> None:
-        if self.known_program is None and self.known_tree_hash is None and self._uncurried_puzzle is None:
-            raise ValueError("Must specify either a program or tree hash that is unknown")
+        if self.known_program is None and self.known_tree_hash is None:
+            raise ValueError("Must specify either a puzzle or puzzle hash that is unknown")
 
     @property
     def program(self) -> Program:
         if self.known_program is None:
-            if self._uncurried_puzzle is None:
-                raise ValueError("Attempting to access program when only tree hash is known")
-            known_program = self._uncurried_puzzle.mod.curry(*self._uncurried_puzzle.args.as_iter())
-            object.__setattr__(self, "known_program", known_program)
-            return known_program
-        return (
-            Program.from_serialized(self.known_program)
-            if isinstance(self.known_program, SerializedProgram)
-            else self.known_program
-        )
+            raise ValueError("Attempting to access puzzle when only puzzle hash is known")
+        return self.known_program
 
     @property
     def tree_hash_optimized(self) -> bytes32:
@@ -87,8 +94,6 @@ class UnknownPuzzle(PuzzleBase):
 
     @cached_property
     def _uncurry_result(self) -> UncurriedPuzzle:
-        if self._uncurried_puzzle is not None:
-            return self._uncurried_puzzle
         return uncurry_puzzle(self.program)
 
     @cached_property
@@ -104,31 +109,27 @@ class UnknownPuzzle(PuzzleBase):
         return list(self._uncurry_result.args.as_iter())
 
     @classmethod
-    def from_uncurried(cls, uncurried_puzzle: UncurriedPuzzle) -> UnknownPuzzle:
-        return cls(_uncurried_puzzle=uncurried_puzzle)
-
-    @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> UnknownPuzzle | None:  # pragma: no cover
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
 
 
-@dataclass(frozen=True)
+@dataclass
 class UnknownSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("UnknownSolution", None)
+
     program: Program
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> UnknownSolution | None:  # pragma: no cover
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:  # pragma: no cover
         raise NotImplementedError("UnknownPuzzles cannot match anything, they are for being matched")
-
-
-@dataclass(frozen=True)
-class DelegatedPuzzleAndSolution:
-    puzzle: Puzzle
-    solution: Solution
 
 
 @dataclass(kw_only=True, frozen=True)
 class P2Conditions(PuzzleBase):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("P2Conditions", None)
+
     conditions: Sequence[Condition]
 
     @property
@@ -136,7 +137,7 @@ class P2Conditions(PuzzleBase):
         return Program.to((1, [cond.to_program() for cond in self.conditions]))
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> P2Conditions | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
         if unknown_puzzle.program.atom is not None or unknown_puzzle.program.at("f") != Program.to(1):
             return None
 
@@ -152,18 +153,25 @@ ACS_PH = ACS.get_tree_hash()
 
 @dataclass(kw_only=True, frozen=True)
 class ACSPuzzle(PuzzleBase):
-    program: Program = field(init=False, default_factory=lambda: ACS)
-    tree_hash_optimized: bytes32 = field(init=False, default=ACS_PH)
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("ACSPuzzle", None)
+
+    @property
+    def program(self) -> Program:
+        return ACS
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ACSPuzzle | None:
-        if unknown_puzzle.tree_hash == ACS_PH:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+        if unknown_puzzle.program == ACS:
             return cls()
         return None
 
 
 @dataclass(kw_only=True, frozen=True)
 class ACSSolution:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("ACSSolution", None)
+
     conditions: Sequence[Condition]
 
     @property
@@ -171,9 +179,12 @@ class ACSSolution:
         return Program.to([cond.to_program() for cond in self.conditions])
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> ACSSolution | None:
-        if unknown_solution.program.atom is not None and unknown_solution.program != Program.NIL:
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
+        if unknown_solution.program == Program.NIL:
+            return cls(conditions=[])
+        if unknown_solution.program.atom is not None:
             return None
+
         try:
             return cls(conditions=parse_conditions_non_consensus(unknown_solution.program.as_iter()))
         except Exception:
@@ -185,22 +196,41 @@ NIL_HASH = Program.NIL.get_tree_hash()
 
 @dataclass(kw_only=True, frozen=True)
 class NilPuzzle(PuzzleBase):
-    program: Program = field(init=False, default_factory=lambda: Program.NIL)
-    tree_hash_optimized: bytes32 = field(init=False, default=NIL_HASH)
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("NilPuzzle", None)
+
+    @property
+    def program(self) -> Program:
+        return Program.NIL
+
+    @property
+    def tree_hash_optimized(self) -> bytes32:
+        return NIL_HASH
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> NilPuzzle | None:
-        if unknown_puzzle.tree_hash == NIL_HASH:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> Self | None:
+        if unknown_puzzle.program == Program.NIL:
             return cls()
         return None
 
 
 @dataclass(kw_only=True, frozen=True)
 class NilSolution:
-    program: Program = field(init=False, default_factory=lambda: Program.NIL)
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Solution] = cast("NilSolution", None)
+
+    @property
+    def program(self) -> Program:
+        return Program.NIL
 
     @classmethod
-    def match(cls, *, unknown_solution: UnknownSolution) -> NilSolution | None:
+    def match(cls, *, unknown_solution: UnknownSolution) -> Self | None:
         if unknown_solution.program == Program.NIL:
             return cls()
         return None
+
+
+@dataclass
+class DelegatedPuzzleAndSolution:
+    puzzle: Puzzle
+    solution: Solution
