@@ -49,7 +49,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope
@@ -342,7 +342,7 @@ class PoolWallet:
         this method.
         """
         wallet_info = await wallet_state_manager.user_store.create_wallet(
-            WalletInfo(uint32(0), "Pool wallet", uint8(WalletType.POOLING_WALLET), "")
+            WalletData("Pool wallet", uint8(WalletType.POOLING_WALLET), "")
         )
 
         pool_wallet = cls(

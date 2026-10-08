@@ -1,15 +1,23 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from chia_rs.sized_ints import uint8, uint32
 
 from chia.util.streamable import Streamable, streamable
 
 
+@dataclass(frozen=True)
+class WalletData:
+    id: uint32 | None = field(init=False)
+    name: str
+    type: uint8  # WalletType(type)
+    data: str
+
+
 @streamable
 @dataclass(frozen=True)
-class WalletInfo(Streamable):
+class WalletInfo(WalletData, Streamable):
     """
     This object represents the wallet data as it is stored in DB.
     ID: Main wallet (Standard) is stored at index 1, every wallet created after done has auto incremented id.
@@ -21,6 +29,3 @@ class WalletInfo(Streamable):
     """
 
     id: uint32
-    name: str
-    type: uint8  # WalletType(type)
-    data: str

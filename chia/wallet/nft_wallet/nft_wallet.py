@@ -51,7 +51,7 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -112,7 +112,7 @@ class NFTWallet:
         self.nft_wallet_info = NFTWalletInfo(did_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            WalletInfo(uint32(0), name, uint8(WalletType.NFT), info_as_string)
+            WalletData(name, uint8(WalletType.NFT), info_as_string)
         )
         self.wallet_id = self.wallet_info.id
         self.nft_store = wallet_state_manager.nft_store

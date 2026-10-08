@@ -5,7 +5,7 @@ from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 
 
 class WalletUserStore:
@@ -42,14 +42,14 @@ class WalletUserStore:
     async def init_wallet(self) -> None:
         all_wallets = await self.get_all_wallet_info_entries()
         if len(all_wallets) == 0:
-            await self.create_wallet(WalletInfo(uint32(0), "Chia Wallet", uint8(WalletType.STANDARD_WALLET), ""))
+            await self.create_wallet(WalletData("Chia Wallet", uint8(WalletType.STANDARD_WALLET), ""))
 
-    async def create_wallet(self, wallet_info: WalletInfo) -> WalletInfo:
+    async def create_wallet(self, wallet_info: WalletData) -> WalletInfo:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
                 (
-                    None if wallet_info.id == 0 else wallet_info.id,
+                    wallet_info.id if isinstance(wallet_info, WalletInfo) else None,
                     wallet_info.name,
                     wallet_info.type,
                     wallet_info.data,

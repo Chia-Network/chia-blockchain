@@ -59,7 +59,7 @@ from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
@@ -137,7 +137,7 @@ class CATWallet:
             name = "CAT WALLET"
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            WalletInfo(uint32(0), name, uint8(self.wallet_type), info_as_string)
+            WalletData(name, uint8(self.wallet_type), info_as_string)
         )
 
         try:
@@ -235,7 +235,7 @@ class CATWallet:
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            WalletInfo(uint32(0), name, uint8(self.wallet_type), info_as_string)
+            WalletData(name, uint8(self.wallet_type), info_as_string)
         )
         self.tail_hash = self.cat_info.limitations_program_hash
 

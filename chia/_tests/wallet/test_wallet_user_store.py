@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint8
 
 from chia._tests.util.db_connection import DBConnection
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData
 from chia.wallet.wallet_user_store import WalletUserStore
 
 
@@ -19,7 +19,7 @@ async def test_store() -> None:
             last_wallet = await store.get_last_wallet()
             assert last_wallet is not None
             assert last_wallet.id == i
-            wallet = await store.create_wallet(WalletInfo(uint32(0), "CAT_WALLET", uint8(WalletType.CAT), "abc"))
+            wallet = await store.create_wallet(WalletData("CAT_WALLET", uint8(WalletType.CAT), "abc"))
             assert wallet.id == i + 1
         assert wallet is not None
         assert wallet.id == 5
@@ -30,7 +30,7 @@ async def test_store() -> None:
         last_wallet = await store.get_last_wallet()
         assert last_wallet is not None
         assert last_wallet.id == 1
-        wallet = await store.create_wallet(WalletInfo(uint32(0), "CAT_WALLET", uint8(WalletType.CAT), "abc"))
+        wallet = await store.create_wallet(WalletData("CAT_WALLET", uint8(WalletType.CAT), "abc"))
         # Due to autoincrement, we don't reuse IDs
         last_wallet = await store.get_last_wallet()
         assert last_wallet is not None

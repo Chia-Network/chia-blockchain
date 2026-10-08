@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from chia_rs import G1Element
 from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32
+from chia_rs.sized_ints import uint8, uint16
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
@@ -36,7 +36,7 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
@@ -106,7 +106,7 @@ class RCATWallet(CATWallet):
         self.info = RCATInfo(limitations_program_hash, None, hidden_puzzle_hash)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            WalletInfo(uint32(0), name, uint8(cls.wallet_type), info_as_string)
+            WalletData(name, uint8(cls.wallet_type), info_as_string)
         )
         self.tail_hash = self.info.limitations_program_hash
 
