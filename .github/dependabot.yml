@@ -16,7 +16,7 @@ updates:
       - dependencies
       - go
       - "Changed"
-    reviewers: ["cmmarslender", "Starttoaster"]
+    reviewers: ["cameroncooper", "emlowe"]
     groups:
       global:
         patterns:
@@ -65,7 +65,7 @@ updates:
       - dependencies
       - javascript
       - "Changed"
-    reviewers: ["cmmarslender", "ChiaMineJP"]
+    reviewers: ["emlowe", "seeden"]
 
   - package-ecosystem: cargo
     directory: /
