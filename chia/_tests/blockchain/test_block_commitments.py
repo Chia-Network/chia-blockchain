@@ -12,7 +12,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_exactly
 from chia._tests.util.blockchain import create_blockchain
-from chia._tests.util.setup_nodes import setup_two_nodes
+from chia._tests.util.setup_nodes import setup_n_nodes, setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
@@ -24,6 +24,7 @@ from chia.consensus.challenge_tree import (
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType
@@ -68,16 +69,22 @@ def _late_parent_candidate(
     return candidate
 
 
-def _infusion_request(block: FullBlock) -> NewInfusionPointVDF:
-    return NewInfusionPointVDF(
-        block.reward_chain_block.get_unfinished().get_hash(),
-        block.reward_chain_block.challenge_chain_ip_vdf,
-        block.challenge_chain_ip_proof,
-        block.reward_chain_block.reward_chain_ip_vdf,
-        block.reward_chain_ip_proof,
-        block.reward_chain_block.infused_challenge_chain_ip_vdf,
-        block.infused_challenge_chain_ip_proof,
-    )
+def _capture_timelord_requests(
+    monkeypatch: pytest.MonkeyPatch,
+    full_node: FullNodeAPI,
+) -> list[NewUnfinishedBlockTimelord]:
+    timelord_requests: list[NewUnfinishedBlockTimelord] = []
+
+    async def capture(
+        messages: list[Message],
+        node_type: NodeType,
+        *_args: object,
+    ) -> None:
+        if node_type == NodeType.TIMELORD:
+            timelord_requests.extend(NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages)
+
+    monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture)
+    return timelord_requests
 
 
 class TestCommitments:
@@ -273,23 +280,12 @@ class TestCommitments:
         assert candidate.reward_chain_block.header_mmr_root == expected_root
         assert expected_root != stale_root
 
-        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node, _, _, _, _):
+        async with setup_n_nodes(constants, 1, db_version, self_hostname) as nodes:
+            full_node = nodes[0]
             for block in blocks[: int(candidate.height)]:
                 await full_node.full_node.add_block(block)
 
-            timelord_requests: list[NewUnfinishedBlockTimelord] = []
-
-            async def capture_timelord_request(
-                messages: list[Message],
-                node_type: NodeType,
-                *_args: object,
-            ) -> None:
-                if node_type == NodeType.TIMELORD:
-                    timelord_requests.extend(
-                        NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages
-                    )
-
-            monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture_timelord_request)
+            timelord_requests = _capture_timelord_requests(monkeypatch, full_node)
             await full_node.full_node.add_unfinished_block(unfinished, None)
 
         assert len(timelord_requests) == 1
@@ -344,7 +340,8 @@ class TestCommitments:
         )
         unfinished = make_unfinished_block(candidate, constants).replace(version=uint8(0))
 
-        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node, _, _, _, _):
+        async with setup_n_nodes(constants, 1, db_version, self_hostname) as nodes:
+            full_node = nodes[0]
             for block in blocks[: int(candidate.height)]:
                 await full_node.full_node.add_block(block)
 
@@ -359,19 +356,7 @@ class TestCommitments:
                 < constants.HARD_FORK2_HEIGHT
             )
 
-            timelord_requests: list[NewUnfinishedBlockTimelord] = []
-
-            async def capture_timelord_request(
-                messages: list[Message],
-                node_type: NodeType,
-                *_args: object,
-            ) -> None:
-                if node_type == NodeType.TIMELORD:
-                    timelord_requests.extend(
-                        NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages
-                    )
-
-            monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture_timelord_request)
+            timelord_requests = _capture_timelord_requests(monkeypatch, full_node)
             await full_node.full_node.add_unfinished_block(unfinished, None)
 
         assert len(timelord_requests) == 1
@@ -432,6 +417,17 @@ class TestCommitments:
             foliage=block_b.foliage.replace(prev_block_hash=shared_parent_hash)
         )
         assert unfinished_a.prev_header_hash == unfinished_b.prev_header_hash == shared_parent_hash
+
+        def infusion_request(block: FullBlock) -> NewInfusionPointVDF:
+            return NewInfusionPointVDF(
+                block.reward_chain_block.get_unfinished().get_hash(),
+                block.reward_chain_block.challenge_chain_ip_vdf,
+                block.challenge_chain_ip_proof,
+                block.reward_chain_block.reward_chain_ip_vdf,
+                block.reward_chain_ip_proof,
+                block.reward_chain_block.infused_challenge_chain_ip_vdf,
+                block.infused_challenge_chain_ip_proof,
+            )
 
         current_root = compute_challenge_merkle_root(canonical_blocks, current_end, current_start)
         following_root = compute_challenge_merkle_root(canonical_blocks, following_end, following_start)
@@ -522,8 +518,8 @@ class TestCommitments:
                 assert prospective_a.challenge_merkle_root == prospective_b.challenge_merkle_root == prospective_root
 
             for block, request in (
-                (block_a, _infusion_request(block_a)),
-                (block_b, _infusion_request(block_b)),
+                (block_a, infusion_request(block_a)),
+                (block_b, infusion_request(block_b)),
             ):
                 for node in nodes:
                     await node.new_infusion_point_vdf(request)
@@ -622,11 +618,9 @@ class TestSyncWithCommitments:
 
     @pytest.mark.anyio
     async def test_sync_fork_height_zero_blocks(
-        self,
-        fork_height2_0_1000_blocks: list[FullBlock],
-        self_hostname: str,
-        db_version: int,
+        self, fork_height2_0_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
     ) -> None:
+        """Test syncing 1000 blocks with fork height 0 between two nodes"""
         blocks = fork_height2_0_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(0),
@@ -641,6 +635,7 @@ class TestSyncWithCommitments:
             server_2,
             _,
         ):
+            # Add all blocks to node 1
             for block in blocks:
                 await full_node_1.full_node.add_block(block)
 
@@ -653,14 +648,17 @@ class TestSyncWithCommitments:
                 full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
             )
             assert validated is True
+            # Connect node 2 to node 1
             await server_2.start_client(
                 PeerInfo(self_hostname, server_1.get_port()),
                 on_connect=full_node_2.full_node.on_connect,
             )
 
+            # Node 2 should sync all blocks from node 1
             await time_out_assert(300, node_height_exactly, True, full_node_1, len(blocks) - 1)
             await time_out_assert(300, node_height_exactly, True, full_node_2, len(blocks) - 1)
 
+            # Verify both nodes have same peak
             peak_1 = full_node_1.full_node.blockchain.get_peak()
             peak_2 = full_node_2.full_node.blockchain.get_peak()
             assert peak_1 is not None and peak_2 is not None
@@ -669,11 +667,9 @@ class TestSyncWithCommitments:
 
     @pytest.mark.anyio
     async def test_sync_fork_height_500_blocks(
-        self,
-        fork_height2_500_1000_blocks: list[FullBlock],
-        self_hostname: str,
-        db_version: int,
+        self, fork_height2_500_1000_blocks: list[FullBlock], self_hostname: str, db_version: int
     ) -> None:
+        """Test syncing 1000 blocks with fork height 500 between two nodes"""
         blocks = fork_height2_500_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(500),
@@ -688,21 +684,27 @@ class TestSyncWithCommitments:
             server_2,
             _,
         ):
+            # Add all blocks to node 1
             for block in blocks:
                 await full_node_1.full_node.add_block(block)
+                log.info(f"Successfully added {block.height}")
 
+            # Connect node 2 to node 1
             await server_2.start_client(
                 PeerInfo(self_hostname, server_1.get_port()),
                 on_connect=full_node_2.full_node.on_connect,
             )
 
+            # Node 2 should sync all blocks from node 1
             await time_out_assert(300, node_height_exactly, True, full_node_1, len(blocks) - 1)
             await time_out_assert(300, node_height_exactly, True, full_node_2, len(blocks) - 1)
 
+            # Verify both nodes have same peak
             peak_1 = full_node_1.full_node.blockchain.get_peak()
             peak_2 = full_node_2.full_node.blockchain.get_peak()
             assert peak_1 is not None and peak_2 is not None
             assert peak_1.header_hash == peak_2.header_hash
+
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=500 between two nodes")
 
 
