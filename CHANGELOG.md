@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.7.5 Chia blockchain 2026-10-07
+
+## What's Changed
+
+### Added
+
+- Add configurable timelord inactivity chain reset timeout (`max_allowed_inactivity_time` in config)
+- Limit PlotNFT v2 singleton discovery
+
+### Changed
+
+- Help the query planner for partial `spent_index_index`
+
+### Fixed
+
+- Fix block viewer regression and navigation in GUI
+- Add backwards compatibility for v1 pool `/PUT` farmer signing
+
 ## 2.7.4 Chia blockchain 2026-09-10
 
 ## What's Changed
