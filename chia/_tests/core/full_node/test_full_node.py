@@ -17,6 +17,7 @@ import pytest
 from aiohttp import WSCloseCode
 from chia_rs import (
     AugSchemeMPL,
+    BlockRecord,
     Coin,
     CoinRecord,
     ConsensusConstants,
@@ -575,7 +576,7 @@ async def test_timelord_inbound_connection(
 
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
-async def test_send_peak_to_timelords_checks_post_hard_fork_from_peak(
+async def test_send_peak_to_timelords_uses_peak_as_hard_fork_trigger(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -584,28 +585,29 @@ async def test_send_peak_to_timelords_checks_post_hard_fork_from_peak(
     peak_block = await full_node.blockchain.get_full_peak()
     assert peak_block is not None
     peak = full_node.blockchain.block_record(peak_block.header_hash)
-    captured_prev_hashes: list[bytes32] = []
+    captured_triggers: list[BlockRecord] = []
 
-    def capture_post_hard_fork2(
+    def capture_post_hard_fork2_block_record(
         constants: ConsensusConstants,
         blocks: Any,
-        *,
-        prev_b_hash: bytes32,
-        sp_index: uint8,
-        finished_sub_slots: int,
+        trigger: BlockRecord,
     ) -> bool:
-        captured_prev_hashes.append(prev_b_hash)
+        captured_triggers.append(trigger)
         return False
 
     async def noop_send_to_all(*args: Any, **kwargs: Any) -> None:
         return None
 
-    monkeypatch.setattr(full_node_module, "post_hard_fork2", capture_post_hard_fork2)
+    monkeypatch.setattr(
+        full_node_module,
+        "post_hard_fork2_block_record",
+        capture_post_hard_fork2_block_record,
+    )
     monkeypatch.setattr(full_node.server, "send_to_all", noop_send_to_all)
 
     await full_node.send_peak_to_timelords(peak_block)
 
-    assert captured_prev_hashes == [peak.header_hash]
+    assert captured_triggers == [peak]
 
 
 @pytest.mark.anyio

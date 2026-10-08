@@ -232,6 +232,16 @@ def post_hard_fork2(
     sp_index: uint8,
     finished_sub_slots: int,
 ) -> bool:
+    """Evaluate HF2 activation.
+
+    All three context arguments must describe the same prospective block:
+    ``prev_b_hash`` is its parent (not its own hash), ``sp_index`` is its
+    signage-point index, and ``finished_sub_slots`` is the number of sub-slots
+    it crosses.
+
+    This low-level form supports unfinished blocks and infusion-time contexts,
+    where no BlockRecord exists for the prospective block.
+    """
     prev_b = blocks.try_block_record(prev_b_hash)
     if prev_b is None:
         assert prev_b_hash == constants.GENESIS_CHALLENGE
@@ -252,4 +262,26 @@ def post_hard_fork2(
             finished_sub_slots=finished_sub_slots,
         )
         >= constants.HARD_FORK2_HEIGHT
+    )
+
+
+def post_hard_fork2_block_record(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    block: BlockRecord,
+) -> bool:
+    """Evaluate HF2 activation.
+
+    Pass the block whose activation decision is needed. For an SES, this is
+    the trigger block that created the summary, not the later block carrying
+    the end-of-sub-slot bundle containing its hash.
+    """
+    return post_hard_fork2(
+        constants,
+        blocks,
+        prev_b_hash=block.prev_hash,
+        sp_index=block.signage_point_index,
+        finished_sub_slots=(
+            len(block.finished_challenge_slot_hashes) if block.finished_challenge_slot_hashes is not None else 0
+        ),
     )
