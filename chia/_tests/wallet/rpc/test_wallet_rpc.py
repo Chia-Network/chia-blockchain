@@ -547,6 +547,17 @@ async def test_push_transactions_sign_fee_only(wallet_environments: WalletTestFr
         )
 
     # With `sign_fee_only`, Wallet B signs only the fee spend and preserves Wallet A's signature.
+    # Empty the unused puzzle-hash buffer first. Fee change then has to derive a new address, and
+    # that address is only persisted if the nested fee scope hands its derivation result to the
+    # outer scope. Otherwise the next fresh spend reuses it, and an empty buffer means it was
+    # never stored at all.
+    puzzle_store = env_b.wallet_state_manager.puzzle_store
+    if not wallet_environments.tx_config.reuse_puzhash:
+        last_index = await puzzle_store.get_last_derivation_path()
+        assert last_index is not None
+        await puzzle_store.set_used_up_to(last_index)
+        assert await puzzle_store.get_unused_derivation_path() is None
+
     b_balance_before = await get_confirmed_balance(client_b, 1)
     resp = await client_b.push_transactions(
         PushTransactions(transactions=[tx_a], fee=uint64(10), sign_fee_only=True),
@@ -573,6 +584,23 @@ async def test_push_transactions_sign_fee_only(wallet_environments: WalletTestFr
             pks.append(pk)
             msgs.append(msg)
     assert AugSchemeMPL.aggregate_verify(pks, msgs, merged.aggregated_signature)
+
+    if not wallet_environments.tx_config.reuse_puzhash:
+        tx_a_addition_ids = {coin.name() for coin in tx_a.additions}
+        change_coins = [
+            coin for tx in resp.transactions for coin in tx.additions if coin.name() not in tx_a_addition_ids
+        ]
+        assert change_coins
+        for coin in change_coins:
+            record = await puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+            assert record is not None
+            unused = await puzzle_store.get_unused_derivation_path()
+            assert unused is None or unused > record.index
+        async with env_b.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as next_scope:
+            next_puzzle_hash = await next_scope.get_puzzle_hash(env_b.wallet_state_manager)
+        assert next_puzzle_hash not in {coin.puzzle_hash for coin in change_coins}
 
     # The bundle is valid and confirmable: Wallet B only pays the fee.
     await farm_transaction(full_node_api, wallet_node_b, merged)

@@ -951,6 +951,17 @@ class WalletRpcApi:
                     )
                 async with action_scope.use() as interface:
                     interface.side_effects.transactions.extend(fee_action_scope.side_effects.transactions)
+                    # The fee scope runs with push=False, so its unused derivation records are discarded
+                    # on exit. Copy them onto the outer scope, which pushes and commits them. Without
+                    # this, reuse_puzhash=False spends the same change address again, and an empty
+                    # puzzle-hash buffer means the new address is never stored.
+                    if interface.side_effects.get_unused_derivation_record_result is not None:
+                        raise ValueError(
+                            "Cannot sign the fee only when puzzle hashes were already generated for this action"
+                        )
+                    interface.side_effects.get_unused_derivation_record_result = (
+                        fee_action_scope.side_effects.get_unused_derivation_record_result
+                    )
             else:
                 await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                     request.fee,
