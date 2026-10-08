@@ -79,12 +79,9 @@ def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
 
 def num_phase_out_epochs(constants: ConsensusConstants) -> int:
     """
-    The number of phase-out epochs is always a power-of-two minus 1. i.e. it
-    will also be a mask for the hash of the proof we're checking for phase-out.
-    Since the hash of the proof are random bits, the simplest check is just to
-    mask and compare the resulting value against the phase-out count down.
+    The number of phase-out epochs is always a power-of-two
     """
-    return (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+    return 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
 
 
 def v1_cut_off_height(constants: ConsensusConstants) -> int:
@@ -107,19 +104,27 @@ def is_v1_phased_out(
     # This is a v1 plot and the phase-out period has started
     # The probability of having been phased out is proportional on the
     # number of epochs since hard fork activation
-    phase_out_epoch_mask = num_phase_out_epochs(constants)
+    phase_out_epoch_mask = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
 
     # we just look at one byte so the mask can't be bigger than that
     assert phase_out_epoch_mask < 256
 
-    # this counter is counting down to zero
-    epoch_counter = (v1_cut_off_height(constants) - prev_transaction_block_height) // constants.EPOCH_BLOCKS
+    # Count down once per epoch, reaching 0 at v1_cut_off_height(). Ceil
+    # division keeps the counter constant until the next epoch boundary.
+    # Floor division drops it on the second block of the epoch, so every v1
+    # proof is rejected EPOCH_BLOCKS - 1 blocks before the cutoff.
+    blocks_remaining = v1_cut_off_height(constants) - int(prev_transaction_block_height)
+    epoch_blocks = int(constants.EPOCH_BLOCKS)
+    epoch_counter = (blocks_remaining + epoch_blocks - 1) // epoch_blocks
 
     # if we're past the phase-out, v1 plots are unconditionally invalid
     if epoch_counter < 0:
         return True
 
     proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
+
+    log.info(f"v1 proof epoch-counter: {epoch_counter} proof-value: {proof_value}")
+
     return proof_value >= epoch_counter
 
 
