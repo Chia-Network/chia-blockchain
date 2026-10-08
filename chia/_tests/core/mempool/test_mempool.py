@@ -3321,7 +3321,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     ):
         try:
             get_puzzle_and_solution_for_coin(
-                SerializedProgram.to(None),
+                bytes(SerializedProgram.to(None)),
                 [],
                 test_constants.MAX_BLOCK_COST_CLVM,
                 TEST_COIN,
