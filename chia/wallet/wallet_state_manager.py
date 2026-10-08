@@ -2162,14 +2162,12 @@ class WalletStateManager:
         coin_subscriptions = [sub for sub in subscriptions if isinstance(sub, CoinSubscription)]
         for subscription in puzzle_hash_subscriptions:
             await self.interested_store.add_interested_puzzle_hash(subscription.target, subscription.wallet_id)
-            await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
-                [s.target for s in subscriptions if isinstance(s, PuzzleHashSubscription)]
-            )
+        await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+            [sub.target for sub in puzzle_hash_subscriptions]
+        )
         for subscription in coin_subscriptions:
             await self.interested_store.add_interested_coin_id(subscription.target)
-            await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(
-                [s.target for s in subscriptions if isinstance(s, CoinSubscription)]
-            )
+        await self.wallet_node.new_peak_queue.subscribe_to_coin_ids([sub.target for sub in coin_subscriptions])
 
     async def delete_trade_transactions(self, trade_id: bytes32) -> None:
         txs: list[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
