@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import CoinSpend, CoinState, G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -136,7 +136,9 @@ class CATWallet:
         if name is None:
             name = "CAT WALLET"
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, self.wallet_type, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletInfo(uint32(0), name, uint8(self.wallet_type), info_as_string)
+        )
 
         try:
             spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
@@ -232,7 +234,9 @@ class CATWallet:
 
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, self.wallet_type, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletInfo(uint32(0), name, uint8(self.wallet_type), info_as_string)
+        )
         self.tail_hash = self.cat_info.limitations_program_hash
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())

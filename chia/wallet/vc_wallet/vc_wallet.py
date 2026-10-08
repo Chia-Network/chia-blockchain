@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from chia_rs import CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
@@ -66,7 +66,7 @@ class VCWallet:
         new_wallet: _T_VCWallet = await cls.create(
             wallet_state_manager,
             wallet,
-            await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), ""),
+            await wallet_state_manager.user_store.create_wallet(WalletInfo(uint32(0), name, uint8(WalletType.VC), "")),
             name,
         )
         await wallet_state_manager.add_new_wallet(new_wallet)

@@ -123,7 +123,9 @@ class CRCATWallet(CATWallet):
 
         self.info = CRCATInfo(limitations_program_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletInfo(uint32(0), name, uint8(WalletType.CRCAT), info_as_string)
+        )
 
         await self.wallet_state_manager.add_new_wallet(self)
         self.tail_hash = self.info.limitations_program_hash

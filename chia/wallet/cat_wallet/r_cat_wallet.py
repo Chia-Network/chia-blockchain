@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from chia_rs import G1Element
 from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16
+from chia_rs.sized_ints import uint8, uint16, uint32
 from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
@@ -105,7 +105,9 @@ class RCATWallet(CATWallet):
 
         self.info = RCATInfo(limitations_program_hash, None, hidden_puzzle_hash)
         info_as_string = bytes(self.info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletInfo(uint32(0), name, uint8(cls.wallet_type), info_as_string)
+        )
         self.tail_hash = self.info.limitations_program_hash
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())

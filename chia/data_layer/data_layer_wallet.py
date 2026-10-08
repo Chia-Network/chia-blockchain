@@ -161,9 +161,7 @@ class DataLayerWallet:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DataLayer Wallet",
-            WalletType.DATA_LAYER.value,
-            "",
+            WalletInfo(uint32(0), "DataLayer Wallet", uint8(WalletType.DATA_LAYER), "")
         )
         await self.wallet_state_manager.add_new_wallet(self)
 
