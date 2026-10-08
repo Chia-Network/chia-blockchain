@@ -2497,8 +2497,8 @@ post_partial_request_json: dict[str, Any] = {
         "end_of_sub_slot": False,
         "harvester_id": "0xf98dff6bdcc3926b33cb8ab22e11bd15c13d6a9b6832ac948b3273f5ccd8e7ec",
     },
-    "authentication_token_v2": "",
     "aggregate_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "authentication_token_v2": "",
 }
 
 post_partial_response_json: dict[str, Any] = {"new_difficulty": 5956480724816802941}
