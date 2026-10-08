@@ -769,7 +769,7 @@ class Mempool:
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
-        builder = BlockBuilder()
+        builder = BlockBuilder(constants)
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
         block_cost = 0
@@ -879,7 +879,7 @@ class Mempool:
                 if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM or (
                     len(batch_transactions) > 0 and batch_spends + len(unique_coin_spends) > MAX_SPENDS_PER_BATCH
                 ):
-                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
 
                     block_cost = builder.cost()
                     if added:
@@ -968,7 +968,7 @@ class Mempool:
                 continue
 
         if len(batch_transactions) > 0:
-            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
             log.info(f"trying to add residual batch: {len(batch_transactions)} batch cost: {batch_cost} added: {added}")
 
             if added:
@@ -988,7 +988,7 @@ class Mempool:
 
         generator_creation_end = monotonic()
         duration = generator_creation_end - generator_creation_start
-        block_program, signature, cost = builder.finalize(constants)
+        block_program, signature, cost = builder.finalize()
         log.log(
             logging.INFO if duration < 2 else logging.WARNING,
             f"create_block_generator2() took {duration:0.4f} seconds. "

@@ -12,7 +12,6 @@ from chia_rs import (
     AugSchemeMPL,
     BlockBuilder,
     CoinSpend,
-    ConsensusConstants,
     FullBlock,
     G1Element,
     G2Element,
@@ -3324,7 +3323,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     ):
         try:
             get_puzzle_and_solution_for_coin(
-                SerializedProgram.to(None),
+                bytes(SerializedProgram.to(None)),
                 [],
                 test_constants.MAX_BLOCK_COST_CLVM,
                 TEST_COIN,
@@ -3769,11 +3768,10 @@ def test_create_block_generator2_spend_batch_cap(monkeypatch: pytest.MonkeyPatch
         self: BlockBuilder,
         bundles: Sequence[SpendBundle],
         cost: uint64,
-        constants: ConsensusConstants,
     ) -> tuple[bool, bool]:
         spend_count = sum(len(b.coin_spends) for b in bundles)
         batch_spend_counts.append(spend_count)
-        return original_add(self, bundles, cost, constants)
+        return original_add(self, bundles, cost)
 
     monkeypatch.setattr(BlockBuilder, "add_spend_bundles", recording_add)
 
