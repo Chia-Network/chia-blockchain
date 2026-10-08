@@ -123,8 +123,6 @@ def is_v1_phased_out(
 
     proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
 
-    log.info(f"v1 proof epoch-counter: {epoch_counter} proof-value: {proof_value}")
-
     return proof_value >= epoch_counter
 
 
