@@ -88,7 +88,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert npc_result.conds is not None
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
     puzzle, solution = get_puzzle_and_solution_for_coin(
-        SerializedProgram.from_bytes(program.program),
+        program.program,
         program.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin_spend.coin,
@@ -173,7 +173,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         uint64(300),
     )
     puz, _solution = get_puzzle_and_solution_for_coin(
-        SerializedProgram.from_bytes(generator.program),
+        generator.program,
         generator.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin,
@@ -321,7 +321,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
         for _ in range(3):
             for c in spent_coins:
                 puz, _solution = get_puzzle_and_solution_for_coin(
-                    SerializedProgram.from_bytes(block_generator.program),
+                    block_generator.program,
                     block_generator.generator_refs,
                     test_constants.MAX_BLOCK_COST_CLVM,
                     c,
