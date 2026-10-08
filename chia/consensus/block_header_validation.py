@@ -17,12 +17,14 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import (
     final_eos_is_already_included,
     get_block_challenge,
     get_filter_challenge_from_chain,
+    post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -32,6 +34,10 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
     validate_pospace_and_get_required_iters,
+)
+from chia.consensus.reward_chain_block_validation import (
+    get_same_signage_point_records,
+    validate_reward_chain_block_transition,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -118,13 +124,6 @@ def validate_unfinished_header_block(
             can_finish_se = False
             can_finish_epoch = False
 
-    pre_sp_tx_height = pre_sp_tx_block_height(
-        constants=constants,
-        blocks=blocks,
-        prev_b_hash=header_block.prev_header_hash,
-        sp_index=header_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(header_block.finished_sub_slots),
-    )
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
@@ -436,6 +435,7 @@ def validate_unfinished_header_block(
 
                 # 3c. Check the actual sub-epoch is correct
                 if check_sub_epoch_summary:
+                    make_challenge_root = post_hard_fork2_block_record(constants, blocks, prev_b)
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
                         blocks,
@@ -443,7 +443,15 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_vs.difficulty if can_finish_epoch else None,
                         expected_vs.ssi if can_finish_epoch else None,
-                        make_challenge_root=pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT,
+                        challenge_root_end_height=(
+                            get_challenge_start_height(
+                                constants,
+                                blocks,
+                                prev_b,
+                            )
+                            if make_challenge_root
+                            else None
+                        ),
                         prev_ses_block=expected_vs.prev_ses_block,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
@@ -915,24 +923,28 @@ def validate_finished_header_block(
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
-    if not genesis_block:
-        assert prev_b is not None
-        # 27. Check block height
-        if header_block.height != prev_b.height + 1:
-            return None, ValidationError(Err.INVALID_HEIGHT)
 
-        # 28. Check weight
-        if header_block.weight != prev_b.weight + expected_vs.difficulty:
-            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_vs.difficulty}")
-            return None, ValidationError(Err.INVALID_WEIGHT)
-    else:
-        # 27b. Check genesis block height, weight, and prev block hash
-        if header_block.height != uint32(0):
-            return None, ValidationError(Err.INVALID_HEIGHT)
-        if header_block.weight != uint128(constants.DIFFICULTY_STARTING):
-            return None, ValidationError(Err.INVALID_WEIGHT)
-        if header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
-            return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
+    same_sp_records = get_same_signage_point_records(
+        blocks,
+        prev_b,
+        header_block.reward_chain_block.signage_point_index,
+        new_sub_slot,
+    )
+
+    # 27. Check block height
+    # 28. Check weight
+    # 27b. Check genesis block height, weight, and prev block hash
+    transition_validation_error = validate_reward_chain_block_transition(
+        constants,
+        header_block.reward_chain_block,
+        header_block.prev_header_hash,
+        prev_b,
+        genesis_block,
+        same_sp_records,
+        expected_vs.difficulty,
+    )
+    if transition_validation_error is not None:
+        return None, transition_validation_error
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
     if genesis_block:

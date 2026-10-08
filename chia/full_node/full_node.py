@@ -50,7 +50,11 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import (
+    post_hard_fork2,
+    post_hard_fork2_block_record,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -950,15 +954,7 @@ class FullNode:
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
-            post_hard_fork = post_hard_fork2(
-                self.constants,
-                self.blockchain,
-                prev_b_hash=peak.header_hash,
-                sp_index=peak.signage_point_index,
-                finished_sub_slots=len(peak.finished_challenge_slot_hashes)
-                if peak.finished_challenge_slot_hashes is not None
-                else 0,
-            )
+            post_hard_fork = post_hard_fork2_block_record(self.constants, self.blockchain, peak)
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
@@ -1480,13 +1476,7 @@ class FullNode:
                                 new_peers_with_peak[idx][0],
                                 end,
                             )
-                        start = time.monotonic()
                         yield (peer, response.blocks)
-                        end = time.monotonic()
-                        if end - start > 1:
-                            self.log.info(
-                                f"sync pipeline back-pressure. stalled {end - start:0.2f} seconds on prevalidate block"
-                            )
                         fetched = True
                         break
                 if fetched is False:
@@ -1624,7 +1614,7 @@ class FullNode:
             source=fetch_blocks(),
             stages=[validate_batch, ingest_batch],
             queue_size=10,
-            names=["fetching", "validating", "ingesting"],
+            names=["fetching", "validating", "database"],
             log=self.log,
             cleanup=drain_pending_futures,
         )

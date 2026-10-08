@@ -3,17 +3,17 @@ from __future__ import annotations
 import random
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint8, uint16, uint64
 from packaging.version import Version
 
-from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.conftest import ConsensusMode, HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.harvester.harvester_api import HarvesterAPI
@@ -143,6 +143,71 @@ async def test_new_signage_point_harvester(
     with mock_successful_proof(env.plot_info):
         await env.harvester_api.new_signage_point_harvester(new_challenge, mock_peer)
     assert_farming_info_sent(mock_peer)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+async def test_v2_partial_proof_path_supports_per_quality_signature_identifier(
+    harvester_environment: HarvesterTestEnvironment,
+    default_400_blocks: list[FullBlock],
+    blockchain_constants: ConsensusConstants,
+) -> None:
+    env, new_challenge, mock_peer = create_test_setup(harvester_environment, default_400_blocks, blockchain_constants)
+    new_challenge = replace(new_challenge, last_tx_height=blockchain_constants.HARD_FORK2_HEIGHT)
+    plot_id = bytes32(b"v2" * 16)
+    plot_manager = env.harvester_api.harvester.plot_manager
+    plot_manager.stop_refreshing()
+    with plot_manager:
+        original_plots = plot_manager.plots.copy()
+        plot_info = plot_manager.plots[env.plot_path]
+        original_prover = plot_info.prover
+    inner_prover = MagicMock()
+    inner_prover.plot_id.return_value = plot_id
+    inner_prover.get_plot_index.return_value = uint16(0)
+    inner_prover.get_meta_group.return_value = uint8(0)
+    inner_prover.get_strength.return_value = uint8(2)
+    inner_prover.get_memo.return_value = original_prover.get_memo()
+    inner_prover.get_qualities_for_challenge.return_value = [PartialProof([uint64(1)] * 16)]
+    plot_info.prover = V2Prover(inner_prover)
+    with plot_manager:
+        plot_manager.plots.clear()
+        plot_manager.plots[env.plot_path] = plot_info
+
+    try:
+        with (
+            patch.object(env.harvester_api, "_plot_passes_filter", return_value=True),
+            patch("chia.harvester.harvester_api.calculate_iterations_quality", return_value=uint64(0)),
+        ):
+            await env.harvester_api.new_signage_point_harvester(new_challenge, mock_peer)
+
+        partial_proof_messages = [
+            call[0][0]
+            for call in mock_peer.send_message.call_args_list
+            if call[0][0].type == ProtocolMessageTypes.partial_proofs.value
+        ]
+        assert len(partial_proof_messages) == 1
+        partial_proofs = harvester_protocol.PartialProofsData.from_bytes(partial_proof_messages[0].data)
+        assert partial_proofs.plot_identifier == str(env.plot_path.resolve())
+        quality_string = partial_proofs.partial_proofs[0].get_string(partial_proofs.strength)
+        plot_identifier = quality_string.hex() + partial_proofs.plot_identifier
+
+        response = await env.harvester_api.request_signatures(
+            harvester_protocol.RequestSignatures(
+                plot_identifier=plot_identifier,
+                challenge_hash=partial_proofs.challenge_hash,
+                sp_hash=partial_proofs.sp_hash,
+                messages=[bytes32.zeros],
+                message_data=None,
+                rc_block_unfinished=None,
+            )
+        )
+
+        assert response is not None
+    finally:
+        plot_info.prover = original_prover
+        with plot_manager:
+            plot_manager.plots.clear()
+            plot_manager.plots.update(original_plots)
 
 
 @pytest.mark.anyio
