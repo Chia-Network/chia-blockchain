@@ -22,6 +22,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 - Fix block viewer regression and navigation in GUI
+- Add backwards compatibility for v1 pool `/PUT` farmer signing
 
 ## 2.7.4 Chia blockchain 2026-09-10
 
