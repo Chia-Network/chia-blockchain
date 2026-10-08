@@ -421,18 +421,20 @@ async def test_register_remote_coins_with_existing_ids_still_subscribes() -> Non
         uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), bytes(RemoteInfo()).hex()
     )
     wallet.remote_info = RemoteInfo()
-    wallet.wallet_state_manager = Mock()
-    wallet.wallet_state_manager.add_interested_coin_ids = AsyncMock()
+    wallet.wallet_state_manager = AsyncMock()
+    wallet.wallet_state_manager._add_subscriptions = AsyncMock()
     wallet.wallet_state_manager.remote_coin_store = Mock()
     wallet.wallet_state_manager.remote_coin_store.add_coin_ids = AsyncMock(return_value=0)
 
     await wallet.register_remote_coins([])
     wallet.wallet_state_manager.remote_coin_store.add_coin_ids.assert_not_awaited()
-    wallet.wallet_state_manager.add_interested_coin_ids.assert_not_awaited()
+    wallet.wallet_state_manager._add_subscriptions.assert_not_awaited()
 
     await wallet.register_remote_coins([coin_id_1, coin_id_1])
 
     wallet.wallet_state_manager.remote_coin_store.add_coin_ids.assert_awaited_once_with(
         [coin_id_1], wallet.wallet_info.id
     )
-    wallet.wallet_state_manager.add_interested_coin_ids.assert_awaited_once_with([coin_id_1], [wallet.wallet_info.id])
+    wallet.wallet_state_manager._add_subscriptions.assert_awaited_once_with(
+        [CoinSubscription(target=coin_id_1, wallet_id=wallet.wallet_info.id)]
+    )
