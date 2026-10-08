@@ -371,7 +371,7 @@ class FarmerAPI:
                         {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
                     )
                     return
-                post_partial_request: PostPartialRequest = PostPartialRequest(payload, current_auth_token, agg_sig)
+                post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig, current_auth_token)
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
