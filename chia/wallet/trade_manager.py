@@ -354,6 +354,12 @@ class TradeManager:
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
 
+                async with action_scope.use() as interface:
+                    interface.side_effects.puzzle_hash_subscriptions.extend(
+                        inner_action_scope.side_effects.puzzle_hash_subscriptions
+                    )
+                    interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
+
                 cancellation_additions.extend(
                     [
                         add
@@ -885,6 +891,10 @@ class TradeManager:
             interface.side_effects.get_unused_derivation_record_result = (
                 inner_action_scope.side_effects.get_unused_derivation_record_result
             )
+            interface.side_effects.puzzle_hash_subscriptions.extend(
+                inner_action_scope.side_effects.puzzle_hash_subscriptions
+            )
+            interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(

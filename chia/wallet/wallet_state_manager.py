@@ -2153,62 +2153,23 @@ class WalletStateManager:
             self.tx_pending_changed()
 
     async def _add_subscriptions(self, subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription]) -> None:
-        # TODO: It's unclear if the intended use for this is that each puzzle hash should store all
-        # the elements of wallet_ids. It only stores one wallet_id per puzzle hash in the interested_store
-        # but the coin_cache keeps all wallet_ids for each puzzle hash
         for subscription in subscriptions:
-            if subscription.target in self.interested_coin_cache:
-                wallet_ids_to_add = list(
-                    {
-                        sub.wallet_id
-                        for sub in subscriptions
-                        if sub.wallet_id not in self.interested_coin_cache[subscription.target]
-                        and sub.wallet_id is not None
-                    }
-                )
-                self.interested_coin_cache[subscription.target].extend(wallet_ids_to_add)
-            else:
-                self.interested_coin_cache[subscription.target] = list(
-                    {sub.wallet_id for sub in subscriptions if sub.wallet_id is not None}
-                )
-        for subscription in subscriptions:
-            if isinstance(subscription, PuzzleHashSubscription):
-                await self.interested_store.add_interested_puzzle_hash(subscription.target, subscription.wallet_id)
-            else:
-                await self.interested_store.add_interested_coin_id(subscription.target)
-        await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
-            [s.target for s in subscriptions if isinstance(s, PuzzleHashSubscription)]
-        )
-        await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(
-            [s.target for s in subscriptions if isinstance(s, CoinSubscription)]
-        )
-
-    async def add_interested_puzzle_hashes(self, puzzle_hashes: list[bytes32], wallet_ids: list[int]) -> None:
-
-        for puzzle_hash in puzzle_hashes:
-            if puzzle_hash in self.interested_coin_cache:
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})
-                self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
-            else:
-                self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
-        for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
-            await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
-        if len(puzzle_hashes) > 0:
-            await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(puzzle_hashes)
-
-    async def add_interested_coin_ids(self, coin_ids: list[bytes32], wallet_ids: list[int] = []) -> None:
-        # TODO: FIX: wallet_ids is sometimes populated unexpectedly when called from add_pending_transaction
-        for coin_id in coin_ids:
-            if coin_id in self.interested_coin_cache:
-                # prevent repeated wallet_ids from appearing in the coin cache
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]})
-                self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
-            else:
-                self.interested_coin_cache[coin_id] = list(set(wallet_ids))
-        for coin_id in coin_ids:
-            await self.interested_store.add_interested_coin_id(coin_id)
-        if len(coin_ids) > 0:
-            await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(coin_ids)
+            if subscription.target in self.interested_coin_cache and subscription.wallet_id is not None:
+                self.interested_coin_cache[subscription.target].append(subscription.wallet_id)
+            elif subscription.wallet_id is not None:
+                self.interested_coin_cache[subscription.target] = [subscription.wallet_id]
+        puzzle_hash_subscriptions = [sub for sub in subscriptions if isinstance(sub, PuzzleHashSubscription)]
+        coin_subscriptions = [sub for sub in subscriptions if isinstance(sub, CoinSubscription)]
+        for subscription in puzzle_hash_subscriptions:
+            await self.interested_store.add_interested_puzzle_hash(subscription.target, subscription.wallet_id)
+            await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+                [s.target for s in subscriptions if isinstance(s, PuzzleHashSubscription)]
+            )
+        for subscription in coin_subscriptions:
+            await self.interested_store.add_interested_coin_id(subscription.target)
+            await self.wallet_node.new_peak_queue.subscribe_to_coin_ids(
+                [s.target for s in subscriptions if isinstance(s, CoinSubscription)]
+            )
 
     async def delete_trade_transactions(self, trade_id: bytes32) -> None:
         txs: list[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
