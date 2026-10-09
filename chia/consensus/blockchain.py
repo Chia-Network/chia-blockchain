@@ -40,7 +40,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.generator_validation import validate_tx_generator
+from chia.consensus.generator_validation import validate_generator_root, validate_tx_generator
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height, unfinished_block_sub_slots
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -50,7 +50,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.priority_thread_pool_executor import Executor
 
@@ -763,7 +762,9 @@ class Blockchain:
         if block.transactions_info is not None:
             generator_bytes = get_transactions_generator_bytes(block)
             if generator_bytes is not None:
-                if std_hash(generator_bytes) != block.transactions_info.generator_root:
+                if not validate_generator_root(
+                    generator_bytes, block.transactions_info.generator_root, self.constants, prev_tx_height
+                ):
                     return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
             elif block.transactions_info.generator_root != bytes([0] * 32):
                 return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH

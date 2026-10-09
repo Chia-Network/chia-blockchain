@@ -22,6 +22,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
+    get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
@@ -30,6 +31,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.generator_validation import compute_generator_root
 from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
@@ -228,7 +230,12 @@ def create_foliage(
 
         generator_hash = bytes32.zeros
         if new_block_gen is not None:
-            generator_hash = std_hash(new_block_gen.program)
+            generator_hash = compute_generator_root(
+                new_block_gen.program,
+                get_flags_for_height_and_constants(
+                    uint32(0) if prev_transaction_block is None else prev_transaction_block.height, constants
+                ),
+            )
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
