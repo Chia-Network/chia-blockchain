@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Unpack, final
 
 from chia.pools.pool_config import PoolingShareState
@@ -49,7 +49,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope
@@ -342,7 +342,7 @@ class PoolWallet:
         this method.
         """
         wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "Pool wallet", WalletType.POOLING_WALLET.value, ""
+            WalletData("Pool wallet", uint8(WalletType.POOLING_WALLET), "")
         )
 
         pool_wallet = cls(

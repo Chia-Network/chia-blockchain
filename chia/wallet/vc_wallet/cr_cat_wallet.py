@@ -53,7 +53,7 @@ from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope
@@ -123,7 +123,9 @@ class CRCATWallet(CATWallet):
 
         self.info = CRCATInfo(limitations_program_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletData(name, uint8(WalletType.CRCAT), info_as_string)
+        )
 
         await self.wallet_state_manager.add_new_wallet(self)
         self.tail_hash = self.info.limitations_program_hash

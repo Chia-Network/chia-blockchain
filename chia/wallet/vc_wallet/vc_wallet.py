@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from chia_rs import CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
@@ -37,7 +37,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
@@ -66,7 +66,7 @@ class VCWallet:
         new_wallet: _T_VCWallet = await cls.create(
             wallet_state_manager,
             wallet,
-            await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), ""),
+            await wallet_state_manager.user_store.create_wallet(WalletData(name, uint8(WalletType.VC), "")),
             name,
         )
         await wallet_state_manager.add_new_wallet(new_wallet)

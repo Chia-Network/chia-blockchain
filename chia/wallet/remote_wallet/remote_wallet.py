@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.remote_wallet.remote_info import RemoteInfo
@@ -13,7 +13,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_sync_scope import WalletSyncScope
 
@@ -57,7 +57,7 @@ class RemoteWallet:
         self.remote_info = RemoteInfo()
         info_as_string = bytes(self.remote_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name, wallet_type=WalletType.REMOTE.value, data=info_as_string
+            WalletData(name, uint8(WalletType.REMOTE), info_as_string)
         )
 
         await self.wallet_state_manager.add_new_wallet(self)

@@ -59,7 +59,7 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_sync_scope import WalletSyncScope
@@ -161,9 +161,7 @@ class DataLayerWallet:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DataLayer Wallet",
-            WalletType.DATA_LAYER.value,
-            "",
+            WalletData("DataLayer Wallet", uint8(WalletType.DATA_LAYER), "")
         )
         await self.wallet_state_manager.add_new_wallet(self)
 

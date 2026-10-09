@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 
 
 class WalletUserStore:
@@ -42,19 +42,18 @@ class WalletUserStore:
     async def init_wallet(self) -> None:
         all_wallets = await self.get_all_wallet_info_entries()
         if len(all_wallets) == 0:
-            await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
+            await self.create_wallet(WalletData("Chia Wallet", uint8(WalletType.STANDARD_WALLET), ""))
 
-    async def create_wallet(
-        self,
-        name: str,
-        wallet_type: int,
-        data: str,
-        id: int | None = None,
-    ) -> WalletInfo:
+    async def create_wallet(self, wallet_info: WalletData) -> WalletInfo:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-                (id, name, wallet_type, data),
+                (
+                    wallet_info.id if isinstance(wallet_info, WalletInfo) else None,
+                    wallet_info.name,
+                    wallet_info.type,
+                    wallet_info.data,
+                ),
             )
             await cursor.close()
             wallet = await self.get_last_wallet()

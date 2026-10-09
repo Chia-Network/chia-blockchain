@@ -36,7 +36,7 @@ from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_info import WalletData, WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
@@ -105,7 +105,9 @@ class RCATWallet(CATWallet):
 
         self.info = RCATInfo(limitations_program_hash, None, hidden_puzzle_hash)
         info_as_string = bytes(self.info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            WalletData(name, uint8(cls.wallet_type), info_as_string)
+        )
         self.tail_hash = self.info.limitations_program_hash
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
