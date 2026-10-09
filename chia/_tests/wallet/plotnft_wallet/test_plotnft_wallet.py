@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+from typing import cast
 from unittest import mock
 from unittest.mock import Mock
 
@@ -618,6 +619,67 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     rediscovered_plotnft_wallet = env.node.wallet_state_manager.wallets[uint32(env.wallet_aliases["plotnft"])]
     assert isinstance(rediscovered_plotnft_wallet, PlotNFT2Wallet)
     assert await rediscovered_plotnft_wallet.get_current_plotnft() == rediscovered_plotnft
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "trusted": True,
+            "reuse_puzhash": True,
+            "blocks_needed": [1],
+            "reorg_exempt": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_plotnft_cap(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {"xch": 1, "plotnft1": 2, "plotnft2": 3, "plotnft3": 4, "plotnft4": 5, "plotnft5": 6}
+
+    for i in range(1, 10):
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            await PlotNFT2Wallet.create_new(
+                wallet_state_manager=env.wallet_state_manager,
+                xch_wallet=env.xch_wallet,
+                action_scope=action_scope,
+                fee=uint64(0),
+            )
+
+        if i <= 5:
+            plotnft_update: dict[int | str, dict[str, int]] = {f"plotnft{i}": {"init": True, "unspent_coin_count": 1}}
+        else:
+            plotnft_update = {}
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {
+                            "unconfirmed_wallet_balance": -1,
+                            "<=#spendable_balance": -1,
+                            "<=#max_send_amount": -1,
+                            ">=#pending_change": 0,
+                            ">=#pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        cast(str | int, "xch"): {
+                            "confirmed_wallet_balance": -1,
+                            ">=#spendable_balance": 1,
+                            ">=#max_send_amount": 1,
+                            "<=#pending_change": 0,
+                            "<=#pending_coin_removal_count": -1,
+                            "<=#unspent_coin_count": 0,
+                        }
+                    }
+                    | plotnft_update,
+                )
+            ]
+        )
 
 
 @pytest.mark.parametrize(
