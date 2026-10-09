@@ -1112,13 +1112,20 @@ def validate_finished_header_block(
         finished_sub_slots=len(header_block.finished_sub_slots),
     )
     if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-        sp_index = header_block.reward_chain_block.signage_point_index
-        starts_new_slot = len(header_block.finished_sub_slots) > 0
-
+        sp_iters = calculate_sp_iters(
+            constants,
+            expected_vs.ssi,
+            header_block.reward_chain_block.signage_point_index,
+        )
+        sp_total_iters = uint128(
+            header_block.reward_chain_block.total_iters
+            - ip_iters
+            + sp_iters
+            - (expected_vs.ssi if sp_iters > ip_iters else 0)
+        )
         expected_mmr_root = blocks.get_mmr_root_for_block(
             header_block.prev_header_hash,
-            sp_index,
-            starts_new_slot,
+            sp_total_iters,
         )
         mmr_root = header_block.reward_chain_block.header_mmr_root
 

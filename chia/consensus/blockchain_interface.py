@@ -4,7 +4,7 @@ from typing import Protocol
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 
 class MMRManagerProtocol(Protocol):
@@ -13,8 +13,7 @@ class MMRManagerProtocol(Protocol):
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
         blocks: BlockRecordsProtocol,
         fork_height: uint32 | None = None,
     ) -> bytes32 | None: ...
@@ -34,9 +33,7 @@ class BlockRecordsProtocol(Protocol):
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool: ...
     def height_to_hash(self, height: uint32) -> bytes32 | None: ...
     def height_to_block_record(self, height: uint32) -> BlockRecord: ...
-    def get_mmr_root_for_block(
-        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
-    ) -> bytes32 | None: ...
+    def get_mmr_root_for_block(self, prev_header_hash: bytes32, sp_total_iters: uint128) -> bytes32 | None: ...
 
     # given a list of block header hashes, return the header hashes of their
     # previous blocks. This is not limited to the block record cache, but must
