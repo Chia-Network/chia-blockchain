@@ -29,6 +29,7 @@ concurrency:
 jobs:
   setup:
     name: Setup
+    if: github.event.repository.visibility != 'private' || github.event_name == 'workflow_dispatch' || github.event_name == 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
