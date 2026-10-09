@@ -4074,6 +4074,13 @@ class TestReorgs:
             block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
         )
 
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # once INTERNED_SPEND_LIST is active the generator is a serde_2026
+            # spend list, which has no classic canonical form. chia_rs rejects
+            # these bytes when it parses them, so the generator has to run
+            await _validate_and_add_block(empty_blockchain, block, expected_error=Err.GENERATOR_RUNTIME_ERROR)
+            return
+
         # overlong encoding became invalid in the 2.7 soft fork
         if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING

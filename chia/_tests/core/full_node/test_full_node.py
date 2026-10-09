@@ -1189,6 +1189,7 @@ async def test_new_transaction_and_mempool(
     ],
     self_hostname: str,
     seeded_random: random.Random,
+    consensus_mode: ConsensusMode,
 ) -> None:
     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     wallet_ph = wallet_a.get_new_puzzlehash()
@@ -1310,9 +1311,14 @@ async def test_new_transaction_and_mempool(
 
     # these numbers reflect the capacity of the mempool. In these
     # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
-    # and MAX_BLOCK_COST_CLVM
-    assert included_tx == 20
-    assert not_included_tx == 7
+    # and MAX_BLOCK_COST_CLVM. Once INTERNED_SPEND_LIST is active (hard fork
+    # 3.0 mode), spends are charged by interned vbytes instead.
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert included_tx == 22
+        assert not_included_tx == 5
+    else:
+        assert included_tx == 20
+        assert not_included_tx == 7
     assert seen_bigger_transaction_has_high_fee
 
     # Mempool is full
@@ -3696,7 +3702,9 @@ def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: n
         print(f"{rec}")
 
 
-async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBlock]) -> None:
+async def validate_coin_set(
+    coin_store: CoinStoreProtocol, blocks: list[FullBlock], constants: ConsensusConstants
+) -> None:
     prev_height = blocks[0].height - 1
     prev_hash = blocks[0].prev_header_hash
     for block in blocks:
@@ -3727,8 +3735,8 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
         # if len(block.transactions_generator_ref_list) > 0:
         #    assert False
 
-        flags = get_flags_for_height_and_constants(block.height, test_constants)
-        additions, removals = additions_and_removals(generator_bytes, [], flags, test_constants)
+        flags = get_flags_for_height_and_constants(block.height, constants)
+        additions, removals = additions_and_removals(generator_bytes, [], flags, constants)
 
         for add, hint in additions:
             rec = records.pop(add.name())
@@ -3792,7 +3800,7 @@ async def test_long_reorg(
     assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
 
     assert node.full_node._coin_store is not None
-    await validate_coin_set(node.full_node._coin_store, blocks)
+    await validate_coin_set(node.full_node._coin_store, blocks, node.full_node.constants)
 
     # one aspect of this test is to make sure we can reorg blocks that are
     # not in the cache. We need to explicitly prune the cache to get that
@@ -3807,7 +3815,7 @@ async def test_long_reorg(
     chain_2_weight = peak.weight
     chain_2_peak = peak.header_hash
 
-    await validate_coin_set(node.full_node._coin_store, reorg_blocks)
+    await validate_coin_set(node.full_node._coin_store, reorg_blocks, node.full_node.constants)
 
     # if the reorg chain has lighter blocks, once we've re-orged onto it, we
     # have a greater block height. If the reorg chain has heavier blocks, we
@@ -3832,7 +3840,7 @@ async def test_long_reorg(
     assert peak.header_hash != chain_2_peak
     assert peak.weight > chain_2_weight
 
-    await validate_coin_set(node.full_node._coin_store, blocks)
+    await validate_coin_set(node.full_node._coin_store, blocks, node.full_node.constants)
 
 
 @pytest.mark.anyio
@@ -3930,8 +3938,8 @@ async def test_long_reorg_nodes(
     assert p2 is not None
     assert p2.header_hash == reorg_blocks[-1].header_hash
 
-    await validate_coin_set(full_node_1.full_node._coin_store, reorg_blocks)
-    await validate_coin_set(full_node_2.full_node._coin_store, reorg_blocks)
+    await validate_coin_set(full_node_1.full_node._coin_store, reorg_blocks, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node._coin_store, reorg_blocks, full_node_2.full_node.constants)
 
     blocks = default_10000_blocks[:reorg_height]
 
@@ -3971,9 +3979,9 @@ async def test_long_reorg_nodes(
     print(f"reorg1 timing: {reorg1_timing:0.2f}s")
     print(f"reorg2 timing: {reorg2_timing:0.2f}s")
 
-    await validate_coin_set(full_node_1.full_node._coin_store, blocks)
-    await validate_coin_set(full_node_2.full_node._coin_store, blocks)
-    await validate_coin_set(full_node_3.full_node._coin_store, blocks)
+    await validate_coin_set(full_node_1.full_node._coin_store, blocks, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node._coin_store, blocks, full_node_2.full_node.constants)
+    await validate_coin_set(full_node_3.full_node._coin_store, blocks, full_node_3.full_node.constants)
 
 
 @pytest.mark.anyio
@@ -4010,8 +4018,8 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
         return p1 == p2
 
     await time_out_assert(10, check_nodes_in_sync)
-    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
-    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain, full_node_2.full_node.constants)
 
     # we spend a coin in the next block
     spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
@@ -4043,8 +4051,8 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
     await add_blocks_in_batches(chain_a[-1:], full_node_1.full_node)
 
     await time_out_assert(10, check_nodes_in_sync)
-    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_a)
-    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_a)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_a, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_a, full_node_2.full_node.constants)
 
     await add_blocks_in_batches(chain_b[-1:], full_node_1.full_node)
 
@@ -4054,8 +4062,8 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
     assert peak.header_hash == chain_b[-1].header_hash
 
     await time_out_assert(10, check_nodes_in_sync)
-    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_b)
-    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_b)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain_b, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain_b, full_node_2.full_node.constants)
 
     # now continue building the chain on top of B
     # since spend_bundle was supposed to have been reorged-out, we should be
@@ -4090,8 +4098,8 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
 
     await add_blocks_in_batches(chain[-4:], full_node_1.full_node)
     await time_out_assert(10, check_nodes_in_sync)
-    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain)
-    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain)
+    await validate_coin_set(full_node_1.full_node.blockchain.coin_store, chain, full_node_1.full_node.constants)
+    await validate_coin_set(full_node_2.full_node.blockchain.coin_store, chain, full_node_2.full_node.constants)
 
 
 @pytest.mark.anyio
