@@ -15,6 +15,7 @@ from typing_extensions import Protocol
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
@@ -38,12 +39,13 @@ log = logging.getLogger(__name__)
 
 
 def _plot_fields(plot_info: PlotInfo) -> tuple[uint8, uint16, uint8]:
-    param = plot_info.prover.get_param()
-    if param.size_v1 is not None:
+    if isinstance(plot_info.prover, V1Prover):
+        param = plot_info.prover.get_param()
+        assert param.size_v1 is not None
         return param.size_v1, uint16(0), uint8(0)
 
-    assert param.strength_v2 is not None
-    return uint8(0x80 | param.strength_v2), param.plot_index, param.meta_group
+    assert isinstance(plot_info.prover, V2Prover)
+    return uint8(0x80 | plot_info.prover.get_strength()), uint16(0), plot_info.prover.get_meta_group()
 
 
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
@@ -71,6 +73,11 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
     converted: list[Plot2] = []
     for plot_info in plot_infos:
         k, plot_index, meta_group = _plot_fields(plot_info)
+        group_size: uint16
+        if isinstance(plot_info.prover, V2Prover):
+            group_size = plot_info.prover.get_group_size()
+        else:
+            group_size = uint16(1)
 
         converted.append(
             Plot2(
@@ -85,6 +92,7 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
                 compression_level=plot_info.prover.get_compression_level(),
                 plot_index=plot_index,
                 meta_group=meta_group,
+                group_size=group_size,
             )
         )
     return converted

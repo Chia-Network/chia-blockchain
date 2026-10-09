@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -119,7 +120,7 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             yield
     elif isinstance(plot_info.prover, V2Prover):
         with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
-            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint8(2))]
+            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint16(0), uint8(2))]
             yield
 
 
@@ -162,12 +163,13 @@ async def test_v2_partial_proof_path_supports_per_quality_signature_identifier(
         plot_info = plot_manager.plots[env.plot_path]
         original_prover = plot_info.prover
     inner_prover = MagicMock()
-    inner_prover.plot_id.return_value = plot_id
-    inner_prover.get_plot_index.return_value = uint16(0)
+    inner_prover.plot_group_id.return_value = plot_id
     inner_prover.get_meta_group.return_value = uint8(0)
     inner_prover.get_strength.return_value = uint8(2)
     inner_prover.get_memo.return_value = original_prover.get_memo()
-    inner_prover.get_qualities_for_challenge.return_value = [PartialProof([uint64(1)] * 16)]
+    inner_prover.get_qualities_for_challenge.return_value = [
+        SimpleNamespace(chain=PartialProof([uint64(1)] * 16), plot_index=uint16(0))
+    ]
     plot_info.prover = V2Prover(inner_prover)
     with plot_manager:
         plot_manager.plots.clear()

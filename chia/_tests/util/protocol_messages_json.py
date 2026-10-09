@@ -83,7 +83,7 @@ partial_proof_json: dict[str, Any] = {
     "plot_index": 3145,
     "meta_group": 5,
     "strength": 3,
-    "plot_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
+    "plot_group_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
@@ -2389,6 +2389,7 @@ plot2_json: dict[str, Any] = {
     "compression_level": 0,
     "plot_index": 3145,
     "meta_group": 5,
+    "group_size": 8,
 }
 
 request_plots_json: dict[str, Any] = {}
@@ -2425,6 +2426,7 @@ respond_plots2_json: dict[str, Any] = {
             "compression_level": 0,
             "plot_index": 3145,
             "meta_group": 5,
+            "group_size": 8,
         }
     ],
     "failed_to_open_filenames": ["str"],
