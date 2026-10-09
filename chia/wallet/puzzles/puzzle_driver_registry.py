@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia.wallet.puzzles import puzzle_drivers
+from chia.wallet.puzzles import puzzle_drivers, standard_puzzle_drivers
 from chia.wallet.puzzles.custody import custody_architecture, member_puzzles, restriction_utilities, restrictions
 
 """
@@ -90,5 +90,15 @@ DRIVER_REGISTRY = [
         name="validator_stack_restriction",
         puzzle=restriction_utilities.ValidatorStackRestriction,
         solution=restriction_utilities.ValidatorStackRestrictionSolution,
+    ),
+    PuzzleDriverSet(
+        name="default_hidden_puzzle",
+        puzzle=standard_puzzle_drivers.DefaultHiddenPuzzle,
+        solution=puzzle_drivers.NilSolution,
+    ),
+    PuzzleDriverSet(
+        name="standard_puzzle",
+        puzzle=standard_puzzle_drivers.StandardPuzzle,
+        solution=standard_puzzle_drivers.StandardPuzzleSolution,
     ),
 ]
