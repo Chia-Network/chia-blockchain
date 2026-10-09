@@ -8,11 +8,12 @@ Persistent fixture-chain generation is excluded: its proofs are already saved
 in the blockchain file and validation does not perform plot lookups.
 
 After workers finish, pytest replaces the shared cache with the union of test
-recordings. Partial runs retain recordings for tests that were not run. Fully
-collected files prune removed/renamed tests before execution; failed or interrupted
-tests retain their previous recordings. Keep plot_cache_tests/ alongside the
-shared cache between runs: entries from an old cache without per-test recordings
-cannot be attributed to unrun tests and are dropped on the first publication.
+recordings, regardless of the session's exit status. Partial runs retain recordings
+for tests that were not run. Fully collected files prune removed/renamed tests
+before execution; failed or interrupted tests retain their previous recordings.
+Keep plot_cache_tests/ alongside the shared cache between runs: entries from an
+old cache without per-test recordings cannot be attributed to unrun tests and are
+dropped on the first publication.
 There is no process-exit publisher.
 """
 
