@@ -269,6 +269,7 @@ async def instantiate_mempool_manager(
     validation_timeout: float = 10,
     log_mempool: LogMempoolMode = "false",
     root_path: Path | None = None,
+    minimum_block_fee_per_cost: uint64 = uint64(0),
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -279,6 +280,7 @@ async def instantiate_mempool_manager(
         validation_timeout=validation_timeout,
         log_mempool=log_mempool,
         root_path=root_path,
+        minimum_block_fee_per_cost=minimum_block_fee_per_cost,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -1663,6 +1665,16 @@ def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
 
 def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
     assert mempool_manager.get_spendbundle(sb.name()) is None
+
+
+@pytest.mark.anyio
+async def test_minimum_block_fee_does_not_reject_from_mempool() -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        minimum_block_fee_per_cost=uint64(1_000_000),
+    ) as mempool_manager:
+        spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
+        assert_sb_in_pool(mempool_manager, spend_bundle)
 
 
 @pytest.mark.anyio
