@@ -10,15 +10,18 @@ from time import monotonic
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    INTERNED_SPEND_LIST,
     AugSchemeMPL,
     BlockBuilder,
     Coin,
     CoinSpend,
     ConsensusConstants,
     G2Element,
+    InternedBlockBuilder,
     SpendBundle,
     get_flags_for_height_and_constants,
     run_block_generator2,
+    solution_generator_2026,
     solution_generator_backrefs,
 )
 from chia_rs.sized_bytes import bytes32
@@ -539,12 +542,18 @@ class Mempool:
         removals = spend_bundle.removals()
         log.info(f"Add rem: {len(additions)} {len(removals)}")
 
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
+
         # since the hard fork has activated, block generators are
         # allowed to be serialized with CLVM back-references. We can do that
-        # unconditionally.
+        # unconditionally. Once INTERNED_SPEND_LIST is active, the generator
+        # must be a serde_2026 serialized spend list instead.
         start_time = monotonic()
         spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
-        block_program = solution_generator_backrefs(spends)
+        if flags & INTERNED_SPEND_LIST:
+            block_program = solution_generator_2026(spends)
+        else:
+            block_program = solution_generator_backrefs(spends)
 
         duration = monotonic() - start_time
         log.log(
@@ -552,8 +561,6 @@ class Mempool:
             f"serializing block generator took {duration:0.2f} seconds "
             f"spends: {len(removals)} additions: {len(additions)}",
         )
-
-        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
 
         err, err_msg, conds = run_block_generator2(
             block_program,
@@ -763,7 +770,12 @@ class Mempool:
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         generator_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY priority DESC, seq ASC")
-        builder = BlockBuilder()
+        # once INTERNED_SPEND_LIST is active, the generator must be a serde_2026
+        # serialized spend list, charged by interned size
+        interned = (get_flags_for_height_and_constants(prev_tx_height, constants) & INTERNED_SPEND_LIST) != 0
+        builder: BlockBuilder | InternedBlockBuilder = (
+            InternedBlockBuilder(constants) if interned else BlockBuilder(constants)
+        )
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
         block_cost = 0
@@ -871,7 +883,7 @@ class Mempool:
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
                 if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
-                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
 
                     block_cost = builder.cost()
                     if added:
@@ -960,7 +972,7 @@ class Mempool:
                 continue
 
         if len(batch_transactions) > 0:
-            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
             log.info(f"trying to add residual batch: {len(batch_transactions)} batch cost: {batch_cost} added: {added}")
 
             if added:
@@ -980,7 +992,7 @@ class Mempool:
 
         generator_creation_end = monotonic()
         duration = generator_creation_end - generator_creation_start
-        block_program, signature, cost = builder.finalize(constants)
+        block_program, signature, cost = builder.finalize()
         log.log(
             logging.INFO if duration < 2 else logging.WARNING,
             f"create_block_generator2() took {duration:0.4f} seconds. "
