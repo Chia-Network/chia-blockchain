@@ -76,6 +76,10 @@ def find_best_block(
     """
     Given a collection of UnfinishedBlocks (all with the same reward block
     hash), return the "best" one. i.e. the one with the smallest foliage hash.
+
+    Multiple farmers of the same plots produce different foliages for one
+    reward hash. Picking the lowest hash lets nodes agree on a single block
+    instead of flip-flopping through short reorgs.
     """
     if len(result) == 0:
         return None, None

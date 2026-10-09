@@ -51,11 +51,18 @@ If this ordering changes, readers can observe a peak whose block, height map ent
 
 ## Fork Choice And Reorg Contract
 
-Fork choice is purely:
+Fork choice is:
 
 - greater weight wins;
 - equal weight with lower `total_iters` wins;
+- equal weight, equal `total_iters`, and equal height with a lower
+  foliage transaction block hash wins;
 - otherwise current peak remains.
+
+The foliage-hash step exists so nodes converge when several farmers farm
+the same plots. Those blocks share weight, total_iters, and height, but
+differ in foliage; a deterministic pick avoids a flip-flop of short
+reorgs. It matches the unfinished-block heuristic.
 
 `ForkInfo` is the bridge between validation and reorg application. It is not just metadata. It must contain every addition/removal/reward coin across the candidate fork range, with `block_hashes` ordered by height. `_reconsider_peak()` replays coin-store state from this object when a fork becomes peak. If `ForkInfo` is incomplete, the reorg can validate but apply the wrong coin set.
 
