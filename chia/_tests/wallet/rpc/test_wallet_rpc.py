@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
-from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
+from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -67,6 +67,7 @@ from chia.cmds.wallet import (
     SignMessageCMD,
     TakeOfferCMD,
 )
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
@@ -74,7 +75,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.fee_rate import FeeRate
 from chia.types.signing_mode import SigningMode
@@ -1742,6 +1743,13 @@ async def test_offer_endpoints(
     with pytest.raises(ValueError, match=re.escape("Attempting to access trade_record on `offer_only` request")):
         offer_only_res.trade_record
 
+    # create_offer_for_ids refuses to push the incomplete maker spend
+    with pytest.raises(ValueError, match=re.escape("Cannot push an incomplete spend")):
+        await env_1.rpc_client.create_offer_for_ids(
+            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
     driver_dict = {
         cat_asset_id: PuzzleInfo(
             {
@@ -2149,6 +2157,104 @@ async def test_offer_endpoints(
             wallet_environments.tx_config,
             timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
         )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [3]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_create_spendbundle_for_ids_push(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    cat_wallet = await mint_cat(
+        wallet_environments,
+        env,
+        "xch",
+        "cat",
+        uint64(20),
+        CATWallet,
+        "cat",
+    )
+    cat_asset_id = cat_wallet.tail_hash
+
+    # create_offer_for_ids refuses to push the incomplete maker spend
+    with pytest.raises(ValueError, match=re.escape("Cannot push an incomplete spend")):
+        await env.rpc_client.create_offer_for_ids(
+            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # create_spendbundle_for_ids returns the offer and records the pending transaction when pushed.
+    # The maker spend is incomplete (it only becomes valid once taken), so we don't wait for
+    # mempool acceptance here.
+    push_res = await env.rpc_client.create_spendbundle_for_ids(
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert push_res.offer is not None
+    assert len(push_res.transactions) > 0
+
+    pushed_trade_id = push_res.trade_record.trade_id
+    saved_trade_record = (await env.rpc_client.get_offer(GetOffer(trade_id=pushed_trade_id))).trade_record
+    assert saved_trade_record.trade_id == pushed_trade_id
+    assert TradeStatus(saved_trade_record.status) == TradeStatus.PENDING_ACCEPT
+
+    # The pushed spend is recorded as a pending transaction in the wallet's transaction store.
+    pending_tx = await env.wallet_state_manager.get_transaction(push_res.transactions[0].name)
+    assert pending_tx is not None
+    assert not pending_tx.confirmed
+
+    # Without push, the same request builds and returns the spend but does not save it to the
+    # transaction store.
+    no_push_res = await env.rpc_client.create_spendbundle_for_ids(
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert no_push_res.offer is not None
+    assert len(no_push_res.transactions) > 0
+    assert await env.wallet_state_manager.get_transaction(no_push_res.transactions[0].name) is None
+
+    # Merging an external spend bundle combines its coin spends and signature without re-signing it.
+    sk = AugSchemeMPL.key_gen(bytes([1] * 32))
+    ext_sig = AugSchemeMPL.sign(sk, b"external message")
+    foreign_spend = make_spend(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), Program.to(1), Program.to([]))
+
+    merge_res = await env.rpc_client.create_spendbundle_for_ids(
+        CreateOfferForIDs(
+            offer={str(1): "-5", cat_asset_id.hex(): "1"},
+            extra_spend_bundle=WalletSpendBundle([foreign_spend], ext_sig),
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    merged = merge_res.transactions[0].spend_bundle
+    assert merged is not None
+    assert foreign_spend in merged.coin_spends  # external coin spends merged in
+    assert len(merged.coin_spends) > 1  # plus the generated maker spend(s)
+
+    # The external signature is aggregated in as-is (not dropped or regenerated): the merged
+    # signature must verify against every maker AGG_SIG pair plus the external (pubkey, message).
+    additional_data = env.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+    pks: list[G1Element] = []
+    msgs: list[bytes] = []
+    for coin_spend in merged.coin_spends:
+        conditions = conditions_dict_for_solution(
+            Program.from_bytes(bytes(coin_spend.puzzle_reveal)),
+            Program.from_bytes(bytes(coin_spend.solution)),
+            INFINITE_COST,
+        )
+        for pk, msg in pkm_pairs_for_conditions_dict(conditions, coin_spend.coin, additional_data):
+            pks.append(pk)
+            msgs.append(msg)
+    pks.append(sk.get_g1())
+    msgs.append(b"external message")
+    assert AugSchemeMPL.aggregate_verify(pks, msgs, merged.aggregated_signature)
 
 
 @pytest.mark.parametrize(
