@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     MEMPOOL_MODE,
     BlockRecord,
     CoinRecord,
@@ -13,6 +14,7 @@ from chia_rs import (
     PlotParam,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
     get_spends_for_trusted_block_with_conditions,
     run_block_generator2,
@@ -32,7 +34,6 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -523,7 +524,7 @@ class FullNodeRpcApi:
         spends = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block,
             self.service.constants,
-            SerializedProgram.from_bytes(block_generator.program),
+            block_generator.program,
             block_generator.generator_refs,
             flags,
             nice=(5,),
@@ -553,7 +554,7 @@ class FullNodeRpcApi:
         spends_with_conditions = await self.service.pool.run_in_loop(
             get_spends_for_trusted_block_with_conditions,
             self.service.constants,
-            SerializedProgram.from_bytes(block_generator.program),
+            block_generator.program,
             block_generator.generator_refs,
             flags,
             nice=(5,),
@@ -882,7 +883,7 @@ class FullNodeRpcApi:
         try:
             flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=block)
             puzzle, solution = get_puzzle_and_solution_for_coin(
-                SerializedProgram.from_bytes(block_generator.program),
+                block_generator.program,
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
@@ -1003,13 +1004,18 @@ class FullNodeRpcApi:
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
 
             if maybe_gen is not None:
+                # the generator is a serde_2026 serialized spend list if
+                # INTERNED_SPEND_LIST was active when it was created
+                flags = MEMPOOL_MODE | (
+                    get_flags_for_height_and_constants(curr_l_tb.height, self.service.constants) & INTERNED_SPEND_LIST
+                )
                 # this also validates the signature
                 err, err_msg, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
                     self.service.constants.MAX_BLOCK_COST_CLVM,
-                    MEMPOOL_MODE,
+                    flags,
                     gen.signature,
                     None,
                     self.service.constants,
