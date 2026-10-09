@@ -403,12 +403,15 @@ def tx_endpoint(
                 )
                 action_scope = cast(WalletActionScope, kwargs["action_scope_override"])
             else:
+                sign_fee_only = func.__name__ == "push_transactions" and request.get("sign_fee_only", False)
+                if sign_fee_only and request.get("sign", None) is True:
+                    raise ValueError("Cannot set both `sign` and `sign_fee_only`")
                 async with self.service.wallet_state_manager.new_action_scope(
                     tx_config,
                     push=request.get("push", push),
                     merge_spends=request.get("merge_spends", merge_spends),
                     sign=False
-                    if func.__name__ == "take_offer"
+                    if func.__name__ == "take_offer" or sign_fee_only
                     else request.get("sign", self.service.config.get("auto_sign_txs", True)),
                 ) as action_scope:
                     response = await func(
@@ -913,19 +916,58 @@ class WalletRpcApi:
     ) -> PushTransactionsResponse:
         if not action_scope.config.push:
             raise ValueError("Cannot push transactions if push is False")
+        if request.sign_fee_only and request.fee == 0:
+            raise ValueError("Cannot sign the fee only when no new fee spend is being added")
         tx_removals = [c for tx in request.transactions for c in tx.removals]
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(request.transactions)
             interface.side_effects.selected_coins.extend(tx_removals)
         if request.fee != 0:
-            await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                request.fee,
-                action_scope,
-                extra_conditions=(
-                    *extra_conditions,
-                    AssertConcurrentSpend(tx_removals[0].name()),
-                ),
+            fee_extra_conditions = (
+                *extra_conditions,
+                AssertConcurrentSpend(tx_removals[0].name()),
             )
+            if request.sign_fee_only:
+                # Sign only the new fee spend and leave the caller-supplied transactions untouched.
+                # The outer action scope runs with `sign=False` (forced in `tx_endpoint`), so it
+                # aggregates the existing signatures without rebuilding them. We sign the fee spend
+                # in its own scope and hand the signed transaction back to the outer scope to merge.
+                # We exclude the caller's removals from fee coin selection so we don't spend a coin
+                # that is already being spent.
+                async with self.service.wallet_state_manager.new_action_scope(
+                    action_scope.config.tx_config.override(
+                        excluded_coin_ids=[
+                            *action_scope.config.tx_config.excluded_coin_ids,
+                            *(c.name() for c in tx_removals),
+                        ],
+                    ),
+                    push=False,
+                    sign=True,
+                ) as fee_action_scope:
+                    await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                        request.fee,
+                        fee_action_scope,
+                        extra_conditions=fee_extra_conditions,
+                    )
+                async with action_scope.use() as interface:
+                    interface.side_effects.transactions.extend(fee_action_scope.side_effects.transactions)
+                    # The fee scope runs with push=False, so its unused derivation records are discarded
+                    # on exit. Copy them onto the outer scope, which pushes and commits them. Without
+                    # this, reuse_puzhash=False spends the same change address again, and an empty
+                    # puzzle-hash buffer means the new address is never stored.
+                    if interface.side_effects.get_unused_derivation_record_result is not None:
+                        raise ValueError(
+                            "Cannot sign the fee only when puzzle hashes were already generated for this action"
+                        )
+                    interface.side_effects.get_unused_derivation_record_result = (
+                        fee_action_scope.side_effects.get_unused_derivation_record_result
+                    )
+            else:
+                await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                    request.fee,
+                    action_scope,
+                    extra_conditions=fee_extra_conditions,
+                )
         elif extra_conditions != tuple():
             raise ValueError("Cannot add conditions to a transaction if no new fee spend is being added")
 

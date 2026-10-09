@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
-from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
+from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -67,6 +67,7 @@ from chia.cmds.wallet import (
     SignMessageCMD,
     TakeOfferCMD,
 )
+from chia.consensus.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup
@@ -74,7 +75,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.coin_spend import make_spend
 from chia.types.fee_rate import FeeRate
 from chia.types.signing_mode import SigningMode
@@ -485,6 +486,125 @@ async def test_push_transactions(wallet_environments: WalletTestFramework, capsy
     await client.push_tx(PushTX(spend_bundle=spend_bundle))
     resp = await client.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
     assert resp["success"]
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [2, 2],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_push_transactions_sign_fee_only(wallet_environments: WalletTestFramework) -> None:
+    # Wallet A builds and signs a transaction. Wallet B pushes it and pays the fee. Wallet B cannot
+    # sign Wallet A's spend, so `sign_fee_only` must sign only the new fee spend while preserving the
+    # signature Wallet A already produced.
+    env_a = wallet_environments.environments[0]
+    env_b = wallet_environments.environments[1]
+
+    wallet_a: Wallet = env_a.xch_wallet
+    client_a: WalletRpcClient = env_a.rpc_client
+    client_b: WalletRpcClient = env_b.rpc_client
+
+    wallet_node_b: WalletNode = env_b.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+
+    # Wallet A signs a fee-less transaction spending its own coin. Wallet B does not hold these keys.
+    outputs = await create_tx_outputs(wallet_a, wallet_environments.tx_config, [(1234321, None)])
+    tx_a = (
+        await client_a.create_signed_transactions(
+            CreateSignedTransaction(additions=outputs),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).signed_tx
+    assert tx_a.spend_bundle is not None
+
+    # Without `sign_fee_only`, Wallet B tries to re-sign the whole merged bundle and fails because it
+    # does not have Wallet A's keys.
+    with pytest.raises(ValueError, match="not found"):
+        await client_b.push_transactions(
+            PushTransactions(transactions=[tx_a], fee=uint64(10)),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # `sign_fee_only` combined with an explicit `sign=True` is contradictory.
+    with pytest.raises(ValueError, match=re.escape("Cannot set both `sign` and `sign_fee_only`")):
+        await client_b.push_transactions(
+            PushTransactions(transactions=[tx_a], fee=uint64(10), sign=True, sign_fee_only=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # `sign_fee_only` with no fee spend to sign is rejected.
+    with pytest.raises(ValueError, match="Cannot sign the fee only when no new fee spend is being added"):
+        await client_b.push_transactions(
+            PushTransactions(transactions=[tx_a], fee=uint64(0), sign_fee_only=True),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    # With `sign_fee_only`, Wallet B signs only the fee spend and preserves Wallet A's signature.
+    # Empty the unused puzzle-hash buffer first. Fee change then has to derive a new address, and
+    # that address is only persisted if the nested fee scope hands its derivation result to the
+    # outer scope. Otherwise the next fresh spend reuses it, and an empty buffer means it was
+    # never stored at all.
+    puzzle_store = env_b.wallet_state_manager.puzzle_store
+    if not wallet_environments.tx_config.reuse_puzhash:
+        last_index = await puzzle_store.get_last_derivation_path()
+        assert last_index is not None
+        await puzzle_store.set_used_up_to(last_index)
+        assert await puzzle_store.get_unused_derivation_path() is None
+
+    b_balance_before = await get_confirmed_balance(client_b, 1)
+    resp = await client_b.push_transactions(
+        PushTransactions(transactions=[tx_a], fee=uint64(10), sign_fee_only=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    merged = WalletSpendBundle.aggregate([tx.spend_bundle for tx in resp.transactions if tx.spend_bundle is not None])
+    # Wallet A's coin spend is still present and a new fee spend was added on top of it.
+    assert all(cs in merged.coin_spends for cs in tx_a.spend_bundle.coin_spends)
+    assert len(merged.coin_spends) > len(tx_a.spend_bundle.coin_spends)
+
+    # The merged signature must verify against every AGG_SIG pair in the bundle, which only holds if
+    # Wallet A's original signature and Wallet B's fee signature are both aggregated in.
+    additional_data = env_b.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+    pks: list[G1Element] = []
+    msgs: list[bytes] = []
+    for coin_spend in merged.coin_spends:
+        conditions = conditions_dict_for_solution(
+            Program.from_bytes(bytes(coin_spend.puzzle_reveal)),
+            Program.from_bytes(bytes(coin_spend.solution)),
+            INFINITE_COST,
+        )
+        for pk, msg in pkm_pairs_for_conditions_dict(conditions, coin_spend.coin, additional_data):
+            pks.append(pk)
+            msgs.append(msg)
+    assert AugSchemeMPL.aggregate_verify(pks, msgs, merged.aggregated_signature)
+
+    if not wallet_environments.tx_config.reuse_puzhash:
+        tx_a_addition_ids = {coin.name() for coin in tx_a.additions}
+        change_coins = [
+            coin for tx in resp.transactions for coin in tx.additions if coin.name() not in tx_a_addition_ids
+        ]
+        assert change_coins
+        for coin in change_coins:
+            record = await puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+            assert record is not None
+            unused = await puzzle_store.get_unused_derivation_path()
+            assert unused is None or unused > record.index
+        async with env_b.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as next_scope:
+            next_puzzle_hash = await next_scope.get_puzzle_hash(env_b.wallet_state_manager)
+        assert next_puzzle_hash not in {coin.puzzle_hash for coin in change_coins}
+
+    # The bundle is valid and confirmable: Wallet B only pays the fee.
+    await farm_transaction(full_node_api, wallet_node_b, merged)
+    await time_out_assert(20, get_confirmed_balance, b_balance_before - 10, client_b, 1)
 
 
 @pytest.mark.parametrize(
