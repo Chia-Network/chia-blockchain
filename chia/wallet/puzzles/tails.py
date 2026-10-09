@@ -133,7 +133,7 @@ class GenesisById(LimitationsProgram):
                     solution=UnknownSolution(program=Program.NIL),
                 ),
             ),
-        )
+        ).program
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
             [

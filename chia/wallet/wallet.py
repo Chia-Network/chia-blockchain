@@ -19,16 +19,13 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreateCoinAnnouncement,
+    ReserveFee,
 )
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
-    puzzle_for_pk,
-    puzzle_hash_for_pk,
-    solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_utils import make_reserve_fee_condition
+from chia.wallet.puzzles.puzzle_drivers import NilSolution, P2Conditions
+from chia.wallet.puzzles.standard_puzzle_drivers import DefaultHiddenPuzzle, StandardPuzzle, StandardPuzzleSolution
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
@@ -94,10 +91,10 @@ class Wallet:
         return self.wallet_id
 
     def convert_secret_key_to_synthetic(self, secret_key: PrivateKey) -> PrivateKey:
-        return calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        return calculate_synthetic_secret_key(secret_key, DefaultHiddenPuzzle().tree_hash)
 
     def convert_public_key_to_synthetic(self, public_key: G1Element) -> G1Element:
-        return calculate_synthetic_public_key(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        return StandardPuzzle(pre_known_original_public_key=public_key).synthetic_public_key
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
@@ -153,33 +150,32 @@ class Wallet:
         return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return puzzle_for_pk(pubkey)
+        return StandardPuzzle(pre_known_original_public_key=pubkey).program
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return puzzle_hash_for_pk(pubkey)
+        return StandardPuzzle(pre_known_original_public_key=pubkey).tree_hash
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
-        return puzzle_for_pk(G1Element.from_bytes(public_key))
+        return self.puzzle_for_pk(G1Element.from_bytes(public_key))
 
     def make_solution(
         self,
         primaries: list[CreateCoin],
         conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
-    ) -> Program:
-        assert fee >= 0
-        condition_list: list[Any] = [condition.to_program() for condition in conditions]
-        if len(primaries) > 0:
-            for primary in primaries:
-                condition_list.append(primary.to_program())
+    ) -> StandardPuzzleSolution[P2Conditions, NilSolution]:
+        condition_list = list(conditions)
+        condition_list.extend(primaries)
         if fee:
-            condition_list.append(make_reserve_fee_condition(fee))
+            condition_list.append(ReserveFee(fee))
 
-        return solution_for_conditions(condition_list)
+        return StandardPuzzleSolution(
+            delegated_puzzle=P2Conditions(conditions=condition_list), delegated_solution=NilSolution()
+        )
 
     async def select_coins(
         self,
@@ -315,11 +311,11 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                solution: Program = self.make_solution(
+                solution = self.make_solution(
                     primaries=primaries,
                     fee=fee if reserve_fee is None else reserve_fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
-                )
+                ).program
                 solution = decorator_manager.solve(inner_puzzle, target_primaries, solution)
                 primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
@@ -337,7 +333,7 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(primaries=[], conditions=(primary_announcement,))
+            solution = self.make_solution(primaries=[], conditions=(primary_announcement,)).program
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 make_spend(

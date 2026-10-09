@@ -536,7 +536,7 @@ class DataLayerWallet:
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if fee > 0 else extra_conditions,
-        )
+        ).program
         db_layer_sol = Program.to([inner_sol])
         full_sol = Program.to(
             [
@@ -727,7 +727,7 @@ class DataLayerWallet:
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=[CreateCoin(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
-        )
+        ).program
         mirror_spend = make_spend(
             mirror_coin,
             create_mirror_puzzle(),

@@ -514,7 +514,7 @@ class CRCATWallet(CATWallet):
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
-                        )
+                        ).program
                     elif regular_chia_to_claim > fee:
                         xch_announcement = await self.create_tandem_xch_tx(
                             fee,
@@ -525,7 +525,7 @@ class CRCATWallet(CATWallet):
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
-                        )
+                        ).program
                     else:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
@@ -533,13 +533,13 @@ class CRCATWallet(CATWallet):
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
                         conditions=(*extra_conditions, announcement),
-                    )
+                    ).program
             else:
                 assert announcement is not None
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
                     conditions=(announcement.corresponding_assertion(),),
-                )
+                ).program
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     crcat.inner_puzzle_hash
