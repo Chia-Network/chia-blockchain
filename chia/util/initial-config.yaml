@@ -653,6 +653,9 @@ wallet:
   # Enabling the delta sync can under certain circumstances lead to missing coin states during re-orgs
   use_delta_sync: False
 
+  # PlotNFTs may want to be disabled for larger farmers
+  enable_plot_nft: True
+
   #################################
   #  Inner puzzle decorators      #
   #################################

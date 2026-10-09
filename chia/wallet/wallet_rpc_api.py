@@ -799,10 +799,8 @@ class WalletRpcApi:
                 await self._stop_wallet()
                 await self.service._start_with_fingerprint(fingerprint=request.fingerprint)
 
-            wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
-            for w in wallets:
-                wallet = self.service.wallet_state_manager.wallets[w.id]
-                unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet.id())
                 balance = await wallet.get_confirmed_balance(unspent)
                 pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
@@ -989,6 +987,10 @@ class WalletRpcApi:
         wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
         wallet_infos: list[WalletInfoResponse] = []
         for wallet in wallets:
+            if wallet.type == WalletType.PLOTNFT_2.value and not self.service.wallet_state_manager.config.get(
+                "enable_plot_nft", True
+            ):
+                continue
             if request.include_data:
                 data = wallet.data
             else:
