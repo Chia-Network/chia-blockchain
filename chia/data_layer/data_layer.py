@@ -114,7 +114,7 @@ async def get_plugin_info(
                 if response.status == 200:
                     ret["response"] = json.loads(await response.text())
                 return plugin_remote, ret
-    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+    except (TimeoutError, aiohttp.ClientError) as e:
         return plugin_remote, {"error": f"{type(e).__name__}: {e}"}
 
 
@@ -889,7 +889,7 @@ class DataLayer:
                                 self.log.error(f"failed to upload to uploader {uploader}")
                             else:
                                 self.log.debug(f"uploaded to uploader {uploader}")
-                except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+                except (TimeoutError, aiohttp.ClientError) as e:
                     self.log.error(f"add_missing_files could not reach uploader {uploader}: {type(e).__name__}: {e}")
 
     async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:

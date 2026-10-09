@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
+from typing import Self
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
-from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

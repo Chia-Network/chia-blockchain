@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
 from chia_rs.sized_bytes import bytes32
@@ -10,7 +10,6 @@ from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.SExp import SExp
-from typing_extensions import Self
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.tree_hash import sha256_treehash

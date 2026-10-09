@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
-from typing import Literal, TypeVar
+from typing import Literal, Self, TypeVar
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
@@ -26,7 +26,6 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
-from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator

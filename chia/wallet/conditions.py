@@ -3,12 +3,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, fields, replace
-from typing import Any, ClassVar, TypeVar, final, get_type_hints
+from typing import Any, ClassVar, Self, TypeVar, final, get_type_hints
 
 from chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode

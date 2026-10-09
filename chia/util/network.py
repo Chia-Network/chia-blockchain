@@ -8,14 +8,13 @@ import ssl
 from collections.abc import Iterable
 from dataclasses import dataclass
 from ipaddress import IPv4Network, IPv6Network, ip_address
-from typing import Any, Literal
+from typing import Any, Literal, final
 from urllib.parse import urlsplit
 
 from aiohttp import web
 from aiohttp.log import web_logger
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
-from typing_extensions import final
 
 from chia.util.ip_address import IPAddress
 from chia.util.task_referencer import create_referenced_task

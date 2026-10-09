@@ -8,7 +8,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import floor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
@@ -428,8 +428,8 @@ class Farmer:
         elif pool_config.version == 2:
             cached_auth_token = self.authentication_tokens.get(pool_config.launcher_id, None)
             if cached_auth_token is None or datetime.fromtimestamp(
-                cached_auth_token[1], tz=timezone.utc
-            ) < datetime.fromtimestamp(self.get_current_time(), tz=timezone.utc):
+                cached_auth_token[1], tz=UTC
+            ) < datetime.fromtimestamp(self.get_current_time(), tz=UTC):
                 auth_response = await self._pool_get_auth(pool_config)
                 if isinstance(auth_response, pool_protocol.GetAuthResponse):
                     self.authentication_tokens[pool_config.launcher_id] = (

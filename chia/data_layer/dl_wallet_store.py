@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import Self
 
 from aiosqlite import Row
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord

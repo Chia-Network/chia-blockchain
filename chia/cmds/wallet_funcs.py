@@ -7,7 +7,7 @@ import pathlib
 import sys
 import time
 from collections.abc import Awaitable, Callable, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -709,7 +709,7 @@ async def print_offer_summary(
 
 
 def format_timestamp_with_timezone(timestamp: int) -> str:
-    tzinfo = datetime.now(timezone.utc).astimezone().tzinfo
+    tzinfo = datetime.now(UTC).astimezone().tzinfo
     return datetime.fromtimestamp(timestamp, tz=tzinfo).strftime("%Y-%m-%d %H:%M %Z")
 
 

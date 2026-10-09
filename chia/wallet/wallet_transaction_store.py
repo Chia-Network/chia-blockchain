@@ -3,11 +3,11 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
+from typing import Any
 
 import aiosqlite
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
-from typing_extensions import Any
 
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash

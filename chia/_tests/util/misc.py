@@ -20,7 +20,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TextIO, TypeVar, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, TextIO, TypeVar, cast, final
 
 import aiohttp
 import pytest
@@ -31,7 +31,6 @@ from aiohttp import web
 from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Self
 
 import chia
 import chia._tests

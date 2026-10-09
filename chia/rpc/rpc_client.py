@@ -7,12 +7,11 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any
+from typing import Any, Self
 
 import aiohttp
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
-from typing_extensions import Self
 
 from chia.protocols.outbound_message import NodeType
 from chia.server.server import ssl_context_for_client

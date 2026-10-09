@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.streamable import Streamable, streamable

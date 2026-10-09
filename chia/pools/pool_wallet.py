@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
-from typing_extensions import Unpack, final
+from typing_extensions import Unpack
 
 from chia.pools.pool_config import PoolingShareState
 from chia.pools.pool_puzzles import (
