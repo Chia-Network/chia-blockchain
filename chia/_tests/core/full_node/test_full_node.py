@@ -69,6 +69,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node import full_node as full_node_module
 from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI, tx_request_and_timeout
+from chia.full_node.mempool import MempoolRemoveReason
 from chia.full_node.sync_store import Peak
 from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -1238,7 +1239,9 @@ async def test_new_transaction_and_mempool(
         condition_dic=conditions_dict,
     )
     assert spend_bundle is not None
-    new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+    spend_name = spend_bundle.name()
+    sbc = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+    new_transaction = fnp.NewTransaction(spend_name, uint64(sbc.cost), uint64(estimate_fees(spend_bundle)))
 
     await full_node_1.new_transaction(new_transaction, fake_peer)
     await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
@@ -4755,6 +4758,247 @@ async def test_new_tx_zero_cost(
     await ws_con_2.send_message(msg)
     # Make sure the first full node has banned the second.
     await time_out_assert(3, lambda: full_node_2_ip in server_1.banned_peers)
+
+
+@pytest.mark.anyio
+async def test_new_tx_cost_exceeds_max_tx_ignored(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    NewTransaction with cost above max_tx_clvm_cost is ignored without banning.
+    """
+    [full_node_1, full_node_2], _, bt = setup_two_nodes_fixture
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await time_out_assert(5, lambda: len(server_1.all_connections) == 1)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+    await full_node_1.full_node.add_block(bt.get_consecutive_blocks(1)[0])
+
+    max_tx = full_node_1.full_node.mempool_manager.max_tx_clvm_cost
+    msg = make_msg(
+        ProtocolMessageTypes.new_transaction,
+        NewTransaction(bytes32.random(), cost=uint64(max_tx + 1), fees=uint64(42)),
+    )
+    full_node_2_ip = "1.3.3.7"
+    ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+    await ws_con_2.send_message(msg)
+    await asyncio.sleep(0.5)
+    assert full_node_2_ip not in server_1.banned_peers
+    assert len(full_node_1.full_node.full_node_store.pending_tx_request) == 0
+
+
+@pytest.mark.anyio
+async def test_add_transaction_max_advertised_cost_admits_despite_under_advertiser(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    Pre-validation uses the maximum advertised cost as the CLVM limit. A liar
+    under-advertising alongside an honest peer must not prevent admission; the
+    liar is banned by the post-success cost mismatch check.
+    """
+    full_node_api, server, bt = one_node_one_block
+    fn = full_node_api.full_node
+
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
+    spend_name = spend_bundle.name()
+
+    # Discover the true cost/fee without advertising, then clear seen state.
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+    mempool_item = fn.mempool_manager.get_mempool_item(spend_name)
+    assert mempool_item is not None
+    true_cost = mempool_item.cost
+    true_fee = mempool_item.fee
+    fn.mempool_manager.mempool.remove_from_pool([spend_name], MempoolRemoveReason.CONFLICT)
+    fn.mempool_manager.remove_seen(spend_name)
+
+    liar_id = bytes32(b"\x01" * 32)
+    honest_id = bytes32(b"\x02" * 32)
+    liar_host = "1.1.1.1"
+    honest_host = "2.2.2.2"
+    peers_with_tx = {
+        liar_id: PeerWithTx(peer_host=liar_host, advertised_fee=true_fee, advertised_cost=uint64(1)),
+        honest_id: PeerWithTx(peer_host=honest_host, advertised_fee=true_fee, advertised_cost=true_cost),
+    }
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True, peers_with_tx=peers_with_tx)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+    assert liar_host in server.banned_peers
+    assert honest_host not in server.banned_peers
+
+
+@pytest.mark.anyio
+async def test_add_transaction_under_advertised_cost_bans_all_at_or_below_limit(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    When every peer under-advertises, CostExceeded bans all peers that advertised
+    the validation limit or less, and does not mark the tx seen.
+    """
+    full_node_api, server, bt = one_node_one_block
+    fn = full_node_api.full_node
+
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
+    spend_name = spend_bundle.name()
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+    mempool_item = fn.mempool_manager.get_mempool_item(spend_name)
+    assert mempool_item is not None
+    true_cost = mempool_item.cost
+    true_fee = mempool_item.fee
+    fn.mempool_manager.mempool.remove_from_pool([spend_name], MempoolRemoveReason.CONFLICT)
+    fn.mempool_manager.remove_seen(spend_name)
+
+    low_id = bytes32(b"\x01" * 32)
+    mid_id = bytes32(b"\x02" * 32)
+    low_host = "1.1.1.1"
+    mid_host = "2.2.2.2"
+    assert true_cost > 2
+    peers_with_tx = {
+        low_id: PeerWithTx(peer_host=low_host, advertised_fee=true_fee, advertised_cost=uint64(1)),
+        mid_id: PeerWithTx(peer_host=mid_host, advertised_fee=true_fee, advertised_cost=uint64(2)),
+    }
+
+    status, err = await fn.add_transaction(spend_bundle, spend_name, test=True, peers_with_tx=peers_with_tx)
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.BLOCK_COST_EXCEEDS_MAX
+    assert low_host in server.banned_peers
+    assert mid_host in server.banned_peers
+    assert not fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_cost_exceeded_at_max_tx_marks_seen(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """CostExceeded at max_tx_clvm_cost marks seen; no peer ads means no ban."""
+    full_node_api, server, _bt = one_node_one_block
+    fn = full_node_api.full_node
+    banned_before = dict(server.banned_peers)
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+
+    async def raise_cost_exceeded(*_args: Any, **_kwargs: Any) -> SpendBundleConditions:
+        raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX)
+
+    original = fn.mempool_manager.pre_validate_spendbundle
+    fn.mempool_manager.pre_validate_spendbundle = raise_cost_exceeded  # type: ignore[method-assign]
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.BLOCK_COST_EXCEEDS_MAX
+    assert server.banned_peers == banned_before
+    assert fn.mempool_manager.seen(spend_name)
+
+
+@pytest.mark.anyio
+async def test_add_transaction_clamps_advertised_cost_above_max_tx(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """Advertised cost above max_tx_clvm_cost is clamped; validation still runs."""
+    full_node_api, server, bt = one_node_one_block
+    fn = full_node_api.full_node
+
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    await add_blocks_in_batches(blocks, fn)
+    wt = bt.get_pool_wallet_tool()
+    spend_bundle = wt.generate_signed_transaction(
+        uint64(42), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+    )
+    spend_name = spend_bundle.name()
+
+    peer_id = bytes32(b"\x03" * 32)
+    peer_host = "3.3.3.3"
+    over_cost = uint64(fn.mempool_manager.max_tx_clvm_cost + 1)
+    peers_with_tx = {
+        peer_id: PeerWithTx(peer_host=peer_host, advertised_fee=uint64(0), advertised_cost=over_cost),
+    }
+
+    captured_max_cost: uint64 | None = None
+    original = fn.mempool_manager.pre_validate_spendbundle
+
+    async def capture_then_validate(*args: Any, max_cost: uint64 | None = None, **kwargs: Any) -> SpendBundleConditions:
+        nonlocal captured_max_cost
+        captured_max_cost = max_cost
+        return await original(*args, max_cost=max_cost, **kwargs)
+
+    fn.mempool_manager.pre_validate_spendbundle = capture_then_validate  # type: ignore[method-assign]
+    try:
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True, peers_with_tx=peers_with_tx)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.SUCCESS
+    assert err is None
+    assert captured_max_cost == fn.mempool_manager.max_tx_clvm_cost
+    # Over-advertisement mismatches the true cost after admission.
+    assert peer_host in server.banned_peers
+
+
+@pytest.mark.anyio
+async def test_add_transaction_passes_max_advertised_cost_to_pre_validate(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """add_transaction forwards the maximum advertised cost as max_cost."""
+    full_node_api, _server, _bt = one_node_one_block
+    fn = full_node_api.full_node
+
+    spend_bundle = make_spend_bundle(1)
+    spend_name = spend_bundle.name()
+    captured_max_cost: uint64 | None = None
+
+    async def capture_pre_validate(
+        *_args: Any, max_cost: uint64 | None = None, **_kwargs: Any
+    ) -> SpendBundleConditions:
+        nonlocal captured_max_cost
+        captured_max_cost = max_cost
+        raise ValueError("stop after capturing max_cost")
+
+    original = fn.mempool_manager.pre_validate_spendbundle
+    fn.mempool_manager.pre_validate_spendbundle = capture_pre_validate  # type: ignore[method-assign]
+    try:
+        peers_with_tx = {
+            bytes32(b"\x04" * 32): PeerWithTx(
+                peer_host="4.4.4.4", advertised_fee=uint64(100), advertised_cost=uint64(5000)
+            ),
+            bytes32(b"\x05" * 32): PeerWithTx(
+                peer_host="5.5.5.5", advertised_fee=uint64(100), advertised_cost=uint64(3000)
+            ),
+        }
+        status, err = await fn.add_transaction(spend_bundle, spend_name, test=True, peers_with_tx=peers_with_tx)
+    finally:
+        fn.mempool_manager.pre_validate_spendbundle = original  # type: ignore[method-assign]
+
+    assert status == MempoolInclusionStatus.FAILED
+    assert err == Err.INVALID_SPEND_BUNDLE
+    assert captured_max_cost == uint64(5000)
 
 
 @pytest.mark.anyio
