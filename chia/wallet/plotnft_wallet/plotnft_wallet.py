@@ -30,7 +30,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash
 from chia.wallet.puzzles.puzzle_drivers import NilSolution, P2Conditions, UnknownPuzzle
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, PuzzleHashSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
@@ -64,8 +64,12 @@ class PlotNFT2Wallet:
             log=logging.getLogger(__name__),
             wallet_info=wallet_info,
         )
-        await wallet_state_manager.add_interested_puzzle_hashes(
-            puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint], wallet_ids=[self.id(), self.id()]
+        # TODO: waiting for addition to sync scope
+        await wallet_state_manager._add_subscriptions(
+            subscriptions=[
+                PuzzleHashSubscription(target=self.p2_singleton_puzzle_hash, wallet_id=self.id()),
+                PuzzleHashSubscription(target=self.hint, wallet_id=self.id()),
+            ]
         )
         if await wallet_state_manager.user_store.get_wallet_by_id(wallet_info.id) is None:
             await wallet_state_manager.user_store.create_wallet(

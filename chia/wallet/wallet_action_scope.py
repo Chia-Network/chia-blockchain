@@ -72,6 +72,18 @@ class PlotNFTTargetStateInfo(Streamable):
         )
 
 
+@dataclass(frozen=True, kw_only=True)
+class PuzzleHashSubscription:
+    target: bytes32
+    wallet_id: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class CoinSubscription:
+    target: bytes32
+    wallet_id: int | None = None
+
+
 @dataclass
 class WalletSideEffects:
     transactions: list[TransactionRecord] = field(default_factory=list)
@@ -81,6 +93,8 @@ class WalletSideEffects:
     singleton_records: list[SingletonRecord] = field(default_factory=list)
     plotnft_exiting_info: PlotNFTTargetStateInfo | None = None
     get_unused_derivation_record_result: GetUnusedDerivationRecordResult | None = None
+    puzzle_hash_subscriptions: list[PuzzleHashSubscription] = field(default_factory=list)
+    coin_subscriptions: list[CoinSubscription] = field(default_factory=list)
 
 
 @final
@@ -198,6 +212,10 @@ async def new_wallet_action_scope(
             extra_spends=self.side_effects.extra_spends,
             singleton_records=self.side_effects.singleton_records,
             plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
+            puzzle_hash_and_coin_subscriptions=[
+                *self.side_effects.puzzle_hash_subscriptions,
+                *self.side_effects.coin_subscriptions,
+            ],
         )
     if push and self.side_effects.get_unused_derivation_record_result is not None:
         await self.side_effects.get_unused_derivation_record_result.commit(wallet_state_manager)
