@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     MEMPOOL_MODE,
     BlockRecord,
     CoinRecord,
@@ -13,6 +14,7 @@ from chia_rs import (
     PlotParam,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
     get_spends_for_trusted_block_with_conditions,
     run_block_generator2,
@@ -1002,13 +1004,18 @@ class FullNodeRpcApi:
             self.service.log.info(f"Simulated block constructed in {time.monotonic() - start_time:0.2f} seconds")
 
             if maybe_gen is not None:
+                # the generator is a serde_2026 serialized spend list if
+                # INTERNED_SPEND_LIST was active when it was created
+                flags = MEMPOOL_MODE | (
+                    get_flags_for_height_and_constants(curr_l_tb.height, self.service.constants) & INTERNED_SPEND_LIST
+                )
                 # this also validates the signature
                 err, err_msg, conds = await self.service.pool.run_in_loop(
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
                     self.service.constants.MAX_BLOCK_COST_CLVM,
-                    MEMPOOL_MODE,
+                    flags,
                     gen.signature,
                     None,
                     self.service.constants,

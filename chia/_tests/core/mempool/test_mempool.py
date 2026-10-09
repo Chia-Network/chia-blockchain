@@ -9,6 +9,7 @@ import pytest
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ENABLE_KECCAK_OPS_OUTSIDE_GUARD,
+    INTERNED_SPEND_LIST,
     AugSchemeMPL,
     CoinSpend,
     FullBlock,
@@ -736,7 +737,12 @@ class TestMempoolManager:
         assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
+        # once INTERNED_SPEND_LIST is active, spends are charged by interned
+        # size. sb4 shares most of its bytes with sb12 and sb3, so adding it
+        # with a MEMPOOL_MIN_FEE_INCREASE fee raises the fee per cost. Without
+        # a fee, it still lowers it
+        interned = (get_flags_for_height_and_constants(blocks[-1].height, bt.constants) & INTERNED_SPEND_LIST) != 0
+        sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(0) if interned else MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
         await send_sb(full_node_1, dummy_peer, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
