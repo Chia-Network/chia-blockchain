@@ -4,7 +4,11 @@ import logging
 from itertools import pairwise
 
 import pytest
-from chia_rs import BlockRecord, ConsensusConstants, FullBlock
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    FullBlock,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 

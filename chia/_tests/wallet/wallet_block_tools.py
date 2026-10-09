@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     BlockRecord,
     ConsensusConstants,
     Foliage,
@@ -20,6 +21,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
+    get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -29,6 +31,8 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_validation import compute_generator_root
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -100,14 +104,23 @@ class WalletBlockTools(BlockTools):
             latest_block = None
             last_timestamp = uint64((int(time.time()) if genesis_timestamp is None else genesis_timestamp) - 20)
 
+        block_cache = BlockCache(blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE))
         for _ in range(num_blocks):
+            prev_tx_height = pre_sp_tx_block_height(
+                constants,
+                block_cache,
+                prev_b_hash=constants.GENESIS_CHALLENGE if latest_block is None else latest_block.header_hash,
+                sp_index=uint8(1),
+                finished_sub_slots=0,
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, constants)
             additions = []
             removals = []
             block_generator: BlockGenerator | None = None
             if transaction_data is not None and len(block_list_input) > 0:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
-                block_generator = simple_solution_generator(transaction_data)
+                block_generator = simple_solution_generator(transaction_data, flags)
             pool_target = PoolTarget(
                 pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph, uint32(0)
             )
@@ -126,6 +139,7 @@ class WalletBlockTools(BlockTools):
                 block_generator,
                 additions,
                 removals,
+                flags,
             )
 
             transaction_data = None
@@ -230,6 +244,7 @@ def get_full_block_and_block_record(
     block_generator: BlockGenerator | None,
     additions: list[Coin],
     removals: list[Coin],
+    flags: int,
 ) -> tuple[FullBlock, BlockRecord, float]:
     timestamp = last_timestamp + 20
     if prev_block is None:
@@ -288,7 +303,7 @@ def get_full_block_and_block_record(
 
     generator_hash = bytes32.zeros
     if block_generator is not None:
-        generator_hash = std_hash(block_generator.program)
+        generator_hash = compute_generator_root(block_generator.program, flags)
 
     foliage_data = FoliageBlockData(
         bytes32.zeros,
@@ -324,7 +339,7 @@ def get_full_block_and_block_record(
         foliage_transaction_block.get_hash(),
         G2Element(),
     )
-    new_format = height >= constants.HARD_FORK2_HEIGHT
+    new_format = bool(flags & INTERNED_SPEND_LIST)
     unfinished_block = UnfinishedBlock(
         [],
         RewardChainBlockUnfinished(

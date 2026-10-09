@@ -50,6 +50,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.generator_validation import validate_generator_root
 from chia.consensus.get_block_challenge import (
     post_hard_fork2,
     post_hard_fork2_block_record,
@@ -101,7 +102,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -2336,9 +2336,17 @@ class FullNode:
                 # If the block arrived with a generator, reject it if it doesn't match generator_root
                 # before replacing it with the cached one.
                 incoming_generator = get_transactions_generator_bytes(block)
-                if (
-                    incoming_generator is not None
-                    and std_hash(incoming_generator) != block.transactions_info.generator_root
+                if incoming_generator is not None and not validate_generator_root(
+                    incoming_generator,
+                    block.transactions_info.generator_root,
+                    self.constants,
+                    pre_sp_tx_block_height(
+                        constants=self.constants,
+                        blocks=self.blockchain,
+                        prev_b_hash=block.prev_header_hash,
+                        sp_index=block.reward_chain_block.signage_point_index,
+                        finished_sub_slots=len(block.finished_sub_slots),
+                    ),
                 ):
                     raise ConsensusError(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
                 block = block.replace(
