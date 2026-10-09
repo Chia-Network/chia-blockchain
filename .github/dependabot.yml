@@ -2,10 +2,6 @@
 # inline with the upstream template, unless you remove the dependabot managed file property from the repo
 
 version: 2
-registries:
-  chia-pypi:
-    type: python-index
-    url: https://pypi.chia.net/simple/
 updates:
   - package-ecosystem: "gomod"
     directory: /
@@ -27,8 +23,6 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    registries:
-      - chia-pypi
     directory: /
     schedule:
       interval: "weekly"
