@@ -53,7 +53,8 @@ boto3 = ">=1.43.8"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
-chia_rs = ">=0.51.0, <0.52"
+# pinned to chia_rs#1531 (`BlockBuilder(constants)`) until the next chia_rs release (needs a Rust toolchain to build)
+chia_rs = { git = "https://github.com/Chia-Network/chia_rs.git", rev = "86c051e3907cf99e43753d72ab41b2bb4937fdf3", subdirectory = "wheel" }
 chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.4.0"  # For the CLI
 clvm = ">=0.9.14"

@@ -82,18 +82,6 @@ MAX_BLOCK_ATOMS = 60_000_000
 MAX_BLOCK_PAIRS = 60_000_000
 
 
-def add_spend_bundles(
-    builder: BlockBuilder | InternedBlockBuilder,
-    bundles: list[SpendBundle],
-    cost: uint64,
-    constants: ConsensusConstants,
-) -> tuple[bool, bool]:
-    # InternedBlockBuilder takes the constants when it's constructed instead
-    if isinstance(builder, InternedBlockBuilder):
-        return builder.add_spend_bundles(bundles, cost)
-    return builder.add_spend_bundles(bundles, cost, constants)
-
-
 @dataclass
 class MempoolRemoveInfo:
     items: dict[bytes32, InternalMempoolItem]
@@ -785,7 +773,9 @@ class Mempool:
         # once INTERNED_SPEND_LIST is active, the generator must be a serde_2026
         # serialized spend list, charged by interned size
         interned = (get_flags_for_height_and_constants(prev_tx_height, constants) & INTERNED_SPEND_LIST) != 0
-        builder: BlockBuilder | InternedBlockBuilder = InternedBlockBuilder(constants) if interned else BlockBuilder()
+        builder: BlockBuilder | InternedBlockBuilder = (
+            InternedBlockBuilder(constants) if interned else BlockBuilder(constants)
+        )
         skipped_items = 0
         # the total (estimated) cost of the transactions added so far
         block_cost = 0
@@ -893,7 +883,7 @@ class Mempool:
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
                 if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
-                    added, done = add_spend_bundles(builder, batch_transactions, uint64(batch_cost), constants)
+                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
 
                     block_cost = builder.cost()
                     if added:
@@ -982,7 +972,7 @@ class Mempool:
                 continue
 
         if len(batch_transactions) > 0:
-            added, _ = add_spend_bundles(builder, batch_transactions, uint64(batch_cost), constants)
+            added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost))
             log.info(f"trying to add residual batch: {len(batch_transactions)} batch cost: {batch_cost} added: {added}")
 
             if added:
@@ -1002,10 +992,7 @@ class Mempool:
 
         generator_creation_end = monotonic()
         duration = generator_creation_end - generator_creation_start
-        if isinstance(builder, InternedBlockBuilder):
-            block_program, signature, cost = builder.finalize()
-        else:
-            block_program, signature, cost = builder.finalize(constants)
+        block_program, signature, cost = builder.finalize()
         log.log(
             logging.INFO if duration < 2 else logging.WARNING,
             f"create_block_generator2() took {duration:0.4f} seconds. "
