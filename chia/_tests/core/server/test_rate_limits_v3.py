@@ -286,6 +286,10 @@ async def test_unsolicited_unlimited_v3_messages(
         sender_connection, peer_id = await add_dummy_connection_wsc(server, self_hostname, dummy_port=msg_type.value)
         receiver_connection = server.all_connections[peer_id]
         receiver_connection.peer_info = PeerInfo(test_host, receiver_connection.peer_info.port)
+        # on_connect arms expected_mempool_responses when the node is synced and
+        # treats the peer as < 2.6.0 (common in CI where package version is 0.0.0).
+        # Clear it so respond_transaction is still treated as unsolicited here.
+        receiver_connection.expected_mempool_responses = 0
         server.banned_peers.pop(test_host, None)
         assert test_host not in server.banned_peers
         await sender_connection.send_message(make_msg(msg_type, msg_data))
