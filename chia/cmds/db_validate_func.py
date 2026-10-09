@@ -51,8 +51,8 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
                     raise RuntimeError("Database is missing version field")
                 if row[0] != 2:
                     raise RuntimeError(f"Database has the wrong version ({row[0]} expected 2)")
-        except sqlite3.OperationalError:
-            raise RuntimeError("Database is missing version table")
+        except sqlite3.OperationalError as e:
+            raise RuntimeError("Database is missing version table") from e
 
         try:
             with closing(in_db.execute("SELECT hash FROM current_peak WHERE key = 0")) as cursor:
@@ -60,8 +60,8 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
                 if row is None or row == []:
                     raise RuntimeError("Database is missing current_peak field")
                 peak = bytes32(row[0])
-        except sqlite3.OperationalError:
-            raise RuntimeError("Database is missing current_peak table")
+        except sqlite3.OperationalError as e:
+            raise RuntimeError("Database is missing current_peak table") from e
 
         print(f"peak hash: {peak}")
 
