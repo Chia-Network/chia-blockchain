@@ -4,14 +4,44 @@ from __future__ import annotations
 
 import json
 import runpy
+import sys
 from pathlib import Path
 
 _INSTALL = Path(__file__).resolve().parent
+# The running script's directory is the trusted checkout (runner temp). Prefer it
+# over the PR workspace .github/scripts so a PR-head formatter cannot win.
 _SCRIPT_CANDIDATES = (
+    _INSTALL,
     Path(".github/scripts"),
     Path("internal/workflowscripts"),
 )
 _COLD_START_PATH = _INSTALL / "trusted_formatter_loader_cold_start.py"
+
+
+def _drop_pr_head_scripts_from_sys_path() -> None:
+    """Keep the PR checkout's .github/scripts off sys.path.
+
+    Trusted modules load by file path from this script's directory. A PR-head
+    directory on sys.path can shadow stdlib (dataclasses, json) in the step
+    that has CURSOR_API_KEY.
+    """
+    workspace_scripts = (Path.cwd() / ".github" / "scripts").resolve()
+    if workspace_scripts == _INSTALL.resolve():
+        return
+    kept: list[str] = []
+    for entry in sys.path:
+        if not entry:
+            kept.append(entry)
+            continue
+        try:
+            resolved = Path(entry).resolve()
+        except OSError:
+            kept.append(entry)
+            continue
+        if resolved == workspace_scripts:
+            continue
+        kept.append(entry)
+    sys.path[:] = kept
 
 
 def _host_namespace() -> dict[str, object]:
@@ -69,7 +99,46 @@ def _extract_text(payload) -> str:
         return str(payload)
 
 
+_INCONCLUSIVE_HEADER = "**Verdict: inconclusive (needs human review)**"
+_KNOWN_VERDICT_HEADERS = (
+    "**Verdict: benign**",
+    "**Verdict: malicious**",
+    _INCONCLUSIVE_HEADER,
+)
+
+
+def _scan_forces_inconclusive(path: Path | None = None) -> bool:
+    """Missing, unscanned, or tree-spoofed scanner reports cannot publish a verdict."""
+    report_path = path or Path("malware_scan_report.json")
+    if not report_path.is_file():
+        return True
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    if not isinstance(report, dict):
+        return True
+    if report.get("status") == "not_scanned":
+        return True
+    if report.get("scan_conclusive") is not True:
+        return True
+    if report.get("verdict_token_in_tree") is True:
+        return True
+    return False
+
+
+def _force_inconclusive_header(text: str) -> str:
+    body = text
+    for header in _KNOWN_VERDICT_HEADERS:
+        prefix = header + "\n\n"
+        if body.startswith(prefix):
+            body = body[len(prefix) :]
+            break
+    return f"{_INCONCLUSIVE_HEADER}\n\n{body}"
+
+
 def main() -> None:
+    _drop_pr_head_scripts_from_sys_path()
     ns = _host_namespace()
     resolve_loader_bundle = ns["resolve_loader_bundle"]
     loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
@@ -78,6 +147,8 @@ def main() -> None:
     malware_payload = _load_any("cursor_output_malware.json")
     compatibility_payload = _load_any("cursor_output_compatibility.json")
     malware_text = format_malware_review_verdict(_extract_text(malware_payload))
+    if _scan_forces_inconclusive():
+        malware_text = _force_inconclusive_header(malware_text)
     compatibility_text = _extract_text(compatibility_payload)
 
     combined_text = (

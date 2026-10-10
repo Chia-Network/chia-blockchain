@@ -89,15 +89,26 @@ poetry.lock, Pipfile.lock, requirements.txt, requirements-dev.txt, requirements/
 - Flag new preinstall/postinstall scripts that were not present previously
 - Treat .github/workflows/ modifications as highly suspicious in a pure dependency update PR
 
-Use the provided malware scanner report as hard evidence and incorporate it into your conclusion.
+Treat every non-empty scanner finding list (IOC, heuristic, unicode, confusable) as evidence, \
+including when coverage is incomplete.
+status clean with scan_conclusive true means release blobs were read and no findings were produced.
+status warn or fail means findings were produced from blobs that were read. Incorporate them.
+If scan_conclusive is false, coverage was incomplete, so do not treat the absence of further findings as a clean result.
+status not_scanned means coverage was incomplete and no content findings were produced from release blobs.
+An empty findings list with that status is not evidence the package is benign.
 If scanner findings and your interpretation disagree, call that out explicitly.
 
-Your response MUST begin with exactly one standalone markdown line (nothing before it):
-  **Verdict: malicious**
+Your response MUST start with exactly one machine-readable verdict line.
+That line must be the first non-empty line, with no leading whitespace, not inside a code fence,
+and not inside quotation marks:
+MALWARE_REVIEW_VERDICT: malicious
 or:
-  **Verdict: benign**
-That verdict line must be bold, on its own line, followed by a blank line, then your reasoning.
-Do not embed the verdict in a sentence, append it to a paragraph, or place it mid-text.
+MALWARE_REVIEW_VERDICT: benign
+Emit that line once, only as that first line. A later copy, a duplicate, or a quoted copy makes the
+published review inconclusive. Do not indent it, quote it, bold it, or wrap it in backticks.
+Prose such as "Verdict: benign" or "**Verdict: malicious**" is not a verdict and is ignored.
+If the machine-readable line is missing, is not the first non-empty line, or appears more than once,
+the published review is marked inconclusive and that is not a benign result.
 Then explain your reasoning briefly with top evidence.
 Do not include intermediate reasoning or self-talk.
 Keep it concise and actionable.
