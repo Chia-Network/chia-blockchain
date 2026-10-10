@@ -110,6 +110,7 @@ jobs:
           token: ${{ github.token }}
           ref: ${{ github.event.repository.default_branch }}
           paths_manifest: .github/scripts/dependency-cursor-review-trusted-scripts.paths
+          dest: ${{ runner.temp }}/trusted-dcr-scripts
 
       - name: Install Cursor CLI
         if: steps.target_pr.outputs.already_reviewed != 'true'
@@ -144,7 +145,7 @@ jobs:
           PR_NUMBER: ${{ steps.target_pr.outputs.number }}
         with:
           script: |
-            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/dependency-cursor-review-dependabot-context.js`);
+            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency-cursor-review-dependabot-context.js`);
             await run({ github, context, core });
       - name: Prepare upstream checkout directory
         if: steps.target_pr.outputs.already_reviewed != 'true'
@@ -192,7 +193,26 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ripgrep jq
-          bash .github/scripts/upstream_malware_scan.sh
+          bash "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/upstream_malware_scan.sh"
+
+      - name: Check out upstream release and drop agent instructions
+        if: steps.target_pr.outputs.already_reviewed != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          resolved_to=""
+          if [ -f malware_scan_report.json ]; then
+            resolved_to="$(jq -r '.resolved_to // empty' malware_scan_report.json)"
+          fi
+          if [ -n "$resolved_to" ]; then
+            git -C .upstream-dependency checkout --detach "$resolved_to"
+          fi
+          rm -rf .upstream-dependency/.cursor || true
+          rm -f .upstream-dependency/.cursorrules || true
+          rm -f .upstream-dependency/.cursorignore || true
+          rm -f .upstream-dependency/AGENTS.md || true
+          rm -f .upstream-dependency/CLAUDE.md || true
+
       - name: Gather local usage hints
         if: steps.target_pr.outputs.already_reviewed != 'true'
         shell: bash
@@ -227,7 +247,14 @@ jobs:
             exit 0
           fi
 
-          python3 -I .github/scripts/dependency_cursor_review_prompts.py
+          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency_cursor_review_prompts.py"
+
+          trusted_root="${RUNNER_TEMP}/trusted-dcr-scripts"
+          hash_trusted_scripts() {
+            find "$trusted_root" -type f -print0 | sort -z | xargs -0 sha256sum
+          }
+          trusted_hash="${RUNNER_TEMP}/trusted-dcr-scripts.sha256"
+          hash_trusted_scripts >"$trusted_hash"
 
           run_agent_prompt() {
             local prompt_file="$1"
@@ -241,7 +268,11 @@ jobs:
           run_agent_prompt "cursor_prompt_malware.txt" "cursor_output_malware.json"
           run_agent_prompt "cursor_prompt_compatibility.txt" "cursor_output_compatibility.json"
 
-          python3 -I .github/scripts/dependency_cursor_review_combine_outputs.py
+          if ! hash_trusted_scripts | cmp -s "$trusted_hash" -; then
+            echo "Trusted review scripts changed before combine." >&2
+            exit 1
+          fi
+          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency_cursor_review_combine_outputs.py"
       - name: Upload malware scan artifacts
         if: always() && steps.target_pr.outputs.already_reviewed != 'true'
         uses: actions/upload-artifact@v7
