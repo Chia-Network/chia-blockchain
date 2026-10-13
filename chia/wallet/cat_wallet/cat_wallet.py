@@ -781,7 +781,7 @@ class CATWallet:
         primaries: list[CreateCoin],
         conditions: tuple[Condition, ...] = tuple(),
     ) -> Program:
-        return self.standard_wallet.make_solution(primaries=primaries, conditions=conditions)
+        return self.standard_wallet.make_solution(primaries=primaries, conditions=conditions).program
 
     async def generate_unsigned_spendbundle(
         self,

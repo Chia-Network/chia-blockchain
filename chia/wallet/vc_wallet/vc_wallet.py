@@ -347,11 +347,11 @@ class VCWallet:
         else:
             magic_condition = vc.standard_magic_condition()
         extra_conditions = (*extra_conditions, magic_condition)
-        innersol: Program = self.standard_wallet.make_solution(
+        innersol = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
         )
-        did_announcement, coin_spend, _vc = vc.do_spend(UnknownSolution(program=innersol), new_proof_hash)
+        did_announcement, coin_spend, _vc = vc.do_spend(innersol, new_proof_hash)
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
             # Need to spend DID

@@ -1704,13 +1704,11 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         ),
                         lineage_proof=LineageProof(),
                     ),
-                    inner_solution=UnknownSolution(
-                        program=wallet.make_solution(
-                            primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
-                            conditions=(
-                                TAILCondition(puzzle=UnknownPuzzle(known_program=ACS_TAIL), solution=NilSolution()),
-                            ),
-                        )
+                    inner_solution=wallet.make_solution(
+                        primaries=[CreateCoin(wallet_ph, uint64(tx_amount), [wallet_ph])],
+                        conditions=(
+                            TAILCondition(puzzle=UnknownPuzzle(known_program=ACS_TAIL), solution=NilSolution()),
+                        ),
                     ),
                     extra_delta=-1,
                 )

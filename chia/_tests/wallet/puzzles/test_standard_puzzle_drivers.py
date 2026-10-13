@@ -27,7 +27,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
     UnknownSolution,
 )
 from chia.wallet.puzzles.standard_puzzle_drivers import (
-    HiddenPuzzleInfo,
+    DefaultHiddenPuzzle,
     StandardPuzzle,
     StandardPuzzleSolution,
     StandardXCHCoin,
@@ -37,26 +37,27 @@ from chia.wallet.puzzles.standard_puzzle_drivers import (
 def test_standard_puzzle_drivers() -> None:
     original_public_key = AugSchemeMPL.key_gen(bytes([1] * 32)).get_g1()
     synthetic_public_key = calculate_synthetic_public_key(original_public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-    parent_id = bytes32(bytes([2] * 32))
-    amount = uint64(1000)
 
     with pytest.raises(ValueError, match="Must specify either the synthetic or original pubkey"):
         StandardPuzzle()
 
-    from_original = StandardPuzzle(pre_known_original_public_key=original_public_key)
+    from_original: StandardPuzzle[DefaultHiddenPuzzle] = StandardPuzzle(
+        pre_known_original_public_key=original_public_key
+    )
     assert from_original.synthetic_public_key == synthetic_public_key
-    from_synthetic = StandardPuzzle(pre_known_synthetic_public_key=synthetic_public_key)
+    from_synthetic: StandardPuzzle[DefaultHiddenPuzzle] = StandardPuzzle(
+        pre_known_synthetic_public_key=synthetic_public_key
+    )
     assert from_synthetic.tree_hash == from_original.tree_hash
 
-    custom_hidden = ACSPuzzle().program
-    custom_hidden_info = HiddenPuzzleInfo(program=custom_hidden, pre_computed_puzzle_hash=None)
-    custom_synthetic = calculate_synthetic_public_key(original_public_key, custom_hidden.get_tree_hash())
+    custom_hidden = ACSPuzzle()
+    custom_synthetic = calculate_synthetic_public_key(original_public_key, custom_hidden.tree_hash)
     from_custom_hidden = StandardPuzzle(
         pre_known_original_public_key=original_public_key,
-        hidden_puzzle_info=custom_hidden_info,
+        hidden_puzzle=custom_hidden,
     )
     assert from_custom_hidden.synthetic_public_key == custom_synthetic
-    assert from_custom_hidden.hidden_puzzle_info.tree_hash == custom_hidden.get_tree_hash()
+    assert from_custom_hidden.hidden_puzzle.tree_hash == custom_hidden.tree_hash
 
     assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
     assert (
@@ -68,13 +69,13 @@ def test_standard_puzzle_drivers() -> None:
     assert matched_without_solution is not None
     assert matched_without_solution.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_without_solution.pre_known_original_public_key is None
-    assert matched_without_solution.hidden_puzzle_info.program == DEFAULT_HIDDEN_PUZZLE
+    assert matched_without_solution.hidden_puzzle.program == DEFAULT_HIDDEN_PUZZLE
 
     with mock.patch.object(UnknownPuzzle, "curried_args", new_callable=mock.PropertyMock, return_value=None):
         assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program)) is None
 
-    delegated_reveal = P2Conditions(conditions=[Remark(Program.to("delegated"))]).program
-    delegated_solution = NilSolution().program
+    delegated_reveal = P2Conditions(conditions=[Remark(Program.to("delegated"))])
+    delegated_solution = NilSolution()
     solution_without_original = StandardPuzzleSolution(
         delegated_puzzle=delegated_reveal,
         delegated_solution=delegated_solution,
@@ -85,13 +86,13 @@ def test_standard_puzzle_drivers() -> None:
     assert matched_delegated is not None
     assert matched_delegated.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_delegated.pre_known_original_public_key is None
-    assert matched_delegated.hidden_puzzle_info.program == DEFAULT_HIDDEN_PUZZLE
+    assert matched_delegated.hidden_puzzle.program == DEFAULT_HIDDEN_PUZZLE
 
-    hidden_reveal = ACSPuzzle().program
+    hidden_reveal = ACSPuzzle()
     solution_with_original = StandardPuzzleSolution(
         original_public_key=original_public_key,
         delegated_puzzle=hidden_reveal,
-        delegated_solution=Program.to([42]),
+        delegated_solution=UnknownSolution(program=Program.to([42])),
     )
 
     assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to(1))) is None
@@ -103,42 +104,45 @@ def test_standard_puzzle_drivers() -> None:
     )
     assert matched_solution_nil_key is not None
     assert matched_solution_nil_key.original_public_key is None
-    assert matched_solution_nil_key.delegated_puzzle == delegated_reveal
-    assert matched_solution_nil_key.delegated_solution == delegated_solution
+    assert matched_solution_nil_key.delegated_puzzle.program == delegated_reveal.program
+    assert matched_solution_nil_key.delegated_solution.program == delegated_solution.program
 
     matched_solution_with_key = StandardPuzzleSolution.match(
         unknown_solution=UnknownSolution(solution_with_original.program)
     )
     assert matched_solution_with_key is not None
     assert matched_solution_with_key.original_public_key == original_public_key
-    assert matched_solution_with_key.delegated_puzzle == hidden_reveal
-    assert matched_solution_with_key.delegated_solution == Program.to([42])
+    assert matched_solution_with_key.delegated_puzzle.program == hidden_reveal.program
+    assert matched_solution_with_key.delegated_solution.program == Program.to([42])
 
-    coin = Coin(parent_id, from_original.tree_hash, amount)
-    xch_coin = StandardXCHCoin(coin=coin, pre_known_original_public_key=original_public_key)
     create_coin = CreateCoin(bytes32(bytes([3] * 32)), uint64(500))
     remark = Remark(Program.to("hi"))
     condition_solution = StandardPuzzleSolution.for_conditions([create_coin, remark])
-    expected_delegated = P2Conditions(conditions=[create_coin, remark]).program
-    assert StandardPuzzleSolution.match(
-        unknown_solution=UnknownSolution(condition_solution.program)
-    ) == StandardPuzzleSolution(
-        delegated_puzzle=expected_delegated,
-        delegated_solution=NilSolution().program,
-    )
+    expected_delegated = P2Conditions(conditions=[create_coin, remark])
+    solution_match = StandardPuzzleSolution.match(unknown_solution=UnknownSolution(condition_solution.program))
+    assert solution_match is not None
+    assert solution_match.original_public_key is None
+    assert solution_match.delegated_puzzle.program == expected_delegated.program
+
+    hidden_solution: StandardPuzzleSolution[DefaultHiddenPuzzle, UnknownSolution] = StandardPuzzle(
+        pre_known_original_public_key=original_public_key
+    ).hidden_puzzle_solution(UnknownSolution(program=Program.to([99])))
+    solution_match = StandardPuzzleSolution.match(unknown_solution=UnknownSolution(hidden_solution.program))
+    assert solution_match is not None
+    assert solution_match.original_public_key is not None
+    assert solution_match.delegated_puzzle.program == DefaultHiddenPuzzle().program
+    assert solution_match.delegated_solution.program == Program.to([99])
+
+    parent_id = bytes32(bytes([2] * 32))
+    amount = uint64(1000)
+    coin = Coin(parent_id, from_original.tree_hash, amount)
+    xch_coin = StandardXCHCoin(coin=coin, pre_known_original_public_key=original_public_key)
+    assert xch_coin.coin == coin
+    assert xch_coin.tree_hash == from_original.tree_hash
 
     synthetic_only_coin = StandardXCHCoin(coin=coin, pre_known_synthetic_public_key=synthetic_public_key)
     with pytest.raises(ValueError, match="Must set `pre_known_original_public_key`"):
-        synthetic_only_coin.hidden_puzzle_solution(NilSolution().program)
-
-    hidden_solution = xch_coin.hidden_puzzle_solution(Program.to([99]))
-    assert StandardPuzzleSolution.match(
-        unknown_solution=UnknownSolution(hidden_solution.program)
-    ) == StandardPuzzleSolution(
-        original_public_key=original_public_key,
-        delegated_puzzle=DEFAULT_HIDDEN_PUZZLE,
-        delegated_solution=Program.to([99]),
-    )
+        synthetic_only_coin.hidden_puzzle_solution(NilSolution())
 
 
 def test_p2_conditions() -> None:

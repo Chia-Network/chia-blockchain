@@ -254,7 +254,7 @@ class ClawbackManager:
                         if len(coin_spends) > 0 or fee == 0
                         else (*extra_conditions, CreateCoinAnnouncement(message))
                     ),
-                )
+                ).program
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
                 # Update incoming tx to prevent double spend and mark it is pending
