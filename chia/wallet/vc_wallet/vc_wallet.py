@@ -558,9 +558,7 @@ class VCWallet:
             else:
                 raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
 
-        async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
+        async with action_scope.sandbox() as inner_action_scope:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
                     [uint64(1)],
@@ -572,9 +570,6 @@ class VCWallet:
                         *announcements_to_make[launcher_id],
                     ),
                 )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
         return Offer.from_spend_bundle(
             WalletSpendBundle.aggregate(

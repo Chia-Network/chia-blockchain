@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from typing import TYPE_CHECKING, cast, final
 
 from chia_rs.chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.plotnft_drivers import PoolConfig
@@ -118,6 +119,50 @@ class WalletActionConfig:
         )
 
 
+@dataclass(frozen=True, kw_only=True)
+class ChildSeed:
+    """A way to specify for a sandbox scope what side effects should propogate down from the parent"""
+
+    transactions: bool = False
+    signing_responses: bool = False
+    extra_spends: bool = False
+    selected_coins: bool = True
+    singleton_records: bool = True
+    plotnft_exiting_info: bool = True
+    get_unused_derivation_record_result: bool = True
+    puzzle_hash_subscriptions: bool = False
+    coin_subscriptions: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
+class ParentAbsorb:
+    """A way to specify for a sandbox scope what side effects should propogate up from the child"""
+
+    transactions: bool = True
+    signing_responses: bool = True
+    extra_spends: bool = True
+    selected_coins: bool = True
+    singleton_records: bool = True
+    plotnft_exiting_info: bool = True
+    get_unused_derivation_record_result: bool = True
+    puzzle_hash_subscriptions: bool = True
+    coin_subscriptions: bool = True
+
+    @classmethod
+    def nothing(cls) -> Self:
+        return cls(
+            transactions=False,
+            signing_responses=False,
+            extra_spends=False,
+            selected_coins=False,
+            singleton_records=False,
+            plotnft_exiting_info=False,
+            get_unused_derivation_record_result=False,
+            puzzle_hash_subscriptions=False,
+            coin_subscriptions=False,
+        )
+
+
 class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
     async def _get_unused_derivation_path(
         self, wallet_state_manager: WalletStateManager
@@ -169,6 +214,44 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
             return record.puzzle_hash
         else:
             return await self._get_new_puzzle_hash(wallet_state_manager)
+
+    @contextlib.asynccontextmanager
+    async def sandbox(
+        self,
+        *,
+        config_override: TXConfig | None = None,
+        child_seed: ChildSeed = ChildSeed(),
+        parent_absorb: ParentAbsorb = ParentAbsorb(),
+    ) -> AsyncIterator[Self]:
+        # build child side effects object
+        child_side_effects = WalletSideEffects()
+        async with self.use() as interface:
+            for f in fields(child_seed):
+                if getattr(child_seed, f.name):
+                    setattr(child_side_effects, f.name, getattr(interface.side_effects, f.name))
+        async with WalletActionScope.new_scope(
+            child_side_effects,
+            WalletActionConfig(
+                push=False,
+                merge_spends=False,
+                sign=False,
+                additional_signing_responses=[],
+                extra_spends=[],
+                puzzle_for_pk=self.config.puzzle_for_pk,
+                tx_config=config_override if config_override is not None else self.config.tx_config,
+            ),
+        ) as inner:
+            inner = cast(Self, inner)
+            yield inner
+        async with self.use() as interface:
+            for f in fields(parent_absorb):
+                if getattr(parent_absorb, f.name):
+                    sandbox_side_effect = getattr(inner.side_effects, f.name)
+                    parent_side_effect = getattr(interface.side_effects, f.name)
+                    if isinstance(sandbox_side_effect, list) and not getattr(child_seed, f.name):
+                        parent_side_effect.extend(sandbox_side_effect)
+                    elif sandbox_side_effect is not None:
+                        setattr(interface.side_effects, f.name, sandbox_side_effect)
 
     # TODO: this should be part of the side effects like everything else
     def dispatch_websocket_event(self, wallet_state_manager: WalletStateManager, event: WebSocketEvent) -> None:

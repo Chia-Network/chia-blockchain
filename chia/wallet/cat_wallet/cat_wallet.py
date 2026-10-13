@@ -57,7 +57,7 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import ParentAbsorb, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -717,8 +717,8 @@ class CATWallet:
         wallet_state_manager lock
         """
         announcement: AssertCoinAnnouncement | None = None
-        async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config.override(primary_coin=None, included_coin_ids=[]), push=False
+        async with action_scope.sandbox(
+            config_override=action_scope.config.tx_config.override(primary_coin=None, included_coin_ids=[]),
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
@@ -765,10 +765,6 @@ class CATWallet:
 
         assert message is not None
         announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
-            interface.side_effects.selected_coins.extend(inner_action_scope.side_effects.selected_coins)
 
         return announcement
 
@@ -1015,7 +1011,7 @@ class CATWallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         # We need to sandbox this because this method isn't supposed to lock up the coins
-        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+        async with action_scope.sandbox(parent_absorb=ParentAbsorb.nothing()) as sandbox:
             return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
