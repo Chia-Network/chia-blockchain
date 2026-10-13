@@ -19,7 +19,7 @@ from chia.plotting.prover import PlotVersion
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import PostPartialRequest
-from chia.types.blockchain_format.proof_of_space import generate_plot_public_key, generate_plot_public_key_v2, make_pos
+from chia.types.blockchain_format.proof_of_space import generate_plot_public_key, make_pos
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -37,11 +37,7 @@ def signing_setup(
     pool_sk = AugSchemeMPL.key_gen(b"3" * 32)
     pool_pk = None if portable else pool_sk.get_g1()
     puzzle_hash = bytes32(b"4" * 32) if portable else None
-    plot_pk = (
-        generate_plot_public_key_v2(local_pk, farmer_pk)
-        if v2
-        else generate_plot_public_key(local_pk, farmer_pk, portable)
-    )
+    plot_pk = generate_plot_public_key(local_pk, farmer_pk, portable, is_v2=v2)
     memo = (
         stream_plot_info_ph(puzzle_hash, farmer_pk, master_sk)
         if puzzle_hash is not None
@@ -156,6 +152,7 @@ async def test_pool_partial_signature(
 
     peer = Mock(peer_node_id=std_hash(b"harvester"), version="test", call_api=AsyncMock(side_effect=sign_partial))
     session = mocker.patch("chia.farmer.farmer_api.aiohttp.ClientSession").return_value.__aenter__.return_value
+    session.post = MagicMock()
     session.post.return_value.__aenter__.return_value.ok = False
     await farmer_api.new_proof_of_space(new_proof, peer)
 
