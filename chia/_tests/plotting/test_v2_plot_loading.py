@@ -15,7 +15,6 @@ from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
-    generate_plot_public_key_v2,
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.derive_keys import master_sk_to_local_sk
@@ -46,7 +45,7 @@ def test_v2_creation_and_keys(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> Non
     prover = V2Prover.from_filename(str(path))
     entry = CacheEntry.from_prover(prover)
     local = master_sk_to_local_sk(master)
-    expected_pk = generate_plot_public_key_v2(local.get_g1(), keys.farmer_public_key)
+    expected_pk = generate_plot_public_key(local.get_g1(), keys.farmer_public_key, is_v2=True)
     # Fixed vector for the pos2 taproot formula, shared by both pool target types.
     assert bytes(expected_pk).hex() == (
         "8144c8ef9f89911efdc979145ef674978e5158d6afa818942aa48b183d9a863a6e7535258b3e95e34087598e3476c798"
