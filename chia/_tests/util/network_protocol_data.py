@@ -975,6 +975,8 @@ plot2 = harvester_protocol.Plot2(
     uint8(5),
 )
 
+plot3 = harvester_protocol.Plot3(**plot2.__dict__, group_size=uint16(8))
+
 request_plots = harvester_protocol.RequestPlots()
 
 respond_plots = harvester_protocol.RespondPlots(
@@ -988,6 +990,8 @@ respond_plots2 = harvester_protocol.RespondPlots2(
     ["str"],
     ["str"],
 )
+
+respond_plots3 = harvester_protocol.RespondPlots3([plot3], ["str"], ["str"])
 
 # INTRODUCER PROTOCOL
 request_peers_introducer = introducer_protocol.RequestPeersIntroducer()
