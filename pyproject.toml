@@ -9,7 +9,7 @@ authors = [
 license = "Apache-2.0"
 readme = {file = "README.md", content-type = "text/markdown"}
 keywords= ["chia", "blockchain", "node"]
-homepage = "https://www.chia.net/"
+homepage = "https://chia.net/"
 
 [tool.poetry]
 # see [tool.poetry-dynamic-versioning]
