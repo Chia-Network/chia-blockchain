@@ -15,7 +15,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
     generate_plot_public_key,
-    generate_plot_public_key_v2,
 )
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
@@ -315,7 +314,9 @@ async def create_v2_plots(
 
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility
-        plot_public_key = generate_plot_public_key_v2(master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key)
+        plot_public_key = generate_plot_public_key(
+            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, is_v2=True
+        )
 
         # TODO: todo_v2_plots index and meta_group should be hooked up to
         # something, maybe i or maybe be passed in as a paramter

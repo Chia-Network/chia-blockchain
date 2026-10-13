@@ -353,25 +353,24 @@ def calculate_plot_id_ph(
     return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
 
-def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
-    taproot_message: bytes = bytes(local_pk + farmer_pk) + bytes(local_pk) + bytes(farmer_pk)
-    taproot_hash: bytes32 = std_hash(taproot_message)
-    return AugSchemeMPL.key_gen(taproot_hash)
-
-
-def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element, include_taproot: bool = False) -> G1Element:
-    if include_taproot:
-        taproot_sk: PrivateKey = generate_taproot_sk(local_pk, farmer_pk)
-        return local_pk + farmer_pk + taproot_sk.get_g1()
-    else:
-        return local_pk + farmer_pk
-
-
-def generate_taproot_sk_v2(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
+def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element, *, is_v2: bool = False) -> PrivateKey:
+    taproot_message = bytes(local_pk + farmer_pk)
     # V2 omits the standalone local key from the taproot message.
-    return AugSchemeMPL.key_gen(std_hash(bytes(local_pk + farmer_pk) + bytes(farmer_pk)))
+    if not is_v2:
+        taproot_message += bytes(local_pk)
+    taproot_message += bytes(farmer_pk)
+    return AugSchemeMPL.key_gen(std_hash(taproot_message))
 
 
-def generate_plot_public_key_v2(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
+def generate_plot_public_key(
+    local_pk: G1Element,
+    farmer_pk: G1Element,
+    include_taproot: bool = False,
+    *,
+    is_v2: bool = False,
+) -> G1Element:
     # All V2 plots include taproot.
-    return local_pk + farmer_pk + generate_taproot_sk_v2(local_pk, farmer_pk).get_g1()
+    if include_taproot or is_v2:
+        taproot_sk = generate_taproot_sk(local_pk, farmer_pk, is_v2=is_v2)
+        return local_pk + farmer_pk + taproot_sk.get_g1()
+    return local_pk + farmer_pk
