@@ -28,7 +28,6 @@ def make_sub_epoch_summary(
     new_difficulty: uint64 | None,
     new_sub_slot_iters: uint64 | None,
     *,
-    make_challenge_root: bool = False,
     challenge_root_end_height: uint32 | None = None,
     prev_ses_block: BlockRecord | None = None,
 ) -> SubEpochSummary:
@@ -43,6 +42,7 @@ def make_sub_epoch_summary(
         prev_prev_block: second to last block in epoch
         new_difficulty: difficulty in new epoch
         new_sub_slot_iters: sub slot iters in new epoch
+        challenge_root_end_height: exclusive end of the challenge-root range, or None to omit the root
     """
     assert prev_prev_block.height == blocks_included_height - 2
     # First sub_epoch
@@ -67,8 +67,7 @@ def make_sub_epoch_summary(
     assert prev_ses_block.finished_reward_slot_hashes is not None
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
-    if make_challenge_root:
-        assert challenge_root_end_height is not None
+    if challenge_root_end_height is not None:
         previous_trigger = blocks.block_record(prev_ses_block.prev_hash)
         challenge_root_start = get_challenge_start_height(
             constants,
@@ -258,6 +257,5 @@ def next_sub_epoch_summary(
         prev_b,
         next_difficulty,
         next_sub_slot_iters,
-        make_challenge_root=with_challenge_root,
         challenge_root_end_height=challenge_root_end_height,
     )

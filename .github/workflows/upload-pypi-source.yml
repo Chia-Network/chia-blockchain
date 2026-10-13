@@ -25,9 +25,39 @@ permissions:
   id-token: write
 
 jobs:
+  # Private pushes that only mirror public main skip this workflow.
+  # On a public repo this job is skipped and the matrix below is unchanged.
+  public-sync:
+    name: "private only: public sync"
+    if: github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && github.event_name == 'push'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Skip when the tree matches public main
+        id: check
+        run: |
+          git fetch --depth=1 https://github.com/Chia-Network/chia-blockchain.git +refs/heads/main:refs/remotes/public/main
+          if [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'public/main^{tree}')" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Tree matches public main; skipping lint."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   mypy:
-    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
+    needs: public-sync
+    if: |
+      !cancelled() &&
+      github.repository_owner == 'Chia-Network' &&
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true') &&
+      github.event.repository.visibility != 'private'
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
@@ -107,10 +137,52 @@ jobs:
         run: |
           ${{ matrix.check.command }}
 
+  mypy-private:
+    name: "private only: mypy Linux 3.12"
+    needs: public-sync
+    if: |
+      !cancelled() &&
+      github.repository_owner == 'Chia-Network' &&
+      github.event.repository.visibility == 'private' &&
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true')
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - uses: chia-network/actions/clean-workspace@main
+
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: chia-network/actions/setup-python@main
+        with:
+          python-version: "3.12"
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: "3.12"
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Check with mypy
+        run: |
+          echo "MYPY VERSION IS: $(mypy --version)"
+          python manage-mypy.py build-mypy-ini
+          mypy
+
   check:
-    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
-    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs: public-sync
+    if: |
+      !cancelled() &&
+      github.repository_owner == 'Chia-Network' &&
+      (needs.public-sync.result == 'skipped' || needs.public-sync.result == 'failure' || needs.public-sync.outputs.skip != 'true')
+    runs-on: ${{ github.repository_owner == 'Chia-Network' && github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -174,13 +246,18 @@ jobs:
           ${{ matrix.check.command }}
 
   upload_source_dist:
-    if: github.repository_owner == 'Chia-Network'
     name: Lint and Upload source distribution
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ github.event.repository.visibility == 'private' && 'blacksmith-4vcpu-ubuntu-2404' || matrix.os }}
     timeout-minutes: 30
     needs:
       - mypy
+      - mypy-private
       - check
+    if: |
+      !cancelled() &&
+      github.repository_owner == 'Chia-Network' &&
+      needs.check.result == 'success' &&
+      (needs.mypy.result == 'success' || needs.mypy-private.result == 'success')
     strategy:
       matrix:
         python:

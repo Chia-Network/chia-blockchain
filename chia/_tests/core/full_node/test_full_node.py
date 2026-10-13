@@ -587,7 +587,7 @@ async def test_send_peak_to_timelords_uses_peak_as_hard_fork_trigger(
     peak = full_node.blockchain.block_record(peak_block.header_hash)
     captured_triggers: list[BlockRecord] = []
 
-    def capture_post_hard_fork2_for_block_record(
+    def capture_post_hard_fork2_block_record(
         constants: ConsensusConstants,
         blocks: Any,
         trigger: BlockRecord,
@@ -600,8 +600,8 @@ async def test_send_peak_to_timelords_uses_peak_as_hard_fork_trigger(
 
     monkeypatch.setattr(
         full_node_module,
-        "post_hard_fork2_for_block_record",
-        capture_post_hard_fork2_for_block_record,
+        "post_hard_fork2_block_record",
+        capture_post_hard_fork2_block_record,
     )
     monkeypatch.setattr(full_node.server, "send_to_all", noop_send_to_all)
 
@@ -654,8 +654,6 @@ async def test_basic_chain(
 
     incoming_queue, _ = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
     blocks = bt.get_consecutive_blocks(1)
@@ -688,8 +686,6 @@ async def test_respond_end_of_sub_slot(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -752,8 +748,6 @@ async def test_respond_end_of_sub_slot_no_reorg(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -795,8 +789,6 @@ async def test_respond_end_of_sub_slot_race(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -831,8 +823,6 @@ async def test_respond_unfinished(
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1018,8 +1008,6 @@ async def test_new_peak(
     incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
     dummy_peer = server_1.all_connections[dummy_node_id]
     expected_requests = 0
-    if await full_node_1.full_node.synced():
-        expected_requests = 1
     await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
@@ -1762,7 +1750,7 @@ async def test_unsolicited_transaction_ignored(
     peer = server_1.all_connections[dummy_node_id]
 
     spend_bundle = make_spend_bundle(1)
-    assert peer.expected_mempool_responses == 0
+    peer.expected_mempool_responses = 0
     res = await full_node_1.respond_transaction(fnp.RespondTransaction(spend_bundle), peer)
     assert res is None
     assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
@@ -1780,7 +1768,6 @@ async def test_malformed_peer_version_on_connect(
 
     # Make synced() return True so on_connect reaches the version check
     original_network = full_node_1.full_node.config.get("selected_network")
-    full_node_1.full_node.config["selected_network"] = "simulator0"
     try:
         peer.version = "2.7.0-custom"
         peer.expected_mempool_responses = 0

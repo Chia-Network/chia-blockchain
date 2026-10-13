@@ -588,7 +588,7 @@ async def test_get_network_info_and_constants(
         await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
         network_info = await client.fetch("get_network_info", {})
         assert network_info == {
-            "network_name": "testnet0",
+            "network_name": "simulator0",
             "network_prefix": "txch",
             "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "success": True,

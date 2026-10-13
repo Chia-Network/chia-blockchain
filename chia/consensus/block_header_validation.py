@@ -24,7 +24,7 @@ from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
     get_unfinished_block_finished_sub_slots,
-    post_hard_fork2_for_block_record,
+    post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -445,7 +445,7 @@ def validate_unfinished_header_block(
 
                 # 3c. Check the actual sub-epoch is correct
                 if check_sub_epoch_summary:
-                    make_challenge_root = post_hard_fork2_for_block_record(constants, blocks, prev_b)
+                    make_challenge_root = post_hard_fork2_block_record(constants, blocks, prev_b)
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
                         blocks,
@@ -453,7 +453,6 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_vs.difficulty if can_finish_epoch else None,
                         expected_vs.ssi if can_finish_epoch else None,
-                        make_challenge_root=make_challenge_root,
                         challenge_root_end_height=(
                             get_challenge_start_height(
                                 constants,

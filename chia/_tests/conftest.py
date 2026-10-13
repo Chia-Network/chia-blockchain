@@ -556,16 +556,13 @@ async def fork_height2_0_block_tools(get_keychain, anyio_backend, testrun_uid: s
 
 
 @pytest.fixture(scope="session")
-async def fork_height2_0_1000_blocks(consensus_mode, fork_height2_0_block_tools):
+async def fork_height2_0_1000_blocks(fork_height2_0_block_tools):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
     from chia._tests.util.blockchain import persistent_blocks
 
-    version = "_fork_height_zero"
-    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-        version += "_hardfork"
     yield persistent_blocks(
         1000,
-        f"test_blocks_1000{version}.db",
+        "test_blocks_1000_fork_height_zero.db",
         fork_height2_0_block_tools,
         seed=b"fork_zero",
     )
@@ -585,17 +582,13 @@ async def fork_height2_500_block_tools(get_keychain, anyio_backend, testrun_uid:
 
 
 @pytest.fixture(scope="session")
-async def fork_height2_500_1000_blocks(consensus_mode, fork_height2_500_block_tools):
+async def fork_height2_500_1000_blocks(fork_height2_500_block_tools):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
     from chia._tests.util.blockchain import persistent_blocks
 
-    version = "_fork_height_500"
-    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-        version += "_hardfork"
-
     yield persistent_blocks(
         1000,
-        f"test_blocks_1000{version}.db",
+        "test_blocks_1000_fork_height_500.db",
         fork_height2_500_block_tools,
         seed=b"fork_500",
     )
