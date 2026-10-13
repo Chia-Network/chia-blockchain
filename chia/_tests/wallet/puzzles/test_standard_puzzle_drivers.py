@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest import mock
 
 import pytest
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, Coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -26,7 +26,12 @@ from chia.wallet.puzzles.puzzle_drivers import (
     UnknownPuzzle,
     UnknownSolution,
 )
-from chia.wallet.puzzles.standard_puzzle_drivers import DefaultHiddenPuzzle, StandardPuzzle, StandardPuzzleSolution
+from chia.wallet.puzzles.standard_puzzle_drivers import (
+    DefaultHiddenPuzzle,
+    StandardPuzzle,
+    StandardPuzzleSolution,
+    StandardXCHCoin,
+)
 
 
 def test_standard_puzzle_drivers() -> None:
@@ -127,6 +132,17 @@ def test_standard_puzzle_drivers() -> None:
     assert solution_match.original_public_key is not None
     assert solution_match.delegated_puzzle.program == DefaultHiddenPuzzle().program
     assert solution_match.delegated_solution.program == Program.to([99])
+
+    parent_id = bytes32(bytes([2] * 32))
+    amount = uint64(1000)
+    coin = Coin(parent_id, from_original.tree_hash, amount)
+    xch_coin = StandardXCHCoin(coin=coin, pre_known_original_public_key=original_public_key)
+    assert xch_coin.coin == coin
+    assert xch_coin.tree_hash == from_original.tree_hash
+
+    synthetic_only_coin = StandardXCHCoin(coin=coin, pre_known_synthetic_public_key=synthetic_public_key)
+    with pytest.raises(ValueError, match="Must set `pre_known_original_public_key`"):
+        synthetic_only_coin.hidden_puzzle_solution(NilSolution())
 
 
 def test_p2_conditions() -> None:
