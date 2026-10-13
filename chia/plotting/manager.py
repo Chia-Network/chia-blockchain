@@ -335,8 +335,8 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    level = prover.get_compression_level()
                     if isinstance(prover, V1Prover):
+                        level = prover.get_compression_level()
                         param = prover.get_param()
                         expected_size = _expected_plot_size(param, self.constants) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                         if (
@@ -358,21 +358,22 @@ class PlotManager:
 
                 assert cache_entry is not None
 
-                level = cache_entry.prover.get_compression_level()
-                if level > self.max_compression_level_allowed:
-                    log.warning(
-                        f"Not farming plot {file_path}. Plot compression level: {level}, "
-                        f"max compression level allowed: {self.max_compression_level_allowed}."
-                    )
-                    return None
+                if isinstance(cache_entry.prover, V1Prover):
+                    level = cache_entry.prover.get_compression_level()
+                    if level > self.max_compression_level_allowed:
+                        log.warning(
+                            f"Not farming plot {file_path}. Plot compression level: {level}, "
+                            f"max compression level allowed: {self.max_compression_level_allowed}."
+                        )
+                        return None
 
-                if level > 0 and self.context_count == 0:
-                    log.warning(
-                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
-                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
-                        " to start harvesting compressed plots."
-                    )
-                    return None
+                    if level > 0 and self.context_count == 0:
+                        log.warning(
+                            f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                            f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                            " to start harvesting compressed plots."
+                        )
+                        return None
 
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:

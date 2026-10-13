@@ -20,7 +20,7 @@ from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot2, PlotSyncResponse
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot3, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -567,10 +567,10 @@ class HarvesterAPI:
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
-            plots_response2: list[Plot2] = []
+            plots_response3: list[Plot3] = []
             for plot in plots:
-                plots_response2.append(
-                    Plot2(
+                plots_response3.append(
+                    Plot3(
                         plot["filename"],
                         plot["size"],
                         plot["plot_id"],
@@ -585,7 +585,14 @@ class HarvesterAPI:
                         plot["group_size"],
                     )
                 )
-            response2 = harvester_protocol.RespondPlots2(plots_response2, failed_to_open_filenames, no_key_filenames)
+            if harvester_protocol.supports_plot_groups(peer.protocol_version):
+                response3 = harvester_protocol.RespondPlots3(
+                    plots_response3, failed_to_open_filenames, no_key_filenames
+                )
+                return make_msg(ProtocolMessageTypes.respond_plots3, response3)
+            response2 = harvester_protocol.RespondPlots2(
+                [plot.to_plot2() for plot in plots_response3], failed_to_open_filenames, no_key_filenames
+            )
             return make_msg(ProtocolMessageTypes.respond_plots2, response2)
 
         plots_response: list[Plot] = []
