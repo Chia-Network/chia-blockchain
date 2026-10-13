@@ -20,14 +20,17 @@ from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
     Plot2,
+    Plot3,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
     PlotSyncPlotList2,
+    PlotSyncPlotList3,
     PlotSyncResponse,
     PlotSyncStart,
     supports_new_plot_serialization,
+    supports_plot_groups,
 )
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -70,7 +73,11 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
 
 
 def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
-    converted: list[Plot2] = []
+    return [plot.to_plot2() for plot in _convert_plot_info_list3(plot_infos)]
+
+
+def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
+    converted: list[Plot3] = []
     for plot_info in plot_infos:
         k, plot_index, meta_group = _plot_fields(plot_info)
         group_size: uint16
@@ -80,7 +87,7 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
             group_size = uint16(1)
 
         converted.append(
-            Plot2(
+            Plot3(
                 filename=plot_info.prover.get_filename(),
                 size=k,
                 plot_id=plot_info.prover.get_id(),
@@ -329,7 +336,10 @@ class Sender:
     def process_batch(self, loaded: list[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            if self._connection is not None and supports_new_plot_serialization(self._connection.protocol_version):
+            if self._connection is not None and supports_plot_groups(self._connection.protocol_version):
+                converted3 = _convert_plot_info_list3(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded3, PlotSyncPlotList3, converted3, remaining == 0)
+            elif self._connection is not None and supports_new_plot_serialization(self._connection.protocol_version):
                 converted2 = _convert_plot_info_list2(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded2, PlotSyncPlotList2, converted2, remaining == 0)
             else:

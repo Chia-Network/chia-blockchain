@@ -58,6 +58,7 @@ async def harvester_environment(
     [
         (Version("0.0.37"), ProtocolMessageTypes.respond_plots),
         (Version("0.0.38"), ProtocolMessageTypes.respond_plots2),
+        (Version("0.0.39"), ProtocolMessageTypes.respond_plots3),
     ],
 )
 @pytest.mark.anyio
