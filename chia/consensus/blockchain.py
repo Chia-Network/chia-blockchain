@@ -250,7 +250,7 @@ class Blockchain:
                 f"persisted MMR node count {len(nodes)} does not match the expected "
                 f"{expected_nodes} for {state.leaf_count} leaves; the database is corrupt"
             )
-        self.mmr_manager.hydrate(nodes, state, self)
+        self.mmr_manager.hydrate(nodes, state)
         log.info(f"Hydrated canonical MMR from disk: {state.leaf_count} leaves, {len(nodes)} nodes")
         return True
 

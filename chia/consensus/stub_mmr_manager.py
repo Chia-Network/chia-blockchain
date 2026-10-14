@@ -24,7 +24,7 @@ class StubMMRManager:
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: Any,
-        fork_height: uint32 | None = None,
+        fork_height: int | None = None,
     ) -> bytes32 | None:
         # Return empty bytes for test contexts
         return None
@@ -72,6 +72,6 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
-    def hydrate(self, nodes: list[bytes32], state: MMRState, blocks: Any) -> None:
+    def hydrate(self, nodes: list[bytes32], state: MMRState) -> None:
         # No-op for stub manager
         pass

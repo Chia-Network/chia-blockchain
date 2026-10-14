@@ -23,6 +23,7 @@ from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root, compute_mmr_leaf
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.mmr import MerkleMountainRange
@@ -369,14 +370,19 @@ async def _open_blockchain(constants: ConsensusConstants, db_wrapper: DBWrapper2
     )
 
 
-async def _expected_canonical_mmr_root(blockchain: Blockchain) -> bytes32 | None:
+async def _expected_canonical_mmr_root(
+    blockchain: Blockchain, coin_store: CoinStoreProtocol | None = None
+) -> bytes32 | None:
     """
     Hand-built MMR over the composite leaves of every canonical block, with
     each coin commitments root reconstructed from the coin store. Comparing
     this against the live MMR root checks both the conds-derived roots
     registered during validation and their agreement with coin-store
-    reconstruction.
+    reconstruction. `coin_store` defaults to the chain's own; pass a separate
+    one for a chain opened with `_open_blockchain_no_rebuild`.
     """
+    if coin_store is None:
+        coin_store = blockchain.coin_store
     mmr = MerkleMountainRange()
     peak = blockchain.get_peak()
     assert peak is not None
@@ -384,7 +390,7 @@ async def _expected_canonical_mmr_root(blockchain: Blockchain) -> bytes32 | None
     for height in range(int(aggregate_from), peak.height + 1):
         header_hash = blockchain.height_to_hash(uint32(height))
         assert header_hash is not None
-        coin_commitments_root = await blockchain.coin_store.get_coin_commitments_root(uint32(height))
+        coin_commitments_root = await coin_store.get_coin_commitments_root(uint32(height))
         mmr.append(compute_mmr_leaf(header_hash, coin_commitments_root))
     return mmr.compute_root()
 
@@ -767,6 +773,9 @@ class TestCoinCommitmentRoots:
             restarted = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "second")
             assert restarted.compute_current_mmr_root() == mmr_root_a
             assert await restarted.coin_store.get_coin_commitments_root(spend_height) == root_a
+            # the canonical leaves live in the hydrated MMR; nothing is pending
+            assert isinstance(restarted.mmr_manager, BlockchainMMRManager)
+            assert restarted.mmr_manager._block_leaves == {}
 
             # reorg to chain B with its distinct ephemeral-spend block
             fork_info = ForkInfo(base[-1].height, base[-1].height, base[-1].header_hash)
@@ -784,6 +793,9 @@ class TestCoinCommitmentRoots:
             # and the final MMR root matches the hand-built composite MMR
             assert await restarted.coin_store.get_coin_commitments_root(spend_height) == root_b
             assert restarted.compute_current_mmr_root() == await _expected_canonical_mmr_root(restarted)
+            # the reorg appended the fork leaves and dropped chain A's orphaned
+            # leaves: nothing stays pending after the canonical update
+            assert restarted.mmr_manager._block_leaves == {}
             restarted.shut_down()
 
     @pytest.mark.anyio
@@ -849,6 +861,132 @@ class TestCoinCommitmentRoots:
             # blocks, and the canonical MMR remains consistent with coin-store
             # reconstruction
             assert restarted.compute_current_mmr_root() == await _expected_canonical_mmr_root(restarted)
+            restarted.shut_down()
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_orphan_child_after_canonical_advance(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        Orphan leaves are only retained until the next canonical update. A
+        new child of a stored orphan branch submitted after the canonical
+        chain advanced must still be accepted: its ancestry is replayed and
+        re-registered before prevalidation, never served canonical leaves.
+        """
+        bt = hf2_bt
+        blocks_a = bt.get_consecutive_blocks(20, guarantee_transaction_block=True)
+        # fork branch diverging at height 4, lighter than the canonical tip
+        blocks_b = bt.get_consecutive_blocks(
+            10, block_list_input=blocks_a[:5], seed=b"fork", guarantee_transaction_block=True
+        )
+
+        async with create_blockchain(bt.constants, 2) as (blockchain, _):
+            assert isinstance(blockchain.mmr_manager, BlockchainMMRManager)
+            for block in blocks_a[:18]:
+                await _validate_and_add_block(blockchain, block)
+            assert blockchain.mmr_manager._block_leaves == {}
+
+            fork_info = ForkInfo(blocks_a[4].height, blocks_a[4].height, blocks_a[4].header_hash)
+            aug_chain = AugmentedBlockchain(blockchain)
+            for block in blocks_b[5:]:
+                await _validate_and_add_block(
+                    blockchain,
+                    block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
+                )
+            # the orphan branch's leaves are pending (no canonical update since)
+            assert len(blockchain.mmr_manager._block_leaves) == len(blocks_b) - 5
+
+            # the canonical chain advances: the orphan leaves are dropped
+            for block in blocks_a[18:]:
+                await _validate_and_add_block(blockchain, block)
+            assert blockchain.mmr_manager._block_leaves == {}
+
+            # a new child of the orphan branch: the stored ancestry is replayed
+            # (as FullNode.add_block does via prepare_stored_fork_ancestry) and
+            # the child's header MMR commitment validates against the fork
+            blocks_b2 = bt.get_consecutive_blocks(1, block_list_input=blocks_b, seed=b"fork")
+            new_child = blocks_b2[-1]
+            assert new_child.prev_header_hash == blocks_b[-1].header_hash
+            fork_info2 = await blockchain.prepare_stored_fork_ancestry(new_child)
+            assert fork_info2 is not None
+            await _validate_and_add_block(
+                blockchain,
+                new_child,
+                expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                fork_info=fork_info2,
+            )
+            assert blockchain.compute_current_mmr_root() == await _expected_canonical_mmr_root(blockchain)
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_hydrated_restart_continues_sync(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        """
+        A partially synced node restarts: the canonical MMR is hydrated from
+        disk with an empty pending map, and syncing on from the hydrated peak
+        validates header MMR commitments against the hydrated leaves by
+        position, both for plain extensions and for a reorg below the
+        hydrated height.
+        """
+        bt = hf2_bt
+        wallet = WalletTool(bt.constants)
+        reward_ph = wallet.get_new_puzzlehash()
+        blocks = _spend_chain(bt, wallet, reward_ph)
+        more_blocks = bt.get_consecutive_blocks(6, block_list_input=blocks, guarantee_transaction_block=True)
+        # a heavier fork diverging below the hydrated peak
+        fork_blocks = bt.get_consecutive_blocks(
+            len(more_blocks) - 10 + 2,
+            block_list_input=more_blocks[:10],
+            seed=b"fork",
+            guarantee_transaction_block=True,
+        )
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            root_before = blockchain.compute_current_mmr_root()
+            assert root_before is not None
+            blockchain.shut_down()
+
+            restarted, spy = await _open_blockchain_no_rebuild(bt.constants, db_wrapper, tmp_path / "second")
+            assert isinstance(restarted.mmr_manager, BlockchainMMRManager)
+            assert restarted.compute_current_mmr_root() == root_before
+            assert restarted.mmr_manager._block_leaves == {}
+            # the restarted chain's coin store is spied; reconstruct expected
+            # roots through a separate store on the same database
+            reference_coin_store = await CoinStore.create(db_wrapper)
+
+            # continue syncing: plain extensions of the hydrated peak
+            for block in more_blocks[len(blocks) :]:
+                await _validate_and_add_block(restarted, block)
+            assert restarted.mmr_manager._block_leaves == {}
+            assert restarted.compute_current_mmr_root() == await _expected_canonical_mmr_root(
+                restarted, reference_coin_store
+            )
+
+            # a reorg whose fork point is below the hydrated height
+            fork_info = ForkInfo(more_blocks[9].height, more_blocks[9].height, more_blocks[9].header_hash)
+            aug_chain = AugmentedBlockchain(restarted)
+            for block in fork_blocks[10:]:
+                await _validate_and_add_block_no_error(
+                    restarted, block, fork_info=fork_info, augmented_blockchain=aug_chain
+                )
+            peak = restarted.get_peak()
+            assert peak is not None
+            assert peak.header_hash == fork_blocks[-1].header_hash
+            assert restarted.mmr_manager._block_leaves == {}
+            assert restarted.compute_current_mmr_root() == await _expected_canonical_mmr_root(
+                restarted, reference_coin_store
+            )
+            spy.assert_not_called()
             restarted.shut_down()
 
 
