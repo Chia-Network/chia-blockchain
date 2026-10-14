@@ -264,6 +264,7 @@ class ClawbackManager:
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         if fee > 0:
             async with action_scope.sandbox(
+                wallet_state_manager=self.xch_wallet.wallet_state_manager,
                 parent_absorb=replace(ParentAbsorb.nothing(), selected_coins=True),
             ) as inner_action_scope:
                 await self.xch_wallet.create_tandem_xch_tx(

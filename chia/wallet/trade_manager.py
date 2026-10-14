@@ -340,6 +340,7 @@ class TradeManager:
                 # ATTENTION: new_wallets
                 assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet, NFTWallet))
                 async with action_scope.sandbox(
+                    wallet_state_manager=self.wallet_state_manager,
                     config_override=action_scope.config.tx_config.override(
                         excluded_coin_ids=[],
                     ),
@@ -621,7 +622,7 @@ class TradeManager:
                     wallet = self.wallet_state_manager.wallets.get(uint32(id))
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
-                async with action_scope.sandbox() as inner_action_scope:
+                async with action_scope.sandbox(wallet_state_manager=self.wallet_state_manager) as inner_action_scope:
                     # This should probably not switch on whether or not we're spending XCH but it has to for now
                     assert wallet is not None
                     if wallet.type() == WalletType.NFT:
@@ -855,6 +856,7 @@ class TradeManager:
             raise ValueError("This offer is no longer valid")
         # We need to sandbox the transactions here because we're going to make our own
         async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
             parent_absorb=dataclasses.replace(
                 ParentAbsorb.nothing(),
                 get_unused_derivation_record_result=True,

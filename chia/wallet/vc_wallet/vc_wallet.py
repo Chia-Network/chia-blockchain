@@ -558,11 +558,11 @@ class VCWallet:
             else:
                 raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
 
-        async with action_scope.sandbox() as inner_action_scope:
+        async with action_scope.sandbox(wallet_state_manager=self.wallet_state_manager) as inner_action_scope:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
                     [uint64(1)],
-                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
+                    [await inner_action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     vc_id=launcher_id,
                     extra_conditions=(

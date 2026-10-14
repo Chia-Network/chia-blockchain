@@ -718,6 +718,7 @@ class CATWallet:
         """
         announcement: AssertCoinAnnouncement | None = None
         async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
             config_override=action_scope.config.tx_config.override(primary_coin=None, included_coin_ids=[]),
         ) as inner_action_scope:
             if fee > amount_to_claim:
@@ -745,7 +746,7 @@ class CATWallet:
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     [uint64(selected_amount + amount_to_claim - fee)],
-                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
+                    [await inner_action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     coins=chia_coins,
                     negative_change_allowed=True,
@@ -1011,7 +1012,10 @@ class CATWallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         # We need to sandbox this because this method isn't supposed to lock up the coins
-        async with action_scope.sandbox(parent_absorb=ParentAbsorb.nothing()) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
             return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:

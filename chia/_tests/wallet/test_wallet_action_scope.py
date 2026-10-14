@@ -128,7 +128,7 @@ async def test_wallet_action_scope_sandbox() -> None:
             interface.side_effects.transactions = [STD_TX]
 
         # Default seed carries selected_coins; default absorb extends unseeded txs and replaces seeded coins
-        async with action_scope.sandbox() as sandbox:
+        async with action_scope.sandbox(wallet_state_manager=wsm) as sandbox:
             assert sandbox.config.tx_config == DEFAULT_TX_CONFIG
             async with sandbox.use() as interface:
                 assert interface.side_effects.selected_coins == [MOCK_COIN]
@@ -141,7 +141,10 @@ async def test_wallet_action_scope_sandbox() -> None:
             assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
 
         # ParentAbsorb.nothing() discards child side effects
-        async with action_scope.sandbox(parent_absorb=ParentAbsorb.nothing()) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
             async with sandbox.use() as interface:
                 interface.side_effects.transactions.append(STD_TX)
                 interface.side_effects.selected_coins.append(MOCK_COIN_3)
@@ -151,7 +154,10 @@ async def test_wallet_action_scope_sandbox() -> None:
             assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
 
         # Seeded list absorb replaces instead of extending (no duplication)
-        async with action_scope.sandbox(child_seed=ChildSeed(selected_coins=True)) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            child_seed=ChildSeed(selected_coins=True),
+        ) as sandbox:
             async with sandbox.use() as interface:
                 assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
                 interface.side_effects.selected_coins.append(MOCK_COIN_3)
@@ -161,13 +167,16 @@ async def test_wallet_action_scope_sandbox() -> None:
 
         # config_override is applied to the sandbox only
         overridden = DEFAULT_TX_CONFIG.override(min_coin_amount=uint64(7))
-        async with action_scope.sandbox(config_override=overridden) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            config_override=overridden,
+        ) as sandbox:
             assert sandbox.config.tx_config.min_coin_amount == uint64(7)
             assert action_scope.config.tx_config.min_coin_amount == DEFAULT_TX_CONFIG.min_coin_amount
 
         # Failed sandboxes do not absorb
         with pytest.raises(RuntimeError, match="sandbox boom"):
-            async with action_scope.sandbox() as sandbox:
+            async with action_scope.sandbox(wallet_state_manager=wsm) as sandbox:
                 async with sandbox.use() as interface:
                     interface.side_effects.transactions.append(STD_TX)
                 raise RuntimeError("sandbox boom")
@@ -188,6 +197,7 @@ async def test_wallet_action_scope_sandbox() -> None:
             interface.side_effects.plotnft_exiting_info = parent_plotnft_info
 
         async with action_scope.sandbox(
+            wallet_state_manager=wsm,
             child_seed=replace(ChildSeed(), plotnft_exiting_info=False),
             parent_absorb=ParentAbsorb(),
         ) as sandbox:

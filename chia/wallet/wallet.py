@@ -459,7 +459,10 @@ class Wallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         # We need to sandbox this because this method isn't supposed to lock up the coins
-        async with action_scope.sandbox(parent_absorb=ParentAbsorb.nothing()) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
             return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking

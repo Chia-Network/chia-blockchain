@@ -1065,7 +1065,7 @@ class DataLayerWallet:
                 this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
             new_ph: bytes32 = await action_scope.get_puzzle_hash(wallet_state_manager)
-            async with action_scope.sandbox() as inner_action_scope:
+            async with action_scope.sandbox(wallet_state_manager=wallet_state_manager) as inner_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [uint64(1)],
                     [new_ph],

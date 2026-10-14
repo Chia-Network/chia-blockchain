@@ -1003,7 +1003,7 @@ class NFTWallet:
                     wallet = await wallet_state_manager.get_wallet_for_asset_id(asset)
 
                 # First, sending all the coins to the OFFER_MOD
-                async with action_scope.sandbox() as inner_action_scope:
+                async with action_scope.sandbox(wallet_state_manager=wallet_state_manager) as inner_action_scope:
                     if asset in fungible_asset_dict:
                         payments = royalty_payments[asset] if asset in royalty_payments else []
                         payment_sum = sum(p.amount for _, p in payments)
