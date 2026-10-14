@@ -2907,4 +2907,5 @@ solver_info_json: dict[str, Any] = {
 solver_response_json: dict[str, Any] = {
     "partial_proof": {"fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]},
     "proof": "0x66756c6c2d70726f6f66",
+    "plot_id": "0x071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442",
 }
