@@ -562,7 +562,7 @@ class FarmerAPI:
                 size=partial_proof_data.plot_size,
             )
 
-            key = bytes(partial_proof)
+            key = bytes(partial_proof) + bytes(plot_id)
             try:
                 # store pending request data for matching with response
                 self.farmer.pending_solver_requests[key] = {
@@ -591,9 +591,9 @@ class FarmerAPI:
         """
         self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
 
-        # find the matching pending request using partial_proof
+        # find the matching pending request using partial_proof and plot_id
 
-        key = bytes(response.partial_proof)
+        key = bytes(response.partial_proof) + bytes(response.plot_id)
         if key not in self.farmer.pending_solver_requests:
             self.farmer.log.warning(
                 f"Received solver response for unknown partial proof {response.partial_proof.fragments[:5]}"

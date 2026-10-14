@@ -1183,4 +1183,5 @@ solver_info = solver_protocol.SolverInfo(
 solver_response = solver_protocol.SolverResponse(
     PartialProof([uint64(256)] * 16),
     b"full-proof",
+    solver_info.plot_id,
 )
