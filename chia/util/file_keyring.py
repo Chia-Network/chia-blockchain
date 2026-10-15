@@ -198,6 +198,15 @@ class DecryptedKeyringData:
             data_dict.get("labels", {}),
         )
 
+    def copy(self) -> DecryptedKeyringData:
+        """
+        Returns a copy of this data which can be mutated without changing the original.
+        """
+        return DecryptedKeyringData(
+            {service: dict(users) for service, users in self.services.items()},
+            dict(self.labels),
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "keys": {
@@ -328,12 +337,14 @@ class FileKeyring(FileSystemEventHandler):
         'user' parameter. Will force a write to keyring.yaml on success.
         """
         with self.lock_and_reload_if_required():
-            keys = self.cached_keys()
+            # Stage the new key on a copy of the cached data so that the in-memory state is
+            # only updated once the new content has been written to disk successfully
+            staged_data = self.cached_data_dict.copy()
             # Ensure a dictionary exists for the 'service'
-            if keys.get(service) is None:
-                keys[service] = {}
-            keys[service][user] = key
-            self.write_keyring()
+            if staged_data.services.get(service) is None:
+                staged_data.services[service] = {}
+            staged_data.services[service][user] = key
+            self.write_keyring(data=staged_data)
 
     def delete_key(self, service: str, user: str) -> None:
         """
@@ -341,12 +352,14 @@ class FileKeyring(FileSystemEventHandler):
         (will force a write to keyring.yaml on success)
         """
         with self.lock_and_reload_if_required():
-            keys = self.cached_keys()
-            service_dict = keys.get(service, {})
+            # Stage the deletion on a copy of the cached data so that the in-memory state is
+            # only updated once the new content has been written to disk successfully
+            staged_data = self.cached_data_dict.copy()
+            service_dict = staged_data.services.get(service, {})
             if service_dict.pop(user, None):
                 if len(service_dict) == 0:
-                    keys.pop(service)
-                self.write_keyring()
+                    staged_data.services.pop(service)
+                self.write_keyring(data=staged_data)
 
     def get_label(self, fingerprint: int) -> str | None:
         """
@@ -371,23 +384,29 @@ class FileKeyring(FileSystemEventHandler):
             raise KeychainLabelInvalid(label, f"label exceeds max length: {len(label)}/{MAX_LABEL_LENGTH}")
         # Then try to set it
         with self.lock_and_reload_if_required():
-            labels = self.cached_labels()
-            for existing_fingerprint, existing_label in labels.items():
+            # Stage the new label on a copy of the cached data so that the in-memory state is
+            # only updated once the new content has been written to disk successfully
+            staged_data = self.cached_data_dict.copy()
+            for existing_fingerprint, existing_label in staged_data.labels.items():
                 if label == existing_label:
                     raise KeychainLabelExists(label, existing_fingerprint)
-            labels[fingerprint] = label
-            self.write_keyring()
+            # Store the fingerprint as a plain int since YAML can't serialize int subclasses (e.g. uint32)
+            staged_data.labels[int(fingerprint)] = label
+            self.write_keyring(data=staged_data)
 
     def delete_label(self, fingerprint: int) -> None:
         """
         Removes the label for the fingerprint. This will force a write to keyring.yaml on success.
         """
         with self.lock_and_reload_if_required():
+            # Stage the deletion on a copy of the cached data so that the in-memory state is
+            # only updated once the new content has been written to disk successfully
+            staged_data = self.cached_data_dict.copy()
             try:
-                self.cached_labels().pop(fingerprint)
+                staged_data.labels.pop(fingerprint)
             except KeyError as e:
                 raise KeychainFingerprintNotFound(fingerprint) from e
-            self.write_keyring()
+            self.write_keyring(data=staged_data)
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:
         """
@@ -422,31 +441,38 @@ class FileKeyring(FileSystemEventHandler):
             self.cached_file_content.get_decrypted_data_dict(passphrase)
         )
 
-    def write_keyring(self, fresh_salt: bool = False) -> None:
+    def write_keyring(self, fresh_salt: bool = False, data: DecryptedKeyringData | None = None) -> None:
         from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 
-        # Merge in other properties like "passphrase_hint"
-        if "passphrase_hint" in self.file_content_properties_for_next_write:
-            self.cached_file_content.passphrase_hint = self.file_content_properties_for_next_write["passphrase_hint"]
-
-        # When writing for the first time, we should have a cached passphrase which hasn't been
-        # validated (because it can't be validated yet...)
-        if not self.has_content() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():
-            # TODO: The above checks, at the time of writing, make sure we get a str here.  A reconsideration of this
-            #       interface would be good.
-            passphrase = cast(str, KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0])
-        else:
-            # TODO, this prompts for the passphrase interactively, move this out
-            passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+        if data is None:
+            data = self.cached_data_dict
 
         try:
-            self.cached_file_content.update_encrypted_data_dict(passphrase, self.cached_data_dict, fresh_salt)
+            # Merge in other properties like "passphrase_hint"
+            if "passphrase_hint" in self.file_content_properties_for_next_write:
+                self.cached_file_content.passphrase_hint = self.file_content_properties_for_next_write[
+                    "passphrase_hint"
+                ]
+
+            # When writing for the first time, we should have a cached passphrase which hasn't been
+            # validated (because it can't be validated yet...)
+            if not self.has_content() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():
+                # TODO: The above checks, at the time of writing, make sure we get a str here.  A reconsideration of
+                #       this interface would be good.
+                passphrase = cast(str, KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0])
+            else:
+                # TODO, this prompts for the passphrase interactively, move this out
+                passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+
+            self.cached_file_content.update_encrypted_data_dict(passphrase, data, fresh_salt)
             self.cached_file_content.write_to_path(self.keyring_path)
-            # Cleanup the cached properties now that we wrote the new content to file
+            # Only commit the new data and cleanup the cached properties once we wrote the new content to file
+            self.cached_data_dict = data
             self.file_content_properties_for_next_write = {}
         except Exception:
             # Restore the correct content if we failed to write the updated cache, let it re-raise if loading also fails
             self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
+            raise
 
     def get_passphrase_hint(self) -> str | None:
         """
