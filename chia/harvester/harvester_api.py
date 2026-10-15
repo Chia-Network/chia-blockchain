@@ -537,7 +537,12 @@ class HarvesterAPI:
             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
             include_taproot = True
 
-        agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+        agg_pk = generate_plot_public_key(
+            local_sk.get_g1(),
+            farmer_public_key,
+            include_taproot,
+            is_v2=plot_info.prover.get_version() == PlotVersion.V2,
+        )
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
