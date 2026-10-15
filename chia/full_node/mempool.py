@@ -79,6 +79,10 @@ MAX_BLOCK_ATOMS = 60_000_000
 MAX_BLOCK_PAIRS = 60_000_000
 
 
+def minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64) -> int:
+    return (cost * fee_per_million_cost + 999_999) // 1_000_000
+
+
 @dataclass
 class MempoolRemoveInfo:
     items: dict[bytes32, InternalMempoolItem]
@@ -525,13 +529,14 @@ class Mempool:
         constants: ConsensusConstants,
         prev_tx_height: uint32,
         timeout: float,
+        minimum_fee_per_cost: uint64 = uint64(0),
     ) -> NewBlockGenerator | None:
         """
         prev_tx_height is needed in case we fast-forward a transaction and we
         need to re-run its puzzle.
         """
 
-        mempool_bundle = self.create_bundle_from_mempool_items(constants, prev_tx_height, timeout)
+        mempool_bundle = self.create_bundle_from_mempool_items(constants, prev_tx_height, timeout, minimum_fee_per_cost)
         if mempool_bundle is None:
             return None
 
@@ -588,7 +593,11 @@ class Mempool:
         )
 
     def create_bundle_from_mempool_items(
-        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float = 1.0
+        self,
+        constants: ConsensusConstants,
+        prev_tx_height: uint32,
+        timeout: float = 1.0,
+        minimum_fee_per_cost: uint64 = uint64(0),
     ) -> tuple[SpendBundle, list[Coin]] | None:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -628,6 +637,8 @@ class Mempool:
             try:
                 assert item.conds is not None
                 cost = item.conds.cost
+                if fee < minimum_fee_for_cost(cost, minimum_fee_per_cost):
+                    continue
                 if skipped_items >= PRIORITY_TX_THRESHOLD:
                     # If we've encountered `PRIORITY_TX_THRESHOLD` number of
                     # transactions that don't fit in the remaining block size,
@@ -748,7 +759,11 @@ class Mempool:
         return agg, additions
 
     def create_block_generator2(
-        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
+        self,
+        constants: ConsensusConstants,
+        prev_tx_height: uint32,
+        timeout: float,
+        minimum_fee_per_cost: uint64 = uint64(0),
     ) -> NewBlockGenerator | None:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
@@ -807,6 +822,8 @@ class Mempool:
             item = self._items[name]
             try:
                 assert item.conds is not None
+                if fee < minimum_fee_for_cost(item.conds.cost, minimum_fee_per_cost):
+                    continue
                 cost = item.conds.condition_cost + item.conds.execution_cost
                 if skipped_items >= PRIORITY_TX_THRESHOLD:
                     # If we've encountered `PRIORITY_TX_THRESHOLD` number of
