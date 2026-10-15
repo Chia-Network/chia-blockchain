@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from chia_rs import compute_merkle_set_root
+from chia_rs import BlockRecord, ConsensusConstants, compute_merkle_set_root
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -110,6 +110,23 @@ def extract_slot_challenge_data(
             )
 
     return slot_data
+
+
+def get_challenge_start_height(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    prev_b: BlockRecord,
+    challenge_hash: bytes32 | None = None,
+) -> uint32:
+    end_height = int(prev_b.height) + 1
+    # A challenge run may contain normal blocks from one sub-slot and overflow blocks from the next.
+    max_challenge_blocks = 2 * constants.MAX_SUB_SLOT_BLOCKS
+    start_height = uint32(max(0, end_height - max_challenge_blocks - 1))
+    trailing_run = extract_slot_challenge_data(blocks, start_height, uint32(end_height))[-1]
+    assert trailing_run.block_count <= max_challenge_blocks
+    if challenge_hash is not None and trailing_run.challenge_hash != challenge_hash:
+        return uint32(end_height)
+    return uint32(end_height - trailing_run.block_count)
 
 
 def build_challenge_merkle_tree(slot_data: list[SlotChallengeData]) -> bytes32:

@@ -50,10 +50,14 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import (
+    post_hard_fork2,
+    post_hard_fork2_block_record,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
@@ -950,15 +954,7 @@ class FullNode:
         if peak_block is not None:
             peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, False)[1]
-            post_hard_fork = post_hard_fork2(
-                self.constants,
-                self.blockchain,
-                prev_b_hash=peak.header_hash,
-                sp_index=peak.signage_point_index,
-                finished_sub_slots=len(peak.finished_challenge_slot_hashes)
-                if peak.finished_challenge_slot_hashes is not None
-                else 0,
-            )
+            post_hard_fork = post_hard_fork2_block_record(self.constants, self.blockchain, peak)
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
@@ -2817,12 +2813,29 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
-        # MMR might be diffrent from the peak mmr depending on whether we have a new sub slot or new SP
-        header_mmr_root = self.blockchain.get_mmr_root_for_block(
-            block.prev_header_hash,
+        sp_iters = calculate_sp_iters(
+            self.constants,
+            sub_slot_iters,
             block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
         )
+        ip_iters = calculate_ip_iters(
+            self.constants,
+            sub_slot_iters,
+            block.reward_chain_block.signage_point_index,
+            validate_result.required_iters,
+        )
+        sp_total_iters = uint128(
+            block.total_iters - ip_iters + sp_iters - (sub_slot_iters if sp_iters > ip_iters else 0)
+        )
+
+        # The MMR commits only to blocks infused before this block's signage point.
+        header_mmr_root = None
+        if post_hard_fork:
+            mmr_peak = self.blockchain.get_peak()
+            header_mmr_root = self.blockchain.get_mmr_root_for_block(
+                block.prev_header_hash if mmr_peak is None else mmr_peak.header_hash,
+                sp_total_iters,
+            )
 
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,

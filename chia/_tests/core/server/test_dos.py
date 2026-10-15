@@ -302,7 +302,7 @@ class TestDos:
 
         new_tx_message = make_msg(
             ProtocolMessageTypes.new_transaction,
-            full_node_protocol.NewTransaction(bytes32([9] * 32), uint64(0), uint64(0)),
+            full_node_protocol.NewTransaction(bytes32([9] * 32), uint64(1), uint64(0)),
         )
         for i in range(4000):
             await ws_con._send_message(new_tx_message)

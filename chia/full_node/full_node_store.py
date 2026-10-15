@@ -11,8 +11,9 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import post_hard_fork2
+from chia.consensus.get_block_challenge import post_hard_fork2_block_record
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
@@ -529,17 +530,7 @@ class FullNodeStore:
             )
             if finish_se:
                 # this is the first slot in a new sub epoch, should include SES
-                post_hard_fork = post_hard_fork2(
-                    constants=self.constants,
-                    blocks=blocks,
-                    prev_b_hash=peak.prev_hash,
-                    sp_index=peak.signage_point_index,
-                    finished_sub_slots=(
-                        len(peak.finished_challenge_slot_hashes)
-                        if peak.finished_challenge_slot_hashes is not None
-                        else 0
-                    ),
-                )
+                post_hard_fork = post_hard_fork2_block_record(self.constants, blocks, peak)
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,
                     blocks,
@@ -547,7 +538,15 @@ class FullNodeStore:
                     blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
-                    make_challenge_root=post_hard_fork,
+                    challenge_root_end_height=(
+                        get_challenge_start_height(
+                            self.constants,
+                            blocks,
+                            peak,
+                        )
+                        if post_hard_fork
+                        else None
+                    ),
                 )
 
                 if eos.challenge_chain.subepoch_summary_hash is None:

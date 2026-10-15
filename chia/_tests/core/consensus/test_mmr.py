@@ -5,7 +5,7 @@ import random
 import pytest
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.wallet.wallet_block_tools import load_block_list
@@ -74,24 +74,16 @@ def _assert_inclusion_proof(
 def _pre_sp_cutoff_height(
     block_records_by_height: list[BlockRecord],
     prev_height: int,
-    new_sp_index: int,
-    starts_new_slot: bool,
+    sp_total_iters: uint128,
 ) -> int | None:
     if prev_height < 0:
         return None
 
-    if starts_new_slot:
-        return prev_height
-
     current_height = prev_height
     while current_height >= 0:
         current = block_records_by_height[current_height]
-        if current.signage_point_index < new_sp_index:
+        if current.total_iters < sp_total_iters:
             return current_height
-        if current.height == 0:
-            return None
-        if current.first_in_sub_slot:
-            return current_height - 1
         current_height -= 1
 
     return None
@@ -651,8 +643,7 @@ def test_mmr_genesis_block_handling() -> None:
     # Test genesis block: prev_header_hash equals genesis_challenge
     mmr_root = mmr.get_mmr_root_for_block(
         prev_header_hash=DEFAULT_CONSTANTS.GENESIS_CHALLENGE,  # Genesis case
-        new_sp_index=0,
-        starts_new_slot=True,
+        sp_total_iters=uint128(0),
         blocks=blocks,
         fork_height=None,
     )
@@ -733,33 +724,31 @@ def test_get_mmr_root_for_block_matches_expected_cutoff(bt: BlockTools) -> None:
         mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
         roots_by_height[record.height] = mmr_manager.compute_current_mmr_root()
 
-    saw_new_slot = False
-    saw_same_slot = False
+    saw_parent_infused_after_sp = False
 
     for block in block_list:
-        starts_new_slot = len(block.finished_sub_slots) > 0
-        saw_new_slot = saw_new_slot or starts_new_slot
-        saw_same_slot = saw_same_slot or (block.height > 0 and not starts_new_slot)
+        record = block_records[block.header_hash]
+        sp_total_iters = record.sp_total_iters(bt.constants)
+        if block.height > 0:
+            parent = block_records[block.prev_header_hash]
+            saw_parent_infused_after_sp = saw_parent_infused_after_sp or parent.total_iters >= sp_total_iters
 
         expected_height = _pre_sp_cutoff_height(
             block_records_by_height,
             int(block.height) - 1,
-            int(block.reward_chain_block.signage_point_index),
-            starts_new_slot,
+            sp_total_iters,
         )
         expected_root = None if expected_height is None else roots_by_height[uint32(expected_height)]
 
         assert (
             block_cache.get_mmr_root_for_block(
                 block.prev_header_hash,
-                block.reward_chain_block.signage_point_index,
-                starts_new_slot,
+                sp_total_iters,
             )
             == expected_root
         )
 
-    assert saw_new_slot
-    assert saw_same_slot
+    assert saw_parent_infused_after_sp
 
 
 def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> None:
@@ -782,8 +771,7 @@ def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> No
 
     fork_root = mmr_manager.get_mmr_root_for_block(
         prev_header_hash=fork_blocks[-1].header_hash,
-        new_sp_index=0,
-        starts_new_slot=True,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
         blocks=BlockCache(fork_records, mmr_manager=mmr_manager),
         fork_height=uint32(2),
     )
