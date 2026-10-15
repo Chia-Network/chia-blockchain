@@ -142,7 +142,8 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 async def test_get_full_blocks_at(
     tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool, default_400_blocks: list[FullBlock]
 ) -> None:
-    blocks = bt.get_consecutive_blocks(10)
+    # Main chain is longer so equal-height alt tips stay orphans (weight), not foliage NEW_PEAKs.
+    blocks = bt.get_consecutive_blocks(11)
     alt_blocks = default_400_blocks[:10]
 
     async with DBConnection(2) as db_wrapper:
@@ -152,17 +153,17 @@ async def test_get_full_blocks_at(
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, InlineExecutor())
 
-        count = 0
-        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
-        for b1, b2 in zip(blocks, alt_blocks):
+        for b1 in blocks:
             await _validate_and_add_block(bc, b1)
+
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        for count, b2 in enumerate(alt_blocks):
             await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             ret = await block_store.get_full_blocks_at([uint32(count)])
-            assert set(ret) == set([b1, b2])
-            count += 1
-            ret = await block_store.get_full_blocks_at([uint32(c) for c in range(count)])
-            assert len(ret) == count * 2
-            assert set(ret) == set(blocks[:count] + alt_blocks[:count])
+            assert set(ret) == {blocks[count], b2}
+            ret = await block_store.get_full_blocks_at([uint32(c) for c in range(count + 1)])
+            assert len(ret) == (count + 1) * 2
+            assert set(ret) == set(blocks[: count + 1] + alt_blocks[: count + 1])
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -170,7 +171,8 @@ async def test_get_full_blocks_at(
 async def test_get_block_records_in_range(
     bt: BlockTools, tmp_dir: Path, use_cache: bool, default_400_blocks: list[FullBlock]
 ) -> None:
-    blocks = bt.get_consecutive_blocks(10)
+    # Main chain is longer so equal-height alt tips stay orphans (weight), not foliage NEW_PEAKs.
+    blocks = bt.get_consecutive_blocks(11)
     alt_blocks = default_400_blocks[:10]
 
     async with DBConnection(2) as db_wrapper:
@@ -180,19 +182,19 @@ async def test_get_block_records_in_range(
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, InlineExecutor())
 
-        count = 0
-        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
-        for b1, b2 in zip(blocks, alt_blocks):
+        for b1 in blocks:
             await _validate_and_add_block(bc, b1)
+
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        for count, b2 in enumerate(alt_blocks):
             await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             # the range is inclusive
             ret = await block_store.get_block_records_in_range(count, count)
             assert len(ret) == 1
-            assert b1.header_hash in ret
+            assert blocks[count].header_hash in ret
             ret = await block_store.get_block_records_in_range(0, count)
-            count += 1
-            assert len(ret) == count
-            assert list(ret.keys()) == [b.header_hash for b in blocks[:count]]
+            assert len(ret) == count + 1
+            assert list(ret.keys()) == [b.header_hash for b in blocks[: count + 1]]
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -200,7 +202,8 @@ async def test_get_block_records_in_range(
 async def test_get_block_bytes_in_range_in_main_chain(
     bt: BlockTools, tmp_dir: Path, use_cache: bool, default_400_blocks: list[FullBlock]
 ) -> None:
-    blocks = bt.get_consecutive_blocks(10)
+    # Main chain is longer so equal-height alt tips stay orphans (weight), not foliage NEW_PEAKs.
+    blocks = bt.get_consecutive_blocks(11)
     alt_blocks = default_400_blocks[:10]
 
     async with DBConnection(2) as db_wrapper:
@@ -209,18 +212,19 @@ async def test_get_block_bytes_in_range_in_main_chain(
         block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, InlineExecutor())
-        count = 0
-        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
-        for b1, b2 in zip(blocks, alt_blocks):
+
+        for b1 in blocks:
             await _validate_and_add_block(bc, b1)
+
+        fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        for count, b2 in enumerate(alt_blocks):
             await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             # the range is inclusive
             ret = await block_store.get_block_bytes_in_range(count, count)
-            assert ret == [bytes(b1)]
+            assert ret == [bytes(blocks[count])]
             ret = await block_store.get_block_bytes_in_range(0, count)
-            count += 1
-            assert len(ret) == count
-            assert set(ret) == set([bytes(b) for b in blocks[:count]])
+            assert len(ret) == count + 1
+            assert set(ret) == {bytes(b) for b in blocks[: count + 1]}
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -260,7 +264,8 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_400_blocks: list[FullBlock]) -> None:
-    blocks = bt.get_consecutive_blocks(10)
+    # Main chain is longer so equal-height alt tips stay orphans (weight), not foliage NEW_PEAKs.
+    blocks = bt.get_consecutive_blocks(11)
     alt_blocks = default_400_blocks[:10]
 
     async with DBConnection(2) as db_wrapper:
@@ -270,11 +275,13 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, InlineExecutor())
 
-        # insert all blocks
+        for b1 in blocks:
+            await _validate_and_add_block(bc, b1)
+
+        # insert orphan fork
         count = 0
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
-        for b1, b2 in zip(blocks, alt_blocks):
-            await _validate_and_add_block(bc, b1)
+        for b2 in alt_blocks:
             await _validate_and_add_block(bc, b2, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
             count += 1
             ret = await block_store.get_random_not_compactified(count)

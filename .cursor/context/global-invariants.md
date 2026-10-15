@@ -10,7 +10,10 @@
 ### 1. Weight monotonicity (fork choice)
 
 Peak always has the heaviest weight. Equal weight resolves by lower
-`total_iters`. This is enforced in `Blockchain._reconsider_peak()`.
+`total_iters`. If weight, `total_iters`, and height are identical, a
+lower foliage transaction block hash wins so nodes converge instead of
+flip-flopping when several farmers farm the same plots. This is enforced
+in `Blockchain._reconsider_peak()`.
 
 ### 2. Coin uniqueness
 

@@ -39,7 +39,7 @@ The suite is not only checking small helpers. It validates that production seque
 The suite repeatedly defends these consensus invariants:
 
 - Canonical chain has exactly one `in_main_chain` block at each height from genesis to peak.
-- Peak selection follows weight first, then lower `total_iters` on equal weight.
+- Peak selection follows weight first, then lower `total_iters` on equal weight, then lower foliage hash when weight, `total_iters`, and height all match (to converge redundant farmers of the same plots).
 - Main-chain extension and fork validation require coherent `ForkInfo`: `peak_height`, `peak_hash`, `fork_height`, `block_hashes`, additions, and removals must describe the branch being validated.
 - Coin state is fork-relative, not just DB-relative. A coin may be canonical before the fork, created on the fork, ephemeral inside the same block, or invalid because it only exists on the abandoned branch.
 - Transaction-block timestamp and previous transaction-block context drive timelocks, not necessarily the current peak height.
