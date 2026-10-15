@@ -292,6 +292,16 @@ class FullNodeAPI:
             await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             return None
 
+        # A cost above the per-tx mempool limit can never be accepted; ignore
+        # without banning (the peer may be confused or on incompatible software).
+        if transaction.cost > self.full_node.mempool_manager.max_tx_clvm_cost:
+            self.log.info(
+                f"Ignoring tx {transaction.transaction_id} from peer {peer.peer_node_id}: "
+                f"advertised cost {transaction.cost} exceeds max_tx_clvm_cost "
+                f"{self.full_node.mempool_manager.max_tx_clvm_cost}."
+            )
+            return None
+
         # If already seen, the cost and fee must match, otherwise ban the peer
         mempool_item = self.full_node.mempool_manager.get_mempool_item(transaction.transaction_id, include_pending=True)
         if mempool_item is not None:
