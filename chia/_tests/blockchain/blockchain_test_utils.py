@@ -43,6 +43,14 @@ async def check_block_store_invariant(bc: Blockchain) -> None:
             # make sure every height is represented in the set
             assert len(in_chain) == max_height + 1
 
+        # chain_index (dual-write height -> header_hash table) must equal
+        # the in_main_chain rows exactly, at every point in time.
+        async with conn.execute("SELECT height, header_hash FROM full_blocks WHERE in_main_chain=1") as cursor:
+            main_chain_rows = {(row[0], row[1]) for row in await cursor.fetchall()}
+        async with conn.execute("SELECT height, header_hash FROM chain_index") as cursor:
+            chain_index_rows = {(row[0], row[1]) for row in await cursor.fetchall()}
+        assert chain_index_rows == main_chain_rows
+
 
 async def _validate_and_add_block(
     blockchain: Blockchain,
