@@ -1,4 +1,4 @@
-name: 🚨 Check commit signing
+name: Check commit signing
 
 on:
   push:
