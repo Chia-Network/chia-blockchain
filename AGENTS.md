@@ -40,17 +40,17 @@ tools/pytest chia/_tests/<relevant_directory>/ -v -n auto
 
 Tests mirror the source layout:
 
-| You changed | Run tests in |
-|---|---|
-| `chia/full_node/` | `chia/_tests/core/full_node/` |
+| You changed                           | Run tests in                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `chia/full_node/`                     | `chia/_tests/core/full_node/`                                                                                 |
 | `chia/full_node/full_node_rpc_api.py` | `chia/_tests/core/test_full_node_rpc.py` (specific RPC handler test file, not the broader `full_node/` suite) |
-| `chia/wallet/` | `chia/_tests/wallet/` |
-| `chia/consensus/` | `chia/_tests/blockchain/` |
-| `chia/rpc/` | `chia/_tests/rpc/` |
-| `chia/data_layer/` | `chia/_tests/core/data_layer/` |
-| `chia/server/` | `chia/_tests/core/server/` |
-| `chia/cmds/` | `chia/_tests/cmds/` |
-| `chia/simulator/` | `chia/_tests/simulation/` |
+| `chia/wallet/`                        | `chia/_tests/wallet/`                                                                                         |
+| `chia/consensus/`                     | `chia/_tests/blockchain/`                                                                                     |
+| `chia/rpc/`                           | `chia/_tests/rpc/`                                                                                            |
+| `chia/data_layer/`                    | `chia/_tests/core/data_layer/`                                                                                |
+| `chia/server/`                        | `chia/_tests/core/server/`                                                                                    |
+| `chia/cmds/`                          | `chia/_tests/cmds/`                                                                                           |
+| `chia/simulator/`                     | `chia/_tests/simulation/`                                                                                     |
 
 Where to put a new test: tests live in `chia/_tests/`, not a top-level `tests/` directory. Note that `full_node` and `data_layer` tests nest under `chia/_tests/core/` — check the existing tree before creating a new file.
 
@@ -96,31 +96,32 @@ tools/py -m mypy .                 # Type checking (uses mypy.ini.template confi
 
 Not all directories carry the same risk:
 
-| Directory | Risk | Notes |
-|-----------|------|-------|
-| `consensus/` | 🔴 Critical | Changes require a CHIP proposal + hard fork schedule |
-| `types/` | 🔴 High | Serialization changes can break the network |
-| `protocols/` | 🔴 High | Message changes require hash regeneration |
-| `full_node/` | 🟡 Medium | Core node logic, mempool, block validation |
-| `wallet/` | 🟡 Medium | Complex state management, many sub-wallets |
-| `rpc/` | 🟡 Medium | API surface — breaking changes affect all consumers |
-| `plotters/` | 🟢 Low | External plotter integrations |
-| `cmds/` | 🟢 Low | CLI wrappers |
-| `util/` | 🟢 Low | Utility functions (but `db_wrapper.py` is higher risk) |
+| Directory    | Risk        | Notes                                                  |
+| ------------ | ----------- | ------------------------------------------------------ |
+| `consensus/` | 🔴 Critical | Changes require a CHIP proposal + hard fork schedule   |
+| `types/`     | 🔴 High     | Serialization changes can break the network            |
+| `protocols/` | 🔴 High     | Message changes require hash regeneration              |
+| `full_node/` | 🟡 Medium   | Core node logic, mempool, block validation             |
+| `wallet/`    | 🟡 Medium   | Complex state management, many sub-wallets             |
+| `rpc/`       | 🟡 Medium   | API surface — breaking changes affect all consumers    |
+| `plotters/`  | 🟢 Low      | External plotter integrations                          |
+| `cmds/`      | 🟢 Low      | CLI wrappers                                           |
+| `util/`      | 🟢 Low      | Utility functions (but `db_wrapper.py` is higher risk) |
 
 ## Contribution Workflow
 
-| Who | Branch from | PR target |
-|-----|------------|--------|
-| External contributors | Fork `main` | PR to `main` |
-| Chia org members | `main` | PR to `main` |
-| **Emergency fixes** | **`latest`** (current release) | PR to `latest` |
+| Who                   | Branch from                    | PR target      |
+| --------------------- | ------------------------------ | -------------- |
+| External contributors | Fork `main`                    | PR to `main`   |
+| Chia org members      | `main`                         | PR to `main`   |
+| **Emergency fixes**   | **`latest`** (current release) | PR to `latest` |
 
 Emergency fixes branch from `latest`, not `main`. This is the most important row in this table.
 
 ## Worked Example: Adding an RPC Endpoint
 
 1. Add the handler in `chia/full_node/full_node_rpc_api.py`:
+
    ```python
    async def my_new_endpoint(self, request: dict[str, Any]) -> EndpointResult:
        # Implementation
@@ -128,6 +129,7 @@ Emergency fixes branch from `latest`, not `main`. This is the most important row
    ```
 
 2. Add the typed client method in `chia/full_node/full_node_rpc_client.py`:
+
    ```python
    async def my_new_endpoint(self, param: str) -> dict[str, Any]:
        return await self.fetch("my_new_endpoint", {"param": param})
@@ -150,6 +152,7 @@ Emergency fixes branch from `latest`, not `main`. This is the most important row
 Agents modifying this codebase benefit from understanding Chia's core concepts. A full domain primer — coinset model, CLVM, spend bundles, condition opcodes, and common pitfalls — is maintained at [`.cursor/context/domain-primer.md`](.cursor/context/domain-primer.md) (if present) or in the [Agent Developer Reference](https://github.com/Chia-Network/chia-for-agents/blob/main/resources/coin-model.md).
 
 Key concepts in brief:
+
 - **Coin model (UTXO).** Each coin = parent_coin_info + puzzle_hash + amount. Coin ID = SHA256 of those three fields.
 - **Puzzles and solutions.** Coins are locked by CLVM programs. Spending reveals the puzzle and provides a solution that produces conditions (CREATE_COIN, AGG_SIG_ME, etc.).
 - **Spend bundles.** A transaction = list of CoinSpends + one aggregated BLS12-381 signature.
