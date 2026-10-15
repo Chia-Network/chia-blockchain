@@ -22,6 +22,7 @@ from typing import Any
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     AugSchemeMPL,
     BlockRecord,
     ChallengeChainSubSlot,
@@ -39,6 +40,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    generator_interned_vbytes,
     get_flags_for_height_and_constants,
     solution_generator,
     solve_proof,
@@ -78,7 +80,11 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
+from chia.full_node.bundle_tools import (
+    simple_solution_generator,
+    simple_solution_generator_2026,
+    simple_solution_generator_backrefs,
+)
 from chia.plotting.cache import cached_master_sk_to_local_sk
 from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
@@ -206,16 +212,25 @@ def compute_block_cost(
     # deliberately create invalid blocks as parts of the tests, and we still
     # need to be able to compute the cost of it
 
+    # once INTERNED_SPEND_LIST is active, `generator` is still the classic
+    # (quoted) generator, but the block holds the serde_2026 serialization of
+    # the spend list wrapper it quotes. That isn't run, and its size is
+    # charged by interned vbytes
+
     condition_cost = 0
     clvm_cost = 0
     flags = int(get_flags_for_height_and_constants(prev_tx_height, constants))
+    interned = (flags & INTERNED_SPEND_LIST) != 0
 
     if height >= constants.HARD_FORK_HEIGHT:
-        blocks: list[bytes] = []
-        cost, result = _run(generator, INFINITE_COST, flags, [DESERIALIZE_MOD, blocks])
-        clvm_cost += cost
+        if interned:
+            spend_list_wrapper = Program.from_bytes(bytes(generator)).rest()
+        else:
+            blocks: list[bytes] = []
+            cost, spend_list_wrapper = _run(generator, INFINITE_COST, flags, [DESERIALIZE_MOD, blocks])
+            clvm_cost += cost
 
-        for spend in result.first().as_iter():
+        for spend in spend_list_wrapper.first().as_iter():
             # each spend is a list of:
             # (parent-coin-id puzzle amount solution)
             puzzle = spend.at("rf")
@@ -237,7 +252,10 @@ def compute_block_cost(
             conditions = res.at("rrrf")
             condition_cost += conditions_cost(conditions, charge_for_conditions=False)
 
-    size_cost = len(bytes(generator)) * constants.COST_PER_BYTE
+    if interned:
+        size_cost = generator_interned_vbytes(bytes(spend_list_wrapper)) * constants.COST_PER_BYTE
+    else:
+        size_cost = len(bytes(generator)) * constants.COST_PER_BYTE
 
     return uint64(clvm_cost + size_cost + condition_cost)
 
@@ -471,6 +489,11 @@ class BlockTools:
             cost = compute_block_cost(
                 SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
             )
+            # once INTERNED_SPEND_LIST is active, the block holds the serde_2026
+            # serialized spend list instead
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
+            if flags & INTERNED_SPEND_LIST:
+                program_bytes = simple_solution_generator_2026(bundle).program
             return NewBlockGenerator(
                 program_bytes,
                 [],
@@ -986,7 +1009,9 @@ class BlockTools:
         if transaction_data is not None:
             additions = compute_additions_unchecked(transaction_data)
             removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
+            interned = (flags & INTERNED_SPEND_LIST) != 0
+            if curr.height >= self.constants.HARD_FORK_HEIGHT and not interned:
                 program_bytes = simple_solution_generator_backrefs(transaction_data).program
             else:
                 program_bytes = simple_solution_generator(transaction_data).program
@@ -994,6 +1019,10 @@ class BlockTools:
             cost = compute_block_cost(
                 SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
             )
+            # once INTERNED_SPEND_LIST is active, the block holds the serde_2026
+            # serialized spend list instead
+            if interned:
+                program_bytes = simple_solution_generator_2026(transaction_data).program
             block_generator = NewBlockGenerator(
                 program_bytes,
                 [],

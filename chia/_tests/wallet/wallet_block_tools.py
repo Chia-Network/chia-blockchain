@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     BlockRecord,
     ConsensusConstants,
     Foliage,
@@ -20,6 +21,7 @@ from chia_rs import (
     TransactionsInfo,
     UnfinishedBlock,
     compute_merkle_set_root,
+    get_flags_for_height_and_constants,
 )
 from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -29,7 +31,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_2026
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -107,7 +109,14 @@ class WalletBlockTools(BlockTools):
             if transaction_data is not None and len(block_list_input) > 0:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
-                block_generator = simple_solution_generator(transaction_data)
+                # once INTERNED_SPEND_LIST is active, the generator must be a
+                # serde_2026 serialized spend list
+                assert latest_block is not None
+                flags = get_flags_for_height_and_constants(latest_block.height, constants)
+                if flags & INTERNED_SPEND_LIST:
+                    block_generator = simple_solution_generator_2026(transaction_data)
+                else:
+                    block_generator = simple_solution_generator(transaction_data)
             pool_target = PoolTarget(
                 pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph, uint32(0)
             )

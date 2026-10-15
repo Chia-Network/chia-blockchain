@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    INTERNED_SPEND_LIST,
     BlockRecord,
     ConsensusConstants,
     FullBlock,
@@ -163,7 +164,10 @@ def _pre_validate_block(
             if block.foliage.foliage_transaction_block_hash != block.foliage_transaction_block.get_hash():
                 return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
-            if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
+            # a serde_2026 generator (INTERNED_SPEND_LIST) has no classic
+            # canonical form; chia_rs bounds its size when parsing it instead
+            interned = (get_flags_for_height_and_constants(prev_tx_height, constants) & INTERNED_SPEND_LIST) != 0
+            if prev_tx_height >= constants.SOFT_FORK9_HEIGHT and not interned:
                 if not is_canonical_serialization(generator_bytes):
                     return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
 

@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     BlockRecord,
     CoinRecord,
     ConsensusConstants,
@@ -14,6 +15,7 @@ from chia_rs import (
     UnfinishedBlock,
     check_time_locks,
     compute_merkle_set_root,
+    get_flags_for_height_and_constants,
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
@@ -387,7 +389,11 @@ async def validate_block_body(
         if not conds.validated_signature:
             log.info(f"block body validation proceeding without validated aggregate signature at height {height}")
 
-        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
+        # a serde_2026 generator (INTERNED_SPEND_LIST, at the flags it was
+        # run with) has no classic canonical form; chia_rs bounds its size
+        # when parsing it instead
+        interned = (get_flags_for_height_and_constants(pre_sp_tx_height, constants) & INTERNED_SPEND_LIST) != 0
+        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT and not interned:
             if not is_canonical_serialization(generator_bytes):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 

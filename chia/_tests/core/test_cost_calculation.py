@@ -4,7 +4,14 @@ import logging
 import pathlib
 
 import pytest
-from chia_rs import G1Element, get_flags_for_height_and_constants
+from chia_rs import (
+    INTERNED_SPEND_LIST,
+    G1Element,
+    generator_interned_vbytes,
+    get_flags_for_height_and_constants,
+    solution_generator,
+    solution_generator_2026,
+)
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -16,7 +23,7 @@ from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_2026
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, run_with_cost
@@ -25,6 +32,10 @@ from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
+# a classic generator is (q . spend-list-wrapper): this prefix, and the cost of
+# running it
+QUOTE_PREFIX = bytes.fromhex("ff01")
+QUOTE_COST = 20
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
 log = logging.getLogger(__name__)
@@ -71,7 +82,11 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
         coinbase,
     )
     assert spend_bundle is not None
-    program: BlockGenerator = simple_solution_generator(spend_bundle)
+    flags = get_flags_for_height_and_constants(softfork_height, bt.constants)
+    interned = (flags & INTERNED_SPEND_LIST) != 0
+    program: BlockGenerator = (
+        simple_solution_generator_2026(spend_bundle) if interned else simple_solution_generator(spend_bundle)
+    )
 
     npc_result: NPCResult = get_name_puzzle_conditions(
         program,
@@ -82,17 +97,18 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     )
 
     assert npc_result.error is None
-    assert len(bytes(program.program)) == 433
+    if not interned:
+        assert len(bytes(program.program)) == 433
 
     coin_spend = spend_bundle.coin_spends[0]
     assert npc_result.conds is not None
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
     puzzle, solution = get_puzzle_and_solution_for_coin(
-        SerializedProgram.from_bytes(program.program),
+        program.program,
         program.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin_spend.coin,
-        get_flags_for_height_and_constants(softfork_height, bt.constants),
+        flags,
     )
     assert puzzle == coin_spend.puzzle_reveal
     assert solution == coin_spend.solution
@@ -107,13 +123,16 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
         clvm_cost = 27360
     else:
         clvm_cost = 404560
-    byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
+    if interned:
+        # a serde_2026 spend list isn't run (so there's no quote cost), and
+        # its size is charged by interned vbytes of the spend list wrapper
+        clvm_cost -= QUOTE_COST
+        spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
+        spend_list_wrapper = solution_generator(spends)[len(QUOTE_PREFIX) :]
+        byte_cost = generator_interned_vbytes(spend_list_wrapper) * bt.constants.COST_PER_BYTE
+    else:
+        byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
     assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
-
-    # Create condition + agg_sig_condition + length + cpu_cost
-    assert (
-        npc_result.conds.cost == condition_cost + len(bytes(program.program)) * bt.constants.COST_PER_BYTE + clvm_cost
-    )
 
 
 @pytest.mark.anyio
@@ -149,7 +168,17 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
             f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
         ).as_bin()
     )
+    coin = Coin(
+        bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
+        bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
+        uint64(300),
+    )
     generator = BlockGenerator(bytes(program), [])
+    flags = get_flags_for_height_and_constants(softfork_height, bt.constants)
+    if flags & INTERNED_SPEND_LIST:
+        # the same spend, as a serde_2026 serialized spend list
+        solution = Program.from_bytes(bytes(program)).at("rffrrrf")
+        generator = BlockGenerator(solution_generator_2026([(coin, bytes(puzzle), bytes(solution))]), [])
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator,
         bt.constants.MAX_BLOCK_COST_CLVM,
@@ -167,17 +196,12 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     )
     assert npc_result.error is None
 
-    coin = Coin(
-        bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
-        bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
-        uint64(300),
-    )
     puz, _solution = get_puzzle_and_solution_for_coin(
-        SerializedProgram.from_bytes(generator.program),
+        generator.program,
         generator.generator_refs,
         bt.constants.MAX_BLOCK_COST_CLVM,
         coin,
-        get_flags_for_height_and_constants(0, bt.constants),
+        flags,
     )
     assert puz == puzzle.to_serialized()
 
@@ -321,7 +345,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
         for _ in range(3):
             for c in spent_coins:
                 puz, _solution = get_puzzle_and_solution_for_coin(
-                    SerializedProgram.from_bytes(block_generator.program),
+                    block_generator.program,
                     block_generator.generator_refs,
                     test_constants.MAX_BLOCK_COST_CLVM,
                     c,
