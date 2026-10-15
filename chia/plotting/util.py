@@ -303,3 +303,15 @@ def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
         )
     elif k < 25 and override_k:
         raise ValueError("Error: The minimum k size allowed from the cli is k=25.")
+
+
+def validate_v2_plot_params(
+    *,
+    strength: int,
+    min_strength: int,
+    max_strength: int,
+) -> None:
+    if strength < min_strength or strength > max_strength:
+        raise ValueError(
+            f"Plot strength must be between {min_strength} and {max_strength} (inclusive), got {strength}."
+        )
