@@ -7,18 +7,18 @@ from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import NewPeak
+from chia.protocols.full_node_protocol import NewPeak, RespondPeers
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 
 @pytest.mark.anyio
@@ -130,6 +130,44 @@ async def test_crawler_to_db(crawler_service_no_loop: CrawlerService, one_node: 
 
 
 @pytest.mark.anyio
+async def test_crawler_unbindable_timestamp(
+    crawler_service_no_loop: CrawlerService, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    A record whose best_timestamp is too large for sqlite to bind must be skipped instead of
+    abandoning the batch and leaving good_peers stale.
+    """
+    crawler = crawler_service_no_loop._node
+    crawl_store = crawler.crawl_store
+    assert crawl_store is not None
+    good_address = "10.0.0.1"
+    bad_address = "10.0.0.2"
+
+    for peer_address, best_timestamp in [(good_address, uint64(time.time())), (bad_address, uint64(2**64 - 1))]:
+        peer_record = PeerRecord(
+            peer_address,
+            peer_address,
+            uint32(8444),
+            False,
+            uint64(0),
+            uint32(0),
+            uint64(0),
+            uint64(time.time()),
+            best_timestamp,
+            "undefined",
+            uint64(0),
+            tls_version="unknown",
+        )
+        await crawl_store.add_peer(peer_record, PeerReliability(peer_address, tries=1, successes=1))
+
+    with caplog.at_level(logging.ERROR):
+        await crawler.save_to_db()
+
+    assert f"Skipping peer {bad_address}" in caplog.text
+    assert good_address in await crawl_store.get_good_peers()
+
+
+@pytest.mark.anyio
 async def test_crawler_peer_cleanup(
     crawler_service_no_loop: CrawlerService, one_node: SimulatorsAndWalletsServices
 ) -> None:
@@ -175,3 +213,89 @@ async def test_crawler_peer_cleanup(
     assert 4 == len(crawl_store.host_to_records)
     good_peers = await crawl_store.get_good_peers()
     assert set(good_peers) == {"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"}, good_peers
+
+
+def _stale_peer_record(host: str, best_timestamp: uint64) -> PeerRecord:
+    return PeerRecord(
+        host,
+        host,
+        uint32(8444),
+        False,
+        uint64(0),
+        uint32(0),
+        uint64(0),
+        uint64(time.time()),
+        best_timestamp,
+        "undefined",
+        uint64(0),
+        tls_version="unknown",
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("invalid_timestamp", [uint64(0), uint64(99_999_999), uint64(2**64 - 1)])
+async def test_invalid_gossip_does_not_refresh_best_timestamp(
+    crawler_service_no_loop: CrawlerService, invalid_timestamp: uint64
+) -> None:
+    """
+    Out-of-range gossip timestamps must be ignored. Substituting now-5-days and then
+    taking max() would keep stale records past prune_old_peers and inflate recent-peer RPC counts.
+    """
+    crawler = crawler_service_no_loop._node
+    crawl_store = crawler.crawl_store
+    assert crawl_store is not None
+
+    known_host = "10.0.0.8"
+    unknown_host = "10.0.0.9"
+    old_timestamp = uint64((datetime.now() - timedelta(days=40)).timestamp())
+    await crawl_store.add_peer(_stale_peer_record(known_host, old_timestamp), PeerReliability(known_host))
+    crawler.best_timestamp_per_peer[known_host] = old_timestamp
+
+    crawler.peers_retrieved = [
+        RespondPeers(
+            [
+                TimestampedPeerInfo(known_host, uint16(8444), invalid_timestamp),
+                TimestampedPeerInfo(unknown_host, uint16(8444), invalid_timestamp),
+            ]
+        )
+    ]
+    await crawler.ingest_retrieved_peers()
+
+    assert crawl_store.host_to_records[known_host].best_timestamp == old_timestamp
+    assert crawler.best_timestamp_per_peer[known_host] == old_timestamp
+    assert unknown_host not in crawler.best_timestamp_per_peer
+    assert unknown_host not in crawl_store.host_to_records
+    assert unknown_host not in crawler.seen_nodes
+
+    await crawl_store.prune_old_peers(older_than_days=31)
+    assert known_host not in crawl_store.host_to_records
+
+
+@pytest.mark.anyio
+async def test_valid_gossip_updates_best_timestamp(crawler_service_no_loop: CrawlerService) -> None:
+    crawler = crawler_service_no_loop._node
+    crawl_store = crawler.crawl_store
+    assert crawl_store is not None
+
+    known_host = "10.0.0.10"
+    new_host = "10.0.0.11"
+    old_timestamp = uint64((datetime.now() - timedelta(days=40)).timestamp())
+    fresh_timestamp = uint64(time.time() - 60)
+    await crawl_store.add_peer(_stale_peer_record(known_host, old_timestamp), PeerReliability(known_host))
+    crawler.best_timestamp_per_peer[known_host] = old_timestamp
+
+    crawler.peers_retrieved = [
+        RespondPeers(
+            [
+                TimestampedPeerInfo(known_host, uint16(8444), fresh_timestamp),
+                TimestampedPeerInfo(new_host, uint16(8444), fresh_timestamp),
+            ]
+        )
+    ]
+    await crawler.ingest_retrieved_peers()
+
+    assert crawl_store.host_to_records[known_host].best_timestamp == fresh_timestamp
+    assert crawler.best_timestamp_per_peer[known_host] == fresh_timestamp
+    assert crawler.best_timestamp_per_peer[new_host] == fresh_timestamp
+    assert new_host in crawl_store.host_to_records
+    assert crawl_store.host_to_records[new_host].best_timestamp == fresh_timestamp
