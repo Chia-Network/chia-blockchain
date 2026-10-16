@@ -33,7 +33,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import ParentAbsorb, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -459,7 +459,10 @@ class Wallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         # We need to sandbox this because this method isn't supposed to lock up the coins
-        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+        async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
             return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking

@@ -43,7 +43,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, ParentAbsorb, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
@@ -339,11 +339,16 @@ class TradeManager:
 
                 # ATTENTION: new_wallets
                 assert isinstance(wallet, (Wallet, CATWallet, DataLayerWallet, NFTWallet))
-                async with self.wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config.override(
+                async with action_scope.sandbox(
+                    wallet_state_manager=self.wallet_state_manager,
+                    config_override=action_scope.config.tx_config.override(
                         excluded_coin_ids=[],
                     ),
-                    push=False,
+                    parent_absorb=dataclasses.replace(
+                        ParentAbsorb.nothing(),
+                        puzzle_hash_subscriptions=True,
+                        coin_subscriptions=True,
+                    ),
                 ) as inner_action_scope:
                     await wallet.generate_signed_transaction(
                         [amount_to_pay],
@@ -353,12 +358,6 @@ class TradeManager:
                         coins=selected_coins,
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
-
-                async with action_scope.use() as interface:
-                    interface.side_effects.puzzle_hash_subscriptions.extend(
-                        inner_action_scope.side_effects.puzzle_hash_subscriptions
-                    )
-                    interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
 
                 cancellation_additions.extend(
                     [
@@ -613,19 +612,16 @@ class TradeManager:
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
-            all_transactions: list[TransactionRecord] = []
-            fee_left_to_pay: uint64 = fee
-            # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
-            # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
-            for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
-                selected_coins = coins_to_offer[id]
-                if isinstance(id, int):
-                    wallet = self.wallet_state_manager.wallets.get(uint32(id))
-                else:
-                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
-                async with self.wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config, push=False
-                ) as inner_action_scope:
+            async with action_scope.sandbox(wallet_state_manager=self.wallet_state_manager) as sandbox:
+                fee_left_to_pay: uint64 = fee
+                # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay
+                # fee with the XCH side of the offer and don't create an extra fee transaction in other wallets.
+                for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
+                    selected_coins = coins_to_offer[id]
+                    if isinstance(id, int):
+                        wallet = self.wallet_state_manager.wallets.get(uint32(id))
+                    else:
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
                     # This should probably not switch on whether or not we're spending XCH but it has to for now
                     assert wallet is not None
                     if wallet.type() == WalletType.NFT:
@@ -637,7 +633,7 @@ class TradeManager:
                             # [abs(offer_dict[id])],
                             amounts,
                             [Offer.ph()],
-                            inner_action_scope,
+                            sandbox,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
@@ -648,23 +644,18 @@ class TradeManager:
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
-                            inner_action_scope,
+                            sandbox,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                             add_authorizations_to_cr_cats=False,
                         )
 
-                all_transactions.extend(inner_action_scope.side_effects.transactions)
-
-                fee_left_to_pay = uint64(0)
-                extra_conditions = tuple()
-
-            async with action_scope.use() as interface:
-                interface.side_effects.transactions.extend(all_transactions)
+                    fee_left_to_pay = uint64(0)
+                    extra_conditions = tuple()
 
             total_spend_bundle = WalletSpendBundle.aggregate(
-                [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
+                [x.spend_bundle for x in sandbox.side_effects.transactions if x.spend_bundle is not None]
             )
 
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
@@ -861,8 +852,14 @@ class TradeManager:
         if not valid:
             raise ValueError("This offer is no longer valid")
         # We need to sandbox the transactions here because we're going to make our own
-        async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+        async with action_scope.sandbox(
+            wallet_state_manager=self.wallet_state_manager,
+            parent_absorb=dataclasses.replace(
+                ParentAbsorb.nothing(),
+                get_unused_derivation_record_result=True,
+                puzzle_hash_subscriptions=True,
+                coin_subscriptions=True,
+            ),
         ) as inner_action_scope:
             result = await self._create_offer_for_ids(
                 take_offer_dict,
@@ -882,19 +879,6 @@ class TradeManager:
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope
             )
 
-        async with action_scope.use() as interface:
-            if interface.side_effects.get_unused_derivation_record_result is not None:
-                # This error is of a protection against potential misues of this band-aid solution.
-                # We should put more thought into how sub-action scopes are generated and what effects
-                # we might want to push. A ticket to this respect can be found [CHIA-2984].
-                raise ValueError("Cannot use `respond_to_offer` with existing puzzle hash generation")
-            interface.side_effects.get_unused_derivation_record_result = (
-                inner_action_scope.side_effects.get_unused_derivation_record_result
-            )
-            interface.side_effects.puzzle_hash_subscriptions.extend(
-                inner_action_scope.side_effects.puzzle_hash_subscriptions
-            )
-            interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(

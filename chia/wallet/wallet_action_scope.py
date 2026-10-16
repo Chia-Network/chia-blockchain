@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from typing import TYPE_CHECKING, cast, final
 
 from chia_rs.chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.plotnft_drivers import PoolConfig
@@ -118,6 +119,50 @@ class WalletActionConfig:
         )
 
 
+@dataclass(frozen=True, kw_only=True)
+class ChildSeed:
+    """A way to specify for a sandbox scope what side effects should propogate down from the parent"""
+
+    transactions: bool = False
+    signing_responses: bool = False
+    extra_spends: bool = False
+    selected_coins: bool = True
+    singleton_records: bool = True
+    plotnft_exiting_info: bool = True
+    get_unused_derivation_record_result: bool = True
+    puzzle_hash_subscriptions: bool = False
+    coin_subscriptions: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
+class ParentAbsorb:
+    """A way to specify for a sandbox scope what side effects should propogate up from the child"""
+
+    transactions: bool = True
+    signing_responses: bool = True
+    extra_spends: bool = True
+    selected_coins: bool = True
+    singleton_records: bool = True
+    plotnft_exiting_info: bool = True
+    get_unused_derivation_record_result: bool = True
+    puzzle_hash_subscriptions: bool = True
+    coin_subscriptions: bool = True
+
+    @classmethod
+    def nothing(cls) -> Self:
+        return cls(
+            transactions=False,
+            signing_responses=False,
+            extra_spends=False,
+            selected_coins=False,
+            singleton_records=False,
+            plotnft_exiting_info=False,
+            get_unused_derivation_record_result=False,
+            puzzle_hash_subscriptions=False,
+            coin_subscriptions=False,
+        )
+
+
 class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
     async def _get_unused_derivation_path(
         self, wallet_state_manager: WalletStateManager
@@ -170,6 +215,48 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
         else:
             return await self._get_new_puzzle_hash(wallet_state_manager)
 
+    @contextlib.asynccontextmanager
+    async def sandbox(
+        self,
+        *,
+        wallet_state_manager: WalletStateManager,
+        config_override: TXConfig | None = None,
+        child_seed: ChildSeed = ChildSeed(),
+        parent_absorb: ParentAbsorb = ParentAbsorb(),
+    ) -> AsyncIterator[Self]:
+        # build child side effects object
+        child_side_effects = WalletSideEffects()
+        async with self.use() as interface:  # Hold the parent so only the sandbox is active
+            for f in fields(child_seed):  # Bring specified parent effects down into the sandbox
+                if getattr(child_seed, f.name):
+                    setattr(child_side_effects, f.name, getattr(interface.side_effects, f.name))
+            async with new_wallet_action_scope(  # create the sandbox
+                wallet_state_manager,
+                tx_config=config_override if config_override is not None else self.config.tx_config,
+                push=False,
+                merge_spends=self.config.merge_spends,
+                # Nested scopes historically auto-signed (new_action_scope default); do not inherit
+                # parent sign=False (e.g. take_offer) or offer halves are built unsigned.
+                sign=None,
+                additional_signing_responses=[],
+                extra_spends=[],
+                puzzle_for_pk=self.config.puzzle_for_pk,
+                _initial_side_effects=child_side_effects,
+            ) as inner:
+                inner = cast(Self, inner)
+                yield inner
+
+            for f in fields(parent_absorb):  # bubble sandbox effects up
+                if getattr(parent_absorb, f.name):
+                    sandbox_side_effect = getattr(inner.side_effects, f.name)
+                    parent_side_effect = getattr(interface.side_effects, f.name)
+                    # We have different semantics for lists that are not seeded
+                    # We don't want to overwrite the original list, we want to extend it
+                    if isinstance(sandbox_side_effect, list) and not getattr(child_seed, f.name):
+                        parent_side_effect.extend(sandbox_side_effect)
+                    elif sandbox_side_effect is not None:
+                        setattr(interface.side_effects, f.name, sandbox_side_effect)
+
     # TODO: this should be part of the side effects like everything else
     def dispatch_websocket_event(self, wallet_state_manager: WalletStateManager, event: WebSocketEvent) -> None:
         wallet_state_manager._dispatch_websocket_event(event)
@@ -185,12 +272,13 @@ async def new_wallet_action_scope(
     additional_signing_responses: list[SigningResponse] = [],
     extra_spends: list[WalletSpendBundle] = [],
     puzzle_for_pk: Callable[[G1Element], Program] | None = None,
+    _initial_side_effects: WalletSideEffects = WalletSideEffects(),
 ) -> AsyncIterator[WalletActionScope]:
     if puzzle_for_pk is None:
         puzzle_for_pk = wallet_state_manager.main_wallet.puzzle_for_pk
     assert puzzle_for_pk is not None
     async with WalletActionScope.new_scope(
-        WalletSideEffects(),
+        _initial_side_effects,
         WalletActionConfig(
             push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, puzzle_for_pk
         ),

@@ -1003,9 +1003,7 @@ class NFTWallet:
                     wallet = await wallet_state_manager.get_wallet_for_asset_id(asset)
 
                 # First, sending all the coins to the OFFER_MOD
-                async with wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config, push=False
-                ) as inner_action_scope:
+                async with action_scope.sandbox(wallet_state_manager=wallet_state_manager) as inner_action_scope:
                     if asset in fungible_asset_dict:
                         payments = royalty_payments[asset] if asset in royalty_payments else []
                         payment_sum = sum(p.amount for _, p in payments)
@@ -1146,9 +1144,6 @@ class NFTWallet:
         )
         aggregate_bundle = WalletSpendBundle.aggregate([txs_bundle, *additional_bundles])
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(all_transactions)
-
         return offer
 
     async def set_bulk_nft_did(
