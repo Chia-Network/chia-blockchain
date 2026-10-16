@@ -422,7 +422,9 @@ async def test_static_peers_with_hostnames(
 
 
 @pytest.mark.anyio
-async def test_static_peers_with_unresolvable_hostnames(seeder_service: DNSServer) -> None:
+async def test_static_peers_with_unresolvable_hostnames(
+    seeder_service: DNSServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
     def make_rrset(name: str, rdtype: dns.rdatatype.RdataType, address: str) -> RRset:
         rrset = RRset(from_text(name), IN, rdtype)
         record_class = A if rdtype == A_TYPE else AAAA
@@ -447,9 +449,11 @@ async def test_static_peers_with_unresolvable_hostnames(seeder_service: DNSServe
 
     mock_resolver = AsyncMock()
     mock_resolver.resolve.side_effect = mock_resolve
-    seeder_service.resolver = mock_resolver
+    monkeypatch.setattr(seeder_service, "resolver", mock_resolver)
     # A failure resolving one static peer must not discard the static peers resolved before or after it
-    seeder_service.config["static_peers"] = ["v4only.example.com", "missing.example.com", "node.example.com"]
+    monkeypatch.setitem(
+        seeder_service.config, "static_peers", ["v4only.example.com", "missing.example.com", "node.example.com"]
+    )
     await seeder_service.refresh_reliable_peers()
 
     assert sorted(str(ip) for ip in seeder_service.reliable_peers_v4) == ["1.2.3.4", "5.6.7.8"]
