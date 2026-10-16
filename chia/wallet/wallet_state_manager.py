@@ -1828,7 +1828,6 @@ class WalletStateManager:
         extra_spends: list[WalletSpendBundle] | None = None,
         singleton_records: list[SingletonRecord] = [],
         plotnft_exiting_info: PlotNFTTargetStateInfo | None = None,
-        puzzle_hash_and_coin_subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -1881,9 +1880,7 @@ class WalletStateManager:
                 if plotnft_exiting_info is not None:
                     await self.plotnft2_store.add_exiting_info(exiting_info=plotnft_exiting_info)
 
-            await self._add_subscriptions(
-                [*puzzle_hash_and_coin_subscriptions, *(CoinSubscription(target=name) for name in all_coins_names)]
-            )
+            await self._add_subscriptions([CoinSubscription(target=name) for name in all_coins_names])
 
             if actual_spend_involved:
                 self.tx_pending_changed()

@@ -209,7 +209,7 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     # Register interest without associating it to any RemoteWallet id.
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         async with action_scope.use() as interface:
-            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=created_coin.puzzle_hash))
+            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=coin_id))
 
     await wallet_environments.process_pending_states(
         [WalletStateTransition(pre_block_balance_updates={1: {"set_remainder": True}})]

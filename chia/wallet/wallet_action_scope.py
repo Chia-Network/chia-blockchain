@@ -212,10 +212,10 @@ async def new_wallet_action_scope(
             extra_spends=self.side_effects.extra_spends,
             singleton_records=self.side_effects.singleton_records,
             plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
-            puzzle_hash_and_coin_subscriptions=[
-                *self.side_effects.puzzle_hash_subscriptions,
-                *self.side_effects.coin_subscriptions,
-            ],
         )
-    if push and self.side_effects.get_unused_derivation_record_result is not None:
-        await self.side_effects.get_unused_derivation_record_result.commit(wallet_state_manager)
+    if push:
+        await wallet_state_manager._add_subscriptions(
+            [*self.side_effects.puzzle_hash_subscriptions, *self.side_effects.coin_subscriptions]
+        )
+        if self.side_effects.get_unused_derivation_record_result is not None:
+            await self.side_effects.get_unused_derivation_record_result.commit(wallet_state_manager)
