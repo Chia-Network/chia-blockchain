@@ -612,17 +612,16 @@ class TradeManager:
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
-            all_transactions: list[TransactionRecord] = []
-            fee_left_to_pay: uint64 = fee
-            # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
-            # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
-            for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
-                selected_coins = coins_to_offer[id]
-                if isinstance(id, int):
-                    wallet = self.wallet_state_manager.wallets.get(uint32(id))
-                else:
-                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
-                async with action_scope.sandbox(wallet_state_manager=self.wallet_state_manager) as inner_action_scope:
+            async with action_scope.sandbox(wallet_state_manager=self.wallet_state_manager) as sandbox:
+                fee_left_to_pay: uint64 = fee
+                # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay
+                # fee with the XCH side of the offer and don't create an extra fee transaction in other wallets.
+                for id in sorted(coins_to_offer.keys(), key=lambda id: id != 1):
+                    selected_coins = coins_to_offer[id]
+                    if isinstance(id, int):
+                        wallet = self.wallet_state_manager.wallets.get(uint32(id))
+                    else:
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
                     # This should probably not switch on whether or not we're spending XCH but it has to for now
                     assert wallet is not None
                     if wallet.type() == WalletType.NFT:
@@ -634,7 +633,7 @@ class TradeManager:
                             # [abs(offer_dict[id])],
                             amounts,
                             [Offer.ph()],
-                            inner_action_scope,
+                            sandbox,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
@@ -645,20 +644,18 @@ class TradeManager:
                         await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
-                            inner_action_scope,
+                            sandbox,
                             fee=fee_left_to_pay,
                             coins=selected_coins,
                             extra_conditions=(*extra_conditions, *announcements_to_assert),
                             add_authorizations_to_cr_cats=False,
                         )
 
-                all_transactions.extend(inner_action_scope.side_effects.transactions)
-
-                fee_left_to_pay = uint64(0)
-                extra_conditions = tuple()
+                    fee_left_to_pay = uint64(0)
+                    extra_conditions = tuple()
 
             total_spend_bundle = WalletSpendBundle.aggregate(
-                [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
+                [x.spend_bundle for x in sandbox.side_effects.transactions if x.spend_bundle is not None]
             )
 
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
