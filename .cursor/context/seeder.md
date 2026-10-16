@@ -105,7 +105,10 @@ Read this for crawler peer discovery, crawler DB scoring/persistence, DNS seed r
   return `NXDOMAIN`; valid answers always include NS and SOA authority records.
 - `static_peers` are merged into each refresh. Literal IPs are accepted directly;
   hostnames are resolved for both `A` and `AAAA` with a source-defined lifetime
-  when the async resolver is available.
+  when the async resolver is available. A failed lookup is logged and skipped
+  for that hostname and record type only; it must not discard the other static
+  peers or the `good_peers` loaded from the DB. The periodic refresh task also
+  logs and survives refresh errors, because nothing awaits it.
 - Peer answer rotation is round-robin per address family, not random per query.
   `CrawlStore.get_good_peers()` shuffles DB results before DNS loads them, then
   DNS pointer state controls fairness between refreshes.

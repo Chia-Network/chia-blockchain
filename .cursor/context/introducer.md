@@ -66,9 +66,9 @@ Read this for introducer peer collection, TCP vetting, DNS fallback, introducer 
 - DNS answers are returned with normalized timestamps, the same trust level as
   introducer peers on the receiving side. Do not treat DNS fallback as stronger
   evidence than the local vetting set.
-- `get_peers_from_dns()` currently lets resolver exceptions propagate to the API
-  handler. A failing DNS query can therefore fail the request instead of
-  returning the partial vetted peer list unless callers add explicit handling.
+- `get_peers_from_dns()` catches and logs a failure for each record type, so a
+  failing or IPv4-only DNS seeder only shrinks the DNS contribution; the vetted
+  peers and any records already resolved are still returned.
 
 ## Wire Protocol Contracts
 
