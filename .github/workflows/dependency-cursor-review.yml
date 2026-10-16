@@ -1,22 +1,14 @@
 # Managed by repo-content-updater
 # Dependency Cursor Review workflow
 #
-# Runs Cursor CLI analysis for Dependabot/Renovate PRs by using:
-# - Dependabot PR body release notes + commit list
-# - An upstream dependency checkout
-# - Local usage hints in the target repo
-#
-# Source documentation: https://cursor.com/docs/cli/github-actions
+# Three jobs, three runners. The agent job is the only one that runs `agent`,
+# and it cannot reach the machine that checks the scan digest or posts the
+# verdict. The required check is the `dependency-review` job.
 #
 # Dependabot pull_request runs again on rebase, recreate, and rebuild. The
-# trusted helper is copied to RUNNER_TEMP before the PR checkout, which
-# deletes the workspace copy. The marker is the stable patch id of the PR
-# diff from the API, not a commit message. Later steps skip when
-# github-actions[bot] has already commented that marker. A content change
-# still reviews. If the commits are not verified Dependabot commits created
-# by web-flow, or the diff has no patch id, the review runs. The resolve and
-# comment steps load the RUNNER_TEMP copies. Renovate and workflow_dispatch
-# always run. A skip leaves this check green.
+# marker is the stable patch id of the PR diff. A later run skips when
+# github-actions[bot] has already commented that marker. The marker is stamped
+# only when the combined review is complete. A skip leaves this check green.
 name: Dependency Cursor Review
 
 on:
@@ -35,13 +27,31 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  dependency-review:
+  dependency-review-scan:
     if: github.repository_owner == 'Chia-Network' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'renovate[bot]')))
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      already_reviewed: ${{ steps.target_pr.outputs.already_reviewed }}
+      review_marker: ${{ steps.target_pr.outputs.review_marker }}
+      number: ${{ steps.target_pr.outputs.number }}
+      title: ${{ steps.target_pr.outputs.title }}
+      head_sha: ${{ steps.target_pr.outputs.head_sha }}
+      package_name: ${{ steps.dependabot_context.outputs.package_name }}
+      from_version: ${{ steps.dependabot_context.outputs.from_version }}
+      to_version: ${{ steps.dependabot_context.outputs.to_version }}
+      upstream_repo: ${{ steps.dependabot_context.outputs.upstream_repo }}
+      resolved_from: ${{ steps.malware_scan.outputs.resolved_from }}
+      resolved_to: ${{ steps.malware_scan.outputs.resolved_to }}
+      status: ${{ steps.malware_scan.outputs.status }}
+      changed_files_count: ${{ steps.malware_scan.outputs.changed_files_count }}
+      report_sha256: ${{ steps.malware_scan.outputs.report_sha256 }}
+      summary: ${{ steps.malware_scan.outputs.summary }}
     steps:
       - name: Checkout trusted target-PR helper
         uses: actions/checkout@v7
@@ -51,7 +61,6 @@ jobs:
           sparse-checkout: |
             .github/scripts/dependency-cursor-review-target-pr.js
             .github/scripts/dependency-cursor-review-dependabot-context.js
-            .github/scripts/dependency-cursor-review-post-comment.js
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -65,7 +74,6 @@ jobs:
           cp -a .trusted-dcr-helper/.github/scripts/. "${dest}/"
           test -s "${dest}/dependency-cursor-review-target-pr.js"
           test -s "${dest}/dependency-cursor-review-dependabot-context.js"
-          test -s "${dest}/dependency-cursor-review-post-comment.js"
 
       - name: Resolve target PR context
         id: target_pr
@@ -110,29 +118,7 @@ jobs:
           token: ${{ github.token }}
           ref: ${{ github.event.repository.default_branch }}
           paths_manifest: .github/scripts/dependency-cursor-review-trusted-scripts.paths
-
-      - name: Install Cursor CLI
-        if: steps.target_pr.outputs.already_reviewed != 'true'
-        shell: bash
-        run: |
-          installer="$(mktemp)"
-          trap 'rm -f "$installer"' EXIT
-          curl https://cursor.com/install -fsSL -o "$installer"
-          if [ ! -s "$installer" ]; then
-            echo "Cursor installer download was empty."
-            exit 1
-          fi
-          bash "$installer"
-          for bin_dir in "$HOME/.cursor/bin" "$HOME/.local/bin"; do
-            if [ -d "$bin_dir" ]; then
-              echo "$bin_dir" >> "$GITHUB_PATH"
-              export PATH="$bin_dir:$PATH"
-            fi
-          done
-          if ! command -v agent >/dev/null 2>&1; then
-            echo "Could not locate 'agent' binary after Cursor CLI install."
-            exit 1
-          fi
+          dest: ${{ runner.temp }}/trusted-dcr-scripts
 
       - name: Extract Dependabot comment context
         if: steps.target_pr.outputs.already_reviewed != 'true'
@@ -144,8 +130,9 @@ jobs:
           PR_NUMBER: ${{ steps.target_pr.outputs.number }}
         with:
           script: |
-            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/dependency-cursor-review-dependabot-context.js`);
+            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency-cursor-review-dependabot-context.js`);
             await run({ github, context, core });
+
       - name: Prepare upstream checkout directory
         if: steps.target_pr.outputs.already_reviewed != 'true'
         run: mkdir -p ".upstream-dependency"
@@ -158,16 +145,6 @@ jobs:
           path: .upstream-dependency
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Remove upstream agent-instruction files
-        if: steps.target_pr.outputs.already_reviewed != 'true'
-        shell: bash
-        run: |
-          rm -rf .upstream-dependency/.cursor || true
-          rm -f .upstream-dependency/.cursorrules || true
-          rm -f .upstream-dependency/.cursorignore || true
-          rm -f .upstream-dependency/AGENTS.md || true
-          rm -f .upstream-dependency/CLAUDE.md || true
 
       - name: Run upstream malware scan
         if: steps.target_pr.outputs.already_reviewed != 'true'
@@ -192,7 +169,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ripgrep jq
-          bash .github/scripts/upstream_malware_scan.sh
+          bash "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/upstream_malware_scan.sh"
+          if [ ! -s malware_scan_report.json ]; then
+            echo "Malware scan report missing." >&2
+            exit 1
+          fi
+          report_line="$(sha256sum malware_scan_report.json)"
+          report_sha256="${report_line%% *}"
+          if [ -z "$report_sha256" ]; then
+            echo "Malware scan report digest was empty." >&2
+            exit 1
+          fi
+          echo "report_sha256=${report_sha256}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out upstream release and drop agent instructions
+        if: steps.target_pr.outputs.already_reviewed != 'true'
+        shell: bash
+        run: |
+          bash "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/upstream_release_checkout.sh"
+
       - name: Gather local usage hints
         if: steps.target_pr.outputs.already_reviewed != 'true'
         shell: bash
@@ -209,25 +204,156 @@ jobs:
             } > package_usage.txt
           fi
 
-      - name: Run Cursor analysis
-        id: cursor_analysis
+      - name: Build Cursor prompts
         if: steps.target_pr.outputs.already_reviewed != 'true'
-        timeout-minutes: 10
+        shell: bash
         env:
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           PR_TITLE: ${{ steps.target_pr.outputs.title }}
           PR_BODY: ${{ steps.target_pr.outputs.body }}
           PACKAGE_NAME: ${{ steps.dependabot_context.outputs.package_name }}
           FROM_VERSION: ${{ steps.dependabot_context.outputs.from_version }}
           TO_VERSION: ${{ steps.dependabot_context.outputs.to_version }}
-        shell: bash
         run: |
-          if [ -z "$CURSOR_API_KEY" ]; then
-            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}' > cursor_output.json
-            exit 0
+          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency_cursor_review_prompts.py"
+          if [ ! -f upstream_changed_files.txt ]; then
+            : > upstream_changed_files.txt
           fi
 
-          python3 -I .github/scripts/dependency_cursor_review_prompts.py
+      - name: Upload scan inputs
+        if: always() && steps.target_pr.outputs.already_reviewed != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dcr-scan-${{ github.run_id }}
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            malware_scan_report.json
+            malware_scan_summary.md
+            upstream_changed_files.txt
+            cursor_prompt_malware.txt
+            cursor_prompt_compatibility.txt
+
+  dependency-review-agent:
+    needs: dependency-review-scan
+    if: ${{ needs.dependency-review-scan.result == 'success' && needs.dependency-review-scan.outputs.already_reviewed != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.dependency-review-scan.outputs.head_sha }}
+          persist-credentials: false
+
+      - name: Checkout trusted instruction strip
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .dcr-strip
+          sparse-checkout: |
+            .github/scripts/upstream_release_checkout.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Checkout upstream release
+        if: ${{ needs.dependency-review-scan.outputs.resolved_to != '' }}
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ needs.dependency-review-scan.outputs.upstream_repo }}
+          ref: ${{ needs.dependency-review-scan.outputs.resolved_to }}
+          path: .upstream-dependency
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch upstream from commit
+        if: ${{ needs.dependency-review-scan.outputs.resolved_from != '' && needs.dependency-review-scan.outputs.resolved_to != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESOLVED_FROM: ${{ needs.dependency-review-scan.outputs.resolved_from }}
+        run: |
+          set -euo pipefail
+          auth_basic="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
+          git -C .upstream-dependency \
+            -c "http.extraheader=AUTHORIZATION: basic ${auth_basic}" \
+            fetch --no-tags --depth=1 origin "${RESOLVED_FROM}"
+
+      - name: Drop agent instructions
+        if: ${{ needs.dependency-review-scan.outputs.resolved_to != '' }}
+        shell: bash
+        env:
+          RESOLVED_TO: ${{ needs.dependency-review-scan.outputs.resolved_to }}
+        run: |
+          bash .dcr-strip/.github/scripts/upstream_release_checkout.sh
+
+      - name: Download scan prompts
+        uses: actions/download-artifact@v7
+        with:
+          name: dcr-scan-${{ github.run_id }}
+          path: dcr-scan-input
+
+      - name: Install Cursor CLI
+        shell: bash
+        run: |
+          installer="$(mktemp)"
+          trap 'rm -f "$installer"' EXIT
+          curl https://cursor.com/install -fsSL -o "$installer"
+          if [ ! -s "$installer" ]; then
+            echo "Cursor installer download was empty."
+            exit 1
+          fi
+          bash "$installer"
+          for bin_dir in "$HOME/.cursor/bin" "$HOME/.local/bin"; do
+            if [ -d "$bin_dir" ]; then
+              echo "$bin_dir" >> "$GITHUB_PATH"
+              export PATH="$bin_dir:$PATH"
+            fi
+          done
+          if ! command -v agent >/dev/null 2>&1; then
+            echo "Could not locate 'agent' binary after Cursor CLI install."
+            exit 1
+          fi
+
+      - name: Refuse leftover credentials
+        shell: bash
+        env:
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: |
+          set -euo pipefail
+          if [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GH_TOKEN:-}" ]; then
+            echo "GITHUB_TOKEN is set." >&2
+            exit 1
+          fi
+          for repo in . .upstream-dependency .dcr-strip; do
+            if [ ! -e "${repo}/.git" ]; then
+              continue
+            fi
+            if git -C "$repo" config --get-regexp '^http\..*extraheader' >/dev/null 2>&1; then
+              echo "git http extraheader is set in ${repo}." >&2
+              exit 1
+            fi
+          done
+
+      - name: Run Cursor agent
+        shell: bash
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: |
+          set -euo pipefail
+          if [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GH_TOKEN:-}" ]; then
+            echo "GITHUB_TOKEN is set." >&2
+            exit 1
+          fi
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}' > cursor_output_malware.json
+            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}' > cursor_output_compatibility.json
+            exit 0
+          fi
 
           run_agent_prompt() {
             local prompt_file="$1"
@@ -238,33 +364,89 @@ jobs:
             fi
           }
 
-          run_agent_prompt "cursor_prompt_malware.txt" "cursor_output_malware.json"
-          run_agent_prompt "cursor_prompt_compatibility.txt" "cursor_output_compatibility.json"
+          run_agent_prompt "dcr-scan-input/cursor_prompt_malware.txt" "cursor_output_malware.json"
+          run_agent_prompt "dcr-scan-input/cursor_prompt_compatibility.txt" "cursor_output_compatibility.json"
 
-          python3 -I .github/scripts/dependency_cursor_review_combine_outputs.py
-      - name: Upload malware scan artifacts
-        if: always() && steps.target_pr.outputs.already_reviewed != 'true'
+      - name: Upload agent outputs
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: dependabot-malware-scan-${{ steps.target_pr.outputs.number }}
-          if-no-files-found: warn
+          name: dcr-agent-${{ github.run_id }}
+          retention-days: 1
+          if-no-files-found: error
           path: |
-            malware_scan_report.json
-            malware_scan_summary.md
-            upstream_changed_files.txt
+            cursor_output_malware.json
+            cursor_output_compatibility.json
 
-      # The patch-id marker is posted only after this analysis step succeeds.
-      # A failed combine or formatter leaves the PR eligible for re-review.
+  dependency-review:
+    needs:
+      - dependency-review-scan
+      - dependency-review-agent
+    if: ${{ always() && !cancelled() && needs.dependency-review-scan.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Fail closed when scan or agent failed
+        if: ${{ needs.dependency-review-scan.result != 'success' || (needs.dependency-review-agent.result != 'success' && needs.dependency-review-agent.result != 'skipped') }}
+        run: |
+          echo "scan=${{ needs.dependency-review-scan.result }} agent=${{ needs.dependency-review-agent.result }}" >&2
+          exit 1
+
+      - name: Already reviewed
+        if: ${{ needs.dependency-review-scan.result == 'success' && needs.dependency-review-scan.outputs.already_reviewed == 'true' }}
+        run: echo "This dependency upgrade was already reviewed."
+
+      - name: Checkout default-branch helpers
+        id: helpers
+        if: ${{ success() && needs.dependency-review-scan.result == 'success' && needs.dependency-review-scan.outputs.already_reviewed != 'true' && needs.dependency-review-agent.result == 'success' }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download scan inputs
+        if: ${{ success() && steps.helpers.outcome == 'success' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: dcr-scan-${{ github.run_id }}
+          path: dcr-scan-input
+
+      - name: Download agent outputs
+        if: ${{ success() && steps.helpers.outcome == 'success' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: dcr-agent-${{ github.run_id }}
+          path: dcr-agent-output
+
+      - name: Combine review
+        if: ${{ success() && steps.helpers.outcome == 'success' }}
+        shell: bash
+        env:
+          MALWARE_SCAN_REPORT_SHA256: ${{ needs.dependency-review-scan.outputs.report_sha256 }}
+          DCR_SCAN_REPORT: ${{ github.workspace }}/dcr-scan-input/malware_scan_report.json
+          DCR_MALWARE_JSON: ${{ github.workspace }}/dcr-agent-output/cursor_output_malware.json
+          DCR_COMPAT_JSON: ${{ github.workspace }}/dcr-agent-output/cursor_output_compatibility.json
+          DCR_COMBINED_JSON: ${{ github.workspace }}/cursor_output.json
+        run: |
+          python3 -I .github/scripts/dependency_cursor_review_combine_outputs.py
+          cp "$DCR_MALWARE_JSON" cursor_output_malware.json
+          cp "$DCR_COMPAT_JSON" cursor_output_compatibility.json
+
+      # The patch-id marker is posted only after combine writes a complete review.
+      # selectPostedMarker in the default-branch helper drops it otherwise.
       - name: Post or update PR comment
-        if: steps.cursor_analysis.outcome == 'success' && steps.target_pr.outputs.already_reviewed != 'true'
+        if: ${{ success() && steps.helpers.outcome == 'success' }}
         uses: actions/github-script@v9
         env:
-          PR_NUMBER: ${{ steps.target_pr.outputs.number }}
-          REVIEW_MARKER: ${{ steps.target_pr.outputs.review_marker }}
-          MALWARE_SCAN_STATUS: ${{ steps.malware_scan.outputs.status }}
-          MALWARE_SCAN_CHANGED_COUNT: ${{ steps.malware_scan.outputs.changed_files_count }}
-          MALWARE_SCAN_SUMMARY: ${{ steps.malware_scan.outputs.summary }}
+          PR_NUMBER: ${{ needs.dependency-review-scan.outputs.number }}
+          REVIEW_MARKER: ${{ needs.dependency-review-scan.outputs.review_marker }}
+          MALWARE_SCAN_STATUS: ${{ needs.dependency-review-scan.outputs.status }}
+          MALWARE_SCAN_CHANGED_COUNT: ${{ needs.dependency-review-scan.outputs.changed_files_count }}
+          MALWARE_SCAN_SUMMARY: ${{ needs.dependency-review-scan.outputs.summary }}
         with:
           script: |
-            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-helper/dependency-cursor-review-post-comment.js`);
+            const run = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/dependency-cursor-review-post-comment.js`);
             await run({ github, context, core });
