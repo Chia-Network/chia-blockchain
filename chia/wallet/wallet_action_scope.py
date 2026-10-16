@@ -238,8 +238,8 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
                 # Nested scopes historically auto-signed (new_action_scope default); do not inherit
                 # parent sign=False (e.g. take_offer) or offer halves are built unsigned.
                 sign=None,
-                additional_signing_responses=self.config.additional_signing_responses,
-                extra_spends=self.config.extra_spends,
+                additional_signing_responses=[],
+                extra_spends=[],
                 puzzle_for_pk=self.config.puzzle_for_pk,
                 _initial_side_effects=child_side_effects,
             ) as inner:
