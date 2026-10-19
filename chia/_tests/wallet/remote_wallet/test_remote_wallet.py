@@ -209,7 +209,7 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     # Register interest without associating it to any RemoteWallet id.
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         async with action_scope.use() as interface:
-            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=created_coin.puzzle_hash))
+            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=coin_id))
 
     await wallet_environments.process_pending_states(
         [WalletStateTransition(pre_block_balance_updates={1: {"set_remainder": True}})]
@@ -367,17 +367,17 @@ async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids(
 
     await remote_wallet.register_remote_coins([coin_id_1, coin_id_2])
 
-    wsm.interested_coin_cache.pop(coin_id_1, None)
-    wsm.interested_coin_cache.pop(coin_id_2, None)
+    wsm.subscription_cache.pop(coin_id_1, None)
+    wsm.subscription_cache.pop(coin_id_2, None)
 
     reloaded_wallet = await RemoteWallet.create(wsm, wallet, remote_wallet.wallet_info)
 
     stored_coin_ids = await wsm.remote_coin_store.get_coin_ids(reloaded_wallet.id())
     assert set(stored_coin_ids) == {coin_id_1, coin_id_2}
-    assert coin_id_1 in wsm.interested_coin_cache
-    assert coin_id_2 in wsm.interested_coin_cache
-    assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_1]
-    assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_2]
+    assert coin_id_1 in wsm.subscription_cache
+    assert coin_id_2 in wsm.subscription_cache
+    assert remote_wallet.id() in wsm.subscription_cache[coin_id_1]
+    assert remote_wallet.id() in wsm.subscription_cache[coin_id_2]
 
 
 @pytest.mark.parametrize(
@@ -409,8 +409,8 @@ async def test_wallet_state_manager_loads_remote_wallet_on_restart(
     assert loaded_remote_wallet is not None
     assert isinstance(loaded_remote_wallet, RemoteWallet)
     assert loaded_remote_wallet.id() == remote_wallet.id()
-    assert coin_id in restarted_wsm.interested_coin_cache
-    assert loaded_remote_wallet.id() in restarted_wsm.interested_coin_cache[coin_id]
+    assert coin_id in restarted_wsm.subscription_cache
+    assert loaded_remote_wallet.id() in restarted_wsm.subscription_cache[coin_id]
 
 
 @pytest.mark.anyio

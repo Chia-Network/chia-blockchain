@@ -163,8 +163,8 @@ class SyncStatus(IntEnum):
 
 
 class WalletStateManager:
-    # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
-    interested_coin_cache: dict[bytes32, list[int]]
+    # Map of coin ID or puzzle hash to wallet IDs that are interested in it
+    subscription_cache: dict[bytes32, list[int]]
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -225,7 +225,7 @@ class WalletStateManager:
     ) -> WalletStateManager:
         self = WalletStateManager()
 
-        self.interested_coin_cache = {}
+        self.subscription_cache = {}
         self.config = config
         self.constants = constants
         self.root_path = root_path
@@ -397,10 +397,10 @@ class WalletStateManager:
 
         return self
 
-    def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
+    def get_subscription_cache(self) -> dict[bytes32, list[int]]:
         # Warning: this is a shallow copy of the cache
         # Do not modify the cache directly, use the add_interested_coin_ids method instead
-        return copy.copy(self.interested_coin_cache)
+        return copy.copy(self.subscription_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
@@ -750,22 +750,26 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network", ""):
-            return True  # sim is always synced if we have a genesis block.
-
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
 
-        latest_timestamp = self.blockchain.get_latest_timestamp()
         has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
+        if has_pending_queue_items:
+            return False
 
-        if latest_timestamp > block_is_current_at and not has_pending_queue_items:
+        # Simulator blocks often use non-wall-clock timestamps, so skip the
+        # recency check
+        if "simulator" in self.config.get("selected_network", ""):
             return True
-        return False
+
+        latest_timestamp = self.blockchain.get_latest_timestamp()
+        return latest_timestamp > block_is_current_at
 
     async def get_sync_status(self) -> SyncStatus:
         peak = self.blockchain._peak
         if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            if self.wallet_node.new_peak_queue.has_pending_data_process_items():
+                return SyncStatus.SLIGHTLY_BEHIND
             return SyncStatus.SYNCED
 
         if peak is None or len(self.wallet_node.server.get_connections(NodeType.FULL_NODE)) == 0:
@@ -1179,10 +1183,10 @@ class WalletStateManager:
             local_record = None
 
         if wallet_identifier is None:
-            cache = self.get_interested_coin_cache()
-            if coin_name in cache:
+            subscription_cache = self.get_subscription_cache()
+            if coin_name in subscription_cache:
                 interested_wallet_ids = [
-                    wallet_id for w in cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
+                    wallet_id for w in subscription_cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
                 ]
                 remote_wallet = self.get_existing_remote_wallet()
                 if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
@@ -1823,7 +1827,6 @@ class WalletStateManager:
         extra_spends: list[WalletSpendBundle] | None = None,
         singleton_records: list[SingletonRecord] = [],
         plotnft_exiting_info: PlotNFTTargetStateInfo | None = None,
-        puzzle_hash_and_coin_subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription] = [],
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -1876,9 +1879,7 @@ class WalletStateManager:
                 if plotnft_exiting_info is not None:
                     await self.plotnft2_store.add_exiting_info(exiting_info=plotnft_exiting_info)
 
-            await self._add_subscriptions(
-                [*puzzle_hash_and_coin_subscriptions, *(CoinSubscription(target=name) for name in all_coins_names)]
-            )
+            await self._add_subscriptions([CoinSubscription(target=name) for name in all_coins_names])
 
             if actual_spend_involved:
                 self.tx_pending_changed()
@@ -2153,10 +2154,10 @@ class WalletStateManager:
 
     async def _add_subscriptions(self, subscriptions: Sequence[PuzzleHashSubscription | CoinSubscription]) -> None:
         for subscription in subscriptions:
-            if subscription.target in self.interested_coin_cache and subscription.wallet_id is not None:
-                self.interested_coin_cache[subscription.target].append(subscription.wallet_id)
+            if subscription.target in self.subscription_cache and subscription.wallet_id is not None:
+                self.subscription_cache[subscription.target].append(subscription.wallet_id)
             elif subscription.wallet_id is not None:
-                self.interested_coin_cache[subscription.target] = [subscription.wallet_id]
+                self.subscription_cache[subscription.target] = [subscription.wallet_id]
         puzzle_hash_subscriptions = [sub for sub in subscriptions if isinstance(sub, PuzzleHashSubscription)]
         coin_subscriptions = [sub for sub in subscriptions if isinstance(sub, CoinSubscription)]
         for subscription in puzzle_hash_subscriptions:

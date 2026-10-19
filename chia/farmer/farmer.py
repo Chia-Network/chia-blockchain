@@ -36,7 +36,7 @@ from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.util.profiler import profile_task
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, streamable
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
@@ -76,6 +76,16 @@ def strip_old_entries(pairs: list[tuple[float, Any]], before: float) -> list[tup
             if index > 0:
                 return pairs[index:]
     return []
+
+
+@streamable
+@dataclass(frozen=True)
+class PutFarmerPayloadBackCompat(Streamable):
+    launcher_id: bytes32
+    authentication_token: uint64
+    authentication_public_key: G1Element | None
+    payout_instructions: str | None
+    suggested_difficulty: uint64 | None
 
 
 def increment_pool_stats(
@@ -597,7 +607,15 @@ class Farmer:
         if pool_config.version == 1:
             # impossible for this to fail when get_authentication_sk above succeeds
             owner_sk = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)[0]  # type: ignore[index]
-            signature = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
+            # temporary back compat to make sure signature lines up with how v1 pools expect
+            hash_to_sign = PutFarmerPayloadBackCompat(
+                launcher_id=put_farmer_payload.launcher_id,
+                authentication_token=put_farmer_payload.authentication_token,
+                authentication_public_key=put_farmer_payload.authentication_public_key,
+                payout_instructions=put_farmer_payload.payout_instructions,
+                suggested_difficulty=put_farmer_payload.suggested_difficulty,
+            ).get_hash()
+            signature = AugSchemeMPL.sign(owner_sk, hash_to_sign)
         else:
             signature = None
         put_farmer_request = pool_protocol.PutFarmerRequest(put_farmer_payload, signature)

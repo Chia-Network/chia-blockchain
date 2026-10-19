@@ -249,6 +249,13 @@ class WalletEnvironment:
                                 f"{getattr(self.wallet_states[wallet_id].balance, key_str)} + {change}"
                             )
                     else:
+                        if getattr(self.wallet_states[wallet_id].balance, key) + change < 0:
+                            raise ValueError(
+                                f"Changing {key} on {self.alias_wallet_id(wallet_id)} "
+                                f"({getattr(self.wallet_states[wallet_id].balance, key)}) by {change} "
+                                f"would result in a "
+                                f"negative value of {getattr(self.wallet_states[wallet_id].balance, key) + change}"
+                            )
                         new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
 
             self.wallet_states = {

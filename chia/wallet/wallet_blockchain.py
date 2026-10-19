@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain import AddBlockResult
@@ -221,10 +221,8 @@ class WalletBlockchain:
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._height_to_hash[height]
 
-    def get_mmr_root_for_block(
-        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
-    ) -> bytes32 | None:
-        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+    def get_mmr_root_for_block(self, prev_header_hash: bytes32, sp_total_iters: uint128) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, sp_total_iters, self)
 
     def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records.get(header_hash)
