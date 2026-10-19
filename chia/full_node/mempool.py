@@ -53,6 +53,12 @@ MAX_SKIPPED_ITEMS = 10
 # spending too much time on potentially expensive items.
 PRIORITY_TX_THRESHOLD = 3
 
+# Max coin spends per BlockBuilder.add_spend_bundles() call in
+# create_block_generator2(). Bounds work per call so the generation timeout can
+# be checked between batches. A single mempool item with more spends than this
+# is still included as one batch (items are not split).
+MAX_SPENDS_PER_BATCH = 100
+
 # Typical cost of a standard XCH spend. It's used as a heuristic to help
 # determine how close to the block size limit we're willing to go.
 MIN_COST_THRESHOLD = 6_000_000
@@ -870,7 +876,9 @@ class Mempool:
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
-                if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
+                if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM or (
+                    len(batch_transactions) > 0 and batch_spends + len(unique_coin_spends) > MAX_SPENDS_PER_BATCH
+                ):
                     added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
 
                     block_cost = builder.cost()
