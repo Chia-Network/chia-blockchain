@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, TypeVar
-
-from typing_extensions import Self
+from typing import Protocol, Self, TypeVar
 
 from chia.util.db_wrapper import DBWrapper2
 

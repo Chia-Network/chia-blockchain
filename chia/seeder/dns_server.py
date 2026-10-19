@@ -208,7 +208,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
         """
         try:
             await asyncio.wait_for(asyncio.gather(*self.futures), timeout=10)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning(f"Timed out waiting for DNS replies to be sent to {self.peer_info}.")
         if self.transport is not None:
             self.transport.close()

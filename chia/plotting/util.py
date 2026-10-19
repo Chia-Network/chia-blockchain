@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from chia.plotting.prover import ProverProtocol
 
+from typing import final
+
 from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
-from typing_extensions import final
 
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.harvester_config import get_plot_directories

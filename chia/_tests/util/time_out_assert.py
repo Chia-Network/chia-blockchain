@@ -9,9 +9,7 @@ import time
 from collections.abc import Awaitable, Callable, Iterable
 from inspect import getframeinfo, stack
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast, final
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, TypeVar, cast, final
 
 import chia
 import chia._tests
