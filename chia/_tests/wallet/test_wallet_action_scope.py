@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
+from unittest.mock import AsyncMock
 
 import pytest
 from chia_rs import G2Element, Program
@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_action_scope import CoinSubscription, PlotNFTTargetStateInfo, PuzzleHashSubscription
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -35,10 +35,11 @@ class MockWalletStateManager:
             list[WalletSpendBundle],
             list[SingletonRecord],
             PlotNFTTargetStateInfo | None,
-            Sequence[CoinSubscription | PuzzleHashSubscription],
         ]
         | None
     ) = None
+
+    _add_subscriptions = AsyncMock()
 
     async def add_pending_transactions(
         self,
@@ -50,7 +51,6 @@ class MockWalletStateManager:
         extra_spends: list[WalletSpendBundle],
         singleton_records: list[SingletonRecord],
         plotnft_exiting_info: PlotNFTTargetStateInfo | None,
-        puzzle_hash_and_coin_subscriptions: Sequence[CoinSubscription | PuzzleHashSubscription],
     ) -> list[TransactionRecord]:
         self.most_recent_call = (
             txs,
@@ -61,7 +61,6 @@ class MockWalletStateManager:
             extra_spends,
             singleton_records,
             plotnft_exiting_info,
-            puzzle_hash_and_coin_subscriptions,
         )
         return txs
 
@@ -88,7 +87,7 @@ async def test_wallet_action_scope() -> None:
             action_scope.side_effects
 
     assert action_scope.side_effects.transactions == [STD_TX]
-    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None, [])
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
         DEFAULT_TX_CONFIG,
@@ -104,4 +103,4 @@ async def test_wallet_action_scope() -> None:
 
     assert action_scope.side_effects.transactions == []
     # same as above because the lack of transactions prevents the add_pending_transactions call
-    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None, [])
+    assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
