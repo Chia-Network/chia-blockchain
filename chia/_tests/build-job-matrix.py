@@ -17,7 +17,7 @@ project_root_path = root_path.parent.parent
 
 
 def skip(path: Path) -> bool:
-    return any(part.startswith(("_", ".")) and part != "_tests" for part in path.parts)
+    return any(part.startswith(("_", ".")) and part != "_tests" for part in path.relative_to(root_path).parts)
 
 
 def subdirs(per: str) -> list[Path]:

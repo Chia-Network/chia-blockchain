@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.mmr import MerkleMountainRange
@@ -126,70 +126,31 @@ class BlockchainMMRManager:
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
         blocks: BlockRecordsProtocol,
         fork_height: uint32 | None = None,
     ) -> bytes32 | None:
         """
-        Compute MMR root for a block with sp/slot filtering.
+        Compute the MMR root containing blocks infused before the signage point.
 
-        Works for both block validation and creation by computing finalized blocks
-        relative to the given sp/slot parameters.
+        Works for both block validation and creation by computing the finalized
+        cutoff relative to the signage point's absolute total iterations.
         """
         if prev_header_hash == self.genesis_challenge:
             # Genesis block has empty MMR
             return None
 
-        prev_block = blocks.block_record(prev_header_hash)
-
-        if starts_new_slot:
-            # New slot - all blocks up to and including prev_block are finalized
-            mmr_root = self._build_mmr_to_block(prev_block, blocks, fork_height)
-            log.debug(f"New slot: Built MMR with all blocks up to height {prev_block.height}")
-            return mmr_root
-
-        # Same slot - need to find cutoff based on sp_index
-        # Walk backwards from prev_block to find highest finalized block
-        current = prev_block
-        cutoff_block = None
-
-        while True:
-            # Check if prev is finalized relative to new block:
-            # 1. Earlier signage point
-            if current.signage_point_index < new_sp_index:
-                cutoff_block = current
-                log.debug(
-                    f"Found earlier sp at height {current.height} "
-                    f"(sp={current.signage_point_index} < {new_sp_index}), cutoff at {current.height}"
-                )
-                break
-
-            if current.height == 0:
-                # Reached genesis without finding cutoff
-                break
-
-            # 2. Crossed slot boundary
-            if current.first_in_sub_slot:
-                cutoff_block = blocks.block_record(current.prev_hash)
-                log.debug(
-                    f"Found slot boundary at height {current.height}, "
-                    f"cutoff at {current.height - 1} for new block (sp={new_sp_index})"
-                )
-                break
-
-            current = blocks.block_record(current.prev_hash)
-
-        if cutoff_block is None:
-            # No finalized blocks
-            log.debug(f"No finalized blocks for new block (sp={new_sp_index})")
-            return None
+        cutoff_block = blocks.block_record(prev_header_hash)
+        while cutoff_block.total_iters >= sp_total_iters:
+            if cutoff_block.height == 0:
+                log.debug(f"No blocks infused before signage point at total iterations {sp_total_iters}")
+                return None
+            cutoff_block = blocks.block_record(cutoff_block.prev_hash)
 
         # Build MMR from genesis to cutoff block
         mmr_root = self._build_mmr_to_block(cutoff_block, blocks, fork_height)
         log.debug(
-            f"Built MMR for new block (sp={new_sp_index}) with finalized blocks "
-            f"(cutoff at height {cutoff_block.height})"
+            f"Built MMR for signage point at total iterations {sp_total_iters} (cutoff at height {cutoff_block.height})"
         )
 
         return mmr_root

@@ -23,6 +23,7 @@ from chia.types.blockchain_format.proof_of_space import (
     num_phase_out_epochs,
     passes_plot_filter,
     passes_plot_filter_v2,
+    v1_cut_off_height,
     verify_and_get_quality_string,
 )
 from chia.util.hash import std_hash
@@ -387,6 +388,26 @@ def test_v1_phase_out() -> None:
             f"expect: {expect * 100.0:0.2f}%"
         )
         assert abs((num_phased_out / 1000) - expect) < 0.05
+
+
+def test_v1_phase_out_completes_at_cut_off_height() -> None:
+    """Every v1 proof is invalid at v1_cut_off_height(), and not one block earlier."""
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500_000))
+    cutoff = v1_cut_off_height(constants)
+    # One bucket in 2**PLOT_V1_PHASE_OUT_EPOCH_BITS survives the final epoch, so
+    # a short sample can look fully phased out by chance.
+    rng = random.Random(1337)
+    proofs = [rng.randbytes(32) for _ in range(16 << int(constants.PLOT_V1_PHASE_OUT_EPOCH_BITS))]
+
+    # there is at least one v1 proof that is *not* phased-out at the height
+    # immediately preceding the cutoff
+    just_before = uint32(cutoff - 1)
+    assert any(not is_v1_phased_out(proof, just_before, constants) for proof in proofs)
+
+    # every proof is invalid at or after the cutoff
+    for height in (cutoff, cutoff + 1, cutoff + int(constants.EPOCH_BLOCKS)):
+        prev_tx_height = uint32(height)
+        assert all(is_v1_phased_out(proof, prev_tx_height, constants) for proof in proofs)
 
 
 class TestV2PlotFilter:
