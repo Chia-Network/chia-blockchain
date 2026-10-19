@@ -178,7 +178,9 @@ def verify_and_get_quality_string(
         return None
 
     plot_id: bytes32 = pos.compute_plot_id()
-    new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
+    plot_group_id = compute_plot_group_id_from_pos(pos) if plot_param.strength_v2 is not None else None
+    challenge_plot_id = plot_group_id if plot_group_id is not None else plot_id
+    new_challenge: bytes32 = calculate_pos_challenge(challenge_plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
         log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
@@ -186,7 +188,7 @@ def verify_and_get_quality_string(
 
     if plot_param.strength_v2 is not None:
         if filter_challenge is not None and signage_point_index is not None:
-            plot_group_id = compute_plot_group_id_from_pos(pos)
+            assert plot_group_id is not None
             group_strength = calculate_plot_filter_bits(
                 prev_transaction_block_height, constants, plot_param.strength_v2
             )
@@ -222,14 +224,16 @@ def verify_and_get_quality_string(
     else:
         # === V2 plots ===
         assert plot_param.strength_v2 is not None
+        assert plot_group_id is not None
 
         return validate_proof_v2(
-            plot_id,
+            plot_group_id,
+            pos.plot_index,
             constants.PLOT_SIZE_V2,
-            pos.challenge,
             plot_param.strength_v2,
+            pos.meta_group,
+            pos.challenge,
             pos.proof,
-            constants.TESTNET,
         )
 
 
@@ -353,15 +357,24 @@ def calculate_plot_id_ph(
     return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
 
-def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
-    taproot_message: bytes = bytes(local_pk + farmer_pk) + bytes(local_pk) + bytes(farmer_pk)
-    taproot_hash: bytes32 = std_hash(taproot_message)
-    return AugSchemeMPL.key_gen(taproot_hash)
+def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element, *, is_v2: bool = False) -> PrivateKey:
+    taproot_message = bytes(local_pk + farmer_pk)
+    # V2 omits the standalone local key from the taproot message.
+    if not is_v2:
+        taproot_message += bytes(local_pk)
+    taproot_message += bytes(farmer_pk)
+    return AugSchemeMPL.key_gen(std_hash(taproot_message))
 
 
-def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element, include_taproot: bool = False) -> G1Element:
-    if include_taproot:
-        taproot_sk: PrivateKey = generate_taproot_sk(local_pk, farmer_pk)
+def generate_plot_public_key(
+    local_pk: G1Element,
+    farmer_pk: G1Element,
+    include_taproot: bool = False,
+    *,
+    is_v2: bool = False,
+) -> G1Element:
+    # All V2 plots include taproot.
+    if include_taproot or is_v2:
+        taproot_sk = generate_taproot_sk(local_pk, farmer_pk, is_v2=is_v2)
         return local_pk + farmer_pk + taproot_sk.get_g1()
-    else:
-        return local_pk + farmer_pk
+    return local_pk + farmer_pk

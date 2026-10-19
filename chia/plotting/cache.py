@@ -16,7 +16,7 @@ from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 
-from chia.plotting.prover import get_prover_from_bytes
+from chia.plotting.prover import PlotVersion, get_prover_from_bytes
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.util.streamable import Streamable, VersionedBlob, streamable
@@ -76,8 +76,11 @@ class CacheEntry:
 
         local_sk = cached_master_sk_to_local_sk(local_master_sk)
 
-        plot_public_key: G1Element = generate_plot_public_key(
-            local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+        plot_public_key = generate_plot_public_key(
+            local_sk.get_g1(),
+            farmer_public_key,
+            pool_contract_puzzle_hash is not None,
+            is_v2=prover.get_version() == PlotVersion.V2,
         )
 
         return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
