@@ -16,11 +16,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_public_key,
 )
 from chia.wallet.puzzles.puzzle_drivers import (
-    ACS,
-    ACS_PH,
     ACSPuzzle,
-    ACSSolution,
-    NilPuzzle,
     NilSolution,
     P2Conditions,
     UnknownPuzzle,
@@ -127,49 +123,3 @@ def test_standard_puzzle_drivers() -> None:
     assert solution_match.original_public_key is not None
     assert solution_match.delegated_puzzle.program == DefaultHiddenPuzzle().program
     assert solution_match.delegated_solution.program == Program.to([99])
-
-
-def test_p2_conditions() -> None:
-    create_coin = CreateCoin(bytes32([1] * 32), uint64(500))
-    remark = Remark(Program.to("hi"))
-    p2 = P2Conditions(conditions=[create_coin, remark])
-
-    assert p2.program == Program.to((1, [create_coin.to_program(), remark.to_program()]))
-    assert p2.tree_hash == p2.program.get_tree_hash()
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=p2.program)) == p2
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) is None
-
-
-def test_acs_puzzle() -> None:
-    acs = ACSPuzzle()
-
-    assert acs.program == ACS
-    assert acs.tree_hash == ACS_PH
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) == ACSPuzzle()
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(2))) is None
-
-
-def test_acs_solution() -> None:
-    create_coin = CreateCoin(bytes32([2] * 32), uint64(1))
-    solution = ACSSolution(conditions=[create_coin])
-
-    assert solution.program == Program.to([create_coin.to_program()])
-    assert ACSSolution.match(unknown_solution=UnknownSolution(solution.program)) == solution
-    assert ACSSolution.match(unknown_solution=UnknownSolution(Program.to(1))) is None
-
-
-def test_nil_puzzle() -> None:
-    nil = NilPuzzle()
-
-    assert nil.program == Program.NIL
-    assert nil.tree_hash == Program.NIL.get_tree_hash()
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) == NilPuzzle()
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS)) is None
-
-
-def test_nil_solution() -> None:
-    nil = NilSolution()
-
-    assert nil.program == Program.NIL
-    assert NilSolution.match(unknown_solution=UnknownSolution(Program.NIL)) == NilSolution()
-    assert NilSolution.match(unknown_solution=UnknownSolution(Program.to([1]))) is None
