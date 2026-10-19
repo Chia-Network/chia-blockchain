@@ -78,6 +78,15 @@ def test_standard_puzzle_drivers() -> None:
     assert matched_delegated.pre_known_synthetic_public_key == synthetic_public_key
     assert matched_delegated.pre_known_original_public_key is None
     assert matched_delegated.hidden_puzzle.program == DEFAULT_HIDDEN_PUZZLE
+    assert (
+        DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=DEFAULT_HIDDEN_PUZZLE))
+        == DefaultHiddenPuzzle()
+    )
+    assert (
+        DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=DEFAULT_HIDDEN_PUZZLE_HASH))
+        == DefaultHiddenPuzzle()
+    )
+    assert DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to("foo"))) is None
 
     hidden_reveal = ACSPuzzle()
     solution_with_original = StandardPuzzleSolution(
