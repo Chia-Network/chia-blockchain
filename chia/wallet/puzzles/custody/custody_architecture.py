@@ -4,11 +4,11 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from functools import cached_property
-from typing import ClassVar, Protocol, TypeVar
+from typing import ClassVar, Protocol, Self, TypeVar
 
 from chia_puzzles_py import programs as puzzle_mods
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import Self, runtime_checkable
+from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.puzzle_drivers import (
