@@ -8,6 +8,8 @@
 .github/scripts/trusted_formatter_loader.py
 .github/scripts/trusted_formatter_loader_cold_start.py
 .github/scripts/upstream_malware_scan.sh
+.github/scripts/dependency_update_coverage.py
+.github/scripts/dependency_manifest_diff.py
 .github/scripts/dependency_cursor_review_prompts.py
 .github/scripts/dependency_cursor_review_combine_outputs.py
 .github/scripts/dependency-cursor-review-dependabot-context.js

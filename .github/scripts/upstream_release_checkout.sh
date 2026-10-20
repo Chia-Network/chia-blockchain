@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Detach .upstream-dependency at the scanned release, then strip agent instructions.
-# Git history stays in the checkout. An empty resolved_to deletes that tree so the
+# Detach .upstream-dependency at the agent target, then strip agent instructions.
+# Git history stays in the checkout. An empty target deletes that tree so the
 # agent cannot review the default branch; the not_scanned comment still posts.
 set -euo pipefail
 
 resolved_to="${RESOLVED_TO:-}"
-if [ -z "$resolved_to" ] && [ -f malware_scan_report.json ]; then
-  resolved_to="$(jq -r '.resolved_to // empty' malware_scan_report.json)"
-fi
 if [ -z "$resolved_to" ]; then
   rm -rf .upstream-dependency .malware-scan
   exit 0

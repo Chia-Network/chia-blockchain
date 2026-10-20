@@ -29,6 +29,7 @@ updates:
   - package-ecosystem: "pip"
     registries:
       - chia-pypi
+    insecure-external-code-execution: allow
     directory: /
     schedule:
       interval: "weekly"
@@ -56,7 +57,7 @@ updates:
       - dependencies
       - github_actions
       - "Changed"
-    reviewers: ["cmmarslender"]
+    reviewers: ["cameroncooper"]
 
   - package-ecosystem: "npm"
     directory: /

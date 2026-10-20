@@ -8,7 +8,7 @@ LOADER_RESOLVE_MARKER_FILENAMES: tuple[str, ...] = (
     "trusted_formatter_loader.py",
 )
 
-# The prose regex/policy selector is gone. The formatter is a single module.
+# No additional formatter modules. The runtime module is malware_verdict_formatter.py.
 FORMATTER_SIBLING_MODULE_STEMS: tuple[str, ...] = ()
 
 FORMATTER_RUNTIME_FILENAMES: tuple[str, ...] = (
