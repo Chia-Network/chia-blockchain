@@ -27,8 +27,9 @@ from chia.consensus.block_generator_info import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.generator_validation import validate_generator_ref_list, validate_tx_generator
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import get_unfinished_block_finished_sub_slots, pre_sp_tx_block_height
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -202,6 +203,7 @@ async def validate_block_body(
     fork_info: ForkInfo,
     *,
     log_coins: bool = False,
+    skip_overflow_ss_validation: bool = True,
 ) -> Err | None:
     """
     This assumes the header block has been completely validated.
@@ -214,18 +216,29 @@ async def validate_block_body(
     fork_info specifies the fork context of this block. In case the block
         extends the main chain, it can be empty, but if the block extends a fork
         of the main chain, the fork info is mandatory in order to validate the block.
+    skip_overflow_ss_validation applies to an unfinished block only: it may omit
+        the end of sub-slot its overflow infusion will cross (see
+        validate_unfinished_header_block).
     """
     if isinstance(block, FullBlock):
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
     prev_transaction_block_timestamp: uint64 = uint64(0)
     # Version is an SP-time gate (matches unfinished-header validation).
+    if isinstance(block, UnfinishedBlock) and skip_overflow_ss_validation:
+        prev_b = records.try_block_record(block.prev_header_hash)
+        sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+            constants, len(block.finished_sub_slots) > 0, prev_b, records
+        )
+        finished_sub_slots = get_unfinished_block_finished_sub_slots(constants, records, block, sub_slot_iters)
+    else:
+        finished_sub_slots = len(block.finished_sub_slots)
     pre_sp_tx_height = pre_sp_tx_block_height(
         constants=constants,
         blocks=records,
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(block.finished_sub_slots),
+        finished_sub_slots=finished_sub_slots,
     )
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
