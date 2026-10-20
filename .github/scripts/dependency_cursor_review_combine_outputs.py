@@ -108,31 +108,7 @@ def _extract_text(payload) -> str:
         return str(payload)
 
 
-# Fixed text. Agent prose is not published on this path, so it cannot carry a verdict banner.
-_TRUSTED_INCONCLUSIVE = "**Verdict: inconclusive (needs human review)**"
-_TRUSTED_COMPAT = "Compatibility analysis withheld because the malware scan did not pass."
 _REPORT_SHA256_ENV = "MALWARE_SCAN_REPORT_SHA256"
-
-
-def _report_allows_agent_verdict(data: bytes) -> bool:
-    """Trust the agent only for a conclusive clean scan with no findings."""
-    try:
-        report = json.loads(data.decode("utf-8"))
-    except Exception:
-        return False
-    if not isinstance(report, dict):
-        return False
-    findings = report.get("findings")
-    if isinstance(findings, dict):
-        findings_present = any(findings.values())
-    else:
-        findings_present = bool(findings)
-    return (
-        report.get("status") == "clean"
-        and report.get("scan_conclusive") is True
-        and report.get("verdict_token_in_tree") is not True
-        and not findings_present
-    )
 
 
 def _fail_closed(message: str) -> None:
@@ -157,7 +133,7 @@ def _env_path(name: str) -> Path:
     return Path(value)
 
 
-def _scan_allows_agent() -> bool:
+def _sealed_report() -> object:
     """Fail closed unless the scan-job digest matches DCR_SCAN_REPORT."""
     expected = os.environ.get(_REPORT_SHA256_ENV, "").strip()
     if not _digest_is_sha256(expected):
@@ -169,34 +145,43 @@ def _scan_allows_agent() -> bool:
         _fail_closed("Malware scan report is missing.")
     if hashlib.sha256(data).hexdigest() != expected:
         _fail_closed("Malware scan report digest mismatch.")
-    return _report_allows_agent_verdict(data)
+    try:
+        report = json.loads(data.decode("utf-8"))
+    except Exception:
+        return None
+    return report if isinstance(report, dict) else None
 
 
 def main() -> None:
     _drop_pr_head_scripts_from_sys_path()
     # Check the sealed report before loading any sibling module.
-    blocked = not _scan_allows_agent()
+    report = _sealed_report()
     malware_path = str(_env_path("DCR_MALWARE_JSON"))
     compatibility_path = str(_env_path("DCR_COMPAT_JSON"))
     combined_path = _env_path("DCR_COMBINED_JSON")
-    if blocked:
-        malware_text = _TRUSTED_INCONCLUSIVE
-        compatibility_text = _TRUSTED_COMPAT
-        complete = False
-        malware_review = {"result": malware_text}
-        compatibility_review = {"result": compatibility_text}
-    else:
-        malware_payload = _load_any(malware_path)
-        compatibility_payload = _load_any(compatibility_path)
-        ns = _host_namespace()
-        resolve_loader_bundle = ns["resolve_loader_bundle"]
-        loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
-        format_malware_review_verdict = loader.find_and_load_format_malware_review_verdict(script_dir)
-        malware_text = format_malware_review_verdict(_extract_text(malware_payload))
-        compatibility_text = _extract_text(compatibility_payload)
-        complete = bool(_successful_analysis_text(malware_path)) and bool(_successful_analysis_text(compatibility_path))
-        malware_review = malware_payload
-        compatibility_review = compatibility_payload
+    malware_payload = _load_any(malware_path)
+    compatibility_payload = _load_any(compatibility_path)
+    ns = _host_namespace()
+    resolve_loader_bundle = ns["resolve_loader_bundle"]
+    loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
+    formatter = loader.import_module_from_trusted_script(
+        script_dir / "malware_verdict_formatter.py",
+        "trusted_malware_verdict_formatter",
+    )
+    agent_text = _extract_text(malware_payload)
+    published = formatter.compose_published_review(
+        report,
+        agent_text,
+        _extract_text(compatibility_payload),
+    )
+    malware_text = published["malware_text"]
+    compatibility_text = published["compatibility_text"]
+    check = str(published.get("check") or "fail")
+    agents_ok = bool(_successful_analysis_text(malware_path)) and bool(_successful_analysis_text(compatibility_path))
+    # The patch-id marker is stamped only when the published check passed.
+    complete = agents_ok and check == "pass" and published.get("may_complete") is True
+    malware_review = {"result": malware_text}
+    compatibility_review = {"result": compatibility_text}
 
     combined_text = (
         f"## Supply-Chain Malware Review\n\n{malware_text}\n\n## Compatibility Analysis\n\n{compatibility_text}"
@@ -204,11 +189,43 @@ def main() -> None:
     combined = {
         "result": combined_text,
         "complete": complete,
+        "check": check,
         "malware_review": malware_review,
         "compatibility_review": compatibility_review,
     }
     combined_path.write_text(json.dumps(combined, indent=2), encoding="utf-8")
 
 
+def _optional_analysis(name: str) -> str:
+    """Agent text when the file is present. A skipped agent leaves this empty."""
+    value = os.environ.get(name, "").strip()
+    if not value or not Path(value).is_file():
+        return ""
+    return _extract_text(_load_any(value))
+
+
+def _enforce_published_check() -> None:
+    """Recompute the check from the sealed report. A stored check string is ignored."""
+    _drop_pr_head_scripts_from_sys_path()
+    report = _sealed_report()
+    ns = _host_namespace()
+    resolve_loader_bundle = ns["resolve_loader_bundle"]
+    loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
+    formatter = loader.import_module_from_trusted_script(
+        script_dir / "malware_verdict_formatter.py",
+        "trusted_malware_verdict_formatter",
+    )
+    published = formatter.compose_published_review(
+        report,
+        _optional_analysis("DCR_MALWARE_JSON"),
+        _optional_analysis("DCR_COMPAT_JSON"),
+    )
+    if published.get("check") != "pass":
+        _fail_closed("Dependency review did not pass.")
+
+
 if __name__ == "__main__":
-    main()
+    if "--enforce-check" in sys.argv:
+        _enforce_published_check()
+    else:
+        main()
