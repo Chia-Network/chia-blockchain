@@ -4450,8 +4450,6 @@ async def declare_pos_unfinished_block_pos_request(
         challenge_chain_sp,
         height=block.reward_chain_block.height,
         prev_transaction_block_height=tx_peak.height,
-        filter_challenge=full_node_store.get_filter_challenge(challenge, block.reward_chain_block.signage_point_index),
-        signage_point_index=block.reward_chain_block.signage_point_index,
     )
     assert q_str is not None
     unfinised_block = None
