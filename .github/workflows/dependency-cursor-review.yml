@@ -289,7 +289,7 @@ jobs:
           bash .dcr-strip/.github/scripts/upstream_release_checkout.sh
 
       - name: Download scan prompts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dcr-scan-${{ github.run_id }}
           path: dcr-scan-input
@@ -409,14 +409,14 @@ jobs:
 
       - name: Download scan inputs
         if: ${{ success() && steps.helpers.outcome == 'success' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dcr-scan-${{ github.run_id }}
           path: dcr-scan-input
 
       - name: Download agent outputs
         if: ${{ success() && steps.helpers.outcome == 'success' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dcr-agent-${{ github.run_id }}
           path: dcr-agent-output
