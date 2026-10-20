@@ -4,18 +4,12 @@
  * Resolve Dependabot/Renovate PR context for dependency-cursor-review (workflow step target_pr).
  *
  * Dependabot pull_request events also fire on rebase, recreate, and rebuild.
- * Those later pushes skip the review when github-actions[bot] has already
- * commented the marker for this same upgrade. "Same" is the GitHub PR number
- * plus the stable patch id of the PR diff, not the head SHA or a commit
- * message. A new PR has no marker, so it is reviewed. Any content change
- * produces a new patch id, so it is reviewed. Renovate and workflow_dispatch
- * always run.
+ * The scan always runs. The agent is skipped only when github-actions[bot]
+ * has already commented this pull request's patch id together with the commit
+ * the release tag still peels to. A moved tag is a different commit, so it is
+ * reviewed. Renovate and workflow_dispatch always run.
  */
-const {
-  isActionsBotUpgradeReview,
-  patchIdFromDiff,
-  reviewMarkerFromPatchId,
-} = require('./dependency-cursor-review-dependabot-context.js');
+const { patchIdFromDiff, reviewedShasForPatch } = require('./dependency-cursor-review-dependabot-context.js');
 
 const DEPENDABOT_BOT = 'dependabot[bot]';
 const WEB_FLOW_BOT = 'web-flow';
@@ -62,7 +56,7 @@ async function pullRequestDiff(github, context, prNumber) {
   return typeof response?.data === 'string' ? response.data : '';
 }
 
-async function dependabotReviewMarker({ github, context, core, pr }) {
+async function dependabotPatchId({ github, context, core, pr }) {
   if (pr.user?.login !== DEPENDABOT_BOT) return '';
   let commits;
   try {
@@ -82,29 +76,25 @@ async function dependabotReviewMarker({ github, context, core, pr }) {
     core.warning(`Could not read the PR diff to identify the upgrade (${err.message}); running review.`);
     return '';
   }
-  const marker = reviewMarkerFromPatchId(patchIdFromDiff(diff));
-  if (!marker) {
+  const patchId = patchIdFromDiff(diff);
+  if (!patchId) {
     core.notice('Dependabot PR diff did not produce a stable patch id; running review.');
   }
-  return marker;
+  return patchId;
 }
 
-async function dependabotReviewAlreadyPosted({ github, context, core, pr, marker }) {
-  if (context.eventName !== 'pull_request') return false;
-  if (pr.user?.login !== DEPENDABOT_BOT) return false;
-  if (!marker) return false;
+async function reviewedReleaseShas({ github, context, core, pr, patchId }) {
+  if (context.eventName !== 'pull_request') return [];
+  if (pr.user?.login !== DEPENDABOT_BOT) return [];
+  if (!patchId) return [];
   let comments;
   try {
     comments = await listIssueComments(github, context, pr.number);
   } catch (err) {
     core.warning(`Could not list PR comments to detect an existing review (${err.message}); running review.`);
-    return false;
+    return [];
   }
-  const matched = comments.some((comment) => isActionsBotUpgradeReview(comment, marker));
-  if (matched) {
-    core.notice(`Dependabot PR #${pr.number} already has a Cursor review for this dependency upgrade; skipping.`);
-  }
-  return matched;
+  return reviewedShasForPatch(comments, patchId);
 }
 
 async function run({ github, context, core }) {
@@ -136,20 +126,23 @@ async function run({ github, context, core }) {
     core.setFailed(`Target PR #${pr.number} is not opened by an allowed bot. Author: ${pr.user?.login}`);
     return;
   }
-  const marker = await dependabotReviewMarker({ github, context, core, pr });
+  const baseSha = String(pr.base?.sha || '');
+  if (!/^[0-9a-fA-F]{40}$/.test(baseSha)) {
+    core.setFailed(`Target PR #${pr.number} is missing a base commit.`);
+    return;
+  }
+  const patchId = await dependabotPatchId({ github, context, core, pr });
+  const reviewed = await reviewedReleaseShas({ github, context, core, pr, patchId });
   core.setOutput('number', String(pr.number));
   core.setOutput('title', pr.title || '');
   core.setOutput('body', pr.body || '');
   core.setOutput('head_sha', pr.head?.sha || '');
-  core.setOutput('review_marker', marker);
-  const alreadyReviewed = await dependabotReviewAlreadyPosted({
-    github,
-    context,
-    core,
-    pr,
-    marker,
-  });
-  core.setOutput('already_reviewed', alreadyReviewed ? 'true' : 'false');
+  core.setOutput('base_sha', baseSha);
+  core.setOutput('patch_id', patchId);
+  core.setOutput('reviewed_shas', reviewed.join(','));
+  // The peeled commit is not known yet. The scan job binds the marker afterward.
+  core.setOutput('review_marker', '');
+  core.setOutput('already_reviewed', 'false');
 }
 
 module.exports = { run, MAX_PR_COMMITS };
