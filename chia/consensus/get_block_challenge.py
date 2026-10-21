@@ -184,10 +184,10 @@ def unfinished_block_sub_slots(
     block: UnfinishedHeaderBlock | UnfinishedBlock,
     sub_slot_iters: uint64,
 ) -> int:
-    """Number of sub-slots crossed between the previous block's infusion and this block's infusion."""
+    """Sub-slots crossed since the previous block's infusion."""
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     if overflow and not final_eos_is_already_included(block, blocks, sub_slot_iters):
-        # the unfinished overflow block omits the end-of-sub-slot of its signage-point sub-slot
+        # the signage point sub-slot's end-of-sub-slot is not included yet
         return len(block.finished_sub_slots) + 1
     return len(block.finished_sub_slots)
 

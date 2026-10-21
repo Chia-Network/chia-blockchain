@@ -1085,13 +1085,10 @@ class FullNodeAPI:
                 return None
 
             if is_overflow_block(self.full_node.constants, request.signage_point_index):
-                # an overflow block is infused in the sub-slot after its signage point. prev_b is
-                # infused before the signage point, so that boundary is crossed as well, but its
-                # end-of-sub-slot does not exist yet and is not in finished_sub_slots.
+                # infused one sub-slot after the signage point; that end-of-sub-slot does not exist yet
                 sub_slots_since_prev = len(finished_sub_slots) + 1
             else:
-                # a non-overflow block is infused in its signage point's sub-slot, so
-                # finished_sub_slots already holds every sub-slot crossed since prev_b
+                # infused in the signage point's sub-slot
                 sub_slots_since_prev = len(finished_sub_slots)
             tx_height = pre_sp_tx_block_height(
                 constants=self.full_node.constants,

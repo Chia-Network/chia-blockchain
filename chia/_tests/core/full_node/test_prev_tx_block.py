@@ -400,16 +400,13 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
 
 
 def test_unfinished_block_finished_sub_slot_count(bt: BlockTools) -> None:
-    # The sub-slot count used to find the pre-SP transaction block of an unfinished block must match
-    # the one its finished block carries. An unfinished first-overflow block omits the final
-    # end-of-sub-slot, so the raw list length undercounts by one.
+    # the unfinished view of a block must count the same sub-slots as the finished block
     block_list = bt.get_consecutive_blocks(
         10,
         block_list_input=[],
         guarantee_transaction_block=True,
     )
-    # a single call keeps infusing into the same sub-slots, so some overflow blocks follow another
-    # overflow block of their own signage point sub-slot
+    # one call also produces overflow blocks that follow another overflow block of the same sub-slot
     block_list = bt.get_consecutive_blocks(20, block_list_input=block_list, force_overflow=True)
     _, _, blocks = load_block_list(block_list, bt.constants)
     block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))

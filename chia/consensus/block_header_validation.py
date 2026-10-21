@@ -93,7 +93,7 @@ def validate_unfinished_header_block(
     if skip_overflow_last_ss_validation and overflow:
         finished_sub_slots_since_prev = unfinished_block_sub_slots(constants, blocks, header_block, expected_vs.ssi)
         if finished_sub_slots_since_prev == len(header_block.finished_sub_slots):
-            # the final end-of-sub-slot is already in the chain, nothing is omitted
+            # nothing is omitted
             skip_overflow_last_ss_validation = False
     else:
         finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
