@@ -56,6 +56,16 @@ def _host_namespace() -> dict[str, object]:
     return runpy.run_path(str(_COLD_START_PATH))
 
 
+def _load_formatter():
+    """The trusted malware verdict formatter module."""
+    ns = _host_namespace()
+    loader, script_dir = ns["resolve_loader_bundle"](_SCRIPT_CANDIDATES)
+    return loader.import_module_from_trusted_script(
+        script_dir / "malware_verdict_formatter.py",
+        "trusted_malware_verdict_formatter",
+    )
+
+
 def _load_any(path: str) -> dict:
     try:
         raw = Path(path).read_text(encoding="utf-8")
@@ -106,6 +116,15 @@ def _extract_text(payload) -> str:
         return json.dumps(payload, indent=2)
     except Exception:
         return str(payload)
+
+
+def _final_message(payload) -> str:
+    """The final assistant message, written separately from the concatenated result."""
+    if isinstance(payload, dict):
+        value = payload.get("final_message")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 _REPORT_SHA256_ENV = "MALWARE_SCAN_REPORT_SHA256"
@@ -161,18 +180,14 @@ def main() -> None:
     combined_path = _env_path("DCR_COMBINED_JSON")
     malware_payload = _load_any(malware_path)
     compatibility_payload = _load_any(compatibility_path)
-    ns = _host_namespace()
-    resolve_loader_bundle = ns["resolve_loader_bundle"]
-    loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
-    formatter = loader.import_module_from_trusted_script(
-        script_dir / "malware_verdict_formatter.py",
-        "trusted_malware_verdict_formatter",
-    )
+    formatter = _load_formatter()
     agent_text = _extract_text(malware_payload)
+    compatibility_text = _final_message(compatibility_payload) or _extract_text(compatibility_payload)
     published = formatter.compose_published_review(
         report,
         agent_text,
-        _extract_text(compatibility_payload),
+        compatibility_text,
+        agent_final_text=_final_message(malware_payload) or agent_text,
     )
     malware_text = published["malware_text"]
     compatibility_text = published["compatibility_text"]
@@ -204,21 +219,23 @@ def _optional_analysis(name: str) -> str:
     return _extract_text(_load_any(value))
 
 
+def _optional_final_message(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value or not Path(value).is_file():
+        return ""
+    return _final_message(_load_any(value))
+
+
 def _enforce_published_check() -> None:
     """Recompute the check from the sealed report. A stored check string is ignored."""
     _drop_pr_head_scripts_from_sys_path()
     report = _sealed_report()
-    ns = _host_namespace()
-    resolve_loader_bundle = ns["resolve_loader_bundle"]
-    loader, script_dir = resolve_loader_bundle(_SCRIPT_CANDIDATES)
-    formatter = loader.import_module_from_trusted_script(
-        script_dir / "malware_verdict_formatter.py",
-        "trusted_malware_verdict_formatter",
-    )
+    formatter = _load_formatter()
     published = formatter.compose_published_review(
         report,
         _optional_analysis("DCR_MALWARE_JSON"),
-        _optional_analysis("DCR_COMPAT_JSON"),
+        _optional_final_message("DCR_COMPAT_JSON") or _optional_analysis("DCR_COMPAT_JSON"),
+        agent_final_text=_optional_final_message("DCR_MALWARE_JSON"),
     )
     if published.get("check") != "pass":
         _fail_closed("Dependency review did not pass.")
