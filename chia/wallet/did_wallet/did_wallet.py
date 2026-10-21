@@ -40,7 +40,6 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
@@ -368,10 +367,8 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-            singleton_match = SingletonPuzzle.match(
-                unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
-            )
+            uncurried = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
+            singleton_match = SingletonPuzzle.match(unknown_puzzle=uncurried)
             assert singleton_match is not None
             did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
             assert did_match is not None
@@ -379,7 +376,7 @@ class DIDWallet:
                 p2_puzzle=did_match.inner_puzzle.program,
                 recovery_list_hash=did_match.recovery_list.ids_hash,
                 num_verification=uint16(did_match.num_of_backup_ids_needed),
-                singleton_struct=uncurried.args.at("f"),
+                singleton_struct=singleton_match.singleton_struct.program,
                 metadata=did_match.metadata.as_program(),
                 inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,

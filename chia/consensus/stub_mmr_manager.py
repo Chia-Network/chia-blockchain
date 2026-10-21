@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint128
 
 if TYPE_CHECKING:
     from chia.consensus.blockchain_interface import MMRManagerProtocol
@@ -20,8 +20,7 @@ class StubMMRManager:
     def get_mmr_root_for_block(
         self,
         prev_header_hash: bytes32,
-        new_sp_index: int,
-        starts_new_slot: bool,
+        sp_total_iters: uint128,
         blocks: Any,
         fork_height: uint32 | None = None,
     ) -> bytes32 | None:

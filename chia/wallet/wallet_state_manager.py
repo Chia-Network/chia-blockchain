@@ -92,7 +92,6 @@ from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
@@ -153,8 +152,8 @@ class SyncStatus(IntEnum):
 
 
 class WalletStateManager:
-    # interested_coin_cache is a map from coid_ids to wallet_ids that are interested in the coin
-    interested_coin_cache: dict[bytes32, list[int]]
+    # Map of coin ID or puzzle hash to wallet IDs that are interested in it
+    subscription_cache: dict[bytes32, list[int]]
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -215,7 +214,7 @@ class WalletStateManager:
     ) -> WalletStateManager:
         self = WalletStateManager()
 
-        self.interested_coin_cache = {}
+        self.subscription_cache = {}
         self.config = config
         self.constants = constants
         self.root_path = root_path
@@ -388,10 +387,10 @@ class WalletStateManager:
 
         return self
 
-    def get_interested_coin_cache(self) -> dict[bytes32, list[int]]:
+    def get_subscription_cache(self) -> dict[bytes32, list[int]]:
         # Warning: this is a shallow copy of the cache
         # Do not modify the cache directly, use the add_interested_coin_ids method instead
-        return copy.copy(self.interested_coin_cache)
+        return copy.copy(self.subscription_cache)
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
@@ -741,22 +740,26 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network", ""):
-            return True  # sim is always synced if we have a genesis block.
-
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
 
-        latest_timestamp = self.blockchain.get_latest_timestamp()
         has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
+        if has_pending_queue_items:
+            return False
 
-        if latest_timestamp > block_is_current_at and not has_pending_queue_items:
+        # Simulator blocks often use non-wall-clock timestamps, so skip the
+        # recency check
+        if "simulator" in self.config.get("selected_network", ""):
             return True
-        return False
+
+        latest_timestamp = self.blockchain.get_latest_timestamp()
+        return latest_timestamp > block_is_current_at
 
     async def get_sync_status(self) -> SyncStatus:
         peak = self.blockchain._peak
         if peak is not None and "simulator" in self.config.get("selected_network", ""):
+            if self.wallet_node.new_peak_queue.has_pending_data_process_items():
+                return SyncStatus.SLIGHTLY_BEHIND
             return SyncStatus.SYNCED
 
         if peak is None or len(self.wallet_node.server.get_connections(NodeType.FULL_NODE)) == 0:
@@ -1124,9 +1127,8 @@ class WalletStateManager:
             )
             assert len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             singleton_match = SingletonPuzzle.match(
-                unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
+                unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(did_spend.puzzle_reveal))
             )
             if singleton_match is not None:
                 did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
@@ -1197,10 +1199,10 @@ class WalletStateManager:
             local_record = None
 
         if wallet_identifier is None:
-            cache = self.get_interested_coin_cache()
-            if coin_name in cache:
+            subscription_cache = self.get_subscription_cache()
+            if coin_name in subscription_cache:
                 interested_wallet_ids = [
-                    wallet_id for w in cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
+                    wallet_id for w in subscription_cache[coin_name] if (wallet_id := uint32(w)) in self.wallets
                 ]
                 remote_wallet = self.get_existing_remote_wallet()
                 if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
@@ -2163,11 +2165,11 @@ class WalletStateManager:
         # the elements of wallet_ids. It only stores one wallet_id per puzzle hash in the interested_store
         # but the coin_cache keeps all wallet_ids for each puzzle hash
         for puzzle_hash in puzzle_hashes:
-            if puzzle_hash in self.interested_coin_cache:
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})
-                self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
+            if puzzle_hash in self.subscription_cache:
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.subscription_cache[puzzle_hash]})
+                self.subscription_cache[puzzle_hash].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
+                self.subscription_cache[puzzle_hash] = list(set(wallet_ids))
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
         if len(puzzle_hashes) > 0:
@@ -2176,12 +2178,12 @@ class WalletStateManager:
     async def add_interested_coin_ids(self, coin_ids: list[bytes32], wallet_ids: list[int] = []) -> None:
         # TODO: FIX: wallet_ids is sometimes populated unexpectedly when called from add_pending_transaction
         for coin_id in coin_ids:
-            if coin_id in self.interested_coin_cache:
+            if coin_id in self.subscription_cache:
                 # prevent repeated wallet_ids from appearing in the coin cache
-                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]})
-                self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.subscription_cache[coin_id]})
+                self.subscription_cache[coin_id].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[coin_id] = list(set(wallet_ids))
+                self.subscription_cache[coin_id] = list(set(wallet_ids))
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id)
         if len(coin_ids) > 0:
@@ -2345,9 +2347,8 @@ class WalletStateManager:
     async def manual_did_search(self, coin_id: bytes32, latest: bool = True) -> ManualDIDSearchResults:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
-        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         singleton_match = SingletonPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
         )
         if singleton_match is None:
             raise ValueError("The coin is not a DID.")
@@ -2425,10 +2426,8 @@ class WalletStateManager:
         # Get coin state
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
-        singleton_struct = uncurried.args.at("f")
         singleton_match = SingletonPuzzle.match(
-            unknown_puzzle=UnknownPuzzle(known_program=uncurried.mod.curry(*uncurried.args.as_iter()))
+            unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
         )
         if singleton_match is None:
             raise ValueError("The coin is not a DID.")
@@ -2439,7 +2438,7 @@ class WalletStateManager:
             did_match.inner_puzzle.program,
             did_match.recovery_list.ids_hash,
             uint16(did_match.num_of_backup_ids_needed),
-            singleton_struct,
+            singleton_match.singleton_struct.program,
             did_match.metadata.as_program(),
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
             coin_state,
@@ -2460,7 +2459,7 @@ class WalletStateManager:
                 did_match.inner_puzzle.tree_hash
             )
 
-        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
+        launcher_id = singleton_match.launcher_id
         if derivation_record is None:
             raise ValueError(f"This DID {launcher_id} does not belong to the connected wallet")
         else:
@@ -2469,12 +2468,16 @@ class WalletStateManager:
                 our_inner_puzzle,
                 did_match.recovery_list.ids_hash,
                 did_match.num_of_backup_ids_needed,
-                singleton_struct,
+                singleton_match.singleton_struct.program,
                 did_match.metadata.as_program(),
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, did_match.metadata.as_program()
+                our_inner_puzzle,
+                NIL_TREEHASH,
+                uint64(0),
+                singleton_match.singleton_struct.program,
+                did_match.metadata.as_program(),
             )
             # Check if we have the DID wallet
             did_wallet: DIDWallet | None = None
@@ -2518,7 +2521,7 @@ class WalletStateManager:
                         our_inner_puzzle,
                         recovery_list_hash,
                         num_verification,
-                        singleton_struct,
+                        singleton_match.singleton_struct.program,
                         metadata.as_program(),
                     )
                     full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
@@ -2536,7 +2539,7 @@ class WalletStateManager:
                                 our_inner_puzzle,
                                 recovery_list_hash,
                                 num_verification,
-                                singleton_struct,
+                                singleton_match.singleton_struct.program,
                                 metadata.as_program(),
                             )
                             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)

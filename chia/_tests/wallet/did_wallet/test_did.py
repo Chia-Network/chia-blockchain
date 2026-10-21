@@ -863,7 +863,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, capsys: pytest
         coin_id=coin_id.hex(),
         latest=True,
     ).run()
-    assert "The coin is not a DID" in capsys.readouterr().out
+    assert "The coin is not a singleton" in capsys.readouterr().out
 
     odd_amount = uint64(1)
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:

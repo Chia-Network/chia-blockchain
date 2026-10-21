@@ -54,7 +54,9 @@ class PlotNFT2Wallet:
     @classmethod
     async def create(
         cls, *, wallet_state_manager: WalletStateManager, xch_wallet: Wallet, wallet_info: WalletInfo
-    ) -> Self:
+    ) -> Self | None:
+        if not wallet_state_manager.config.get("enable_plot_nft", True):
+            return None
         self = cls(
             wallet_state_manager=wallet_state_manager,
             xch_wallet=xch_wallet,
@@ -556,11 +558,16 @@ class PlotNFT2Wallet:
                 )
                 is not None
             )
-            if matched_plotnft_wallet_id is None and (
-                coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id or user_key_is_owned
+            if (
+                matched_plotnft_wallet_id is None
+                and (coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id or user_key_is_owned)
+                and len(
+                    [None for wallet in wallet_state_manager.wallets.values() if isinstance(wallet, PlotNFT2Wallet)]
+                )
+                <= 4
             ):
                 matched_plotnft_wallet_id = uint32(max(wallet_state_manager.wallets.keys()) + 1)
-                wallet_state_manager.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
+                new_wallet = await PlotNFT2Wallet.create(
                     wallet_state_manager=wallet_state_manager,
                     xch_wallet=wallet_state_manager.main_wallet,
                     wallet_info=WalletInfo(
@@ -570,6 +577,10 @@ class PlotNFT2Wallet:
                         data=next_plot_nft.launcher_id.hex(),
                     ),
                 )
+                if new_wallet is not None:
+                    wallet_state_manager.wallets[matched_plotnft_wallet_id] = new_wallet
+                else:
+                    return None
             if matched_plotnft_wallet_id is None or not user_key_is_owned:
                 wallet_state_manager.log.warning(
                     f"PlotNFT id {next_plot_nft.launcher_id} hinted to but not keyed to wallet"
@@ -702,6 +713,8 @@ class PlotNFT2Wallet:
                         data=launcher_id.hex(),
                     ),
                 )
+                if new_wallet is None:
+                    continue
                 wallet_state_manager.wallets[wallet_id] = new_wallet
                 plotnft = await new_wallet.get_current_plotnft()
                 created_height = await wallet_state_manager.plotnft2_store.get_plotnft_created_height(
