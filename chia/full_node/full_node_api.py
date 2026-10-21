@@ -1084,14 +1084,21 @@ class FullNodeAPI:
                 self.log.warning(f"Value Error: {e}")
                 return None
 
+            if is_overflow_block(self.full_node.constants, request.signage_point_index):
+                # an overflow block is infused in the sub-slot after its signage point. prev_b is
+                # infused before the signage point, so that boundary is crossed as well, but its
+                # end-of-sub-slot does not exist yet and is not in finished_sub_slots.
+                sub_slots_since_prev = len(finished_sub_slots) + 1
+            else:
+                # a non-overflow block is infused in its signage point's sub-slot, so
+                # finished_sub_slots already holds every sub-slot crossed since prev_b
+                sub_slots_since_prev = len(finished_sub_slots)
             tx_height = pre_sp_tx_block_height(
                 constants=self.full_node.constants,
                 blocks=self.full_node.blockchain,
                 prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
                 sp_index=request.signage_point_index,
-                # prev_b is infused before the signage point, so an overflow block always omits its last end-of-sub-slot
-                finished_sub_slots=len(finished_sub_slots)
-                + int(is_overflow_block(self.full_node.constants, request.signage_point_index)),
+                finished_sub_slots=sub_slots_since_prev,
             )
             quality_string: bytes32 | None = verify_and_get_quality_string(
                 request.proof_of_space,

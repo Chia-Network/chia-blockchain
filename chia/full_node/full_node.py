@@ -51,10 +51,10 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import (
-    get_unfinished_block_finished_sub_slots,
     post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -2639,9 +2639,7 @@ class FullNode:
             prev_b,
             self.blockchain,
         )
-        finished_sub_slots = get_unfinished_block_finished_sub_slots(
-            self.constants, self.blockchain, block, sub_slot_iters
-        )
+        finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
 
         # Count the blocks in sub slot, and check if it's a new epoch
         if len(block.finished_sub_slots) > 0:

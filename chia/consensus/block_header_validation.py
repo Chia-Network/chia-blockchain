@@ -23,9 +23,9 @@ from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
-    get_unfinished_block_finished_sub_slots,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
@@ -91,9 +91,7 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        finished_sub_slots_since_prev = get_unfinished_block_finished_sub_slots(
-            constants, blocks, header_block, expected_vs.ssi
-        )
+        finished_sub_slots_since_prev = unfinished_block_sub_slots(constants, blocks, header_block, expected_vs.ssi)
         if finished_sub_slots_since_prev == len(header_block.finished_sub_slots):
             # the final end-of-sub-slot is already in the chain, nothing is omitted
             skip_overflow_last_ss_validation = False

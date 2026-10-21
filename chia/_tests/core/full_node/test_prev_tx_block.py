@@ -7,11 +7,11 @@ from chia_rs.sized_ints import uint8, uint32
 import chia.consensus.get_block_challenge as get_block_challenge_module
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import (
-    get_unfinished_block_finished_sub_slots,
     is_infused_before_sp,
     post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
@@ -419,9 +419,8 @@ def test_unfinished_block_finished_sub_slot_count(bt: BlockTools) -> None:
     for block in block_list:
         unfinished = make_unfinished_block(block, bt.constants)
         sub_slot_iters = block_cache.block_record(block.header_hash).sub_slot_iters
-        assert get_unfinished_block_finished_sub_slots(bt.constants, block_cache, unfinished, sub_slot_iters) == len(
-            block.finished_sub_slots
-        )
+        count = unfinished_block_sub_slots(bt.constants, block_cache, unfinished, sub_slot_iters)
+        assert count == len(block.finished_sub_slots)
         if len(unfinished.finished_sub_slots) < len(block.finished_sub_slots):
             omitted_eos += 1
         elif is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
