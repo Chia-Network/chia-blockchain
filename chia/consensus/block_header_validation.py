@@ -92,12 +92,10 @@ def validate_unfinished_header_block(
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
         finished_sub_slots_since_prev = get_unfinished_block_finished_sub_slots(
-            constants,
-            blocks,
-            header_block,
-            expected_vs.ssi,
+            constants, blocks, header_block, expected_vs.ssi
         )
         if finished_sub_slots_since_prev == len(header_block.finished_sub_slots):
+            # the final end-of-sub-slot is already in the chain, nothing is omitted
             skip_overflow_last_ss_validation = False
     else:
         finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
@@ -127,13 +125,6 @@ def validate_unfinished_header_block(
             can_finish_se = False
             can_finish_epoch = False
 
-    pre_sp_tx_height = pre_sp_tx_block_height(
-        constants=constants,
-        blocks=blocks,
-        prev_b_hash=header_block.prev_header_hash,
-        sp_index=header_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=finished_sub_slots_since_prev,
-    )
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
@@ -544,7 +535,13 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        pre_sp_tx_height,
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=header_block.prev_header_hash,
+            sp_index=header_block.reward_chain_block.signage_point_index,
+            finished_sub_slots=finished_sub_slots_since_prev,
+        ),
         height_agnostic=height_agnostic,
         filter_challenge=filter_challenge,
         signage_point_index=header_block.reward_chain_block.signage_point_index,

@@ -52,6 +52,7 @@ from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import (
     get_unfinished_block_finished_sub_slots,
+    post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
 )
@@ -2632,24 +2633,14 @@ class FullNode:
         else:
             prev_b = self.blockchain.block_record(block.prev_header_hash)
 
-        sub_slot_iters = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(block.finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
-        )[0]
-        finished_sub_slots = get_unfinished_block_finished_sub_slots(
-            self.constants,
-            self.blockchain,
-            block,
-            sub_slot_iters,
         )
-        prev_tx_height = pre_sp_tx_block_height(
-            self.constants,
-            self.blockchain,
-            prev_b_hash=block.prev_header_hash,
-            sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=finished_sub_slots,
+        finished_sub_slots = get_unfinished_block_finished_sub_slots(
+            self.constants, self.blockchain, block, sub_slot_iters
         )
 
         # Count the blocks in sub slot, and check if it's a new epoch
@@ -2701,6 +2692,13 @@ class FullNode:
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
             # Match finished-block prevalidation: CLVM flags are gated on the
             # latest tx block infused before this block's signage point.
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=finished_sub_slots,
+            )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
 
             # on mainnet we won't receive unfinished blocks for heights
@@ -2756,7 +2754,13 @@ class FullNode:
         else:
             height = uint32(self.blockchain.block_record(block.prev_header_hash).height + 1)
 
-        post_hard_fork = prev_tx_height >= self.constants.HARD_FORK2_HEIGHT
+        post_hard_fork = post_hard_fork2(
+            self.constants,
+            self.blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=finished_sub_slots,
+        )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,
             self.blockchain,
@@ -2798,13 +2802,6 @@ class FullNode:
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
                 f"{percent_full_str}"
             )
-
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants,
-            len(block.finished_sub_slots) > 0,
-            prev_b,
-            self.blockchain,
-        )
 
         if block.reward_chain_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_block.pos_ss_cc_challenge_hash)

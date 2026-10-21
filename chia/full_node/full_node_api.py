@@ -41,9 +41,14 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.get_block_challenge import is_first_overflow, pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    is_overflow_block,
+)
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -1079,21 +1084,16 @@ class FullNodeAPI:
                 self.log.warning(f"Value Error: {e}")
                 return None
 
-            finished_sub_slots_for_sp = len(finished_sub_slots) + int(
-                is_first_overflow(
-                    constants=self.full_node.constants,
-                    blocks=self.full_node.blockchain,
-                    prev_b=prev_b,
-                    sp_index=request.signage_point_index,
-                    sp_sub_slot_total_iters=total_iters_pos_slot,
-                )
-            )
             tx_height = pre_sp_tx_block_height(
                 constants=self.full_node.constants,
                 blocks=self.full_node.blockchain,
                 prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
                 sp_index=request.signage_point_index,
-                finished_sub_slots=finished_sub_slots_for_sp,
+                # prev_b was infused before the signage point, so an overflow block always crosses the
+                # signage point's sub-slot before its infusion point; that end-of-sub-slot is not in
+                # finished_sub_slots yet.
+                finished_sub_slots=len(finished_sub_slots)
+                + int(is_overflow_block(self.full_node.constants, request.signage_point_index)),
             )
             quality_string: bytes32 | None = verify_and_get_quality_string(
                 request.proof_of_space,

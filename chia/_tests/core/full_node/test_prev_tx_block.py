@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import ConsensusConstants, FullBlock
+from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
 from chia_rs.sized_ints import uint8, uint32
 
 import chia.consensus.get_block_challenge as get_block_challenge_module
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import (
+    get_unfinished_block_finished_sub_slots,
     is_infused_before_sp,
     post_hard_fork2,
     post_hard_fork2_block_record,
@@ -396,3 +397,84 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
         idx -= 1
 
     return curr
+
+
+def unfinished_from_full_block(constants: ConsensusConstants, block: FullBlock) -> UnfinishedBlock:
+    # The farmer builds an overflow block before the end-of-sub-slot of its signage point sub-slot
+    # exists, so the unfinished block never carries it.
+    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    return UnfinishedBlock(
+        block.finished_sub_slots[:-1] if overflow else block.finished_sub_slots,
+        block.reward_chain_block.get_unfinished(),
+        block.challenge_chain_sp_proof,
+        block.reward_chain_sp_proof,
+        block.foliage,
+        block.foliage_transaction_block,
+        block.transactions_info,
+        block.transactions_generator,
+        block.transactions_generator_ref_list,
+        block.transactions_generator_buffer,
+        block.version,
+    )
+
+
+def tx_height_for_count(constants: ConsensusConstants, blocks: BlockCache, block: FullBlock, count: int) -> uint32:
+    return pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=block.prev_header_hash,
+        sp_index=block.reward_chain_block.signage_point_index,
+        finished_sub_slots=count,
+    )
+
+
+def test_unfinished_block_finished_sub_slot_count(bt: BlockTools) -> None:
+    # The sub-slot count used to find the pre-SP transaction block of an unfinished block must match
+    # the one its finished block carries. An unfinished first-overflow block omits the final
+    # end-of-sub-slot, so the raw list length skips a transaction block infused before the signage
+    # point.
+    block_list = bt.get_consecutive_blocks(
+        10,
+        block_list_input=[],
+        guarantee_transaction_block=True,
+    )
+    # a single call keeps infusing into the same sub-slots, so some overflow blocks follow another
+    # overflow block of their own signage point sub-slot
+    block_list = bt.get_consecutive_blocks(20, block_list_input=block_list, force_overflow=True)
+    _, _, blocks = load_block_list(block_list, bt.constants)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
+
+    omitted_eos = 0
+    stale_tx_height = 0
+    already_included = 0
+    for block in block_list:
+        unfinished = unfinished_from_full_block(bt.constants, block)
+        sub_slot_iters = block_cache.block_record(block.header_hash).sub_slot_iters
+        finished_sub_slots = get_unfinished_block_finished_sub_slots(
+            bt.constants, block_cache, unfinished, sub_slot_iters
+        )
+        assert finished_sub_slots == len(block.finished_sub_slots)
+
+        expected = tx_height_for_count(bt.constants, block_cache, block, len(block.finished_sub_slots))
+        assert tx_height_for_count(bt.constants, block_cache, block, finished_sub_slots) == expected
+        if len(unfinished.finished_sub_slots) < len(block.finished_sub_slots):
+            omitted_eos += 1
+            if tx_height_for_count(bt.constants, block_cache, block, len(unfinished.finished_sub_slots)) < expected:
+                stale_tx_height += 1
+        elif is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+            already_included += 1
+
+    assert omitted_eos > 0
+    assert already_included > 0
+    assert stale_tx_height > 0
+
+
+def test_unfinished_overflow_genesis_finished_sub_slot_count(bt: BlockTools) -> None:
+    block = bt.get_consecutive_blocks(1, block_list_input=[], force_overflow=True)[0]
+    assert is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
+    unfinished = unfinished_from_full_block(bt.constants, block)
+    assert len(unfinished.finished_sub_slots) == len(block.finished_sub_slots) - 1
+    block_cache = BlockCache({}, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
+    assert get_unfinished_block_finished_sub_slots(
+        bt.constants, block_cache, unfinished, bt.constants.SUB_SLOT_ITERS_STARTING
+    ) == len(block.finished_sub_slots)
