@@ -258,6 +258,8 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
+        self.log.info(f"HARD_FORK2_HEIGHT: {self.constants.HARD_FORK2_HEIGHT}")
+        self.log.info(f"PLOT_FILTER_V2_RELATIVE_HEIGHT: {self.constants.PLOT_FILTER_V2_RELATIVE_HEIGHT}")
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
