@@ -1089,9 +1089,7 @@ class FullNodeAPI:
                 blocks=self.full_node.blockchain,
                 prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
                 sp_index=request.signage_point_index,
-                # prev_b was infused before the signage point, so an overflow block always crosses the
-                # signage point's sub-slot before its infusion point; that end-of-sub-slot is not in
-                # finished_sub_slots yet.
+                # prev_b is infused before the signage point, so an overflow block always omits its last end-of-sub-slot
                 finished_sub_slots=len(finished_sub_slots)
                 + int(is_overflow_block(self.full_node.constants, request.signage_point_index)),
             )

@@ -191,9 +191,8 @@ def get_unfinished_block_finished_sub_slots(
     undercounts by one in that case.
     """
     finished_sub_slots = len(block.finished_sub_slots)
-    if is_overflow_block(constants, block.reward_chain_block.signage_point_index) and (
-        block.prev_header_hash == constants.GENESIS_CHALLENGE
-        or not final_eos_is_already_included(block, blocks, sub_slot_iters)
+    if is_overflow_block(constants, block.reward_chain_block.signage_point_index) and not final_eos_is_already_included(
+        block, blocks, sub_slot_iters
     ):
         finished_sub_slots += 1
 
