@@ -25,11 +25,13 @@ class SmartFeeEstimator:
     log: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     def parse(self, fee_result: EstimateResult) -> float:
+        # Rates here are mojos per 1,000 cost, the same unit the tracker stores.
+        # estimate_result_to_fee_estimate() is the only division by 1,000.
         fail_bucket: BucketResult = fee_result.fail_bucket
         median = fee_result.median
 
         if median != -1:
-            return median / 1000.0
+            return median
 
         if fail_bucket.start == 0:
             return -1.0
@@ -43,7 +45,7 @@ class SmartFeeEstimator:
         start_index = min(get_bucket_index(self.fee_tracker.buckets, fail_bucket.start) + 3, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
-        return fee_val / 1000.0
+        return fee_val
 
     def get_estimate_for_block(self, block: uint32) -> FeeEstimateV2:
         estimate_result = self.fee_tracker.estimate_fee_for_block(block)
