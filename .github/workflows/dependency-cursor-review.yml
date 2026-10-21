@@ -92,6 +92,9 @@ jobs:
       - name: Checkout repository
         if: steps.target_pr.outputs.already_reviewed != 'true'
         uses: actions/checkout@v7
+        env:
+          ACTIONS_CACHE_URL: ""
+          ACTIONS_RESULTS_URL: ""
         with:
           ref: ${{ steps.target_pr.outputs.head_sha }}
           persist-credentials: false
@@ -252,12 +255,15 @@ jobs:
     needs: dependency-review-scan
     if: ${{ needs.dependency-review-scan.result == 'success' && needs.dependency-review-scan.outputs.already_reviewed != 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        env:
+          ACTIONS_CACHE_URL: ""
+          ACTIONS_RESULTS_URL: ""
         with:
           ref: ${{ needs.dependency-review-scan.outputs.head_sha }}
           persist-credentials: false
@@ -454,11 +460,15 @@ jobs:
           done
 
       - name: Run Cursor agent
+        timeout-minutes: 10
         shell: bash
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GITHUB_TOKEN: ""
           GH_TOKEN: ""
+          ACTIONS_CACHE_URL: ""
+          ACTIONS_RESULTS_URL: ""
+          ACTIONS_RUNTIME_TOKEN: ""
         run: |
           set -euo pipefail
           if [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GH_TOKEN:-}" ]; then
@@ -474,10 +484,44 @@ jobs:
           run_agent_prompt() {
             local prompt_file="$1"
             local output_file="$2"
-            if ! agent -f --mode ask -p --output-format json < "$prompt_file" > "$output_file"; then
+            local stream_file="${output_file}.stream"
+            if ! agent -f --mode ask -p --output-format stream-json < "$prompt_file" > "$stream_file"; then
               FALLBACK_PROMPT="$(python3 -c 'from pathlib import Path; import sys; path = sys.argv[1]; max_bytes = 60000; raw = Path(path).read_bytes(); text = raw[:max_bytes].decode("utf-8", errors="ignore"); text += "\n\n[Prompt truncated for CLI argument compatibility.]" if len(raw) > max_bytes else ""; print(text, end="")' "$prompt_file")"
-              agent -f --mode ask -p --output-format json "$FALLBACK_PROMPT" > "$output_file"
+              agent -f --mode ask -p --output-format stream-json "$FALLBACK_PROMPT" > "$stream_file"
             fi
+            python3 - "$stream_file" "$output_file" <<'PY'
+          import json
+          import sys
+
+          stream_path, output_path = sys.argv[1:3]
+          result = ""
+          final = ""
+          with open(stream_path, encoding="utf-8") as handle:
+              for line in handle:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      event = json.loads(line)
+                  except json.JSONDecodeError:
+                      continue
+                  if not isinstance(event, dict):
+                      continue
+                  if event.get("type") == "assistant":
+                      text = "".join(
+                          block.get("text", "")
+                          for block in event.get("message", {}).get("content", [])
+                          if isinstance(block, dict)
+                      )
+                      if text:
+                          final = text
+                  elif event.get("type") == "result":
+                      result = event.get("result", "")
+          payload = {"result": result or final, "final_message": final, "complete": bool(result or final)}
+          with open(output_path, "w", encoding="utf-8") as handle:
+              json.dump(payload, handle)
+              handle.write("\n")
+          PY
           }
 
           run_agent_prompt "dcr-scan-input/cursor_prompt_malware.txt" "cursor_output_malware.json"

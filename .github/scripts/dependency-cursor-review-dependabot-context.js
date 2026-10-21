@@ -112,6 +112,26 @@ function groupPreamble(body) {
   return body.slice(0, cut);
 }
 
+// The Dependabot update table only. Release-note tables sit later, often inside
+// <details>, and a row there must not invent a package or clear a real version.
+function dependabotUpdateTable(body) {
+  const source = String(body || '');
+  const detailsAt = source.search(/<details\b/i);
+  const region = detailsAt === -1 ? source : source.slice(0, detailsAt);
+  const header = /^\|\s*Package\s*\|\s*From\s*\|\s*To\s*\|/im.exec(region);
+  if (!header) return '';
+  const kept = [];
+  for (const line of region.slice(header.index).split('\n')) {
+    if (!line.trim()) {
+      if (kept.length > 0) break;
+      continue;
+    }
+    if (!line.trim().startsWith('|')) break;
+    kept.push(line);
+  }
+  return kept.join('\n');
+}
+
 // One map. Intro links, table rows, Updates lines, and the title all write it.
 // A second non-empty repository or version that differs clears that field.
 function collectPackageUpdates(title, body) {
@@ -134,8 +154,9 @@ function collectPackageUpdates(title, body) {
     );
   }
   const tableRe = /^\|\s*([^|\n]+?)\s*\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|/gm;
+  const table = dependabotUpdateTable(body);
   let row;
-  while ((row = tableRe.exec(body)) !== null) {
+  while ((row = tableRe.exec(table)) !== null) {
     const cell = packageCell(row[1]);
     rememberUpdate(byName, cell.name, row[2], row[3], cell.repo);
   }
@@ -298,8 +319,7 @@ async function runDependabotContext({ core }) {
   fs.writeFileSync('dependency_updates.json', JSON.stringify(parsed.updates, null, 2));
 
   if (!parsed.updates.some((item) => item.upstreamRepo)) {
-    core.setFailed('PR body is missing an upstream GitHub repository link.');
-    return;
+    core.warning('PR body is missing an upstream GitHub repository link; the scan will record no_upstream_link.');
   }
 
   const normalizedReleaseNotes = parsed.releaseNotes || 'PR body did not include a Release notes details section.';
