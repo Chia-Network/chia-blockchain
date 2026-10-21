@@ -7,7 +7,7 @@ STORED_FEE_RATE_SCALE = 1000
 
 MIN_FEE_RATE = 0  # Value of first bucket
 INITIAL_STEP = 5.0  # First bucket after zero value
-MAX_FEE_RATE = 40000000.0  # Same stored unit as STORED_FEE_RATE_SCALE
+MAX_FEE_RATE = 40000000.0  # Mojo per STORED_FEE_RATE_SCALE cost unit
 INFINITE_FEE_RATE = 1000000000.0
 
 STEP_SIZE = 1.05  # bucket increase by 1.05

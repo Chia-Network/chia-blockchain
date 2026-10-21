@@ -103,7 +103,8 @@ def test_quote_uses_one_division() -> None:
     assert published.error is None
     assert published.estimated_fee_rate.mojos_per_clvm_cost == pytest.approx(5.0)
     send_xch_cost = 9_401_710
-    assert int(published.estimated_fee_rate.mojos_per_clvm_cost * send_xch_cost) == 5 * send_xch_cost
+    # 47,008,550 mojos is 5 per cost times the desktop send cost, 9,401,710.
+    assert int(published.estimated_fee_rate.mojos_per_clvm_cost * send_xch_cost) == 47_008_550
     assert fee_rate_v2_to_v1(published.estimated_fee_rate).mojos_per_clvm_cost == 5
 
     # The wallet protocol still rounds a positive fraction up to 1 mojo per cost.
