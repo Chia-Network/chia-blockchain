@@ -314,9 +314,8 @@ async def create_v2_plots(
 
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility
-        include_taproot: bool = keys.pool_contract_puzzle_hash is not None
         plot_public_key = generate_plot_public_key(
-            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
+            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, is_v2=True
         )
 
         # TODO: todo_v2_plots index and meta_group should be hooked up to

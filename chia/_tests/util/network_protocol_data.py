@@ -1026,8 +1026,8 @@ get_pool_info_response = pool_protocol.GetPoolInfoResponse(
 
 post_partial_request = pool_protocol.PostPartialRequest(
     post_partial_payload,
-    "",
     g2_element,
+    "",
 )
 
 post_partial_response = pool_protocol.PostPartialResponse(

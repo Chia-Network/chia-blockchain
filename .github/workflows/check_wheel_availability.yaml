@@ -1,4 +1,4 @@
-name: 🚨 Check Dependency Artifacts
+name: Check Dependency Artifacts
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         exclude:
           - os:
               matrix: windows

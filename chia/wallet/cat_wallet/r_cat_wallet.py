@@ -3,13 +3,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_byte_class import hexstr_to_bytes
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16
-from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

@@ -9,9 +9,7 @@ from collections.abc import Callable
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, Protocol, runtime_checkable
-
-from typing_extensions import Self
+from typing import Any, Protocol, Self, runtime_checkable
 
 log = logging.getLogger(__name__)
 

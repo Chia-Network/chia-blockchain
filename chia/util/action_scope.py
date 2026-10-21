@@ -4,9 +4,7 @@ import contextlib
 import copy
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar
-
-from typing_extensions import Self
+from typing import Generic, Self, TypeVar
 
 _T_SideEffects = TypeVar("_T_SideEffects")
 _T_Config = TypeVar("_T_Config")

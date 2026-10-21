@@ -8,6 +8,7 @@ from typing import cast
 from unittest.mock import AsyncMock
 
 import dns
+import dns.resolver
 import pytest
 from chia_rs.sized_ints import uint32, uint64
 from dns.name import from_text
@@ -418,3 +419,42 @@ async def test_static_peers_with_hostnames(
     assert len(answer) == 1
     expected = "2001:db8::5" if request_type == dns.rdatatype.AAAA else "1.2.3.4"
     assert answer[0].to_text() == expected
+
+
+@pytest.mark.anyio
+async def test_static_peers_with_unresolvable_hostnames(
+    seeder_service: DNSServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def make_rrset(name: str, rdtype: dns.rdatatype.RdataType, address: str) -> RRset:
+        rrset = RRset(from_text(name), IN, rdtype)
+        record_class = A if rdtype == A_TYPE else AAAA
+        rrset.add(record_class(IN, rdtype, address))
+        return rrset
+
+    async def mock_resolve(
+        qname: dns.name.Name | str,
+        rdtype: dns.rdatatype.RdataType | str = dns.rdatatype.A,
+        lifetime: float | None = None,
+    ) -> RRset:
+        if qname == "missing.example.com":
+            raise dns.resolver.NXDOMAIN
+        if qname == "v4only.example.com":
+            if rdtype == "AAAA":
+                raise dns.resolver.NoAnswer
+            return make_rrset("v4only.example.com.", A_TYPE, "5.6.7.8")
+        assert qname == "node.example.com"
+        if rdtype == "A":
+            return make_rrset("node.example.com.", A_TYPE, "1.2.3.4")
+        return make_rrset("node.example.com.", AAAA_TYPE, "2001:db8::5")
+
+    mock_resolver = AsyncMock()
+    mock_resolver.resolve.side_effect = mock_resolve
+    monkeypatch.setattr(seeder_service, "resolver", mock_resolver)
+    # A failure resolving one static peer must not discard the static peers resolved before or after it
+    monkeypatch.setitem(
+        seeder_service.config, "static_peers", ["v4only.example.com", "missing.example.com", "node.example.com"]
+    )
+    await seeder_service.refresh_reliable_peers()
+
+    assert sorted(str(ip) for ip in seeder_service.reliable_peers_v4) == ["1.2.3.4", "5.6.7.8"]
+    assert [str(ip) for ip in seeder_service.reliable_peers_v6] == ["2001:db8::5"]

@@ -29,7 +29,7 @@ from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.timelord_protocol import NewInfusionPointVDF, NewUnfinishedBlockTimelord
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
-from chia.simulator.block_tools import load_block_list, make_unfinished_block, test_constants
+from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
@@ -231,6 +231,7 @@ class TestCommitments:
     async def test_timelord_mmr_includes_peak_parent_before_sp(
         self,
         fork_height2_500_1000_blocks: list[FullBlock],
+        fork_height2_500_block_tools: BlockTools,
         self_hostname: str,
         db_version: int,
         monkeypatch: pytest.MonkeyPatch,
@@ -242,6 +243,22 @@ class TestCommitments:
             PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
         _, _, block_records = load_block_list(blocks, constants)
+        # Keep HF2 active for the stale parent, and both parents in the same sub-slot.
+        parent = next(
+            record
+            for record in block_records.values()
+            if record.prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT
+            if not record.first_in_sub_slot
+            if not record.overflow
+        )
+        # Force a nonzero SP in a later sub-slot, after the parent was infused.
+        blocks = fork_height2_500_block_tools.get_consecutive_blocks(
+            1,
+            block_list_input=blocks[: int(parent.height) + 1],
+            skip_slots=2,
+            force_overflow=True,
+        )
+        _, _, block_records = load_block_list(blocks, constants)
         block_cache = BlockCache(
             block_records,
             BlockchainMMRManager(
@@ -249,16 +266,11 @@ class TestCommitments:
                 aggregate_from=constants.HARD_FORK2_HEIGHT,
             ),
         )
-        candidate = _late_parent_candidate(
-            blocks,
-            block_records,
-            block_cache,
-            constants,
-            minimum_height=constants.HARD_FORK2_HEIGHT,
-            minimum_signage_point_index=uint8(1),
-        )
+        candidate = blocks[-1]
+        assert candidate.reward_chain_block.signage_point_index > 0
         candidate_record = block_records[candidate.header_hash]
         parent = block_records[candidate.prev_header_hash]
+        assert parent.total_iters < candidate_record.sp_total_iters(constants)
         unfinished = make_unfinished_block(candidate, constants).replace(
             foliage=candidate.foliage.replace(prev_block_hash=parent.prev_hash)
         )
