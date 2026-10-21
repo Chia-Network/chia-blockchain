@@ -7,6 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.cmds.wallet_funcs import print_offer_summary
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.wallet_request_types import CATAssetIDToName, CATAssetIDToNameResponse
 
 TEST_DUCKSAUCE_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000001"
@@ -20,6 +21,12 @@ TEST_ASSET_ID_NAME_MAPPING: dict[bytes32, tuple[uint32, str]] = {
 }
 
 
+TEST_CAT_DRIVERS = {
+    asset_id.hex(): PuzzleInfo({"type": "CAT", "tail": "0x" + asset_id.hex()})
+    for asset_id in TEST_ASSET_ID_NAME_MAPPING
+}
+
+
 async def cat_name_resolver(request: CATAssetIDToName) -> CATAssetIDToNameResponse:
     wallet_id, name = TEST_ASSET_ID_NAME_MAPPING.get(request.asset_id, (None, None))
     return CATAssetIDToNameResponse(wallet_id=wallet_id, name=name)
@@ -29,7 +36,7 @@ async def cat_name_resolver(request: CATAssetIDToName) -> CATAssetIDToNameRespon
 async def test_print_offer_summary_xch(capsys: Any) -> None:
     summary_dict = {"xch": str(1_000_000_000_000)}
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
@@ -42,7 +49,7 @@ async def test_print_offer_summary_cat(capsys: Any) -> None:
         TEST_DUCKSAUCE_ASSET_ID: str(1_000),
     }
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
@@ -56,7 +63,7 @@ async def test_print_offer_summary_multiple_cats(capsys: Any) -> None:
         TEST_CRUNCHBERRIES_ASSET_ID: str(2_000),
     }
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
@@ -73,7 +80,7 @@ async def test_print_offer_summary_xch_and_cats(capsys: Any) -> None:
         TEST_UNICORNTEARS_ASSET_ID: str(3_333),
     }
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
@@ -92,7 +99,7 @@ async def test_print_offer_summary_xch_and_cats_with_zero_values(capsys: Any) ->
         TEST_UNICORNTEARS_ASSET_ID: str(0),
     }
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
@@ -109,7 +116,7 @@ async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
         "unknown": str(3_456),
     }
 
-    await print_offer_summary(cat_name_resolver, summary_dict, has_fee=True)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS, has_fee=True)
 
     captured = capsys.readouterr()
 
@@ -121,7 +128,7 @@ async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
 async def test_print_offer_summary_xch_with_one_mojo(capsys: Any) -> None:
     summary_dict = {"xch": str(1)}
 
-    await print_offer_summary(cat_name_resolver, summary_dict)
+    await print_offer_summary(cat_name_resolver, summary_dict, TEST_CAT_DRIVERS)
 
     captured = capsys.readouterr()
 
