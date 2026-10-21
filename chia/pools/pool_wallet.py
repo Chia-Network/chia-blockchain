@@ -47,7 +47,7 @@ from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import PuzzleHashSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
@@ -363,14 +363,16 @@ class PoolWallet:
 
         p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
         await wallet_state_manager.add_new_wallet(pool_wallet)
-        await wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [pool_wallet.wallet_id])
+        await wallet_state_manager._add_subscriptions(
+            [PuzzleHashSubscription(target=p2_puzzle_hash, wallet_id=pool_wallet.wallet_id)]
+        )
 
         return pool_wallet
 
     @classmethod
     async def create_from_db(
         cls,
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str | None = None,

@@ -121,6 +121,7 @@ from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import CoinSubscription
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -2438,7 +2439,9 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: p
     await wallet_2_rpc.did_message_spend(
         DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), wallet_environments.tx_config
     )
-    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+    async with env_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        async with action_scope.use() as interface:
+            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=last_did_coin.name()))
 
     await wallet_environments.process_pending_states(
         [
@@ -2464,7 +2467,9 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework, capsys: p
         DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True),
         wallet_environments.tx_config.override(reuse_puzhash=True),
     )
-    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+    async with env_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        async with action_scope.use() as interface:
+            interface.side_effects.coin_subscriptions.append(CoinSubscription(target=last_did_coin.name()))
 
     await wallet_environments.process_pending_states(
         [
