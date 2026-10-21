@@ -24,6 +24,7 @@ from chia.full_node.fee_estimator_constants import (
     SHORT_DECAY,
     SHORT_SCALE,
     STEP_SIZE,
+    STORED_FEE_RATE_SCALE,
     SUCCESS_PCT,
     SUFFICIENT_FEE_TXS,
 )
@@ -136,7 +137,7 @@ class FeeStat:  # TxConfirmStats
         # convert from number of blocks to number of periods
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
-        fee_rate = item.fee_per_cost * 1000
+        fee_rate = item.fee_per_cost * STORED_FEE_RATE_SCALE
         bucket_index = get_bucket_index(self.buckets, fee_rate)
 
         for i in range(periods_to_confirm, len(self.confirmed_average)):
@@ -515,7 +516,7 @@ class FeeTracker:
         if item.height_added_to_mempool < self.latest_seen_height:
             self.log.info(f"Processing Item from pending pool: cost={item.cost} fee={item.fee}")
 
-        fee_rate = item.fee_per_cost * 1000
+        fee_rate = item.fee_per_cost * STORED_FEE_RATE_SCALE
         bucket_index: int = get_bucket_index(self.buckets, fee_rate)
 
         self.short_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
@@ -523,7 +524,7 @@ class FeeTracker:
         self.long_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
 
     def remove_tx(self, item: MempoolItemInfo) -> None:
-        bucket_index = get_bucket_index(self.buckets, item.fee_per_cost * 1000)
+        bucket_index = get_bucket_index(self.buckets, item.fee_per_cost * STORED_FEE_RATE_SCALE)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.med_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)

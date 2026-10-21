@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import re
 from collections.abc import AsyncGenerator
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator, create_bitcoin_fee_estimator
+from chia.full_node.fee_estimator_constants import STORED_FEE_RATE_SCALE
+from chia.full_node.fee_tracker import BucketResult, EstimateResult
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_errors import RpcError
@@ -18,8 +23,29 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.fee_rate import FeeRateV2
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_service import WalletService
+
+SEND_XCH_COST = 9_401_710
+
+
+class StoredMedianEstimator(BitcoinFeeEstimator):
+    """Publish one stored median through the real fee estimator."""
+
+    def __init__(self, stored_median: float) -> None:
+        base = create_bitcoin_fee_estimator(uint64(1_000_000))
+        super().__init__(base.tracker, base.fee_rate_estimator)
+        self.stored_median = stored_median
+
+    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRateV2:
+        empty = BucketResult(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        published = self.fee_rate_estimator.estimate_result_to_fee_estimate(
+            EstimateResult(uint64(time_offset_seconds), empty, empty, self.stored_median)
+        )
+        if published.error is not None:
+            return FeeRateV2(0)
+        return published.estimated_fee_rate
 
 
 @pytest.fixture(scope="function")
@@ -284,6 +310,41 @@ async def test_get_spendbundle_type_cost_spend_count_ok(
         request = {"target_times": [1], "spend_type": "send_xch_transaction", "spend_count": spend_count}
         ret = await full_node_rpc_api.get_fee_estimate(request)
         print(spend_count, ret)
+
+
+def _api_quoting(stored_median: float) -> FullNodeRpcApi:
+    mempool = SimpleNamespace(
+        fee_estimator=StoredMedianEstimator(stored_median),
+        total_mempool_cost=lambda: 0,
+        total_mempool_fees=lambda: 0,
+        size=lambda: 0,
+    )
+    api = FullNodeRpcApi(cast("FullNode", SimpleNamespace(mempool_manager=SimpleNamespace(mempool=mempool))))
+
+    async def get_blockchain_state(_request: dict[str, Any]) -> dict[str, Any]:
+        return {"blockchain_state": {"sync": {"synced": True}, "peak": None}}
+
+    api.get_blockchain_state = get_blockchain_state  # type: ignore[method-assign]
+    return api
+
+
+@pytest.mark.anyio
+async def test_get_fee_estimate_uses_published_rate() -> None:
+    """cost=1 is chia show -f. send_xch_transaction is the desktop fee box."""
+    full_node_rpc_api = _api_quoting(5 * STORED_FEE_RATE_SCALE)
+    by_cost = await full_node_rpc_api.get_fee_estimate({"target_times": [60, 120, 300], "cost": 1})
+    assert by_cost["estimates"] == [5, 5, 5]
+    assert by_cost["current_fee_rate"] == 5
+
+    by_type = await full_node_rpc_api.get_fee_estimate({"target_times": [60], "spend_type": "send_xch_transaction"})
+    assert by_type["estimates"] == [5 * SEND_XCH_COST]
+
+    # A stored 200 publishes as 0.2. cost=1 keeps whole mojos, so the CLI line is 0.
+    small_api = _api_quoting(0.2 * STORED_FEE_RATE_SCALE)
+    small = await small_api.get_fee_estimate({"target_times": [60], "cost": 1})
+    assert small["estimates"] == [0]
+    desktop = await small_api.get_fee_estimate({"target_times": [60], "spend_type": "send_xch_transaction"})
+    assert desktop["estimates"] == [int(0.2 * SEND_XCH_COST)]
 
 
 @pytest.mark.anyio

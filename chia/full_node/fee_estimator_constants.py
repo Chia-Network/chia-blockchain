@@ -1,9 +1,13 @@
 # https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.h
 from __future__ import annotations
 
+# Tracker buckets are mojos per this many CLVM cost.
+# The publisher divides by this once. parse() must not divide again.
+STORED_FEE_RATE_SCALE = 1000
+
 MIN_FEE_RATE = 0  # Value of first bucket
 INITIAL_STEP = 5.0  # First bucket after zero value
-MAX_FEE_RATE = 40000000.0  # Mojo per 1000 cost unit
+MAX_FEE_RATE = 40000000.0  # Same stored unit as STORED_FEE_RATE_SCALE
 INFINITE_FEE_RATE = 1000000000.0
 
 STEP_SIZE = 1.05  # bucket increase by 1.05

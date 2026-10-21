@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.full_node.fee_estimation import FeeMempoolInfo
+from chia.full_node.fee_estimator_constants import STORED_FEE_RATE_SCALE
 from chia.full_node.fee_tracker import (
     BucketResult,
     EstimateResult,
@@ -25,8 +26,8 @@ class SmartFeeEstimator:
     log: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     def parse(self, fee_result: EstimateResult) -> float:
-        # Rates here are mojos per 1,000 cost, the same unit the tracker stores.
-        # estimate_result_to_fee_estimate() is the only division by 1,000.
+        # Rates here are mojos per STORED_FEE_RATE_SCALE cost, the unit the tracker stores.
+        # estimate_result_to_fee_estimate() is the only division by that scale.
         fail_bucket: BucketResult = fee_result.fail_bucket
         median = fee_result.median
 
@@ -36,11 +37,10 @@ class SmartFeeEstimator:
         if fail_bucket.start == 0:
             return -1.0
 
-        # If median is -1, tracker wasn't able to find a passing bucket.
-        # Suggest one bucket higher than the lowest failing bucket.
-
-        # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
-        # We want +1 from the lowest bucket it failed at. Thus +3
+        # No passing median. The tracker sets start to the edge below the failing
+        # bucket. get_bucket_index steps one left of that edge, so +3 is one bucket
+        # above the failure. When start is the first bucket, the index clamps to 0
+        # and the suggestion is one bucket higher than this rule.
         max_val = len(self.fee_tracker.buckets) - 1
         start_index = min(get_bucket_index(self.fee_tracker.buckets, fail_bucket.start) + 3, max_val)
 
@@ -89,5 +89,5 @@ class SmartFeeEstimator:
         if fee == -1:
             return FeeEstimateV2("Not enough data", r.requested_time, FeeRateV2(0))
         else:
-            # convert from mojo / 1000 clvm_cost to mojo / 1 clvm_cost
-            return FeeEstimateV2(None, r.requested_time, FeeRateV2(fee / 1000))
+            # convert from mojos per STORED_FEE_RATE_SCALE cost to mojos per 1 cost
+            return FeeEstimateV2(None, r.requested_time, FeeRateV2(fee / STORED_FEE_RATE_SCALE))
