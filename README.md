@@ -20,6 +20,8 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 
 Please check out the [Chia website][link-chia], the [Intro to Chia][link-intro], and [FAQ][link-faq] for information on this project.
 
+Building on Chia with AI? See [chia-for-agents](https://github.com/Chia-Network/chia-for-agents) for agent-optimized documentation and an MCP server.
+
 Python 3.11+ is required. Make sure your default python version is >=3.11 by typing `python3`.
 
 If you are behind a NAT, it can be difficult for peers outside your subnet to reach you when they start up. You can enable [UPnP][link-upnp]

@@ -45,6 +45,7 @@
 | [benchmarks.md](benchmarks.md)                       | Benchmark harness, benchmark scripts, performance measurement                                      | Touching `benchmarks/`                                                           |
 | [repo-tooling.md](repo-tooling.md)                   | Packaging, install scripts, CI workflows, build/release, GUI submodule, developer tools            | Touching root config, `build_scripts/`, `.github/`, `tools/`, install scripts    |
 | [global-invariants.md](global-invariants.md)         | Cross-module invariants, state dependencies, trust boundaries, workflow traces, fragility clusters | Cross-cutting changes, security review, reorg-related work                       |
+| [domain-primer.md](domain-primer.md)                 | Chia domain concepts: coinset model, CLVM, spend bundles, condition opcodes                        | When working with Chia-specific data types or puzzles                            |
 
 ---
 
