@@ -788,7 +788,6 @@ class Blockchain:
             block.foliage_transaction_block,
             b"",
         )
-        prev_b = self.try_block_record(unfinished_header_block.prev_header_hash)
         expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,
