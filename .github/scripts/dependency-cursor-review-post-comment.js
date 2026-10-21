@@ -106,28 +106,33 @@ function selectPostedMarker(marker) {
   return marker;
 }
 
+function malwareScanSummaryText() {
+  const fromArtifact = readText('dcr-scan-input/malware_scan_summary.md', '');
+  if (String(fromArtifact).trim()) return String(fromArtifact).trim();
+  const fromOutput = process.env.MALWARE_SCAN_SUMMARY || '';
+  if (String(fromOutput).trim()) return String(fromOutput).trim();
+  const malwareScanStatus = process.env.MALWARE_SCAN_STATUS || '';
+  const malwareScanChangedCount = process.env.MALWARE_SCAN_CHANGED_COUNT || '';
+  return [
+    '## Malware Scan Summary',
+    '',
+    `- Status: **${malwareScanStatus || 'unknown'}**`,
+    `- Changed upstream files scanned: \`${malwareScanChangedCount || 'unknown'}\``,
+    '- Scanner output file missing.',
+  ].join('\n');
+}
+
 async function runPostComment({ github, context, core }) {
   const analysisMaxLen = 48000;
   const malwareMaxLen = 10000;
   const githubCommentLimit = 65536;
-  const malwareScanStatus = process.env.MALWARE_SCAN_STATUS || '';
-  const malwareScanChangedCount = process.env.MALWARE_SCAN_CHANGED_COUNT || '';
-  const malwareScanSummaryOutput = process.env.MALWARE_SCAN_SUMMARY || '';
   const issueNumber = Number(process.env.PR_NUMBER || '0');
   const reviewMarker = process.env.REVIEW_MARKER || '';
 
   const raw = readText('cursor_output.json', '{"result":"No Cursor output generated.","complete":false}');
   const analysisText = analysisTextFromRaw(raw);
   const marker = selectPostedMarker(reviewMarker);
-  const malwareSummary =
-    (typeof malwareScanSummaryOutput === 'string' && malwareScanSummaryOutput.trim()) ||
-    [
-      '## Malware Scan Summary',
-      '',
-      `- Status: **${malwareScanStatus || 'unknown'}**`,
-      `- Changed upstream files scanned: \`${malwareScanChangedCount || 'unknown'}\``,
-      '- Scanner output file missing.',
-    ].join('\n');
+  const malwareSummary = malwareScanSummaryText();
 
   let trimmedAnalysis = analysisText.slice(0, analysisMaxLen);
   let trimmedMalware = malwareSummary.slice(0, malwareMaxLen);
@@ -186,5 +191,6 @@ async function runPostComment({ github, context, core }) {
 }
 
 module.exports = runPostComment;
+module.exports.malwareScanSummaryText = malwareScanSummaryText;
 module.exports.selectPostedMarker = selectPostedMarker;
 module.exports.successfulAnalysisText = successfulAnalysisText;
