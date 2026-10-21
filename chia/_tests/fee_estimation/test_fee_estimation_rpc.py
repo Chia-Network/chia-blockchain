@@ -17,6 +17,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_errors import RpcError
+from chia.rpc.rpc_server import EndpointResult
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -312,6 +313,13 @@ async def test_get_spendbundle_type_cost_spend_count_ok(
         print(spend_count, ret)
 
 
+class _EmptyPeakRpcApi(FullNodeRpcApi):
+    """Quote tests stop at an empty peak, so the chain itself is never read."""
+
+    async def get_blockchain_state(self, _: dict[str, Any]) -> EndpointResult:
+        return {"blockchain_state": {"sync": {"synced": True}, "peak": None}}
+
+
 def _api_quoting(stored_median: float) -> FullNodeRpcApi:
     mempool = SimpleNamespace(
         fee_estimator=StoredMedianEstimator(stored_median),
@@ -319,13 +327,7 @@ def _api_quoting(stored_median: float) -> FullNodeRpcApi:
         total_mempool_fees=lambda: 0,
         size=lambda: 0,
     )
-    api = FullNodeRpcApi(cast("FullNode", SimpleNamespace(mempool_manager=SimpleNamespace(mempool=mempool))))
-
-    async def get_blockchain_state(_request: dict[str, Any]) -> dict[str, Any]:
-        return {"blockchain_state": {"sync": {"synced": True}, "peak": None}}
-
-    api.get_blockchain_state = get_blockchain_state  # type: ignore[method-assign]
-    return api
+    return _EmptyPeakRpcApi(cast("FullNode", SimpleNamespace(mempool_manager=SimpleNamespace(mempool=mempool))))
 
 
 @pytest.mark.anyio
