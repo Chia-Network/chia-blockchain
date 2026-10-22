@@ -48,7 +48,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -433,7 +433,8 @@ class DIDWallet:
         )
 
         await self.add_parent(coin.name(), future_parent)
-        await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+        # TODO: waiting for addition to sync scope
+        await self.wallet_state_manager._add_subscriptions([CoinSubscription(target=coin.name())])
 
     @classmethod
     async def identify(

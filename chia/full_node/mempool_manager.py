@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
-from typing import Literal, TypeVar
+from typing import Literal, Self, TypeVar
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
@@ -26,7 +26,6 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
-from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
@@ -51,6 +50,7 @@ log = logging.getLogger(__name__)
 # mempool items replacing existing ones must increase the total fee at least by
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
+DEFAULT_MAX_SPENDS_PER_ITEM = 1000
 
 
 @dataclass
@@ -333,6 +333,7 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
+    max_spends_per_item: int
     validation_timeout: float
     log_mempool: LogMempoolMode
     root_path: Path | None
@@ -346,12 +347,14 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
         log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
         self.log_mempool = log_mempool
         self.root_path = root_path
+        self.max_spends_per_item = max_spends_per_item
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: dict[bytes32, bytes32] = {}
@@ -407,6 +410,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
         log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
     ) -> AsyncIterator[Self]:
@@ -416,6 +420,7 @@ class MempoolManager:
             consensus_constants,
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
+            max_spends_per_item=max_spends_per_item,
             validation_timeout=validation_timeout,
             log_mempool=log_mempool,
             root_path=root_path,
@@ -542,6 +547,9 @@ class MempoolManager:
 
         if spend_bundle.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
+
+        if len(spend_bundle.coin_spends) > self.max_spends_per_item:
+            raise ValidationError(Err.TOO_MANY_SPENDS)
 
         assert self.peak is not None
 

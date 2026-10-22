@@ -277,3 +277,14 @@ async def test_balance_checking(
         }
     )
     await env_0.check_balances()
+
+    # Reject balance deltas that would make an expected balance negative
+    current_confirmed = env_0.wallet_states[env_0.dealias_wallet_id("xch")].balance.confirmed_wallet_balance
+    with pytest.raises(ValueError, match="would result in a negative value"):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    "confirmed_wallet_balance": -(current_confirmed + 1),
+                }
+            }
+        )

@@ -17,7 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 from random import Random
 from types import TracebackType
-from typing import Any
+from typing import Any, Self
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -46,7 +46,6 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
-from typing_extensions import Self
 
 from chia.consensus.block_creation import (
     calculate_infusion_point_total_iters,
@@ -798,18 +797,28 @@ class BlockTools:
                 else:
                     pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
                     self.local_sk_cache[plot_info.prover.get_id()] = (local_master_sk, pool_pk_or_ph)
-                if isinstance(pool_pk_or_ph, G1Element):
+                if plot_info.prover.get_version() == PlotVersion.V2:
+                    include_taproot = True
+                elif isinstance(pool_pk_or_ph, G1Element):
                     include_taproot = False
                 else:
                     assert isinstance(pool_pk_or_ph, bytes32)
                     include_taproot = True
                 local_sk = cached_master_sk_to_local_sk(local_master_sk)
-                agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
+                agg_pk = generate_plot_public_key(
+                    local_sk.get_g1(),
+                    farmer_sk.get_g1(),
+                    include_taproot,
+                    is_v2=plot_info.prover.get_version() == PlotVersion.V2,
+                )
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 if include_taproot:
-                    taproot_sk: PrivateKey = generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
+                    taproot_sk: PrivateKey
+                    taproot_sk = generate_taproot_sk(
+                        local_sk.get_g1(), farmer_sk.get_g1(), is_v2=plot_info.prover.get_version() == PlotVersion.V2
+                    )
                     taproot_share: G2Element = AugSchemeMPL.sign(taproot_sk, m, agg_pk)
                 else:
                     taproot_share = G2Element()
@@ -1873,7 +1882,12 @@ class BlockTools:
                 else:
                     assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                     include_taproot = True
-                plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+                plot_pk = generate_plot_public_key(
+                    local_sk.get_g1(),
+                    farmer_public_key,
+                    include_taproot,
+                    is_v2=plot_info.prover.get_version() == PlotVersion.V2,
+                )
                 proof_of_space: ProofOfSpace = make_pos(
                     new_challenge,
                     plot_info.pool_public_key,
