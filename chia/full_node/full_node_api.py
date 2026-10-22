@@ -27,7 +27,6 @@ from chia_rs import (
     RewardChainBlockUnfinished,
     UnfinishedBlock,
     additions_and_removals,
-    get_flags_for_height_and_constants,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
@@ -74,7 +73,6 @@ from chia.protocols.wallet_protocol import (
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -1690,7 +1688,7 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: BlockInfo | None = await self.full_node.block_store.get_block_info(header_hash)
+        block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or not block_has_transactions_generator(block):
             return reject_msg
@@ -1703,13 +1701,14 @@ class FullNodeAPI:
         # untrusted peers are deprioritized
         trusted = self.is_trusted(peer)
         try:
+            flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
             puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 SerializedProgram.from_bytes(block_generator.program),
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                get_flags_for_height_and_constants(height, self.full_node.constants),
+                flags,
                 nice=(5,) if trusted else (15,),
                 dedicated=trusted,
             )
