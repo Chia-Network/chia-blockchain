@@ -11,9 +11,10 @@ from chia.consensus.get_block_challenge import (
     post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
+from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
 from chia.util.block_cache import BlockCache
 
 
@@ -396,3 +397,31 @@ def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants
         idx -= 1
 
     return curr
+
+
+def test_unfinished_block_finished_sub_slot_count(bt: BlockTools) -> None:
+    # the unfinished view of a block must count the same sub-slots as the finished block
+    block_list = bt.get_consecutive_blocks(
+        10,
+        block_list_input=[],
+        guarantee_transaction_block=True,
+    )
+    # one call also produces overflow blocks that follow another overflow block of the same sub-slot
+    block_list = bt.get_consecutive_blocks(20, block_list_input=block_list, force_overflow=True)
+    _, _, blocks = load_block_list(block_list, bt.constants)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
+
+    omitted_eos = 0
+    already_included = 0
+    for block in block_list:
+        unfinished = make_unfinished_block(block, bt.constants)
+        sub_slot_iters = block_cache.block_record(block.header_hash).sub_slot_iters
+        count = unfinished_block_sub_slots(bt.constants, block_cache, unfinished, sub_slot_iters)
+        assert count == len(block.finished_sub_slots)
+        if len(unfinished.finished_sub_slots) < len(block.finished_sub_slots):
+            omitted_eos += 1
+        elif is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+            already_included += 1
+
+    assert omitted_eos > 0
+    assert already_included > 0

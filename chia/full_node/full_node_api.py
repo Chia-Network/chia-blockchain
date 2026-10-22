@@ -43,7 +43,12 @@ from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    is_overflow_block,
+)
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -1079,12 +1084,18 @@ class FullNodeAPI:
                 self.log.warning(f"Value Error: {e}")
                 return None
 
+            if is_overflow_block(self.full_node.constants, request.signage_point_index):
+                # infused one sub-slot after the signage point; that end-of-sub-slot does not exist yet
+                sub_slots_since_prev = len(finished_sub_slots) + 1
+            else:
+                # infused in the signage point's sub-slot
+                sub_slots_since_prev = len(finished_sub_slots)
             tx_height = pre_sp_tx_block_height(
                 constants=self.full_node.constants,
                 blocks=self.full_node.blockchain,
                 prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
                 sp_index=request.signage_point_index,
-                finished_sub_slots=len(finished_sub_slots),
+                finished_sub_slots=sub_slots_since_prev,
             )
             quality_string: bytes32 | None = verify_and_get_quality_string(
                 request.proof_of_space,
