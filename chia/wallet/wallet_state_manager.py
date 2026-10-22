@@ -1008,7 +1008,9 @@ class WalletStateManager:
             )
 
         # Check if the coin is clawback
-        clawback_coin_data = match_clawback_puzzle(uncurried, coin_spend.puzzle_reveal, coin_spend.solution)
+        clawback_coin_data = match_clawback_puzzle(
+            uncurried, coin_spend.puzzle_reveal, coin_spend.solution, coin_state.coin.puzzle_hash
+        )
         if clawback_coin_data is not None:
             return (
                 await self.clawback_manager.identify(clawback_coin_data, coin_state, coin_spend, peer),
@@ -1328,11 +1330,11 @@ class WalletStateManager:
                                 # To prevent unnecessary fetch, we only fetch once,
                                 # if there is a child coin that is not owned by the wallet.
                                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
-                                # Check if the parent coin is a Clawback coin
-                                uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-                                clawback_metadata = match_clawback_puzzle(
-                                    uncurried, coin_spend.puzzle_reveal, coin_spend.solution
-                                )
+                            # Check if the coin is a Clawback coin
+                            uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+                            clawback_metadata = match_clawback_puzzle(
+                                uncurried, coin_spend.puzzle_reveal, coin_spend.solution, coin.puzzle_hash
+                            )
                             if clawback_metadata is not None:
                                 # Add the Clawback coin as the interested coin for the sender
                                 # TODO: waiting for addition to sync_scope
