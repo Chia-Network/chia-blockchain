@@ -201,6 +201,7 @@ async def validate_block_body(
     conds: SpendBundleConditions | None,
     fork_info: ForkInfo,
     *,
+    finished_sub_slots: int,
     log_coins: bool = False,
 ) -> Err | None:
     """
@@ -214,6 +215,8 @@ async def validate_block_body(
     fork_info specifies the fork context of this block. In case the block
         extends the main chain, it can be empty, but if the block extends a fork
         of the main chain, the fork info is mandatory in order to validate the block.
+    finished_sub_slots is the number of sub-slots crossed since the previous block's infusion. An unfinished
+        overflow block may omit the last one (see unfinished_block_sub_slots).
     """
     if isinstance(block, FullBlock):
         assert height == block.height
@@ -225,7 +228,7 @@ async def validate_block_body(
         blocks=records,
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(block.finished_sub_slots),
+        finished_sub_slots=finished_sub_slots,
     )
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must

@@ -413,6 +413,7 @@ class Blockchain:
             block.height,
             pre_validation_result.conds,
             fork_info,
+            finished_sub_slots=len(block.finished_sub_slots),
             log_coins=self._log_coins,
         )
         if error_code is not None:
@@ -817,6 +818,13 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
+        # count the sub-slots the same way as validate_unfinished_block_header
+        finished_sub_slots = len(block.finished_sub_slots)
+        if skip_overflow_ss_validation:
+            sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+                self.constants, len(block.finished_sub_slots) > 0, self.try_block_record(block.prev_header_hash), self
+            )
+            finished_sub_slots = unfinished_block_sub_slots(self.constants, self, block, sub_slot_iters)
         error_code = await validate_block_body(
             self.constants,
             self,
@@ -825,6 +833,7 @@ class Blockchain:
             uint32(prev_height + 1),
             conds,
             fork_info,
+            finished_sub_slots=finished_sub_slots,
             log_coins=self._log_coins,
         )
 
