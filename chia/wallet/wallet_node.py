@@ -256,8 +256,8 @@ class WalletNode:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
-            key: PrivateKey | G1Element | None = await keychain_proxy.get_key_for_fingerprint(
-                fingerprint, private=private
+            key: PrivateKey | G1Element | None = await keychain_proxy.get_key_for_fingerprint(  # type: ignore[call-overload]
+                fingerprint, private=private, or_public=True
             )
             if isinstance(key, PrivateKey):
                 return KeyInformation(secret_key=key)

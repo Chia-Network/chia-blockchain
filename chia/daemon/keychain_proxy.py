@@ -341,7 +341,7 @@ class KeychainProxy(DaemonProxy):
     ) -> PrivateKey | G1Element | None: ...
 
     async def get_key_for_fingerprint(
-        self, fingerprint: int | None, private: bool = True
+        self, fingerprint: int | None, private: bool = True, or_public: bool = False
     ) -> PrivateKey | G1Element | None:
         """
         Locates and returns a private key matching the provided fingerprint
@@ -362,7 +362,7 @@ class KeychainProxy(DaemonProxy):
                         raise KeychainKeyNotFound(fingerprint)
                 if private and selected_key.secrets is not None:
                     key = selected_key.private_key
-                elif not private:
+                elif not private or or_public:
                     key = selected_key.public_key
                 else:
                     return None
