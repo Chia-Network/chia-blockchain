@@ -88,6 +88,8 @@ class StandardPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             if unknown_puzzle.curried_args is None:
                 return None
             list_of_args = [arg for arg in unknown_puzzle.curried_args]
+            if len(list_of_args) != 1:
+                return None
             try:
                 synth_pubkey = G1Element.from_bytes(list_of_args[0].as_atom())
             except Exception:
