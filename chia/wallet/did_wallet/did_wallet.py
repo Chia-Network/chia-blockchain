@@ -605,7 +605,7 @@ class DIDWallet:
                 inner_puzzle=UnknownPuzzle(known_tree_hash=new_puzhash),
                 self_launcher_id=did_info.origin_coin.name(),
                 metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-                recovery_list=RecoveryList(ids=did_info.backup_ids),
+                recovery_list=self.recovery_list,
                 num_of_backup_ids_needed=did_info.num_of_backup_ids_needed,
             ).tree_hash
             wallet_node = self.wallet_state_manager.wallet_node
@@ -660,7 +660,7 @@ class DIDWallet:
                 inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(pubkey)),
                 self_launcher_id=self.did_info.origin_coin.name(),
                 metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-                recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+                recovery_list=self.recovery_list,
                 num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
             ).program
             return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
@@ -680,7 +680,7 @@ class DIDWallet:
             inner_puzzle=UnknownPuzzle(known_tree_hash=puzzle_hash_for_pk(pubkey)),
             self_launcher_id=origin_coin_name,
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-            recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+            recovery_list=self.recovery_list,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
         ).tree_hash
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
@@ -690,6 +690,15 @@ class DIDWallet:
         core = self.did_info.origin_coin.name()
         assert core is not None
         return core.hex()
+
+    @property
+    def recovery_list(self) -> RecoveryList:
+        # Preserve Program.NIL vs NIL_TREEHASH from the live inner puzzle when present.
+        if self.did_info.current_inner is not None:
+            matched = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=self.did_info.current_inner))
+            if matched is not None:
+                return matched.recovery_list
+        return RecoveryList(ids=self.did_info.backup_ids)
 
     async def set_name(self, new_name: str) -> None:
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
@@ -808,7 +817,7 @@ class DIDWallet:
             inner_puzzle=UnknownPuzzle(known_tree_hash=new_puzhash),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-            recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+            recovery_list=self.recovery_list,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
         ).tree_hash
         p2_solution = self.standard_wallet.make_solution(
@@ -950,7 +959,7 @@ class DIDWallet:
             ),
             self_launcher_id=launcher_id,
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-            recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+            recovery_list=self.recovery_list,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
         ).program
 
@@ -967,7 +976,7 @@ class DIDWallet:
             inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(pubkey)),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-            recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+            recovery_list=self.recovery_list,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
         ).program
 
@@ -987,7 +996,7 @@ class DIDWallet:
             inner_puzzle=UnknownPuzzle(known_program=puzzle_for_pk(record.pubkey)),
             self_launcher_id=self.did_info.origin_coin.name(),
             metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-            recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+            recovery_list=self.recovery_list,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
         ).program
 
@@ -1275,7 +1284,7 @@ class DIDWallet:
                     inner_puzzle=UnknownPuzzle(known_tree_hash=hint),
                     self_launcher_id=self.did_info.origin_coin.name(),
                     metadata=DIDMetadata(json.loads(self.did_info.metadata)),
-                    recovery_list=RecoveryList(ids=self.did_info.backup_ids),
+                    recovery_list=self.recovery_list,
                     num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
                 ),
                 launcher_id=self.did_info.origin_coin.name(),

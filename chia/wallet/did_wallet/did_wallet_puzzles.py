@@ -73,7 +73,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
     def program(self) -> Program:
         return DID_INNERPUZ_MOD.curry(
             self.inner_puzzle.program,
-            self.recovery_list.tree_hash,
+            self.recovery_list.ids_hash,
             self.num_of_backup_ids_needed,
             self.struct_driver(launcher_id=self.self_launcher_id).program,
             self.metadata.as_program(),
