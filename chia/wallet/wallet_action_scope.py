@@ -3,12 +3,11 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field, fields, replace
-from typing import TYPE_CHECKING, cast, final
+from typing import TYPE_CHECKING, Self, cast, final
 
 from chia_rs.chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.plotnft_drivers import PoolConfig
