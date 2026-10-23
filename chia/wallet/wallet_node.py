@@ -11,7 +11,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, CoinState, ConsensusConstants, G1Element, G2Element, HeaderBlock, PrivateKey
@@ -64,6 +64,7 @@ from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, StreamableError, streamable
 from chia.util.task_referencer import create_referenced_task
+from chia.wallet.derive_keys import KeyInformation
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
@@ -251,29 +252,19 @@ class WalletNode:
         for cache in self.peer_caches.values():
             cache.clear_after_height(reorg_height)
 
-    @overload
-    async def get_key_for_fingerprint(self, fingerprint: int | None) -> G1Element | None: ...
-
-    @overload
-    async def get_key_for_fingerprint(self, fingerprint: int | None, private: Literal[True]) -> PrivateKey | None: ...
-
-    @overload
-    async def get_key_for_fingerprint(self, fingerprint: int | None, private: Literal[False]) -> G1Element | None: ...
-
-    @overload
-    async def get_key_for_fingerprint(
-        self, fingerprint: int | None, private: bool
-    ) -> PrivateKey | G1Element | None: ...
-
-    async def get_key_for_fingerprint(
-        self, fingerprint: int | None, private: bool = False
-    ) -> PrivateKey | G1Element | None:
+    async def get_key_for_fingerprint(self, fingerprint: int | None, private: bool = False) -> KeyInformation | None:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
             key: PrivateKey | G1Element | None = await keychain_proxy.get_key_for_fingerprint(
                 fingerprint, private=private
             )
+            if isinstance(key, PrivateKey):
+                return KeyInformation(secret_key=key)
+            elif isinstance(key, G1Element):
+                return KeyInformation(public_key=key)
+            else:
+                return None
         except KeychainIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
@@ -288,26 +279,18 @@ class WalletNode:
             self.log.error(f"Missing keychain_proxy: {e} {tb}")
             raise  # Re-raise so that the caller can decide whether to continue or abort
 
-        return key
-
-    async def get_key(
-        self, fingerprint: int | None, private: bool = True, find_a_default: bool = True
-    ) -> PrivateKey | G1Element | None:
+    async def get_key(self, fingerprint: int | None, private: bool = True) -> KeyInformation | None:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: PrivateKey | G1Element | None = await self.get_key_for_fingerprint(fingerprint, private=private)
+        key = await self.get_key_for_fingerprint(fingerprint, private=private)
 
-        if key is None and fingerprint is not None and find_a_default:
+        if key is None and fingerprint is not None:
             key = await self.get_key_for_fingerprint(None, private=private)
             if key is not None:
-                if isinstance(key, PrivateKey):
-                    fp = key.get_g1().get_fingerprint()
-                else:
-                    fp = key.get_fingerprint()
-                self.log.info(f"Using first key found (fingerprint: {fp})")
+                self.log.info(f"Using first key found (fingerprint: {key.fingerprint})")
 
         return key
 
@@ -440,26 +423,13 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        public_key = None
-        private_key = await self.get_key(fingerprint, private=True, find_a_default=False)
-        if private_key is None:
-            public_key = await self.get_key(fingerprint, private=False, find_a_default=False)
-        else:
-            assert isinstance(private_key, PrivateKey)
-            public_key = private_key.get_g1()
-
-        if public_key is None:
-            private_key = await self.get_key(None, private=True, find_a_default=True)
-            if private_key is not None:
-                assert isinstance(private_key, PrivateKey)
-                public_key = private_key.get_g1()
-            else:
-                self.log_out()
-                return False
-        assert isinstance(public_key, G1Element)
-        # override with private key fetched in case it's different from what was passed
+        key_information = await self.get_key(fingerprint, private=True)
+        if key_information is None:
+            self.log_out()
+            return False
+        # override with key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = public_key.get_fingerprint()
+            fingerprint = key_information.fingerprint
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -474,15 +444,14 @@ class WalletNode:
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
             await self.reset_sync_db(path, fingerprint)
 
-        assert private_key is None or isinstance(private_key, PrivateKey)
         self._wallet_state_manager = await WalletStateManager.create(
-            private_key,
+            key_information.secret_key,
             self.config,
             path,
             self.constants,
             self.root_path,
             self,
-            public_key,
+            key_information.public_key,
         )
 
         if self.state_changed_callback is not None:

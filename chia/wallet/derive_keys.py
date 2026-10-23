@@ -142,3 +142,22 @@ def match_address_to_sk(
             return found_addresses
 
     return found_addresses
+
+
+class KeyInformation:
+    public_key: G1Element
+    secret_key: PrivateKey | None
+    fingerprint: int
+
+    def __init__(self, *, secret_key: PrivateKey | None = None, public_key: G1Element | None = None) -> None:
+        if secret_key is None and public_key is None:
+            raise ValueError("Must provide either a secret key or a public key")
+        if secret_key is not None:
+            self.secret_key = secret_key
+            self.public_key = secret_key.get_g1()
+            self.fingerprint = self.public_key.get_fingerprint()
+        else:
+            self.secret_key = None
+            assert public_key is not None  # implied, but mypy doesn't know that
+            self.public_key = public_key
+            self.fingerprint = public_key.get_fingerprint()
