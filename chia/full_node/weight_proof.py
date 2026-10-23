@@ -955,7 +955,7 @@ def _validate_sub_epoch_segments(
     summaries_bytes: list[bytes],
     height: uint32,
     validate_from: int = 0,
-) -> list[tuple[VDFProof, ClassgroupElement, VDFInfo]] | None:
+) -> list[tuple[bytes, bytes, bytes]] | None:
     summaries = summaries_from_bytes(summaries_bytes)
     sub_epoch_segments: SubEpochSegments = SubEpochSegments.from_bytes(weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -965,7 +965,7 @@ def _validate_sub_epoch_segments(
     prev_ses: SubEpochSummary | None = None
     segments_by_sub_epoch = map_segments_by_sub_epoch(sub_epoch_segments.challenge_segments)
     curr_ssi = constants.SUB_SLOT_ITERS_STARTING
-    vdfs_to_validate = []
+    vdfs_to_validate: list[tuple[bytes, bytes, bytes]] = []
     max_segments = _max_sub_epoch_segments(constants)
     for sub_epoch_n, segments in segments_by_sub_epoch.items():
         if len(segments) > max_segments:
@@ -1001,10 +1001,12 @@ def _validate_sub_epoch_segments(
                 sampled_seg_index == idx,
                 height,
             )
-            vdfs_to_validate.extend(vdf_list)
             if not valid_segment:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
                 return None
+            vdfs_to_validate.extend(
+                (bytes(proof), bytes(classgroup), bytes(info)) for proof, classgroup, info in vdf_list
+            )
             prev_ses = None
             total_blocks += 1
             total_slot_iters += slot_iters
@@ -1770,25 +1772,23 @@ async def validate_weight_proof_inner(
     )
 
     if not skip_segment_validation:
-        vdfs_to_validate = _validate_sub_epoch_segments(
-            constants, rng, wp_segment_bytes, summary_bytes, peak_height, validate_from
+        vdfs_to_validate = await loop.run_in_executor(
+            executor,
+            _validate_sub_epoch_segments,
+            constants,
+            rng,
+            wp_segment_bytes,
+            summary_bytes,
+            peak_height,
+            validate_from,
         )
-        await asyncio.sleep(0)  # break up otherwise multi-second sync code
-
         if vdfs_to_validate is None:
             return False, []
 
         vdf_tasks = []
         for batch in to_batches(vdfs_to_validate, num_processes):
-            byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in batch.entries:
-                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-            vdf_task = asyncio.get_running_loop().run_in_executor(
-                executor,
-                _validate_vdf_batch,
-                constants,
-                byte_chunks,
-                pathlib.Path(shutdown_file_name),
+            vdf_task = loop.run_in_executor(
+                executor, _validate_vdf_batch, constants, batch.entries, pathlib.Path(shutdown_file_name)
             )
             vdf_tasks.append(vdf_task)
             # give other stuff a turn
