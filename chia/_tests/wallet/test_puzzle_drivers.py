@@ -7,7 +7,6 @@ from attr import dataclass
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program, run
-from chia.wallet import uncurried_puzzle as uncurried_puzzle_mod
 from chia.wallet.conditions import Remark
 from chia.wallet.puzzles.puzzle_drivers import (
     ACS_PH,
@@ -21,29 +20,41 @@ from chia.wallet.puzzles.puzzle_drivers import (
     UnknownPuzzle,
     UnknownSolution,
 )
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
-def test_puzzle_base() -> None:
+def test_puzzle_with_puzzle_hash() -> None:
     @dataclass
     class SomePuzzleDriverWithoutOptimizedPuzzleHash(PuzzleBase):
-        program: Program = Program.to(None)
+        @property
+        def program(self) -> Program:
+            return Program.to("cache me")
 
     @dataclass
     class SomePuzzleDriverWithOptimizedPuzzleHash(PuzzleBase):
-        program: Program = Program.to(None)
-        tree_hash_optimized: bytes32 = bytes32.zeros
+        @property
+        def program(self) -> Program:
+            return Program.to("unused")
+
+        @property
+        def tree_hash_optimized(self) -> bytes32:
+            return bytes32.zeros
 
     without_optimized_hash = SomePuzzleDriverWithoutOptimizedPuzzleHash()
-    with_optimized_hash = SomePuzzleDriverWithOptimizedPuzzleHash()
-
-    assert without_optimized_hash.tree_hash == NIL_HASH
+    assert without_optimized_hash.tree_hash == Program.to("cache me").get_tree_hash()
     with mock.patch.object(Program, "get_tree_hash") as tree_hash_patched:
-        without_optimized_hash.tree_hash
+        # Already cached from the assertion above
         without_optimized_hash.tree_hash
         without_optimized_hash.tree_hash
         assert tree_hash_patched.call_count == 0
 
+    fresh = SomePuzzleDriverWithoutOptimizedPuzzleHash()
+    with mock.patch.object(Program, "get_tree_hash", return_value=bytes32(b"\x01" * 32)) as tree_hash_patched:
+        assert fresh.tree_hash == bytes32(b"\x01" * 32)
+        fresh.tree_hash
+        assert tree_hash_patched.call_count == 1
+
+    with_optimized_hash = SomePuzzleDriverWithOptimizedPuzzleHash()
+    assert with_optimized_hash.program == Program.to("unused")
     with mock.patch.object(Program, "get_tree_hash") as tree_hash_patched:
         with_optimized_hash.tree_hash
         with_optimized_hash.tree_hash
@@ -65,33 +76,12 @@ def test_unknown_puzzle() -> None:
     with_curry_hash = with_curry.get_tree_hash()
     unknown_puz_with_curry = UnknownPuzzle(known_program=with_curry)
     assert unknown_puz_with_curry.mod == Program.to("mod")
-    assert unknown_puz_with_curry.curried_args == [Program.to("arg1"), Program.to("arg2"), Program.to("arg3")]
+    assert list(unknown_puz_with_curry.curried_args or []) == [
+        Program.to("arg1"),
+        Program.to("arg2"),
+        Program.to("arg3"),
+    ]
     assert unknown_puz_with_curry.tree_hash == with_curry_hash
-    with (
-        mock.patch.object(Program, "get_tree_hash") as tree_hash_patched,
-        mock.patch.object(uncurried_puzzle_mod, "uncurry_puzzle") as uncurry_patched,
-    ):
-        unknown_puz_with_curry.mod
-        unknown_puz_with_curry.curried_args
-        unknown_puz_with_curry.mod
-        unknown_puz_with_curry.curried_args
-        unknown_puz_with_curry.mod
-        unknown_puz_with_curry.curried_args
-        assert uncurry_patched.call_count == 0
-        unknown_puz_with_curry.tree_hash
-        unknown_puz_with_curry.tree_hash
-        unknown_puz_with_curry.tree_hash
-        assert tree_hash_patched.call_count == 0
-
-    # Test the transition from uncurried puzzle
-    uncurried_puzzle = uncurry_puzzle(with_curry)
-    with_curry_from_uncurried = UnknownPuzzle.from_uncurried(uncurried_puzzle)
-    assert with_curry_from_uncurried.program == with_curry
-    with mock.patch.object(Program, "curry") as curry_patched:
-        with_curry_from_uncurried.program
-        with_curry_from_uncurried.program
-        with_curry_from_uncurried.program
-        assert curry_patched.call_count == 0
 
     # Test using only a puzzle hash
     unknown_puz_zeros = UnknownPuzzle(known_tree_hash=bytes32.zeros)
@@ -101,17 +91,19 @@ def test_unknown_puzzle() -> None:
         unknown_puz_zeros.tree_hash
         assert tree_hash_patched.call_count == 0
     assert unknown_puz_zeros.tree_hash == bytes32.zeros
-    with pytest.raises(ValueError, match="Attempting to access program when only tree hash is known"):
-        unknown_puz_zeros.program
+    with pytest.raises(ValueError, match="Attempting to access puzzle when only puzzle hash is known"):
+        _ = unknown_puz_zeros.program
 
     # Check post init
-    with pytest.raises(ValueError, match="Must specify either a program or tree hash that is unknown"):
+    with pytest.raises(ValueError, match="Must specify either a puzzle or puzzle hash that is unknown"):
         UnknownPuzzle(known_program=None, known_tree_hash=None)
 
 
 def test_acs_puzzle() -> None:
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=bytes32.zeros)) is None
-    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=ACS_PH)) == ACSPuzzle()
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(0))) is None
+    assert ACSPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to(1))) == ACSPuzzle()
+    assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.NIL)) == ACSSolution(conditions=[])
+    # Atoms are treated as an empty condition list by the parser
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to("not an ACS"))) is None
     assert ACSSolution.match(unknown_solution=UnknownSolution(program=Program.to(["not an ACS"]))) is None
     acs_solution = ACSSolution(conditions=[Remark(rest=Program.to("foo")), Remark(rest=Program.to("bar"))])
@@ -119,10 +111,12 @@ def test_acs_puzzle() -> None:
         ACSSolution.match(unknown_solution=UnknownSolution(program=run(ACSPuzzle().program, acs_solution.program)))
         == acs_solution
     )
+    assert ACS_PH == Program.to(1).get_tree_hash()
+    assert NIL_HASH == Program.NIL.get_tree_hash()
 
 
 def test_nil_puzzle() -> None:
-    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=NIL_HASH)) == NilPuzzle()
+    assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) == NilPuzzle()
     assert NilPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to("not a ()"))) is None
     assert NilSolution.match(unknown_solution=UnknownSolution(program=Program.to("not a ()"))) is None
     assert (
@@ -135,7 +129,6 @@ def test_p2_conditions() -> None:
     assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, None)))) == P2Conditions(
         conditions=[]
     )
-    assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.NIL)) is None
     assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((2, None)))) is None
     assert P2Conditions.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to((1, ["not a condition"])))) is None
     assert ACSSolution.match(

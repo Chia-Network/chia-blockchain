@@ -32,10 +32,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_pk,
 )
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    match_singleton_puzzle,
-    puzzle_hash_for_singleton,
-)
+from chia.wallet.puzzles.singleton_drivers import SingletonPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE,
     create_singleton_puzzle,
@@ -370,17 +367,16 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
-            assert uncurried.curried_args is not None
-            _, curried_args = match_singleton_puzzle(uncurried)
-            _, inner_puzzle = curried_args
-            did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+            uncurried = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
+            singleton_match = SingletonPuzzle.match(unknown_puzzle=uncurried)
+            assert singleton_match is not None
+            did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
             assert did_match is not None
             did_data = DIDCoinData(
                 p2_puzzle=did_match.inner_puzzle.program,
                 recovery_list_hash=did_match.recovery_list.ids_hash,
                 num_verification=uint16(did_match.num_of_backup_ids_needed),
-                singleton_struct=uncurried.curried_args[0],
+                singleton_struct=singleton_match.singleton_struct.program,
                 metadata=did_match.metadata.as_program(),
                 inner_puzzle=get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal),
                 coin_state=parent_state,
@@ -1283,16 +1279,16 @@ class DIDWallet:
         if self.did_info.origin_coin is None:
             return False  # pragma: no cover
         return (
-            puzzle_hash_for_singleton(
-                inner_puz_hash=DIDRecoveryPuzzle(
+            SingletonPuzzle(
+                inner_puzzle=DIDRecoveryPuzzle(
                     inner_puzzle=UnknownPuzzle(known_tree_hash=hint),
                     self_launcher_id=self.did_info.origin_coin.name(),
                     metadata=DIDMetadata(json.loads(self.did_info.metadata)),
                     recovery_list=self.recovery_list,
                     num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
-                ).tree_hash,
+                ),
                 launcher_id=self.did_info.origin_coin.name(),
-            )
+            ).tree_hash
             == coin.puzzle_hash
         )
 
