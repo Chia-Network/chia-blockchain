@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from unittest.mock import AsyncMock
 
 import pytest
 from chia_rs import G2Element, Program
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.data_layer.singleton_record import SingletonRecord
@@ -14,13 +14,19 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
+from chia.wallet.wallet_action_scope import (
+    ChildSeed,
+    ParentAbsorb,
+    PlotNFTTargetStateInfo,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 MOCK_SR = SigningResponse(b"hey", bytes32.zeros)
 MOCK_SB = WalletSpendBundle([], G2Element())
 MOCK_COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
+MOCK_COIN_2 = Coin(bytes32.zeros, bytes32(b"\1" * 32), uint64(1))
+MOCK_COIN_3 = Coin(bytes32.zeros, bytes32(b"\2" * 32), uint64(2))
 
 
 @dataclass
@@ -104,3 +110,96 @@ async def test_wallet_action_scope() -> None:
     assert action_scope.side_effects.transactions == []
     # same as above because the lack of transactions prevents the add_pending_transactions call
     assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [], [], None)
+
+
+@pytest.mark.anyio
+async def test_wallet_action_scope_sandbox() -> None:
+    wsm = MockWalletStateManager()
+    async with wsm.new_action_scope(  # type: ignore[attr-defined]
+        DEFAULT_TX_CONFIG,
+        push=False,
+        puzzle_for_pk=lambda _: Program.to(1),
+    ) as action_scope:
+        async with action_scope.use() as interface:
+            interface.side_effects.selected_coins = [MOCK_COIN]
+            interface.side_effects.transactions = [STD_TX]
+
+        # Default seed carries selected_coins; default absorb extends unseeded txs and replaces seeded coins
+        async with action_scope.sandbox(wallet_state_manager=wsm) as sandbox:
+            assert sandbox.config.tx_config == DEFAULT_TX_CONFIG
+            async with sandbox.use() as interface:
+                assert interface.side_effects.selected_coins == [MOCK_COIN]
+                assert interface.side_effects.transactions == []
+                interface.side_effects.selected_coins.append(MOCK_COIN_2)
+                interface.side_effects.transactions.append(STD_TX)
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.transactions == [STD_TX, STD_TX]
+            assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
+
+        # ParentAbsorb.nothing() discards child side effects
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
+            async with sandbox.use() as interface:
+                interface.side_effects.transactions.append(STD_TX)
+                interface.side_effects.selected_coins.append(MOCK_COIN_3)
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.transactions == [STD_TX, STD_TX]
+            assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
+
+        # Seeded list absorb replaces instead of extending (no duplication)
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            child_seed=ChildSeed(selected_coins=True),
+        ) as sandbox:
+            async with sandbox.use() as interface:
+                assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2]
+                interface.side_effects.selected_coins.append(MOCK_COIN_3)
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.selected_coins == [MOCK_COIN, MOCK_COIN_2, MOCK_COIN_3]
+
+        # config_override is applied to the sandbox only
+        overridden = DEFAULT_TX_CONFIG.override(min_coin_amount=uint64(7))
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            config_override=overridden,
+        ) as sandbox:
+            assert sandbox.config.tx_config.min_coin_amount == uint64(7)
+            assert action_scope.config.tx_config.min_coin_amount == DEFAULT_TX_CONFIG.min_coin_amount
+
+        # Failed sandboxes do not absorb
+        with pytest.raises(RuntimeError, match="sandbox boom"):
+            async with action_scope.sandbox(wallet_state_manager=wsm) as sandbox:
+                async with sandbox.use() as interface:
+                    interface.side_effects.transactions.append(STD_TX)
+                raise RuntimeError("sandbox boom")
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.transactions == [STD_TX, STD_TX]
+
+        # Scalar None from an unseeded child does not clobber the parent
+        parent_plotnft_info = PlotNFTTargetStateInfo(
+            wallet_id=uint32(1),
+            exiting_fee=uint64(0),
+            next_pool_url=None,
+            next_pool_puzzle_hash=None,
+            next_heightlock=None,
+            next_pool_memoization=None,
+        )
+        async with action_scope.use() as interface:
+            interface.side_effects.plotnft_exiting_info = parent_plotnft_info
+
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            child_seed=replace(ChildSeed(), plotnft_exiting_info=False),
+            parent_absorb=ParentAbsorb(),
+        ) as sandbox:
+            async with sandbox.use() as interface:
+                assert interface.side_effects.plotnft_exiting_info is None
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.plotnft_exiting_info == parent_plotnft_info

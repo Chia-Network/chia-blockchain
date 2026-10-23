@@ -114,15 +114,10 @@ class GenesisById(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        async with wallet.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
-        ) as inner_action_scope:
+        async with action_scope.sandbox(wallet_state_manager=wallet.wallet_state_manager) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
                 [amount], [minted_cat_puzzle_hash], inner_action_scope, fee, coins, origin_id=origin_id
             )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions = inner_action_scope.side_effects.transactions
 
         inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.make_solution(
