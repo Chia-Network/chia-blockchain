@@ -2254,6 +2254,82 @@ async def test_unfinished_block_with_replaced_generator(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+    reason="generator_root is the tree hash only after hard fork 2",
+)
+@pytest.mark.parametrize("path", ["unfinished", "add_block", "add_block_batch"])
+async def test_bloated_generator_stored_and_relayed_smaller(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+    path: str,
+) -> None:
+    # A peer pads the generator. The tree is the same, so the header hash and
+    # partial hash are too. The node stores and serves the smaller re-encoding.
+    full_node_1, _, _, _, _, _, bt = wallet_nodes
+    full_node = full_node_1.full_node
+    blocks = bt.get_consecutive_blocks(
+        3,
+        block_list_input=await full_node_1.get_all_full_blocks(),
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await full_node.add_block(block)
+    wt: WalletTool = bt.get_pool_wallet_tool()
+    coin = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    block = blocks[-1]
+    generator = block.transactions_generator_buffer
+    assert generator is not None
+    # the decoder ignores trailing bytes: same tree, more bytes
+    bloated = generator + bytes(8)
+
+    if path == "unfinished":
+        unf = unfinished_from_full_block(block)
+        bloated_unf = unf.replace(transactions_generator_buffer=bloated)
+        assert bloated_unf.partial_hash == unf.partial_hash
+        await full_node.add_unfinished_block(bloated_unf, None)
+        stored_unf = full_node.full_node_store.get_unfinished_block(unf.partial_hash)
+        assert stored_unf is not None
+        assert stored_unf.transactions_generator_buffer == generator
+        assert unf.foliage.foliage_transaction_block_hash is not None
+        msg = await full_node_1.request_unfinished_block2(
+            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+        )
+        assert msg is not None
+        relayed_unf = fnp.RespondUnfinishedBlock.from_bytes(msg.data).unfinished_block
+        assert relayed_unf.transactions_generator_buffer == generator
+        return
+
+    bloated_block = block.replace(transactions_generator_buffer=bloated)
+    assert bloated_block.header_hash == block.header_hash
+    if path == "add_block":
+        await full_node.add_block(bloated_block)
+    else:
+        ssi, diff, prev_ses_block = await full_node.get_sub_slot_iters_difficulty_ses_block(block, None, None)
+        success, _ = await full_node.add_block_batch(
+            [bloated_block],
+            PeerInfo("0.0.0.0", 0),
+            ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash),
+            ValidationState(ssi, diff, prev_ses_block),
+            AugmentedBlockchain(full_node.blockchain),
+        )
+        assert success
+    assert full_node.blockchain.get_peak_height() == block.height
+    stored = await full_node.block_store.get_full_block(block.header_hash)
+    assert stored is not None
+    assert stored.transactions_generator_buffer == generator
+    msg = await full_node_1.request_block(fnp.RequestBlock(block.height, True))
+    assert msg is not None
+    assert fnp.RespondBlock.from_bytes(msg.data).block.transactions_generator_buffer == generator
+
+
+@pytest.mark.anyio
 async def test_double_blocks_same_pospace(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools

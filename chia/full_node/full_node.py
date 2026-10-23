@@ -47,7 +47,7 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockchainInterface, BlockRecordsProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.generator_validation import validate_generator_root
@@ -62,6 +62,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
+from chia.full_node.bundle_tools import recompress_generator
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -1886,8 +1887,9 @@ class FullNode:
                     assert cc_sub_slot.new_difficulty is not None
                     vs.difficulty = cc_sub_slot.new_difficulty
             block_rec = blockchain.block_record(block.header_hash)
+            smaller = await self.smaller_generator(block, blockchain, len(block.finished_sub_slots), nice=(20,))
             result, error, state_change_summary = await self.blockchain.add_block(
-                block,
+                block if smaller is None else block.replace(transactions_generator_buffer=smaller),
                 pre_validation_results[i],
                 vs.ssi,
                 fork_info,
@@ -2302,6 +2304,8 @@ class FullNode:
             return None
 
         pre_validation_result: PreValidationResult | None = None
+        # a generator taken from the unfinished block cache is already recompressed
+        recompress = True
         if (
             block.is_transaction_block()
             and block.transactions_info is not None
@@ -2355,6 +2359,7 @@ class FullNode:
                     transactions_generator_buffer=unf_entry.unfinished_block.transactions_generator_buffer,
                     version=unf_entry.unfinished_block.version,
                 )
+                recompress = False
             elif not block_has_transactions_generator(block):
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
                 # with the same unfinished block hash in the cache, so we need to fetch the correct one
@@ -2443,6 +2448,10 @@ class FullNode:
                             f" {pre_validation_result.error_msg or ''}"
                         )
                 else:
+                    if recompress:
+                        smaller = await self.smaller_generator(block, self.blockchain, len(block.finished_sub_slots))
+                        if smaller is not None:
+                            block = block.replace(transactions_generator_buffer=smaller)
                     if fork_info is None:
                         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
@@ -2578,6 +2587,36 @@ class FullNode:
             for task in self._segment_task_list[:]:
                 if task.done():
                     self._segment_task_list.remove(task)
+        return None
+
+    async def smaller_generator(
+        self,
+        block: FullBlock | UnfinishedBlock,
+        blocks: BlockRecordsProtocol,
+        finished_sub_slots: int,
+        nice: tuple[int] = (0,),
+    ) -> bytes | None:
+        """
+        Return a smaller encoding of a validated block's serde_2026 generator,
+        or None to keep the one it has. The block commits to the generator's
+        tree hash, so the header hash and partial hash stay the same.
+        """
+        generator = block.transactions_generator_buffer
+        if generator is None:
+            return None
+        pre_sp_tx_height = pre_sp_tx_block_height(
+            constants=self.constants,
+            blocks=blocks,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=finished_sub_slots,
+        )
+        smaller: bytes = await self.pool.run_in_loop(
+            recompress_generator, generator, self.constants, pre_sp_tx_height, nice=nice
+        )
+        if len(smaller) < len(generator):
+            self.log.info(f"Recompressed block generator from {len(generator)} to {len(smaller)} bytes")
+            return smaller
         return None
 
     async def add_unfinished_block(
@@ -2750,6 +2789,10 @@ class FullNode:
             validation_time = time.monotonic() - validation_start
 
         assert validate_result.required_iters is not None
+
+        smaller = await self.smaller_generator(block, self.blockchain, finished_sub_slots, nice=(5 + unfinished_count,))
+        if smaller is not None:
+            block = block.replace(transactions_generator_buffer=smaller)
 
         # Perform another check, in case we have already concurrently added the same unfinished block
         existing, _, has_better = self.full_node_store.get_unfinished_block2(block_hash, foliage_tx_hash)
