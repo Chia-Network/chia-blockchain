@@ -373,11 +373,11 @@ class KeychainProxy(DaemonProxy):
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or (private and ent is None):
+                if pk is None or ((private and ent is None) or or_public):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                elif private:
+                elif private or (ent is None and or_public):
                     if ent is None:
                         err = f"Missing ent in {response.get('command')} response"
                         self.log.error(f"{err}")

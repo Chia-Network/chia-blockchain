@@ -396,7 +396,7 @@ class BlockTools:
                     print(f"not found: {len(diff)}")
                     for f in diff:
                         print(f)
-                # assert len(self.plot_manager.plots) == len(self.expected_plots)
+                assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
             self.root_path,
@@ -614,7 +614,7 @@ class BlockTools:
                 if plot.new_plot:
                     existing_plots = False
             await self.refresh_plots()
-            # assert len(self.plot_manager.plots) == len(self.expected_plots)
+            assert len(self.plot_manager.plots) == len(self.expected_plots)
             return existing_plots
 
     async def new_plot(
