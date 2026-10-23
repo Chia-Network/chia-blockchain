@@ -373,16 +373,12 @@ class KeychainProxy(DaemonProxy):
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or ((private and ent is None) or or_public):
+                if pk is None or (private and ent is None and not or_public):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                elif private or (ent is None and or_public):
-                    if ent is None:
-                        err = f"Missing ent in {response.get('command')} response"
-                        self.log.error(f"{err}")
-                        raise KeychainMalformedResponse(f"{err}")
-
+                elif private and not (ent is None and or_public):
+                    assert ent is not None  # implied, but mypy doesn't know that
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
