@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -46,6 +46,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.did_wallet.did_wallet_puzzles import RecoveryList
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -119,11 +120,9 @@ async def make_did_wallet(
     metadata: dict[str, str] = {},
     fee: uint64 = uint64(0),
 ) -> DIDWallet:
-    did_wallet = await DIDWallet.create_new_did_wallet(
+    return await DIDWallet.create_new_did_wallet(
         wallet_state_manager, wallet, amount, action_scope, metadata=metadata, fee=fee
     )
-
-    return did_wallet
 
 
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
@@ -776,8 +775,19 @@ async def test_did_auto_transfer_limit(
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "recovery_list",
+    [
+        pytest.param(RecoveryList(ids=[]), id="program_nil"),
+        pytest.param(RecoveryList(tree_hash=NIL_TREEHASH), id="nil_treehash"),
+    ],
+)
 @pytest.mark.anyio
-async def test_get_info(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
+async def test_get_info(
+    wallet_environments: WalletTestFramework,
+    capsys: pytest.CaptureFixture[str],
+    recovery_list: RecoveryList,
+) -> None:
     env_0, env_1 = wallet_environments.environments
     env_0.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
     env_1.wallet_aliases = {"xch": 1, "did": 2, "nft": 3}
@@ -787,9 +797,10 @@ async def test_get_info(wallet_environments: WalletTestFramework, capsys: pytest
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_1 = await action_scope.get_puzzle_hash(env_1.wallet_state_manager)
 
-    await create_did_via_cli(
-        wallet_environments, env_0, amount=did_amount, fee=fee, name="Profile 1", metadata={"twitter": "twitter"}
-    )
+    with patch.object(DIDWallet, "recovery_list", new_callable=PropertyMock, return_value=recovery_list):
+        await create_did_via_cli(
+            wallet_environments, env_0, amount=did_amount, fee=fee, name="Profile 1", metadata={"twitter": "twitter"}
+        )
     did_wallet_1 = await get_did_wallet(env_0)
     assert did_wallet_1.get_name() == "Profile 1"
     metadata = json.loads(did_wallet_1.did_info.metadata)
@@ -851,7 +862,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, capsys: pytest
     assert response.metadata["twitter"] == "twitter"
     assert response.latest_coin == (await did_wallet_1.get_coin()).name()
     assert response.num_verification == 0
-    assert response.recovery_list_hash is None
+    assert response.recovery_list_hash == recovery_list.ids_hash
     assert decode_puzzle_hash(response.p2_address) == response.hints[0]
 
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -1521,8 +1532,6 @@ def test_did_recovery_is_nil(program: Program, result: bool) -> None:
 
 
 def test_recovery_list_ids_hash() -> None:
-    from chia.wallet.did_wallet.did_wallet_puzzles import RecoveryList
-
     assert RecoveryList(ids=None).ids_hash is None
     assert RecoveryList(ids=[]).ids_hash is None
     ids = [bytes32.zeros, bytes32([1] * 32)]

@@ -977,8 +977,8 @@ class WalletStateManager:
 
         # Check if the coin is a DID
         is_match, curried_args = match_singleton_puzzle(uncurried)
-        singleton_struct, inner_puzzle = curried_args
         if is_match:
+            singleton_struct, inner_puzzle = curried_args
             did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
             if did_match is not None and coin_state.coin.amount % 2 == 1:
                 did_data: DIDCoinData = DIDCoinData(
