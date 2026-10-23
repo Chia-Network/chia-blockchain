@@ -62,7 +62,7 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-coverage]: https://coveralls.io/github/Chia-Network/chia-blockchain
 [link-discord]: https://discord.gg/chia
 [link-docs]: https://docs.chia.net/docs-home/
-[link-downloads]: https://www.chia.net/downloads/
+[link-downloads]: https://www.chia.net/farm/downloads/
 [link-faq]: https://docs.chia.net/faq/
 [link-install]: https://docs.chia.net/installation/
 [link-intro]: https://docs.chia.net/introduction/
@@ -74,4 +74,4 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-twitter]: https://twitter.com/chia_project
 [link-upnp]: https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/
 [link-youtube]: https://www.youtube.com/chianetwork
-[logo-chia]: https://www.chia.net/wp-content/uploads/2022/09/chia-logo.svg "Chia logo"
+[logo-chia]: .github/assets/chia-logo.svg "Chia logo"
