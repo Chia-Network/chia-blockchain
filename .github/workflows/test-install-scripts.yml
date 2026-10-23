@@ -193,6 +193,7 @@ jobs:
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+            # Prepare Ubuntu falls back to python3.11-venv from universe.
             url: "docker://ubuntu:jammy"
           - name: ubuntu:noble (24.04)
             type: ubuntu
@@ -267,7 +268,7 @@ jobs:
         run: |
           apt-get --yes update
           apt-get install --yes git lsb-release
-          MINIMUM=3.10
+          MINIMUM=3.11
           if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
             apt-get install --yes python${MINIMUM}-venv

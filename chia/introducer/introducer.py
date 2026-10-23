@@ -135,7 +135,13 @@ class Introducer:
         peers: list[TimestampedPeerInfo] = []
         dns_address = random.choice(self.dns_servers)
         for rdtype in ("A", "AAAA"):
-            result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
+            # A failed lookup (no records of this type, NXDOMAIN, SERVFAIL, timeout) must not discard the
+            # peers already found, or the vetted peers the caller is about to send.
+            try:
+                result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
+            except Exception as e:
+                self.log.warning(f"Querying {dns_address} for {rdtype} records failed: {type(e).__name__}: {e}")
+                continue
             for ip in result:
                 peers.append(
                     TimestampedPeerInfo(

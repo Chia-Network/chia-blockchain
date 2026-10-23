@@ -359,6 +359,12 @@ class TradeManager:
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
 
+                async with action_scope.use() as interface:
+                    interface.side_effects.puzzle_hash_subscriptions.extend(
+                        inner_action_scope.side_effects.puzzle_hash_subscriptions
+                    )
+                    interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
+
                 cancellation_additions.extend(
                     [
                         add

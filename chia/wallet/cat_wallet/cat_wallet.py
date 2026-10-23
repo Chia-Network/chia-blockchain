@@ -4,12 +4,12 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from chia_rs import CoinSpend, CoinState, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
-from typing_extensions import Self, Unpack
+from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection

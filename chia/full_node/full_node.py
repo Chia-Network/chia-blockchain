@@ -54,6 +54,7 @@ from chia.consensus.get_block_challenge import (
     post_hard_fork2,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -67,7 +68,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import LogMempoolMode, MempoolManager
+from chia.full_node.mempool_manager import DEFAULT_MAX_SPENDS_PER_ITEM, LogMempoolMode, MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -354,6 +355,7 @@ class FullNode:
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
+                max_spends_per_item=self.config.get("max_spends_per_item", DEFAULT_MAX_SPENDS_PER_ITEM),
                 log_mempool=self._log_mempool_mode(),
                 root_path=self.root_path,
             ) as self._mempool_manager:
@@ -2632,6 +2634,14 @@ class FullNode:
         else:
             prev_b = self.blockchain.block_record(block.prev_header_hash)
 
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            self.constants,
+            len(block.finished_sub_slots) > 0,
+            prev_b,
+            self.blockchain,
+        )
+        finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
+
         # Count the blocks in sub slot, and check if it's a new epoch
         if len(block.finished_sub_slots) > 0:
             num_blocks_in_ss = 1  # Curr
@@ -2686,7 +2696,7 @@ class FullNode:
                 blocks=self.blockchain,
                 prev_b_hash=block.prev_header_hash,
                 sp_index=block.reward_chain_block.signage_point_index,
-                finished_sub_slots=len(block.finished_sub_slots),
+                finished_sub_slots=finished_sub_slots,
             )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
 
@@ -2748,7 +2758,7 @@ class FullNode:
             self.blockchain,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(block.finished_sub_slots),
+            finished_sub_slots=finished_sub_slots,
         )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,
@@ -2791,13 +2801,6 @@ class FullNode:
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
                 f"{percent_full_str}"
             )
-
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants,
-            len(block.finished_sub_slots) > 0,
-            prev_b,
-            self.blockchain,
-        )
 
         if block.reward_chain_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_block.pos_ss_cc_challenge_hash)

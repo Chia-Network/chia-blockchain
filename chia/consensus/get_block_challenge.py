@@ -178,6 +178,20 @@ def pre_sp_tx_block_height(
     return latest_tx_block.height
 
 
+def unfinished_block_sub_slots(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    block: UnfinishedHeaderBlock | UnfinishedBlock,
+    sub_slot_iters: uint64,
+) -> int:
+    """Sub-slots crossed since the previous block's infusion."""
+    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    if overflow and not final_eos_is_already_included(block, blocks, sub_slot_iters):
+        # the signage point sub-slot's end-of-sub-slot is not included yet
+        return len(block.finished_sub_slots) + 1
+    return len(block.finished_sub_slots)
+
+
 def get_filter_challenge_from_chain(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
