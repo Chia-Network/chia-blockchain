@@ -12,7 +12,7 @@ import os
 import random
 import sysconfig
 import tempfile
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Generator, Iterator
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -636,6 +636,54 @@ def pytest_addoption(parser: pytest.Parser):
     )
 
 
+_plot_cache_passed = pytest.StashKey[bool]()
+_plot_cache_collected_files: set[str] = set()
+
+
+def pytest_collectreport(report: pytest.CollectReport) -> None:
+    if report.passed and report.nodeid.endswith(".py"):
+        _plot_cache_collected_files.add(report.nodeid)
+
+
+def _test_plot_cache_directory() -> Path:
+    from chia._tests.util.plot_cache import TEST_CACHE_DIRECTORY
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    return DEFAULT_ROOT_PATH.parent / "test-plots" / TEST_CACHE_DIRECTORY
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> Iterator[None]:
+    from chia._tests.util.plot_cache import record_test, save_test_cache
+
+    item.stash[_plot_cache_passed] = False
+    with record_test() as lookups:
+        yield
+    if item.stash[_plot_cache_passed]:
+        save_test_cache(_test_plot_cache_directory(), item.nodeid, lookups)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[Any]
+) -> Generator[None, pytest.TestReport, pytest.TestReport]:
+    report = yield
+    if report.when == "call":
+        item.stash[_plot_cache_passed] = report.passed
+    elif not report.passed:
+        item.stash[_plot_cache_passed] = False
+    return report
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    if hasattr(session.config, "workerinput") or session.config.option.collectonly or exitstatus != 0:
+        return
+    from chia._tests.util.plot_cache import CACHE_FILENAME, merge_test_caches
+    from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    merge_test_caches(_test_plot_cache_directory(), DEFAULT_ROOT_PATH.parent / "test-plots" / CACHE_FILENAME)
+
+
 def pytest_configure(config):
     for logger_name in ["aiosqlite", "filelock", "watchdog"]:
         logger = logging.getLogger(logger_name)
@@ -680,7 +728,9 @@ def pytest_configure(config):
         globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
 
 
-def pytest_collection_modifyitems(session, config: pytest.Config, items: list[pytest.Function]):
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_collection_modifyitems(session, config: pytest.Config, items: list[pytest.Function]) -> Iterator[None]:
+    collected = {item.nodeid for item in items}
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
@@ -729,6 +779,14 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: list[py
     if len(all_error_lines) > 0:
         all_error_lines.insert(0, "custom chia collection rules failed")
         raise Exception("\n".join(all_error_lines))
+
+    yield
+    # Node selectors collect only part of a file. -k/-m filtering happens after
+    # the snapshot above, so it cannot accidentally prune deselected tests.
+    if not config.option.collectonly and not session.testsfailed and not any("::" in arg for arg in config.args):
+        from chia._tests.util.plot_cache import prune_test_caches
+
+        prune_test_caches(_test_plot_cache_directory(), collected, config.rootpath, files=_plot_cache_collected_files)
 
 
 @pytest.fixture(scope="function")
