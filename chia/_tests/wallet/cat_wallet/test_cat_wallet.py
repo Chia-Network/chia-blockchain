@@ -1695,7 +1695,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                                 solution=UnknownSolution(program=Program.NIL),
                             ),
                         ),
-                    ),
+                    ).program,
                     extra_delta=-1,
                 )
             ],

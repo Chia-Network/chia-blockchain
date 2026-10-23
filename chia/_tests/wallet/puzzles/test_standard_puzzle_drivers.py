@@ -1,0 +1,134 @@
+from __future__ import annotations
+
+from unittest import mock
+
+import pytest
+from chia_rs import AugSchemeMPL
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
+from chia.types.blockchain_format.program import Program
+from chia.wallet.conditions import CreateCoin, Remark
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    MOD,
+    calculate_synthetic_public_key,
+)
+from chia.wallet.puzzles.puzzle_drivers import (
+    ACSPuzzle,
+    NilSolution,
+    P2Conditions,
+    UnknownPuzzle,
+    UnknownSolution,
+)
+from chia.wallet.puzzles.standard_puzzle_drivers import DefaultHiddenPuzzle, StandardPuzzle, StandardPuzzleSolution
+
+
+def test_standard_puzzle_drivers() -> None:
+    original_public_key = AugSchemeMPL.key_gen(bytes([1] * 32)).get_g1()
+    synthetic_public_key = calculate_synthetic_public_key(original_public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+
+    with pytest.raises(ValueError, match="Must specify either the synthetic or original pubkey"):
+        StandardPuzzle()
+
+    from_original: StandardPuzzle[DefaultHiddenPuzzle] = StandardPuzzle(
+        pre_known_original_public_key=original_public_key
+    )
+    assert from_original.synthetic_public_key == synthetic_public_key
+    from_synthetic: StandardPuzzle[DefaultHiddenPuzzle] = StandardPuzzle(
+        pre_known_synthetic_public_key=synthetic_public_key
+    )
+    assert from_synthetic.tree_hash == from_original.tree_hash
+
+    custom_hidden = ACSPuzzle()
+    custom_synthetic = calculate_synthetic_public_key(original_public_key, custom_hidden.tree_hash)
+    from_custom_hidden = StandardPuzzle(
+        pre_known_original_public_key=original_public_key,
+        hidden_puzzle=custom_hidden,
+    )
+    assert from_custom_hidden.synthetic_public_key == custom_synthetic
+    assert from_custom_hidden.hidden_puzzle.tree_hash == custom_hidden.tree_hash
+
+    assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACSPuzzle().program)) is None
+    assert (
+        StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=MOD.curry(synthetic_public_key, Program.to(2))))
+        is None
+    )
+
+    matched_without_solution = StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program))
+    assert matched_without_solution is not None
+    assert matched_without_solution.pre_known_synthetic_public_key == synthetic_public_key
+    assert matched_without_solution.pre_known_original_public_key is None
+    assert matched_without_solution.hidden_puzzle.program == DEFAULT_HIDDEN_PUZZLE
+
+    with mock.patch.object(UnknownPuzzle, "curried_args", new_callable=mock.PropertyMock, return_value=None):
+        assert StandardPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program)) is None
+
+    delegated_reveal = P2Conditions(conditions=[Remark(Program.to("delegated"))])
+    delegated_solution = NilSolution()
+    solution_without_original = StandardPuzzleSolution(
+        delegated_puzzle=delegated_reveal,
+        delegated_solution=delegated_solution,
+    )
+    matched_delegated = StandardPuzzle.match(
+        unknown_puzzle=UnknownPuzzle(known_program=from_synthetic.program),
+    )
+    assert matched_delegated is not None
+    assert matched_delegated.pre_known_synthetic_public_key == synthetic_public_key
+    assert matched_delegated.pre_known_original_public_key is None
+    assert matched_delegated.hidden_puzzle.program == DEFAULT_HIDDEN_PUZZLE
+    assert (
+        DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=DEFAULT_HIDDEN_PUZZLE))
+        == DefaultHiddenPuzzle()
+    )
+    assert (
+        DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_tree_hash=DEFAULT_HIDDEN_PUZZLE_HASH))
+        == DefaultHiddenPuzzle()
+    )
+    assert DefaultHiddenPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=Program.to("foo"))) is None
+
+    hidden_reveal = ACSPuzzle()
+    solution_with_original = StandardPuzzleSolution(
+        original_public_key=original_public_key,
+        delegated_puzzle=hidden_reveal,
+        delegated_solution=UnknownSolution(program=Program.to([42])),
+    )
+
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to(1))) is None
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to([1, 2]))) is None
+    assert StandardPuzzleSolution.match(unknown_solution=UnknownSolution(Program.to([1, 2, 3, 4]))) is None
+
+    matched_solution_nil_key = StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(solution_without_original.program)
+    )
+    assert matched_solution_nil_key is not None
+    assert matched_solution_nil_key.original_public_key is None
+    assert matched_solution_nil_key.delegated_puzzle.program == delegated_reveal.program
+    assert matched_solution_nil_key.delegated_solution.program == delegated_solution.program
+
+    matched_solution_with_key = StandardPuzzleSolution.match(
+        unknown_solution=UnknownSolution(solution_with_original.program)
+    )
+    assert matched_solution_with_key is not None
+    assert matched_solution_with_key.original_public_key == original_public_key
+    assert matched_solution_with_key.delegated_puzzle.program == hidden_reveal.program
+    assert matched_solution_with_key.delegated_solution.program == Program.to([42])
+
+    create_coin = CreateCoin(bytes32(bytes([3] * 32)), uint64(500))
+    remark = Remark(Program.to("hi"))
+    condition_solution = StandardPuzzleSolution.for_conditions([create_coin, remark])
+    expected_delegated = P2Conditions(conditions=[create_coin, remark])
+    solution_match = StandardPuzzleSolution.match(unknown_solution=UnknownSolution(condition_solution.program))
+    assert solution_match is not None
+    assert solution_match.original_public_key is None
+    assert solution_match.delegated_puzzle.program == expected_delegated.program
+
+    hidden_solution: StandardPuzzleSolution[DefaultHiddenPuzzle, UnknownSolution] = StandardPuzzle(
+        pre_known_original_public_key=original_public_key
+    ).hidden_puzzle_solution(UnknownSolution(program=Program.to([99])))
+    solution_match = StandardPuzzleSolution.match(unknown_solution=UnknownSolution(hidden_solution.program))
+    assert solution_match is not None
+    assert solution_match.original_public_key is not None
+    assert solution_match.delegated_puzzle.program == DefaultHiddenPuzzle().program
+    assert solution_match.delegated_solution.program == Program.to([99])
