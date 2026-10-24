@@ -1,0 +1,34 @@
+name: 🚨 Check action Node runtime
+
+on:
+  push:
+    branches:
+      - long_lived/**
+      - main
+      - release/**
+  pull_request:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  check-node-runtime:
+    name: Check action Node runtime
+    runs-on: [ubuntu-latest]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Check action Node runtime
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/check_node_runtime.sh
