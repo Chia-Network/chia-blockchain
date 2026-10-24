@@ -1,4 +1,6 @@
-# Managed by repo-content-updater
+# This file is managed by the repo-content-updater project. Manual changes here will result in a PR to bring back
+# inline with the upstream template, unless you add !dependency-cursor-review to the repo's managed-files property
+# repo-content-updater:dependency-cursor-review
 # Dependency Cursor Review workflow
 #
 # Three jobs, three runners. The agent job is the only one that runs `agent`,
@@ -53,44 +55,41 @@ jobs:
       resolved_to: ${{ steps.malware_scan.outputs.resolved_to }}
       from_tag: ${{ steps.malware_scan.outputs.from_tag }}
       to_tag: ${{ steps.malware_scan.outputs.to_tag }}
-      status: ${{ steps.malware_scan.outputs.status }}
-      changed_files_count: ${{ steps.malware_scan.outputs.changed_files_count }}
       report_sha256: ${{ steps.malware_scan.outputs.report_sha256 }}
       summary: ${{ steps.malware_scan.outputs.summary }}
       scan_conclusive: ${{ steps.malware_scan.outputs.scan_conclusive }}
     steps:
-      - name: Checkout trusted target-PR helper
+      - name: Checkout trusted review scripts
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
-          path: .trusted-dcr-helper
+          path: .trusted-dcr-scripts
           sparse-checkout: |
-            .github/scripts/dependency-cursor-review-target-pr.js
-            .github/scripts/dependency-cursor-review-dependabot-context.js
+            .github/scripts/
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
-      - name: Copy trusted helper out of the workspace
+      # The PR-head checkout below replaces the workspace. Scripts run from, and
+      # outputs go to, fresh directories outside it.
+      - name: Copy trusted scripts out of the workspace
         shell: bash
         run: |
           set -euo pipefail
-          dest="${RUNNER_TEMP}/trusted-dcr-helper"
-          rm -rf "${dest}"
-          mkdir -p "${dest}"
-          cp -a .trusted-dcr-helper/.github/scripts/. "${dest}/"
+          dest="${RUNNER_TEMP}/trusted-dcr-scripts"
+          mkdir "${dest}" "${RUNNER_TEMP}/dcr-out"
+          cp -a .trusted-dcr-scripts/.github/scripts/. "${dest}/"
           test -s "${dest}/dependency-cursor-review-target-pr.js"
-          test -s "${dest}/dependency-cursor-review-dependabot-context.js"
+          test -s "${dest}/dependency_update_coverage.py"
 
       - name: Resolve target PR context
         id: target_pr
         uses: actions/github-script@v9
         with:
           script: |
-            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-helper/dependency-cursor-review-target-pr.js`);
+            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/dependency-cursor-review-target-pr.js`);
             await run.run({ github, context, core });
 
       - name: Checkout repository
-        if: steps.target_pr.outputs.already_reviewed != 'true'
         uses: actions/checkout@v7
         env:
           ACTIONS_CACHE_URL: ""
@@ -99,58 +98,29 @@ jobs:
           ref: ${{ steps.target_pr.outputs.head_sha }}
           persist-credentials: false
 
-      # PR head is untrusted: overwrite composite action.yml from default branch before uses: ./…
-      - name: Install trusted git path checkout action definition
-        if: steps.target_pr.outputs.already_reviewed != 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          action_file=".github/actions/trusted-git-path-checkout/action.yml"
-          default_branch="${{ github.event.repository.default_branch }}"
-          echo "Installing trusted composite action from origin/${default_branch} (not PR head definition)."
-          auth_basic="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
-          git -c "http.extraheader=AUTHORIZATION: basic ${auth_basic}" \
-            fetch --no-tags --depth=1 origin "${default_branch}"
-          mkdir -p .github/actions/trusted-git-path-checkout
-          git checkout "FETCH_HEAD" -- "${action_file}"
-          if [ ! -f "$action_file" ]; then
-            echo "Trusted composite action missing on origin/${default_branch} at ${action_file}."
-            exit 1
-          fi
-
-      - name: Ensure malware verdict formatter bundle
-        if: steps.target_pr.outputs.already_reviewed != 'true'
-        uses: ./.github/actions/trusted-git-path-checkout
-        with:
-          token: ${{ github.token }}
-          ref: ${{ github.event.repository.default_branch }}
-          paths_manifest: .github/scripts/dependency-cursor-review-trusted-scripts.paths
-          dest: ${{ runner.temp }}/trusted-dcr-scripts
-
       - name: Extract Dependabot comment context
-        if: steps.target_pr.outputs.already_reviewed != 'true'
-        id: dependabot_context
         uses: actions/github-script@v9
         env:
-          PR_TITLE: ${{ steps.target_pr.outputs.title }}
           PR_BODY: ${{ steps.target_pr.outputs.body }}
           PR_NUMBER: ${{ steps.target_pr.outputs.number }}
+          DCR_OUT: ${{ runner.temp }}/dcr-out
         with:
           script: |
-            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency-cursor-review-dependabot-context.js`);
-            await run({ github, context, core });
+            const run = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/dependency-cursor-review-dependabot-context.js`);
+            await run();
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
 
       - name: Run upstream malware scan
-        if: steps.target_pr.outputs.already_reviewed != 'true'
         id: malware_scan
         shell: bash
         env:
           PR_BASE_SHA: ${{ steps.target_pr.outputs.base_sha }}
-          VERSION_RANGE_FROM_BODY: ${{ steps.dependabot_context.outputs.version_range_from_body }}
-          MALWARE_WARN_ONLY: >-
-            1
+          DCR_OUT: ${{ runner.temp }}/dcr-out
+          DCR_FETCH_TOKEN: ${{ github.token }}
           MALWARE_IOC_PATTERNS: >-
             ["axios@1\\.14\\.1", "axios@0\\.30\\.4", "plain-crypto-js", "sfrclak\\.com", "@shadanai/openclaw", "@shadanai/[a-z0-9._-]+", "2026\\.3\\.28-2", "2026\\.3\\.28-3", "2026\\.3\\.31-1", "2026\\.3\\.31-2"]
           MALWARE_IOC_ALLOWLIST: >-
@@ -164,12 +134,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ripgrep jq
-          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency_update_coverage.py"
-          if [ ! -s malware_scan_report.json ]; then
+          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/dependency_update_coverage.py"
+          report="${DCR_OUT}/malware_scan_report.json"
+          if [ ! -s "$report" ]; then
             echo "Malware scan report missing." >&2
             exit 1
           fi
-          report_line="$(sha256sum malware_scan_report.json)"
+          report_line="$(sha256sum "$report")"
           report_sha256="${report_line%% *}"
           if [ -z "$report_sha256" ]; then
             echo "Malware scan report digest was empty." >&2
@@ -178,31 +149,29 @@ jobs:
           echo "report_sha256=${report_sha256}" >> "$GITHUB_OUTPUT"
 
       - name: Check out upstream release and drop agent instructions
-        if: steps.target_pr.outputs.already_reviewed != 'true'
         shell: bash
         env:
           RESOLVED_TO: ${{ steps.malware_scan.outputs.resolved_to }}
         run: |
-          bash "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/upstream_release_checkout.sh"
+          bash "${RUNNER_TEMP}/trusted-dcr-scripts/upstream_release_checkout.sh"
 
       - name: Gather local usage hints
-        if: steps.target_pr.outputs.already_reviewed != 'true'
         shell: bash
         env:
           PACKAGE_NAME: ${{ steps.malware_scan.outputs.package_name }}
+          DCR_OUT: ${{ runner.temp }}/dcr-out
         run: |
           if [ -z "$PACKAGE_NAME" ]; then
-            echo "No package detected from PR metadata." > package_usage.txt
+            echo "No package detected from PR metadata." >"${DCR_OUT}/package_usage.txt"
           else
             {
               echo "Search pattern: $PACKAGE_NAME"
               echo
               rg -n --fixed-strings --hidden --glob '!.git' --glob '!node_modules' --glob '!.upstream-dependency/**' -- "$PACKAGE_NAME" . || true
-            } > package_usage.txt
+            } >"${DCR_OUT}/package_usage.txt"
           fi
 
       - name: Build Cursor prompts
-        if: steps.target_pr.outputs.already_reviewed != 'true'
         shell: bash
         env:
           PR_TITLE: ${{ steps.target_pr.outputs.title }}
@@ -212,25 +181,22 @@ jobs:
           TO_VERSION: ${{ steps.malware_scan.outputs.to_version }}
           RESOLVED_FROM: ${{ steps.malware_scan.outputs.resolved_from }}
           RESOLVED_TO: ${{ steps.malware_scan.outputs.resolved_to }}
+          DCR_OUT: ${{ runner.temp }}/dcr-out
         run: |
-          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency_cursor_review_prompts.py"
-          if [ ! -f upstream_changed_files.txt ]; then
-            : > upstream_changed_files.txt
-          fi
+          python3 -I "${RUNNER_TEMP}/trusted-dcr-scripts/dependency_cursor_review_prompts.py"
 
       - name: Upload scan inputs
-        if: always() && steps.target_pr.outputs.already_reviewed != 'true'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: dcr-scan-${{ github.run_id }}
           retention-days: 1
           if-no-files-found: error
           path: |
-            malware_scan_report.json
-            malware_scan_summary.md
-            upstream_changed_files.txt
-            cursor_prompt_malware.txt
-            cursor_prompt_compatibility.txt
+            ${{ runner.temp }}/dcr-out/malware_scan_report.json
+            ${{ runner.temp }}/dcr-out/malware_scan_summary.md
+            ${{ runner.temp }}/dcr-out/cursor_prompt_malware.txt
+            ${{ runner.temp }}/dcr-out/cursor_prompt_compatibility.txt
 
       - name: Bind review marker to peeled commit
         id: bind_review
@@ -242,14 +208,10 @@ jobs:
           RESOLVED_TO: ${{ steps.malware_scan.outputs.resolved_to }}
         with:
           script: |
-            const {
-              reviewMarkerFromPatchId,
-              skipApplies,
-            } = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/.github/scripts/dependency-cursor-review-dependabot-context.js`);
-            const resolved = process.env.RESOLVED_TO || '';
-            const reviewed = (process.env.REVIEWED_SHAS || '').split(',').filter(Boolean);
-            core.setOutput('review_marker', reviewMarkerFromPatchId(process.env.PATCH_ID || '', resolved));
-            core.setOutput('already_reviewed', skipApplies(reviewed, resolved) ? 'true' : 'false');
+            const { bindReviewOutputs } = require(`${process.env.RUNNER_TEMP}/trusted-dcr-scripts/dependency-cursor-review-dependabot-context.js`);
+            for (const [name, value] of Object.entries(bindReviewOutputs(process.env))) {
+              core.setOutput(name, value);
+            }
 
   dependency-review-agent:
     needs: dependency-review-scan
@@ -267,6 +229,11 @@ jobs:
         with:
           ref: ${{ needs.dependency-review-scan.outputs.head_sha }}
           persist-credentials: false
+
+      # Only the trusted steps below create these paths, so none of them writes through a link.
+      - name: Clear review paths from the checkout
+        shell: bash
+        run: rm -rf -- .dcr-strip .upstream-dependency dcr-scan-input
 
       - name: Checkout trusted instruction strip
         uses: actions/checkout@v7
@@ -293,6 +260,15 @@ jobs:
         with:
           name: dcr-scan-${{ github.run_id }}
           path: dcr-scan-input
+
+      # Before anything reads them: refuse linked review paths and a non-regular
+      # scan input, delete every symlink in the release, and drop agent instructions.
+      - name: Prepare agent inputs
+        shell: bash
+        env:
+          RESOLVED_TO: ${{ needs.dependency-review-scan.outputs.resolved_to }}
+        run: |
+          bash .dcr-strip/.github/scripts/upstream_release_checkout.sh
 
       - name: Fetch upstream commits and version tags
         if: ${{ needs.dependency-review-scan.outputs.resolved_to != '' }}
@@ -408,14 +384,6 @@ jobs:
           note_tag "from tag" "$verified_from" "$token"
           note_tag "to tag" "$verified_to" "$token"
 
-      - name: Drop agent instructions
-        if: ${{ needs.dependency-review-scan.outputs.resolved_to != '' }}
-        shell: bash
-        env:
-          RESOLVED_TO: ${{ needs.dependency-review-scan.outputs.resolved_to }}
-        run: |
-          bash .dcr-strip/.github/scripts/upstream_release_checkout.sh
-
       - name: Install Cursor CLI
         shell: bash
         run: |
@@ -475,25 +443,41 @@ jobs:
             echo "GITHUB_TOKEN is set." >&2
             exit 1
           fi
+          out="${RUNNER_TEMP}/dcr-out"
+          mkdir "$out"
           if [ -z "$CURSOR_API_KEY" ]; then
-            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}' > cursor_output_malware.json
-            echo '{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}' > cursor_output_compatibility.json
+            skipped='{"result":"CURSOR_API_KEY is not set; analysis was skipped.","complete":false}'
+            echo "$skipped" >"${out}/cursor_output_malware.json"
+            echo "$skipped" >"${out}/cursor_output_compatibility.json"
             exit 0
           fi
 
           run_agent_prompt() {
             local prompt_file="$1"
             local output_file="$2"
-            local stream_file="${output_file}.stream"
+            local stream_file
+            stream_file="$(mktemp)"
             if ! agent -f --mode ask -p --output-format stream-json < "$prompt_file" > "$stream_file"; then
-              FALLBACK_PROMPT="$(python3 -c 'from pathlib import Path; import sys; path = sys.argv[1]; max_bytes = 60000; raw = Path(path).read_bytes(); text = raw[:max_bytes].decode("utf-8", errors="ignore"); text += "\n\n[Prompt truncated for CLI argument compatibility.]" if len(raw) > max_bytes else ""; print(text, end="")' "$prompt_file")"
+              FALLBACK_PROMPT="$(
+                python3 -I - "$prompt_file" <<'PY'
+          import sys
+
+          max_bytes = 60000
+          with open(sys.argv[1], "rb") as handle:
+              raw = handle.read(max_bytes + 1)
+          text = raw[:max_bytes].decode("utf-8", errors="ignore")
+          if len(raw) > max_bytes:
+              text += "\n\n[Prompt truncated for CLI argument compatibility.]"
+          print(text, end="")
+          PY
+              )"
               agent -f --mode ask -p --output-format stream-json "$FALLBACK_PROMPT" > "$stream_file"
             fi
-            python3 - "$stream_file" "$output_file" <<'PY'
+            python3 -I - "$stream_file" <<'PY' >"$output_file"
           import json
           import sys
 
-          stream_path, output_path = sys.argv[1:3]
+          stream_path = sys.argv[1]
           result = ""
           final = ""
           with open(stream_path, encoding="utf-8") as handle:
@@ -518,14 +502,13 @@ jobs:
                   elif event.get("type") == "result":
                       result = event.get("result", "")
           payload = {"result": result or final, "final_message": final, "complete": bool(result or final)}
-          with open(output_path, "w", encoding="utf-8") as handle:
-              json.dump(payload, handle)
-              handle.write("\n")
+          json.dump(payload, sys.stdout)
+          sys.stdout.write("\n")
           PY
           }
 
-          run_agent_prompt "dcr-scan-input/cursor_prompt_malware.txt" "cursor_output_malware.json"
-          run_agent_prompt "dcr-scan-input/cursor_prompt_compatibility.txt" "cursor_output_compatibility.json"
+          run_agent_prompt "dcr-scan-input/cursor_prompt_malware.txt" "${out}/cursor_output_malware.json"
+          run_agent_prompt "dcr-scan-input/cursor_prompt_compatibility.txt" "${out}/cursor_output_compatibility.json"
 
       - name: Upload agent outputs
         if: always()
@@ -535,8 +518,8 @@ jobs:
           retention-days: 1
           if-no-files-found: error
           path: |
-            cursor_output_malware.json
-            cursor_output_compatibility.json
+            ${{ runner.temp }}/dcr-out/cursor_output_malware.json
+            ${{ runner.temp }}/dcr-out/cursor_output_compatibility.json
 
   dependency-review:
     needs:
@@ -548,6 +531,10 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    env:
+      # A policy input to decide(), read once by the combine step.
+      MALWARE_WARN_ONLY: >-
+        1
     steps:
       - name: Fail closed when scan or agent failed
         if: ${{ needs.dependency-review-scan.result != 'success' || (needs.dependency-review-agent.result != 'success' && needs.dependency-review-agent.result != 'skipped') }}
@@ -566,6 +553,11 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
 
       - name: Download scan inputs
         if: ${{ success() && steps.helpers.outcome == 'success' }}
@@ -604,8 +596,6 @@ jobs:
         env:
           PR_NUMBER: ${{ needs.dependency-review-scan.outputs.number }}
           REVIEW_MARKER: ${{ needs.dependency-review-scan.outputs.review_marker }}
-          MALWARE_SCAN_STATUS: ${{ needs.dependency-review-scan.outputs.status }}
-          MALWARE_SCAN_CHANGED_COUNT: ${{ needs.dependency-review-scan.outputs.changed_files_count }}
           MALWARE_SCAN_SUMMARY: ${{ needs.dependency-review-scan.outputs.summary }}
         with:
           script: |
