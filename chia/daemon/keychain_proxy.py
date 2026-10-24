@@ -341,7 +341,7 @@ class KeychainProxy(DaemonProxy):
     ) -> PrivateKey | G1Element | None: ...
 
     async def get_key_for_fingerprint(
-        self, fingerprint: int | None, private: bool = True
+        self, fingerprint: int | None, private: bool = True, or_public: bool = False
     ) -> PrivateKey | G1Element | None:
         """
         Locates and returns a private key matching the provided fingerprint
@@ -362,7 +362,7 @@ class KeychainProxy(DaemonProxy):
                         raise KeychainKeyNotFound(fingerprint)
                 if private and selected_key.secrets is not None:
                     key = selected_key.private_key
-                elif not private:
+                elif not private or or_public:
                     key = selected_key.public_key
                 else:
                     return None
@@ -373,16 +373,12 @@ class KeychainProxy(DaemonProxy):
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or (private and ent is None):
+                if pk is None or (private and ent is None and not or_public):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                elif private:
-                    if ent is None:
-                        err = f"Missing ent in {response.get('command')} response"
-                        self.log.error(f"{err}")
-                        raise KeychainMalformedResponse(f"{err}")
-
+                elif private and not (ent is None and or_public):
+                    assert ent is not None  # implied, but mypy doesn't know that
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)

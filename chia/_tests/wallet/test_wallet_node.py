@@ -59,8 +59,8 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
     key = await node.get_key(fingerprint)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -80,8 +80,8 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     key = await node.get_key(None)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -118,8 +118,8 @@ async def test_get_private_key_missing_key_use_default(
     key = await node.get_key(1234567890)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -138,8 +138,8 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
     key = await node.get_key(fingerprint, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -171,8 +171,8 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
     key = await node.get_key(None, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -213,8 +213,8 @@ async def test_get_public_key_missing_key_use_default(
     key = await node.get_key(1234567890, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
