@@ -7,7 +7,8 @@
  * The scan always runs. The agent is skipped only when github-actions[bot]
  * has already commented this pull request's patch id together with the commit
  * the release tag still peels to. A moved tag is a different commit, so it is
- * reviewed. Renovate and workflow_dispatch always run.
+ * reviewed. Renovate and workflow_dispatch always run. The peeled commit is
+ * not known yet, so the scan job's bind_review step makes the skip decision.
  */
 const { patchIdFromDiff, reviewedShasForPatch } = require('./dependency-cursor-review-dependabot-context.js');
 
@@ -98,8 +99,6 @@ async function reviewedReleaseShas({ github, context, core, pr, patchId }) {
 }
 
 async function run({ github, context, core }) {
-  core.setOutput('already_reviewed', 'false');
-  core.setOutput('review_marker', '');
   let pr;
   if (context.eventName === 'pull_request') {
     pr = context.payload.pull_request;
@@ -140,9 +139,6 @@ async function run({ github, context, core }) {
   core.setOutput('base_sha', baseSha);
   core.setOutput('patch_id', patchId);
   core.setOutput('reviewed_shas', reviewed.join(','));
-  // The peeled commit is not known yet. The scan job binds the marker afterward.
-  core.setOutput('review_marker', '');
-  core.setOutput('already_reviewed', 'false');
 }
 
 module.exports = { run, MAX_PR_COMMITS };
