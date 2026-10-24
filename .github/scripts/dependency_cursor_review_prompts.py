@@ -11,9 +11,13 @@ from pathlib import Path
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{7,64}\Z")
 
 
-def _read_file(path: str) -> str:
+def _out_dir() -> Path:
+    return Path(os.environ["DCR_OUT"])
+
+
+def _read_file(name: str) -> str:
     try:
-        return Path(path).read_text(encoding="utf-8")
+        return (_out_dir() / name).read_text(encoding="utf-8")
     except FileNotFoundError:
         return ""
 
@@ -80,7 +84,7 @@ def _prompt_fields() -> dict[str, str]:
         "resolved_to": os.getenv("RESOLVED_TO", ""),
     }
     try:
-        report = json.loads(Path("malware_scan_report.json").read_text(encoding="utf-8"))
+        report = json.loads((_out_dir() / "malware_scan_report.json").read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
         return env_fields
     if not isinstance(report, dict) or "agent_target" not in report:
@@ -165,8 +169,9 @@ Review the dependency update for signs of compromise. Use this checklist and exp
 
 ### Invisible Unicode / GlassWorm technique
 This class of attack can appear blank in rendered code review. Flag:
-- Unicode Private Use Area characters (U+FE00\u2013U+FE0F, U+E0100\u2013U+E01EF)
-- Zero-width characters (U+200B, U+200C, U+200D, U+FEFF)
+- Unicode Private Use Area characters (U+E0100\u2013U+E01EF)
+- Zero-width characters (U+200B, U+200C)
+- A byte-order mark (U+FEFF) embedded inside a token rather than after whitespace
 - Hangul filler characters (U+3164, U+115F, U+1160)
 - Bidi control characters (U+202A\u2013U+202E, U+2066\u2013U+2069, Trojan Source)
 - Homoglyph substitutions in operators/identifiers (e.g. \uff0f, \u2217, \u01c3)
@@ -174,6 +179,10 @@ This class of attack can appear blank in rendered code review. Flag:
 - eval()/Function() receiving visually blank strings
 - Decoder patterns using codePointAt()/fromCodePoint()/charCodeAt() for hidden payload assembly
 - Commit metadata consistency anomalies suggesting force-push/rewrite concealment
+
+Variation selectors (U+FE00\u2013U+FE0F) and the zero-width joiner (U+200D) are normal emoji
+rendering. They are not evidence on their own. Binary and media blobs (images, archives,
+wheels) are not text; a codepoint match there is byte coincidence, not a hidden glyph.
 
 ### Dependency integrity
 - Unexpected new transitive dependencies vs prior dependency graph
@@ -188,12 +197,21 @@ pnpm-lock.yaml, Gemfile.lock, go.sum, Cargo.toml, Cargo.lock, .cargo/config.toml
 poetry.lock, Pipfile.lock, requirements.txt, requirements-dev.txt, requirements/*.txt, etc.)
 - Flag new transitive dependencies introduced alongside the direct update
 - Flag new preinstall/postinstall scripts that were not present previously
-- Treat .github/workflows/ modifications as highly suspicious in a pure dependency update PR
+- Treat .github/workflows/ modifications in the PR under review as highly suspicious in a pure dependency update PR. \
+Upstream release workflow files are not executed by this repository; a path-touch finding there is context unless the \
+workflow content itself adds a payload.
+- Unchanged or removed submodule pointers are recorded in the report and their contents are not scanned. \
+An added or moved submodule pointer is reported as unread with cause "submodule changed".
 
-IOC matches and Unicode or confusable-character findings are blocking. Do not clear them.
-You may only agree with them or escalate them.
+IOC matches, and Unicode or confusable-character findings in files changed by this update, are blocking. \
+Do not clear them.
+Pre-existing Unicode or confusable findings in unchanged release files are context for this update, \
+not a reason to block.
+Codepoint matches in binary or media blobs are not text findings and are context for this update.
+A changed media path is still a steganography signal.
+You may only agree with blocking findings or escalate them.
 Generic exec, spawn, child_process, base64, and eval hits are context, including inside compiled
-bundles. Other heuristic hits stay blocking in every path, including dist/ and lib/.
+bundles. Other heuristic hits are blocking.
 status clean with scan_conclusive true means release blobs were read and no findings were produced.
 status warn or fail means findings were produced from blobs that were read. Incorporate them.
 If scan_conclusive is false, coverage was incomplete, so do not treat the absence of further findings as a clean result.
@@ -253,8 +271,8 @@ Do not include intermediate reasoning or self-talk.
 Keep it concise and actionable.
 """.strip()
 
-    Path("cursor_prompt_malware.txt").write_text(malware_prompt, encoding="utf-8")
-    Path("cursor_prompt_compatibility.txt").write_text(compatibility_prompt, encoding="utf-8")
+    (_out_dir() / "cursor_prompt_malware.txt").write_text(malware_prompt, encoding="utf-8")
+    (_out_dir() / "cursor_prompt_compatibility.txt").write_text(compatibility_prompt, encoding="utf-8")
 
 
 if __name__ == "__main__":
