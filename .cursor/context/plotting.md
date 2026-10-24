@@ -80,8 +80,8 @@ Public plotting docs frame plots as files tied to a farmer key, pool key, or poo
 
 ## CLI, External Plotters, And Simulator Coupling
 
-- `chia plots create` and `chia.plotters.chiapos` both call `resolve_plot_keys()` and `create_plots()`; external plotter wrappers for bladebit and madmax call `resolve_plot_keys()` and pass the resulting keys to subprocess CLIs.
-- Plot size validation lives in `util.validate_plot_size()` and is CLI/operator policy: mainnet min k comes from config, and `--override-k` still applies source-defined lower bounds.
+- `chia plots create` and `chia.plotters.chiapos` both call `resolve_plot_keys()` and `create_plots()`; `chia plots create2` calls `resolve_plot_keys()` and `create_v2_plots()` with network-derived `PLOT_SIZE_V2` / `TESTNET` and CLI strength; external plotter wrappers for bladebit and madmax call `resolve_plot_keys()` and pass the resulting keys to subprocess CLIs.
+- Plot size validation lives in `util.validate_plot_size()` (v1) and is CLI/operator policy: mainnet min k comes from config, and `--override-k` still applies source-defined lower bounds. V2 CLI size is not user-selectable; `create2` always uses network `PLOT_SIZE_V2`, and `util.validate_v2_plot_params()` only enforces strength against `MIN_PLOT_STRENGTH`..`MAX_PLOT_STRENGTH`.
 - `chia plots check` deliberately opens no-key plots, can list duplicate filename-style plot IDs, and can reveal raw memo bytes. Treat it as an admin/debug surface with more permissive loading than normal harvesting.
 - Simulator `BlockTools` uses `create_plots()`, `create_v2_plots()`, and `PlotManager` to generate deterministic local plots for tests and block generation. Test-only private keys and debug plot IDs/memos in creation should not leak into production assumptions.
 
