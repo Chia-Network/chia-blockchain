@@ -1,8 +1,9 @@
-"""Merge Cursor malware + compatibility JSON outputs; format malware verdict via trusted loader.
+"""Merge Cursor malware + compatibility JSON outputs; format the malware verdict.
 
 The verdict job passes DCR_SCAN_REPORT and MALWARE_SCAN_REPORT_SHA256 from the
 scan job. Combine reads that report and exits unless hashlib.sha256 matches.
 Agent JSON is untrusted data read from DCR_MALWARE_JSON and DCR_COMPAT_JSON.
+main and --enforce-check load the same inputs and reach the same decide().
 """
 
 from __future__ import annotations
@@ -10,124 +11,66 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import runpy
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
-_INSTALL = Path(__file__).resolve().parent
-# The running script's directory is the trusted checkout (runner temp). Prefer it
-# over the PR workspace .github/scripts so a PR-head formatter cannot win.
-_SCRIPT_CANDIDATES = (
-    _INSTALL,
-    Path(".github/scripts"),
-    Path("internal/workflowscripts"),
-)
-_COLD_START_PATH = _INSTALL / "trusted_formatter_loader_cold_start.py"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import malware_verdict_formatter as formatter
 
-def _drop_pr_head_scripts_from_sys_path() -> None:
-    """Keep the PR checkout's .github/scripts off sys.path.
-
-    Trusted modules load by file path from this script's directory. A PR-head
-    directory on sys.path can shadow stdlib (dataclasses, json) in the step
-    that has CURSOR_API_KEY.
-    """
-    workspace_scripts = (Path.cwd() / ".github" / "scripts").resolve()
-    if workspace_scripts == _INSTALL.resolve():
-        return
-    kept: list[str] = []
-    for entry in sys.path:
-        if not entry:
-            kept.append(entry)
-            continue
-        try:
-            resolved = Path(entry).resolve()
-        except OSError:
-            kept.append(entry)
-            continue
-        if resolved == workspace_scripts:
-            continue
-        kept.append(entry)
-    sys.path[:] = kept
+_REPORT_SHA256_ENV = "MALWARE_SCAN_REPORT_SHA256"
+_WARN_ONLY_ENV = "MALWARE_WARN_ONLY"
+_TEXT_KEYS = ("result", "output", "text", "message")
+_FAILED_PREFIXES = ("Error: agent exited", "CURSOR_API_KEY is not set", "No Cursor output generated")
 
 
-def _host_namespace() -> dict[str, object]:
-    """Canonical python3 -I host entry (no sibling imports)."""
-    return runpy.run_path(str(_COLD_START_PATH))
+class _AgentOutput(NamedTuple):
+    text: str  # the concatenated result, or a readable dump of whatever was written
+    final: str  # the final assistant message, written separately from the result
+    ok: bool  # a successful, non-empty analysis
 
 
-def _load_formatter():
-    """The trusted malware verdict formatter module."""
-    ns = _host_namespace()
-    loader, script_dir = ns["resolve_loader_bundle"](_SCRIPT_CANDIDATES)
-    return loader.import_module_from_trusted_script(
-        script_dir / "malware_verdict_formatter.py",
-        "trusted_malware_verdict_formatter",
-    )
-
-
-def _load_any(path: str) -> dict:
-    try:
-        raw = Path(path).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return {"result": f"Missing output file: {path}"}
-    try:
-        return json.loads(raw)
-    except Exception:
-        return {"result": raw}
-
-
-def _successful_analysis_text(path: str) -> str:
-    """Non-empty analysis text from a successful agent JSON result, or ''."""
-    try:
-        raw = Path(path).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return ""
-    if not raw.strip():
-        return ""
-    try:
-        payload = json.loads(raw)
-    except Exception:
-        return ""
-    if not isinstance(payload, dict) or payload.get("error") or payload.get("is_error") is True:
-        return ""
-    if payload.get("complete") is False:
-        return ""
-    for key in ("result", "output", "text", "message"):
-        value = payload.get(key)
-        if isinstance(value, str) and value.strip() and not value.startswith("Missing output file:"):
-            if value.startswith(("Error: agent exited", "CURSOR_API_KEY is not set", "No Cursor output generated")):
-                return ""
-            return value.strip()
-    return ""
-
-
-def _extract_text(payload) -> str:
-    if not isinstance(payload, dict):
-        try:
-            return json.dumps(payload, indent=2)
-        except Exception:
-            return str(payload)
-    for key in ("result", "output", "text", "message"):
-        val = payload.get(key)
-        if isinstance(val, str) and val.strip():
-            return val
+def _extract_text(payload: object) -> str:
+    if isinstance(payload, dict):
+        for key in _TEXT_KEYS:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
     try:
         return json.dumps(payload, indent=2)
-    except Exception:
+    except (TypeError, ValueError):
         return str(payload)
 
 
-def _final_message(payload) -> str:
-    """The final assistant message, written separately from the concatenated result."""
-    if isinstance(payload, dict):
-        value = payload.get("final_message")
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return ""
+def _final_message(payload: object) -> str:
+    value = payload.get("final_message") if isinstance(payload, dict) else None
+    return value.strip() if isinstance(value, str) and value.strip() else ""
 
 
-_REPORT_SHA256_ENV = "MALWARE_SCAN_REPORT_SHA256"
+def _succeeded(payload: object) -> bool:
+    if not isinstance(payload, dict) or payload.get("error") or payload.get("is_error") is True:
+        return False
+    if payload.get("complete") is False:
+        return False
+    for key in _TEXT_KEYS:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip() and not value.startswith("Missing output file:"):
+            return not value.startswith(_FAILED_PREFIXES)
+    return False
+
+
+def _agent_output(path: Path) -> _AgentOutput:
+    """One agent JSON file. Missing or unparsable output is never a successful analysis."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return _AgentOutput(f"Missing output file: {path}", "", ok=False)
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return _AgentOutput(raw, "", ok=False)
+    return _AgentOutput(_extract_text(payload), _final_message(payload), ok=_succeeded(payload))
 
 
 def _fail_closed(message: str) -> None:
@@ -136,13 +79,7 @@ def _fail_closed(message: str) -> None:
 
 
 def _digest_is_sha256(value: str) -> bool:
-    if len(value) != 64:
-        return False
-    try:
-        int(value, 16)
-    except ValueError:
-        return False
-    return value == value.lower()
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def _env_path(name: str) -> Path:
@@ -166,78 +103,61 @@ def _sealed_report() -> object:
         _fail_closed("Malware scan report digest mismatch.")
     try:
         report = json.loads(data.decode("utf-8"))
-    except Exception:
+    except (UnicodeDecodeError, ValueError):
         return None
     return report if isinstance(report, dict) else None
 
 
-def main() -> None:
-    _drop_pr_head_scripts_from_sys_path()
-    # Check the sealed report before loading any sibling module.
+def _warn_only() -> bool:
+    """The one read of MALWARE_WARN_ONLY, a policy input to decide(). Unset keeps the fleet default, warn-only."""
+    return os.environ.get(_WARN_ONLY_ENV, "").strip() not in {"0", "false", "False", "no"}
+
+
+class _Inputs(NamedTuple):
+    malware: _AgentOutput
+    compatibility: _AgentOutput
+    published: dict[str, object]
+
+
+def _load_and_decide() -> _Inputs:
+    """The one loader. A skipped agent leaves its file absent, which can only block."""
     report = _sealed_report()
-    malware_path = str(_env_path("DCR_MALWARE_JSON"))
-    compatibility_path = str(_env_path("DCR_COMPAT_JSON"))
-    combined_path = _env_path("DCR_COMBINED_JSON")
-    malware_payload = _load_any(malware_path)
-    compatibility_payload = _load_any(compatibility_path)
-    formatter = _load_formatter()
-    agent_text = _extract_text(malware_payload)
-    compatibility_text = _final_message(compatibility_payload) or _extract_text(compatibility_payload)
+    malware = _agent_output(_env_path("DCR_MALWARE_JSON"))
+    compatibility = _agent_output(_env_path("DCR_COMPAT_JSON"))
     published = formatter.compose_published_review(
         report,
-        agent_text,
-        compatibility_text,
-        agent_final_text=_final_message(malware_payload) or agent_text,
+        malware.text,
+        compatibility.final or compatibility.text,
+        agent_final_text=malware.final or malware.text,
+        warn_only=_warn_only(),
     )
+    return _Inputs(malware, compatibility, published)
+
+
+def main() -> None:
+    combined_path = _env_path("DCR_COMBINED_JSON")
+    malware, compatibility, published = _load_and_decide()
     malware_text = published["malware_text"]
     compatibility_text = published["compatibility_text"]
-    check = str(published.get("check") or "fail")
-    agents_ok = bool(_successful_analysis_text(malware_path)) and bool(_successful_analysis_text(compatibility_path))
-    # The patch-id marker is stamped only when the published check passed.
-    complete = agents_ok and check == "pass" and published.get("may_complete") is True
-    malware_review = {"result": malware_text}
-    compatibility_review = {"result": compatibility_text}
-
-    combined_text = (
-        f"## Supply-Chain Malware Review\n\n{malware_text}\n\n## Compatibility Analysis\n\n{compatibility_text}"
+    # The patch-id marker is stamped only for a complete review whose decision passed.
+    complete = malware.ok and compatibility.ok and published["may_complete"] is True
+    sections = (
+        f"## Supply-Chain Malware Review\n\n{malware_text}",
+        f"## Compatibility Analysis\n\n{compatibility_text}",
     )
     combined = {
-        "result": combined_text,
+        "result": "\n\n".join(sections),
         "complete": complete,
-        "check": check,
-        "malware_review": malware_review,
-        "compatibility_review": compatibility_review,
+        "check": published["check"],
+        "malware_review": {"result": malware_text},
+        "compatibility_review": {"result": compatibility_text},
     }
     combined_path.write_text(json.dumps(combined, indent=2), encoding="utf-8")
 
 
-def _optional_analysis(name: str) -> str:
-    """Agent text when the file is present. A skipped agent leaves this empty."""
-    value = os.environ.get(name, "").strip()
-    if not value or not Path(value).is_file():
-        return ""
-    return _extract_text(_load_any(value))
-
-
-def _optional_final_message(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value or not Path(value).is_file():
-        return ""
-    return _final_message(_load_any(value))
-
-
 def _enforce_published_check() -> None:
-    """Recompute the check from the sealed report. A stored check string is ignored."""
-    _drop_pr_head_scripts_from_sys_path()
-    report = _sealed_report()
-    formatter = _load_formatter()
-    published = formatter.compose_published_review(
-        report,
-        _optional_analysis("DCR_MALWARE_JSON"),
-        _optional_final_message("DCR_COMPAT_JSON") or _optional_analysis("DCR_COMPAT_JSON"),
-        agent_final_text=_optional_final_message("DCR_MALWARE_JSON"),
-    )
-    if published.get("check") != "pass":
+    """Recompute the decision from the sealed inputs. A stored check string is ignored."""
+    if _load_and_decide().published["check"] != formatter.PASS:
         _fail_closed("Dependency review did not pass.")
 
 
