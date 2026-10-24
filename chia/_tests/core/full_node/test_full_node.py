@@ -34,6 +34,8 @@ from chia_rs import (
     UnfinishedBlock,
     VDFInfo,
     additions_and_removals,
+    solution_generator_2026,
+    tree_hash_2026,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -1188,6 +1190,7 @@ async def test_new_transaction_and_mempool(
     ],
     self_hostname: str,
     seeded_random: random.Random,
+    consensus_mode: ConsensusMode,
 ) -> None:
     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     wallet_ph = wallet_a.get_new_puzzlehash()
@@ -1309,9 +1312,14 @@ async def test_new_transaction_and_mempool(
 
     # these numbers reflect the capacity of the mempool. In these
     # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
-    # and MAX_BLOCK_COST_CLVM
-    assert included_tx == 20
-    assert not_included_tx == 7
+    # and MAX_BLOCK_COST_CLVM. Once INTERNED_SPEND_LIST is active (hard fork
+    # 3.0 mode), spends are charged by interned vbytes instead.
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert included_tx == 22
+        assert not_included_tx == 5
+    else:
+        assert included_tx == 20
+        assert not_included_tx == 7
     assert seen_bigger_transaction_has_high_fee
 
     # Mempool is full
@@ -2104,13 +2112,14 @@ async def test_unfinished_block_with_replaced_generator(
     block: FullBlock = blocks[0]
     overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
 
-    replaced_generator = SerializedProgram.from_bytes(b"\x80")
+    use_v1 = block.version == 1
+    replaced_generator = solution_generator_2026([]) if use_v1 else b"\x80"
 
     if committment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            std_hash(bytes(replaced_generator)),
+            tree_hash_2026(replaced_generator) if use_v1 else std_hash(replaced_generator),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
@@ -2220,7 +2229,6 @@ async def test_unfinished_block_with_replaced_generator(
     if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
-    use_v1 = block.version == 1
     unf = UnfinishedBlock(
         block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
         reward_chain_block,
@@ -2229,9 +2237,9 @@ async def test_unfinished_block_with_replaced_generator(
         foliage,
         transaction_block,
         transactions_info,
-        None if use_v1 else replaced_generator,
+        None if use_v1 else SerializedProgram.from_bytes(replaced_generator),
         generator_refs,
-        bytes(replaced_generator) if use_v1 else None,
+        replaced_generator if use_v1 else None,
         block.version,
     )
 

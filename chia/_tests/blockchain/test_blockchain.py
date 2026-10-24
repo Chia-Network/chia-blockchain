@@ -28,6 +28,7 @@ from chia_rs import (
     SpendConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
@@ -58,6 +59,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.generator_validation import compute_generator_root
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -4098,14 +4100,35 @@ class TestReorgs:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        # Overlong atom encoding. Program/SerializedProgram can no longer load
-        # non-canonical CLVM, so inject raw bytes via the generator buffer.
-        generator_bytes = bytes.fromhex("c00101")
-        assert not is_canonical_serialization(generator_bytes)
+        interned = consensus_mode >= ConsensusMode.HARD_FORK_3_0
+        if interned:
+            # serde_2026 encoding of (() . A): one atom group, atom length 1
+            # encoded overlong as 80 01, payload A, then nil/atom/cons.
+            generator_bytes = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
+        else:
+            # Program/SerializedProgram cannot load non-canonical CLVM, so
+            # inject the overlong atom directly via the generator buffer.
+            generator_bytes = bytes.fromhex("c00101")
+            assert not is_canonical_serialization(generator_bytes)
 
         block = recursive_replace(original_block, "transactions_generator", None)
+        if interned:
+            # The interned tree has 8 virtual bytes, independent of varint size.
+            block = recursive_replace(block, "transactions_info.cost", uint64(8 * bt.constants.COST_PER_BYTE))
         block = recursive_replace(block, "transactions_generator_buffer", generator_bytes)
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(generator_bytes))
+        pre_sp_tx_height = pre_sp_tx_block_height(
+            bt.constants,
+            empty_blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
+        flags = get_flags_for_height_and_constants(pre_sp_tx_height, bt.constants)
+        block = recursive_replace(
+            block,
+            "transactions_info.generator_root",
+            compute_generator_root(generator_bytes, flags),
+        )
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )
@@ -4113,13 +4136,29 @@ class TestReorgs:
             block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
         )
 
-        # overlong encoding became invalid in the 2.7 soft fork
-        if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+        # HF2 permits overlong varints: identity and cost come from the tree.
+        # Exercise decoding as well as body validation in this case.
+        skip_prevalidation = not interned
+        if interned:
+            assert block.foliage.foliage_transaction_block_hash is not None
+            block = recursive_replace(
+                block,
+                "foliage.foliage_transaction_block_signature",
+                bt.get_plot_signature(
+                    block.foliage.foliage_transaction_block_hash,
+                    block.reward_chain_block.proof_of_space.plot_public_key,
+                ),
+            )
+            # TODO: Make overlong serde_2026 atom encodings an error.
+            expected_error = None
+        elif consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
 
-        await _validate_and_add_block(empty_blockchain, block, expected_error=expected_error, skip_prevalidation=True)
+        await _validate_and_add_block(
+            empty_blockchain, block, expected_error=expected_error, skip_prevalidation=skip_prevalidation
+        )
 
 
 @pytest.mark.anyio
