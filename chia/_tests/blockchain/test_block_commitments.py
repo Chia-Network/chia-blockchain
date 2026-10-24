@@ -931,17 +931,41 @@ def test_generator_root_ignores_interned_encoding() -> None:
     assert validate_generator_root(overlong, root, constants, uint32(0))
 
 
-@pytest.mark.parametrize("interned", [False, True])
+@pytest.mark.parametrize(
+    "prev_tx_height, pre_sp_tx_height, fork_height",
+    [(None, 0, 0), (None, 0, 10), (9, 9, 10), (10, 9, 10), (10, 10, 10)],
+)
 @pytest.mark.parametrize("has_generator", [False, True])
-def test_foliage_generator_root(interned: bool, has_generator: bool, mocker: MockerFixture) -> None:
+def test_foliage_generator_root(
+    prev_tx_height: int | None,
+    pre_sp_tx_height: int,
+    fork_height: int,
+    has_generator: bool,
+    mocker: MockerFixture,
+) -> None:
     from chia_rs import G1Element, G2Element, PoolTarget, solution_generator, solution_generator_2026
     from chia_rs.sized_ints import uint128
 
     from chia.consensus.block_creation import compute_block_fee, create_foliage
     from chia.types.generator_types import NewBlockGenerator
 
-    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0 if interned else 1))
+    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(fork_height))
+    interned = pre_sp_tx_height >= fork_height
     generator = solution_generator_2026([]) if interned else solution_generator([])
+    blocks = mocker.Mock()
+    prev_block = None
+    if prev_tx_height is not None:
+        # The reward-accounting height may cross HF2 while the SP activation height has not.
+        prev_block = mocker.Mock(
+            height=uint32(prev_tx_height),
+            is_transaction_block=True,
+            total_iters=uint128(1),
+            fees=uint64(0),
+            header_hash=bytes32.zeros,
+            pool_puzzle_hash=bytes32.zeros,
+            farmer_puzzle_hash=bytes32.zeros,
+        )
+        blocks.block_record.return_value = mocker.Mock(is_transaction_block=True)
     reward_block = mocker.Mock()
     reward_block.get_hash.return_value = bytes32.zeros
     reward_block.proof_of_space.pool_public_key = G1Element()
@@ -950,9 +974,10 @@ def test_foliage_generator_root(interned: bool, has_generator: bool, mocker: Moc
         constants,
         reward_block,
         NewBlockGenerator(generator) if has_generator else None,
-        None,
-        mocker.Mock(),
-        uint128(0),
+        prev_block,
+        blocks,
+        uint128(2),
+        uint32(pre_sp_tx_height),
         uint64(1),
         bytes32.zeros,
         PoolTarget(bytes32.zeros, uint32(0)),
@@ -964,3 +989,5 @@ def test_foliage_generator_root(interned: bool, has_generator: bool, mocker: Moc
     assert info is not None
     expected = tree_hash_2026(generator) if interned else std_hash(generator)
     assert info.generator_root == (expected if has_generator else bytes32.zeros)
+    if has_generator:
+        assert validate_generator_root(generator, info.generator_root, constants, uint32(pre_sp_tx_height))

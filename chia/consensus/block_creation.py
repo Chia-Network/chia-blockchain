@@ -61,6 +61,7 @@ def create_foliage(
     prev_block: BlockRecord | None,
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
+    pre_sp_tx_height: uint32,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
@@ -81,6 +82,7 @@ def create_foliage(
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
+        pre_sp_tx_height: height of the latest tx block infused before this block's signage point
         timestamp: timestamp to put into the foliage block
         farmer_reward_puzzlehash: where to pay out farming reward
         pool_target: where to pay out pool reward
@@ -230,11 +232,10 @@ def create_foliage(
 
         generator_hash = bytes32.zeros
         if new_block_gen is not None:
+            # Match the SP-time activation used for generator encoding and block version.
             generator_hash = compute_generator_root(
                 new_block_gen.program,
-                get_flags_for_height_and_constants(
-                    uint32(0) if prev_transaction_block is None else prev_transaction_block.height, constants
-                ),
+                get_flags_for_height_and_constants(pre_sp_tx_height, constants),
             )
 
         generator_refs_hash = bytes32([1] * 32)
@@ -397,6 +398,7 @@ def create_unfinished_block(
         prev_block,
         blocks,
         total_iters_sp,
+        pre_sp_tx_height,
         timestamp,
         farmer_reward_puzzle_hash,
         pool_target,
