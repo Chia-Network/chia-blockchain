@@ -1,8 +1,29 @@
 #!/usr/bin/env bash
-# Detach .upstream-dependency at the agent target, then strip agent instructions.
-# Git history stays in the checkout. An empty target deletes that tree so the
-# agent cannot review the default branch; the not_scanned comment still posts.
+# Prepare what the agent reads, without following a link out of the tree.
+#
+# The review paths may hold symlinks from the pull request checkout or from
+# upstream content. None of .dcr-strip, .upstream-dependency or dcr-scan-input
+# may be a link, and dcr-scan-input (the scan prompts and report) may hold only
+# regular files; anything else fails the step before anything is read.
+#
+# .upstream-dependency is then detached at the agent target, every symlink in
+# it is deleted, and agent instruction files are stripped. Git history stays in
+# the checkout. An empty target deletes that tree so the agent cannot review
+# the default branch; the not_scanned comment still posts.
 set -euo pipefail
+
+for root in .dcr-strip .upstream-dependency dcr-scan-input; do
+  if [ -L "$root" ]; then
+    echo "Refusing ${root}: it is a symbolic link." >&2
+    exit 1
+  fi
+done
+if [ -e dcr-scan-input ] && {
+  [ ! -d dcr-scan-input ] || [ -n "$(find -P dcr-scan-input -mindepth 1 ! -type f -print -quit)" ]
+}; then
+  echo "Refusing dcr-scan-input: it holds something other than regular files." >&2
+  exit 1
+fi
 
 resolved_to="${RESOLVED_TO:-}"
 if [ -z "$resolved_to" ]; then
@@ -27,52 +48,12 @@ fi
 # at-to-ref copies keep real instruction-file names.
 rm -rf .malware-scan
 
-root="$(realpath -P -- .upstream-dependency)"
+# find -P never follows a link, so it does not descend into a symlinked
+# directory. Prune every directory named .git so find does not stat the object
+# store of a full clone. With every link gone, each path left is a real file or
+# directory inside the checkout.
+find -P .upstream-dependency -mindepth 1 '(' -type d -name .git -prune ')' -o -type l -exec rm -f -- {} +
 
-inside_checkout() {
-  local path="$1"
-  local resolved
-  case "$path" in
-  .upstream-dependency | .upstream-dependency/*) ;;
-  *) return 1 ;;
-  esac
-  resolved="$(realpath -P -- "$path")" || return 1
-  case "$resolved" in
-  "$root" | "$root"/*) return 0 ;;
-  *) return 1 ;;
-  esac
-}
-
-# find -P does not descend into symlinked directories. Prune every directory
-# named .git so find does not stat the object store of a full clone. Symlink
-# hits are unlinked without following. A real path whose realpath leaves the
-# checkout fails the step.
-strip_matches() {
-  local kind="$1"
-  shift
-  local path
-  while IFS= read -r -d '' path; do
-    if [ -L "$path" ]; then
-      rm -- "$path"
-      continue
-    fi
-    if ! inside_checkout "$path"; then
-      echo "Refusing to strip ${path}: realpath leaves .upstream-dependency." >&2
-      exit 1
-    fi
-    if [ "$kind" = dir ]; then
-      rm -rf -- "$path"
-    else
-      rm -f -- "$path"
-    fi
-  done < <(find -P .upstream-dependency -mindepth 1 '(' -type d -name .git -prune ')' -o "$@")
-}
-
-strip_matches dir \
-  '(' -type d -o -type l ')' \
-  '(' -name .cursor -o -name .agents -o -name .claude -o -name .codex ')' \
-  -prune -print0
-strip_matches file \
-  '(' -type f -o -type l ')' \
-  '(' -name AGENTS.md -o -name CLAUDE.md -o -name .cursorrules -o -name .cursorignore ')' \
-  -print0
+find -P .upstream-dependency -mindepth 1 '(' -type d -name .git -prune ')' -o \
+  '(' -type d '(' -name .cursor -o -name .agents -o -name .claude -o -name .codex ')' -prune -exec rm -rf -- {} + ')' -o \
+  '(' -type f '(' -name AGENTS.md -o -name CLAUDE.md -o -name .cursorrules -o -name .cursorignore ')' -exec rm -f -- {} + ')'
