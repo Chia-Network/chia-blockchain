@@ -106,20 +106,13 @@ function selectPostedMarker(marker) {
   return marker;
 }
 
+// Coverage facts only. The verdict and the check come from the combined review, which decide() wrote.
 function malwareScanSummaryText() {
   const fromArtifact = readText('dcr-scan-input/malware_scan_summary.md', '');
   if (String(fromArtifact).trim()) return String(fromArtifact).trim();
   const fromOutput = process.env.MALWARE_SCAN_SUMMARY || '';
   if (String(fromOutput).trim()) return String(fromOutput).trim();
-  const malwareScanStatus = process.env.MALWARE_SCAN_STATUS || '';
-  const malwareScanChangedCount = process.env.MALWARE_SCAN_CHANGED_COUNT || '';
-  return [
-    '## Malware Scan Summary',
-    '',
-    `- Status: **${malwareScanStatus || 'unknown'}**`,
-    `- Changed upstream files scanned: \`${malwareScanChangedCount || 'unknown'}\``,
-    '- Scanner output file missing.',
-  ].join('\n');
+  return ['## Malware Scan Summary', '', '- Scanner output file missing.'].join('\n');
 }
 
 async function runPostComment({ github, context, core }) {
