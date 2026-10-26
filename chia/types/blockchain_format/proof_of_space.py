@@ -191,7 +191,12 @@ def verify_and_get_quality_string(
                 prev_transaction_block_height, constants, plot_param.strength_v2
             )
             if not passes_plot_filter_v2(
-                plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
+                plot_group_id,
+                pos.meta_group,
+                group_strength,
+                filter_challenge,
+                signage_point_index,
+                constants.FILTER_WINDOW_SIZE,
             ):
                 log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
                 return None
@@ -270,12 +275,6 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
     return std_hash(plot_id + challenge_hash + signage_point)
 
 
-# V2 Plot Filter Constants
-# TODO: todo_v2_plots move FILTER_WINDOW_SIZE to ConsensusConstants in chia_rs
-FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
-MAX_EFFECTIVE_PLOT_FILTER_BITS: int = 13  # 8192 effective plot filter cap
-
-
 def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
     base_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
     relative_height = int(height) - constants.HARD_FORK2_HEIGHT
@@ -294,7 +293,9 @@ def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, pl
     if plot_strength < constants.MIN_PLOT_STRENGTH:
         raise ValueError(f"Plot strength ({plot_strength}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
     strength_delta = int(plot_strength) - constants.MIN_PLOT_STRENGTH
-    return min(calculate_base_plot_filter_bits(height, constants) + strength_delta, MAX_EFFECTIVE_PLOT_FILTER_BITS)
+    return min(
+        calculate_base_plot_filter_bits(height, constants) + strength_delta, constants.MAX_EFFECTIVE_PLOT_FILTER_BITS
+    )
 
 
 def passes_plot_filter_v2(
@@ -303,7 +304,7 @@ def passes_plot_filter_v2(
     group_strength: int,
     filter_challenge: bytes32,
     signage_point_index: int,
-    window_size: int = FILTER_WINDOW_SIZE,
+    window_size: int,
 ) -> bool:
     """
     V2 plot filter - predictable passage.

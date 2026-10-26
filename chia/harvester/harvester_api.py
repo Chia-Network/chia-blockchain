@@ -87,6 +87,7 @@ class HarvesterAPI:
                 group_strength,
                 filter_challenge,
                 challenge.signage_point_index,
+                self.harvester.constants.FILTER_WINDOW_SIZE,
             )
 
         # V1 plots use original prefix-bits filter

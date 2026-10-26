@@ -1830,6 +1830,7 @@ class BlockTools:
                     group_strength,
                     filter_challenge,
                     signage_point_index,
+                    constants.FILTER_WINDOW_SIZE,
                 ):
                     continue
             else:
@@ -2090,9 +2091,8 @@ def get_filter_challenge(
     prev_header_hash: bytes32 | None,
     current_challenge: bytes32,
     signage_point_index: int,
-    window_size: int = 16,
 ) -> bytes32 | None:
-    window_start = (signage_point_index // window_size) * window_size
+    window_start = (signage_point_index // constants.FILTER_WINDOW_SIZE) * constants.FILTER_WINDOW_SIZE
     sub_slots_back = 2 if window_start == 0 else 1
 
     reversed_challenges = [sub_slot.challenge_chain.get_hash() for sub_slot in reversed(finished_sub_slots)]
