@@ -107,8 +107,8 @@ def calculate_iterations_quality(
         # V2 strength compensation: a plot that passes the filter less often (higher
         # strength) must be proportionally more likely to be eligible, so all strengths
         # win blocks at the same rate per physical byte. The factor mirrors the filter
-        # exactly: 2^(effective_filter_bits - base_filter_bits), which auto-caps at the
-        # 8192 cap (effective_filter_bits is capped at 13). With this, pass_probability
+        # exactly: 2^(effective_filter_bits - base_filter_bits), which auto-caps at
+        # MAX_EFFECTIVE_PLOT_FILTER_BITS. With this, pass_probability
         # x eligibility stays at 1/2^base for every strength.
         base_bits = calculate_base_plot_filter_bits(height, constants)
         effective_bits = calculate_plot_filter_bits(height, constants, size.strength_v2)
