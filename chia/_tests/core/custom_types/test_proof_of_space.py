@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, PlotParam
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotParam
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint8, uint32
 
@@ -36,12 +36,18 @@ def _test_pk() -> G1Element:
 @dataclass
 class ProofOfSpaceCase:
     id: str
-    pos_challenge: bytes32
-    plot_size: PlotParam
-    plot_public_key: G1Element
+    pos_challenge: bytes32 = bytes32(b"1" * 32)
+    plot_size: PlotParam = field(default_factory=lambda: PlotParam.make_v1(42))
+    plot_public_key: G1Element = field(default_factory=G1Element)
     pool_public_key: G1Element | None = None
     pool_contract_puzzle_hash: bytes32 | None = None
     height: uint32 = DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
+    prev_transaction_block_height: uint32 | None = None
+    constants: ConsensusConstants = DEFAULT_CONSTANTS
+    proof: bytes = b"1"
+    height_agnostic: bool = False
+    filter_challenge: bytes32 | None = None
+    signage_point_index: int | None = None
     expected_error: str | None = None
     marks: Marks = ()
 
@@ -71,52 +77,39 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     assert is_v2_plot(pos) is expected
 
 
-# TODO: todo_v2_plots more test cases, cover plot_index and group_id
 @datacases(
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v1(0),
-        plot_public_key=G1Element(),
         expected_error="Expected pool public key or pool contract puzzle hash but got neither",
     ),
     ProofOfSpaceCase(
         id="Both pool public key and pool contract puzzle hash",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v1(0),
-        plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="Expected pool public key or pool contract puzzle hash but got both",
     ),
     ProofOfSpaceCase(
         id="Lower than minimum plot size",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v1(31),
-        plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size (31) is lower than the minimum (32)",
     ),
     ProofOfSpaceCase(
         id="Higher than maximum plot size",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v1(51),
-        plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size (51) is higher than the maximum (50)",
     ),
     ProofOfSpaceCase(
         id="Different challenge",
-        pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v1(42),
         pool_public_key=G1Element(),
-        plot_public_key=G1Element(),
         expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter with size 9",
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
-        plot_size=PlotParam.make_v1(42),
         pool_public_key=g1(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -129,7 +122,6 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ProofOfSpaceCase(
         id="Passing the plot filter with size 8",
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
-        plot_size=PlotParam.make_v1(42),
         pool_public_key=g1(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -139,27 +131,103 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         height=uint32(5496000),
     ),
     ProofOfSpaceCase(
+        id="v1 proof size limit not active before soft fork 9",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        proof=b"1" * 2000,
+        prev_transaction_block_height=uint32(DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT - 1),
+    ),
+    ProofOfSpaceCase(
+        id="v1 proof just below size limit at soft fork 9",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        proof=b"1" * 1999,
+        prev_transaction_block_height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+    ),
+    ProofOfSpaceCase(
+        id="v1 proof at size limit rejected at soft fork 9",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        proof=b"1" * 2000,
+        prev_transaction_block_height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        expected_error="Proof of space too large: 2000 bytes",
+    ),
+    ProofOfSpaceCase(
+        id="v1 height agnostic bypasses proof size limit",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        proof=b"1" * 2000,
+        prev_transaction_block_height=DEFAULT_CONSTANTS.SOFT_FORK9_HEIGHT,
+        height_agnostic=True,
+    ),
+    ProofOfSpaceCase(
+        id="v1 proof rejected at phase-out cutoff",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=uint32(5496000),
+        constants=DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(0)),
+        prev_transaction_block_height=uint32(num_phase_out_epochs(DEFAULT_CONSTANTS) * DEFAULT_CONSTANTS.EPOCH_BLOCKS),
+        expected_error="v1 proof has been phased-out and is no longer valid",
+    ),
+    ProofOfSpaceCase(
+        id="v1 height agnostic bypasses phase-out",
+        pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
+        pool_public_key=g1(
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+        ),
+        plot_public_key=g1(
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+        ),
+        height=uint32(5496000),
+        constants=DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(0)),
+        prev_transaction_block_height=uint32(num_phase_out_epochs(DEFAULT_CONSTANTS) * DEFAULT_CONSTANTS.EPOCH_BLOCKS),
+        height_agnostic=True,
+    ),
+    ProofOfSpaceCase(
         id="v2 plot lower than minimum strength",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 1),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        plot_public_key=G1Element(),
         expected_error="Plot strength (1) is lower than the minimum (2)",
     ),
     ProofOfSpaceCase(
         id="v2 plot min strength challenge mismatch",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        plot_public_key=G1Element(),
         expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
         id="v2 plot strength 18",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 18),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        plot_public_key=G1Element(),
         expected_error="Plot strength (18) is too high (max is 17)",
     ),
     ProofOfSpaceCase(
@@ -174,12 +242,107 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
     ),
     ProofOfSpaceCase(
         id="v2 not activated",
-        pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotParam.make_v2(0, 0, 2),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        plot_public_key=G1Element(),
-        height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
+        prev_transaction_block_height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
         expected_error="v2 proof support has not yet activated",
+    ),
+    ProofOfSpaceCase(
+        id="v2 passing plot filter with nonzero plot index and meta group",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=0,
+    ),
+    ProofOfSpaceCase(
+        id="v2 changed plot index invalidates challenge",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(8, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=0,
+        expected_error="Calculated pos challenge doesn't match the provided one",
+    ),
+    ProofOfSpaceCase(
+        id="v2 changed meta group invalidates challenge",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 43, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=0,
+        expected_error="Calculated pos challenge doesn't match the provided one",
+    ),
+    ProofOfSpaceCase(
+        id="v2 missing filter challenge only",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=None,
+        signage_point_index=0,
+        expected_error="V2 plot requires filter_challenge and signage_point_index",
+    ),
+    ProofOfSpaceCase(
+        id="v2 missing signage point index only",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=None,
+        expected_error="V2 plot requires filter_challenge and signage_point_index",
+    ),
+    ProofOfSpaceCase(
+        id="v2 failing plot filter",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=1,
+        expected_error="Did not pass the V2 plot filter. group_strength: 9",
+    ),
+    ProofOfSpaceCase(
+        id="v2 height agnostic still checks supplied filter inputs",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=b32("00000000000000000000000000000000000000000000000000000000000004b9"),
+        signage_point_index=1,
+        height_agnostic=True,
+        expected_error="Did not pass the V2 plot filter. group_strength: 9",
+    ),
+    ProofOfSpaceCase(
+        id="v2 height agnostic bypasses activation and missing filter inputs",
+        pos_challenge=b32("18705cb0580d80ccb3369cbb4318c2f753bb409276eda3f4b4a2892f21b9a783"),
+        plot_size=PlotParam.make_v2(7, 42, 2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=g1(
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+        ),
+        filter_challenge=None,
+        signage_point_index=None,
+        prev_transaction_block_height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
+        height_agnostic=True,
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
@@ -190,15 +353,20 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
         params=case.plot_size,
-        proof=b"1",
+        proof=case.proof,
     )
     quality_string = verify_and_get_quality_string(
         pos=pos,
-        constants=DEFAULT_CONSTANTS,
+        constants=case.constants,
         original_challenge_hash=b32("73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
         signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
         height=case.height,
-        prev_transaction_block_height=case.height,
+        prev_transaction_block_height=(
+            case.height if case.prev_transaction_block_height is None else case.prev_transaction_block_height
+        ),
+        height_agnostic=case.height_agnostic,
+        filter_challenge=case.filter_challenge,
+        signage_point_index=case.signage_point_index,
     )
     assert quality_string is None
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
@@ -215,7 +383,6 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="V2 plot requires filter_challenge and signage_point_index",
     ),
-    # TODO: todo_v2_plots add test case that passes the plot filter with filter_challenge
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     pos = make_pos(
