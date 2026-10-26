@@ -7,7 +7,8 @@ and empty qualities across fixture setup, the test, and fixture teardown.
 Persistent fixture-chain generation is excluded: its proofs are already saved
 in the blockchain file and validation does not perform plot lookups.
 
-Qualities are keyed by (plot or plot-group ID, challenge), V1 full proofs by
+Qualities are keyed by (plot_id, challenge) for V1 and
+(plot_group_id, meta_group, challenge) for V2, V1 full proofs by
 (plot_id, challenge, index), and solved V2 proofs by (partial_proof_bytes,
 member_plot_id). Cached V2 qualities include each member's plot index.
 
@@ -151,10 +152,11 @@ def merge_test_caches(directory: Path, destination: Path) -> None:
     print(f"plot_cache: published {sum(map(len, merged))} entries ({destination.stat().st_size / 1e6:.2f} MB)")
 
 
-# (plot or plot-group ID, challenge) -> list of serialized quality data
+# V1: (plot_id, challenge), V2: (plot_group_id, meta_group, challenge)
+# -> list of serialized quality data
 # V1: each entry is 32 bytes (quality bytes32)
 # V2: each entry is (plot_index, serialized PartialProof bytes)
-_qualities: dict[tuple[bytes, bytes], list[Any]] = {}
+_qualities: dict[tuple[bytes, bytes] | tuple[bytes, int, bytes], list[Any]] = {}
 
 # (plot_id, challenge, index) -> proof bytes
 _full_proofs: dict[tuple[bytes, bytes, int], bytes] = {}
@@ -241,7 +243,7 @@ def install(plot_dir: Path) -> None:
 
     def v2_qualities(self: V2Prover, challenge: bytes32) -> list[QualityProtocol]:
         global _hits, _misses
-        key = (bytes(self.get_id()), bytes(challenge))
+        key = (bytes(self.get_id()), int(self.get_meta_group()), bytes(challenge))
         cached = _qualities.get(key)
         if cached is not None and all(isinstance(q, tuple) and len(q) == 2 for q in cached):
             _record_lookup(0, key, cached)

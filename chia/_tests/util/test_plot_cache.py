@@ -148,23 +148,28 @@ def test_recording_captures_hits_misses_and_empty_qualities(monkeypatch: pytest.
     solve.assert_called_once_with(partial, plot_id, 1, 20)
 
 
-@pytest.mark.parametrize("legacy_cache", [False, True])
+@pytest.mark.parametrize("legacy_cache", ["none", "partial", "indexed", "empty"])
 @pytest.mark.parametrize("empty", [False, True])
 def test_v2_recording_roundtrip(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy_cache: bool, empty: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy_cache: str, empty: bool
 ) -> None:
     group_id, challenge = bytes32(b"g" * 32), bytes32(b"c" * 32)
-    key = (group_id, challenge)
+    meta_group = 1
+    key = (group_id, meta_group, challenge)
     partial = PartialProof([uint64(1)] * 16)
     # The same partial proof can belong to different members of a group.
     indices = [] if empty else [uint16(3), uint16(7)]
     expected = [V2Quality(partial, index, uint8(2)) for index in indices]
     serialized = [(index, partial.to_bytes()) for index in indices]
-    monkeypatch.setattr(pc, "_qualities", {key: [partial.to_bytes()]} if legacy_cache else {})
+    legacy_values = {"partial": [partial.to_bytes()], "indexed": [(uint16(9), partial.to_bytes())], "empty": []}
+    monkeypatch.setattr(
+        pc, "_qualities", {} if legacy_cache == "none" else {(group_id, challenge): legacy_values[legacy_cache]}
+    )
     monkeypatch.setattr(pc, "_full_proofs", {})
     monkeypatch.setattr(pc, "_solve_proofs", {})
     inner = MagicMock()
     inner.plot_group_id.return_value = group_id
+    inner.get_meta_group.return_value = meta_group
     inner.get_strength.return_value = 2
     inner.get_qualities_for_challenge.return_value = [
         SimpleNamespace(chain=partial, plot_index=index) for index in indices
@@ -200,6 +205,38 @@ def test_solved_proofs_recorded_separately_for_group_members(monkeypatch: pytest
             {(partial.to_bytes(), first): b"first proof", (partial.to_bytes(), second): b"second proof"},
         )
     assert solve.call_count == 2
+
+
+@pytest.mark.parametrize("different_group", [False, True])
+@pytest.mark.parametrize("first_empty", [False, True])
+def test_v2_qualities_cache_identity(monkeypatch: pytest.MonkeyPatch, different_group: bool, first_empty: bool) -> None:
+    monkeypatch.setattr(pc, "_qualities", {})
+    challenge = bytes32(b"c" * 32)
+    first_group = bytes32(b"a" * 32)
+    second_group = bytes32(b"b" * 32) if different_group else first_group
+    identities = [(first_group, 0), (second_group, 0 if different_group else 1)]
+    provers = []
+    inner_provers = []
+    expected = []
+    for i, (group_id, meta_group) in enumerate(identities):
+        partial = PartialProof([uint64(i + 1)] * 16)
+        qualities = [] if i == 0 and first_empty else [V2Quality(partial, uint16(3), uint8(2))]
+        inner = MagicMock()
+        inner.plot_group_id.return_value = group_id
+        inner.get_meta_group.return_value = meta_group
+        inner.get_strength.return_value = 2
+        inner.get_qualities_for_challenge.return_value = [
+            SimpleNamespace(chain=q.get_partial_proof(), plot_index=q.get_plot_index()) for q in qualities
+        ]
+        provers.append(V2Prover(inner))
+        inner_provers.append(inner)
+        expected.append(qualities)
+
+    for _ in range(2):
+        for prover, qualities in zip(provers, expected):
+            assert prover.get_qualities_for_challenge(challenge) == qualities
+    for inner in inner_provers:
+        inner.get_qualities_for_challenge.assert_called_once_with(challenge)
 
 
 def test_persistent_chain_generation_is_not_recorded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
