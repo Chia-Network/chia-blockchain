@@ -92,7 +92,9 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     )
 
     assert npc_result.error is None
-    if not interned:
+    if interned:
+        assert generator_interned_vbytes_trusted(program.program) == 566
+    else:
         assert len(bytes(program.program)) == 433
 
     coin_spend = spend_bundle.coin_spends[0]
