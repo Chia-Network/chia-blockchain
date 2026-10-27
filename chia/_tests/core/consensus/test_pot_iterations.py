@@ -20,6 +20,10 @@ test_constants = DEFAULT_CONSTANTS.replace(
 )
 
 
+# Reference group size used to generate the consensus v2 plot size table.
+V2_PLOT_SIZE_CALC_REFERENCE_GROUP_SIZE = 256
+
+
 class TestPotIterations:
     def test_is_overflow_block(self) -> None:
         assert not is_overflow_block(test_constants, uint8(27))
@@ -141,9 +145,63 @@ def test_expected_plot_size_v1() -> None:
         last_size = plot_size
 
 
-@mark.parametrize("k, expected_size", [(28, 988_009_621), (20, 2_810_836)])
-def test_expected_plot_size_v2(k: int, expected_size: int) -> None:
+def _plot_v2_bits_per_fragment(k: int, reference_group_size: int) -> float:
+    """
+    Estimate compressed fragment bits.
+    At group size 256, the delta in bits per fragment,
+    and thus final plot size, is negligible
+    """
+    assert 0 < reference_group_size < 65536
+
+    # Fragments are sorted, and we encode the gap from each fragment
+    # to the previous one. The expected gap is approximately 2**k.
+    #
+    # The encoder splits each gap into a quotient and a remainder.
+    # It writes the bottom k-8 bits of the remainder directly.
+    # For k=28, this contributes 20 bits per fragment.
+    low_bits = k - 8
+
+    # The quotient records how many times the gap exceeds the encoder's
+    # threshold. It is stored in unary: 1 bit for quotient 0, 2 bits for
+    # quotient 1, 3 bits for quotient 2, and so on.
+    #
+    # The threshold is 178 * 2**(k-8), or about 0.695 times the
+    # expected gap. Under the exponential gap model, roughly half the
+    # gaps need 1 unary bit, a quarter need 2, an eighth need 3, etc.
+    # The resulting average is approximately 1.9957 bits per fragment.
+    quotient_bits = 1.9957
+
+    # The upper part of the remainder has 178 possible values, from
+    # 0 through 177. Smaller values are slightly more common.
+    #
+    # The modeled distribution needs about 7.447 bits per value with
+    # ideal coding. Allowing for the encoder's FSE table and coding
+    # inefficiency gives an estimate of about 7.4485 bits per fragment.
+    remainder_bits = 7.4485
+
+    # Each group chunk covers a range containing an average of 64
+    # fragments per plot. A group of 256 therefore has approximately
+    # 64 * 256 fragments in each encoded chunk.
+    fragments_per_chunk = 64 * reference_group_size
+
+    # Encoding separate chunks has a small cost compared with the
+    # large-chunk average above. A simulation at k=28 found an estimated
+    # net correction of about 12.8 bits per chunk. This combines effects
+    # such as ending the FSE stream, byte rounding, and chunk boundaries;
+    # it is an empirical estimate, not a fixed-size field in the format.
+    extra_bits_per_chunk = 12.8
+
+    # Share that chunk cost among all fragments in the chunk.
+    extra_bits_per_fragment = extra_bits_per_chunk / fragments_per_chunk
+
+    return low_bits + quotient_bits + remainder_bits + extra_bits_per_fragment
+
+
+@mark.parametrize("k", range(18, 29, 2))
+def test_expected_plot_size_v2(k: int) -> None:
     constants = test_constants.replace(PLOT_SIZE_V2=uint8(k))
+    bpf = _plot_v2_bits_per_fragment(k, V2_PLOT_SIZE_CALC_REFERENCE_GROUP_SIZE)
+    expected_size = uint64((2**k) * bpf / 8)
     for strength in [2, 3, 4, 5, 6, 7]:
         for plot_index in [2, 300, 400, 500, 600, 700]:
             for group_id in [2, 3, 4, 5, 6, 7]:
