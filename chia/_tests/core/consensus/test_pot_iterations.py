@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from chia_rs import PlotParam
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from pytest import raises
+from pytest import mark, raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import _expected_plot_size
@@ -141,9 +141,11 @@ def test_expected_plot_size_v1() -> None:
         last_size = plot_size
 
 
-def test_expected_plot_size_v2() -> None:
+@mark.parametrize("k, expected_size", [(28, 988_009_621), (20, 2_810_836)])
+def test_expected_plot_size_v2(k: int, expected_size: int) -> None:
+    constants = test_constants.replace(PLOT_SIZE_V2=uint8(k))
     for strength in [2, 3, 4, 5, 6, 7]:
         for plot_index in [2, 300, 400, 500, 600, 700]:
             for group_id in [2, 3, 4, 5, 6, 7]:
-                plot_size = _expected_plot_size(PlotParam.make_v2(plot_index, group_id, strength), test_constants)
-                assert plot_size == 988_513_566
+                plot_size = _expected_plot_size(PlotParam.make_v2(plot_index, group_id, strength), constants)
+                assert plot_size == expected_size
