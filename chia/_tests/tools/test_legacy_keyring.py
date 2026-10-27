@@ -15,6 +15,12 @@ except ImportError:
 from chia.legacy.keyring import create_legacy_keyring, generate_and_add, get_keys, legacy_keyring
 
 
+@pytest.fixture(autouse=True)
+def isolated_keyring_data_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # CryptFileKeyring creates ~/.local/share/python_keyring, which races/collides with global runner state
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg_data"))
+
+
 def show() -> Result:
     return CliRunner().invoke(legacy_keyring, ["show"])
 
