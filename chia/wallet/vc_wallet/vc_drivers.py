@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any, Generic, Self, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar, cast, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -38,9 +38,16 @@ from chia.wallet.conditions import (
     ReserveFee,
     UnknownCondition,
 )
-from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.puzzle_drivers import P2Conditions, Solution, UnknownPuzzle, UnknownSolution
+from chia.wallet.puzzles.puzzle_drivers import (
+    P2Conditions,
+    Puzzle,
+    PuzzleBase,
+    Solution,
+    UnknownPuzzle,
+    UnknownSolution,
+)
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -62,6 +69,7 @@ EML_DID_TP: Program = Program.from_bytes(EML_DID_TP_BYTES)
 EXTIGENT_METADATA_LAYER_COVENANT_MORPHER: Program = Program.from_bytes(EML_COVENANT_MORPHER_BYTES)
 REVOCATION_LAYER: Program = Program.from_bytes(REVOCATION_LAYER_BYTES)
 ACS_TRANSFER_PROGRAM: Program = Program.from_bytes(ACS_TRANSFER_PROGRAM_BYTES)
+STANDARD_VC_REVOCATION_PUZZLE: Program = Program.from_bytes(STANDARD_VC_REVOCATION_PUZZLE_BYTES)
 
 # Hashes
 EXTIGENT_METADATA_LAYER_HASH = bytes32(EXIGENT_METADATA_LAYER_HASH_BYTES)
@@ -73,14 +81,39 @@ EXTIGENT_METADATA_LAYER_COVENANT_MORPHER_HASH: bytes32 = bytes32(EML_COVENANT_MO
 REVOCATION_LAYER_HASH: bytes32 = bytes32(REVOCATION_LAYER_HASH_BYTES)
 
 
+##########################
+# Standard Brick Puzzle #
+##########################
+
+
+@dataclass(frozen=True, kw_only=True)
+class StandardBrickPuzzle(PuzzleBase):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("StandardBrickPuzzle", None)
+
+    @property
+    def program(self) -> Program:
+        return STANDARD_VC_REVOCATION_PUZZLE.curry(
+            SINGLETON_MOD_HASH,
+            Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
+            EXTIGENT_METADATA_LAYER_HASH,
+            REVOCATION_LAYER_HASH,
+            ACS_TRANSFER_PROGRAM.get_tree_hash(),
+        )
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> StandardBrickPuzzle | None:
+        if unknown_puzzle.known_program is None:
+            if unknown_puzzle.known_tree_hash == STANDARD_BRICK_PUZZLE_HASH:
+                return StandardBrickPuzzle()
+            return None
+        if unknown_puzzle.mod != STANDARD_VC_REVOCATION_PUZZLE:
+            return None
+        return StandardBrickPuzzle()
+
+
 # Standard brick puzzle uses the mods above
-STANDARD_BRICK_PUZZLE: Program = Program.from_bytes(STANDARD_VC_REVOCATION_PUZZLE_BYTES).curry(
-    SINGLETON_MOD_HASH,
-    Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
-    EXTIGENT_METADATA_LAYER_HASH,
-    REVOCATION_LAYER_HASH,
-    ACS_TRANSFER_PROGRAM.get_tree_hash(),
-)
+STANDARD_BRICK_PUZZLE: Program = StandardBrickPuzzle().program
 STANDARD_BRICK_PUZZLE_HASH: bytes32 = STANDARD_BRICK_PUZZLE.get_tree_hash()
 STANDARD_BRICK_PUZZLE_HASH_HASH: bytes32 = Program.to(STANDARD_BRICK_PUZZLE_HASH).get_tree_hash()
 
@@ -88,68 +121,248 @@ STANDARD_BRICK_PUZZLE_HASH_HASH: bytes32 = Program.to(STANDARD_BRICK_PUZZLE_HASH
 ##################
 # Covenant Layer #
 ##################
+_T_ParentMorpher = TypeVar("_T_ParentMorpher", bound=Puzzle)
+_T_CovenantPuzzle = TypeVar("_T_CovenantPuzzle", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class CovenantLayer(PuzzleBase, Generic[_T_ParentMorpher, _T_CovenantPuzzle]):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("CovenantLayer[_T_ParentMorpher, _T_CovenantPuzzle]", None)
+
+    initial_puzzle_hash: bytes32
+    parent_morpher: _T_ParentMorpher
+    inner_puzzle: _T_CovenantPuzzle
+
+    @property
+    def program(self) -> Program:
+        return COVENANT_LAYER.curry(
+            self.initial_puzzle_hash,
+            self.parent_morpher.program,
+            self.inner_puzzle.program,
+        )
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> CovenantLayer[UnknownPuzzle, UnknownPuzzle] | None:
+        if unknown_puzzle.mod != COVENANT_LAYER or unknown_puzzle.curried_args is None:
+            return None
+
+        (inner_puzzle_hash_prog, parent_morpher_prog, inner_puzzle_prog) = unknown_puzzle.curried_args
+        return CovenantLayer(
+            initial_puzzle_hash=bytes32(inner_puzzle_hash_prog.as_atom()),
+            parent_morpher=UnknownPuzzle(known_program=parent_morpher_prog),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle_prog),
+        )
+
+
+_T_MorpherSolution = TypeVar("_T_MorpherSolution", bound=Solution)
+_T_InnerSolution = TypeVar("_T_InnerSolution", bound=Solution)
+
+
+@dataclass(frozen=True, kw_only=True)
+class CovenantLayerSolution(Generic[_T_MorpherSolution, _T_InnerSolution]):
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast(
+            "CovenantLayerSolution[_T_MorpherSolution, _T_InnerSolution]", None
+        )
+
+    lineage_proof: LineageProof
+    morpher_solution: _T_MorpherSolution
+    inner_solution: _T_InnerSolution
+
+    @property
+    def program(self) -> Program:
+        return Program.to(
+            [
+                self.lineage_proof.to_program(),
+                self.morpher_solution.program,
+                self.inner_solution.program,
+            ]
+        )
+
+    @classmethod
+    def match(
+        cls, *, unknown_solution: UnknownSolution
+    ) -> CovenantLayerSolution[UnknownSolution, UnknownSolution] | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 3:
+            return None
+        num_lineage_proof_fields = len(list(list_of_values[0].as_iter()))
+        return CovenantLayerSolution(
+            lineage_proof=LineageProof.from_program(
+                list_of_values[0],
+                [LineageProofField.PARENT_NAME, LineageProofField.AMOUNT]
+                if num_lineage_proof_fields == 2
+                else [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+            ),
+            morpher_solution=UnknownSolution(list_of_values[1]),
+            inner_solution=UnknownSolution(list_of_values[2]),
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class StdParentMorpher(PuzzleBase):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("StdParentMorpher", None)
+
+    initial_puzzle_hash: bytes32
+
+    @property
+    def program(self) -> Program:
+        return STD_COVENANT_PARENT_MORPHER.curry(
+            STD_COVENANT_PARENT_MORPHER_HASH,
+            COVENANT_LAYER_HASH,
+            self.initial_puzzle_hash,
+        )
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> StdParentMorpher | None:
+        if unknown_puzzle.mod != STD_COVENANT_PARENT_MORPHER or unknown_puzzle.curried_args is None:
+            return None
+        (_mod_hash, _covenant_layer_hash, initial_puzzle_hash_prog) = unknown_puzzle.curried_args
+        return StdParentMorpher(initial_puzzle_hash=bytes32(initial_puzzle_hash_prog.as_atom()))
+
+
 def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program, inner_puzzle: Program) -> Program:
-    return COVENANT_LAYER.curry(
-        initial_puzzle_hash,
-        parent_morpher,
-        inner_puzzle,
-    )
+    return CovenantLayer(
+        initial_puzzle_hash=initial_puzzle_hash,
+        parent_morpher=UnknownPuzzle(known_program=parent_morpher),
+        inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
+    ).program
 
 
 def match_covenant_layer(uncurried_puzzle: UnknownPuzzle) -> tuple[bytes32, Program, Program] | None:
-    if uncurried_puzzle.mod == COVENANT_LAYER and uncurried_puzzle.curried_args is not None:
-        return (
-            bytes32(uncurried_puzzle.curried_args[0].as_atom()),
-            uncurried_puzzle.curried_args[1],
-            uncurried_puzzle.curried_args[2],
-        )
-    else:
+    matched = CovenantLayer.match(unknown_puzzle=uncurried_puzzle)
+    if matched is None:
         return None  # pragma: no cover
+    return (
+        matched.initial_puzzle_hash,
+        matched.parent_morpher.program,
+        matched.inner_puzzle.program,
+    )
 
 
 def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program, inner_solution: Program) -> Program:
-    solution: Program = Program.to(
-        [
-            lineage_proof.to_program(),
-            morpher_solution,
-            inner_solution,
-        ]
-    )
-    return solution
+    return CovenantLayerSolution(
+        lineage_proof=lineage_proof,
+        morpher_solution=UnknownSolution(program=morpher_solution),
+        inner_solution=UnknownSolution(program=inner_solution),
+    ).program
 
 
 def create_std_parent_morpher(initial_puzzle_hash: bytes32) -> Program:
     """
     The standard PARENT_MORPHER for plain coins that want to prove an initial state
     """
-    return STD_COVENANT_PARENT_MORPHER.curry(
-        STD_COVENANT_PARENT_MORPHER_HASH,
-        COVENANT_LAYER_HASH,
-        initial_puzzle_hash,
-    )
+    return StdParentMorpher(initial_puzzle_hash=initial_puzzle_hash).program
 
 
 ####################
 # Covenant Adapter #
 ####################
+
+
+_T_CovenantLayer = TypeVar("_T_CovenantLayer", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class TransferProgramCovenantAdapter(PuzzleBase, Generic[_T_CovenantLayer]):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("TransferProgramCovenantAdapter[_T_CovenantLayer]", None)
+
+    inner_puzzle: _T_CovenantLayer
+
+    @property
+    def program(self) -> Program:
+        return EML_TP_COVENANT_ADAPTER.curry(self.inner_puzzle.program)
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> TransferProgramCovenantAdapter[UnknownPuzzle] | None:
+        if unknown_puzzle.mod != EML_TP_COVENANT_ADAPTER or unknown_puzzle.curried_args is None:
+            return None
+        (covenant_layer_prog,) = unknown_puzzle.curried_args
+        return TransferProgramCovenantAdapter(inner_puzzle=UnknownPuzzle(known_program=covenant_layer_prog))
+
+
 def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
-    return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
+    return TransferProgramCovenantAdapter(inner_puzzle=UnknownPuzzle(known_program=covenant_layer)).program
 
 
 def match_tp_covenant_adapter(uncurried_puzzle: UnknownPuzzle) -> Program | None:  # pragma: no cover
-    if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER and uncurried_puzzle.curried_args is not None:
-        return uncurried_puzzle.curried_args[0]
-    else:
+    matched = TransferProgramCovenantAdapter.match(unknown_puzzle=uncurried_puzzle)
+    if matched is None:
         return None
+    return matched.inner_puzzle.program
 
 
 ##################################
 # Update w/ DID Transfer Program #
 ##################################
+
+
+@dataclass(frozen=True, kw_only=True)
+class DidTransferProgram(PuzzleBase):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("DidTransferProgram", None)
+
+    @property
+    def program(self) -> Program:
+        return EML_DID_TP.curry(SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH)
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> DidTransferProgram | None:
+        if unknown_puzzle.mod == EML_DID_TP:
+            return DidTransferProgram()
+        return None
+
+
+@dataclass(frozen=True, kw_only=True)
+class DidTpSolution:
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast("DidTpSolution", None)
+
+    provider_innerpuzhash: bytes32
+    my_coin_id: bytes32
+    new_metadata: Program
+    new_transfer_program: bytes32 | None
+
+    @property
+    def program(self) -> Program:
+        return Program.to(
+            [
+                self.provider_innerpuzhash,
+                self.my_coin_id,
+                self.new_metadata,
+                self.new_transfer_program,
+            ]
+        )
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> DidTpSolution | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 4:
+            return None
+        new_transfer_program_prog = list_of_values[3]
+        return cls(
+            provider_innerpuzhash=bytes32(list_of_values[0].as_atom()),
+            my_coin_id=bytes32(list_of_values[1].as_atom()),
+            new_metadata=list_of_values[2],
+            new_transfer_program=None
+            if new_transfer_program_prog == Program.NIL
+            else bytes32(new_transfer_program_prog.as_atom()),
+        )
+
+
 def create_did_tp(
     singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
     singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
 ) -> Program:
+    if singleton_mod_hash == SINGLETON_MOD_HASH and singleton_launcher_hash == SINGLETON_LAUNCHER_HASH:
+        return DidTransferProgram().program
     return EML_DID_TP.curry(
         singleton_mod_hash,
         singleton_launcher_hash,
@@ -160,7 +373,7 @@ EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
 def match_did_tp(uncurried_puzzle: UnknownPuzzle) -> tuple[()] | None:
-    if uncurried_puzzle.mod == EML_DID_TP:
+    if DidTransferProgram.match(unknown_puzzle=uncurried_puzzle) is not None:
         return ()
     else:
         return None  # pragma: no cover
@@ -169,75 +382,232 @@ def match_did_tp(uncurried_puzzle: UnknownPuzzle) -> tuple[()] | None:
 def solve_did_tp(
     provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: bytes32
 ) -> Program:
-    solution: Program = Program.to(
-        [
-            provider_innerpuzhash,
-            my_coin_id,
-            new_metadata,
-            new_transfer_program,
-        ]
-    )
-    return solution
+    return DidTpSolution(
+        provider_innerpuzhash=provider_innerpuzhash,
+        my_coin_id=my_coin_id,
+        new_metadata=new_metadata,
+        new_transfer_program=new_transfer_program,
+    ).program
 
 
 ##############################
 # P2 Puzzle or Hidden Puzzle #
 ##############################
+
+
+_T_RevocationPuzzle = TypeVar("_T_RevocationPuzzle", bound=Puzzle)
+_T_RevocationHiddenPuzzle = TypeVar("_T_RevocationHiddenPuzzle", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class RevocationLayer(PuzzleBase, Generic[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast(
+            "RevocationLayer[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]", None
+        )
+
+    inner_puzzle: _T_RevocationPuzzle
+    hidden_puzzle: _T_RevocationHiddenPuzzle
+
+    @property
+    def program(self) -> Program:
+        return REVOCATION_LAYER.curry(REVOCATION_LAYER_HASH, self.hidden_puzzle.tree_hash, self.inner_puzzle.tree_hash)
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> RevocationLayer[UnknownPuzzle, UnknownPuzzle] | None:
+        if unknown_puzzle.mod != REVOCATION_LAYER or unknown_puzzle.curried_args is None:
+            return None
+        (_mod_hash, hidden_puzzle_hash_prog, inner_puzzle_hash_prog) = unknown_puzzle.curried_args
+        return RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=bytes32(hidden_puzzle_hash_prog.as_atom())),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=bytes32(inner_puzzle_hash_prog.as_atom())),
+        )
+
+
+_T_RevocationPuzzleReveal = TypeVar("_T_RevocationPuzzleReveal", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class RevocationLayerSolution(Generic[_T_RevocationPuzzleReveal, _T_InnerSolution]):
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast(
+            "RevocationLayerSolution[_T_RevocationPuzzleReveal, _T_InnerSolution]", None
+        )
+
+    puzzle_reveal: _T_RevocationPuzzleReveal
+    inner_solution: _T_InnerSolution
+    hidden: bool = False
+
+    @property
+    def program(self) -> Program:
+        return Program.to(
+            [
+                self.hidden,
+                self.puzzle_reveal.program,
+                self.inner_solution.program,
+            ]
+        )
+
+    @classmethod
+    def match(
+        cls, *, unknown_solution: UnknownSolution
+    ) -> RevocationLayerSolution[UnknownPuzzle, UnknownSolution] | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 3:
+            return None
+        return RevocationLayerSolution(
+            hidden=list_of_values[0] != Program.NIL,
+            puzzle_reveal=UnknownPuzzle(known_program=list_of_values[1]),
+            inner_solution=UnknownSolution(list_of_values[2]),
+        )
+
+
 def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
-    return REVOCATION_LAYER.curry(
-        REVOCATION_LAYER_HASH,
-        hidden_puzzle_hash,
-        inner_puzzle_hash,
-    )
+    return RevocationLayer(
+        hidden_puzzle=UnknownPuzzle(known_tree_hash=hidden_puzzle_hash),
+        inner_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
+    ).program
 
 
 def match_revocation_layer(uncurried_puzzle: UnknownPuzzle) -> tuple[bytes32, bytes32] | None:
-    if uncurried_puzzle.mod == REVOCATION_LAYER and uncurried_puzzle.curried_args is not None:
-        return (
-            bytes32(uncurried_puzzle.curried_args[1].as_atom()),
-            bytes32(uncurried_puzzle.curried_args[2].as_atom()),
-        )
-    else:
+    matched = RevocationLayer.match(unknown_puzzle=uncurried_puzzle)
+    if matched is None:
         return None  # pragma: no cover
+    return matched.hidden_puzzle.tree_hash, matched.inner_puzzle.tree_hash
 
 
 def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
-    solution: Program = Program.to(
-        [
-            hidden,
-            puzzle_reveal,
-            inner_solution,
-        ]
-    )
-    return solution
+    return RevocationLayerSolution(
+        puzzle_reveal=UnknownPuzzle(known_program=puzzle_reveal),
+        inner_solution=UnknownSolution(program=inner_solution),
+        hidden=hidden,
+    ).program
 
 
 ########
 # MISC #
 ########
-def create_eml_covenant_morpher(
-    transfer_program_hash: bytes32,
-) -> Program:
-    """
-    A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> EML -> Covenant stack
-    """
-    first_curry: Program = EXTIGENT_METADATA_LAYER_COVENANT_MORPHER.curry(
-        COVENANT_LAYER_HASH,
-        EXTIGENT_METADATA_LAYER_HASH,
-        EML_TP_COVENANT_ADAPTER_HASH,
-        SINGLETON_MOD_HASH,
-        Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
-        transfer_program_hash,
-    )
-    return first_curry.curry(first_curry.get_tree_hash())
 
 
-def construct_exigent_metadata_layer(
-    metadata: Program | None, transfer_program: Program, inner_puzzle: Program
-) -> Program:
-    return EXTIGENT_METADATA_LAYER.curry(
-        EXTIGENT_METADATA_LAYER_HASH, metadata, transfer_program, transfer_program.get_tree_hash(), inner_puzzle
-    )
+_T_EmlCovenantMorpherTp = TypeVar("_T_EmlCovenantMorpherTp", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("EmlCovenantMorpher[_T_EmlCovenantMorpherTp]", None)
+
+    transfer_program: _T_EmlCovenantMorpherTp
+
+    @property
+    def program(self) -> Program:
+        first_curry: Program = EXTIGENT_METADATA_LAYER_COVENANT_MORPHER.curry(
+            COVENANT_LAYER_HASH,
+            EXTIGENT_METADATA_LAYER_HASH,
+            EML_TP_COVENANT_ADAPTER_HASH,
+            SINGLETON_MOD_HASH,
+            Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
+            self.transfer_program.tree_hash,
+        )
+        return first_curry.curry(first_curry.get_tree_hash())
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> EmlCovenantMorpher[UnknownPuzzle] | None:
+        if unknown_puzzle.mod is None or unknown_puzzle.curried_args is None:
+            return None
+        first_curry = UnknownPuzzle(known_program=unknown_puzzle.mod)
+        if first_curry.mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER or first_curry.curried_args is None:
+            return None
+        curried_args = list(first_curry.curried_args)
+        if len(curried_args) != 6:
+            return None
+        return EmlCovenantMorpher(transfer_program=UnknownPuzzle(known_tree_hash=bytes32(curried_args[5].as_atom())))
+
+
+@dataclass(frozen=True, kw_only=True)
+class EmlCovenantMorpherSolution:
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast("EmlCovenantMorpherSolution", None)
+
+    parent_proof_hash: bytes32 | None
+    launcher_id: bytes32
+
+    @property
+    def program(self) -> Program:
+        return Program.to([self.parent_proof_hash, self.launcher_id])
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> EmlCovenantMorpherSolution | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 2:
+            return None
+        parent_proof_hash_prog = list_of_values[0]
+        return cls(
+            parent_proof_hash=None
+            if parent_proof_hash_prog == Program.NIL
+            else bytes32(parent_proof_hash_prog.as_atom()),
+            launcher_id=bytes32(list_of_values[1].as_atom()),
+        )
+
+
+_T_TransferProgram = TypeVar("_T_TransferProgram", bound=Puzzle)
+_T_EMLPuzzle = TypeVar("_T_EMLPuzzle", bound=Puzzle)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ExigentMetadataLayer(PuzzleBase, Generic[_T_TransferProgram, _T_EMLPuzzle]):
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("ExigentMetadataLayer[_T_TransferProgram, _T_EMLPuzzle]", None)
+
+    metadata: Program | None
+    transfer_program: _T_TransferProgram
+    inner_puzzle: _T_EMLPuzzle
+
+    @property
+    def program(self) -> Program:
+        return EXTIGENT_METADATA_LAYER.curry(
+            EXTIGENT_METADATA_LAYER_HASH,
+            self.metadata,
+            self.transfer_program.program,
+            self.transfer_program.tree_hash,
+            self.inner_puzzle.program,
+        )
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> ExigentMetadataLayer[UnknownPuzzle, UnknownPuzzle] | None:
+        if unknown_puzzle.mod != EXTIGENT_METADATA_LAYER or unknown_puzzle.curried_args is None:
+            return None
+        (_mod_hash, metadata_prog, transfer_program_prog, _tp_hash, inner_puzzle_prog) = unknown_puzzle.curried_args
+        return ExigentMetadataLayer(
+            metadata=None if metadata_prog == Program.NIL else metadata_prog,
+            transfer_program=UnknownPuzzle(known_program=transfer_program_prog),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle_prog),
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class ExigentMetadataLayerSolution(Generic[_T_InnerSolution]):
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast("ExigentMetadataLayerSolution[_T_InnerSolution]", None)
+
+    inner_solution: _T_InnerSolution
+
+    @property
+    def program(self) -> Program:
+        return Program.to([self.inner_solution.program])
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> ExigentMetadataLayerSolution[UnknownSolution] | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 1:
+            return None
+        return ExigentMetadataLayerSolution(inner_solution=UnknownSolution(list_of_values[0]))
 
 
 @streamable
@@ -248,6 +618,103 @@ class VCLineageProof(LineageProof, Streamable):
     """
 
     parent_proof_hash: bytes32 | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class StandardBrickPuzzleSolution:
+    """
+    Solution to StandardBrickPuzzle. Requires proof info about pretty much the whole puzzle stack.
+    """
+
+    if TYPE_CHECKING:
+        _solution_protocol_check: ClassVar[Solution] = cast("StandardBrickPuzzleSolution", None)
+
+    launcher_id: bytes32
+    metadata_hash: bytes32
+    tp_hash: bytes32
+    inner_puzzle_hash: bytes32
+    amount: uint64
+    eml_lineage_proof: VCLineageProof
+    provider_innerpuzhash: bytes32
+    coin_id: bytes32
+    announcement_nonce: bytes32 | None = None
+
+    @property
+    def program(self) -> Program:
+        return Program.to(
+            [
+                self.launcher_id,
+                self.metadata_hash,
+                self.tp_hash,
+                STANDARD_BRICK_PUZZLE_HASH_HASH,
+                self.inner_puzzle_hash,
+                self.amount,
+                self.eml_lineage_proof.to_program(),
+                Program.to(self.eml_lineage_proof.parent_proof_hash),
+                self.announcement_nonce,
+                Program.to(
+                    [
+                        self.provider_innerpuzhash,
+                        self.coin_id,
+                    ]
+                ),
+            ]
+        )
+
+    @classmethod
+    def match(cls, *, unknown_solution: UnknownSolution) -> StandardBrickPuzzleSolution | None:
+        if unknown_solution.program.atom is not None:
+            return None
+        list_of_values = list(unknown_solution.program.as_iter())
+        if len(list_of_values) != 10:
+            return None
+        announcement_nonce_prog = list_of_values[8]
+        provider_and_coin = list(list_of_values[9].as_iter())
+        if len(provider_and_coin) != 2:
+            return None
+        lineage_proof = LineageProof.from_program(
+            list_of_values[6],
+            [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
+        )
+        parent_proof_hash_prog = list_of_values[7]
+        return cls(
+            launcher_id=bytes32(list_of_values[0].as_atom()),
+            metadata_hash=bytes32(list_of_values[1].as_atom()),
+            tp_hash=bytes32(list_of_values[2].as_atom()),
+            inner_puzzle_hash=bytes32(list_of_values[4].as_atom()),
+            amount=uint64(list_of_values[5].as_int()),
+            eml_lineage_proof=VCLineageProof(
+                parent_name=lineage_proof.parent_name,
+                inner_puzzle_hash=lineage_proof.inner_puzzle_hash,
+                amount=lineage_proof.amount,
+                parent_proof_hash=None
+                if parent_proof_hash_prog == Program.NIL
+                else bytes32(parent_proof_hash_prog.as_atom()),
+            ),
+            provider_innerpuzhash=bytes32(provider_and_coin[0].as_atom()),
+            coin_id=bytes32(provider_and_coin[1].as_atom()),
+            announcement_nonce=None
+            if announcement_nonce_prog == Program.NIL
+            else bytes32(announcement_nonce_prog.as_atom()),
+        )
+
+
+def create_eml_covenant_morpher(
+    transfer_program_hash: bytes32,
+) -> Program:
+    """
+    A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> EML -> Covenant stack
+    """
+    return EmlCovenantMorpher(transfer_program=UnknownPuzzle(known_tree_hash=transfer_program_hash)).program
+
+
+def construct_exigent_metadata_layer(
+    metadata: Program | None, transfer_program: Program, inner_puzzle: Program
+) -> Program:
+    # Keep direct curry so callers can pass a puzzle-hash atom and use get_tree_hash_precalc.
+    return EXTIGENT_METADATA_LAYER.curry(
+        EXTIGENT_METADATA_LAYER_HASH, metadata, transfer_program, transfer_program.get_tree_hash(), inner_puzzle
+    )
 
 
 def solve_std_vc_backdoor(
@@ -264,44 +731,146 @@ def solve_std_vc_backdoor(
     """
     Solution to the STANDARD_BRICK_PUZZLE above. Requires proof info about pretty much the whole puzzle stack.
     """
-    solution: Program = Program.to(
-        [
-            launcher_id,
-            metadata_hash,
-            tp_hash,
-            STANDARD_BRICK_PUZZLE_HASH_HASH,
-            inner_puzzle_hash,
-            amount,
-            eml_lineage_proof.to_program(),
-            Program.to(eml_lineage_proof.parent_proof_hash),
-            announcement_nonce,
-            Program.to(
-                [
-                    provider_innerpuzhash,
-                    coin_id,
-                ]
-            ),
-        ]
-    )
-    return solution
+    return StandardBrickPuzzleSolution(
+        launcher_id=launcher_id,
+        metadata_hash=metadata_hash,
+        tp_hash=tp_hash,
+        inner_puzzle_hash=inner_puzzle_hash,
+        amount=amount,
+        eml_lineage_proof=eml_lineage_proof,
+        provider_innerpuzhash=provider_innerpuzhash,
+        coin_id=coin_id,
+        announcement_nonce=announcement_nonce,
+    ).program
 
 
 # Launching to a VC requires a OL with a transfer program that guarantees a () metadata on the next iteration
 # (mod (_ _ (provider tp)) (list (c provider ()) tp ()))
 # (c (c 19 ()) (c 43 (q ())))
-GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080")
-OWNERSHIP_LAYER_LAUNCHER: Program = construct_exigent_metadata_layer(
-    None,
-    GUARANTEED_NIL_TP,
-    P2_ANNOUNCED_DELEGATED_PUZZLE,
+GUARANTEED_NIL_TP = UnknownPuzzle(known_program=Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080"))
+OWNERSHIP_LAYER_LAUNCHER = ExigentMetadataLayer(
+    metadata=None,
+    transfer_program=GUARANTEED_NIL_TP,
+    inner_puzzle=UnknownPuzzle(known_program=P2_ANNOUNCED_DELEGATED_PUZZLE),
 )
-GUARANTEED_NIL_TP_HASH: bytes32 = GUARANTEED_NIL_TP.get_tree_hash()
-OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
+GUARANTEED_NIL_TP_HASH: bytes32 = GUARANTEED_NIL_TP.tree_hash
+OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.tree_hash
 
 
 ########################
 # Verified Credentials #
 ########################
+
+
+_T_VCPuzzle = TypeVar("_T_VCPuzzle", bound=Puzzle)
+
+
+@dataclass(kw_only=True, frozen=True)
+class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
+    """
+    PuzzleBase driver for the VC inner puzzle stack (EML -> revocation -> custody).
+    """
+
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[Puzzle] = cast("VerifiedCredentialInnerPuzzle[_T_VCPuzzle]", None)
+
+    eml_lineage_proof: VCLineageProof
+    self_launcher_id: bytes32
+    custody_puzzle: _T_VCPuzzle
+    proof_provider: bytes32
+    proof_hash: bytes32 | None
+
+    @property
+    def construction(
+        self,
+    ) -> ExigentMetadataLayer[
+        TransferProgramCovenantAdapter[CovenantLayer[EmlCovenantMorpher[DidTransferProgram], DidTransferProgram]],
+        RevocationLayer[_T_VCPuzzle, StandardBrickPuzzle],
+    ]:
+        return ExigentMetadataLayer(
+            metadata=Program.to((self.proof_provider, self.proof_hash)),
+            transfer_program=self.transfer_program,
+            inner_puzzle=self.revocation_layer,
+        )
+
+    @property
+    def transfer_program(
+        self,
+    ) -> TransferProgramCovenantAdapter[CovenantLayer[EmlCovenantMorpher[DidTransferProgram], DidTransferProgram]]:
+        return TransferProgramCovenantAdapter(
+            inner_puzzle=CovenantLayer(
+                initial_puzzle_hash=puzzle_for_singleton(
+                    self.self_launcher_id, OWNERSHIP_LAYER_LAUNCHER.program
+                ).get_tree_hash(),
+                parent_morpher=EmlCovenantMorpher(transfer_program=DidTransferProgram()),
+                inner_puzzle=DidTransferProgram(),
+            )
+        )
+
+    @property
+    def revocation_layer(self) -> RevocationLayer[_T_VCPuzzle, StandardBrickPuzzle]:
+        return RevocationLayer(inner_puzzle=self.custody_puzzle, hidden_puzzle=StandardBrickPuzzle())
+
+    def wrap_inner_with_backdoor(self) -> Program:
+        return self.revocation_layer.program
+
+    @property
+    def program(self) -> Program:
+        return self.construction.program
+
+    @property
+    def tree_hash_optimized(self) -> bytes32:
+        return self.construction.tree_hash
+
+    @classmethod
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> VerifiedCredentialInnerPuzzle[UnknownPuzzle] | None:
+        eml_match = ExigentMetadataLayer.match(unknown_puzzle=unknown_puzzle)
+        if eml_match is None or eml_match.metadata is None:
+            return None
+
+        try:
+            proof_provider = bytes32(eml_match.metadata.at("f").as_atom())
+            proof_hash_prog = eml_match.metadata.at("r")
+            proof_hash = None if proof_hash_prog == Program.NIL else bytes32(proof_hash_prog.as_atom())
+        except Exception:
+            return None
+
+        assert isinstance(eml_match.transfer_program, UnknownPuzzle)
+        tp_adapter = TransferProgramCovenantAdapter.match(unknown_puzzle=eml_match.transfer_program)
+        if tp_adapter is None:
+            return None
+
+        assert isinstance(tp_adapter.inner_puzzle, UnknownPuzzle)
+        covenant = CovenantLayer.match(unknown_puzzle=tp_adapter.inner_puzzle)
+        if covenant is None:
+            return None
+
+        assert isinstance(covenant.parent_morpher, UnknownPuzzle)
+        if EmlCovenantMorpher.match(unknown_puzzle=covenant.parent_morpher) is None:
+            return None
+
+        assert isinstance(covenant.inner_puzzle, UnknownPuzzle)
+        if DidTransferProgram.match(unknown_puzzle=covenant.inner_puzzle) is None:
+            return None
+
+        assert isinstance(eml_match.inner_puzzle, UnknownPuzzle)
+        revocation = RevocationLayer.match(unknown_puzzle=eml_match.inner_puzzle)
+        if revocation is None:
+            return None
+
+        if (
+            StandardBrickPuzzle.match(unknown_puzzle=revocation.hidden_puzzle) is None
+            and revocation.hidden_puzzle.tree_hash != STANDARD_BRICK_PUZZLE_HASH
+        ):
+            return None
+
+        return VerifiedCredentialInnerPuzzle(
+            eml_lineage_proof=VCLineageProof(),
+            self_launcher_id=bytes32.zeros,
+            custody_puzzle=revocation.inner_puzzle,
+            proof_provider=proof_provider,
+            proof_hash=proof_hash,
+        )
 
 
 @streamable
@@ -320,6 +889,16 @@ class VerifiedCredential(Streamable):
     inner_puzzle_hash: bytes32
     proof_provider: bytes32
     proof_hash: bytes32 | None
+
+    @property
+    def as_inner_puzzle(self) -> VerifiedCredentialInnerPuzzle[UnknownPuzzle]:
+        return VerifiedCredentialInnerPuzzle(
+            eml_lineage_proof=self.eml_lineage_proof,
+            self_launcher_id=self.launcher_id,
+            custody_puzzle=UnknownPuzzle(known_tree_hash=self.inner_puzzle_hash),
+            proof_provider=self.proof_provider,
+            proof_hash=self.proof_hash,
+        )
 
     @classmethod
     def launch(
@@ -350,31 +929,27 @@ class VerifiedCredential(Streamable):
         # Create the second puzzle for the first launch
         curried_eve_singleton: Program = puzzle_for_singleton(
             launcher_coin.name(),
-            OWNERSHIP_LAYER_LAUNCHER,
+            OWNERSHIP_LAYER_LAUNCHER.program,
         )
         curried_eve_singleton_hash: bytes32 = curried_eve_singleton.get_tree_hash()
         launcher_solution = Program.to([curried_eve_singleton_hash, uint64(1), None])
 
         # Create the final puzzle for the second launch
-        inner_transfer_program: Program = create_did_tp()
-        transfer_program: Program = create_tp_covenant_adapter(
-            create_covenant_layer(
-                curried_eve_singleton_hash,
-                create_eml_covenant_morpher(
-                    inner_transfer_program.get_tree_hash(),
-                ),
-                inner_transfer_program,
-            )
+        second_launcher_coin: Coin = Coin(
+            launcher_coin.name(),
+            curried_eve_singleton_hash,
+            uint64(1),
         )
-        wrapped_inner_puzzle_hash: bytes32 = create_revocation_layer(
-            STANDARD_BRICK_PUZZLE_HASH,
-            new_inner_puzzle_hash,
-        ).get_tree_hash()
-        metadata_layer_hash: bytes32 = construct_exigent_metadata_layer(
-            Program.to((provider_id, None)),
-            transfer_program,
-            wrapped_inner_puzzle_hash,  # type: ignore[arg-type]
-        ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
+        target_vc_inner = VerifiedCredentialInnerPuzzle(
+            eml_lineage_proof=VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
+            self_launcher_id=launcher_coin.name(),
+            custody_puzzle=UnknownPuzzle(known_tree_hash=new_inner_puzzle_hash),
+            proof_provider=provider_id,
+            proof_hash=None,
+        )
+        wrapped_inner_puzzle_hash: bytes32 = target_vc_inner.revocation_layer.tree_hash
+        metadata_layer_hash: bytes32 = target_vc_inner.tree_hash
+        transfer_program_hash: bytes32 = target_vc_inner.transfer_program.tree_hash
         curried_singleton_hash: bytes32 = puzzle_for_singleton(
             launcher_coin.name(),
             metadata_layer_hash,  # type: ignore[arg-type]
@@ -385,16 +960,11 @@ class VerifiedCredential(Streamable):
                 Remark(rest=Program.to([new_inner_puzzle_hash])),
                 UnknownCondition(
                     opcode=Program.to(-10),
-                    args=[Program.to(provider_id), Program.to(transfer_program.get_tree_hash())],
+                    args=[Program.to(provider_id), Program.to(transfer_program_hash)],
                 ),
             ],
         ).program
         second_launcher_solution = Program.to([launch_dpuz, None])
-        second_launcher_coin: Coin = Coin(
-            launcher_coin.name(),
-            curried_eve_singleton_hash,
-            uint64(1),
-        )
         create_launcher_conditions = [
             CreateCoin(SINGLETON_LAUNCHER_HASH, uint64(1)),
             CreateCoin(origin_coin.puzzle_hash, uint64(sum(c.amount for c in origin_coins) - fee - 1)),
@@ -436,7 +1006,7 @@ class VerifiedCredential(Streamable):
                 Coin(second_launcher_coin.name(), curried_singleton_hash, uint64(1)),
                 LineageProof(
                     parent_name=second_launcher_coin.parent_coin_info,
-                    inner_puzzle_hash=OWNERSHIP_LAYER_LAUNCHER.get_tree_hash(),
+                    inner_puzzle_hash=OWNERSHIP_LAYER_LAUNCHER_HASH,
                     amount=uint64(1),
                 ),
                 VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
@@ -456,34 +1026,13 @@ class VerifiedCredential(Streamable):
         )
 
     def construct_exigent_metadata_layer(self) -> Program:
-        return construct_exigent_metadata_layer(
-            Program.to((self.proof_provider, self.proof_hash)),
-            self.construct_transfer_program(),
-            self.wrap_inner_with_backdoor(),
-        )
+        return self.as_inner_puzzle.program
 
     def construct_transfer_program(self) -> Program:
-        curried_eve_singleton_hash: bytes32 = puzzle_for_singleton(
-            self.launcher_id,
-            OWNERSHIP_LAYER_LAUNCHER,
-        ).get_tree_hash()
-        inner_transfer_program: Program = create_did_tp()
-
-        return create_tp_covenant_adapter(
-            create_covenant_layer(
-                curried_eve_singleton_hash,
-                create_eml_covenant_morpher(
-                    inner_transfer_program.get_tree_hash(),
-                ),
-                inner_transfer_program,
-            ),
-        )
+        return self.as_inner_puzzle.transfer_program.program
 
     def wrap_inner_with_backdoor(self) -> Program:
-        return create_revocation_layer(
-            self.hidden_puzzle().get_tree_hash(),
-            self.inner_puzzle_hash,
-        )
+        return self.as_inner_puzzle.wrap_inner_with_backdoor()
 
     def hidden_puzzle(self) -> Program:
         return STANDARD_BRICK_PUZZLE
@@ -508,7 +1057,7 @@ class VerifiedCredential(Streamable):
         if full_transfer_program.mod != EML_TP_COVENANT_ADAPTER:
             # This is the first spot we'll run into trouble if we're examining a VC being launched
             # Break off to that logic here
-            if full_transfer_program_as_prog == GUARANTEED_NIL_TP:
+            if full_transfer_program_as_prog == GUARANTEED_NIL_TP.program:
                 if layer_below_singleton.curried_args[4] != P2_ANNOUNCED_DELEGATED_PUZZLE:
                     return (
                         False,
@@ -518,6 +1067,8 @@ class VerifiedCredential(Streamable):
                     return True, ""
             else:
                 return False, "top layer of transfer program is not a covenant layer adapter"  # pragma: no cover
+        if VerifiedCredentialInnerPuzzle.match(unknown_puzzle=layer_below_singleton) is not None:
+            return True, ""
         assert full_transfer_program.curried_args is not None
         adapted_transfer_program: UnknownPuzzle = UnknownPuzzle(known_program=full_transfer_program.curried_args[0])
         if adapted_transfer_program.mod != COVENANT_LAYER or adapted_transfer_program.curried_args is None:
@@ -576,7 +1127,7 @@ class VerifiedCredential(Streamable):
             inner_puzzle_hash=layer_below_singleton.get_tree_hash(),
             amount=uint64(parent_coin.amount),
         )
-        if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER:
+        if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER.program:
             proof_hash: bytes32 | None = None
             eml_lineage_proof: VCLineageProof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
@@ -619,10 +1170,10 @@ class VerifiedCredential(Streamable):
             assert revocation_layer.curried_args is not None
             eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
-                inner_puzzle_hash=create_revocation_layer(
-                    STANDARD_BRICK_PUZZLE_HASH,
-                    bytes32(revocation_layer.curried_args[2].as_atom()),
-                ).get_tree_hash(),
+                inner_puzzle_hash=RevocationLayer(
+                    hidden_puzzle=UnknownPuzzle(known_tree_hash=STANDARD_BRICK_PUZZLE_HASH),
+                    inner_puzzle=UnknownPuzzle(known_tree_hash=bytes32(revocation_layer.curried_args[2].as_atom())),
+                ).tree_hash,
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None if parent_proof_hash == Program.NIL else parent_proof_hash,
             )
@@ -658,14 +1209,12 @@ class VerifiedCredential(Streamable):
             eml_lineage_proof=self.eml_lineage_proof,
             launcher_id=self.launcher_id,
             tp_solution=UnknownSolution(
-                program=Program.to(
-                    [
-                        provider_innerpuzhash,
-                        self.coin.name(),
-                        Program.to(new_proof_hash),
-                        None,  # TP update is not allowed because then the singleton will leave the VC protocol
-                    ]
-                )
+                program=DidTpSolution(
+                    provider_innerpuzhash=provider_innerpuzhash,
+                    my_coin_id=self.coin.name(),
+                    new_metadata=Program.to(new_proof_hash),
+                    new_transfer_program=None,  # TP update is not allowed because singleton will leave the VC protocol
+                ).program
             ),
         )
 
@@ -703,14 +1252,12 @@ class VerifiedCredential(Streamable):
         vc_solution: Program = solution_for_singleton(
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
-            Program.to(
-                [  # solve EML
-                    solve_revocation_layer(
-                        inner_puzzle,
-                        inner_solution,
-                    ),
-                ]
-            ),
+            ExigentMetadataLayerSolution(
+                inner_solution=RevocationLayerSolution(
+                    puzzle_reveal=UnknownPuzzle(known_program=inner_puzzle),
+                    inner_solution=UnknownSolution(program=inner_solution),
+                )
+            ).program,
         )
 
         if new_proof_hash is not None:
@@ -738,7 +1285,7 @@ class VerifiedCredential(Streamable):
             ),
             self._next_vc(
                 new_inner_puzzle_hash,
-                self.proof_hash if new_proof_hash is None else new_proof_hash,
+                self.as_inner_puzzle.proof_hash if new_proof_hash is None else new_proof_hash,
                 uint64(new_singleton_condition.at("rrf").as_int()),
             ),
         )
@@ -753,28 +1300,27 @@ class VerifiedCredential(Streamable):
         Sync attempts by this class on spends generated by this method are expected to fail. This could be improved in
         the future with a separate type/state of VC that is revoked, but perfectly useful as a singleton.
         """
+        vc_inner = self.as_inner_puzzle
         vc_solution: Program = solution_for_singleton(
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
-            Program.to(
-                [  # solve EML
-                    solve_revocation_layer(
-                        self.hidden_puzzle(),
-                        solve_std_vc_backdoor(
-                            self.launcher_id,
-                            Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
-                            self.construct_transfer_program().get_tree_hash(),
-                            self.inner_puzzle_hash,
-                            uint64(self.coin.amount),
-                            self.eml_lineage_proof,
-                            provider_innerpuzhash,
-                            self.coin.name(),
-                            announcement_nonce,
-                        ),
-                        hidden=True,
+            ExigentMetadataLayerSolution(
+                inner_solution=RevocationLayerSolution(
+                    puzzle_reveal=StandardBrickPuzzle(),
+                    inner_solution=StandardBrickPuzzleSolution(
+                        launcher_id=self.launcher_id,
+                        metadata_hash=Program.to((vc_inner.proof_provider, vc_inner.proof_hash)).get_tree_hash(),
+                        tp_hash=vc_inner.transfer_program.tree_hash,
+                        inner_puzzle_hash=vc_inner.custody_puzzle.tree_hash,
+                        amount=uint64(self.coin.amount),
+                        eml_lineage_proof=vc_inner.eml_lineage_proof,
+                        provider_innerpuzhash=provider_innerpuzhash,
+                        coin_id=self.coin.name(),
+                        announcement_nonce=announcement_nonce,
                     ),
-                ]
-            ),
+                    hidden=True,
+                )
+            ).program,
         )
 
         expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
@@ -831,13 +1377,12 @@ class VerifiedCredential(Streamable):
 @dataclass(frozen=True)
 class RevocationOuterPuzzle:
     def match(self, puzzle: UnknownPuzzle) -> PuzzleInfo | None:
-        args = match_revocation_layer(puzzle)
-        if args is None:
+        revocation_layer_match = RevocationLayer.match(unknown_puzzle=puzzle)
+        if revocation_layer_match is None:
             return None
-        hidden_puzzle_hash, _ = args
         constructor_dict: dict[str, Any] = {
             "type": "revocation layer",
-            "hidden_puzzle_hash": "0x" + hidden_puzzle_hash.hex(),
+            "hidden_puzzle_hash": "0x" + revocation_layer_match.hidden_puzzle.tree_hash.hex(),
         }
         return PuzzleInfo(constructor_dict)
 
@@ -856,10 +1401,16 @@ class RevocationOuterPuzzle:
         return bytes32(constructor["hidden_puzzle_hash"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
-        return create_revocation_layer(constructor["hidden_puzzle_hash"], inner_puzzle.get_tree_hash())
+        return RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=constructor["hidden_puzzle_hash"]),
+            inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
+        ).program
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        return solve_revocation_layer(inner_puzzle, inner_solution)  # deliberately no support for hidden puzzle spends
+        return RevocationLayerSolution(  # deliberately no support for hidden puzzle spends
+            puzzle_reveal=UnknownPuzzle(known_program=inner_puzzle),
+            inner_solution=UnknownSolution(program=inner_solution),
+        ).program
 
 
 _T_Solution = TypeVar("_T_Solution", bound=Solution)

@@ -31,9 +31,10 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle, UnknownSolution
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer, solve_revocation_layer
+from chia.wallet.vc_wallet.vc_drivers import RevocationLayer, RevocationLayerSolution
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -208,18 +209,22 @@ class RCATWallet(CATWallet):
         return True
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        inner_puzzle_hash = create_revocation_layer(
-            self.info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
-        ).get_tree_hash()
+        inner_puzzle_hash = RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=self.info.hidden_puzzle_hash),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=self.standard_wallet.puzzle_hash_for_pk(pubkey)),
+        ).tree_hash
         limitations_program_hash_hash = Program.to(self.info.limitations_program_hash).get_tree_hash()
         return curry_and_treehash(
             QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
         )
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        return create_revocation_layer(
-            self.info.hidden_puzzle_hash, (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
-        )
+        return RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=self.info.hidden_puzzle_hash),
+            inner_puzzle=UnknownPuzzle(
+                known_tree_hash=(await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
+            ),
+        ).program
 
     async def make_inner_solution(
         self,
@@ -232,10 +237,12 @@ class RCATWallet(CATWallet):
         ) = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {coin.puzzle_hash}")
-        return solve_revocation_layer(
-            self.standard_wallet.puzzle_for_pk(record.pubkey),
-            (await super().make_inner_solution(coin, primaries=primaries, conditions=conditions)),
-        )
+        return RevocationLayerSolution(
+            puzzle_reveal=UnknownPuzzle(known_program=self.standard_wallet.puzzle_for_pk(record.pubkey)),
+            inner_solution=UnknownSolution(
+                program=await super().make_inner_solution(coin, primaries=primaries, conditions=conditions)
+            ),
+        ).program
 
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         if (
@@ -268,10 +275,10 @@ class RCATWallet(CATWallet):
         This matches coins that are RCATs with the hint as the inner puzzle
         """
 
-        hint_inner_hash: bytes32 = create_revocation_layer(
-            self.info.hidden_puzzle_hash,
-            hint,
-        ).get_tree_hash()
+        hint_inner_hash: bytes32 = RevocationLayer(
+            hidden_puzzle=UnknownPuzzle(known_tree_hash=self.info.hidden_puzzle_hash),
+            inner_puzzle=UnknownPuzzle(known_tree_hash=hint),
+        ).tree_hash
         if (
             construct_cat_puzzle(
                 Program.to(CAT_MOD_HASH),

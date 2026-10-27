@@ -141,7 +141,9 @@ class VCWallet:
         # Check the ownership
         derivation_record: (
             DerivationRecord | None
-        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(vc.inner_puzzle_hash)
+        ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            vc.as_inner_puzzle.custody_puzzle.tree_hash
+        )
         if derivation_record is None:
             wallet_state_manager.log.warning(
                 f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet."
@@ -298,7 +300,7 @@ class VCWallet:
                 f"Verified credential with {lookup_info[0]} {lookup_info[1].hex()}"
                 "is not confirmed, please try again later."
             )  # pragma: no cover
-        inner_puzhash: bytes32 = vc_record.vc.inner_puzzle_hash
+        inner_puzhash: bytes32 = vc_record.vc.as_inner_puzzle.custody_puzzle.tree_hash
         inner_puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(inner_puzhash)
 
         primaries: list[CreateCoin] = [
@@ -322,7 +324,7 @@ class VCWallet:
                     if wallet.type() == WalletType.DECENTRALIZED_ID:
                         assert isinstance(wallet, DIDWallet)
                         if wallet.did_info.current_inner is not None and wallet.did_info.origin_coin is not None:
-                            if vc_record.vc.proof_provider == wallet.did_info.origin_coin.name():
+                            if vc_record.vc.as_inner_puzzle.proof_provider == wallet.did_info.origin_coin.name():
                                 provider_inner_puzhash = wallet.did_info.current_inner.get_tree_hash()
                                 break
                             else:
@@ -346,13 +348,13 @@ class VCWallet:
             for _, wallet in self.wallet_state_manager.wallets.items():
                 if wallet.type() == WalletType.DECENTRALIZED_ID:
                     assert isinstance(wallet, DIDWallet)
-                    if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
+                    if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.as_inner_puzzle.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_record.vc.launcher_id.hex())
                         await wallet.create_message_spend(action_scope, extra_conditions=(did_announcement,))
                         break
             else:
                 raise ValueError(
-                    f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
+                    f"Cannot find the required DID {vc_record.vc.as_inner_puzzle.proof_provider.hex()}."
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
@@ -394,7 +396,7 @@ class VCWallet:
         for _, wallet in self.wallet_state_manager.wallets.items():
             if wallet.type() == WalletType.DECENTRALIZED_ID:
                 assert isinstance(wallet, DIDWallet)
-                if bytes32.fromhex(wallet.get_my_DID()) == vc.proof_provider:
+                if bytes32.fromhex(wallet.get_my_DID()) == vc.as_inner_puzzle.proof_provider:
                     did_wallet = wallet
                     break
         else:
@@ -533,12 +535,12 @@ class VCWallet:
                 coin_args[coin_name] = (
                     await self.proof_of_inclusions_for_root_and_keys(
                         # It's on my TODO list to fix the below line -Quex
-                        vc.proof_hash,  # type: ignore[arg-type]
+                        vc.as_inner_puzzle.proof_hash,  # type: ignore[arg-type]
                         ProofsChecker.from_program(UnknownPuzzle(known_program=crcat_spend.crcat.proofs_checker)).flags,
                     ),
-                    vc.proof_provider,
+                    vc.as_inner_puzzle.proof_provider,
                     vc.launcher_id,
-                    vc.wrap_inner_with_backdoor().get_tree_hash(),
+                    vc.as_inner_puzzle.wrap_inner_with_backdoor().get_tree_hash(),
                 )
                 if crcat_spend.crcat.coin.name() in spends_to_fix:
                     spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
