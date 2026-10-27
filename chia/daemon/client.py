@@ -99,7 +99,7 @@ class DaemonProxy:
             response: WsRpcMessage = self.response_dict[request_id]
             self.response_dict.pop(request_id)
             return response
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._request_dict.pop(request_id)
             raise Exception(f"No response from daemon for request_id: {request_id}")
 

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 from chia_rs import BlockRecord, CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from clvm.EvalError import EvalError
-from typing_extensions import Unpack, final
+from typing_extensions import Unpack
 
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, StoreProofs, leaf_hash
@@ -57,7 +57,7 @@ from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, PuzzleHashSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -278,8 +278,12 @@ class DataLayerWallet:
             )
 
         await self.wallet_state_manager.dl_store.add_launcher(spend.coin, height)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
-        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
+        await self.wallet_state_manager._add_subscriptions(
+            subscriptions=[
+                PuzzleHashSubscription(target=launcher_id, wallet_id=self.id()),
+                CoinSubscription(target=new_singleton.name()),
+            ]
+        )
 
         new_singleton_coin_record: WalletCoinRecord | None = await self.wallet_state_manager.coin_store.get_coin_record(
             new_singleton.name()
@@ -367,8 +371,9 @@ class DataLayerWallet:
                     generation=uint32(0),
                 )
             )
-
-        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
+            interface.side_effects.puzzle_hash_subscriptions.append(
+                PuzzleHashSubscription(target=launcher_id, wallet_id=self.id())
+            )
 
         return launcher_id
 
@@ -801,7 +806,8 @@ class DataLayerWallet:
                         height,
                     )
                 )
-                await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+                # TODO: waiting for addition to sync scope
+                await self.wallet_state_manager._add_subscriptions([CoinSubscription(target=coin.name())])
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
@@ -867,8 +873,9 @@ class DataLayerWallet:
                     generation=uint32(singleton_record.generation + 1),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids(
-                [new_singleton.name()],
+            # TODO: waiting for addition to sync scope
+            await self.wallet_state_manager._add_subscriptions(
+                [CoinSubscription(target=new_singleton.name())],
             )
         elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             await self.wallet_state_manager.dl_store.delete_mirror(parent_name)

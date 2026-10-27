@@ -20,7 +20,9 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 
 Please check out the [Chia website][link-chia], the [Intro to Chia][link-intro], and [FAQ][link-faq] for information on this project.
 
-Python 3.10+ is required. Make sure your default python version is >=3.10 by typing `python3`.
+Building on Chia with AI? See [chia-for-agents](https://github.com/Chia-Network/chia-for-agents) for agent-optimized documentation and an MCP server.
+
+Python 3.11+ is required. Make sure your default python version is >=3.11 by typing `python3`.
 
 If you are behind a NAT, it can be difficult for peers outside your subnet to reach you when they start up. You can enable [UPnP][link-upnp]
 on your router or add a NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer.
@@ -60,7 +62,7 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-coverage]: https://coveralls.io/github/Chia-Network/chia-blockchain
 [link-discord]: https://discord.gg/chia
 [link-docs]: https://docs.chia.net/docs-home/
-[link-downloads]: https://www.chia.net/downloads/
+[link-downloads]: https://www.chia.net/farm/downloads/
 [link-faq]: https://docs.chia.net/faq/
 [link-install]: https://docs.chia.net/installation/
 [link-intro]: https://docs.chia.net/introduction/
@@ -72,4 +74,4 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-twitter]: https://twitter.com/chia_project
 [link-upnp]: https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/
 [link-youtube]: https://www.youtube.com/chianetwork
-[logo-chia]: https://www.chia.net/wp-content/uploads/2022/09/chia-logo.svg "Chia logo"
+[logo-chia]: .github/assets/chia-logo.svg "Chia logo"

@@ -10,6 +10,7 @@ from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
 from filelock import FileLock
 
+from chia._tests.util import plot_cache
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
@@ -121,24 +122,27 @@ def new_test_db(
     dummy_block_references: bool = False,
     include_transactions: bool = False,
 ) -> list[FullBlock]:
-    print(f"create {path} with {num_of_blocks} blocks with ")
-    blocks: list[FullBlock] = bt.get_consecutive_blocks(
-        num_of_blocks,
-        block_list_input=block_list_input,
-        time_per_block=time_per_block,
-        seed=seed,
-        skip_slots=empty_sub_slots,
-        normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
-        normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
-        normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
-        normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
-        dummy_block_references=dummy_block_references,
-        include_transactions=include_transactions,
-        genesis_timestamp=uint64(1234567890),
-    )
-    block_bytes_list: list[bytes] = []
-    for block in blocks:
-        block_bytes_list.append(bytes(block))
-    bytes_fn = pickle.dumps(block_bytes_list)
-    path.write_bytes(bytes_fn)
-    return blocks
+    with plot_cache.ignore_recording():
+        print(f"create {path} with {num_of_blocks} blocks with ")
+        blocks: list[FullBlock] = bt.get_consecutive_blocks(
+            num_of_blocks,
+            block_list_input=block_list_input,
+            time_per_block=time_per_block,
+            seed=seed,
+            skip_slots=empty_sub_slots,
+            normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
+            normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
+            normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
+            normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+            dummy_block_references=dummy_block_references,
+            include_transactions=include_transactions,
+            genesis_timestamp=uint64(1234567890),
+        )
+        block_bytes_list: list[bytes] = []
+        for block in blocks:
+            block_bytes_list.append(bytes(block))
+        bytes_fn = pickle.dumps(block_bytes_list)
+        temporary = path.with_suffix(path.suffix + ".tmp")
+        temporary.write_bytes(bytes_fn)
+        temporary.replace(path)
+        return blocks

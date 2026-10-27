@@ -23,7 +23,7 @@ recompile_requested = (
 here_name = __name__.rpartition(".")[0]
 
 
-def translate_path(p_):
+def translate_path(p_: pathlib.Path) -> str:
     p = str(p_)
     if os.path.isdir(p):
         return p
@@ -39,18 +39,18 @@ if "CLVM_TOOLS" in os.environ:
     compile_clvm_py = compile_clvm_py_candidate
 
 
-def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path]):
+def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path]) -> None:
     # Compile using rust (default)
 
     # Ensure path translation is done in the idiomatic way currently
     # expected.  It can use either a filesystem path or name a python
     # module.
     treated_include_paths = list(map(translate_path, search_paths))
-    res = compile_clvm_rust(str(full_path), str(output), treated_include_paths)
+    compile_clvm_rust(str(full_path), str(output), treated_include_paths)
 
     if "CLVM_TOOLS" in os.environ and os.environ["CLVM_TOOLS"] == "check" and compile_clvm_py is not None:
         # Simple helper to read the compiled output
-        def sha256file(f):
+        def sha256file(f: str | pathlib.Path) -> str:
             import hashlib
 
             m = hashlib.sha256()
@@ -60,7 +60,7 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
 
         orig = f"{output}.orig"
 
-        compile_clvm_py(full_path, orig, search_paths=search_paths)
+        compile_clvm_py(full_path, orig, search_paths=search_paths)  # type: ignore[no-untyped-call]
         orig256 = sha256file(orig)
         rs256 = sha256file(output)
 
@@ -71,16 +71,17 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
         else:
             print(f"Compilation match {full_path}: {orig256}\n")
 
-    return res
 
-
-def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path] = []):
+def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path] = []) -> None:
     with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "clvm_compile" / full_path.name):
         compile_clvm_in_lock(full_path, output, search_paths)
 
 
 def load_serialized_clvm(
-    clvm_filename, package_or_requirement=here_name, include_standard_libraries: bool = True, recompile: bool = True
+    clvm_filename: str,
+    package_or_requirement: str = here_name,
+    include_standard_libraries: bool = True,
+    recompile: bool = True,
 ) -> SerializedProgram:
     """
     This function takes a .clsp file in the given package and compiles it to a
@@ -116,8 +117,8 @@ def load_serialized_clvm(
 
 
 def load_clvm(
-    clvm_filename,
-    package_or_requirement=here_name,
+    clvm_filename: str,
+    package_or_requirement: str = here_name,
     include_standard_libraries: bool = True,
     recompile: bool = True,
 ) -> Program:
@@ -134,8 +135,8 @@ def load_clvm(
 
 
 def load_clvm_maybe_recompile(
-    clvm_filename,
-    package_or_requirement=here_name,
+    clvm_filename: str,
+    package_or_requirement: str = here_name,
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
@@ -148,8 +149,8 @@ def load_clvm_maybe_recompile(
 
 
 def load_serialized_clvm_maybe_recompile(
-    clvm_filename,
-    package_or_requirement=here_name,
+    clvm_filename: str,
+    package_or_requirement: str = here_name,
     include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> SerializedProgram:

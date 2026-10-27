@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, Self, cast, final
 
 from chia_rs import CoinSpend, G2Element
 from chia_rs.chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
-from typing_extensions import Self, Unpack
+from typing_extensions import Unpack
 
 from chia.pools.plotnft_drivers import GetNextPlotNFTError, PlotNFT, PoolConfig, PoolReward, UserConfig
 from chia.pools.pool_config import PoolingShareState
@@ -27,7 +27,7 @@ from chia.wallet.puzzles.puzzle_drivers import (
 from chia.wallet.puzzles.singleton_drivers import P2SingletonPuzzle, SingletonStruct
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, PuzzleHashSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
@@ -63,8 +63,12 @@ class PlotNFT2Wallet:
             log=logging.getLogger(__name__),
             wallet_info=wallet_info,
         )
-        await wallet_state_manager.add_interested_puzzle_hashes(
-            puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint], wallet_ids=[self.id(), self.id()]
+        # TODO: waiting for addition to sync scope
+        await wallet_state_manager._add_subscriptions(
+            subscriptions=[
+                PuzzleHashSubscription(target=self.p2_singleton_puzzle_hash, wallet_id=self.id()),
+                PuzzleHashSubscription(target=self.hint, wallet_id=self.id()),
+            ]
         )
         if await wallet_state_manager.user_store.get_wallet_by_id(wallet_info.id) is None:
             await wallet_state_manager.user_store.create_wallet(

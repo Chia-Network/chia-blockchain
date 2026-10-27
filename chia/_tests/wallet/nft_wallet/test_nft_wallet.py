@@ -95,7 +95,7 @@ async def wait_rpc_state_condition(
         now = time.monotonic()
         elapsed = now - start
         if elapsed >= timeout:
-            raise asyncio.TimeoutError(
+            raise TimeoutError(
                 f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}",
             )
 
