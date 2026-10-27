@@ -17,7 +17,9 @@ from chia._tests.core.mempool.test_mempool_manager import (
     TEST_COIN,
     TEST_COIN_ID,
     TEST_HEIGHT,
+    make_singleton_spend,
     mempool_item_from_spendbundle,
+    singleton_lineage_info,
     spend_bundle_from_conditions,
 )
 from chia._tests.util.key_tool import KeyTool
@@ -72,20 +74,13 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     we don't need to fast forward, we just need to set the next version from
     our additions to chain ff spends.
     """
-    test_amount = uint64(3)
-    test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, test_amount)
-    test_unspent_lineage_info = UnspentLineageInfo(
-        coin_id=test_coin.name(), parent_id=test_coin.parent_coin_info, parent_parent_id=TEST_COIN_ID
-    )
-
-    # At this point, spends are considered *potentially* eligible for singleton
-    # fast forward mainly when their amount is odd and they don't have conditions
-    # that disqualify them
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, test_amount]]
-    sb = spend_bundle_from_conditions(conditions, test_coin)
+    singleton_spend = make_singleton_spend(launcher_id=TEST_COIN_ID)
+    test_coin = singleton_spend.coin
+    sb = SpendBundle([singleton_spend], G2Element())
     item = mempool_item_from_spendbundle(sb)
+    # Eligibility must come from evaluating the actual singleton spend.
     assert item.bundle_coin_spends[test_coin.name()].supports_fast_forward
-    item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = test_unspent_lineage_info
+    item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = singleton_lineage_info(singleton_spend)
     internal_mempool_item = InternalMempoolItem(
         sb.aggregated_signature, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
     )
@@ -96,7 +91,7 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     )
     child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
     expected_fast_forward_spends = {
-        IDENTITY_PUZZLE_HASH: UnspentLineageInfo(
+        test_coin.puzzle_hash: UnspentLineageInfo(
             coin_id=child_coin.name(), parent_id=test_coin.name(), parent_parent_id=test_coin.parent_coin_info
         )
     }
