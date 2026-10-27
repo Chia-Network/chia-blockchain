@@ -302,7 +302,9 @@ class FarmerRpcApi:
         plot_count: int = 0
         for receiver in self.service.plot_sync_receivers.values():
             plot_count += sum(
-                plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash for plot in receiver.plots().values()
+                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
+                for plot in receiver.plots().values()
+                if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash
             )
         return plot_count
 

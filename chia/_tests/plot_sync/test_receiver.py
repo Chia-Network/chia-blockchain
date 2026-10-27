@@ -151,6 +151,8 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     await receiver.sync_done(PlotSyncDone(plot_sync_identifier(sender._sync_id, uint64(6)), uint64(0)))
 
     assert len(receiver.plots()) == 2
+    assert receiver.to_dict(True)["plots"] == 2
+    assert receiver.to_dict(True)["plot_count"] == 1 + (group_size if version == "0.0.39" else 1)
     assert receiver.total_plot_size() == 200
     assert receiver.total_effective_plot_size() == int(
         UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(synced_plots[0].param(), DEFAULT_CONSTANTS)
