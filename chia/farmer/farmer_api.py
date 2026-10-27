@@ -47,6 +47,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
+    is_v2_plot,
     verify_and_get_quality_string,
 )
 
@@ -322,10 +323,15 @@ class FarmerAPI:
                 for sk in self.farmer.get_private_keys():
                     pk = sk.get_g1()
                     if pk == response.farmer_pk:
-                        agg_pk = generate_plot_public_key(response.local_pk, pk, True)
+                        agg_pk = generate_plot_public_key(
+                            response.local_pk, pk, True, is_v2=is_v2_plot(new_proof_of_space.proof)
+                        )
                         assert agg_pk == new_proof_of_space.proof.plot_public_key
                         sig_farmer = AugSchemeMPL.sign(sk, m_to_sign, agg_pk)
-                        taproot_sk: PrivateKey = generate_taproot_sk(response.local_pk, pk)
+                        taproot_sk: PrivateKey
+                        taproot_sk = generate_taproot_sk(
+                            response.local_pk, pk, is_v2=is_v2_plot(new_proof_of_space.proof)
+                        )
                         taproot_sig: G2Element = AugSchemeMPL.sign(taproot_sk, m_to_sign, agg_pk)
 
                         plot_signature = AugSchemeMPL.aggregate(
@@ -885,7 +891,7 @@ class FarmerAPI:
             if plot_identifier == response.plot_identifier:
                 pospace = candidate_pospace
         assert pospace is not None
-        include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
+        include_taproot: bool = is_v2_plot(pospace) or pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = verify_and_get_quality_string(
             pospace,
@@ -910,10 +916,11 @@ class FarmerAPI:
             for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
-                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
+                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot, is_v2=is_v2_plot(pospace))
                     assert agg_pk == pospace.plot_public_key
                     if include_taproot:
-                        taproot_sk: PrivateKey = generate_taproot_sk(response.local_pk, pk)
+                        taproot_sk: PrivateKey
+                        taproot_sk = generate_taproot_sk(response.local_pk, pk, is_v2=is_v2_plot(pospace))
                         taproot_share_cc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, challenge_chain_sp, agg_pk)
                         taproot_share_rc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, reward_chain_sp, agg_pk)
                     else:
@@ -984,10 +991,10 @@ class FarmerAPI:
                 ) = response.message_signatures[1]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
-                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
+                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot, is_v2=is_v2_plot(pospace))
                     assert agg_pk == pospace.plot_public_key
                     if include_taproot:
-                        taproot_sk = generate_taproot_sk(response.local_pk, pk)
+                        taproot_sk = generate_taproot_sk(response.local_pk, pk, is_v2=is_v2_plot(pospace))
                         foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
                         foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
                             taproot_sk, foliage_transaction_block_hash, agg_pk

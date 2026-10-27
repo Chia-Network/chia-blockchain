@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from unittest.mock import AsyncMock
 
 import pytest
 from chia_rs import G2Element, Program
@@ -37,6 +38,8 @@ class MockWalletStateManager:
         ]
         | None
     ) = None
+
+    _add_subscriptions = AsyncMock()
 
     async def add_pending_transactions(
         self,

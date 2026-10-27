@@ -208,7 +208,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
         """
         try:
             await asyncio.wait_for(asyncio.gather(*self.futures), timeout=10)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning(f"Timed out waiting for DNS replies to be sent to {self.peer_info}.")
         if self.transport is not None:
             self.transport.close()
@@ -408,7 +408,11 @@ class DNSServer:
     async def periodically_get_reliable_peers(self) -> None:
         sleep_interval = 0
         while not self.shutdown_event.is_set() and self.crawl_store is not None:
-            await self.refresh_reliable_peers()
+            # This task is never awaited, so an escaping exception would silently stop all future refreshes.
+            try:
+                await self.refresh_reliable_peers()
+            except Exception as e:
+                log.error(f"Error refreshing reliable peers: {e}. Traceback: {traceback.format_exc()}.")
             sleep_interval = min(15, sleep_interval + 1)
             await asyncio.sleep(sleep_interval * 60)
 
@@ -440,7 +444,16 @@ class DNSServer:
                         log.warning(f"Not an IP address, trying to resolve {static_peer} to an IP address")
                         if self.resolver is not None:
                             for rdtype in ["A", "AAAA"]:
-                                result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
+                                # One unresolvable static peer (or one without AAAA records) must not
+                                # discard the other static peers and the crawler's good peers.
+                                try:
+                                    result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
+                                except Exception as e:
+                                    log.warning(
+                                        f"Unable to resolve {rdtype} records for static peer {static_peer}: "
+                                        f"{type(e).__name__}: {e}"
+                                    )
+                                    continue
                                 for ip in result:
                                     try:
                                         ip_as_string = ip.to_text()

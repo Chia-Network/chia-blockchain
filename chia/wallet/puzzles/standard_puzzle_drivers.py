@@ -66,13 +66,12 @@ class StandardPuzzle(PuzzleBase, Generic[_T_Puzzle]):
     def synthetic_public_key(self) -> G1Element:
         if self.pre_known_synthetic_public_key is None:
             assert self.pre_known_original_public_key is not None  # guarded by __post_init__
-            object.__setattr__(
-                self,
-                "pre_known_synthetic_public_key",
-                calculate_synthetic_public_key(self.pre_known_original_public_key, self.hidden_puzzle.tree_hash),
+            synth_pubkey = calculate_synthetic_public_key(
+                self.pre_known_original_public_key, self.hidden_puzzle.tree_hash
             )
-            assert self.pre_known_synthetic_public_key is not None
-        return self.pre_known_synthetic_public_key
+        else:
+            synth_pubkey = self.pre_known_synthetic_public_key
+        return synth_pubkey
 
     @property
     def program(self) -> Program:
@@ -91,10 +90,11 @@ class StandardPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             list_of_args = [arg for arg in unknown_puzzle.curried_args]
             if len(list_of_args) != 1:
                 return None
-            return StandardPuzzle(
-                pre_known_synthetic_public_key=G1Element.from_bytes(list_of_args[0].as_atom()),
-                hidden_puzzle=DefaultHiddenPuzzle(),
-            )
+            try:
+                synth_pubkey = G1Element.from_bytes(list_of_args[0].as_atom())
+            except Exception:
+                return None
+            return StandardPuzzle(pre_known_synthetic_public_key=synth_pubkey, hidden_puzzle=DefaultHiddenPuzzle())
         return None
 
     def hidden_puzzle_solution(

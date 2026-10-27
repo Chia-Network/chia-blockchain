@@ -1,6 +1,6 @@
 # Managed by repo-content-updater — composite action shipped to consumer repos.
 name: Trusted git path checkout
-description: Fetch a trusted branch ref over HTTPS Basic auth and checkout one repository path from FETCH_HEAD.
+description: Fetch a trusted branch ref over HTTPS Basic auth and checkout repository paths from FETCH_HEAD.
 inputs:
   token:
     description: GitHub token for git fetch (e.g. github.token)
@@ -20,6 +20,10 @@ inputs:
     description: Repository-relative manifest of paths (one per line); checked out with all listed paths
     required: false
     default: ""
+  dest:
+    description: Directory to extract trusted files into. When set, the PR working tree is not modified.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -31,6 +35,7 @@ runs:
         CHECKOUT_PATH: ${{ inputs.path }}
         CHECKOUT_PATHS: ${{ inputs.paths }}
         PATHS_MANIFEST: ${{ inputs.paths_manifest }}
+        CHECKOUT_DEST: ${{ inputs.dest }}
       run: |
         set -euo pipefail
         default_branch="${TRUSTED_REF}"
@@ -39,45 +44,86 @@ runs:
         auth_basic="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
         git -c "http.extraheader=AUTHORIZATION: basic ${auth_basic}" \
           fetch --no-tags --depth=1 origin "${default_branch}"
+
+        trim_line() {
+          local line="$1"
+          line="${line#"${line%%[![:space:]]*}"}"
+          line="${line%"${line##*[![:space:]]}"}"
+          printf '%s' "$line"
+        }
+
+        reject_unsafe_path() {
+          local trimmed="$1"
+          case "$trimmed" in
+          /*)
+            echo "Trusted checkout refused absolute path: ${trimmed}"
+            exit 1
+            ;;
+          esac
+          case "/${trimmed}/" in
+          */../*)
+            echo "Trusted checkout refused path traversal: ${trimmed}"
+            exit 1
+            ;;
+          esac
+        }
+
         checkout_targets=()
         if [ -n "${PATHS_MANIFEST//[[:space:]]/}" ]; then
-          checkout_targets+=("${PATHS_MANIFEST}")
-        fi
-        if [ -n "${CHECKOUT_PATHS//[[:space:]]/}" ]; then
-          while IFS= read -r line || [ -n "$line" ]; do
-            trimmed="${line#"${line%%[![:space:]]*}"}"
-            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-            [ -z "$trimmed" ] && continue
-            checkout_targets+=("$trimmed")
-          done <<< "${CHECKOUT_PATHS}"
-        elif [ -n "${CHECKOUT_PATH}" ]; then
-          checkout_targets+=("${CHECKOUT_PATH}")
-        fi
-        if [ "${#checkout_targets[@]}" -eq 0 ]; then
-          echo "Trusted checkout requires path, paths, or paths_manifest input."
-          exit 1
-        fi
-        if [ -n "${PATHS_MANIFEST//[[:space:]]/}" ]; then
-          mkdir -p "$(dirname "${PATHS_MANIFEST}")"
-          git checkout "FETCH_HEAD" -- "${PATHS_MANIFEST}"
-          if [ ! -f "${PATHS_MANIFEST}" ]; then
+          manifest_file="$(mktemp)"
+          if ! git show "FETCH_HEAD:${PATHS_MANIFEST}" >"$manifest_file"; then
+            rm -f "$manifest_file"
             echo "Trusted manifest missing on origin/${default_branch} at ${PATHS_MANIFEST}."
             exit 1
           fi
+          manifest_entries=0
           while IFS= read -r line || [ -n "$line" ]; do
-            trimmed="${line#"${line%%[![:space:]]*}"}"
-            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+            trimmed="$(trim_line "$line")"
             [ -z "$trimmed" ] && continue
+            reject_unsafe_path "$trimmed"
             checkout_targets+=("$trimmed")
-          done < "${PATHS_MANIFEST}"
-        fi
-        for script in "${checkout_targets[@]}"; do
-          mkdir -p "$(dirname "${script}")"
-        done
-        git checkout "FETCH_HEAD" -- "${checkout_targets[@]}"
-        for script in "${checkout_targets[@]}"; do
-          if [ ! -f "$script" ]; then
-            echo "Trusted file missing on origin/${default_branch} at ${script}."
+            manifest_entries=$((manifest_entries + 1))
+          done <"$manifest_file"
+          rm -f "$manifest_file"
+          if [ "$manifest_entries" -eq 0 ]; then
+            echo "Trusted paths manifest is empty or whitespace-only; refusing to leave PR-head scripts in place."
             exit 1
           fi
-        done
+        fi
+        if [ -n "${CHECKOUT_PATHS//[[:space:]]/}" ]; then
+          while IFS= read -r line || [ -n "$line" ]; do
+            trimmed="$(trim_line "$line")"
+            [ -z "$trimmed" ] && continue
+            reject_unsafe_path "$trimmed"
+            checkout_targets+=("$trimmed")
+          done <<<"${CHECKOUT_PATHS}"
+        elif [ -n "${CHECKOUT_PATH}" ]; then
+          reject_unsafe_path "${CHECKOUT_PATH}"
+          checkout_targets+=("${CHECKOUT_PATH}")
+        fi
+        if [ "${#checkout_targets[@]}" -eq 0 ]; then
+          echo "Trusted checkout requires path, paths, or a non-empty paths_manifest."
+          exit 1
+        fi
+
+        if [ -n "${CHECKOUT_DEST//[[:space:]]/}" ]; then
+          mkdir -p "${CHECKOUT_DEST}"
+          git archive "FETCH_HEAD" -- "${checkout_targets[@]}" | tar -x -C "${CHECKOUT_DEST}"
+          for script in "${checkout_targets[@]}"; do
+            if [ ! -f "${CHECKOUT_DEST}/${script}" ]; then
+              echo "Trusted file missing on origin/${default_branch} at ${script}."
+              exit 1
+            fi
+          done
+        else
+          for script in "${checkout_targets[@]}"; do
+            mkdir -p "$(dirname "${script}")"
+          done
+          git checkout "FETCH_HEAD" -- "${checkout_targets[@]}"
+          for script in "${checkout_targets[@]}"; do
+            if [ ! -f "$script" ]; then
+              echo "Trusted file missing on origin/${default_branch} at ${script}."
+              exit 1
+            fi
+          done
+        fi

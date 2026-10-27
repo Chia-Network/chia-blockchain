@@ -49,7 +49,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -404,7 +404,7 @@ class NFTWallet:
     ) -> None:
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
-        await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+        await self.wallet_state_manager._add_subscriptions([CoinSubscription(target=coin.name(), wallet_id=None)])
         async with sync_scope.use() as interface:
             interface.side_effects.websocket_events.append(
                 WebSocketEvent(name="nft_coin_added", wallet_id=self.wallet_info.id)

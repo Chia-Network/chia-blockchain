@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, final
 
 from aiohttp import (
     ClientResponseError,
@@ -25,7 +25,6 @@ from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from typing_extensions import final
 
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -380,7 +379,7 @@ class ChiaServer:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if connection is not None:
                 await connection.close(
                     self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_HANDSHAKE
@@ -494,7 +493,7 @@ class ChiaServer:
             except ClientResponseError as e:
                 self.log.warning(f"Connection failed to {url}. Error: {e}")
                 return False
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self.log.debug(f"Timeout error connecting to {url}")
                 return False
             if ws is None:
@@ -561,7 +560,7 @@ class ChiaServer:
                 self.log.debug(f"Feeler connection error. {e}")
             else:
                 self.log.info(f"{e}")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if connection is not None:
                 await connection.close()
             self.log.debug(f"Handshake timeout connecting to {target_node}")

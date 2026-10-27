@@ -18,7 +18,28 @@ from chia.simulator.block_tools import BlockTools
 
 # To generate the chains, run:
 
-# pytest -m build_test_chains
+# tools/pytest chia/_tests/blockchain/test_build_chains.py
+#
+# Persistent chain generation is excluded from the plot cache. Validation uses
+# the proofs embedded in these files. Per-test plot-cache recordings instead
+# capture the lookups needed by dynamically generated chains during tests.
+#
+# To populate ~/.chia/test-plots/plot_cache.pickle with broadly reused lookups
+# without running the whole suite, keep these targets' default parametrization:
+#
+# pytest \
+#   chia/_tests/core/full_node/test_prev_tx_block.py::test_post_hard_fork2_skips_slow_path_outside_fork_window \
+#   chia/_tests/core/test_full_node_rpc.py::test1 \
+#   chia/_tests/core/full_node/test_full_node.py::test_slot_catch_up_genesis \
+#   chia/_tests/core/full_node/stores/test_full_node_store.py::test_basic_store
+#
+# These cover default-seed transaction chains through a sub-epoch, simulator
+# farming and reorgs, skipped genesis slots, and custom-constant/normalized chains.
+# Most wallet tests use WalletBlockTools and do not perform plot lookups, and
+# validating pre-built chains needs no plot cache. Specialized forks/seeds can
+# still add entries during later test runs.
+# Successful finalization merges the per-test recordings; existing recordings
+# for other tests are retained. Keep plot_cache_tests/ alongside the shared cache.
 
 
 @pytest.mark.build_test_chains

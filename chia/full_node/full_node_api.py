@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from collections.abc import Collection, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import anyio
@@ -27,7 +27,6 @@ from chia_rs import (
     RewardChainBlockUnfinished,
     UnfinishedBlock,
     additions_and_removals,
-    get_flags_for_height_and_constants,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
@@ -43,7 +42,12 @@ from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    is_overflow_block,
+)
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -69,7 +73,6 @@ from chia.protocols.wallet_protocol import (
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -1079,12 +1082,18 @@ class FullNodeAPI:
                 self.log.warning(f"Value Error: {e}")
                 return None
 
+            if is_overflow_block(self.full_node.constants, request.signage_point_index):
+                # infused one sub-slot after the signage point; that end-of-sub-slot does not exist yet
+                sub_slots_since_prev = len(finished_sub_slots) + 1
+            else:
+                # infused in the signage point's sub-slot
+                sub_slots_since_prev = len(finished_sub_slots)
             tx_height = pre_sp_tx_block_height(
                 constants=self.full_node.constants,
                 blocks=self.full_node.blockchain,
                 prev_b_hash=self.full_node.constants.GENESIS_CHALLENGE if prev_b is None else prev_b.header_hash,
                 sp_index=request.signage_point_index,
-                finished_sub_slots=len(finished_sub_slots),
+                finished_sub_slots=sub_slots_since_prev,
             )
             quality_string: bytes32 | None = verify_and_get_quality_string(
                 request.proof_of_space,
@@ -1679,7 +1688,7 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: BlockInfo | None = await self.full_node.block_store.get_block_info(header_hash)
+        block: FullBlock | None = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or not block_has_transactions_generator(block):
             return reject_msg
@@ -1692,13 +1701,14 @@ class FullNodeAPI:
         # untrusted peers are deprioritized
         trusted = self.is_trusted(peer)
         try:
+            flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
             puzzle, solution = await self.full_node.pool.run_in_loop(
                 get_puzzle_and_solution_for_coin,
                 SerializedProgram.from_bytes(block_generator.program),
                 block_generator.generator_refs,
                 self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                get_flags_for_height_and_constants(height, self.full_node.constants),
+                flags,
                 nice=(5,) if trusted else (15,),
                 dedicated=trusted,
             )
@@ -2012,8 +2022,8 @@ class FullNodeAPI:
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_fee_estimates])
     async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
         def get_fee_estimates(est: FeeEstimatorInterface, req_times: list[uint64]) -> list[FeeEstimate]:
-            now = datetime.now(timezone.utc)
-            utc_time = now.replace(tzinfo=timezone.utc)
+            now = datetime.now(UTC)
+            utc_time = now.replace(tzinfo=UTC)
             utc_now = int(utc_time.timestamp())
             deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
             fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]

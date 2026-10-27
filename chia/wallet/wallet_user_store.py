@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import Self
+
 from chia_rs.sized_ints import uint32
-from typing_extensions import Self
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.util.wallet_types import WalletType

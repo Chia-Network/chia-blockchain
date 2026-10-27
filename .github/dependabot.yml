@@ -2,6 +2,13 @@
 # inline with the upstream template, unless you remove the dependabot managed file property from the repo
 
 version: 2
+registries:
+  chia-pypi:
+    type: python-index
+    url: https://pypi.chia.net/simple/
+  chia-downloads:
+    type: python-index
+    url: https://download.chia.net/simple/
 updates:
   - package-ecosystem: "gomod"
     directory: /
@@ -23,6 +30,10 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
+    registries:
+      - chia-pypi
+      - chia-downloads
+    insecure-external-code-execution: allow
     directory: /
     schedule:
       interval: "weekly"
@@ -50,7 +61,7 @@ updates:
       - dependencies
       - github_actions
       - "Changed"
-    reviewers: ["cmmarslender"]
+    reviewers: ["cameroncooper"]
 
   - package-ecosystem: "npm"
     directory: /

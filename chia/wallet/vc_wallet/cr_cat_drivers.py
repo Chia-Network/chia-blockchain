@@ -4,6 +4,7 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
+from typing import Self
 
 from chia_puzzles_py.programs import (
     CONDITIONS_W_FEE_ANNOUNCE,
@@ -18,7 +19,6 @@ from chia_puzzles_py.programs import (
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
-from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program

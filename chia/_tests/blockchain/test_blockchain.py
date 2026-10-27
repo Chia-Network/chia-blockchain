@@ -58,6 +58,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
@@ -492,6 +493,44 @@ class TestBlockHeaderValidation:
                 return None
 
             await _validate_and_add_block(blockchain, blocks[-1])
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0],
+        reason="moves HARD_FORK2_HEIGHT onto a chain built with HARD_FORK2_HEIGHT=0",
+    )
+    async def test_unf_block_overflow_version_at_hard_fork2(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+        # an unfinished overflow block that omits its final end-of-sub-slot must pass the header and body
+        # version checks at the same pre-SP transaction height
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(10, guarantee_transaction_block=True)
+        blocks = bt.get_consecutive_blocks(30, block_list_input=blocks, force_overflow=True)
+        for block in blocks:
+            await _validate_and_add_block(blockchain, block)
+
+        for block in blocks:
+            unf = make_unfinished_block(block, bt.constants)
+            if block_has_transactions_generator(block) or len(unf.finished_sub_slots) == len(block.finished_sub_slots):
+                continue
+            heights = [
+                pre_sp_tx_block_height(
+                    constants=bt.constants,
+                    blocks=blockchain,
+                    prev_b_hash=block.prev_header_hash,
+                    sp_index=block.reward_chain_block.signage_point_index,
+                    finished_sub_slots=len(sub_slots),
+                )
+                for sub_slots in (unf.finished_sub_slots, block.finished_sub_slots)
+            ]
+            if heights[0] < heights[1]:
+                break
+        else:
+            pytest.fail("no unfinished overflow block whose omitted end-of-sub-slot changes the pre-SP tx height")
+
+        # activate the hard fork between the two heights
+        blockchain.constants = blockchain.constants.replace(HARD_FORK2_HEIGHT=heights[1])
+        validate_res = await blockchain.validate_unfinished_block(unf, None)
+        assert validate_res.error is None
 
     @pytest.mark.anyio
     async def test_one_sb_per_two_slots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:

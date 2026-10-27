@@ -1,4 +1,4 @@
-name: 📦🚀 Build Installers - MacOS
+name: 📦 Build Installers - MacOS
 
 on:
   workflow_dispatch:

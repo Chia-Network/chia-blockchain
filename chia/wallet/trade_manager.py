@@ -43,7 +43,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_sync_scope import WalletSyncScope, WebSocketEvent
@@ -354,6 +354,12 @@ class TradeManager:
                         extra_conditions=(*extra_conditions, *announcement_conditions),
                     )
 
+                async with action_scope.use() as interface:
+                    interface.side_effects.puzzle_hash_subscriptions.extend(
+                        inner_action_scope.side_effects.puzzle_hash_subscriptions
+                    )
+                    interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
+
                 cancellation_additions.extend(
                     [
                         add
@@ -422,9 +428,10 @@ class TradeManager:
         offered_coins: set[Coin] = {value for values in offer.get_offered_coins().values() for value in values}
         non_offer_additions: set[Coin] = set(offer.additions()) ^ offered_coins
         non_offer_removals: set[Coin] = set(offer.removals()) ^ offered_coins
-        await self.wallet_state_manager.add_interested_coin_ids(
-            [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
-        )
+        async with action_scope.use() as interface:
+            interface.side_effects.coin_subscriptions.extend(
+                CoinSubscription(target=coin.name()) for coin in (*non_offer_removals, *non_offer_additions)
+            )
 
         action_scope.dispatch_websocket_event(self.wallet_state_manager, WebSocketEvent(name="offer_added"))
 
@@ -884,6 +891,10 @@ class TradeManager:
             interface.side_effects.get_unused_derivation_record_result = (
                 inner_action_scope.side_effects.get_unused_derivation_record_result
             )
+            interface.side_effects.puzzle_hash_subscriptions.extend(
+                inner_action_scope.side_effects.puzzle_hash_subscriptions
+            )
+            interface.side_effects.coin_subscriptions.extend(inner_action_scope.side_effects.coin_subscriptions)
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(

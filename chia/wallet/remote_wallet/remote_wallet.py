@@ -11,11 +11,14 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_sync_scope import WalletSyncScope
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 # The purpose of the remote wallet is to allow the WSM to get notifications about the remote coins.
@@ -25,7 +28,7 @@ class RemoteWallet:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[WalletProtocol] = cast("RemoteWallet", None)
 
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     remote_info: RemoteInfo
@@ -64,7 +67,9 @@ class RemoteWallet:
         return self
 
     @classmethod
-    async def create(cls, wallet_state_manager: Any, wallet: Wallet, wallet_info: WalletInfo) -> RemoteWallet:
+    async def create(
+        cls, wallet_state_manager: WalletStateManager, wallet: Wallet, wallet_info: WalletInfo
+    ) -> RemoteWallet:
         """
         Load an existing Remote wallet from the user store.
         """
@@ -80,7 +85,9 @@ class RemoteWallet:
         # remote coin updates continue to be associated with this wallet after restart.
         coin_ids = await self.wallet_state_manager.remote_coin_store.get_coin_ids(self.wallet_info.id)
         if len(coin_ids) > 0:
-            await self.wallet_state_manager.add_interested_coin_ids(coin_ids, [self.wallet_info.id])
+            await self.wallet_state_manager._add_subscriptions(
+                [CoinSubscription(target=coin_id, wallet_id=self.wallet_info.id) for coin_id in coin_ids]
+            )
 
         return self
 
@@ -103,7 +110,11 @@ class RemoteWallet:
 
         unique_coin_ids = list(dict.fromkeys(coin_ids))
         await self.wallet_state_manager.remote_coin_store.add_coin_ids(unique_coin_ids, self.wallet_info.id)
-        await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
+        # TODO: This method should probably take an action scope but it's a bit overkill for this use
+        # As part of research into initializing less comprehensive action scopes, this should be revisited.
+        await self.wallet_state_manager._add_subscriptions(
+            [CoinSubscription(target=coin_id, wallet_id=self.wallet_info.id) for coin_id in unique_coin_ids]
+        )
 
     # This is unused as we are using an SQL database for the coin info.
     # This is disabled currently, but could be enabled. See that we do not load in create()
