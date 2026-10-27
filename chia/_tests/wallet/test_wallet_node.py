@@ -85,6 +85,7 @@ async def wallet_node_and_keychain(
     key_path = root_path / full_config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / full_config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / full_config["private_ssl_ca"]["key"]
+    full_config["daemon_port"] = 0
     with Lockfile.create(daemon_launch_lock_path(root_path)):
         ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
         async with ws_server.run():
