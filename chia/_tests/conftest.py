@@ -676,7 +676,7 @@ def pytest_runtest_makereport(
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
-    if hasattr(session.config, "workerinput") or session.config.option.collectonly or exitstatus != 0:
+    if hasattr(session.config, "workerinput") or session.config.option.collectonly:
         return
     from chia._tests.util.plot_cache import CACHE_FILENAME, merge_test_caches
     from chia.util.default_root import DEFAULT_ROOT_PATH

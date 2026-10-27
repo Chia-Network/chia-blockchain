@@ -12,7 +12,6 @@ from chia_rs import (
     AugSchemeMPL,
     BlockBuilder,
     CoinSpend,
-    ConsensusConstants,
     FullBlock,
     G1Element,
     G2Element,
@@ -739,7 +738,18 @@ class TestMempoolManager:
         assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
+        # Extra outputs keep the fee rate lower even with HF2 interning.
+        sb4_1 = generate_test_spend_bundle(
+            wallet_a,
+            coin4,
+            fee=MEMPOOL_MIN_FEE_INCREASE,
+            condition_dic={
+                ConditionOpcode.CREATE_COIN: [
+                    ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes32([i] * 32), int_to_bytes(1)])
+                    for i in (1, 2, 3, 4)
+                ]
+            },
+        )
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
         await send_sb(full_node_1, dummy_peer, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
@@ -3324,7 +3334,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     ):
         try:
             get_puzzle_and_solution_for_coin(
-                SerializedProgram.to(None),
+                bytes(SerializedProgram.to(None)),
                 [],
                 test_constants.MAX_BLOCK_COST_CLVM,
                 TEST_COIN,
@@ -3769,11 +3779,10 @@ def test_create_block_generator2_spend_batch_cap(monkeypatch: pytest.MonkeyPatch
         self: BlockBuilder,
         bundles: Sequence[SpendBundle],
         cost: uint64,
-        constants: ConsensusConstants,
     ) -> tuple[bool, bool]:
         spend_count = sum(len(b.coin_spends) for b in bundles)
         batch_spend_counts.append(spend_count)
-        return original_add(self, bundles, cost, constants)
+        return original_add(self, bundles, cost)
 
     monkeypatch.setattr(BlockBuilder, "add_spend_bundles", recording_add)
 

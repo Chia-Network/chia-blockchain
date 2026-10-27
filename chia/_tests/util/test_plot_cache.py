@@ -2,15 +2,62 @@ from __future__ import annotations
 
 import pickle  # ruff: ignore[suspicious-pickle-import]
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 from chia_rs.sized_bytes import bytes32
 
 import chia._tests.util.plot_cache as pc
+from chia._tests import conftest as test_conftest
 from chia._tests.util import blockchain as chain_utils
 from chia.plotting.prover import V1Prover
+from chia.util import default_root
+
+
+@pytest.mark.parametrize("exitstatus", list(pytest.ExitCode))
+def test_session_finish_publishes_saved_recordings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, exitstatus: pytest.ExitCode
+) -> None:
+    monkeypatch.setattr(default_root, "DEFAULT_ROOT_PATH", tmp_path / "mainnet")
+    plot_dir = tmp_path / "test-plots"
+    directory = plot_dir / pc.TEST_CACHE_DIRECTORY
+    # A failed test retains its previous recording; a passing test replaces its own.
+    pc.save_test_cache(directory, "test.py::test_failed", ({(b"retained", b"challenge"): []}, {}, {}))
+    pc.save_test_cache(directory, "test.py::test_passed", ({(b"old", b"challenge"): []}, {}, {}))
+    destination = plot_dir / pc.CACHE_FILENAME
+    pc.merge_test_caches(directory, destination)
+    pc.save_test_cache(directory, "test.py::test_passed", ({(b"new", b"challenge"): []}, {}, {}))
+    session = cast(pytest.Session, SimpleNamespace(config=SimpleNamespace(option=SimpleNamespace(collectonly=False))))
+
+    test_conftest.pytest_sessionfinish(session, exitstatus)
+
+    assert pc._load_from_disk(destination) == (
+        {(b"retained", b"challenge"): [], (b"new", b"challenge"): []},
+        {},
+        {},
+    )
+
+
+@pytest.mark.parametrize(("worker", "collect_only"), [(True, False), (False, True), (True, True)])
+def test_session_finish_does_not_publish_from_worker_or_collection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, worker: bool, collect_only: bool
+) -> None:
+    monkeypatch.setattr(default_root, "DEFAULT_ROOT_PATH", tmp_path / "mainnet")
+    plot_dir = tmp_path / "test-plots"
+    pc.save_test_cache(
+        plot_dir / pc.TEST_CACHE_DIRECTORY, "test.py::test_saved", ({(b"plot", b"challenge"): []}, {}, {})
+    )
+    config = SimpleNamespace(option=SimpleNamespace(collectonly=collect_only))
+    if worker:
+        config.workerinput = {}
+
+    test_conftest.pytest_sessionfinish(
+        cast(pytest.Session, SimpleNamespace(config=config)), pytest.ExitCode.TESTS_FAILED
+    )
+
+    assert not (plot_dir / pc.CACHE_FILENAME).exists()
 
 
 def test_replacing_test_recording_shrinks_cache_and_retains_unrun_tests(tmp_path: Path) -> None:
