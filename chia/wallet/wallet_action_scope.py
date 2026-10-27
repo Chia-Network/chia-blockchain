@@ -223,13 +223,16 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
         child_seed: ChildSeed = ChildSeed(),
         parent_absorb: ParentAbsorb = ParentAbsorb(),
     ) -> AsyncIterator[Self]:
-        # build child side effects object
+        # Build child side effects object
         child_side_effects = WalletSideEffects()
-        async with self.use() as interface:  # Hold the parent so only the sandbox is active
-            for f in fields(child_seed):  # Bring specified parent effects down into the sandbox
+        # Hold the parent so only the sandbox is active
+        async with self.use() as interface:
+            # Bring specified parent effects down into the sandbox
+            for f in fields(child_seed):
                 if getattr(child_seed, f.name):
                     setattr(child_side_effects, f.name, getattr(interface.side_effects, f.name))
-            async with new_wallet_action_scope(  # create the sandbox
+            # Create the sandbox
+            async with new_wallet_action_scope(
                 wallet_state_manager,
                 tx_config=config_override if config_override is not None else self.config.tx_config,
                 push=False,
@@ -245,7 +248,8 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
                 inner = cast(Self, inner)
                 yield inner
 
-            for f in fields(parent_absorb):  # bubble sandbox effects up
+            # Bubble sandbox effects up
+            for f in fields(parent_absorb):
                 if getattr(parent_absorb, f.name):
                     sandbox_side_effect = getattr(inner.side_effects, f.name)
                     parent_side_effect = getattr(interface.side_effects, f.name)
