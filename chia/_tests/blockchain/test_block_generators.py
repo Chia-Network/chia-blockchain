@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import INTERNED_SPEND_LIST, FullBlock, get_flags_for_height_and_constants, tree_hash_2026
+from chia_rs import (
+    INTERNED_SPEND_LIST,
+    FullBlock,
+    get_flags_for_height_and_constants,
+    max_canonical_blob_size,
+    tree_hash_2026,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from pytest_mock import MockerFixture
@@ -167,9 +173,11 @@ def test_generator_root_activation() -> None:
     constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(10))
     legacy = solution_generator([])
     interned = solution_generator_2026([])
-    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants)) == std_hash(legacy)
+    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants), constants) == std_hash(
+        legacy
+    )
     root = tree_hash_2026(interned)
-    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants)) == root
+    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants), constants) == root
     assert root != std_hash(interned)
     assert validate_generator_root(interned, root, constants, uint32(10))
     assert not validate_generator_root(interned, std_hash(interned), constants, uint32(10))
@@ -181,8 +189,17 @@ def test_generator_root_ignores_interned_encoding() -> None:
     canonical = bytes.fromhex("fdff32303236 01 01 41 03 00 02 01")
     overlong = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
     assert std_hash(canonical) != std_hash(overlong)
-    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants))
+    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants), constants)
     assert validate_generator_root(overlong, root, constants, uint32(0))
+
+
+def test_generator_root_rejects_oversized_generator() -> None:
+    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0))
+    cap = max_canonical_blob_size(constants.MAX_BLOCK_COST_CLVM, constants.COST_PER_BYTE)
+    oversized = bytes(cap + 1)
+    with pytest.raises(ValueError, match="max_canonical_blob_size"):
+        compute_generator_root(oversized, get_flags_for_height_and_constants(0, constants), constants)
+    assert not validate_generator_root(oversized, bytes32.zeros, constants, uint32(0))
 
 
 @pytest.mark.parametrize(

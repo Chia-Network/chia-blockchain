@@ -4127,7 +4127,7 @@ class TestReorgs:
         block = recursive_replace(
             block,
             "transactions_info.generator_root",
-            compute_generator_root(generator_bytes, flags),
+            compute_generator_root(generator_bytes, flags, bt.constants),
         )
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
