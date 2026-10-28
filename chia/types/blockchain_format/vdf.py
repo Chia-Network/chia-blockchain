@@ -34,8 +34,7 @@ def verify_vdf(
     discriminant_size: int,
     witness_type: uint8,
 ) -> bool:
-    # TODO: chiavdf needs hinted
-    return verify_n_wesolowski(  # type:ignore[no-any-return]
+    return verify_n_wesolowski(
         str(disc),
         input_el,
         output,

@@ -59,15 +59,12 @@ class BlueboxProcessData(Streamable):
 def prove_bluebox_slow(payload: bytes, executor_shutdown_tempfile_name: str) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
-    return cast(
-        bytes,
-        prove(
-            bluebox_process_data.challenge,
-            initial_el,
-            bluebox_process_data.size_bits,
-            bluebox_process_data.iters,
-            executor_shutdown_tempfile_name,
-        ),
+    return prove(
+        bluebox_process_data.challenge,
+        initial_el,
+        bluebox_process_data.size_bits,
+        bluebox_process_data.iters,
+        executor_shutdown_tempfile_name,
     )
 
 
@@ -983,7 +980,7 @@ class Timelord:
         # Labels a proof to the current state only
         proof_label: int | None = None,
     ) -> None:
-        disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
+        disc: str = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
             # Depending on the flag 'bluebox_mode', the timelord tells the vdf_client what to execute.
