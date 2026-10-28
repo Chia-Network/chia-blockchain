@@ -1714,14 +1714,14 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
 name = "concurrent-log-handler"
-version = "0.9.29"
+version = "0.9.30"
 description = "RotatingFileHandler replacement with concurrency, gzip and Windows support. Size and time based rotation."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "concurrent_log_handler-0.9.29-py3-none-any.whl", hash = "sha256:0d6c077fbaef2dae49a25975dcf72a602fe0a6a4ce80a3b7c37696d37e10459a"},
-    {file = "concurrent_log_handler-0.9.29.tar.gz", hash = "sha256:bc37a76d3f384cbf4a98f693ebd770543edc0f4cd5c6ab6bc70e9e1d7d582265"},
+    {file = "concurrent_log_handler-0.9.30-py3-none-any.whl", hash = "sha256:50c4c377d57d0f03743c923dfaed53fbd8c85617cbb7f40ed92b7144f49ea895"},
+    {file = "concurrent_log_handler-0.9.30.tar.gz", hash = "sha256:163c97f72efce386065bf58b9d73a17c45f6d626c067c5f1fdb442184ee4c435"},
 ]
 
 [package.dependencies]
@@ -5388,4 +5388,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <4"
-content-hash = "468ef81de25b0bdd675cc0c7870a436111b6e2c1d2ea0d46e602435b65069ca1"
+content-hash = "fb439ef40a581bd9af5ecf5df886329af570e9e2614d4d15ac90aa749a23af4d"
