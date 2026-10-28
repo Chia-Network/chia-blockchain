@@ -535,7 +535,7 @@ class CATWallet:
                             success = await RCATWallet.convert_to_revocable(
                                 found_cat_wallet,
                                 # too complicated for mypy but semantics guarantee this not to be None
-                                hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                                hidden_puzzle_hash=revocation_layer_match.hidden_puzzle.tree_hash,  # type: ignore[union-attr]
                             )
                             if success:
                                 async with sync_scope.use() as interface:
@@ -567,7 +567,7 @@ class CATWallet:
                         wallet_state_manager.main_wallet,
                         parent_data.tail_program_hash,
                         # too complicated for mypy but semantics guarantee this not to be None
-                        hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                        hidden_puzzle_hash=revocation_layer_match.hidden_puzzle.tree_hash,  # type: ignore[union-attr]
                     )
                 else:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
