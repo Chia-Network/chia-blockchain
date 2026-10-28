@@ -338,7 +338,7 @@ class VCWallet:
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
-        )
+        ).program
         did_announcement, coin_spend, _vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:

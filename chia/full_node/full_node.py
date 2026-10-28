@@ -50,10 +50,11 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.generator_validation import validate_generator_root
 from chia.consensus.get_block_challenge import (
-    get_unfinished_block_finished_sub_slots,
     post_hard_fork2_block_record,
     pre_sp_tx_block_height,
+    unfinished_block_sub_slots,
 )
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -100,7 +101,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -2337,9 +2337,17 @@ class FullNode:
                 # If the block arrived with a generator, reject it if it doesn't match generator_root
                 # before replacing it with the cached one.
                 incoming_generator = get_transactions_generator_bytes(block)
-                if (
-                    incoming_generator is not None
-                    and std_hash(incoming_generator) != block.transactions_info.generator_root
+                if incoming_generator is not None and not validate_generator_root(
+                    incoming_generator,
+                    block.transactions_info.generator_root,
+                    self.constants,
+                    pre_sp_tx_block_height(
+                        constants=self.constants,
+                        blocks=self.blockchain,
+                        prev_b_hash=block.prev_header_hash,
+                        sp_index=block.reward_chain_block.signage_point_index,
+                        finished_sub_slots=len(block.finished_sub_slots),
+                    ),
                 ):
                     raise ConsensusError(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
                 block = block.replace(
@@ -2635,18 +2643,13 @@ class FullNode:
         else:
             prev_b = self.blockchain.block_record(block.prev_header_hash)
 
-        sub_slot_iters = get_next_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(block.finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
-        )[0]
-        finished_sub_slots = get_unfinished_block_finished_sub_slots(
-            self.constants,
-            self.blockchain,
-            block,
-            sub_slot_iters,
         )
+        finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
         prev_tx_height = pre_sp_tx_block_height(
             self.constants,
             self.blockchain,
@@ -2800,13 +2803,6 @@ class FullNode:
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
                 f"{percent_full_str}"
             )
-
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants,
-            len(block.finished_sub_slots) > 0,
-            prev_b,
-            self.blockchain,
-        )
 
         if block.reward_chain_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_block.pos_ss_cc_challenge_hash)

@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -199,20 +198,18 @@ def pre_sp_tx_block_height(
     return latest_tx_block.height
 
 
-def get_unfinished_block_finished_sub_slots(
+def unfinished_block_sub_slots(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     block: UnfinishedHeaderBlock | UnfinishedBlock,
     sub_slot_iters: uint64,
 ) -> int:
-    finished_sub_slots = len(block.finished_sub_slots)
-    if is_overflow_block(constants, block.reward_chain_block.signage_point_index) and (
-        block.prev_header_hash == constants.GENESIS_CHALLENGE
-        or not final_eos_is_already_included(block, blocks, sub_slot_iters)
-    ):
-        finished_sub_slots += 1
-
-    return finished_sub_slots
+    """Sub-slots crossed since the previous block's infusion."""
+    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    if overflow and not final_eos_is_already_included(block, blocks, sub_slot_iters):
+        # the signage point sub-slot's end-of-sub-slot is not included yet
+        return len(block.finished_sub_slots) + 1
+    return len(block.finished_sub_slots)
 
 
 def get_filter_challenge_from_chain(
@@ -226,7 +223,7 @@ def get_filter_challenge_from_chain(
 
     Returns the cc sub-slot challenge hash of a previously completed sub-slot
     """
-    sub_slots_back = 2 if signage_point_index < FILTER_WINDOW_SIZE else 1
+    sub_slots_back = 2 if signage_point_index < constants.FILTER_WINDOW_SIZE else 1
 
     # Collect sub-slot challenge hashes newest-first
     reversed_challenges: list[bytes32] = []

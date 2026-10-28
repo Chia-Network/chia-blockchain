@@ -2,12 +2,259 @@ from __future__ import annotations
 
 import pickle  # ruff: ignore[suspicious-pickle-import]
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
+import pytest
+from chia_rs import PartialProof
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint64
 
 import chia._tests.util.plot_cache as pc
-from chia.plotting.prover import V1Prover
+from chia._tests import conftest as test_conftest
+from chia._tests.util import blockchain as chain_utils
+from chia.plotting.prover import V1Prover, V2Prover, V2Quality
+from chia.util import default_root
+
+
+@pytest.mark.parametrize("exitstatus", list(pytest.ExitCode))
+def test_session_finish_publishes_saved_recordings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, exitstatus: pytest.ExitCode
+) -> None:
+    monkeypatch.setattr(default_root, "DEFAULT_ROOT_PATH", tmp_path / "mainnet")
+    plot_dir = tmp_path / "test-plots"
+    directory = plot_dir / pc.TEST_CACHE_DIRECTORY
+    # A failed test retains its previous recording; a passing test replaces its own.
+    pc.save_test_cache(directory, "test.py::test_failed", ({(b"retained", b"challenge"): []}, {}, {}))
+    pc.save_test_cache(directory, "test.py::test_passed", ({(b"old", b"challenge"): []}, {}, {}))
+    destination = plot_dir / pc.CACHE_FILENAME
+    pc.merge_test_caches(directory, destination)
+    pc.save_test_cache(directory, "test.py::test_passed", ({(b"new", b"challenge"): []}, {}, {}))
+    session = cast(pytest.Session, SimpleNamespace(config=SimpleNamespace(option=SimpleNamespace(collectonly=False))))
+
+    test_conftest.pytest_sessionfinish(session, exitstatus)
+
+    assert pc._load_from_disk(destination) == (
+        {(b"retained", b"challenge"): [], (b"new", b"challenge"): []},
+        {},
+        {},
+    )
+
+
+@pytest.mark.parametrize(("worker", "collect_only"), [(True, False), (False, True), (True, True)])
+def test_session_finish_does_not_publish_from_worker_or_collection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, worker: bool, collect_only: bool
+) -> None:
+    monkeypatch.setattr(default_root, "DEFAULT_ROOT_PATH", tmp_path / "mainnet")
+    plot_dir = tmp_path / "test-plots"
+    pc.save_test_cache(
+        plot_dir / pc.TEST_CACHE_DIRECTORY, "test.py::test_saved", ({(b"plot", b"challenge"): []}, {}, {})
+    )
+    config = SimpleNamespace(option=SimpleNamespace(collectonly=collect_only))
+    if worker:
+        config.workerinput = {}
+
+    test_conftest.pytest_sessionfinish(
+        cast(pytest.Session, SimpleNamespace(config=config)), pytest.ExitCode.TESTS_FAILED
+    )
+
+    assert not (plot_dir / pc.CACHE_FILENAME).exists()
+
+
+def test_replacing_test_recording_shrinks_cache_and_retains_unrun_tests(tmp_path: Path) -> None:
+    directory = tmp_path / pc.TEST_CACHE_DIRECTORY
+    destination = tmp_path / pc.CACHE_FILENAME
+    destination.write_bytes(pickle.dumps(({(b"stale", b"challenge"): []}, {}, {})))
+    first = "test_file.py::test_proofs[first]"
+    second = "test_file.py::test_proofs[second]"
+    pc.save_test_cache(directory, first, ({(b"old", b"challenge"): []}, {}, {}))
+    pc.save_test_cache(directory, second, ({}, {}, {(b"partial", b"plot"): b"proof"}))
+    pc.merge_test_caches(directory, destination)
+    pc.save_test_cache(directory, first, ({(b"new", b"challenge"): []}, {}, {}))
+    pc.merge_test_caches(directory, destination)
+    assert pc._load_from_disk(destination) == ({(b"new", b"challenge"): []}, {}, {(b"partial", b"plot"): b"proof"})
+    assert len(list(directory.glob("*.pickle"))) == 2
+    # A test that stops using plots must remove its previous entries as well.
+    pc.save_test_cache(directory, first, ({}, {}, {}))
+    pc.save_test_cache(directory, second, ({}, {}, {}))
+    pc.merge_test_caches(directory, destination)
+    assert pc._load_from_disk(destination) == ({}, {}, {})
+
+
+def test_no_recordings_preserves_existing_cache(tmp_path: Path) -> None:
+    destination = tmp_path / pc.CACHE_FILENAME
+    destination.write_bytes(b"existing")
+    pc.merge_test_caches(tmp_path / "missing", destination)
+    assert destination.read_bytes() == b"existing"
+
+
+def test_pruning_preserves_uncollected_tests(tmp_path: Path) -> None:
+    for name in ("test_first.py", "test_second.py"):
+        (tmp_path / name).touch()
+    directory = tmp_path / pc.TEST_CACHE_DIRECTORY
+    keep = "test_first.py::test_proofs[keep]"
+    removed = "test_first.py::test_proofs[removed]"
+    uncollected = "test_second.py::test_other"
+    deleted = "test_deleted.py::test_other"
+    for nodeid in (keep, removed, uncollected, deleted):
+        pc.save_test_cache(directory, nodeid, ({(nodeid.encode(), b"challenge"): []}, {}, {}))
+    pc.prune_test_caches(directory, {keep}, tmp_path, files={"test_first.py"})
+    assert pc.test_cache_path(directory, keep).exists()
+    assert pc.test_cache_path(directory, uncollected).exists()
+    assert not pc.test_cache_path(directory, removed).exists()
+    assert not pc.test_cache_path(directory, deleted).exists()
+
+
+@pytest.mark.parametrize("contents", [b"corrupt", b"", pickle.dumps(("test.py::test_bad", ({}, {})))])
+def test_invalid_recording_does_not_fail_merge(tmp_path: Path, contents: bytes) -> None:
+    directory = tmp_path / pc.TEST_CACHE_DIRECTORY
+    pc.save_test_cache(directory, "test.py::test_good", ({(b"plot", b"challenge"): []}, {}, {}))
+    pc.test_cache_path(directory, "test.py::test_bad").write_bytes(contents)
+    # Leftover temporary files from interrupted writers are not inputs.
+    (directory / "interrupted.pickle.tmp").write_bytes(b"incomplete")
+    destination = tmp_path / pc.CACHE_FILENAME
+    pc.merge_test_caches(directory, destination)
+    assert pc._load_from_disk(destination) == ({(b"plot", b"challenge"): []}, {}, {})
+
+
+def test_recording_captures_hits_misses_and_empty_qualities(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pc, "_qualities", {})
+    monkeypatch.setattr(pc, "_full_proofs", {})
+    monkeypatch.setattr(pc, "_solve_proofs", {})
+    inner = MagicMock()
+    plot_id, challenge = bytes32(b"p" * 32), bytes32(b"c" * 32)
+    inner.get_id.return_value = plot_id
+    inner.get_qualities_for_challenge.return_value = []
+    inner.get_full_proof.return_value = b"proof"
+    prover = V1Prover(inner)
+    partial = MagicMock()
+    partial.to_bytes.return_value = b"partial"
+    solve = MagicMock(return_value=b"solved")
+    monkeypatch.setattr(pc, "_orig_solve_proof", solve)
+    for _ in range(2):
+        # The second test gets only hits and must still record all three tables.
+        with pc.record_test() as recorded:
+            assert prover.get_qualities_for_challenge(challenge) == []
+            assert prover.get_full_proof(challenge, 0) == b"proof"
+            assert pc.cached_solve_proof(partial, plot_id, 1, 20) == b"solved"
+        assert recorded == (
+            {(plot_id, challenge): []},
+            {(plot_id, challenge, 0): b"proof"},
+            {(b"partial", plot_id): b"solved"},
+        )
+    inner.get_qualities_for_challenge.assert_called_once()
+    inner.get_full_proof.assert_called_once()
+    solve.assert_called_once_with(partial, plot_id, 1, 20)
+
+
+@pytest.mark.parametrize("legacy_cache", ["none", "partial", "indexed", "empty"])
+@pytest.mark.parametrize("empty", [False, True])
+def test_v2_recording_roundtrip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy_cache: str, empty: bool
+) -> None:
+    group_id, challenge = bytes32(b"g" * 32), bytes32(b"c" * 32)
+    meta_group = 1
+    key = (group_id, meta_group, challenge)
+    partial = PartialProof([uint64(1)] * 16)
+    # The same partial proof can belong to different members of a group.
+    indices = [] if empty else [uint16(3), uint16(7)]
+    expected = [V2Quality(partial, index, uint8(2)) for index in indices]
+    serialized = [(index, partial.to_bytes()) for index in indices]
+    legacy_values = {"partial": [partial.to_bytes()], "indexed": [(uint16(9), partial.to_bytes())], "empty": []}
+    monkeypatch.setattr(
+        pc, "_qualities", {} if legacy_cache == "none" else {(group_id, challenge): legacy_values[legacy_cache]}
+    )
+    monkeypatch.setattr(pc, "_full_proofs", {})
+    monkeypatch.setattr(pc, "_solve_proofs", {})
+    inner = MagicMock()
+    inner.plot_group_id.return_value = group_id
+    inner.get_meta_group.return_value = meta_group
+    inner.get_strength.return_value = 2
+    inner.get_qualities_for_challenge.return_value = [
+        SimpleNamespace(chain=partial, plot_index=index) for index in indices
+    ]
+    prover = V2Prover(inner)
+    directory = tmp_path / pc.TEST_CACHE_DIRECTORY
+    for run in range(2):
+        # The second run must record disk-cache hits, including empty results.
+        with pc.record_test() as recorded:
+            assert prover.get_qualities_for_challenge(challenge) == expected
+        assert recorded == ({key: serialized}, {}, {})
+        pc.save_test_cache(directory, f"test.py::test_group[{run}]", recorded)
+        pc.merge_test_caches(directory, tmp_path / pc.CACHE_FILENAME)
+        pc._qualities.clear()
+        pc.load(tmp_path)
+        assert pc._qualities == {key: serialized}
+    inner.get_qualities_for_challenge.assert_called_once_with(challenge)
+
+
+def test_solved_proofs_recorded_separately_for_group_members(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pc, "_solve_proofs", {})
+    partial = PartialProof([uint64(1)] * 16)
+    first, second = bytes32(b"a" * 32), bytes32(b"b" * 32)
+    solve = MagicMock(side_effect=[b"first proof", b"second proof"])
+    monkeypatch.setattr(pc, "_orig_solve_proof", solve)
+    for _ in range(2):
+        with pc.record_test() as recorded:
+            assert pc.cached_solve_proof(partial, first, 2, 20) == b"first proof"
+            assert pc.cached_solve_proof(partial, second, 2, 20) == b"second proof"
+        assert recorded == (
+            {},
+            {},
+            {(partial.to_bytes(), first): b"first proof", (partial.to_bytes(), second): b"second proof"},
+        )
+    assert solve.call_count == 2
+
+
+@pytest.mark.parametrize("different_group", [False, True])
+@pytest.mark.parametrize("first_empty", [False, True])
+def test_v2_qualities_cache_identity(monkeypatch: pytest.MonkeyPatch, different_group: bool, first_empty: bool) -> None:
+    monkeypatch.setattr(pc, "_qualities", {})
+    challenge = bytes32(b"c" * 32)
+    first_group = bytes32(b"a" * 32)
+    second_group = bytes32(b"b" * 32) if different_group else first_group
+    identities = [(first_group, 0), (second_group, 0 if different_group else 1)]
+    provers = []
+    inner_provers = []
+    expected = []
+    for i, (group_id, meta_group) in enumerate(identities):
+        partial = PartialProof([uint64(i + 1)] * 16)
+        qualities = [] if i == 0 and first_empty else [V2Quality(partial, uint16(3), uint8(2))]
+        inner = MagicMock()
+        inner.plot_group_id.return_value = group_id
+        inner.get_meta_group.return_value = meta_group
+        inner.get_strength.return_value = 2
+        inner.get_qualities_for_challenge.return_value = [
+            SimpleNamespace(chain=q.get_partial_proof(), plot_index=q.get_plot_index()) for q in qualities
+        ]
+        provers.append(V2Prover(inner))
+        inner_provers.append(inner)
+        expected.append(qualities)
+
+    for _ in range(2):
+        for prover, qualities in zip(provers, expected):
+            assert prover.get_qualities_for_challenge(challenge) == qualities
+    for inner in inner_provers:
+        inner.get_qualities_for_challenge.assert_called_once_with(challenge)
+
+
+def test_persistent_chain_generation_is_not_recorded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.setattr(chain_utils, "DEFAULT_ROOT_PATH", tmp_path / "mainnet")
+    bt = MagicMock()
+
+    def generate(*args: Any, **kwargs: Any) -> list[bytes]:
+        pc._record_lookup(0, (b"generation-only", b"challenge"), [])
+        return [b"block"]
+
+    bt.get_consecutive_blocks.side_effect = generate
+    with pc.record_test() as recorded:
+        chain_utils.persistent_blocks(1, "chain.db", bt)
+        pc._record_lookup(0, (b"dynamic", b"challenge"), [])
+    assert recorded == ({(b"dynamic", b"challenge"): []}, {}, {})
+    assert (tmp_path / "blocks" / "chain.db").exists()
+    assert not list((tmp_path / "blocks").glob("*.plot-cache.pickle"))
 
 
 class TestLoadFromDisk:
@@ -41,60 +288,25 @@ class TestLoadFromDisk:
 
 
 class TestLoad:
-    def test_missing_directory(self, tmp_path: Path) -> None:
-        old_cache_path = pc._cache_path
-        try:
-            pc.load(tmp_path / "does_not_exist")
-            assert pc._cache_path == old_cache_path
-        finally:
-            pc._cache_path = old_cache_path
+    def test_missing_directory(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(pc, "_qualities", {})
+        monkeypatch.setattr(pc, "_full_proofs", {})
+        monkeypatch.setattr(pc, "_solve_proofs", {})
+        pc.load(tmp_path / "does_not_exist")
+        assert (pc._qualities, pc._full_proofs, pc._solve_proofs) == ({}, {}, {})
 
     def test_loads_entries(self, tmp_path: Path) -> None:
         cache_file = tmp_path / pc.CACHE_FILENAME
         qualities = {(b"id1", b"ch1"): [b"q1"]}
         cache_file.write_bytes(pickle.dumps((qualities, {}, {})))
 
-        old_cache_path = pc._cache_path
         old_qualities = dict(pc._qualities)
         try:
             pc.load(tmp_path)
             assert (b"id1", b"ch1") in pc._qualities
         finally:
-            pc._cache_path = old_cache_path
             pc._qualities.clear()
             pc._qualities.update(old_qualities)
-
-
-class TestSave:
-    def test_no_misses_skips_write(self, tmp_path: Path) -> None:
-        old = pc._misses, pc._cache_path
-        try:
-            pc._misses = 0
-            pc._cache_path = tmp_path / pc.CACHE_FILENAME
-            pc._save()
-            assert not pc._cache_path.exists()
-        finally:
-            pc._misses, pc._cache_path = old
-
-    def test_merges_with_existing(self, tmp_path: Path) -> None:
-        cache_file = tmp_path / pc.CACHE_FILENAME
-        existing = {(b"old_plot", b"old_ch"): [b"old_q"]}
-        cache_file.write_bytes(pickle.dumps((existing, {}, {})))
-
-        old = pc._misses, pc._cache_path, dict(pc._qualities)
-        try:
-            pc._misses = 1
-            pc._cache_path = cache_file
-            pc._qualities[b"new_plot", b"new_ch"] = [b"new_q"]
-            pc._save()
-
-            q, _fp, _sp = pc._load_from_disk(cache_file)
-            assert (b"old_plot", b"old_ch") in q
-            assert (b"new_plot", b"new_ch") in q
-        finally:
-            pc._misses, pc._cache_path = old[0], old[1]
-            pc._qualities.clear()
-            pc._qualities.update(old[2])
 
 
 class TestInstall:

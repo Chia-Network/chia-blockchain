@@ -40,8 +40,8 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.generator_validation import validate_tx_generator
-from chia.consensus.get_block_challenge import get_unfinished_block_finished_sub_slots, pre_sp_tx_block_height
+from chia.consensus.generator_validation import validate_generator_root, validate_tx_generator
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height, unfinished_block_sub_slots
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.blockchain_format.coin import Coin
@@ -50,7 +50,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.priority_thread_pool_executor import Executor
 
@@ -413,6 +412,7 @@ class Blockchain:
             block.height,
             pre_validation_result.conds,
             fork_info,
+            finished_sub_slots=len(block.finished_sub_slots),
             log_coins=self._log_coins,
         )
         if error_code is not None:
@@ -740,11 +740,9 @@ class Blockchain:
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants, len(block.finished_sub_slots) > 0, prev_b, self
         )
-        finished_sub_slots = (
-            get_unfinished_block_finished_sub_slots(self.constants, self, block, sub_slot_iters)
-            if skip_overflow_ss_validation
-            else len(block.finished_sub_slots)
-        )
+        finished_sub_slots = len(block.finished_sub_slots)
+        if skip_overflow_ss_validation:
+            finished_sub_slots = unfinished_block_sub_slots(self.constants, self, block, sub_slot_iters)
         prev_tx_height = pre_sp_tx_block_height(
             constants=self.constants,
             blocks=self,
@@ -764,7 +762,9 @@ class Blockchain:
         if block.transactions_info is not None:
             generator_bytes = get_transactions_generator_bytes(block)
             if generator_bytes is not None:
-                if std_hash(generator_bytes) != block.transactions_info.generator_root:
+                if not validate_generator_root(
+                    generator_bytes, block.transactions_info.generator_root, self.constants, prev_tx_height
+                ):
                     return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
             elif block.transactions_info.generator_root != bytes([0] * 32):
                 return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -790,7 +790,6 @@ class Blockchain:
             block.foliage_transaction_block,
             b"",
         )
-        prev_b = self.try_block_record(unfinished_header_block.prev_header_hash)
         expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,
@@ -820,6 +819,13 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
+        # count the sub-slots the same way as validate_unfinished_block_header
+        finished_sub_slots = len(block.finished_sub_slots)
+        if skip_overflow_ss_validation:
+            sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+                self.constants, len(block.finished_sub_slots) > 0, self.try_block_record(block.prev_header_hash), self
+            )
+            finished_sub_slots = unfinished_block_sub_slots(self.constants, self, block, sub_slot_iters)
         error_code = await validate_block_body(
             self.constants,
             self,
@@ -828,6 +834,7 @@ class Blockchain:
             uint32(prev_height + 1),
             conds,
             fork_info,
+            finished_sub_slots=finished_sub_slots,
             log_coins=self._log_coins,
         )
 

@@ -168,7 +168,7 @@ async def summary(
                 else:
                     total_plot_size_harvester = harvester_dict["total_plot_size"]
                     total_effective_plot_size_harvester = harvester_dict["total_effective_plot_size"]
-                    plot_count_harvester = harvester_dict["plots"]
+                    plot_count_harvester = harvester_dict.get("plot_count", harvester_dict["plots"])
                     PlotStats.total_plot_size += total_plot_size_harvester
                     PlotStats.total_effective_plot_size += total_effective_plot_size_harvester
                     PlotStats.total_plots += plot_count_harvester

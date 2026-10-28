@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from chia_rs import get_spends_for_trusted_block, solution_generator_2026
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -127,3 +129,32 @@ def test_generator_ref() -> None:
     cat_list = run_json_block(full_block, dirname, constants)
 
     assert cat_list == []
+
+
+@pytest.mark.parametrize("filename", ["1315630.json", "1315544.json", "1315537.json"])
+def test_hf2_generator(filename: str) -> None:
+    dirname = Path(__file__).parent
+    full_block = json.loads((dirname / filename).read_text())
+    expected = run_json_block(full_block, dirname, constants)
+    assert expected
+
+    block = full_block["block"]
+    spends = get_spends_for_trusted_block(
+        constants, bytes.fromhex(block["transactions_generator"].removeprefix("0x")), [], 0
+    )["block_spends"]
+    block["transactions_generator_buffer"] = (
+        "0x" + solution_generator_2026([(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spends]).hex()
+    )
+    block["transactions_generator"] = None
+    block["version"] = 1
+    block["transactions_info"]["cost"] = constants.MAX_BLOCK_COST_CLVM
+
+    assert run_json_block(full_block, dirname, constants) == expected
+
+
+def test_hf2_block_no_generator() -> None:
+    dirname = Path(__file__).parent
+    full_block = json.loads((dirname / "300000.json").read_text())
+    full_block["block"]["version"] = 1
+    full_block["block"]["transactions_generator_buffer"] = None
+    assert run_json_block(full_block, dirname, constants) == []

@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 
 from chia_rs import (
+    INTERNED_SPEND_LIST,
     BlockRecord,
     CoinRecord,
     ConsensusConstants,
@@ -14,6 +15,7 @@ from chia_rs import (
     UnfinishedBlock,
     check_time_locks,
     compute_merkle_set_root,
+    get_flags_for_height_and_constants,
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
@@ -27,7 +29,11 @@ from chia.consensus.block_generator_info import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.generator_validation import validate_generator_ref_list, validate_tx_generator
+from chia.consensus.generator_validation import (
+    validate_generator_ref_list,
+    validate_generator_root,
+    validate_tx_generator,
+)
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
@@ -201,6 +207,7 @@ async def validate_block_body(
     conds: SpendBundleConditions | None,
     fork_info: ForkInfo,
     *,
+    finished_sub_slots: int,
     log_coins: bool = False,
 ) -> Err | None:
     """
@@ -214,6 +221,8 @@ async def validate_block_body(
     fork_info specifies the fork context of this block. In case the block
         extends the main chain, it can be empty, but if the block extends a fork
         of the main chain, the fork info is mandatory in order to validate the block.
+    finished_sub_slots is the number of sub-slots crossed since the previous block's infusion. An unfinished
+        overflow block may omit the last one (see unfinished_block_sub_slots).
     """
     if isinstance(block, FullBlock):
         assert height == block.height
@@ -225,7 +234,7 @@ async def validate_block_body(
         blocks=records,
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(block.finished_sub_slots),
+        finished_sub_slots=finished_sub_slots,
     )
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
@@ -352,11 +361,13 @@ async def validate_block_body(
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
-    # 7a. The generator root must be the hash of the serialized bytes of
-    #     the generator for this block (or zeroes if no generator)
+    # 7a. Commit to the interned tree after activation, serialized bytes before
+    #     activation, or zeroes if there is no generator.
     generator_bytes = get_transactions_generator_bytes(block)
     if generator_bytes is not None:
-        if std_hash(generator_bytes) != block.transactions_info.generator_root:
+        if not validate_generator_root(
+            generator_bytes, block.transactions_info.generator_root, constants, pre_sp_tx_height
+        ):
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
     elif block.transactions_info.generator_root != bytes([0] * 32):
         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -387,7 +398,11 @@ async def validate_block_body(
         if not conds.validated_signature:
             log.info(f"block body validation proceeding without validated aggregate signature at height {height}")
 
-        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT:
+        # a serde_2026 generator (INTERNED_SPEND_LIST, at the flags it was
+        # run with) has no classic canonical form; chia_rs bounds its size
+        # when parsing it instead
+        interned = (get_flags_for_height_and_constants(pre_sp_tx_height, constants) & INTERNED_SPEND_LIST) != 0
+        if prev_transaction_block_height >= constants.SOFT_FORK9_HEIGHT and not interned:
             if not is_canonical_serialization(generator_bytes):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
 

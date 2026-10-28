@@ -736,7 +736,7 @@ class DIDWallet:
                 )
             ],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
-        )
+        ).program
         innersol: Program = Program.to([1, p2_solution])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
@@ -834,7 +834,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[CreateCoin(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
-        )
+        ).program
         innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
@@ -912,7 +912,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[CreateCoin(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
-        )
+        ).program
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, p2_solution])
 
@@ -1141,7 +1141,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[CreateCoin(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             conditions=extra_conditions,
-        )
+        ).program
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(

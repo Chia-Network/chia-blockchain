@@ -22,7 +22,6 @@ from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.util.lru_cache import LRUCache, LRUKeyedListCache, LRUSet
 from chia.util.streamable import Streamable, streamable
@@ -879,7 +878,7 @@ class FullNodeStore:
 
             return recent_eos[0]
 
-        window_start = (index // FILTER_WINDOW_SIZE) * FILTER_WINDOW_SIZE
+        window_start = (index // self.constants.FILTER_WINDOW_SIZE) * self.constants.FILTER_WINDOW_SIZE
 
         for sub_slot, _, _ in self.finished_sub_slots:
             slot_challenge = (
@@ -889,7 +888,7 @@ class FullNodeStore:
                 continue
 
             if window_start == 0:
-                # Window [0-15]: use SS(n-2) challenge hash
+                # First window: use SS(n-2) challenge hash
                 if sub_slot is None:
                     log.debug("filter_challenge unavailable: not enough sub-slot history for window 0")
                     return None
@@ -906,7 +905,7 @@ class FullNodeStore:
 
                 return previous_sub_slot_challenge(previous_sub_slot)
             else:
-                # Windows [16-31], [32-47], [48-63]: use SS(n-1) challenge hash
+                # Later windows: use SS(n-1) challenge hash
                 if sub_slot is None:
                     log.debug("filter_challenge unavailable: no previous sub-slot")
                     return None
