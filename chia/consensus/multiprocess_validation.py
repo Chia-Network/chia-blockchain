@@ -33,7 +33,7 @@ from chia.consensus.coin_commitments import coin_commitments_root_from_conds
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.generator_validation import validate_generator_ref_list, validate_generator_root
+from chia.consensus.generator_validation import validate_committed_generator, validate_generator_ref_list
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
@@ -151,23 +151,15 @@ def _pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 return error_result(Err.BLOCK_COST_EXCEEDS_MAX)
 
-            if block.foliage_transaction_block is None:
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
-
             # Fast-fail: prove the generator is the committed one before
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
+            generator_error = validate_committed_generator(block, constants, prev_tx_height)
+            if generator_error is not None:
+                return error_result(generator_error)
             generator_bytes = get_transactions_generator_bytes(block)
             assert generator_bytes is not None
-            if not validate_generator_root(
-                generator_bytes, block.transactions_info.generator_root, constants, prev_tx_height
-            ):
-                return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
-            if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
-            if block.foliage.foliage_transaction_block_hash != block.foliage_transaction_block.get_hash():
-                return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
             # a serde_2026 generator (INTERNED_SPEND_LIST) has no classic
             # canonical form; chia_rs bounds its size when parsing it instead

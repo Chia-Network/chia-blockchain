@@ -41,7 +41,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.generator_validation import validate_generator_root, validate_tx_generator
+from chia.consensus.generator_validation import validate_committed_body, validate_generator_root, validate_tx_generator
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height, unfinished_block_sub_slots
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -50,7 +50,7 @@ from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
-from chia.util.errors import Err
+from chia.util.errors import ConsensusError, Err
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.priority_thread_pool_executor import Executor
 
@@ -355,6 +355,23 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
+        # The block's header hash is already known, but its body comes from the
+        # caller (e.g. a peer's sync batch) and is not validated again. Reject a
+        # body its header hash does not commit to before running it and
+        # registering its coin commitment.
+        prev_tx_height = uint32(0)
+        if block.is_transaction_block():
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(block.finished_sub_slots),
+            )
+        body_error = validate_committed_body(block, self.constants, prev_tx_height)
+        if body_error is not None:
+            raise ConsensusError(body_error, [block.header_hash])
+
         additions: list[tuple[Coin, bytes | None]] = []
         removals: list[tuple[bytes32, Coin]] = []
         generator_bytes = get_transactions_generator_bytes(block)
@@ -363,13 +380,6 @@ class Blockchain:
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
-            prev_tx_height = pre_sp_tx_block_height(
-                constants=self.constants,
-                blocks=self,
-                prev_b_hash=block.prev_header_hash,
-                sp_index=block.reward_chain_block.signage_point_index,
-                finished_sub_slots=len(block.finished_sub_slots),
-            )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
                 generator_bytes,
