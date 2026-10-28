@@ -2003,6 +2003,10 @@ class TestPreValidation:
                     empty_blockchain.pool,
                     None,
                     vs,
+                    # parallel workers can't check header MMR commitments: a
+                    # block's commitment covers earlier batch blocks whose
+                    # composite leaves only exist after their generators ran
+                    skip_commitment_validation=True,
                 )
             )
 
@@ -2947,7 +2951,7 @@ class TestBodyValidation:
             await b.add_block(
                 blocks[-1],
                 PreValidationResult(
-                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)
+                    None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
                 ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
@@ -3025,7 +3029,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3060,7 +3066,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3096,7 +3104,9 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0)),
+            PreValidationResult(
+                None, None, uint64(1), npc_result.conds.replace(validated_signature=True), uint32(0), None
+            ),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3752,6 +3762,10 @@ class TestReorgs:
                     b.pool,
                     None,
                     vs,
+                    # parallel workers can't check header MMR commitments: a
+                    # block's commitment covers earlier batch blocks whose
+                    # composite leaves only exist after their generators ran
+                    skip_commitment_validation=True,
                 )
             )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
@@ -4470,6 +4484,15 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, mon
             block1, block2 = b1, b2
         counter += 1
 
+        # Like the full node's add_block(), replay the stored fork ancestry
+        # (get_fork_info() runs the fork blocks) before prevalidation: the
+        # header MMR check needs the fork blocks' coin commitments, which are
+        # only retained in memory while the fork is being validated.
+        peak = b.get_peak()
+        if peak is None:
+            fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        else:
+            fork_info = await get_fork_info(b, block1, peak)
         preval = await (
             await pre_validate_block(
                 b.constants,
@@ -4480,13 +4503,11 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, mon
                 ValidationState(ssi, diff, None),
             )
         )
-        peak = b.get_peak()
-        if peak is None:
-            fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
-        else:
-            fork_info = await get_fork_info(b, block1, peak)
         _, err, _ = await b.add_block(block1, preval, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
+        peak = b.get_peak()
+        assert peak is not None
+        fork_info = await get_fork_info(b, block2, peak)
         preval = await (
             await pre_validate_block(
                 b.constants,
@@ -4497,9 +4518,6 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools, mon
                 ValidationState(ssi, diff, None),
             )
         )
-        peak = b.get_peak()
-        assert peak is not None
-        fork_info = await get_fork_info(b, block2, peak)
         _, err, _ = await b.add_block(block2, preval, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
 
@@ -4536,6 +4554,10 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
                 bc.pool,
                 None,
                 vs,
+                # parallel workers can't check header MMR commitments: a block's
+                # commitment covers earlier batch blocks whose composite leaves
+                # only exist after their generators ran
+                skip_commitment_validation=True,
             )
         )
 

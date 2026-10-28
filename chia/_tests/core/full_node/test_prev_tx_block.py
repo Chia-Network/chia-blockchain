@@ -374,6 +374,58 @@ def test_post_hard_fork2_skips_slow_path_outside_fork_window(bt: BlockTools, mon
     )
 
 
+def test_post_hard_fork2_window_shortcut_agrees_with_pre_sp_tx_height(bt: BlockTools) -> None:
+    """
+    From HARD_FORK2_HEIGHT + SUB_EPOCH_BLOCKS on, post_hard_fork2() answers
+    True without finding the pre-SP transaction block, while header MMR
+    validation and the block version use pre_sp_tx_block_height() directly.
+    On a real chain the shortcut never changes the answer: the gap between a
+    block and its pre-SP transaction block is far below a sub-epoch. With
+    SUB_EPOCH_BLOCKS shrunk below the largest gap the two do disagree, so the
+    comparison is not vacuous.
+    """
+    constants = bt.constants
+    block_list = bt.get_consecutive_blocks(int(constants.SUB_EPOCH_BLOCKS) + 20)
+    _, _, blocks = load_block_list(block_list, constants)
+    block_cache = BlockCache(blocks, BlockchainMMRManager(constants.GENESIS_CHALLENGE))
+    candidates = block_list[1:]
+    pre_sp_tx_heights = [
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=block_cache,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
+        for block in candidates
+    ]
+
+    def disagreements(fork_constants: ConsensusConstants) -> list[uint32]:
+        return [
+            block.height
+            for block, pre_sp_tx_height in zip(candidates, pre_sp_tx_heights)
+            if post_hard_fork2(
+                fork_constants,
+                block_cache,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(block.finished_sub_slots),
+            )
+            != (pre_sp_tx_height >= fork_constants.HARD_FORK2_HEIGHT)
+        ]
+
+    gaps = [block.height - pre_sp_tx_height for block, pre_sp_tx_height in zip(candidates, pre_sp_tx_heights)]
+    assert 2 <= max(gaps) < constants.SUB_EPOCH_BLOCKS
+    # every block from 1 to 20 is a fork height whose window ends inside the chain
+    for hard_fork_2 in range(1, 21):
+        assert disagreements(constants.replace(HARD_FORK2_HEIGHT=uint32(hard_fork_2))) == []
+
+    widest = candidates[gaps.index(max(gaps))]
+    hard_fork_2 = uint32(pre_sp_tx_heights[gaps.index(max(gaps))] + 1)
+    shrunk = constants.replace(HARD_FORK2_HEIGHT=hard_fork_2, SUB_EPOCH_BLOCKS=uint32(widest.height - hard_fork_2))
+    assert widest.height in disagreements(shrunk)
+
+
 # get the latest infused transaction block before the signage point of the last block in the list
 def find_tx_before_sp(block_list: list[FullBlock], constants: ConsensusConstants) -> FullBlock | None:
     sp_index = block_list[-1].reward_chain_block.signage_point_index

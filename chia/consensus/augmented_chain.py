@@ -33,7 +33,10 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
-    _fork_height: uint32 | None
+    # height of the last block the extra blocks share with the underlying
+    # chain: None while there are no extra blocks (the view is the underlying
+    # chain), -1 when the extra blocks start at genesis
+    _fork_height: int | None
     _read_only: bool
     mmr_manager: MMRManagerProtocol
 
@@ -76,6 +79,9 @@ class AugmentedBlockchain:
                 break
             self._height_to_hash[br.height] = curr_hash
             if br.height == 0:
+                # the ancestry ends at a genesis the underlying chain does not
+                # have: nothing is shared, so no canonical MMR prefix applies
+                self._fork_height = -1
                 break
             curr_hash = br.prev_hash
 
@@ -95,6 +101,11 @@ class AugmentedBlockchain:
                     f"New block's prev_hash must match last added block. "
                     f"Expected {last_header_hash.hex()[:16]}, got {block_record.prev_hash.hex()[:16]}"
                 )
+            if self._fork_height is None:
+                # everything overlaid so far is canonical (stored records added
+                # through add_block_record()); this block is the first one that
+                # leaves the canonical chain
+                self._populate_fork_ancestry(block_record.prev_hash)
         elif block_record.height > 0:
             if self._underlying.try_block_record(block_record.prev_hash) is None:
                 raise AugmentedBlockchainValidationError(
@@ -102,6 +113,10 @@ class AugmentedBlockchain:
                     f"Block height {block_record.height}, prev_hash {block_record.prev_hash.hex()[:16]} not found"
                 )
             self._populate_fork_ancestry(block_record.prev_hash)
+        else:
+            # the extra chain starts at genesis: it shares nothing with the
+            # underlying chain, so no canonical MMR prefix may be reused for it
+            self._fork_height = -1
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
@@ -153,6 +168,18 @@ class AugmentedBlockchain:
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._ensure_mutable()
+        # a stored block that is not on the underlying canonical chain turns
+        # this view into a fork view: record where it leaves the canonical
+        # chain before the underlying may overlay it. decide this before
+        # delegating, since the underlying may update its height map
+        if (
+            self._fork_height is None
+            and self._underlying.height_to_hash(block_record.height) != block_record.header_hash
+        ):
+            if block_record.height == 0:
+                self._fork_height = -1
+            else:
+                self._populate_fork_ancestry(block_record.prev_hash)
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
         # now that we're adding the block to the underlying blockchain, we don't

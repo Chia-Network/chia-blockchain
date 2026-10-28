@@ -7,9 +7,11 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint128
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.wallet.wallet_block_tools import load_block_list
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_mmr_leaf
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.mmr import (
     MerkleMountainRange,
@@ -21,6 +23,19 @@ from chia.consensus.mmr import (
 from chia.simulator.block_tools import BlockTools
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
+
+
+def _register_and_add(
+    mmr: BlockchainMMRManager,
+    header_hash: bytes32,
+    prev_hash: bytes32,
+    height: int,
+    coin_commitments_root: bytes32 = EMPTY_MERKLE_SET_ROOT,
+) -> None:
+    # the blocks in these tests carry no transaction spends, so their
+    # coin commitments root is the canonical empty Merkle-set root
+    mmr.register_block_commitment(header_hash, coin_commitments_root)
+    mmr.add_block_to_mmr(header_hash, prev_hash, uint32(height))
 
 
 def _serialize_expected_proof(flags_bits: list[int], siblings: list[bytes32]) -> bytes:
@@ -622,7 +637,7 @@ def test_mmr_rollback_to_same_height_asserts() -> None:
     prev_hash = bytes32.zeros
     for height in range(500, 505):
         block_hash = bytes32([height % 256] + [0] * 31)
-        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+        _register_and_add(mmr, block_hash, prev_hash, height)
         prev_hash = block_hash
 
     blocks = BlockCache({}, mmr_manager=mmr)
@@ -666,6 +681,7 @@ def test_mmr_aggregate_from_filtering() -> None:
     for height in range(500):
         block_hash = bytes32([height % 256] + [0] * 31)
         prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 0 else bytes32.zeros
+        # pre-fork blocks are never registered, and add_block_to_mmr skips them
         mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
 
     # MMR should still be empty (no blocks added)
@@ -677,7 +693,7 @@ def test_mmr_aggregate_from_filtering() -> None:
     for height in range(500, 505):
         block_hash = bytes32([height % 256] + [0] * 31)
         prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 500 else bytes32.zeros
-        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+        _register_and_add(mmr, block_hash, prev_hash, height)
 
     # MMR should now contain 5 blocks (500-504)
     assert mmr._last_height == uint32(504)
@@ -692,20 +708,166 @@ def test_mmr_enforces_sequential_heights_from_aggregate_from() -> None:
     mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
 
     with pytest.raises(AssertionError):
-        mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(501))
+        _register_and_add(mmr, bytes32([1] * 32), bytes32.zeros, 501)
 
     first_hash = bytes32([1] * 32)
-    mmr.add_block_to_mmr(first_hash, bytes32.zeros, aggregate_from)
+    _register_and_add(mmr, first_hash, bytes32.zeros, int(aggregate_from))
 
     with pytest.raises(AssertionError):
         mmr.add_block_to_mmr(bytes32([2] * 32), first_hash, uint32(502))
+
+
+def test_add_block_to_mmr_requires_registered_commitment() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+
+    # post-fork blocks must have their coin commitment registered before being appended
+    with pytest.raises(AssertionError, match="coin commitment"):
+        mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(0))
+
+    mmr.register_block_commitment(bytes32([1] * 32), EMPTY_MERKLE_SET_ROOT)
+    mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(0))
+    assert mmr._last_height == uint32(0)
+
+
+def test_mmr_appends_composite_leaf() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    header_hash = bytes32([1] * 32)
+    root = bytes32([2] * 32)
+
+    mmr.register_block_commitment(header_hash, root)
+    mmr.add_block_to_mmr(header_hash, bytes32.zeros, uint32(0))
+
+    # the appended leaf is H(header_hash || coin_commitments_root), not the raw header hash
+    assert mmr._mmr.nodes[0] == compute_mmr_leaf(header_hash, root)
+    assert mmr._mmr.nodes[0] != header_hash
+    assert mmr.compute_current_mmr_root() == compute_mmr_leaf(header_hash, root)
+
+
+def test_register_block_commitment_idempotent() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    header_hash = bytes32([1] * 32)
+    mmr.register_block_commitment(header_hash, EMPTY_MERKLE_SET_ROOT)
+    mmr.register_block_commitment(header_hash, EMPTY_MERKLE_SET_ROOT)
+    mmr.add_block_to_mmr(header_hash, bytes32.zeros, uint32(0))
+    assert mmr.compute_current_mmr_root() == compute_mmr_leaf(header_hash, EMPTY_MERKLE_SET_ROOT)
+
+
+def test_register_block_commitment_conflict_is_rejected() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    block_hash = bytes32([1] * 32)
+    root_a = bytes32([2] * 32)
+    root_b = bytes32([3] * 32)
+
+    mmr.register_block_commitment(block_hash, root_a)
+
+    # a conflicting registration for a pending block is rejected
+    with pytest.raises(AssertionError, match="Conflicting coin commitment"):
+        mmr.register_block_commitment(block_hash, root_b)
+
+    # the pending leaf is unchanged, so the append and any fork rebuild that
+    # consumes it use the originally registered leaf
+    assert mmr._block_leaves[block_hash] == compute_mmr_leaf(block_hash, root_a)
+    mmr.add_block_to_mmr(block_hash, bytes32.zeros, uint32(0))
+    assert mmr.compute_current_mmr_root() == compute_mmr_leaf(block_hash, root_a)
+    # the append consumed the pending registration
+    assert block_hash not in mmr._block_leaves
+
+    # a rollback drops the popped leaf; a re-append needs a fresh registration
+    mmr.rollback_to_height(-1, BlockCache({}, mmr_manager=mmr))
+    assert mmr.compute_current_mmr_root() is None
+    with pytest.raises(AssertionError, match="Missing coin commitment"):
+        mmr.add_block_to_mmr(block_hash, bytes32.zeros, uint32(0))
+    mmr.register_block_commitment(block_hash, root_a)
+    mmr.add_block_to_mmr(block_hash, bytes32.zeros, uint32(0))
+    assert mmr.compute_current_mmr_root() == compute_mmr_leaf(block_hash, root_a)
+
+
+def _add_simple_chain(mmr: BlockchainMMRManager, count: int) -> bytes32:
+    prev = bytes32.zeros
+    for h in range(count):
+        hh = bytes32([h + 1] + [0] * 31)
+        _register_and_add(mmr, hh, prev, h)
+        prev = hh
+    return prev
+
+
+def test_canonical_update_append_commit() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    prev = _add_simple_chain(mmr, 3)
+    node_count_before = len(mmr._mmr.nodes)
+
+    # a canonical append (fork at the current tip) truncates nothing
+    truncation = mmr.begin_canonical_update(2, BlockCache({}, mmr_manager=mmr))
+    assert truncation == node_count_before
+
+    new_hash = bytes32([4] + [0] * 31)
+    mmr.register_block_commitment(new_hash, EMPTY_MERKLE_SET_ROOT)
+    mmr.add_block_to_mmr(new_hash, prev, uint32(3))
+
+    # the new flat nodes are exactly the diff to persist
+    new_nodes = mmr.canonical_new_nodes(truncation)
+    assert new_nodes == mmr._mmr.nodes[truncation:]
+    assert len(new_nodes) == len(mmr._mmr.nodes) - node_count_before
+    state = mmr.canonical_state(uint32(3), new_hash)
+    assert state.leaf_count == 4
+    assert state.canonical_height == 3
+    assert state.canonical_header_hash == new_hash
+
+    mmr.commit_canonical_update()
+    # after commit, a rollback is a no-op (the update is durable)
+    mmr.rollback_canonical_update()
+    assert len(mmr._mmr.nodes) == node_count_before + len(new_nodes)
+    assert mmr._last_height == uint32(3)
+
+
+def test_begin_canonical_update_nested_rejected() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    _register_and_add(mmr, bytes32([1] * 32), bytes32.zeros, 0)
+    mmr.begin_canonical_update(0, BlockCache({}, mmr_manager=mmr))
+    with pytest.raises(AssertionError, match="nested"):
+        mmr.begin_canonical_update(0, BlockCache({}, mmr_manager=mmr))
+    mmr.rollback_canonical_update()
+
+
+def test_mmr_rollback_drops_appended_leaves() -> None:
+    aggregate_from = uint32(500)
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
+    prev_hash = bytes32.zeros
+    hashes: list[bytes32] = []
+    for height in range(500, 505):
+        block_hash = bytes32([height % 256] + [0] * 31)
+        hashes.append(block_hash)
+        _register_and_add(mmr, block_hash, prev_hash, height)
+        prev_hash = block_hash
+
+    root_before = mmr.compute_current_mmr_root()
+    assert root_before is not None
+    # appended leaves live in the MMR, not in the pending map
+    assert mmr._block_leaves == {}
+
+    # rolling back below aggregate_from resets the MMR. The popped leaves are
+    # not retained: re-appending requires re-registration (the leaf is always
+    # re-derivable by the replay paths), it is never served from the MMR by
+    # position for a block that is no longer in it
+    mmr.rollback_to_height(499, BlockCache({}, mmr_manager=mmr))
+    assert mmr.compute_current_mmr_root() is None
+    assert mmr._block_leaves == {}
+    with pytest.raises(AssertionError, match="Missing coin commitment"):
+        mmr.add_block_to_mmr(hashes[0], bytes32.zeros, uint32(500))
+
+    prev_hash = bytes32.zeros
+    for height, block_hash in enumerate(hashes):
+        _register_and_add(mmr, block_hash, prev_hash, 500 + height)
+        prev_hash = block_hash
+
+    assert mmr.compute_current_mmr_root() == root_before
 
 
 def test_compute_current_mmr_root_reflects_current_state() -> None:
     mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
     assert mmr.compute_current_mmr_root() is None
 
-    mmr.add_block_to_mmr(bytes32([1] * 32), bytes32.zeros, uint32(0))
+    _register_and_add(mmr, bytes32([1] * 32), bytes32.zeros, 0)
     assert mmr.compute_current_mmr_root() == mmr._mmr.compute_root()
 
 
@@ -721,7 +883,7 @@ def test_get_mmr_root_for_block_matches_expected_cutoff(bt: BlockTools) -> None:
     for block in block_list:
         record = block_records[block.header_hash]
         block_records_by_height.append(record)
-        mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
         roots_by_height[record.height] = mmr_manager.compute_current_mmr_root()
 
     saw_parent_infused_after_sp = False
@@ -761,13 +923,18 @@ def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> No
     mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
     for block in canonical_blocks:
         record = canonical_records[block.header_hash]
-        mmr_manager.add_block_to_mmr(record.header_hash, record.prev_hash, record.height)
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
 
     expected_canonical_mmr = MerkleMountainRange()
     for block in canonical_blocks:
-        expected_canonical_mmr.append(block.header_hash)
+        expected_canonical_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
     canonical_root = expected_canonical_mmr.compute_root()
     assert mmr_manager.compute_current_mmr_root() == canonical_root
+
+    # the fork blocks are not part of the canonical chain; their commitments are
+    # registered without being appended to the canonical MMR
+    for block in fork_blocks[3:]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
 
     fork_root = mmr_manager.get_mmr_root_for_block(
         prev_header_hash=fork_blocks[-1].header_hash,
@@ -778,12 +945,268 @@ def test_get_mmr_root_for_block_reuses_fork_height_context(bt: BlockTools) -> No
 
     expected_fork_mmr = MerkleMountainRange()
     for block in [*canonical_blocks[:3], *fork_blocks[3:]]:
-        expected_fork_mmr.append(block.header_hash)
+        expected_fork_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
     assert fork_root == expected_fork_mmr.compute_root()
 
     assert mmr_manager.compute_current_mmr_root() == canonical_root
     assert mmr_manager._last_height == canonical_blocks[-1].height
     assert mmr_manager._last_header_hash == canonical_blocks[-1].header_hash
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_deep_fork_rebuild_computes_correct_root(bt: BlockTools) -> None:
+    # a fork branch longer than twice the retention window must still rebuild
+    # to the correct fork root: evicting active-fork ancestors is never allowed
+    # to change the computed root
+    canonical_blocks = bt.get_consecutive_blocks(30, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(30, block_list_input=canonical_blocks[:5], seed=b"deep-fork")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
+
+    # register the fork branch's leaves (not appended to the canonical MMR)
+    for block in fork_blocks[5:]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+
+    fork_root = mmr_manager.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+        blocks=BlockCache(fork_records, mmr_manager=mmr_manager),
+        fork_height=uint32(4),
+    )
+
+    expected_fork_mmr = MerkleMountainRange()
+    for block in [*canonical_blocks[:5], *fork_blocks[5:]]:
+        expected_fork_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
+    assert fork_root == expected_fork_mmr.compute_root()
+    # the canonical MMR is unchanged by the speculative fork rebuild
+    assert mmr_manager._last_header_hash == canonical_blocks[-1].header_hash
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_missing_fork_leaf_never_substitutes_canonical(bt: BlockTools) -> None:
+    # a rebuild needing a fork leaf that is missing from the registration map
+    # must fail safely; it must never substitute the canonical leaf found at
+    # the same height in the MMR node array
+    canonical_blocks = bt.get_consecutive_blocks(6, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(3, block_list_input=canonical_blocks[:3], seed=b"mmr-fork-missing")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
+
+    # register all fork blocks except the tip; the tip is at a height covered
+    # by the canonical MMR
+    for block in fork_blocks[3:-1]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+
+    with pytest.raises(AssertionError, match="Missing coin commitment"):
+        mmr_manager.get_mmr_root_for_block(
+            prev_header_hash=fork_blocks[-1].header_hash,
+            sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+            blocks=BlockCache(fork_records, mmr_manager=mmr_manager),
+            fork_height=uint32(2),
+        )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_fork_view_without_fork_context_never_substitutes_canonical(bt: BlockTools) -> None:
+    # fork_height=None asserts that the blocks view is the canonical chain the
+    # MMR was built from. A fork view passed without fork context must be
+    # detected and fail safely, not be served canonical leaves by position
+    canonical_blocks = bt.get_consecutive_blocks(6, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(3, block_list_input=canonical_blocks[:3], seed=b"mmr-fork-view")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
+    # even with every fork leaf registered, the lie is caught
+    for block in fork_blocks[3:]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+
+    with pytest.raises(AssertionError, match="canonical MMR view"):
+        mmr_manager.get_mmr_root_for_block(
+            prev_header_hash=fork_blocks[-1].header_hash,
+            sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+            blocks=BlockCache(fork_records, mmr_manager=mmr_manager),
+            fork_height=None,
+        )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_fork_from_genesis_uses_only_pending_leaves(bt: BlockTools) -> None:
+    # fork_height=-1 (an AugmentedBlockchain whose extra blocks start at
+    # genesis) shares no prefix with the canonical MMR: every leaf of the
+    # target chain must come from the pending map, including the heights the
+    # fork chain has in common with the canonical chain by number only
+    canonical_blocks = bt.get_consecutive_blocks(6, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(4, block_list_input=[], seed=b"mmr-genesis-fork")
+    assert fork_blocks[0].header_hash != canonical_blocks[0].header_hash
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
+    fork_cache = BlockCache(fork_records, mmr_manager=mmr_manager)
+
+    # no fork leaf registered: fail safe rather than serve the canonical
+    # leaves that sit at the same heights
+    with pytest.raises(AssertionError, match="Missing coin commitment"):
+        mmr_manager.get_mmr_root_for_block(
+            prev_header_hash=fork_blocks[-1].header_hash,
+            sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+            blocks=fork_cache,
+            fork_height=-1,
+        )
+
+    for block in fork_blocks:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+    expected_fork_mmr = MerkleMountainRange()
+    for block in fork_blocks:
+        expected_fork_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
+    root = mmr_manager.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+        blocks=fork_cache,
+        fork_height=-1,
+    )
+    assert root == expected_fork_mmr.compute_root()
+    # the canonical MMR itself is untouched
+    assert mmr_manager.compute_current_mmr_root() != root
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_evicted_fork_leaves_fail_safe_until_re_registered(bt: BlockTools) -> None:
+    # a fork branch whose leaves were registered before a canonical commit is
+    # past the retention window afterwards: the rebuild must fail safely
+    # (never substitute canonical leaves), and re-registering the leaves (the
+    # replay path) yields the correct fork root
+    canonical_blocks = bt.get_consecutive_blocks(31, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(30, block_list_input=canonical_blocks[:5], seed=b"deep-fork-evict")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    mmr_manager = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks[:30]:
+        record = canonical_records[block.header_hash]
+        _register_and_add(mmr_manager, record.header_hash, record.prev_hash, int(record.height))
+
+    for block in fork_blocks[5:]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+
+    expected_fork_mmr = MerkleMountainRange()
+    for block in [*canonical_blocks[:5], *fork_blocks[5:]]:
+        expected_fork_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
+    expected_fork_root = expected_fork_mmr.compute_root()
+
+    fork_cache = BlockCache(fork_records, mmr_manager=mmr_manager)
+    root = mmr_manager.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+        blocks=fork_cache,
+        fork_height=uint32(4),
+    )
+    assert root == expected_fork_root
+
+    # a canonical commit (the chain advances) ends the retention of the
+    # pending fork leaves
+    canonical_cache = BlockCache(dict(canonical_records), mmr_manager=mmr_manager)
+    tip = canonical_records[canonical_blocks[30].header_hash]
+    mmr_manager.register_block_commitment(tip.header_hash, EMPTY_MERKLE_SET_ROOT)
+    mmr_manager.begin_canonical_update(29, canonical_cache)
+    mmr_manager.add_block_to_mmr(tip.header_hash, tip.prev_hash, tip.height)
+    mmr_manager.commit_canonical_update()
+    assert mmr_manager._block_leaves == {}
+
+    with pytest.raises(AssertionError, match="Missing coin commitment"):
+        mmr_manager.get_mmr_root_for_block(
+            prev_header_hash=fork_blocks[-1].header_hash,
+            sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+            blocks=fork_cache,
+            fork_height=uint32(4),
+        )
+
+    # re-derivation (replay) re-registers the branch, and the root is correct
+    for block in fork_blocks[5:]:
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+    root = mmr_manager.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+        blocks=fork_cache,
+        fork_height=uint32(4),
+    )
+    assert root == expected_fork_root
+    # the canonical MMR is untouched by the speculative rebuilds
+    assert mmr_manager._last_header_hash == canonical_blocks[30].header_hash
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="the manager is mode-independent")
+def test_loaded_mmr_serves_canonical_leaves_by_position(bt: BlockTools) -> None:
+    # loading must not repopulate the pending map; canonical leaves come from
+    # the loaded MMR by position, and a fork rebuild off the loaded state
+    # combines them with the registered fork leaves
+    canonical_blocks = bt.get_consecutive_blocks(10, block_list_input=[])
+    fork_blocks = bt.get_consecutive_blocks(3, block_list_input=canonical_blocks[:7], seed=b"load-fork")
+
+    _, _, canonical_records = load_block_list(canonical_blocks, bt.constants)
+    _, _, fork_records = load_block_list(fork_blocks, bt.constants)
+
+    source = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    for block in canonical_blocks:
+        record = canonical_records[block.header_hash]
+        _register_and_add(source, record.header_hash, record.prev_hash, int(record.height))
+    canonical_root = source.compute_current_mmr_root()
+    assert canonical_root is not None
+
+    loaded = BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE)
+    canonical_cache = BlockCache(dict(canonical_records), mmr_manager=loaded)
+    loaded.load_canonical(list(source._mmr.nodes), source.canonical_state(uint32(9), canonical_blocks[-1].header_hash))
+    assert loaded._block_leaves == {}
+    assert loaded.compute_current_mmr_root() == canonical_root
+
+    # canonical view: a root at an earlier height needs no registrations
+    root_at_8 = loaded.get_mmr_root_for_block(
+        prev_header_hash=canonical_blocks[8].header_hash,
+        sp_total_iters=uint128(canonical_records[canonical_blocks[8].header_hash].total_iters + 1),
+        blocks=canonical_cache,
+    )
+    expected_mmr = MerkleMountainRange()
+    for block in canonical_blocks[:9]:
+        expected_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
+    assert root_at_8 == expected_mmr.compute_root()
+    assert loaded._block_leaves == {}
+
+    # fork view off the loaded state
+    for block in fork_blocks[7:]:
+        loaded.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+    fork_root = loaded.get_mmr_root_for_block(
+        prev_header_hash=fork_blocks[-1].header_hash,
+        sp_total_iters=uint128(fork_records[fork_blocks[-1].header_hash].total_iters + 1),
+        blocks=BlockCache(fork_records, mmr_manager=loaded),
+        fork_height=uint32(6),
+    )
+    expected_fork_mmr = MerkleMountainRange()
+    for block in [*canonical_blocks[:7], *fork_blocks[7:]]:
+        expected_fork_mmr.append(compute_mmr_leaf(block.header_hash, EMPTY_MERKLE_SET_ROOT))
+    assert fork_root == expected_fork_mmr.compute_root()
+    assert loaded.compute_current_mmr_root() == canonical_root
 
 
 def test_mmr_init_validation() -> None:
@@ -868,7 +1291,7 @@ def test_mmr_rollback_below_aggregate_from() -> None:
     for height in range(500, 505):
         block_hash = bytes32([height % 256] + [0] * 31)
         prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 500 else bytes32.zeros
-        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+        _register_and_add(mmr, block_hash, prev_hash, height)
 
     blocks = BlockCache(block_records, mmr_manager=mmr)
 

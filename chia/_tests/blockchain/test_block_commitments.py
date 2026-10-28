@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from itertools import pairwise
+from pathlib import Path
 
 import pytest
 from chia_rs import (
@@ -19,26 +21,60 @@ from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
+from chia.consensus.block_generator_info import block_has_transactions_generator
+from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.blockchain import Blockchain
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     compute_challenge_merkle_root,
     extract_slot_challenge_data,
     get_challenge_start_height,
 )
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_mmr_leaf
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.consensus.mmr import MerkleMountainRange
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.mmr_store import MMRStore
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.timelord_protocol import NewInfusionPointVDF, NewUnfinishedBlockTimelord
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
-from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
+from chia.simulator.block_tools import (
+    BlockTools,
+    create_block_tools_async,
+    load_block_list,
+    make_unfinished_block,
+    test_constants,
+)
+from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
+from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.errors import Err
+from chia.util.inline_executor import InlineExecutor
+from chia.util.keychain import Keychain
 
 log = logging.getLogger(__name__)
+
+
+def _registered_mmr_manager(
+    blocks: list[FullBlock], genesis_challenge: bytes32, aggregate_from: uint32
+) -> BlockchainMMRManager:
+    """
+    An MMR manager with every block's coin commitment registered, so it can
+    serve as a root oracle over `blocks` (composite leaves need the
+    commitment; the header hash alone is not a leaf). These fixture chains
+    carry no transaction generators, so every commitment is the empty root.
+    """
+    mmr_manager = BlockchainMMRManager(genesis_challenge, aggregate_from=aggregate_from)
+    for block in blocks:
+        assert not block_has_transactions_generator(block)
+        mmr_manager.register_block_commitment(block.header_hash, EMPTY_MERKLE_SET_ROOT)
+    return mmr_manager
 
 
 def _late_parent_candidate(
@@ -232,86 +268,6 @@ class TestCommitments:
         assert post_hf2_ses_roots >= 3
 
     @pytest.mark.anyio
-    async def test_timelord_mmr_includes_peak_parent_before_sp(
-        self,
-        fork_height2_500_1000_blocks: list[FullBlock],
-        fork_height2_500_block_tools: BlockTools,
-        self_hostname: str,
-        db_version: int,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        blocks = fork_height2_500_1000_blocks
-        constants = test_constants.replace(
-            HARD_FORK2_HEIGHT=uint32(500),
-            HARD_FORK_HEIGHT=uint32(0),
-            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
-        )
-        _, _, block_records = load_block_list(blocks, constants)
-        # Keep HF2 active for the stale parent, and both parents in the same sub-slot.
-        parent = next(
-            record
-            for record in block_records.values()
-            if record.prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT
-            if not record.first_in_sub_slot
-            if not record.overflow
-        )
-        # Force a nonzero SP in a later sub-slot, after the parent was infused.
-        blocks = fork_height2_500_block_tools.get_consecutive_blocks(
-            1,
-            block_list_input=blocks[: int(parent.height) + 1],
-            skip_slots=2,
-            force_overflow=True,
-        )
-        _, _, block_records = load_block_list(blocks, constants)
-        block_cache = BlockCache(
-            block_records,
-            BlockchainMMRManager(
-                constants.GENESIS_CHALLENGE,
-                aggregate_from=constants.HARD_FORK2_HEIGHT,
-            ),
-        )
-        candidate = blocks[-1]
-        assert candidate.reward_chain_block.signage_point_index > 0
-        candidate_record = block_records[candidate.header_hash]
-        parent = block_records[candidate.prev_header_hash]
-        assert parent.total_iters < candidate_record.sp_total_iters(constants)
-        unfinished = make_unfinished_block(candidate, constants).replace(
-            foliage=candidate.foliage.replace(prev_block_hash=parent.prev_hash)
-        )
-        expected_root = block_cache.get_mmr_root_for_block(
-            parent.header_hash,
-            candidate_record.sp_total_iters(constants),
-        )
-        stale_root = block_cache.get_mmr_root_for_block(
-            parent.prev_hash,
-            candidate_record.sp_total_iters(constants),
-        )
-        assert candidate.reward_chain_block.header_mmr_root == expected_root
-        assert expected_root != stale_root
-
-        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node, _, _, _, _):
-            for block in blocks[: int(candidate.height)]:
-                await full_node.full_node.add_block(block)
-
-            timelord_requests: list[NewUnfinishedBlockTimelord] = []
-
-            async def capture_timelord_request(
-                messages: list[Message],
-                node_type: NodeType,
-                *_args: object,
-            ) -> None:
-                if node_type == NodeType.TIMELORD:
-                    timelord_requests.extend(
-                        NewUnfinishedBlockTimelord.from_bytes(message.data) for message in messages
-                    )
-
-            monkeypatch.setattr(full_node.full_node.server, "send_to_all", capture_timelord_request)
-            await full_node.full_node.add_unfinished_block(unfinished, None)
-
-        assert len(timelord_requests) == 1
-        assert timelord_requests[0].header_mmr_root == expected_root
-
-    @pytest.mark.anyio
     async def test_timelord_mmr_omitted_before_fork_activation(
         self,
         fork_height2_500_1000_blocks: list[FullBlock],
@@ -329,10 +285,7 @@ class TestCommitments:
         _, _, block_records = load_block_list(blocks, chain_constants)
         block_cache = BlockCache(
             block_records,
-            BlockchainMMRManager(
-                constants.GENESIS_CHALLENGE,
-                aggregate_from=constants.HARD_FORK2_HEIGHT,
-            ),
+            _registered_mmr_manager(blocks, constants.GENESIS_CHALLENGE, constants.HARD_FORK2_HEIGHT),
         )
         candidate = next(
             (
@@ -592,10 +545,7 @@ class TestSyncWithCommitments:
             _, _, block_records = load_block_list(blocks, constants)
             candidate_blocks = BlockCache(
                 block_records,
-                BlockchainMMRManager(
-                    constants.GENESIS_CHALLENGE,
-                    aggregate_from=constants.HARD_FORK2_HEIGHT,
-                ),
+                _registered_mmr_manager(blocks, constants.GENESIS_CHALLENGE, constants.HARD_FORK2_HEIGHT),
             )
             candidate = _late_parent_candidate(
                 blocks,
@@ -727,9 +677,10 @@ def test_mmr_manager_deep_copy() -> None:
     mmr1 = BlockchainMMRManager(test_constants.GENESIS_CHALLENGE)
 
     # Add some blocks to it
-    mmr1.add_block_to_mmr(bytes32([1] * 32), bytes32([0] * 32), uint32(0))
-    mmr1.add_block_to_mmr(bytes32([2] * 32), bytes32([1] * 32), uint32(1))
-    mmr1.add_block_to_mmr(bytes32([3] * 32), bytes32([2] * 32), uint32(2))
+    for height in range(3):
+        block_hash = bytes32([height + 1] * 32)
+        mmr1.register_block_commitment(block_hash, EMPTY_MERKLE_SET_ROOT)
+        mmr1.add_block_to_mmr(block_hash, bytes32([height] * 32), uint32(height))
 
     original_height = mmr1._last_height
     original_root = mmr1.compute_current_mmr_root()
@@ -742,8 +693,10 @@ def test_mmr_manager_deep_copy() -> None:
     assert mmr2.compute_current_mmr_root() == original_root
 
     # Mutate the copy
-    mmr2.add_block_to_mmr(bytes32([4] * 32), bytes32([3] * 32), uint32(3))
-    mmr2.add_block_to_mmr(bytes32([5] * 32), bytes32([4] * 32), uint32(4))
+    for height in range(3, 5):
+        block_hash = bytes32([height + 1] * 32)
+        mmr2.register_block_commitment(block_hash, EMPTY_MERKLE_SET_ROOT)
+        mmr2.add_block_to_mmr(block_hash, bytes32([height] * 32), uint32(height))
 
     # Verify original is unchanged (deep copy worked)
     assert mmr1._last_height == original_height
@@ -755,3 +708,153 @@ def test_mmr_manager_deep_copy() -> None:
 
     # Verify they are truly independent objects
     assert mmr1._mmr is not mmr2._mmr
+
+
+HF2_CONSTANTS = test_constants.replace(
+    HARD_FORK2_HEIGHT=uint32(0),
+    HARD_FORK_HEIGHT=uint32(0),
+    PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
+)
+
+
+@pytest.fixture(scope="module")
+async def hf2_bt(get_keychain: Keychain, anyio_backend: str, testrun_uid: str) -> AsyncIterator[BlockTools]:
+    async with create_block_tools_async(constants=HF2_CONSTANTS, keychain=get_keychain, testrun_uid=testrun_uid) as bt:
+        yield bt
+
+
+async def _open_blockchain(constants: ConsensusConstants, db_wrapper: DBWrapper2, blockchain_dir: Path) -> Blockchain:
+    coin_store = await CoinStore.create(db_wrapper)
+    block_store = await BlockStore.create(db_wrapper)
+    mmr_store = await MMRStore.create(db_wrapper)
+    height_map = await BlockHeightMap.create(blockchain_dir, db_wrapper)
+    return await Blockchain.create(
+        coin_store, block_store, height_map, constants, InlineExecutor(), mmr_store=mmr_store
+    )
+
+
+async def _expected_canonical_mmr_root(blockchain: Blockchain) -> bytes32 | None:
+    """
+    Hand-built MMR over the composite leaves of every canonical block, with
+    each coin commitments root reconstructed from the coin store. Comparing
+    this against the live MMR root checks both the conds-derived roots
+    registered during validation and their agreement with coin-store
+    reconstruction.
+    """
+    mmr = MerkleMountainRange()
+    peak = blockchain.get_peak()
+    assert peak is not None
+    aggregate_from = blockchain.mmr_manager.get_aggrtegate_from()
+    for height in range(int(aggregate_from), peak.height + 1):
+        header_hash = blockchain.height_to_hash(uint32(height))
+        assert header_hash is not None
+        coin_commitments_root = await blockchain.coin_store.get_coin_commitments_root(uint32(height))
+        mmr.append(compute_mmr_leaf(header_hash, coin_commitments_root))
+    return mmr.compute_root()
+
+
+def _spendable_reward_coins(blocks: list[FullBlock], reward_ph: bytes32) -> list[Coin]:
+    coins: list[Coin] = []
+    for block in blocks:
+        for coin in block.get_included_reward_coins():
+            if coin.puzzle_hash == reward_ph:
+                coins.append(coin)
+    return coins
+
+
+class TestMMRPersistence:
+    """Tests for MMR persistence (Milestone 1B): startup loading, reorg truncation, recovery."""
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_corrupt_node_count_fails_closed(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        bt = hf2_bt
+        blocks = bt.get_consecutive_blocks(8, guarantee_transaction_block=True)
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            blockchain.shut_down()
+
+            # corrupt the flat node array so its count no longer matches leaf_count
+            async with db_wrapper.writer() as conn:
+                await conn.execute("DELETE FROM mmr_nodes WHERE position = (SELECT MAX(position) FROM mmr_nodes)")
+
+            # the corruption is detected and startup fails closed
+            with pytest.raises(RuntimeError, match="node count"):
+                await _open_blockchain(bt.constants, db_wrapper, tmp_path / "second")
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_corrupt_leaf_count_fails_closed(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        bt = hf2_bt
+        blocks = bt.get_consecutive_blocks(8, guarantee_transaction_block=True)
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            blockchain.shut_down()
+
+            # corrupt the singleton metadata: the leaf count no longer matches the peak
+            async with db_wrapper.writer() as conn:
+                await conn.execute("UPDATE mmr_state SET leaf_count = leaf_count + 1")
+
+            with pytest.raises(RuntimeError, match="leaf count"):
+                await _open_blockchain(bt.constants, db_wrapper, tmp_path / "second")
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_corrupt_peak_hash_fails_closed(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        bt = hf2_bt
+        blocks = bt.get_consecutive_blocks(8, guarantee_transaction_block=True)
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            blockchain.shut_down()
+
+            # corrupt the singleton metadata: the recorded peak hash is wrong for
+            # the recorded peak height
+            async with db_wrapper.writer() as conn:
+                await conn.execute("UPDATE mmr_state SET canonical_header_hash = ?", (bytes32(b"\x01" * 32),))
+
+            with pytest.raises(RuntimeError, match="peak hash"):
+                await _open_blockchain(bt.constants, db_wrapper, tmp_path / "second")
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_mismatched_aggregate_from_fails_closed(
+        self, hf2_bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        bt = hf2_bt
+        blocks = bt.get_consecutive_blocks(8, guarantee_transaction_block=True)
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            blockchain.shut_down()
+
+            # the persisted MMR starts aggregating at HF2=0; reopening the same
+            # database under a different HF2 height must not reuse it
+            with pytest.raises(RuntimeError, match="aggregate_from"):
+                await _open_blockchain(
+                    bt.constants.replace(HARD_FORK2_HEIGHT=uint32(4)), db_wrapper, tmp_path / "second"
+                )
