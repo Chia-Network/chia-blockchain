@@ -5,7 +5,7 @@ import json
 from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
@@ -38,6 +38,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
@@ -46,9 +47,12 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import RecoveryList
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, DIDMetadata, DIDRecoveryPuzzle, RecoveryList
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
@@ -509,6 +513,94 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     assert puz.get_tree_hash() == did_wallet.puzzle_hash_for_pk(derivation.pubkey)
     inner = await did_wallet.get_innerpuz_for_new_innerhash(derivation.pubkey)
     assert inner.get_tree_hash() is not None
+
+    # Cover find_lost_did override + brute-force: parent spend params don't match coin PH
+    # (e.g. last spend updated metadata), without another on-chain DID spend (parent_info is
+    # cleared by find_lost above, so create_update_spend would fail ASSERT_MY_PARENT_ID).
+    peer = env_0.node.get_full_node_peer()
+    coin_spend, coin_state = await env_0.wallet_state_manager.get_latest_singleton_coin_spend(
+        peer, did_wallet.did_info.origin_coin.name()
+    )
+    uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+    is_match, curried_args = match_singleton_puzzle(uncurried)
+    assert is_match
+    singleton_struct, inner_puzzle = curried_args
+    did_match = DIDRecoveryPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=inner_puzzle))
+    assert did_match is not None
+    launcher_id = bytes32(singleton_struct.rest().first().as_atom())
+
+    hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
+    hint: bytes32 | None = None
+    for hinted_coin in hinted_coins.values():
+        if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+            hint = hinted_coin.hint
+            break
+    hint_derivation = (
+        None
+        if hint is None
+        else await env_0.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+    )
+
+    # Pick a p2 that is not the spend hint so override reconstruction still misses and
+    # brute-force address search must run.
+    override_derivation = None
+    for index in range(20):
+        derivation_record = await env_0.wallet_state_manager.puzzle_store.get_derivation_record(
+            uint32(index), uint32(1), False
+        )
+        if derivation_record is None:
+            break
+        if hint_derivation is None or derivation_record.pubkey != hint_derivation.pubkey:
+            override_derivation = derivation_record
+            break
+    assert override_derivation is not None
+
+    override_metadata = {"Twitter": "http://www.twitter.com"}
+    override_inner = env_0.wallet_state_manager.main_wallet.puzzle_for_pk(override_derivation.pubkey)
+    override_did_puzzle = DID_INNERPUZ_MOD.curry(
+        override_inner,
+        did_match.recovery_list.ids_hash,
+        did_match.num_of_backup_ids_needed,
+        singleton_struct,
+        DIDMetadata(override_metadata).as_program(),
+    )
+    mismatched_ph = create_singleton_puzzle(override_did_puzzle, launcher_id).get_tree_hash()
+    fake_state = CoinState(
+        Coin(coin_state.coin.parent_coin_info, mismatched_ph, coin_state.coin.amount),
+        coin_state.spent_height,
+        coin_state.created_height,
+    )
+
+    await env_0.wallet_state_manager.coin_store.delete_coin_record(coin_state.coin.name())
+    # Poison stored inner so neither the empty-recovery nor current_inner shortcuts match.
+    did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=Program.to(1))
+
+    async def fake_get_latest(_peer: object, _coin_id: bytes32, latest: bool = True) -> tuple[object, object]:
+        return coin_spend, fake_state
+
+    assert did_wallet.did_info.origin_coin is not None
+    with patch.object(env_0.wallet_state_manager, "get_latest_singleton_coin_spend", side_effect=fake_get_latest):
+        capsys.readouterr()
+        await DidFindLostCMD(
+            rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
+            coin_id=did_wallet.did_info.origin_coin.name().hex(),
+            metadata=None,
+            recovery_list_hash=None,
+            num_verification=None,
+        ).run()
+        assert "Failed to find lost DID" in capsys.readouterr().out
+
+        await DidFindLostCMD(
+            rpc_info=wallet_environments.cmd_tx_endpoint_args(env_0)["rpc_info"],
+            coin_id=did_wallet.did_info.origin_coin.name().hex(),
+            metadata=json.dumps(override_metadata),
+            recovery_list_hash=None,
+            num_verification=None,
+        ).run()
+        assert "Successfully found lost DID" in capsys.readouterr().out
+
+    assert did_wallet.did_info.current_inner is not None
+    assert did_wallet.did_info.current_inner.get_tree_hash() == override_did_puzzle.get_tree_hash()
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
