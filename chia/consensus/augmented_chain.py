@@ -85,6 +85,21 @@ class AugmentedBlockchain:
                 break
             curr_hash = br.prev_hash
 
+    def reset_fork_ancestry(self, peak_hash: bytes32) -> None:
+        """
+        Derive the view again for the stored fork block `peak_hash`, against
+        the current underlying chain, when a reorg of the underlying chain
+        replaced the fork's common ancestor. Overlaid blocks are dropped. The
+        ancestry's block records must be in the underlying chain's cache.
+        """
+        self._ensure_mutable()
+        self._extra_blocks = {}
+        self._height_to_hash = {}
+        self._fork_height = None
+        peak = self._underlying.block_record(peak_hash)
+        if self._underlying.height_to_hash(peak.height) != peak_hash:
+            self._populate_fork_ancestry(peak_hash)
+
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self._ensure_mutable()
         if block.header_hash != block_record.header_hash:

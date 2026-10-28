@@ -767,6 +767,72 @@ class TestSyncWithCommitments:
                 node.blockchain
             )
 
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_reorg_below_fork_point_between_fork_batches(
+        self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        A reorg committed between two batches of a fork can replace the
+        fork's common ancestor. The retained ForkInfo and augmented chain
+        then describe the fork against a canonical chain that no longer
+        exists, and the next batch must rebuild them against the new one.
+        """
+        bt = hf2_bt
+        canonical = bt.get_consecutive_blocks(31)
+        fork = bt.get_consecutive_blocks(31, block_list_input=canonical[:10], seed=b"fork-between-batches")
+        competitor = bt.get_consecutive_blocks(31, block_list_input=canonical[:5], seed=b"reorg-between-batches")
+        assert competitor[5].header_hash != canonical[5].header_hash
+        assert fork[14].weight < canonical[-1].weight < competitor[-1].weight
+        assert fork[19].weight < competitor[-1].weight < fork[-1].weight
+
+        async with setup_two_nodes(bt.constants, db_version, self_hostname) as (full_node_1, full_node_2, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical, node)
+
+            fork_info = ForkInfo(9, 9, canonical[9].header_hash)
+            blockchain = AugmentedBlockchain(node.blockchain)
+            vs = ValidationState(bt.constants.SUB_SLOT_ITERS_STARTING, bt.constants.DIFFICULTY_STARTING, None)
+            peer_info = PeerInfo(self_hostname, 0)
+            success, _ = await node.add_block_batch(fork[10:15], peer_info, fork_info, vs, blockchain)
+            assert success
+
+            # another peer's heavier chain, sharing only heights 0..4 with the
+            # fork, commits between the batches
+            await add_blocks_in_batches(competitor, node)
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == competitor[-1].header_hash
+
+            # the next batch overlaps the previous one (short_sync_batch's
+            # ranges repeat the last block)
+            success, _ = await node.add_block_batch(fork[14:20], peer_info, fork_info, vs, blockchain)
+            assert success
+            assert fork_info.fork_height == 4
+            assert fork_info.peak_hash == fork[19].header_hash
+            assert fork_info.block_hashes == [block.header_hash for block in fork[5:20]]
+            assert blockchain.height_to_hash(uint32(7)) == canonical[7].header_hash
+
+            # the fork overtakes the competitor, rolling the coin store back to
+            # the rebuilt fork height
+            success, _ = await node.add_block_batch(fork[19:], peer_info, fork_info, vs, blockchain)
+            assert success
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == fork[-1].header_hash
+            assert node.blockchain.mmr_manager.compute_current_mmr_root() == await _expected_canonical_mmr_root(
+                node.blockchain
+            )
+
+            # the coin store matches a node that only ever saw the fork's chain
+            reference = full_node_2.full_node
+            await add_blocks_in_batches(fork, reference)
+            for height in map(uint32, range(len(fork))):
+                assert set(await node.coin_store.get_coins_added_at_height(height)) == set(
+                    await reference.coin_store.get_coins_added_at_height(height)
+                )
+                assert set(await node.coin_store.get_coins_removed_at_height(height)) == set(
+                    await reference.coin_store.get_coins_removed_at_height(height)
+                )
+
 
 def test_mmr_manager_deep_copy() -> None:
     # Create original MMR manager

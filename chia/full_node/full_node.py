@@ -1731,8 +1731,10 @@ class FullNode:
         pre_validate_start = time.monotonic()
         # The chain lock may have been released since the previous batch of
         # this fork; a canonical block committed meanwhile drops the pending
-        # leaves of the fork blocks that skip_blocks() will not run again.
-        await self.blockchain.restore_fork_leaves(fork_info)
+        # leaves of the fork blocks that skip_blocks() will not run again, and
+        # a reorg may replace the fork's common ancestor.
+        if await self.blockchain.reconcile_fork_info(fork_info):
+            blockchain.reset_fork_ancestry(fork_info.peak_hash)
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         # Keep the augmented chain's MMR snapshot aligned with the underlying

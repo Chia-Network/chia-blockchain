@@ -445,11 +445,23 @@ class Blockchain:
         if peak is None or block.prev_header_hash == peak.header_hash:
             return None
 
-        # Walk back from the parent to the fork point (the first canonical
-        # ancestor, or past the branch's own genesis when it shares no block
-        # with the canonical chain), collecting the stored fork branch blocks.
+        branch = await self._stored_fork_branch(block.prev_header_hash)
+        if not branch:
+            # the parent is unknown, or on the canonical chain and its
+            # ancestry's commitments are already registered
+            return None
+        return await self._replay_stored_branch(branch)
+
+    async def _stored_fork_branch(self, tip_hash: bytes32) -> list[bytes32] | None:
+        """
+        Walk back from the stored block `tip_hash` to the fork point (the
+        first canonical ancestor, or past the branch's own genesis when it
+        shares no block with the canonical chain), collecting the stored fork
+        branch blocks. Returns their header hashes, oldest first (empty when
+        `tip_hash` is canonical), or None when `tip_hash` is unknown.
+        """
         branch: list[bytes32] = []
-        curr_hash = block.prev_header_hash
+        curr_hash = tip_hash
         curr = await self.get_block_record_from_db(curr_hash)
         if curr is None:
             return None
@@ -460,31 +472,29 @@ class Blockchain:
             curr_hash = curr.prev_hash
             curr = await self.get_block_record_from_db(curr_hash)
             assert curr is not None
-        if not branch:
-            # the parent is on the canonical chain; its ancestry's commitments
-            # are already registered
-            return None
-
         branch.reverse()
-        return await self._replay_stored_branch(branch)
+        return branch
 
-    async def _replay_stored_branch(self, branch: list[bytes32]) -> ForkInfo:
+    async def _replay_stored_branch(self, branch: list[bytes32], fork_info: ForkInfo | None = None) -> ForkInfo:
         """
         Replay the stored blocks `branch` (header hashes, oldest first, each
-        the parent of the next) into a new ForkInfo that starts at the first
-        block's parent, loading each block record into the in-memory cache and
-        registering each block's coin commitment. Returns the ForkInfo advanced
-        to the last block.
+        the parent of the next) into `fork_info`, or a new ForkInfo, reset to
+        start at the first block's parent, loading each block record into the
+        in-memory cache and registering each block's coin commitment. Returns
+        the ForkInfo advanced to the last block.
         """
         assert len(branch) > 0
-        fork_info: ForkInfo | None = None
-        for header_hash in branch:
+        for i, header_hash in enumerate(branch):
             fork_block = await self.block_store.get_full_block(header_hash)
             assert fork_block is not None
-            if fork_info is None:
+            if i == 0:
                 # a genesis block's parent is the genesis challenge at height -1
                 parent_height = fork_block.height - 1
-                fork_info = ForkInfo(parent_height, parent_height, fork_block.prev_header_hash)
+                if fork_info is None:
+                    fork_info = ForkInfo(parent_height, parent_height, fork_block.prev_header_hash)
+                else:
+                    fork_info.reset(parent_height, fork_block.prev_header_hash)
+            assert fork_info is not None
             # make the block record resolvable for prevalidation
             record = await self.get_block_record_from_db(header_hash)
             assert record is not None
@@ -514,6 +524,45 @@ class Blockchain:
         if all(self.mmr_manager.has_block_leaf(header_hash) for header_hash in fork_info.block_hashes[first:]):
             return
         await self._replay_stored_branch(fork_info.block_hashes)
+
+    async def reconcile_fork_info(self, fork_info: ForkInfo) -> bool:
+        """
+        Prepare `fork_info`, kept across releases of the chain lock (like a
+        sync spanning several batches), for running more blocks of its fork.
+        A reorg committed meanwhile may have replaced the fork's common
+        ancestor: fork_info's fork height, its spends since the fork and its
+        block hashes then describe the fork against a canonical chain that no
+        longer exists. In that case rebuild it in place, replaying the stored
+        branch from the new common ancestor up to its peak (which also
+        registers the branch's composite MMR leaves), and return True: views
+        of the fork derived from the old fork point (an AugmentedBlockchain's
+        fork ancestry) are stale too. Otherwise restore the leaves a canonical
+        commit may have dropped (restore_fork_leaves) and return False.
+        """
+        # a fork starting at genesis (fork height -1) has no common ancestor
+        # to replace
+        stale = False
+        if fork_info.fork_height >= 0:
+            # the fork's own block at its fork height
+            if len(fork_info.block_hashes) == 0:
+                fork_hash = fork_info.peak_hash
+            else:
+                first = await self.get_block_record_from_db(fork_info.block_hashes[0])
+                assert first is not None
+                fork_hash = first.prev_hash
+            stale = self.height_to_hash(uint32(fork_info.fork_height)) != fork_hash
+        if not stale:
+            await self.restore_fork_leaves(fork_info)
+            return False
+
+        branch = await self._stored_fork_branch(fork_info.peak_hash)
+        assert branch is not None
+        if len(branch) == 0:
+            # the fork's peak itself has become canonical
+            fork_info.reset(fork_info.peak_height, fork_info.peak_hash)
+        else:
+            await self._replay_stored_branch(branch, fork_info)
+        return True
 
     async def add_block(
         self,
