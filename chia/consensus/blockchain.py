@@ -203,8 +203,9 @@ class Blockchain:
         """
         Try to load the canonical header MMR from the persisted store. Returns
         True on success. Returns False when there is no usable persisted state
-        (absent, or written for a different peak), in which case the caller
-        rebuilds from the coin store. Raises when the persisted state cannot be
+        (absent, written for a different peak, or empty and written for a
+        different activation height the peak predates), in which case the
+        caller rebuilds from the coin store. Raises when the persisted state cannot be
         reconciled with the canonical chain (structural corruption), to fail
         closed rather than accept it silently.
         """
@@ -214,6 +215,19 @@ class Blockchain:
         if state is None:
             return False
         if state.aggregate_from != self.constants.HARD_FORK2_HEIGHT:
+            if (
+                self._peak_height < min(state.aggregate_from, self.constants.HARD_FORK2_HEIGHT)
+                and state.leaf_count == 0
+            ):
+                # a future activation height was rescheduled: the empty MMR
+                # commits to nothing under either height. Rebuild it under the
+                # active height.
+                log.info(
+                    f"persisted MMR aggregate_from {state.aggregate_from} differs from the active consensus "
+                    f"constant {self.constants.HARD_FORK2_HEIGHT}, but the peak predates both and the MMR is "
+                    "empty; rebuilding it"
+                )
+                return False
             raise RuntimeError(
                 f"persisted MMR aggregate_from {state.aggregate_from} does not match the active "
                 f"consensus constant {self.constants.HARD_FORK2_HEIGHT}; the database is corrupt or "
@@ -432,7 +446,8 @@ class Blockchain:
             return None
 
         # Walk back from the parent to the fork point (the first canonical
-        # ancestor), collecting the stored fork branch blocks.
+        # ancestor, or past the branch's own genesis when it shares no block
+        # with the canonical chain), collecting the stored fork branch blocks.
         branch: list[bytes32] = []
         curr_hash = block.prev_header_hash
         curr = await self.get_block_record_from_db(curr_hash)
@@ -450,17 +465,55 @@ class Blockchain:
             # are already registered
             return None
 
-        fork_info = ForkInfo(curr.height, curr.height, curr_hash)
-        for header_hash in reversed(branch):
+        branch.reverse()
+        return await self._replay_stored_branch(branch)
+
+    async def _replay_stored_branch(self, branch: list[bytes32]) -> ForkInfo:
+        """
+        Replay the stored blocks `branch` (header hashes, oldest first, each
+        the parent of the next) into a new ForkInfo that starts at the first
+        block's parent, loading each block record into the in-memory cache and
+        registering each block's coin commitment. Returns the ForkInfo advanced
+        to the last block.
+        """
+        assert len(branch) > 0
+        fork_info: ForkInfo | None = None
+        for header_hash in branch:
             fork_block = await self.block_store.get_full_block(header_hash)
             assert fork_block is not None
+            if fork_info is None:
+                # a genesis block's parent is the genesis challenge at height -1
+                parent_height = fork_block.height - 1
+                fork_info = ForkInfo(parent_height, parent_height, fork_block.prev_header_hash)
             # make the block record resolvable for prevalidation
             record = await self.get_block_record_from_db(header_hash)
             assert record is not None
             self.add_block_record(record)
             # replay the block, registering its coin commitment
             await self.run_single_block(fork_block, fork_info)
+        assert fork_info is not None
         return fork_info
+
+    async def restore_fork_leaves(self, fork_info: ForkInfo) -> None:
+        """
+        Re-register the composite MMR leaves of the fork blocks `fork_info`
+        has already run (its block_hashes) when a canonical commit dropped them
+        (see BlockchainMMRManager.commit_canonical_update). A caller that keeps
+        one ForkInfo across releases of the chain lock, like a sync spanning
+        several batches, calls this before resuming: skip_blocks() does not
+        run blocks at or below the fork's peak again, so it would not
+        re-register them. `fork_info` already contains those blocks' spends
+        and is not modified; the branch is replayed into a scratch ForkInfo.
+        """
+        # block_hashes[i] is the block at height fork_height + 1 + i
+        first = max(0, self.mmr_manager.get_aggrtegate_from() - fork_info.fork_height - 1)
+        # a canonical commit drops every pending leaf at once, but other
+        # replays (e.g. preparing a child of a mid-branch fork block) register
+        # some of them again individually, so check each one. Replaying the
+        # whole branch re-registers the present leaves with identical roots.
+        if all(self.mmr_manager.has_block_leaf(header_hash) for header_hash in fork_info.block_hashes[first:]):
+            return
+        await self._replay_stored_branch(fork_info.block_hashes)
 
     async def add_block(
         self,

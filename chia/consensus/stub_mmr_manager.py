@@ -35,6 +35,10 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
+    def has_block_leaf(self, header_hash: bytes32) -> bool:
+        # The stub never needs registered leaves
+        return True
+
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         # No-op for stub manager
         pass

@@ -1547,7 +1547,9 @@ class FullNode:
             # blockchain now, when the previous batch has been fully committed
             # (ingest batches run in order). The header MMR commitment checks
             # in add_prevalidated_blocks() need the composite leaves of all
-            # prior blocks, including those of the previous batch.
+            # prior blocks, including those of the previous batch (restored
+            # first if a canonical commit dropped the fork's pending leaves).
+            await self.blockchain.restore_fork_leaves(fork_info)
             blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
 
             if block_rate_height == -1:
@@ -1727,6 +1729,10 @@ class FullNode:
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
         pre_validate_start = time.monotonic()
+        # The chain lock may have been released since the previous batch of
+        # this fork; a canonical block committed meanwhile drops the pending
+        # leaves of the fork blocks that skip_blocks() will not run again.
+        await self.blockchain.restore_fork_leaves(fork_info)
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         # Keep the augmented chain's MMR snapshot aligned with the underlying

@@ -62,7 +62,8 @@ class BlockchainMMRManager:
     callers re-derive such leaves through the replay paths that register them
     (Blockchain.prepare_stored_fork_ancestry for a child of a stored fork,
     FullNode.skip_blocks / Blockchain.run_single_block when a sync resumes a
-    stored fork).
+    stored fork, Blockchain.restore_fork_leaves when a sync resumes a fork
+    after a canonical commit dropped its leaves).
     """
 
     genesis_challenge: bytes32
@@ -107,6 +108,10 @@ class BlockchainMMRManager:
             assert existing == leaf, f"Conflicting coin commitment registration for block {header_hash.hex()}"
             return
         self._block_leaves[header_hash] = leaf
+
+    def has_block_leaf(self, header_hash: bytes32) -> bool:
+        """Whether the block's composite leaf is registered and pending (not yet appended)."""
+        return header_hash in self._block_leaves
 
     def _get_block_leaf(self, header_hash: bytes32) -> bytes32:
         leaf = self._block_leaves.get(header_hash)

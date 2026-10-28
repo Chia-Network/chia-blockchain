@@ -20,10 +20,12 @@ from chia._tests.core.node_height import node_height_exactly
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.block_height_map import BlockHeightMap
-from chia.consensus.blockchain import Blockchain
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     compute_challenge_merkle_root,
@@ -52,6 +54,7 @@ from chia.simulator.block_tools import (
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
+from chia.types.validation_state import ValidationState
 from chia.util.block_cache import BlockCache
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.errors import Err
@@ -671,6 +674,99 @@ class TestSyncWithCommitments:
             assert peak_1.header_hash == peak_2.header_hash
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=500 between two nodes")
 
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_canonical_block_between_fork_batches(
+        self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        short_sync_batch keeps one ForkInfo across batches but releases the
+        chain lock between them, so a canonical block from another peer can
+        commit in between and drop the fork's pending leaves. The next batch
+        skips the fork blocks it already ran and must restore their leaves
+        for its header MMR checks and for the reorg that appends them.
+        """
+        bt = hf2_bt
+        canonical = bt.get_consecutive_blocks(32)
+        fork = bt.get_consecutive_blocks(25, block_list_input=canonical[:10], seed=b"fork-between-batches")
+        assert fork[14].weight < canonical[30].weight
+        assert fork[-1].weight > canonical[31].weight
+
+        async with setup_two_nodes(bt.constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical[:31], node)
+
+            fork_info = ForkInfo(9, 9, canonical[9].header_hash)
+            blockchain = AugmentedBlockchain(node.blockchain)
+            vs = ValidationState(bt.constants.SUB_SLOT_ITERS_STARTING, bt.constants.DIFFICULTY_STARTING, None)
+            peer_info = PeerInfo(self_hostname, 0)
+            success, _ = await node.add_block_batch(fork[10:15], peer_info, fork_info, vs, blockchain)
+            assert success
+            assert node.blockchain.mmr_manager.has_block_leaf(fork[10].header_hash)
+
+            # another peer's canonical block commits between the batches
+            await node.add_block(canonical[31])
+            assert not node.blockchain.mmr_manager.has_block_leaf(fork[10].header_hash)
+
+            # the next batch overlaps the previous one (short_sync_batch's
+            # ranges repeat the last block) and overtakes the canonical chain
+            success, _ = await node.add_block_batch(fork[14:], peer_info, fork_info, vs, blockchain)
+            assert success
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == fork[-1].header_hash
+            assert node.blockchain.mmr_manager.compute_current_mmr_root() == await _expected_canonical_mmr_root(
+                node.blockchain
+            )
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_fork_prefix_replayed_between_fork_batches(
+        self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        After a canonical commit drops the fork's pending leaves, a block
+        building on a mid-branch fork block replays only that branch prefix.
+        The next batch must still restore the leaves of the rest of the branch.
+        """
+        bt = hf2_bt
+        canonical = bt.get_consecutive_blocks(32)
+        fork = bt.get_consecutive_blocks(25, block_list_input=canonical[:10], seed=b"fork-between-batches")
+        assert fork[14].weight < canonical[30].weight
+        assert fork[-1].weight > canonical[31].weight
+        sibling = bt.get_consecutive_blocks(1, block_list_input=fork[:12], seed=b"fork-sibling")[-1]
+        assert sibling.prev_header_hash == fork[11].header_hash
+        assert sibling.header_hash != fork[12].header_hash
+
+        async with setup_two_nodes(bt.constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical[:31], node)
+
+            fork_info = ForkInfo(9, 9, canonical[9].header_hash)
+            blockchain = AugmentedBlockchain(node.blockchain)
+            vs = ValidationState(bt.constants.SUB_SLOT_ITERS_STARTING, bt.constants.DIFFICULTY_STARTING, None)
+            peer_info = PeerInfo(self_hostname, 0)
+            success, _ = await node.add_block_batch(fork[10:15], peer_info, fork_info, vs, blockchain)
+            assert success
+
+            # another peer's canonical block commits between the batches
+            await node.add_block(canonical[31])
+            assert not node.blockchain.mmr_manager.has_block_leaf(fork[10].header_hash)
+
+            # a gossiped child of fork[11] replays fork[10..11] only
+            await node.add_block(sibling)
+            assert not node.blockchain.contains_block(sibling.header_hash, sibling.height)
+            assert await node.blockchain.get_block_record_from_db(sibling.header_hash) is not None
+            assert node.blockchain.mmr_manager.has_block_leaf(fork[10].header_hash)
+            assert not node.blockchain.mmr_manager.has_block_leaf(fork[13].header_hash)
+
+            success, _ = await node.add_block_batch(fork[14:], peer_info, fork_info, vs, blockchain)
+            assert success
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == fork[-1].header_hash
+            assert node.blockchain.mmr_manager.compute_current_mmr_root() == await _expected_canonical_mmr_root(
+                node.blockchain
+            )
+
 
 def test_mmr_manager_deep_copy() -> None:
     # Create original MMR manager
@@ -858,3 +954,70 @@ class TestMMRPersistence:
                 await _open_blockchain(
                     bt.constants.replace(HARD_FORK2_HEIGHT=uint32(4)), db_wrapper, tmp_path / "second"
                 )
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_rescheduled_future_aggregate_from_rebuilds_empty_mmr(
+        self, bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        blocks = bt.get_consecutive_blocks(3)
+        scheduled = bt.constants.replace(HARD_FORK2_HEIGHT=uint32(1000))
+        rescheduled = bt.constants.replace(HARD_FORK2_HEIGHT=uint32(2000))
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(scheduled, db_wrapper, tmp_path / "first")
+            for block in blocks:
+                await _validate_and_add_block(blockchain, block)
+            assert blockchain.mmr_manager.compute_current_mmr_root() is None
+            blockchain.shut_down()
+
+            # the peak predates both activation heights and the persisted MMR
+            # is empty: moving the future activation invalidates nothing, so
+            # the empty MMR is rebuilt under the new height
+            blockchain = await _open_blockchain(rescheduled, db_wrapper, tmp_path / "second")
+            peak = blockchain.get_peak()
+            assert peak is not None and peak.header_hash == blocks[-1].header_hash
+            assert blockchain.mmr_store is not None
+            state = await blockchain.mmr_store.get_state()
+            assert state is not None and state.aggregate_from == rescheduled.HARD_FORK2_HEIGHT
+            blockchain.shut_down()
+
+            # the rewritten state loads directly
+            blockchain = await _open_blockchain(rescheduled, db_wrapper, tmp_path / "third")
+            peak = blockchain.get_peak()
+            assert peak is not None and peak.header_hash == blocks[-1].header_hash
+            blockchain.shut_down()
+
+
+class TestStoredForkReplay:
+    """Tests for replaying a stored fork branch before validating its child."""
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_prepare_stored_fork_with_a_different_genesis(
+        self, bt: BlockTools, consensus_mode: ConsensusMode, tmp_path: Path
+    ) -> None:
+        canonical = bt.get_consecutive_blocks(3)
+        fork = bt.get_consecutive_blocks(2, seed=b"foreign-genesis")
+        assert fork[0].header_hash != canonical[0].header_hash
+
+        async with DBWrapper2.managed(
+            database=generate_in_memory_db_uri(), uri=True, reader_count=1, db_version=2
+        ) as db_wrapper:
+            blockchain = await _open_blockchain(bt.constants, db_wrapper, tmp_path / "chain")
+            for block in canonical:
+                await _validate_and_add_block(blockchain, block)
+            await _validate_and_add_block(blockchain, fork[0], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+
+            # the stored branch shares no block with the canonical chain, so it
+            # is replayed from its own genesis
+            fork_info = await blockchain.prepare_stored_fork_ancestry(fork[1])
+            assert fork_info is not None
+            assert fork_info.fork_height == -1
+            assert fork_info.peak_height == 0 and fork_info.peak_hash == fork[0].header_hash
+            await _validate_and_add_block(
+                blockchain, fork[1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+            )
+            blockchain.shut_down()

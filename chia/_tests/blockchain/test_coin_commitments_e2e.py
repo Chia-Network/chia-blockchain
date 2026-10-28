@@ -931,29 +931,35 @@ class TestTimelordPath:
         # stays valid if the parent shares the grandparent's sub-slot, is not a
         # transaction block, and the candidate's signage point is in a later
         # sub-slot (its SP VDFs then don't chain through the parent's infusion).
-        parent_index = next(
+        # The seed rarely changes which proofs of space block_tools finds, so
+        # the candidate's signage point depends on the parent: try each
+        # eligible one.
+        parent_indexes = [
             index
             for index, block in enumerate(fork_height2_500_1000_blocks)
             if block.height > constants.HARD_FORK2_HEIGHT
             if block.foliage_transaction_block is None
             if len(block.finished_sub_slots) == 0
-        )
-        prefix = fork_height2_500_1000_blocks[: parent_index + 1]
-        candidate = next(
+        ]
+        blocks = next(
             (
-                farmed[-1]
-                for seed in range(32)
+                farmed
+                for parent_index in parent_indexes
                 for farmed in [
                     fork_height2_500_block_tools.get_consecutive_blocks(
-                        1, block_list_input=prefix, skip_slots=1, skip_overflow=True, seed=bytes([seed])
+                        1,
+                        block_list_input=fork_height2_500_1000_blocks[: parent_index + 1],
+                        skip_slots=1,
+                        skip_overflow=True,
                     )
                 ]
                 if farmed[-1].reward_chain_block.signage_point_index >= 1
             ),
             None,
         )
-        assert candidate is not None, "no seed farmed a new-sub-slot block at signage point index >= 1"
-        blocks = [*prefix, candidate]
+        assert blocks is not None, "no parent led to a new-sub-slot block at signage point index >= 1"
+        prefix = blocks[:-1]
+        candidate = blocks[-1]
         _, _, block_records = load_block_list(blocks, constants)
         block_cache = BlockCache(
             block_records,
