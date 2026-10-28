@@ -29,7 +29,7 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.coin_commitments import coin_commitments_root_from_conds
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
@@ -201,7 +201,12 @@ def _pre_validate_block(
         # data registered or appended anywhere.
         coin_commitments_root: bytes32 | None = None
         if error is None and block.height >= constants.HARD_FORK2_HEIGHT:
-            coin_commitments_root = coin_commitments_root_from_conds(conds)
+            if removals_and_additions is None:
+                # a non-transaction block
+                coin_commitments_root = EMPTY_MERKLE_SET_ROOT
+            else:
+                # transaction spends only; reward coins are not in these lists
+                coin_commitments_root = compute_coin_commitments_root(*removals_and_additions)
 
         validation_time = time.monotonic() - validation_start
         return PreValidationResult(

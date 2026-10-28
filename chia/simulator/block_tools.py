@@ -482,6 +482,25 @@ class BlockTools:
         self._block_commitment_roots[full_block.header_hash] = root
         return root
 
+    def _register_block_commitment(self, full_block: FullBlock, new_gen: NewBlockGenerator | None) -> None:
+        """
+        Registers the coin commitment of a block created by this instance so
+        the MMR can append its composite leaf. The additions and removals of
+        the block generator match the conditions consensus validation computes
+        from the generator.
+        """
+        if full_block.height < self.mmr_manager.get_aggrtegate_from():
+            return
+        if block_has_transactions_generator(full_block):
+            assert new_gen is not None
+            commitment_root = compute_coin_commitments_root(
+                [coin.name() for coin in new_gen.removals], new_gen.additions
+            )
+        else:
+            commitment_root = EMPTY_MERKLE_SET_ROOT
+        self._block_commitment_roots[full_block.header_hash] = commitment_root
+        self.mmr_manager.register_block_commitment(full_block.header_hash, commitment_root)
+
     def setup_new_gen(
         self,
         generator_block_heights: list[uint32],
@@ -1258,20 +1277,7 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
-                        # Register the block's coin commitment so the MMR can
-                        # append its composite leaf. The additions and removals
-                        # of the block generator match the conditions consensus
-                        # validation computes from the generator.
-                        if full_block.height >= self.mmr_manager.get_aggrtegate_from():
-                            if block_has_transactions_generator(full_block):
-                                assert new_gen is not None
-                                commitment_root = compute_coin_commitments_root(
-                                    [coin.name() for coin in new_gen.removals], new_gen.additions
-                                )
-                            else:
-                                commitment_root = EMPTY_MERKLE_SET_ROOT
-                            self._block_commitment_roots[full_block.header_hash] = commitment_root
-                            self.mmr_manager.register_block_commitment(full_block.header_hash, commitment_root)
+                        self._register_block_commitment(full_block, new_gen)
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
                             block_record.header_hash, block_record.prev_hash, block_record.height
@@ -1593,20 +1599,7 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
-                        # Register the block's coin commitment so the MMR can
-                        # append its composite leaf. The additions and removals
-                        # of the block generator match the conditions consensus
-                        # validation computes from the generator.
-                        if full_block.height >= self.mmr_manager.get_aggrtegate_from():
-                            if block_has_transactions_generator(full_block):
-                                assert new_gen is not None
-                                commitment_root = compute_coin_commitments_root(
-                                    [coin.name() for coin in new_gen.removals], new_gen.additions
-                                )
-                            else:
-                                commitment_root = EMPTY_MERKLE_SET_ROOT
-                            self._block_commitment_roots[full_block.header_hash] = commitment_root
-                            self.mmr_manager.register_block_commitment(full_block.header_hash, commitment_root)
+                        self._register_block_commitment(full_block, new_gen)
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
                             block_record.header_hash, block_record.prev_hash, block_record.height
