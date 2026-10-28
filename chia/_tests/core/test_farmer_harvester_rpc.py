@@ -10,11 +10,12 @@ from os import mkdir
 from pathlib import Path
 from shutil import copy
 from typing import Any, cast
+from unittest.mock import Mock
 
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plot_sync.test_delta import dummy_plot
@@ -23,6 +24,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_rpc_api import (
+    FarmerRpcApi,
     FilterItem,
     PaginatedRequestData,
     PlotInfoRequestData,
@@ -35,7 +37,7 @@ from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.pools.pool_config import PoolingShareState
 from chia.protocols import farmer_protocol
-from chia.protocols.harvester_protocol import Plot
+from chia.protocols.harvester_protocol import Plot, Plot3
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.solver.solver_service import SolverService
@@ -115,6 +117,7 @@ async def test_farmer_get_harvesters_and_summary(
             harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
 
         assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
+        assert harvester_dict["plot_count"] == len(harvester_plots)
         assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)
         assert harvester_dict["no_key_filenames"] == get_list_or_len([], counts_only)
         assert harvester_dict["duplicates"] == get_list_or_len([], counts_only)
@@ -314,6 +317,40 @@ async def test_farmer_get_pool_state_plot_count(
 
     await time_out_assert(15, remove_all_and_validate, False)
     assert (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"] == 0
+
+
+@pytest.mark.anyio
+async def test_pool_state_counts_v2_group_members() -> None:
+    pool_hash = bytes32.random()
+    other_pool_hash = bytes32.random()
+    group = Plot3(
+        filename="group.gplot",
+        size=uint8(0x83),
+        plot_id=bytes32.random(),
+        pool_public_key=None,
+        pool_contract_puzzle_hash=pool_hash,
+        plot_public_key=G1Element(),
+        file_size=uint64(0),
+        time_modified=uint64(0),
+        compression_level=uint8(0),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
+        group_size=uint16(8),
+    )
+    v1_plot = dataclasses.replace(group, filename="v1.plot", size=uint8(32))
+    receiver = Mock(spec=Receiver)
+    receiver.plots.return_value = {
+        "group.gplot": group,
+        "v1.plot": v1_plot,
+        "legacy.gplot": group.to_plot2(),
+        "other.gplot": dataclasses.replace(group, pool_contract_puzzle_hash=other_pool_hash),
+    }
+    farmer = Mock(spec=Farmer)
+    farmer.plot_sync_receivers = {bytes32.zeros: receiver}
+    farmer.pool_state = {pool_hash: {}, other_pool_hash: {}}
+
+    pool_state = (await FarmerRpcApi(farmer).get_pool_state({}))["pool_state"]
+    assert [state["plot_count"] for state in pool_state] == [10, 8]
 
 
 @pytest.mark.parametrize(

@@ -75,6 +75,8 @@ def test_rl_v3_roundtrip(settings: dict[ProtocolMessageTypes, RLSettingsV3] | No
     [
         ProtocolMessageTypes.respond_plots2,
         ProtocolMessageTypes.plot_sync_loaded2,
+        ProtocolMessageTypes.respond_plots3,
+        ProtocolMessageTypes.plot_sync_loaded3,
     ],
 )
 def test_plot_serialization_messages_use_time_based_rate_limits(message_type: ProtocolMessageTypes) -> None:

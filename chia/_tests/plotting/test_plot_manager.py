@@ -8,18 +8,19 @@ from os import unlink
 from pathlib import Path
 from shutil import copy, move
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
-from chia_rs import G1Element
-from chia_rs.sized_ints import uint32
+from chia_rs import ConsensusConstants, G1Element, PlotParam
+from chia_rs.sized_ints import uint8, uint16, uint32
 from chiapos import DiskProver
 
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.plotting.manager import Cache, PlotManager
-from chia.plotting.prover import V1Prover
+from chia.plotting.manager import Cache, CacheEntry, PlotManager
+from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import (
     PlotInfo,
     PlotRefreshEvents,
@@ -34,6 +35,57 @@ log = logging.getLogger(__name__)
 
 # These tests are not dependent on consensus rules
 pytestmark = [pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")]
+
+
+@pytest.mark.parametrize("cache_hit", [False, True])
+@pytest.mark.parametrize(
+    "v2,level,max_level,contexts,loaded",
+    [
+        (False, 0, 0, 0, True),
+        (False, 8, 7, 1, False),
+        (False, 8, 8, 0, False),
+        (False, 8, 8, 1, True),
+        (True, 0, 0, 0, True),
+    ],
+)
+def test_refresh_compression_policy_applies_only_to_v1(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    blockchain_constants: ConsensusConstants,
+    cache_hit: bool,
+    v2: bool,
+    level: int,
+    max_level: int,
+    contexts: int,
+    loaded: bool,
+) -> None:
+    path = tmp_path / ("group.gplot" if v2 else "compressed.plot")
+    path.write_bytes(b"plot")
+    prover = Mock(spec=V2Prover if v2 else V1Prover)
+    prover.get_filename.return_value = str(path)
+    if v2:
+        prover.get_group_size.return_value = uint16(8)
+        prover.get_compression_level.side_effect = AssertionError("V2 has no V1 compression level")
+    else:
+        prover.get_compression_level.return_value = uint8(level)
+        prover.get_param.return_value = PlotParam.make_v1(uint8(20))
+
+    entry = CacheEntry(prover, G1Element(), None, None, G1Element(), time.time())
+    manager = PlotManager(tmp_path, Mock(), blockchain_constants)
+    manager.set_public_keys([G1Element()], [])
+    manager.max_compression_level_allowed = max_level
+    manager.context_count = contexts
+    manager._refreshing_enabled = True
+    if cache_hit:
+        manager.cache.update(path, entry)
+    else:
+        monkeypatch.setattr("chia.plotting.manager.get_prover_from_file", lambda _: prover)
+        monkeypatch.setattr(CacheEntry, "from_prover", lambda _: entry)
+
+    result = manager.refresh_batch([path], {tmp_path})
+    assert bool(result.loaded) == loaded
+    assert (path in manager.plots) == loaded
+    assert manager.failed_to_open_filenames == {}
 
 
 @dataclass
