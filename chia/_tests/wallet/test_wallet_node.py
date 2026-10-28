@@ -35,11 +35,12 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.socket import find_available_listen_port
 from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
@@ -80,12 +81,13 @@ async def wallet_node_and_keychain(
         return
 
     create_all_ssl(root_path)
-    full_config = load_config(root_path, "config.yaml")
+    with lock_and_load_config(root_path, "config.yaml") as full_config:
+        full_config["daemon_port"] = find_available_listen_port(name="daemon")
+        save_config(root_path, "config.yaml", full_config)
     crt_path = root_path / full_config["daemon_ssl"]["private_crt"]
     key_path = root_path / full_config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / full_config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / full_config["private_ssl_ca"]["key"]
-    full_config["daemon_port"] = 0
     with Lockfile.create(daemon_launch_lock_path(root_path)):
         ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
         async with ws_server.run():
