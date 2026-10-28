@@ -68,7 +68,7 @@ cryptography = [
     {version = ">=50.0.1", markers = "sys_platform != 'darwin' or platform_machine != 'x86_64'"},
 ]
 dnslib = ">=0.9.25"  # dns lib
-dnspython = ">=2.6.1"  # Query DNS seeds
+dnspython = ">=2.9.0"  # Query DNS seeds
 filelock = ">=3.29.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = ">=25.5.0"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = ">=26.2"
