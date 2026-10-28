@@ -191,7 +191,12 @@ def verify_and_get_quality_string(
                 prev_transaction_block_height, constants, plot_param.strength_v2
             )
             if not passes_plot_filter_v2(
-                plot_group_id, pos.meta_group, group_strength, filter_challenge, signage_point_index
+                plot_group_id,
+                pos.meta_group,
+                group_strength,
+                filter_challenge,
+                signage_point_index,
+                constants.FILTER_WINDOW_SIZE,
             ):
                 log.error(f"Did not pass the V2 plot filter. group_strength: {group_strength}")
                 return None
@@ -270,34 +275,14 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
     return std_hash(plot_id + challenge_hash + signage_point)
 
 
-# V2 Plot Filter Constants
-# TODO: todo_v2_plots move FILTER_WINDOW_SIZE and _BASE_FILTER_OFFSETS to ConsensusConstants in chia_rs
-FILTER_WINDOW_SIZE: int = 16  # SPs per filter window (64 SPs / 4 windows)
-MAX_EFFECTIVE_PLOT_FILTER_BITS: int = 13  # 8192 effective plot filter cap
-
-# Base plot filter reduction schedule — relative heights from HARD_FORK2_HEIGHT.
-# Starts at NUMBER_ZERO_BITS_PLOT_FILTER_V2 at the fork, then reduces over time.
-_BASE_FILTER_RELATIVE_HEIGHTS: list[uint32] = [
-    uint32(50_494_000),  # +~31 years
-    uint32(45_444_000),  # +~28 years
-    uint32(40_394_000),  # +~25 years
-    uint32(35_343_000),  # +~21 years
-    uint32(30_298_000),  # +~18 years
-    uint32(25_247_000),  # +~15 years
-    uint32(20_197_000),  # +~12 years
-    uint32(15_146_000),  # +~9 years
-    uint32(10_101_000),  # +~6 years
-]
-
-
 def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
     base_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
     relative_height = int(height) - constants.HARD_FORK2_HEIGHT
     if relative_height <= 0:
         return base_bits
-    for index, offset in enumerate(_BASE_FILTER_RELATIVE_HEIGHTS):
+    for index, offset in enumerate(constants.PLOT_FILTER_V2_RELATIVE_HEIGHT):
         if relative_height >= offset:
-            reductions = len(_BASE_FILTER_RELATIVE_HEIGHTS) - index
+            reductions = len(constants.PLOT_FILTER_V2_RELATIVE_HEIGHT) - index
             return max(0, base_bits - reductions)
     return base_bits
 
@@ -308,7 +293,9 @@ def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, pl
     if plot_strength < constants.MIN_PLOT_STRENGTH:
         raise ValueError(f"Plot strength ({plot_strength}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
     strength_delta = int(plot_strength) - constants.MIN_PLOT_STRENGTH
-    return min(calculate_base_plot_filter_bits(height, constants) + strength_delta, MAX_EFFECTIVE_PLOT_FILTER_BITS)
+    return min(
+        calculate_base_plot_filter_bits(height, constants) + strength_delta, constants.MAX_EFFECTIVE_PLOT_FILTER_BITS
+    )
 
 
 def passes_plot_filter_v2(
@@ -317,7 +304,7 @@ def passes_plot_filter_v2(
     group_strength: int,
     filter_challenge: bytes32,
     signage_point_index: int,
-    window_size: int = FILTER_WINDOW_SIZE,
+    window_size: int,
 ) -> bool:
     """
     V2 plot filter - predictable passage.

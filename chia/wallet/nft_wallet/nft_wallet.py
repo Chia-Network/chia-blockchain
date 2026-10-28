@@ -823,7 +823,7 @@ class NFTWallet:
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin_name)) if fee > 0 else extra_conditions,
-        )
+        ).program
 
         if unft.supports_did:
             innersol = Program.to([innersol])

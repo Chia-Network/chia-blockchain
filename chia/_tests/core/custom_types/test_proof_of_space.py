@@ -323,6 +323,47 @@ def test_base_filter_relative_to_fork_height() -> None:
     assert calculate_base_plot_filter_bits(uint32(0), constants) == 9  # before fork
 
 
+@pytest.mark.parametrize("initial_bits", [5, 9])
+@pytest.mark.parametrize(
+    "height,reductions",
+    [
+        (0, 0),
+        (99, 0),
+        (100, 0),
+        (199, 0),
+        (200, 1),
+        (249, 1),
+        (250, 2),
+        (299, 2),
+        (300, 3),
+        (1555, 3),
+        (7587, 3),
+        (7588, 4),
+        (9123, 4),
+        (9124, 5),
+        (10659, 5),
+        (10660, 6),
+        (12195, 6),
+        (12196, 7),
+        (13731, 7),
+        (13732, 8),
+        (15267, 8),
+        (15268, 9),
+        (15269, 9),
+    ],
+)
+def test_plot_filter_bits_use_configured_schedule(height: int, reductions: int, initial_bits: int) -> None:
+    constants = DEFAULT_CONSTANTS.replace(
+        HARD_FORK2_HEIGHT=uint32(100),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(initial_bits),
+        PLOT_FILTER_V2_RELATIVE_HEIGHT=[uint32(h) for h in [15168, 13632, 12096, 10560, 9024, 7488, 200, 150, 100]],
+    )
+    expected_bits = max(0, initial_bits - reductions)
+    assert calculate_base_plot_filter_bits(uint32(height), constants) == expected_bits
+    assert calculate_plot_filter_bits(uint32(height), constants, constants.MIN_PLOT_STRENGTH) == expected_bits
+    assert calculate_plot_filter_bits(uint32(height), constants, constants.MIN_PLOT_STRENGTH + 1) == expected_bits + 1
+
+
 def test_base_filter_can_be_lowered_for_test_constants() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000), NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(0))
     assert calculate_base_plot_filter_bits(uint32(1_000_000), constants) == 0
@@ -426,6 +467,7 @@ class TestV2PlotFilter:
             group_strength=group_strength,
             filter_challenge=filter_challenge,
             signage_point_index=5,
+            window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
         )
         result2 = passes_plot_filter_v2(
             plot_group_id=plot_group_id,
@@ -433,6 +475,7 @@ class TestV2PlotFilter:
             group_strength=group_strength,
             filter_challenge=filter_challenge,
             signage_point_index=5,
+            window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
         )
         assert result1 == result2
 
@@ -451,6 +494,7 @@ class TestV2PlotFilter:
                 group_strength=group_strength,
                 filter_challenge=filter_challenge,
                 signage_point_index=sp_index,
+                window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
             )
             results.append(result)
 
@@ -466,7 +510,7 @@ class TestV2PlotFilter:
         meta_group = 42
         group_strength = 8
 
-        # Test with default window_size=16
+        # Test with the default constants' window size (16).
         for sp_index in range(16):
             result1 = passes_plot_filter_v2(
                 plot_group_id=plot_group_id,
@@ -474,6 +518,7 @@ class TestV2PlotFilter:
                 group_strength=group_strength,
                 filter_challenge=filter_challenge,
                 signage_point_index=sp_index,
+                window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
             )
             result2 = passes_plot_filter_v2(
                 plot_group_id=plot_group_id,
@@ -481,6 +526,7 @@ class TestV2PlotFilter:
                 group_strength=group_strength,
                 filter_challenge=filter_challenge,
                 signage_point_index=sp_index + 16,  # Next window
+                window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
             )
             assert result1 == result2, f"Results should match for SP indices {sp_index} and {sp_index + 16}"
 
@@ -500,6 +546,7 @@ class TestV2PlotFilter:
                     group_strength=group_strength,
                     filter_challenge=filter_challenge,
                     signage_point_index=sp_index,
+                    window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
                 ):
                     pass_indices[meta_group] = sp_index
                     break
@@ -525,6 +572,7 @@ class TestV2PlotFilter:
                 group_strength=group_strength,
                 filter_challenge=filter_challenge,
                 signage_point_index=sp_index,
+                window_size=DEFAULT_CONSTANTS.FILTER_WINDOW_SIZE,
             ):
                 pass_count += 1
 

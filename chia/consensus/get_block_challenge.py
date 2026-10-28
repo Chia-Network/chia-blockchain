@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.types.blockchain_format.proof_of_space import FILTER_WINDOW_SIZE
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -203,7 +202,7 @@ def get_filter_challenge_from_chain(
 
     Returns the cc sub-slot challenge hash of a previously completed sub-slot
     """
-    sub_slots_back = 2 if signage_point_index < FILTER_WINDOW_SIZE else 1
+    sub_slots_back = 2 if signage_point_index < constants.FILTER_WINDOW_SIZE else 1
 
     # Collect sub-slot challenge hashes newest-first
     reversed_challenges: list[bytes32] = []
