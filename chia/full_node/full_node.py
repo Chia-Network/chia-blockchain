@@ -2707,7 +2707,7 @@ class FullNode:
         finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
 
         # Count the blocks in sub slot, and check if it's a new epoch
-        if len(block.finished_sub_slots) > 0:
+        if finished_sub_slots > 0:
             num_blocks_in_ss = 1  # Curr
         else:
             curr = self.blockchain.try_block_record(block.prev_header_hash)
@@ -2717,7 +2717,6 @@ class FullNode:
                 num_blocks_in_ss += 1
 
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
-            # TODO: potentially allow overflow blocks here, which count for the next slot
             self.log.warning("Too many blocks added, not adding block")
             return None
 
