@@ -14,6 +14,7 @@ from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.coin_store_protocol import CoinStoreProtocol, CoinStoreSnapshot
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_item import UnspentLineageInfo
@@ -337,6 +338,50 @@ class CoinStore:
             if peak_row is not None:
                 peak = (peak_row[1], peak_row[0])
             yield _CoinStoreSnapshot(self, peak)
+
+    async def get_coin_commitments_root(self, height: uint32) -> bytes32:
+        """
+        Reconstruct the canonical block's coin commitments root at `height`
+        from the coin store, using one reader snapshot and exactly two indexed
+        queries:
+
+            spent_index = height            -- every coin spent at this height
+            confirmed_index = height AND coinbase = 0
+                                              -- every transaction-created output
+                                                 (reward coins are excluded)
+
+        The outputs are grouped by parent coin ID and combined with the shared
+        consensus helper. Both queries must observe the same snapshot so a
+        concurrent peak change cannot mix pre- and post-update coin state.
+
+        A nullable coin_commitments_root column keyed by block hash may be
+        added to the block store later if profiling shows this reconstruction
+        is a hot path; it is intentionally omitted initially, and this two-query
+        path remains the recovery and integrity-check fallback.
+        """
+        # spent_index is 0 for unspent coins (and -1 for fast-forward marked
+        # ones), so height 0 cannot be queried and commits the empty root.
+        if height == 0:
+            return EMPTY_MERKLE_SET_ROOT
+
+        async with self.db_wrapper.reader() as conn:
+            async with conn.execute(
+                # `spent_index>0` is required for SQLite to use the partial coin_spent_index.
+                "SELECT coin_name FROM coin_record INDEXED BY coin_spent_index WHERE spent_index=? AND spent_index>0",
+                (height,),
+            ) as cursor:
+                spent_coin_ids = [bytes32(row[0]) for row in await cursor.fetchall()]
+
+            async with conn.execute(
+                "SELECT puzzle_hash, coin_parent, amount FROM coin_record INDEXED BY coin_confirmed_index "
+                "WHERE confirmed_index=? AND coinbase=0",
+                (height,),
+            ) as cursor:
+                created_coins = [
+                    Coin(bytes32(row[1]), bytes32(row[0]), uint64.from_bytes(row[2])) for row in await cursor.fetchall()
+                ]
+
+        return compute_coin_commitments_root(spent_coin_ids, created_coins)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
