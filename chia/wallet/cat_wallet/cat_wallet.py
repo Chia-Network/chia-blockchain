@@ -55,7 +55,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
-from chia.wallet.vc_wallet.vc_drivers import match_revocation_layer
+from chia.wallet.vc_wallet.vc_drivers import RevocationLayer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -471,8 +471,8 @@ class CATWallet:
                 uncurried_puzzle_reveal = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
                 if uncurried_puzzle_reveal.mod != CAT_MOD or uncurried_puzzle_reveal.curried_args is None:
                     return None
-                revocation_layer_match = match_revocation_layer(
-                    UnknownPuzzle(known_program=uncurried_puzzle_reveal.curried_args[2])
+                revocation_layer_match = RevocationLayer.match(
+                    unknown_puzzle=UnknownPuzzle(known_program=uncurried_puzzle_reveal.curried_args[2])
                 )
                 if revocation_layer_match is not None:
                     wallet_type = RCATWallet
@@ -535,7 +535,7 @@ class CATWallet:
                             success = await RCATWallet.convert_to_revocable(
                                 found_cat_wallet,
                                 # too complicated for mypy but semantics guarantee this not to be None
-                                hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                                hidden_puzzle_hash=revocation_layer_match.hidden_puzzle.tree_hash,  # type: ignore[union-attr]
                             )
                             if success:
                                 async with sync_scope.use() as interface:
@@ -567,7 +567,7 @@ class CATWallet:
                         wallet_state_manager.main_wallet,
                         parent_data.tail_program_hash,
                         # too complicated for mypy but semantics guarantee this not to be None
-                        hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
+                        hidden_puzzle_hash=revocation_layer_match.hidden_puzzle.tree_hash,  # type: ignore[union-attr]
                     )
                 else:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(

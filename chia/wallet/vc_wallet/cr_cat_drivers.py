@@ -38,8 +38,8 @@ from chia.wallet.vc_wallet.vc_drivers import (
     EXTIGENT_METADATA_LAYER_HASH,
     GUARANTEED_NIL_TP_HASH,
     P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
-    create_did_tp,
-    create_eml_covenant_morpher,
+    DidTransferProgram,
+    EmlCovenantMorpher,
 )
 
 # Mods
@@ -77,8 +77,8 @@ CREDENTIAL_STRUCT: Program = Program.to(
                     (
                         [
                             4,
-                            (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
-                            [4, (1, create_did_tp()), 1],
+                            (1, EmlCovenantMorpher(transfer_program=DidTransferProgram()).program),
+                            [4, (1, DidTransferProgram().program), 1],
                         ],
                         None,
                     )
