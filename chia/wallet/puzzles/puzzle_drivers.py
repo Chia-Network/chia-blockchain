@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, ClassVar, Protocol, Self, TypeVar, cast
 
 from chia_rs import Coin
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import Self, runtime_checkable
+from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import Condition, parse_conditions_non_consensus
