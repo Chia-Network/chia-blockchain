@@ -878,26 +878,6 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, block)
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    # This can probably be fixed by:
-    # index d0f7daa91b..b6c5a27d13 100644
-    # --- a/chia/consensus/multiprocess_validation.py
-    # +++ b/chia/consensus/multiprocess_validation.py
-    # @@ -246,7 +246,7 @@ async def pre_validate_block(
-    #              sub_slot_iters=vs.ssi,
-    #              prev_ses_block=vs.prev_ses_block,
-    #          )
-    # -    except ValueError:
-    # +    except Exception as e:
-    #          log.exception("block_to_block_record()")
-    #          return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="In the 3.0 hard fork scenario, the last check fails with an exception "
-        "(KeyError) instead of an error code. All passing tests fail because the "
-        "proof-of-space is invalid (mismatching challenge). The test suggests that "
-        "the specific error isn't important, but it still doesn't like exceptions",
-    )
     async def test_empty_slot_no_ses(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2l
         blockchain = empty_blockchain
