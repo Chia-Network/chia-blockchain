@@ -139,7 +139,7 @@ class ParentAbsorb:
 
     transactions: bool = True
     signing_responses: bool = True
-    extra_spends: bool = True
+    extra_spends: bool = False  # Get folded into transaction during _add_pending_transaction
     selected_coins: bool = True
     singleton_records: bool = True
     plotnft_exiting_info: bool = True
@@ -240,8 +240,8 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
                 # Nested scopes historically auto-signed (new_action_scope default); do not inherit
                 # parent sign=False (e.g. take_offer) or offer halves are built unsigned.
                 sign=None,
-                additional_signing_responses=[],
-                extra_spends=[],
+                additional_signing_responses=child_side_effects.signing_responses,
+                extra_spends=child_side_effects.extra_spends,
                 puzzle_for_pk=self.config.puzzle_for_pk,
                 _initial_side_effects=child_side_effects,
             ) as inner:

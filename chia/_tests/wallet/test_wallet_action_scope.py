@@ -203,3 +203,40 @@ async def test_wallet_action_scope_sandbox() -> None:
 
         async with action_scope.use() as interface:
             assert interface.side_effects.plotnft_exiting_info == parent_plotnft_info
+
+        # Default absorb must not pull extra_spends up: finalize already folds them into
+        # transactions, so absorbing would duplicate them on the parent.
+        async with action_scope.sandbox(wallet_state_manager=wsm) as sandbox:
+            async with sandbox.use() as interface:
+                interface.side_effects.extra_spends.append(MOCK_SB)
+                interface.side_effects.signing_responses.append(MOCK_SR)
+                interface.side_effects.transactions.append(STD_TX)
+
+        assert wsm.most_recent_call is not None
+        assert wsm.most_recent_call[5] == [MOCK_SB]
+        assert wsm.most_recent_call[4] == [MOCK_SR]
+        async with action_scope.use() as interface:
+            assert interface.side_effects.signing_responses == [MOCK_SR]
+            assert interface.side_effects.extra_spends == []
+            assert interface.side_effects.transactions == [STD_TX, STD_TX, STD_TX]
+
+        # Seeded signing_responses / extra_spends must reach child config and side effects
+        # (not get wiped by hard-coded empty lists when constructing the sandbox scope).
+        async with action_scope.use() as interface:
+            interface.side_effects.signing_responses = [MOCK_SR]
+            interface.side_effects.extra_spends = [MOCK_SB]
+
+        async with action_scope.sandbox(
+            wallet_state_manager=wsm,
+            child_seed=ChildSeed(signing_responses=True, extra_spends=True),
+            parent_absorb=ParentAbsorb.nothing(),
+        ) as sandbox:
+            assert sandbox.config.additional_signing_responses == [MOCK_SR]
+            assert sandbox.config.extra_spends == [MOCK_SB]
+            async with sandbox.use() as interface:
+                assert interface.side_effects.signing_responses == [MOCK_SR]
+                assert interface.side_effects.extra_spends == [MOCK_SB]
+
+        async with action_scope.use() as interface:
+            assert interface.side_effects.signing_responses == [MOCK_SR]
+            assert interface.side_effects.extra_spends == [MOCK_SB]
