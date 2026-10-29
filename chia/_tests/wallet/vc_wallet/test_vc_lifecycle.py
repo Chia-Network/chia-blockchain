@@ -18,7 +18,6 @@ from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.puzzle_drivers import (
-    ACSPuzzle,
     ACSSolution,
     NilSolution,
     UnknownPuzzle,
@@ -899,7 +898,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             ExigentMetadataLayer(
                 metadata=None,
                 transfer_program=UnknownPuzzle(known_program=ACS_TRANSFER_PROGRAM),
-                inner_puzzle=ACSPuzzle(),
+                inner_puzzle=ACS,
             ).program,
         )
 
