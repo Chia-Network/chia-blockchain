@@ -29,7 +29,7 @@ async def test_manual_did_search_error_paths() -> None:
     # Not a singleton at all
     non_singleton_spend = make_spend(coin, ACSPuzzle().program, Program.to([]))
     wsm.get_latest_singleton_coin_spend = AsyncMock(return_value=(non_singleton_spend, coin_state))  # type: ignore[method-assign]
-    with pytest.raises(ValueError, match="The coin is not a DID"):
+    with pytest.raises(ValueError, match="The coin is not a singleton"):
         await wsm.manual_did_search(bytes32.zeros)
 
     # Singleton of ACS — not a DID recovery puzzle
