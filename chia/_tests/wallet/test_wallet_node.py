@@ -121,8 +121,8 @@ async def test_get_private_key(wallet_node_and_keychain: tuple[WalletNode, Keych
     key = await node.get_key(fingerprint)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -139,8 +139,8 @@ async def test_get_private_key_default_key(wallet_node_and_keychain: tuple[Walle
     key = await node.get_key(None)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -169,8 +169,8 @@ async def test_get_private_key_missing_key_use_default(wallet_node_and_keychain:
     key = await node.get_key(1234567890)
 
     assert key is not None
-    assert isinstance(key, PrivateKey)
-    assert key.get_g1().get_fingerprint() == fingerprint
+    assert key.secret_key is not None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -186,8 +186,8 @@ async def test_get_public_key(wallet_node_and_keychain: tuple[WalletNode, Keycha
     key = await node.get_key(fingerprint, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -216,8 +216,8 @@ async def test_get_public_key_default_key(wallet_node_and_keychain: tuple[Wallet
     key = await node.get_key(None, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
 
 
 @pytest.mark.anyio
@@ -250,8 +250,38 @@ async def test_get_public_key_missing_key_use_default(wallet_node_and_keychain: 
     key = await node.get_key(1234567890, private=False)
 
     assert key is not None
-    assert isinstance(key, G1Element)
-    assert key.get_fingerprint() == fingerprint
+    assert key.secret_key is None
+    assert key.fingerprint == fingerprint
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_no_keys(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, _keychain = wallet_node_and_keychain  # empty keyring
+
+    assert await node._start_with_fingerprint() is False
+    assert node.logged_in is False
+
+
+@pytest.mark.anyio
+async def test_start_with_fingerprint_public_only_key(
+    wallet_node_and_keychain: tuple[WalletNode, Keychain],
+) -> None:
+    """
+    Starting with a public-only key must succeed for both local and daemon keychains.
+    This exercises the `or_public` fallback: private lookup finds the key but has no secrets.
+    """
+    node, keychain = wallet_node_and_keychain
+    pk: G1Element = keychain.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
+    )
+    fingerprint = pk.get_fingerprint()
+
+    assert await node._start_with_fingerprint(fingerprint=fingerprint) is True
+    assert node.logged_in_fingerprint == fingerprint
+    assert node.wallet_state_manager.private_key is None
+    assert node.wallet_state_manager.root_pubkey == pk
 
 
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
