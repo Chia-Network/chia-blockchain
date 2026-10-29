@@ -2355,7 +2355,7 @@ class WalletStateManager:
             unknown_puzzle=UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
         )
         if singleton_match is None:
-            raise ValueError("The coin is not a DID.")
+            raise ValueError("The coin is not a singleton.")
         did_match = DIDRecoveryPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle)
         if did_match is None:
             raise ValueError("The coin is not a DID.")
