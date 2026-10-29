@@ -7,8 +7,6 @@ on:
       - main
       - release/**
   pull_request:
-    branches:
-      - "**"
 
 permissions:
   contents: read
@@ -28,5 +26,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # Commit objects only; the check never reads file contents.
+          filter: blob:none
 
       - uses: chia-network/actions/check-commit-signing@main
