@@ -511,10 +511,10 @@ class BlockTools:
                 )
             else:
                 sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                assert sk is not None
+                assert sk is not None and isinstance(sk, PrivateKey)
                 self.farmer_master_sk = sk
                 sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                assert sk is not None
+                assert sk is not None and isinstance(sk, PrivateKey)
                 self.pool_master_sk = sk
 
             self.farmer_pk = cached_master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
