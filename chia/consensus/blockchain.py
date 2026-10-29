@@ -494,6 +494,8 @@ class Blockchain:
                     fork_info = ForkInfo(parent_height, parent_height, fork_block.prev_header_hash)
                 else:
                     fork_info.reset(parent_height, fork_block.prev_header_hash)
+                if parent_height >= 0:
+                    await self._load_fork_point_history(uint32(parent_height))
             assert fork_info is not None
             # make the block record resolvable for prevalidation
             record = await self.get_block_record_from_db(header_hash)
@@ -503,6 +505,30 @@ class Blockchain:
             await self.run_single_block(fork_block, fork_info)
         assert fork_info is not None
         return fork_info
+
+    async def _load_fork_point_history(self, fork_point: uint32) -> None:
+        """
+        Make sure the canonical history below `fork_point` that replaying a
+        stored branch from it walks is in the in-memory cache. The replay's
+        pre_sp_tx_block() walks back to the last transaction block infused
+        before the block's signage point. A block is infused within
+        NUM_SP_INTERVALS_EXTRA + 1 SP intervals of its signage point and is a
+        transaction block if that signage point is after the previous
+        transaction block's infusion, so the walk spans at most 4 sub-slots of
+        at most MAX_SUB_SLOT_BLOCKS blocks each. Prevalidating the block after
+        the branch reads the history any block at its height with a canonical
+        parent reads, which the cache already keeps. For a deep fork point
+        warmup() reloads [fork_point - BLOCKS_CACHE_SIZE, fork_point], covering
+        both; the check itself only reads the cache, so a fork near the peak
+        never touches the db.
+        """
+        bottom = max(0, fork_point - 4 * self.constants.MAX_SUB_SLOT_BLOCKS)
+        for height in range(bottom, fork_point + 1):
+            header_hash = self.height_to_hash(uint32(height))
+            assert header_hash is not None
+            if self.try_block_record(header_hash) is None:
+                await self.warmup(fork_point)
+                return
 
     async def restore_fork_leaves(self, fork_info: ForkInfo) -> None:
         """
@@ -555,13 +581,10 @@ class Blockchain:
             await self.restore_fork_leaves(fork_info)
             return False
 
+        # the fork's peak is not canonical: its block at the fork height isn't
         branch = await self._stored_fork_branch(fork_info.peak_hash)
-        assert branch is not None
-        if len(branch) == 0:
-            # the fork's peak itself has become canonical
-            fork_info.reset(fork_info.peak_height, fork_info.peak_hash)
-        else:
-            await self._replay_stored_branch(branch, fork_info)
+        assert branch is not None and len(branch) > 0
+        await self._replay_stored_branch(branch, fork_info)
         return True
 
     async def add_block(

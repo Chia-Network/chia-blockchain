@@ -833,6 +833,161 @@ class TestSyncWithCommitments:
                     await reference.coin_store.get_coins_removed_at_height(height)
                 )
 
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    @pytest.mark.parametrize("entry", ["resumed_batch", "stored_fork_child"])
+    # the small cache still covers the sub-epoch summary lookback of extending
+    # the peak (SUB_EPOCH_BLOCKS + MAX_SUB_SLOT_BLOCKS), so the chains below
+    # build normally while the competitor evicts the fork's common ancestor
+    @pytest.mark.parametrize("cache_size", [220, None], ids=["small_cache", "default_cache"])
+    async def test_stored_fork_replay_after_cache_eviction(
+        self,
+        hf2_bt: BlockTools,
+        self_hostname: str,
+        db_version: int,
+        consensus_mode: ConsensusMode,
+        entry: str,
+        cache_size: int | None,
+    ) -> None:
+        """
+        Replaying a stored fork branch walks the canonical history below its
+        common ancestor, and prevalidating the block after it reads that
+        history too. When the canonical chain has since grown past the block
+        cache, that history is evicted and must be loaded again first.
+        """
+        bt = hf2_bt
+        constants = bt.constants
+        if cache_size is not None:
+            constants = constants.replace(BLOCKS_CACHE_SIZE=uint32(cache_size))
+        canonical = bt.get_consecutive_blocks(31)
+        fork = bt.get_consecutive_blocks(10, block_list_input=canonical[:10], seed=b"fork-between-batches")
+        competitor = bt.get_consecutive_blocks(231, block_list_input=canonical[:5], seed=b"reorg-between-batches")
+        assert competitor[5].header_hash != canonical[5].header_hash
+        assert fork[14].weight < canonical[-1].weight < competitor[-1].weight
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical, node)
+
+            fork_info = ForkInfo(9, 9, canonical[9].header_hash)
+            blockchain = AugmentedBlockchain(node.blockchain)
+            vs = ValidationState(bt.constants.SUB_SLOT_ITERS_STARTING, bt.constants.DIFFICULTY_STARTING, None)
+            peer_info = PeerInfo(self_hostname, 0)
+            success, _ = await node.add_block_batch(fork[10:15], peer_info, fork_info, vs, blockchain)
+            assert success
+
+            # a heavier chain sharing only heights 0..4 with the fork commits,
+            # and its peak post-processing evicts the old block records
+            await add_blocks_in_batches(competitor, node)
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == competitor[-1].header_hash
+            evicted = node.blockchain.try_block_record(canonical[4].header_hash) is None
+            assert evicted == (cache_size is not None)
+
+            if entry == "resumed_batch":
+                success, _ = await node.add_block_batch(fork[14:20], peer_info, fork_info, vs, blockchain)
+                assert success
+                assert fork_info.fork_height == 4
+                assert fork_info.peak_hash == fork[19].header_hash
+            else:
+                await node.add_block(fork[15])
+                assert await node.blockchain.get_block_record_from_db(fork[15].header_hash) is not None
+                assert not node.blockchain.contains_block(fork[15].header_hash, fork[15].height)
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_stored_fork_replay_below_cached_fork_point(
+        self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        However long a stored fork branch is, replaying its first blocks walks
+        the canonical history below the fork point. When the fork point is
+        still cached but the blocks below it are evicted, those must be loaded
+        again too.
+        """
+        bt = hf2_bt
+        # see test_stored_fork_replay_after_cache_eviction
+        cache_size = 220
+        constants = bt.constants.replace(BLOCKS_CACHE_SIZE=uint32(cache_size))
+        prefix = bt.get_consecutive_blocks(21)
+        # a non-transaction fork point, so the first replayed transaction
+        # block's pre-SP transaction block lies below it
+        fork_height = next(h for h in range(20, 0, -1) if not prefix[h].is_transaction_block())
+        common = prefix[: fork_height + 1]
+        fork = bt.get_consecutive_blocks(10, block_list_input=common, seed=b"fork-below-cached-fork-point")
+        # empty sub-slots make the branch's tail slower than the competitor
+        fork = bt.get_consecutive_blocks(
+            cache_size - 10, block_list_input=fork, seed=b"fork-below-cached-fork-point-tail", skip_slots=20
+        )
+        competitor = bt.get_consecutive_blocks(
+            cache_size - 1, block_list_input=common, seed=b"competitor-below-cached-fork-point"
+        )
+        stored, child = fork[:-1], fork[-1]
+        # the stored branch is shorter than the cache, so the child's own
+        # prevalidation only reads history down to the fork point
+        assert child.height - cache_size == fork_height
+        assert competitor[-1].height == stored[-1].height
+        assert competitor[-1].weight == stored[-1].weight
+        assert competitor[-1].total_iters < stored[-1].total_iters
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(stored, node)
+            # the competitor wins the weight tie on total iters, and its peak
+            # post-processing evicts the blocks below the fork point
+            await add_blocks_in_batches(competitor, node)
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == competitor[-1].header_hash
+            assert node.blockchain.try_block_record(common[-1].header_hash) is not None
+            assert node.blockchain.try_block_record(common[-2].header_hash) is None
+
+            # the child is heavier than the competitor and reorgs to the fork
+            await node.add_block(child)
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == child.header_hash
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    async def test_near_peak_stored_fork_child_keeps_evicted_history_out(
+        self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
+    ) -> None:
+        """
+        Replaying a stored fork branch just below the peak only walks history
+        the block cache keeps, so preparing a child of it must not reload the
+        evicted canonical history from the db.
+        """
+        bt = hf2_bt
+        # see test_stored_fork_replay_after_cache_eviction
+        cache_size = 220
+        constants = bt.constants.replace(BLOCKS_CACHE_SIZE=uint32(cache_size))
+        canonical = bt.get_consecutive_blocks(241)
+        fork_height = 237
+        # empty sub-slots keep the fork behind the canonical chain at equal height
+        fork = bt.get_consecutive_blocks(
+            3, block_list_input=canonical[: fork_height + 1], seed=b"near-peak-fork", skip_slots=20
+        )
+        for height in (239, 240):
+            assert fork[height].weight == canonical[height].weight
+            assert fork[height].total_iters > canonical[height].total_iters
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical[:240], node)
+            await node.add_block(fork[238])
+            for height in (239, 240):
+                if height == 240:
+                    # the canonical chain advances, evicting one more height
+                    await node.add_block(canonical[height])
+                # the highest height the canonical peak's cleaning evicted
+                evicted = canonical[height - cache_size].header_hash
+                assert node.blockchain.try_block_record(evicted) is None
+                # an orphan child of the stored fork block(s), replayed first
+                await node.add_block(fork[height])
+                peak = node.blockchain.get_peak()
+                assert peak is not None and peak.header_hash == canonical[height].header_hash
+                assert await node.blockchain.get_block_record_from_db(fork[height].header_hash) is not None
+                assert node.blockchain.try_block_record(evicted) is None
+
 
 def test_mmr_manager_deep_copy() -> None:
     # Create original MMR manager
