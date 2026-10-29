@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import ClassVar, Generic, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
 
 from chia_puzzles_py.programs import DID_INNERPUZ, DID_INNERPUZ_HASH
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
-from chia.pools.plotnft_drivers import SingletonStruct
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.puzzle_drivers import Puzzle, PuzzleBase, UnknownPuzzle
+from chia.wallet.puzzles.puzzle_drivers import OuterPuzzle, Puzzle, PuzzleBase, UnknownPuzzle
+from chia.wallet.puzzles.singleton_drivers import SingletonStruct
 from chia.wallet.util.curry_and_treehash import (
     calculate_hash_of_quoted_mod_hash,
     curry_and_treehash,
@@ -59,6 +59,9 @@ class RecoveryList:
 
 @dataclass(frozen=True, kw_only=True)
 class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
+    if TYPE_CHECKING:
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast("DIDRecoveryPuzzle[_T_Puzzle]", None)
+
     inner_puzzle: _T_Puzzle
     self_launcher_id: bytes32
     metadata: DIDMetadata
@@ -72,7 +75,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.program,
             self.recovery_list.ids_hash,
             self.num_of_backup_ids_needed,
-            self.struct_driver(launcher_id=self.self_launcher_id).to_program(),
+            self.struct_driver(launcher_id=self.self_launcher_id).program,
             self.metadata.as_program(),
         )
 
@@ -83,7 +86,7 @@ class DIDRecoveryPuzzle(PuzzleBase, Generic[_T_Puzzle]):
             self.inner_puzzle.tree_hash,
             self.recovery_list.pre_hashed,
             Program.to(self.num_of_backup_ids_needed).get_tree_hash(),
-            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash(),
+            self.struct_driver(launcher_id=self.self_launcher_id).struct_hash,
             self.metadata.tree_hash,
         )
 

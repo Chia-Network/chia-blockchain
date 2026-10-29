@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar, cast, final
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -26,7 +26,6 @@ from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
@@ -34,13 +33,13 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreatePuzzleAnnouncement,
-    Remark,
     ReserveFee,
     UnknownCondition,
 )
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.puzzle_drivers import (
+    OuterPuzzle,
     P2Conditions,
     Puzzle,
     PuzzleBase,
@@ -48,15 +47,15 @@ from chia.wallet.puzzles.puzzle_drivers import (
     UnknownPuzzle,
     UnknownSolution,
 )
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_LAUNCHER,
-    SINGLETON_LAUNCHER_HASH,
-    SINGLETON_MOD,
-    SINGLETON_MOD_HASH,
-    generate_launcher_coin,
-    puzzle_for_singleton,
-    solution_for_singleton,
+from chia.wallet.puzzles.singleton_drivers import (
+    Singleton,
+    SingletonCorePuzzles,
+    SingletonLaunchInfo,
+    SingletonLaunchResult,
+    SingletonPuzzle,
+    new_create_coin_from_inner_puzzle_and_solution,
 )
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions
 
 # Mods
@@ -91,11 +90,13 @@ class StandardBrickPuzzle(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("StandardBrickPuzzle", None)
 
+    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
+
     @property
     def program(self) -> Program:
         return STANDARD_VC_REVOCATION_PUZZLE.curry(
-            SINGLETON_MOD_HASH,
-            Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
+            self.singleton_puzzles.singleton_mod_hash,
+            Program.to(self.singleton_puzzles.singleton_launcher_hash).get_tree_hash(),
             EXTIGENT_METADATA_LAYER_HASH,
             REVOCATION_LAYER_HASH,
             ACS_TRANSFER_PROGRAM.get_tree_hash(),
@@ -128,8 +129,9 @@ _T_CovenantPuzzle = TypeVar("_T_CovenantPuzzle", bound=Puzzle)
 @dataclass(frozen=True, kw_only=True)
 class CovenantLayer(PuzzleBase, Generic[_T_ParentMorpher, _T_CovenantPuzzle]):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("CovenantLayer[_T_ParentMorpher, _T_CovenantPuzzle]", None)
-
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "CovenantLayer[_T_ParentMorpher, _T_CovenantPuzzle]", None
+        )
     initial_puzzle_hash: bytes32
     parent_morpher: _T_ParentMorpher
     inner_puzzle: _T_CovenantPuzzle
@@ -236,7 +238,9 @@ _T_CovenantLayer = TypeVar("_T_CovenantLayer", bound=Puzzle)
 @dataclass(frozen=True, kw_only=True)
 class TransferProgramCovenantAdapter(PuzzleBase, Generic[_T_CovenantLayer]):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("TransferProgramCovenantAdapter[_T_CovenantLayer]", None)
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "TransferProgramCovenantAdapter[_T_CovenantLayer]", None
+        )
 
     inner_puzzle: _T_CovenantLayer
 
@@ -262,9 +266,13 @@ class DidTransferProgram(PuzzleBase):
     if TYPE_CHECKING:
         _protocol_check: ClassVar[Puzzle] = cast("DidTransferProgram", None)
 
+    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
+
     @property
     def program(self) -> Program:
-        return EML_DID_TP.curry(SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH)
+        return EML_DID_TP.curry(
+            self.singleton_puzzles.singleton_mod_hash, self.singleton_puzzles.singleton_launcher_hash
+        )
 
     @classmethod
     def match(cls, *, unknown_puzzle: UnknownPuzzle) -> DidTransferProgram | None:
@@ -312,21 +320,6 @@ class DidTpSolution:
         )
 
 
-def create_did_tp(
-    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
-    singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
-) -> Program:
-    if singleton_mod_hash == SINGLETON_MOD_HASH and singleton_launcher_hash == SINGLETON_LAUNCHER_HASH:
-        return DidTransferProgram().program
-    return EML_DID_TP.curry(
-        singleton_mod_hash,
-        singleton_launcher_hash,
-    )
-
-
-EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
-
-
 ##############################
 # P2 Puzzle or Hidden Puzzle #
 ##############################
@@ -339,7 +332,7 @@ _T_RevocationHiddenPuzzle = TypeVar("_T_RevocationHiddenPuzzle", bound=Puzzle)
 @dataclass(frozen=True, kw_only=True)
 class RevocationLayer(PuzzleBase, Generic[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast(
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
             "RevocationLayer[_T_RevocationPuzzle, _T_RevocationHiddenPuzzle]", None
         )
 
@@ -415,6 +408,7 @@ class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
         _protocol_check: ClassVar[Puzzle] = cast("EmlCovenantMorpher[_T_EmlCovenantMorpherTp]", None)
 
     transfer_program: _T_EmlCovenantMorpherTp
+    singleton_puzzles: ClassVar[SingletonCorePuzzles] = SingletonCorePuzzles()
 
     @property
     def program(self) -> Program:
@@ -422,8 +416,8 @@ class EmlCovenantMorpher(PuzzleBase, Generic[_T_EmlCovenantMorpherTp]):
             COVENANT_LAYER_HASH,
             EXTIGENT_METADATA_LAYER_HASH,
             EML_TP_COVENANT_ADAPTER_HASH,
-            SINGLETON_MOD_HASH,
-            Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
+            self.singleton_puzzles.singleton_mod_hash,
+            Program.to(self.singleton_puzzles.singleton_launcher_hash).get_tree_hash(),
             self.transfer_program.tree_hash,
         )
         return first_curry.curry(first_curry.get_tree_hash())
@@ -476,7 +470,9 @@ _T_EMLPuzzle = TypeVar("_T_EMLPuzzle", bound=Puzzle)
 @dataclass(frozen=True, kw_only=True)
 class ExigentMetadataLayer(PuzzleBase, Generic[_T_TransferProgram, _T_EMLPuzzle]):
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("ExigentMetadataLayer[_T_TransferProgram, _T_EMLPuzzle]", None)
+        _outer_puzzle_protocol_check: ClassVar[OuterPuzzle[Puzzle]] = cast(
+            "ExigentMetadataLayer[_T_TransferProgram, _T_EMLPuzzle]", None
+        )
 
     metadata: Program | None
     transfer_program: _T_TransferProgram
@@ -632,17 +628,51 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.tree_hash
 ########################
 
 
+@final
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class MagicTPCondition(Condition):
+    eml_lineage_proof: VCLineageProof
+    launcher_id: bytes32
+    tp_solution: Program | None
+
+    def to_program(self) -> Program:
+        return Program.to(
+            [
+                -10,
+                self.eml_lineage_proof.to_program(),
+                [self.eml_lineage_proof.parent_proof_hash, self.launcher_id],
+                self.tp_solution,
+            ]
+        )
+
+    @classmethod
+    def from_program(cls, program: Program) -> MagicTPCondition:
+        raise NotImplementedError
+
+
+@streamable
+@dataclass(frozen=True)
+class StreamableVerifiedCredential(Streamable):
+    coin: Coin
+    singleton_lineage_proof: LineageProof
+    eml_lineage_proof: VCLineageProof
+    launcher_id: bytes32
+    inner_puzzle_hash: bytes32
+    proof_provider: bytes32
+    proof_hash: bytes32 | None
+
+
 _T_VCPuzzle = TypeVar("_T_VCPuzzle", bound=Puzzle)
 
 
 @dataclass(kw_only=True, frozen=True)
-class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
+class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     """
-    PuzzleBase driver for the VC inner puzzle stack (EML -> revocation -> custody).
+    This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
+    spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
+    likely result in an error.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[Puzzle] = cast("VerifiedCredentialInnerPuzzle[_T_VCPuzzle]", None)
 
     eml_lineage_proof: VCLineageProof
     self_launcher_id: bytes32
@@ -669,9 +699,9 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     ) -> TransferProgramCovenantAdapter[CovenantLayer[EmlCovenantMorpher[DidTransferProgram], DidTransferProgram]]:
         return TransferProgramCovenantAdapter(
             inner_puzzle=CovenantLayer(
-                initial_puzzle_hash=puzzle_for_singleton(
-                    self.self_launcher_id, OWNERSHIP_LAYER_LAUNCHER.program
-                ).get_tree_hash(),
+                initial_puzzle_hash=SingletonPuzzle(
+                    launcher_id=self.self_launcher_id, inner_puzzle=OWNERSHIP_LAYER_LAUNCHER
+                ).tree_hash,
                 parent_morpher=EmlCovenantMorpher(transfer_program=DidTransferProgram()),
                 inner_puzzle=DidTransferProgram(),
             )
@@ -693,7 +723,7 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         return self.construction.tree_hash
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> VerifiedCredentialInnerPuzzle[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> VerifiedCredentialPuzzle[UnknownPuzzle] | None:
         eml_match = ExigentMetadataLayer.match(unknown_puzzle=unknown_puzzle)
         if eml_match is None or eml_match.metadata is None:
             return None
@@ -734,7 +764,7 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         ):
             return None
 
-        return VerifiedCredentialInnerPuzzle(
+        return VerifiedCredentialPuzzle(
             eml_lineage_proof=VCLineageProof(),
             self_launcher_id=bytes32.zeros,
             custody_puzzle=revocation.inner_puzzle,
@@ -743,43 +773,52 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         )
 
 
-@streamable
-@dataclass(frozen=True)
-class VerifiedCredential(Streamable):
+_T_LaunchPuzzle = TypeVar("_T_LaunchPuzzle", bound=Puzzle)
+
+
+@dataclass(kw_only=True, frozen=True)
+class VCLaunchResult(
+    SingletonLaunchResult[VerifiedCredentialPuzzle[_T_VCPuzzle]],
+    Generic[_T_VCPuzzle],
+):
+    launched_singleton: VerifiedCredential[_T_VCPuzzle]
+
+
+@dataclass(kw_only=True, frozen=True)
+class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Generic[_T_VCPuzzle]):
     """
     This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
     likely result in an error.
     """
 
-    coin: Coin
-    singleton_lineage_proof: LineageProof
-    eml_lineage_proof: VCLineageProof
-    launcher_id: bytes32
-    inner_puzzle_hash: bytes32
-    proof_provider: bytes32
-    proof_hash: bytes32 | None
+    @classmethod
+    def is_vc(cls, *, unknown_puzzle: UnknownPuzzle) -> bool:
+        """
+        Stricter than SingletonPuzzle.match: only matches VC eve launchers and fully formed VC singleton puzzles.
+        """
+        singleton_match = SingletonPuzzle.match(unknown_puzzle=unknown_puzzle)
+        if singleton_match is None:
+            return False
 
-    @property
-    def as_inner_puzzle(self) -> VerifiedCredentialInnerPuzzle[UnknownPuzzle]:
-        return VerifiedCredentialInnerPuzzle(
-            eml_lineage_proof=self.eml_lineage_proof,
-            self_launcher_id=self.launcher_id,
-            custody_puzzle=UnknownPuzzle(known_tree_hash=self.inner_puzzle_hash),
-            proof_provider=self.proof_provider,
-            proof_hash=self.proof_hash,
-        )
+        assert isinstance(singleton_match.inner_puzzle, UnknownPuzzle)
+
+        # Eve launcher (OWNERSHIP_LAYER_LAUNCHER) is the parent spend that creates the first real VC coin.
+        if singleton_match.inner_puzzle.program == OWNERSHIP_LAYER_LAUNCHER.program:
+            return True
+
+        return VerifiedCredentialPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle) is not None
 
     @classmethod
-    def launch(
+    def launch_vc(
         cls,
         origin_coins: list[Coin],
         provider_id: bytes32,
-        new_inner_puzzle_hash: bytes32,
+        new_inner_puzzle: _T_LaunchPuzzle,
         memos: list[bytes],
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> tuple[list[Program], list[CoinSpend], Self]:
+    ) -> VCLaunchResult[_T_LaunchPuzzle]:
         """
         Launch a VC.
 
@@ -793,186 +832,80 @@ class VerifiedCredential(Streamable):
         and an instance of this class representing the expected state after all relevant spends have been pushed and
         confirmed.
         """
-        origin_coin = origin_coins[0]
-        launcher_coin: Coin = generate_launcher_coin(origin_coin, uint64(1))
-
-        # Create the second puzzle for the first launch
-        curried_eve_singleton: Program = puzzle_for_singleton(
-            launcher_coin.name(),
-            OWNERSHIP_LAYER_LAUNCHER.program,
+        launch_result = cls.launch(
+            origin_coin=origin_coins[0],
+            launch_info=SingletonLaunchInfo(desired_inner_puzzle=OWNERSHIP_LAYER_LAUNCHER, key_value_hints={}),
         )
-        curried_eve_singleton_hash: bytes32 = curried_eve_singleton.get_tree_hash()
-        launcher_solution = Program.to([curried_eve_singleton_hash, uint64(1), None])
+        eml_lineage_proof = VCLineageProof(
+            parent_name=launch_result.launched_singleton.coin.parent_coin_info, amount=uint64(1)
+        )
+        target_vc_puzzle = SingletonPuzzle(
+            launcher_id=launch_result.launched_singleton.launcher_id,
+            inner_puzzle=VerifiedCredentialPuzzle(
+                eml_lineage_proof=eml_lineage_proof,
+                self_launcher_id=launch_result.launched_singleton.launcher_id,
+                custody_puzzle=new_inner_puzzle,
+                proof_provider=provider_id,
+                proof_hash=None,
+            ),
+        )
 
         # Create the final puzzle for the second launch
-        second_launcher_coin: Coin = Coin(
-            launcher_coin.name(),
-            curried_eve_singleton_hash,
-            uint64(1),
-        )
-        target_vc_inner = VerifiedCredentialInnerPuzzle(
-            eml_lineage_proof=VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
-            self_launcher_id=launcher_coin.name(),
-            custody_puzzle=UnknownPuzzle(known_tree_hash=new_inner_puzzle_hash),
-            proof_provider=provider_id,
-            proof_hash=None,
-        )
-        wrapped_inner_puzzle_hash: bytes32 = target_vc_inner.revocation_layer.tree_hash
-        metadata_layer_hash: bytes32 = target_vc_inner.tree_hash
-        transfer_program_hash: bytes32 = target_vc_inner.transfer_program.tree_hash
-        curried_singleton_hash: bytes32 = puzzle_for_singleton(
-            launcher_coin.name(),
-            metadata_layer_hash,  # type: ignore[arg-type]
-        ).get_tree_hash_precalc(metadata_layer_hash)
-        launch_dpuz: Program = P2Conditions(
+        launch_dpuz = P2Conditions(
             conditions=[
-                CreateCoin(wrapped_inner_puzzle_hash, uint64(1), memos),
-                Remark(rest=Program.to([new_inner_puzzle_hash])),
+                CreateCoin(
+                    puzzle_hash=target_vc_puzzle.inner_puzzle.revocation_layer.tree_hash,
+                    amount=uint64(1),
+                    memos=memos,
+                ),
+                UnknownCondition(
+                    opcode=Program.to(1),
+                    args=[Program.to(target_vc_puzzle.inner_puzzle.custody_puzzle.tree_hash)],
+                ),
                 UnknownCondition(
                     opcode=Program.to(-10),
-                    args=[Program.to(provider_id), Program.to(transfer_program_hash)],
+                    args=[
+                        Program.to(provider_id),
+                        Program.to(target_vc_puzzle.inner_puzzle.transfer_program.tree_hash),
+                    ],
                 ),
-            ],
-        ).program
-        second_launcher_solution = Program.to([launch_dpuz, None])
+            ]
+        )
+        second_launcher_solution = ExigentMetadataLayerSolution(
+            inner_solution=UnknownSolution(program=Program.to([launch_dpuz.program, None]))
+        )
         create_launcher_conditions = [
-            CreateCoin(SINGLETON_LAUNCHER_HASH, uint64(1)),
-            CreateCoin(origin_coin.puzzle_hash, uint64(sum(c.amount for c in origin_coins) - fee - 1)),
-            ReserveFee(fee),
-            AssertCoinAnnouncement(asserted_msg=launcher_solution.get_tree_hash(), asserted_id=launcher_coin.name()),
-            (
-                second_launcher_announcement := AssertCoinAnnouncement(
-                    asserted_msg=launch_dpuz.get_tree_hash(), asserted_id=second_launcher_coin.name()
-                )
+            CreateCoin(
+                puzzle_hash=origin_coins[0].puzzle_hash,
+                amount=uint64(sum(c.amount for c in origin_coins) - fee - 1),
             ),
-            *[cond for cond in extra_conditions],
+            ReserveFee(amount=fee),
+            AssertCoinAnnouncement(
+                asserted_id=launch_result.launched_singleton.coin.name(), asserted_msg=launch_dpuz.tree_hash
+            ),
+            *extra_conditions,
         ]
 
-        primary_dpuz: Program = P2Conditions(conditions=create_launcher_conditions).program
-        additional_dpuzs: list[Program] = [P2Conditions(conditions=[second_launcher_announcement]).program]
-        return (
-            [primary_dpuz, *additional_dpuzs],
-            [
-                make_spend(
-                    launcher_coin,
-                    SINGLETON_LAUNCHER,
-                    launcher_solution,
-                ),
-                make_spend(
-                    second_launcher_coin,
-                    curried_eve_singleton,
-                    solution_for_singleton(
-                        LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(1)),
-                        uint64(1),
-                        Program.to(
-                            [
-                                second_launcher_solution,
-                            ]
-                        ),
-                    ),
-                ),
+        return VCLaunchResult(
+            necessary_conditions=[*launch_result.necessary_conditions, *create_launcher_conditions],
+            necessary_spends=[
+                *launch_result.necessary_spends,
+                launch_result.launched_singleton.spend(inner_solution=second_launcher_solution),
             ],
-            cls(
-                Coin(second_launcher_coin.name(), curried_singleton_hash, uint64(1)),
-                LineageProof(
-                    parent_name=second_launcher_coin.parent_coin_info,
+            launched_singleton=VerifiedCredential(
+                coin=Coin(launch_result.launched_singleton.coin.name(), target_vc_puzzle.tree_hash, uint64(1)),
+                launcher_id=launch_result.launched_singleton.launcher_id,
+                lineage_proof=LineageProof(
+                    parent_name=launch_result.launched_singleton.coin.parent_coin_info,
                     inner_puzzle_hash=OWNERSHIP_LAYER_LAUNCHER_HASH,
                     amount=uint64(1),
                 ),
-                VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
-                launcher_coin.name(),
-                new_inner_puzzle_hash,
-                provider_id,
-                None,
+                inner_puzzle=target_vc_puzzle.inner_puzzle,
             ),
         )
 
-    ####################################################################################################################
-    # The methods in this section give insight into the structure of the puzzle stack that is considered a "VC"
-    def construct_puzzle(self) -> Program:
-        return puzzle_for_singleton(
-            self.launcher_id,
-            self.construct_exigent_metadata_layer(),
-        )
-
-    def construct_exigent_metadata_layer(self) -> Program:
-        return self.as_inner_puzzle.program
-
-    def wrap_inner_with_backdoor(self) -> Program:
-        return self.as_inner_puzzle.wrap_inner_with_backdoor()
-
-    def hidden_puzzle(self) -> Program:
-        return STANDARD_BRICK_PUZZLE
-
-    ####################################################################################################################
-
-    @staticmethod
-    def is_vc(puzzle_reveal: UnknownPuzzle) -> tuple[bool, str]:
-        """
-        This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a VC and an error
-        message for if the puzzle is a mismatch. Returns True for VC launcher spends.
-        """
-        if puzzle_reveal.mod != SINGLETON_MOD or puzzle_reveal.curried_args is None:
-            return False, "top most layer is not a singleton"
-        layer_below_singleton: UnknownPuzzle = UnknownPuzzle(known_program=puzzle_reveal.curried_args[1])
-        if layer_below_singleton.mod != EXTIGENT_METADATA_LAYER or layer_below_singleton.curried_args is None:
-            return False, "layer below singleton is not an exigent metadata layer"
-
-        # Need to validate both transfer program...
-        full_transfer_program_as_prog: Program = layer_below_singleton.curried_args[2]
-        full_transfer_program: UnknownPuzzle = UnknownPuzzle(known_program=full_transfer_program_as_prog)
-        if full_transfer_program.mod != EML_TP_COVENANT_ADAPTER:
-            # This is the first spot we'll run into trouble if we're examining a VC being launched
-            # Break off to that logic here
-            if full_transfer_program_as_prog == GUARANTEED_NIL_TP.program:
-                if layer_below_singleton.curried_args[4] != P2_ANNOUNCED_DELEGATED_PUZZLE:
-                    return (
-                        False,
-                        "tp indicates VC is launching, but it does not have the correct inner puzzle",
-                    )  # pragma: no cover
-                else:
-                    return True, ""
-            else:
-                return False, "top layer of transfer program is not a covenant layer adapter"  # pragma: no cover
-        if VerifiedCredentialInnerPuzzle.match(unknown_puzzle=layer_below_singleton) is not None:
-            return True, ""
-        assert full_transfer_program.curried_args is not None
-        adapted_transfer_program: UnknownPuzzle = UnknownPuzzle(known_program=full_transfer_program.curried_args[0])
-        if adapted_transfer_program.mod != COVENANT_LAYER or adapted_transfer_program.curried_args is None:
-            return (
-                False,
-                "transfer program is adapted to covenant layer, but covenant layer did not follow",
-            )  # pragma: no cover
-        morpher: UnknownPuzzle = UnknownPuzzle(known_program=adapted_transfer_program.curried_args[1])
-        if (
-            morpher.mod is None
-            or UnknownPuzzle(known_program=morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER
-        ):
-            return (
-                False,
-                "covenant for exigent metadata layer does not match the one expected for VCs",
-            )  # pragma: no cover
-        if UnknownPuzzle(known_program=adapted_transfer_program.curried_args[2]).mod != EML_DID_TP:
-            return (
-                False,
-                "transfer program for exigent metadata layer was not the standard VC transfer program",
-            )  # pragma: no cover
-
-        # ...and layer below EML
-        layer_below_eml: UnknownPuzzle = UnknownPuzzle(known_program=layer_below_singleton.curried_args[4])
-        if layer_below_eml.mod != REVOCATION_LAYER or layer_below_eml.curried_args is None:
-            return False, "VC did not have a provider backdoor"  # pragma: no cover
-        hidden_puzzle_hash = bytes32(layer_below_eml.curried_args[1].as_atom())
-        if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
-            return (
-                False,
-                "VC did not have the standard method to brick in its backdoor hidden puzzle slot",
-            )  # pragma: no cover
-
-        return True, ""
-
     @classmethod
-    def get_next_from_coin_spend(cls, parent_spend: CoinSpend) -> Self:
+    def get_next_from_coin_spend(cls, parent_spend: CoinSpend) -> VerifiedCredential[UnknownPuzzle]:
         """
         Given a coin spend, this will return the next VC that was create as an output of that spend. This is the main
         method to use when syncing. If a spend has been identified as having a VC puzzle reveal, running this method
@@ -985,10 +918,9 @@ class VerifiedCredential(Streamable):
         parent_coin: Coin = parent_spend.coin
         solution = Program.from_serialized(parent_spend.solution)
 
-        singleton: UnknownPuzzle = UnknownPuzzle(known_program=parent_spend.puzzle_reveal)
-        assert singleton.curried_args is not None
-        launcher_id: bytes32 = bytes32(singleton.curried_args[0].at("rf").as_atom())
-        layer_below_singleton: Program = singleton.curried_args[1]
+        singleton: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
+        launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())
+        layer_below_singleton: Program = singleton.args.at("rf")
         singleton_lineage_proof: LineageProof = LineageProof(
             parent_name=parent_coin.parent_coin_info,
             inner_puzzle_hash=layer_below_singleton.get_tree_hash(),
@@ -1009,7 +941,7 @@ class VerifiedCredential(Streamable):
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(magic_condition.at("rf").as_atom())
         else:
-            metadata_layer: UnknownPuzzle = UnknownPuzzle(known_program=layer_below_singleton)
+            metadata_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
@@ -1020,9 +952,8 @@ class VerifiedCredential(Streamable):
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_atom())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
-            assert metadata_layer.curried_args is not None
             if magic_condition.at("rrrf") == Program.NIL:
-                proof_hash_as_prog: Program = metadata_layer.curried_args[1].at("r")
+                proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
             elif magic_condition.at("rrrf").atom is not None:
                 raise ValueError("Specified VC was cleared")
             else:
@@ -1030,31 +961,36 @@ class VerifiedCredential(Streamable):
 
             proof_hash = None if proof_hash_as_prog == Program.NIL else bytes32(proof_hash_as_prog.as_atom())
 
-            proof_provider = bytes32(metadata_layer.curried_args[1].at("f").as_atom())
+            proof_provider = bytes32(metadata_layer.args.at("rff").as_atom())
 
-            parent_proof_hash: bytes32 = metadata_layer.curried_args[1].get_tree_hash()
-            revocation_layer = UnknownPuzzle(known_program=metadata_layer.curried_args[4])
-            assert revocation_layer.curried_args is not None
+            parent_proof_hash: bytes32 = metadata_layer.args.at("rf").get_tree_hash()
             eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=RevocationLayer(
                     hidden_puzzle=UnknownPuzzle(known_tree_hash=STANDARD_BRICK_PUZZLE_HASH),
-                    inner_puzzle=UnknownPuzzle(known_tree_hash=bytes32(revocation_layer.curried_args[2].as_atom())),
+                    inner_puzzle=UnknownPuzzle(
+                        known_tree_hash=bytes32(
+                            uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").as_atom()
+                        )
+                    ),
                 ).tree_hash,
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None if parent_proof_hash == Program.NIL else parent_proof_hash,
             )
 
-        new_vc: Self = cls(
-            coin,
-            singleton_lineage_proof,
-            eml_lineage_proof,
-            launcher_id,
-            inner_puzzle_hash,
-            proof_provider,
-            proof_hash,
+        new_vc = VerifiedCredential(
+            coin=coin,
+            lineage_proof=singleton_lineage_proof,
+            launcher_id=launcher_id,
+            inner_puzzle=VerifiedCredentialPuzzle(
+                eml_lineage_proof=eml_lineage_proof,
+                self_launcher_id=launcher_id,
+                custody_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
+                proof_provider=proof_provider,
+                proof_hash=proof_hash,
+            ),
         )
-        if new_vc.construct_puzzle().get_tree_hash() != new_vc.coin.puzzle_hash:
+        if new_vc.tree_hash != new_vc.coin.puzzle_hash:
             raise ValueError("Error getting new VC from coin spend, probably the child singleton is not a VC")
 
         return new_vc
@@ -1065,50 +1001,50 @@ class VerifiedCredential(Streamable):
         self,
         new_proof_hash: bytes32 | None,
         provider_innerpuzhash: bytes32,
-        new_proof_provider: bytes32 | None = None,
-    ) -> MagicTPCondition[UnknownSolution]:
+    ) -> MagicTPCondition:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
         the inner puzzle will require a corresponding announcement from the provider DID authorizing that proof hash
         change.
         """
         return MagicTPCondition(
-            eml_lineage_proof=self.eml_lineage_proof,
+            eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
             launcher_id=self.launcher_id,
-            tp_solution=UnknownSolution(
-                program=DidTpSolution(
-                    provider_innerpuzhash=provider_innerpuzhash,
-                    my_coin_id=self.coin.name(),
-                    new_metadata=Program.to(new_proof_hash),
-                    new_transfer_program=None,  # TP update is not allowed because singleton will leave the VC protocol
-                ).program
-            ),
+            tp_solution=DidTpSolution(
+                provider_innerpuzhash=provider_innerpuzhash,
+                my_coin_id=self.coin.name(),
+                new_metadata=Program.to(new_proof_hash),
+                # TP update is not allowed because then the singleton will leave the VC protocol
+                new_transfer_program=None,
+            ).program,
         )
 
-    def standard_magic_condition(self) -> MagicTPCondition[UnknownSolution]:
+    def standard_magic_condition(self) -> MagicTPCondition:
         """
         Returns the standard magic condition that needs to be returned to the metadata layer. Returning this condition
         from the inner puzzle will leave the proof hash and transfer program the same.
         """
         return MagicTPCondition(
-            eml_lineage_proof=self.eml_lineage_proof,
+            eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
             launcher_id=self.launcher_id,
             tp_solution=None,
         )
 
-    def magic_condition_for_self_revoke(self) -> MagicTPCondition[UnknownSolution]:
+    def magic_condition_for_self_revoke(self) -> MagicTPCondition:
         return MagicTPCondition(
-            eml_lineage_proof=self.eml_lineage_proof,
+            eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
             launcher_id=self.launcher_id,
-            tp_solution=UnknownSolution(program=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash())),
+            tp_solution=Program.to(ACS_TRANSFER_PROGRAM.get_tree_hash()),
         )
+
+    def wrap_inner_with_backdoor(self) -> Program:
+        return self.inner_puzzle.revocation_layer.program
 
     def do_spend(
         self,
-        inner_puzzle: Program,
-        inner_solution: Program,
+        inner_solution: Solution,
         new_proof_hash: bytes32 | None = None,
-    ) -> tuple[CreatePuzzleAnnouncement | None, CoinSpend, VerifiedCredential]:
+    ) -> tuple[CreatePuzzleAnnouncement | None, CoinSpend, VerifiedCredential[UnknownPuzzle]]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -1116,16 +1052,6 @@ class VerifiedCredential(Streamable):
         Returns potentially the puzzle announcement the spend will expect from the provider DID, the spend of the VC,
         and the expected class representation of the new VC after the spend is pushed and confirmed.
         """
-        vc_solution: Program = solution_for_singleton(
-            self.singleton_lineage_proof,
-            uint64(self.coin.amount),
-            ExigentMetadataLayerSolution(
-                inner_solution=RevocationLayerSolution(
-                    puzzle_reveal=UnknownPuzzle(known_program=inner_puzzle),
-                    inner_solution=UnknownSolution(program=inner_solution),
-                )
-            ).program,
-        )
 
         if new_proof_hash is not None:
             expected_announcement: CreatePuzzleAnnouncement | None = CreatePuzzleAnnouncement(
@@ -1138,22 +1064,38 @@ class VerifiedCredential(Streamable):
         else:
             expected_announcement = None
 
-        new_singleton_condition: Program = next(
-            c for c in inner_puzzle.run(inner_solution).as_iter() if c.at("f") == 51 and c.at("rrf").as_int() % 2 != 0
+        spend, next_singleton = self.action_spend(
+            inner_solution=ExigentMetadataLayerSolution(
+                inner_solution=RevocationLayerSolution(
+                    puzzle_reveal=self.inner_puzzle.custody_puzzle,
+                    inner_solution=inner_solution,
+                )
+            )
         )
-        new_inner_puzzle_hash: bytes32 = bytes32(new_singleton_condition.at("rf").as_atom())
+
+        new_singleton_create_coin = new_create_coin_from_inner_puzzle_and_solution(
+            self.inner_puzzle.custody_puzzle, inner_solution
+        )
 
         return (
             expected_announcement,
-            make_spend(
-                self.coin,
-                self.construct_puzzle(),
-                vc_solution,
-            ),
-            self._next_vc(
-                new_inner_puzzle_hash,
-                self.as_inner_puzzle.proof_hash if new_proof_hash is None else new_proof_hash,
-                uint64(new_singleton_condition.at("rrf").as_int()),
+            spend,
+            VerifiedCredential(
+                coin=next_singleton.coin,
+                launcher_id=next_singleton.launcher_id,
+                lineage_proof=next_singleton.lineage_proof,
+                inner_puzzle=VerifiedCredentialPuzzle(
+                    eml_lineage_proof=VCLineageProof(
+                        self.coin.parent_coin_info,
+                        self.inner_puzzle.revocation_layer.tree_hash,
+                        self.coin.amount,
+                        Program.to((self.inner_puzzle.proof_provider, self.inner_puzzle.proof_hash)).get_tree_hash(),
+                    ),
+                    self_launcher_id=self.launcher_id,
+                    proof_provider=self.inner_puzzle.proof_provider,
+                    proof_hash=self.inner_puzzle.proof_hash if new_proof_hash is None else new_proof_hash,
+                    custody_puzzle=UnknownPuzzle(known_tree_hash=new_singleton_create_coin.puzzle_hash),
+                ),
             ),
         )
 
@@ -1167,71 +1109,61 @@ class VerifiedCredential(Streamable):
         Sync attempts by this class on spends generated by this method are expected to fail. This could be improved in
         the future with a separate type/state of VC that is revoked, but perfectly useful as a singleton.
         """
-        vc_inner = self.as_inner_puzzle
-        vc_solution: Program = solution_for_singleton(
-            self.singleton_lineage_proof,
-            uint64(self.coin.amount),
-            ExigentMetadataLayerSolution(
+
+        expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
+            std_hash(self.coin.name() + Program.NIL.get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
+        )
+
+        spend = self.spend(
+            inner_solution=ExigentMetadataLayerSolution(
                 inner_solution=RevocationLayerSolution(
                     puzzle_reveal=StandardBrickPuzzle(),
                     inner_solution=StandardBrickPuzzleSolution(
                         launcher_id=self.launcher_id,
-                        metadata_hash=Program.to((vc_inner.proof_provider, vc_inner.proof_hash)).get_tree_hash(),
-                        tp_hash=vc_inner.transfer_program.tree_hash,
-                        inner_puzzle_hash=vc_inner.custody_puzzle.tree_hash,
+                        metadata_hash=Program.to(
+                            (self.inner_puzzle.proof_provider, self.inner_puzzle.proof_hash)
+                        ).get_tree_hash(),
+                        tp_hash=self.inner_puzzle.transfer_program.tree_hash,
+                        inner_puzzle_hash=self.inner_puzzle.custody_puzzle.tree_hash,
                         amount=uint64(self.coin.amount),
-                        eml_lineage_proof=vc_inner.eml_lineage_proof,
+                        eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
                         provider_innerpuzhash=provider_innerpuzhash,
                         coin_id=self.coin.name(),
                         announcement_nonce=announcement_nonce,
                     ),
                     hidden=True,
                 )
-            ).program,
-        )
-
-        expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
-            std_hash(self.coin.name() + Program.NIL.get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
+            )
         )
 
         return (
             expected_announcement,
-            make_spend(self.coin, self.construct_puzzle(), vc_solution),
+            spend,
         )
 
-    ####################################################################################################################
-
-    def _next_vc(
-        self, next_inner_puzzle_hash: bytes32, new_proof_hash: bytes32 | None, next_amount: uint64
-    ) -> VerifiedCredential:
-        """
-        Private method that creates the next VC class instance.
-        """
-        slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
-            Coin(self.coin.name(), bytes32.zeros, next_amount),
-            LineageProof(
-                self.coin.parent_coin_info,
-                self.construct_exigent_metadata_layer().get_tree_hash(),
-                uint64(self.coin.amount),
-            ),
-            VCLineageProof(
-                self.coin.parent_coin_info,
-                self.wrap_inner_with_backdoor().get_tree_hash(),
-                uint64(self.coin.amount),
-                Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
-            ),
-            self.launcher_id,
-            next_inner_puzzle_hash,
-            self.proof_provider,
-            new_proof_hash,
+    def as_streamable(self) -> StreamableVerifiedCredential:
+        return StreamableVerifiedCredential(
+            coin=self.coin,
+            singleton_lineage_proof=self.lineage_proof,
+            eml_lineage_proof=self.inner_puzzle.eml_lineage_proof,
+            launcher_id=self.launcher_id,
+            inner_puzzle_hash=self.inner_puzzle.custody_puzzle.tree_hash,
+            proof_provider=self.inner_puzzle.proof_provider,
+            proof_hash=self.inner_puzzle.proof_hash,
         )
 
-        return replace(
-            slightly_incomplete_vc,
-            coin=Coin(
-                slightly_incomplete_vc.coin.parent_coin_info,
-                slightly_incomplete_vc.construct_puzzle().get_tree_hash(),
-                slightly_incomplete_vc.coin.amount,
+    @classmethod
+    def from_streamable(cls, streamable_object: StreamableVerifiedCredential) -> VerifiedCredential[UnknownPuzzle]:
+        return VerifiedCredential(
+            coin=streamable_object.coin,
+            launcher_id=streamable_object.launcher_id,
+            lineage_proof=streamable_object.singleton_lineage_proof,
+            inner_puzzle=VerifiedCredentialPuzzle(
+                eml_lineage_proof=streamable_object.eml_lineage_proof,
+                self_launcher_id=streamable_object.launcher_id,
+                custody_puzzle=UnknownPuzzle(known_tree_hash=streamable_object.inner_puzzle_hash),
+                proof_provider=streamable_object.proof_provider,
+                proof_hash=streamable_object.proof_hash,
             ),
         )
 
@@ -1280,47 +1212,51 @@ class RevocationOuterPuzzle:
         ).program
 
 
-_T_Solution = TypeVar("_T_Solution", bound=Solution)
+################################
+# Backward-compatible helpers  #
+################################
 
 
-@final
-@dataclass(kw_only=True, frozen=True)
-class MagicTPCondition(Condition, Generic[_T_Solution]):
-    eml_lineage_proof: VCLineageProof
-    launcher_id: bytes32
-    tp_solution: _T_Solution | None
+def create_did_tp(
+    singleton_mod_hash: bytes32 | None = None,
+    singleton_launcher_hash: bytes32 | None = None,
+) -> Program:
+    if singleton_mod_hash is None and singleton_launcher_hash is None:
+        return DidTransferProgram().program
+    assert singleton_mod_hash is not None and singleton_launcher_hash is not None
+    return EML_DID_TP.curry(singleton_mod_hash, singleton_launcher_hash)
 
-    def __post_init__(self) -> None:
-        # Driver-only condition; fields are not streamable-serializable.
+
+def create_eml_covenant_morpher(transfer_program_hash: bytes32) -> Program:
+    return EmlCovenantMorpher(transfer_program=UnknownPuzzle(known_tree_hash=transfer_program_hash)).program
+
+
+def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
+    return RevocationLayer(
+        hidden_puzzle=UnknownPuzzle(known_tree_hash=hidden_puzzle_hash),
+        inner_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
+    ).program
+
+
+def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, bytes32] | None:
+    if uncurried_puzzle.mod != REVOCATION_LAYER:
         return None
+    return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
 
-    def to_program(self) -> Program:
-        return Program.to(
-            [
-                -10,
-                self.eml_lineage_proof.to_program(),
-                [self.eml_lineage_proof.parent_proof_hash, self.launcher_id],
-                self.tp_solution.program if self.tp_solution is not None else None,
-            ]
-        )
 
-    @classmethod
-    def from_program(cls, program: Program) -> MagicTPCondition[UnknownSolution]:  # type: ignore[override]
-        _, eml_lineage_proof, proof_hash_and_launcher_id, tp_solution = program.as_iter()
-        proof_hash, launcher_id = proof_hash_and_launcher_id.as_iter()
-        num_values = eml_lineage_proof.list_len()
-        inner_puzzle_hash = None
-        if num_values == 2:
-            parent_id, amount = eml_lineage_proof.as_iter()
-        else:
-            parent_id, inner_puzzle_hash, amount = eml_lineage_proof.as_iter()
-        return MagicTPCondition(
-            eml_lineage_proof=VCLineageProof(
-                parent_proof_hash=bytes32(proof_hash.as_atom()) if proof_hash != Program.NIL else None,
-                inner_puzzle_hash=bytes32(inner_puzzle_hash.as_atom()) if inner_puzzle_hash is not None else None,
-                amount=uint64(amount.as_int()),
-                parent_name=bytes32(parent_id.as_atom()),
-            ),
-            launcher_id=bytes32(launcher_id.as_atom()),
-            tp_solution=None if tp_solution == Program.NIL else UnknownSolution(program=tp_solution),
-        )
+def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
+    return RevocationLayerSolution(
+        puzzle_reveal=UnknownPuzzle(known_program=puzzle_reveal),
+        inner_solution=UnknownSolution(program=inner_solution),
+        hidden=hidden,
+    ).program
+
+
+def construct_exigent_metadata_layer(
+    metadata: Program | None, transfer_program: Program, inner_puzzle: Program
+) -> Program:
+    return ExigentMetadataLayer(
+        metadata=metadata,
+        transfer_program=UnknownPuzzle(known_program=transfer_program),
+        inner_puzzle=UnknownPuzzle(known_program=inner_puzzle),
+    ).program
