@@ -18,6 +18,7 @@ from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.puzzle_drivers import (
+    ACSPuzzle,
     ACSSolution,
     NilSolution,
     UnknownPuzzle,
@@ -50,7 +51,6 @@ from chia.wallet.vc_wallet.vc_drivers import (
     VCLineageProof,
     VerifiedCredential,
     VerifiedCredentialInnerPuzzle,
-    construct_exigent_metadata_layer,
     create_did_tp,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -896,11 +896,11 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
-            construct_exigent_metadata_layer(
-                None,
-                ACS_TRANSFER_PROGRAM,
-                ACS.program,
-            ),
+            ExigentMetadataLayer(
+                metadata=None,
+                transfer_program=UnknownPuzzle(known_program=ACS_TRANSFER_PROGRAM),
+                inner_puzzle=ACSPuzzle(),
+            ).program,
         )
 
         assert (
@@ -950,11 +950,11 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         # Verify the end state
         cleared_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
-            construct_exigent_metadata_layer(
-                None,
-                ACS_TRANSFER_PROGRAM,
-                vc.wrap_inner_with_backdoor(),
-            ),
+            ExigentMetadataLayer(
+                metadata=None,
+                transfer_program=UnknownPuzzle(known_program=ACS_TRANSFER_PROGRAM),
+                inner_puzzle=vc.as_inner_puzzle.revocation_layer,
+            ).program,
         )
 
         assert (
@@ -1157,14 +1157,6 @@ def test_vc_driver_match_edge_cases() -> None:
         proof_hash=None,
     )
     assert vc_puzzle.wrap_inner_with_backdoor() == vc_puzzle.revocation_layer.program
-    assert (
-        construct_exigent_metadata_layer(Program.to("m"), ACS.program, ACS.program)
-        == ExigentMetadataLayer(
-            metadata=Program.to("m"),
-            transfer_program=UnknownPuzzle(known_program=ACS.program),
-            inner_puzzle=ACS,
-        ).program
-    )
 
     # VerifiedCredentialInnerPuzzle.match failure paths
     assert VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS.program)) is None
