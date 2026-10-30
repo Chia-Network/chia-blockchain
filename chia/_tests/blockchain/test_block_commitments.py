@@ -708,6 +708,71 @@ class TestSyncWithCommitments:
 
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
+    @pytest.mark.parametrize("activation", [0, 20])
+    async def test_reorg_replacing_fork_point_between_fork_batches(
+        self,
+        activation: int,
+        get_keychain: Keychain,
+        testrun_uid: str,
+        self_hostname: str,
+        db_version: int,
+        consensus_mode: ConsensusMode,
+    ) -> None:
+        """
+        As in test_canonical_block_between_fork_batches, but the chain
+        committed between the batches is a heavier reorg that replaces the
+        fork point. The next batch fails and leaves the chain unchanged,
+        rather than rolling back only to the stale fork height and keeping
+        the replacement's blocks below it. Activation at 20 puts the fork
+        point before activation, where no MMR check catches it.
+        """
+        constants = HF2_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(activation))
+        async with create_block_tools_async(constants=constants, keychain=get_keychain, testrun_uid=testrun_uid) as bt:
+            canonical = bt.get_consecutive_blocks(31, guarantee_transaction_block=True)
+            fork = bt.get_consecutive_blocks(
+                31, block_list_input=canonical[:10], seed=b"fork-between-batches", guarantee_transaction_block=True
+            )
+            replacement = bt.get_consecutive_blocks(
+                31,
+                block_list_input=canonical[:5],
+                seed=b"reorg-between-batches",
+                farmer_reward_puzzle_hash=bytes32(b"C" * 32),
+                guarantee_transaction_block=True,
+            )
+        assert replacement[-1].weight > canonical[-1].weight
+        assert fork[-1].weight > replacement[-1].weight
+
+        async with setup_two_nodes(constants, db_version, self_hostname) as (full_node_1, _, _, _, _):
+            node = full_node_1.full_node
+            await add_blocks_in_batches(canonical, node)
+
+            fork_info = ForkInfo(9, 9, canonical[9].header_hash)
+            blockchain = AugmentedBlockchain(node.blockchain)
+            vs = ValidationState(constants.SUB_SLOT_ITERS_STARTING, constants.DIFFICULTY_STARTING, None)
+            peer_info = PeerInfo(self_hostname, 0)
+            success, _ = await node.add_block_batch(fork[10:15], peer_info, fork_info, vs, blockchain)
+            assert success
+
+            await add_blocks_in_batches(replacement[5:], node)
+            peak = node.blockchain.get_peak()
+            assert peak is not None and peak.header_hash == replacement[-1].header_hash
+            assert node.blockchain.height_to_hash(uint32(9)) != canonical[9].header_hash
+
+            async def chain_state() -> tuple[object, ...]:
+                heights = [uint32(height) for height in range(len(replacement))]
+                return (
+                    node.blockchain.get_peak(),
+                    node.blockchain.mmr_manager.compute_current_mmr_root(),
+                    [node.blockchain.height_to_hash(height) for height in heights],
+                    [set(await node.coin_store.get_coins_added_at_height(height)) for height in heights],
+                )
+
+            saved = await chain_state()
+            assert await node.add_block_batch(fork[14:], peer_info, fork_info, vs, blockchain) == (False, None)
+            assert await chain_state() == saved
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
     async def test_canonical_block_between_backtrack_blocks(
         self, hf2_bt: BlockTools, self_hostname: str, db_version: int, consensus_mode: ConsensusMode
     ) -> None:
