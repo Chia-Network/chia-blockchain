@@ -314,7 +314,6 @@ class WalletStateManager:
             auto_claim_batch_size=self.config.get("auto_claim", {}).get("batch_size", 50),
             timestamp_for_height=self.wallet_node.get_timestamp_for_height,
             puzzle_hash_encoder=self.encode_puzzle_hash,
-            action_scope_sandbox=self.new_action_scope,
             _add_subscriptions=self._add_subscriptions,
         )
         self.fungibility_manager = FungibilityManager(coin_store=self.coin_store, wallet_state_manager=self)
