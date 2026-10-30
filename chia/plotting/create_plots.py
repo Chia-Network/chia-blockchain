@@ -100,6 +100,7 @@ class PlotKeysResolver:
                 if self.alt_fingerprint is not None:
                     sk = await keychain_proxy.get_key_for_fingerprint(self.alt_fingerprint)
                     if not isinstance(sk, PrivateKey):
+                        sk = None
                         raise ValueError(f"No secret key available for {self.alt_fingerprint}")
                 else:
                     sk = await keychain_proxy.get_first_private_key()
