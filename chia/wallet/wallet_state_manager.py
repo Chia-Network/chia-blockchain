@@ -407,7 +407,7 @@ class WalletStateManager:
         return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
 
     async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
-        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if record.hardened:
@@ -415,7 +415,7 @@ class WalletStateManager:
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
 
     async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
-        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if isinstance(record._pubkey, bytes):
