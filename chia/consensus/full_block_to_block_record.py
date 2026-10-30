@@ -7,7 +7,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.challenge_tree import get_challenge_start_height
 from chia.consensus.deficit import calculate_deficit
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch, get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import post_hard_fork2_block_record
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
@@ -48,6 +48,19 @@ def block_to_block_record(
     if found_ses_hash:
         assert prev_b is not None
         assert len(block.finished_sub_slots) > 0
+        # The SES hash isn't validated yet so reject it if no SES can be
+        # included here.
+        can_finish_se, _ = can_finish_sub_and_full_epoch(
+            constants=constants,
+            blocks=blocks,
+            height=prev_b.height,
+            prev_header_hash=prev_b.prev_hash,
+            deficit=prev_b.deficit,
+            block_at_height_included_ses=prev_b.sub_epoch_summary_included is not None,
+            prev_ses_block=prev_ses_block,
+        )
+        if not can_finish_se:
+            raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
         with_challenge_hash = post_hard_fork2_block_record(constants, blocks, prev_b)
         ses = make_sub_epoch_summary(
             constants,
