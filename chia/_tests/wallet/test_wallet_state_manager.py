@@ -569,7 +569,7 @@ async def test_puzzle_hash_requests(
     )  # -1 being no puzzle hashes used, not even at index 0
     assert await get_puzzle_hash_state() == expected_state
 
-    # Test `from_zero` fills in gaps
+    # Test gaps are filled in
     async with wsm.puzzle_store.db_wrapper.writer() as conn:
         await conn.execute(
             "DELETE FROM derivation_paths WHERE derivation_index=?",
@@ -579,11 +579,8 @@ async def test_puzzle_hash_requests(
     assert (
         len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index) * 2
     )  # 0 inclusive
-    result = await wsm.create_more_puzzle_hashes(
-        from_zero=True, target=PuzzleHashWindowTarget(total_generated=expected_state.highest_index)
-    )
+    result = await wsm.create_more_puzzle_hashes()
     await result.commit(wsm)
-    expected_state = PuzzleHashState(expected_state.highest_index + wsm.initial_num_public_keys, -1)
     assert await get_puzzle_hash_state() == expected_state
     assert len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index + 1) * 2
 

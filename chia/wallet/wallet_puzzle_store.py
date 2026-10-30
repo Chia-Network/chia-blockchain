@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from sqlite3 import Row
 
 from chia_rs import G1Element
@@ -25,12 +25,14 @@ class PuzzleHashWindowTarget:
 
 @dataclass(kw_only=True)
 class PuzzleHashWindow:
-    minimum_unused_index: int
-    maximum_used_index: int
-    maximum_generated_index: int
+    # min/maxes might be `None` if no values match the criteria
+    minimum_unused_index: int | None
+    maximum_used_index: int | None
+    maximum_generated_index: int | None
     usused_after_maximum_used: int
     total_unused: int
     total_generated: int
+    wallet_gaps: dict[int, list[int]] = field(default_factory=dict)
 
 
 class WalletPuzzleStore:
@@ -88,6 +90,10 @@ class WalletPuzzleStore:
     async def get_window_statistics(self) -> PuzzleHashWindow | None:
         """
         Returns a PuzzleHashWindow object containing statistics about the derivation paths in the database.
+
+        ``wallet_gaps`` maps wallet_id -> missing derivation indices in ``0..max`` for that wallet.
+        Contiguity is probed cheaply via ``COUNT(DISTINCT index) < MAX(index) + 1``; missing indices
+        are only enumerated when that probe finds holes.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
@@ -95,6 +101,13 @@ class WalletPuzzleStore:
                 "WITH bounds AS ("
                 "SELECT MAX(CASE WHEN used=1 AND hardened=0 THEN derivation_index END) AS maximum_used_index "
                 "FROM derivation_paths"
+                "), "
+                "wallet_index_stats AS ("
+                "SELECT wallet_id, "
+                "MAX(derivation_index) AS max_idx, "
+                "COUNT(DISTINCT derivation_index) AS n_idx "
+                "FROM derivation_paths "
+                "GROUP BY wallet_id"
                 ") "
                 "SELECT "
                 "MIN(CASE WHEN used=0 AND hardened=0 THEN derivation_index END), "
@@ -102,14 +115,46 @@ class WalletPuzzleStore:
                 "MAX(derivation_index), "
                 "COUNT(CASE WHEN used=0 AND hardened=0 AND derivation_index > bounds.maximum_used_index THEN 1 END), "
                 "COUNT(CASE WHEN used=0 AND hardened=0 THEN 1 END), "
-                "COUNT(*) "
+                "COUNT(*), "
+                "(SELECT COUNT(*) FROM wallet_index_stats WHERE n_idx < max_idx + 1) "
                 "FROM derivation_paths "
                 "CROSS JOIN bounds",
             )
 
-        assert row is not None  # not semantically possible, so this is for mypy
-        if row[5] == 0:  # total_generated (COUNT(*))
-            return None
+            assert row is not None  # not semantically possible, so this is for mypy
+            if row[5] == 0:  # total_generated (COUNT(*))
+                return None
+
+            wallet_gaps: dict[int, list[int]] = {}
+            if row[6] > 0:
+                # Only hit this path when at least one wallet has holes under its max index.
+                # Fetch present indices for gappy wallets and compute missing indices in Python
+                # to avoid SQLite recursive-CTE depth limits on large derivation windows.
+                present_rows = await conn.execute_fetchall(
+                    "WITH wallet_bounds AS ("
+                    "SELECT wallet_id, "
+                    "MAX(derivation_index) AS max_idx, "
+                    "COUNT(DISTINCT derivation_index) AS n_idx "
+                    "FROM derivation_paths "
+                    "GROUP BY wallet_id "
+                    "HAVING n_idx < max_idx + 1"
+                    ") "
+                    "SELECT d.wallet_id, d.derivation_index, wb.max_idx "
+                    "FROM derivation_paths d "
+                    "JOIN wallet_bounds wb ON wb.wallet_id = d.wallet_id "
+                    "GROUP BY d.wallet_id, d.derivation_index "
+                    "ORDER BY d.wallet_id, d.derivation_index"
+                )
+                present_by_wallet: dict[int, tuple[int, set[int]]] = {}
+                for wallet_id, derivation_index, max_idx in present_rows:
+                    entry = present_by_wallet.get(wallet_id)
+                    if entry is None:
+                        present_by_wallet[wallet_id] = (max_idx, {derivation_index})
+                    else:
+                        entry[1].add(derivation_index)
+                for wallet_id, (max_idx, present) in present_by_wallet.items():
+                    wallet_gaps[wallet_id] = [i for i in range(max_idx + 1) if i not in present]
+
         return PuzzleHashWindow(
             minimum_unused_index=row[0],
             maximum_used_index=row[1],
@@ -117,6 +162,7 @@ class WalletPuzzleStore:
             usused_after_maximum_used=row[3],
             total_unused=row[4],
             total_generated=row[5],
+            wallet_gaps=wallet_gaps,
         )
 
     async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:

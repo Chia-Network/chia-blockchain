@@ -1711,7 +1711,6 @@ class WalletRpcApi:
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
         result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
-            from_zero=False,
             target=PuzzleHashWindowTarget(total_generated=request.index, unused_after_maximum_used=0),
         )
         await result.commit(self.service.wallet_state_manager)
