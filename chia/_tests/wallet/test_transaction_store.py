@@ -171,9 +171,11 @@ async def test_tx_reorged_update() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
-        tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
-        await store.add_transaction_record(tr)
-        tr = await store.get_transaction_record(tr.name)
+        modified_tr1 = dataclasses.replace(
+            tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)]
+        )
+        await store.add_transaction_record(modified_tr1)
+        tr = await store.get_transaction_record(modified_tr1.name)
         assert tr is not None
         assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(1), None), ("peer2", uint8(1), None)]
@@ -189,12 +191,13 @@ async def test_tx_reorged_update() -> None:
 async def test_tx_reorged_add() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
-
-        tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
-
-        assert await store.get_transaction_record(tr.name) is None
-        await store.tx_reorged(tr)
-        tr = await store.get_transaction_record(tr.name)
+        modified_tr1 = dataclasses.replace(
+            tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)]
+        )
+        tr = await store.get_transaction_record(modified_tr1.name)
+        assert tr is None
+        await store.tx_reorged(modified_tr1)
+        tr = await store.get_transaction_record(modified_tr1.name)
         assert tr is not None
         assert tr.sent == 0
         assert tr.sent_to == []
