@@ -52,7 +52,10 @@ export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring sp
 CHIAVDF_DIR=$(python -c 'import pathlib, chiavdf; print(pathlib.Path(chiavdf.__file__).parent)')
 THE_PATH=""
 for dir in "$CHIAVDF_DIR" "$(dirname "$CHIAVDF_DIR")"; do
-  if [ -f "$dir/vdf_client" ]; then THE_PATH="$dir/vdf_client"; break; fi
+  if [ -f "$dir/vdf_client" ]; then
+    THE_PATH="$dir/vdf_client"
+    break
+  fi
 done
 # Note that this picks the version based on the requirement, not the presently
 # installed chiavdf.
