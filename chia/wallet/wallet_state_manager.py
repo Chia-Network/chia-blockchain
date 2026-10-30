@@ -550,6 +550,8 @@ class WalletStateManager:
                 for wallet_id, indexes in indexes_by_wallet.items():
                     target_wallet = self.wallets[wallet_id]
                     assert target_wallet.type() != WalletType.POOLING_WALLET
+                    if indexes == []:
+                        continue
 
                     creating_msg = (
                         f"Creating puzzle hashes from {min(indexes)} to {max(indexes)} for wallet_id: {wallet_id}"
