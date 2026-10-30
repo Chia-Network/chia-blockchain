@@ -475,21 +475,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test is failing for HARD_FORK_3_0. It fails with
-    # chia.types.blockchain_format.proof_of_space: ERROR Calculated pos
-    # challenge doesn't match the provided one
-    # a6f067fd914acb3e9e437887f3e7c8d906f43920f21ae4719012e6a4692e02c9
-    # Investigate, fix and remove this limit_consensus_modes()
-    @pytest.mark.limit_consensus_modes(
-        allowed=[
-            ConsensusMode.PLAIN,
-            ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_7,
-            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
-        ],
-        reason="investigate test failure",
-    )
-    async def test_weight_proof10000__blocks_compact(
+    async def test_weight_proof10000_blocks_compact(
         self, default_10000_blocks_compact: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_10000_blocks_compact
