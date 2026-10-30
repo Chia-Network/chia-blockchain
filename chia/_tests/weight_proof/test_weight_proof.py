@@ -516,12 +516,6 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test is failing for HARD_FORK_3_0 for some reason.
-    # Investigate, fix and remove this limit_consensus_modes()
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
-        reason="investigate test failure",
-    )
     async def test_weight_proof10000(
         self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
