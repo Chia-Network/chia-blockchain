@@ -137,7 +137,7 @@ from chia.wallet.wallet_protocol import (
     MaxSendQuantityWallet,
     WalletProtocol,
 )
-from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
+from chia.wallet.wallet_puzzle_store import PuzzleHashWindowTarget, WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_signer import WalletSigner
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -461,10 +461,7 @@ class WalletStateManager:
 
     async def create_more_puzzle_hashes(
         self,
-        from_zero: bool = False,
-        mark_existing_as_used: bool = True,
-        up_to_index: uint32 | None = None,
-        num_additional_phs: int | None = None,
+        target: PuzzleHashWindowTarget = PuzzleHashWindowTarget(),
         previous_result: CreateMorePuzzleHashesResult | None = None,
         _commit_previous_result: bool = True,
     ) -> CreateMorePuzzleHashesResult:
@@ -474,68 +471,64 @@ class WalletStateManager:
         """
         try:
             async with self.puzzle_hash_db_writer():
+                current_window = await self.puzzle_store.get_window_statistics()
                 if previous_result is not None:
-                    if previous_result.mark_existing_as_used is not mark_existing_as_used:
-                        raise ValueError(
-                            "Called `create_more_puzzle_hashes` with a previous result and different configuration"
-                        )
                     if _commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
                 self.log.debug("Target wallets to generate puzzle hashes for: %r", targets)
-                unused: uint32 | None = (
-                    up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
+                generate_to = (
+                    target.total_generated
+                    if target.total_generated is not None
+                    else (
+                        current_window.maximum_used_index
+                        if current_window is not None and current_window.maximum_used_index is not None
+                        else 0
+                    )
                 )
-                if unused is None:
-                    # This handles the case where the database has entries but they have all been used
-                    unused = await self.puzzle_store.get_last_derivation_path()
-                    self.log.debug("Tried finding unused: %s", unused)
-                    if unused is None:
-                        # This handles the case where the database is empty
-                        unused = uint32(0)
-                    else:
-                        # The first unused will be the one after the last used one we got above
-                        unused = uint32(unused + 1)
-
-                self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
+                self.log.debug(f"Requested to generate puzzle hashes to at least index {generate_to}")
                 start_t = time.time()
-                to_generate = num_additional_phs if num_additional_phs is not None else self.initial_num_public_keys
+                cushion = (
+                    target.unused_after_maximum_used
+                    if target.unused_after_maximum_used is not None
+                    else self.initial_num_public_keys
+                )
 
                 # iterate all wallets that need derived keys and establish the start
-                # index for all of them
-                start_index_by_wallet: dict[uint32, int] = {}
-                last_index = unused + to_generate
+                # indexes for all of them
+                indexes_by_wallet: dict[uint32, list[int]] = {}
+                last_index = generate_to + cushion
                 for wallet_id in targets:
                     target_wallet = self.wallets[wallet_id]
                     if not target_wallet.require_derivation_paths():
                         self.log.debug("Skipping wallet %s as no derivation paths required", wallet_id)
                         continue
-                    if from_zero:
-                        start_index_by_wallet[wallet_id] = 0
-                        continue
+                    indexes_by_wallet[wallet_id] = []
+                    if current_window is not None:
+                        indexes_by_wallet[wallet_id].extend(current_window.wallet_gaps.get(wallet_id, []))
                     last: uint32 | None = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
                     if last is not None:
                         if last >= last_index:
                             self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {last_index}")
                             continue
-                        start_index_by_wallet[wallet_id] = last
+                        start_index = last + 1
                     else:
-                        start_index_by_wallet[wallet_id] = 0
+                        start_index = 0
+                    indexes_by_wallet[wallet_id].extend(range(start_index, last_index + 1))
 
-                if len(start_index_by_wallet) == 0:
+                if not any(indexes_by_wallet.values()):
                     raise PurposefulAbort(
                         CreateMorePuzzleHashesResult(
                             derivation_paths=[] if previous_result is None else previous_result.derivation_paths,
-                            mark_existing_as_used=mark_existing_as_used,
-                            unused=unused,
+                            unused=generate_to,
                             new_unhardened_keys=False,
                             last_index=last_index,
                         )
                     )
 
-                lowest_start_index = min(start_index_by_wallet.values())
+                all_indexes = {idx for idxs in indexes_by_wallet.values() for idx in idxs}
 
-                # now derive the keysfrom lowest_start_index to last_index
+                # now derive the keys from lowest_start_index to last_index
                 # these maps derivation index to public key
                 hardened_keys: dict[int, G1Element] = {}
                 unhardened_keys: dict[int, G1Element] = {}
@@ -543,67 +536,51 @@ class WalletStateManager:
                 if self.private_key is not None:
                     # Hardened
                     intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                    for index in range(lowest_start_index, last_index + 1):
+                    for index in all_indexes:
                         hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
 
                 # Unhardened
                 intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
-                for index in range(lowest_start_index, last_index + 1):
+                for index in all_indexes:
                     unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
 
                 derivation_paths: list[DerivationRecord] = (
                     [] if previous_result is None else previous_result.derivation_paths
                 )
-                for wallet_id, start_index in start_index_by_wallet.items():
+                for wallet_id, indexes in indexes_by_wallet.items():
                     target_wallet = self.wallets[wallet_id]
                     assert target_wallet.type() != WalletType.POOLING_WALLET
-                    assert start_index < last_index
 
                     creating_msg = (
-                        f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                        f"Creating puzzle hashes from {min(indexes)} to {max(indexes)} for wallet_id: {wallet_id}"
                     )
                     self.log.info(f"Start: {creating_msg}")
-                    for index in range(start_index, last_index + 1):
-                        pubkey: G1Element | None = hardened_keys.get(index)
-                        if pubkey is not None:
-                            # Hardened
-                            puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                            self.log.debug(
-                                f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
-                            )
-                            derivation_paths.append(
-                                DerivationRecord(
-                                    uint32(index),
-                                    puzzlehash,
-                                    pubkey,
-                                    target_wallet.type(),
-                                    uint32(target_wallet.id()),
-                                    True,
+                    for index in indexes:
+                        for pubkey, hardened in zip(
+                            [hardened_keys.get(index), unhardened_keys.get(index)], [True, False]
+                        ):
+                            if pubkey is not None:
+                                # Hardened
+                                puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                                self.log.debug(
+                                    f"{'un' if not hardened else ''}hardened puzzle at index {index} "
+                                    f"wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
                                 )
-                            )
-                        # Unhardened
-                        pubkey = unhardened_keys.get(index)
-                        assert pubkey is not None
-                        puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                        self.log.debug(
-                            f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                        )
-                        derivation_paths.append(
-                            DerivationRecord(
-                                uint32(index),
-                                puzzlehash_unhardened,
-                                pubkey,
-                                target_wallet.type(),
-                                uint32(target_wallet.id()),
-                                False,
-                            )
-                        )
+                                derivation_paths.append(
+                                    DerivationRecord(
+                                        uint32(index),
+                                        puzzlehash,
+                                        pubkey,
+                                        target_wallet.type(),
+                                        uint32(target_wallet.id()),
+                                        hardened,
+                                    )
+                                )
                     self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
                 raise PurposefulAbort(
                     CreateMorePuzzleHashesResult(
                         derivation_paths=derivation_paths,
-                        mark_existing_as_used=mark_existing_as_used,
-                        unused=unused,
+                        unused=generate_to,
                         new_unhardened_keys=(len(hardened_keys) > 0),
                         last_index=last_index,
                     )
@@ -686,7 +663,7 @@ class WalletStateManager:
                 # Create more puzzle hashes / keys
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
                     previous_result=create_more_puzzle_hashes_result,
-                    up_to_index=record.index,
+                    target=PuzzleHashWindowTarget(total_generated=record.index),
                     _commit_previous_result=False,
                 )
                 await create_more_puzzle_hashes_result.commit(self)

@@ -89,6 +89,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMet
 from chia.wallet.wallet_coin_store import CoinRecordOrder, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_puzzle_store import PuzzleHashWindowTarget
 from chia.wallet.wallet_request_types import (
     Addition,
     AddKey,
@@ -1710,7 +1711,7 @@ class WalletRpcApi:
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
         result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
-            from_zero=False, mark_existing_as_used=False, up_to_index=request.index, num_additional_phs=0
+            target=PuzzleHashWindowTarget(total_generated=request.index, unused_after_maximum_used=0),
         )
         await result.commit(self.service.wallet_state_manager)
 

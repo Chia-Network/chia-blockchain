@@ -504,11 +504,8 @@ class WalletNode:
             for wallet_id in self.wallet_state_manager.wallets:
                 await self._update_balance_cache(wallet_id)
 
-        async with self.wallet_state_manager.puzzle_store.lock:
-            index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
-            if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
-                result = await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
-                await result.commit(self.wallet_state_manager)
+        result = await self.wallet_state_manager.create_more_puzzle_hashes()
+        await result.commit(self.wallet_state_manager)
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
