@@ -14,6 +14,7 @@ from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.coin_store_protocol import CoinStoreProtocol, CoinStoreSnapshot
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_item import UnspentLineageInfo
@@ -337,6 +338,32 @@ class CoinStore:
             if peak_row is not None:
                 peak = (peak_row[1], peak_row[0])
             yield _CoinStoreSnapshot(self, peak)
+
+    async def get_coin_commitments_root(self, height: uint32) -> bytes32:
+        # spent_index is 0 for unspent coins, so height 0 can't be queried; it has no spends
+        if height == 0:
+            return EMPTY_MERKLE_SET_ROOT
+
+        # one reader snapshot, so a concurrent peak change can't mix coin states between the two queries
+        async with self.db_wrapper.reader() as conn:
+            async with conn.execute(
+                # `spent_index>0` is required for SQLite to use the partial coin_spent_index.
+                "SELECT coin_name FROM coin_record INDEXED BY coin_spent_index WHERE spent_index=? AND spent_index>0",
+                (height,),
+            ) as cursor:
+                spent_coin_ids = [bytes32(row[0]) for row in await cursor.fetchall()]
+
+            async with conn.execute(
+                # coinbase=0 excludes reward coins
+                "SELECT puzzle_hash, coin_parent, amount FROM coin_record INDEXED BY coin_confirmed_index "
+                "WHERE confirmed_index=? AND coinbase=0",
+                (height,),
+            ) as cursor:
+                created_coins = [
+                    Coin(bytes32(row[1]), bytes32(row[0]), uint64.from_bytes(row[2])) for row in await cursor.fetchall()
+                ]
+
+        return compute_coin_commitments_root(spent_coin_ids, created_coins)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
