@@ -875,7 +875,6 @@ def validate_finished_header_block(
     expected_vs: ValidationState,
     *,
     check_sub_epoch_summary: bool = True,
-    skip_commitment_validation: bool = False,
     height_agnostic: bool = False,
 ) -> tuple[uint64 | None, ValidationError | None]:
     """
@@ -1100,39 +1099,5 @@ def validate_finished_header_block(
         header_block.foliage.foliage_transaction_block_hash is not None
     ) != header_block.reward_chain_block.is_transaction_block:
         return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_PRESENCE)
-
-    # 34. Validate header MMR commitment (skip for weight proof validation)
-
-    pre_sp_tx_height = pre_sp_tx_block_height(
-        constants=constants,
-        blocks=blocks,
-        prev_b_hash=header_block.prev_header_hash,
-        sp_index=header_block.reward_chain_block.signage_point_index,
-        finished_sub_slots=len(header_block.finished_sub_slots),
-    )
-    if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-        sp_iters = calculate_sp_iters(
-            constants,
-            expected_vs.ssi,
-            header_block.reward_chain_block.signage_point_index,
-        )
-        sp_total_iters = uint128(
-            header_block.reward_chain_block.total_iters
-            - ip_iters
-            + sp_iters
-            - (expected_vs.ssi if sp_iters > ip_iters else 0)
-        )
-        expected_mmr_root = blocks.get_mmr_root_for_block(
-            header_block.prev_header_hash,
-            sp_total_iters,
-        )
-        mmr_root = header_block.reward_chain_block.header_mmr_root
-
-        if mmr_root != expected_mmr_root:
-            expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
-            log.error(
-                f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
-            )
-            return None, ValidationError(Err.INVALID_HEADER_MMR_ROOT)
 
     return required_iters, None

@@ -6,6 +6,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint128
 
 if TYPE_CHECKING:
+    from chia.consensus.block_body_validation import ForkInfo
     from chia.consensus.blockchain_interface import MMRManagerProtocol
 
 
@@ -22,7 +23,7 @@ class StubMMRManager:
         prev_header_hash: bytes32,
         sp_total_iters: uint128,
         blocks: Any,
-        fork_height: uint32 | None = None,
+        fork_info: ForkInfo | None = None,
     ) -> bytes32 | None:
         # Return empty bytes for test contexts
         return None
@@ -30,7 +31,9 @@ class StubMMRManager:
     def compute_current_mmr_root(self) -> bytes32 | None:
         return None
 
-    def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
+    def add_block_to_mmr(
+        self, header_hash: bytes32, prev_hash: bytes32, height: uint32, coin_commitments_root: bytes32 | None
+    ) -> None:
         # No-op for stub manager
         pass
 
@@ -41,7 +44,3 @@ class StubMMRManager:
     def get_aggrtegate_from(self) -> uint32:
         # Stub returns 0 (aggregate from genesis)
         return uint32(0)
-
-    def copy(self) -> MMRManagerProtocol:
-        # Return a new instance (stateless)
-        return StubMMRManager()

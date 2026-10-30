@@ -1318,7 +1318,6 @@ def validate_recent_blocks(
                     False,
                     expected_vs,
                     check_sub_epoch_summary=ses_blocks > 2,
-                    skip_commitment_validation=True,
                     height_agnostic=is_v2_plot(block.reward_chain_block.proof_of_space),
                 )
                 if error is not None:
