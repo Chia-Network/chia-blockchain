@@ -36,7 +36,7 @@ Public plotting docs frame plots as files tied to a farmer key, pool key, or poo
 - V1 plot memos have two exact source-defined layouts for public-key and pool-contract plots. `parse_plot_info()` rejects any other length. This memo is the source of the local plot secret used by harvester signature responses.
 - The plot public key is derived as `local_pk + farmer_pk` for pool-public-key plots, and `local_pk + farmer_pk + taproot_pk` for pool-contract plots. This must stay aligned with `chia.types.blockchain_format.proof_of_space.generate_plot_public_key()` and farmer aggregate-signature verification.
 - V1 plot IDs are computed from pool public key or pool contract puzzle hash plus plot public key. V2 plot IDs are computed by `compute_plot_id_v2()` from strength, plot public key, pool key/hash, plot index, and meta group.
-- Current V2 creation hardcodes placeholder plot-index and meta-group values; `V2Prover.get_param()` mirrors this placeholder. Any future multi-index/group support must update creation, prover metadata, proof construction, farmer/harvester protocol payloads, and tests together.
+- Current V2 creation assigns successive plot indices within each logical group and uses meta-group zero. Each generated file contains one plot, so `V2Prover.get_group_size()` reports one for each file. Proof construction and farmer/harvester protocol payloads carry the plot index from the prover.
 
 ## Discovery And Refresh Model
 
@@ -80,9 +80,9 @@ Public plotting docs frame plots as files tied to a farmer key, pool key, or poo
 
 ## CLI, External Plotters, And Simulator Coupling
 
-- `chia plots create` and `chia.plotters.chiapos` both call `resolve_plot_keys()` and `create_plots()`; external plotter wrappers for bladebit and madmax call `resolve_plot_keys()` and pass the resulting keys to subprocess CLIs.
-- Plot size validation lives in `util.validate_plot_size()` and is CLI/operator policy: mainnet min k comes from config, and `--override-k` still applies source-defined lower bounds.
-- `chia plots check` deliberately opens no-key plots, can list duplicate filename-style plot IDs, and can reveal raw memo bytes. Treat it as an admin/debug surface with more permissive loading than normal harvesting.
+- `chia plots create` and `chia.plotters.chiapos` both call `resolve_plot_keys()` and `create_plots()`; `chia plots create2` calls `resolve_plot_keys()` and `create_v2_plots()` with network-derived `PLOT_SIZE_V2` and CLI strength. Its `--num` option counts plot groups, and `--plots-per-group` creates multiple single-plot files with a shared group ID and distinct plot indices. Both options default to one. External plotter wrappers for bladebit and madmax call `resolve_plot_keys()` and pass the resulting keys to subprocess CLIs.
+- Plot size validation lives in `util.validate_plot_size()` (v1) and is CLI/operator policy: mainnet min k comes from config, and `--override-k` still applies source-defined lower bounds. V2 `create2` accepts even `-k/--size` values from 18 through 28, matching the pos2-chip plotter limits. Omission uses the network's `PLOT_SIZE_V2` (k=28 on mainnet and current testnets, k=20 on simulator0 and testnet0). A size mismatch warns that the plot cannot be farmed on that network but still creates it for testing. `util.validate_v2_plot_params()` enforces strength against `MIN_PLOT_STRENGTH`..`MAX_PLOT_STRENGTH`.
+- `chia plots check` deliberately opens no-key plots, can list duplicate filename-style plot IDs, and can reveal raw memo bytes. It rejects V2 plots whose recorded k-size differs from the selected network's `PLOT_SIZE_V2`, with an explicit network-size error instead of a misleading proof-quality warning. For supported V2 plots, proof diagnostics use the file's recorded k-size. Treat it as an admin/debug surface with more permissive loading than normal harvesting.
 - Simulator `BlockTools` uses `create_plots()`, `create_v2_plots()`, and `PlotManager` to generate deterministic local plots for tests and block generation. Test-only private keys and debug plot IDs/memos in creation should not leak into production assumptions.
 
 ## Fragility Hotspots

@@ -284,18 +284,25 @@ async def create_v2_plots(
     size: int = 28,
     strength: int = 2,
     num: int = 1,
+    plots_per_group: int = 1,
     test_private_keys: list[PrivateKey] | None = None,
 ) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
+    if not 1 <= plots_per_group <= 65536:
+        raise ValueError("plots_per_group must be between 1 and 65536")
+    if plots_per_group != 1:
+        log.warning("Multiple plots per file are not supported yet; creating each plot in an individual file")
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     if keys.pool_public_key is not None:
         log.info(
-            f"Creating {num} v2 plots of size {size}, strength: {strength}, pool public key:  "
+            f"Creating {num} v2 plot groups with {plots_per_group} plots each, size {size}, strength: {strength}, "
+            "pool public key:  "
             f"{bytes(keys.pool_public_key).hex()} farmer public key: {bytes(keys.farmer_public_key).hex()}"
         )
     else:
         assert keys.pool_contract_puzzle_hash is not None
         log.info(
-            f"Creating {num} v2 plots of size {size}, strength: {strength}, pool contract address:  "
+            f"Creating {num} v2 plot groups with {plots_per_group} plots each, size {size}, strength: {strength}, "
+            "pool contract address:  "
             f"{keys.pool_contract_address} farmer public key: {bytes(keys.farmer_public_key).hex()}"
         )
 
@@ -317,9 +324,6 @@ async def create_v2_plots(
             master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, is_v2=True
         )
 
-        # TODO: todo_v2_plots index and meta_group should be hooked up to
-        # something, maybe i or maybe be passed in as a paramter
-        plot_index = uint16(0)
         meta_group = uint8(0)
 
         # The plot group ID is based on the harvester, farmer, pool contract
@@ -339,21 +343,28 @@ async def create_v2_plots(
             keys.pool_contract_puzzle_hash,
         )
 
-        filename = f"plot-k{size}-{plot_group_id}.gplot"
-        full_path: Path = final_dir / filename
+        plot_memo = bytes(pool_ph_or_pk) + bytes(keys.farmer_public_key) + bytes(sk)
+        for plot_index in range(plots_per_group):
+            # Keep the original filename for index 0 so existing single-plot
+            # groups can be extended without recreating their first plot.
+            suffix = f"-{plot_index}" if plot_index else ""
+            filename = f"plot-k{size}-{plot_group_id}{suffix}.gplot"
+            full_path = final_dir / filename
 
-        if not full_path.exists():
-            log.info(f"Starting plot {i + 1}/{num}")
-            plot_memo = bytes(pool_ph_or_pk) + bytes(keys.farmer_public_key) + bytes(sk)
-            create_v2_single_plot_group(
-                str(full_path.absolute()), size, strength, plot_group_id, plot_index, meta_group, plot_memo
-            )
-            created_plots[plot_group_id] = full_path
-        else:
-            log.info(f"Plot {filename} already exists")
-            existing_plots[plot_group_id] = full_path
+            if not full_path.exists():
+                log.info(f"Starting plot {plot_index + 1}/{plots_per_group} in group {i + 1}/{num}")
+                create_v2_single_plot_group(
+                    str(full_path.absolute()), size, strength, plot_group_id, uint16(plot_index), meta_group, plot_memo
+                )
+                created_plots.setdefault(plot_group_id, full_path)
+            elif plot_group_id not in created_plots:
+                log.info(f"Plot {filename} already exists")
+                existing_plots.setdefault(plot_group_id, full_path)
 
-    log.info(f"Created a total of {len(created_plots)} new plots")
+        if plot_group_id in created_plots:
+            existing_plots.pop(plot_group_id, None)
+
+    log.info(f"Created a total of {len(created_plots)} new plot groups")
     for created_path in created_plots.values():
         log.info(created_path.name)
 
