@@ -1,11 +1,12 @@
-# Managed by repo-content-updater
+# This file is managed by the repo-content-updater project. Manual changes here will result in a PR to bring back
+# inline with the upstream template, unless you add !dep-review to the repo's managed-files property
 # Dependency Review Action
 #
 # This Action will scan dependency manifest files that change as part of a Pull Request, surfacing known-vulnerable versions of the packages declared or updated in the PR. Once installed, if the workflow run is marked as required, PRs introducing known-vulnerable packages will be blocked from merging.
 #
 # Source repository: https://github.com/actions/dependency-review-action
 # Public documentation: https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-dependency-review#dependency-review-enforcement
-name: "🚨 Dependency Review"
+name: 🚨 Dependency Review
 on: [pull_request]
 
 permissions:
@@ -16,11 +17,29 @@ jobs:
     if: github.repository_owner == 'Chia-Network'
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repository"
+      - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: "Dependency Review"
+      - name: Dependency Review
         uses: actions/dependency-review-action@v5.0.0
         with:
           allow-dependencies-licenses: pkg:pypi/pyinstaller, pkg:pypi/mypy
-          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-1.0-or-later, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+
+  osv-scanner:
+    if: github.repository_owner == 'Chia-Network'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@v2.7.0
+    with:
+      # Recursively scan every lockfile in the PR, including transitive dependencies.
+      scan-args: |-
+        --allow-no-lockfiles
+        -r
+        ./
+      # The reusable workflow declares actions: read, contents: read and
+      # security-events: write. Findings fail the job through annotations;
+      # SARIF upload stays disabled.
+      upload-sarif: false
