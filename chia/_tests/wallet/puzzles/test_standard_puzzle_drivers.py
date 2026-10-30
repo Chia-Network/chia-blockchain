@@ -15,13 +15,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     MOD,
     calculate_synthetic_public_key,
 )
-from chia.wallet.puzzles.puzzle_drivers import (
-    ACSPuzzle,
-    NilSolution,
-    P2Conditions,
-    UnknownPuzzle,
-    UnknownSolution,
-)
+from chia.wallet.puzzles.puzzle_drivers import ACSPuzzle, NilSolution, P2Conditions, UnknownPuzzle, UnknownSolution
 from chia.wallet.puzzles.standard_puzzle_drivers import DefaultHiddenPuzzle, StandardPuzzle, StandardPuzzleSolution
 
 

@@ -109,6 +109,10 @@ class SingletonStruct:
             )
         )
 
+    @classmethod
+    def from_program(cls, program: Program) -> Self:
+        return cls(launcher_id=bytes32(program.at("rf").as_atom()))
+
     def struct_hash(self) -> bytes32:
         return self.to_program().get_tree_hash()
 
