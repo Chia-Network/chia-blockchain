@@ -39,13 +39,14 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           DISPATCH_PR: ${{ github.event.inputs.pr_number }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           number="${PR_NUMBER:-${DISPATCH_PR}}"
           [[ "$number" =~ ^[0-9]+$ ]] || { echo "A numeric PR number is required." >&2; exit 1; }
-          if [ "$(gh pr view "$number" --json author --jq '.author.login')" != "dependabot[bot]" ]; then
+          if [ "$(gh api "repos/${GH_REPO}/pulls/${number}" --jq '.user.login')" != "dependabot[bot]" ]; then
             echo "PR author is not dependabot[bot]." >&2
             exit 1
           fi
