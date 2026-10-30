@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from sqlite3 import Row
 
 from chia_rs import G1Element
@@ -14,6 +15,22 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, kw_only=True)
+class PuzzleHashWindowTarget:
+    total_generated: int | None = None
+    unused_after_maximum_used: int | None = None
+
+
+@dataclass(kw_only=True)
+class PuzzleHashWindow:
+    minimum_unused_index: int
+    maximum_used_index: int
+    maximum_generated_index: int
+    usused_after_maximum_used: int
+    total_unused: int
+    total_generated: int
 
 
 class WalletPuzzleStore:
@@ -67,6 +84,40 @@ class WalletPuzzleStore:
         self.last_derivation_index = None
         self.last_wallet_derivation_index = {}
         return self
+
+    async def get_window_statistics(self) -> PuzzleHashWindow | None:
+        """
+        Returns a PuzzleHashWindow object containing statistics about the derivation paths in the database.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "WITH bounds AS ("
+                "SELECT MAX(CASE WHEN used=1 AND hardened=0 THEN derivation_index END) AS maximum_used_index "
+                "FROM derivation_paths"
+                ") "
+                "SELECT "
+                "MIN(CASE WHEN used=0 AND hardened=0 THEN derivation_index END), "
+                "bounds.maximum_used_index, "
+                "MAX(derivation_index), "
+                "COUNT(CASE WHEN used=0 AND hardened=0 AND derivation_index > bounds.maximum_used_index THEN 1 END), "
+                "COUNT(CASE WHEN used=0 AND hardened=0 THEN 1 END), "
+                "COUNT(*) "
+                "FROM derivation_paths "
+                "CROSS JOIN bounds",
+            )
+
+        assert row is not None  # not semantically possible, so this is for mypy
+        if row[5] == 0:  # total_generated (COUNT(*))
+            return None
+        return PuzzleHashWindow(
+            minimum_unused_index=row[0],
+            maximum_used_index=row[1],
+            maximum_generated_index=row[2],
+            usused_after_maximum_used=row[3],
+            total_unused=row[4],
+            total_generated=row[5],
+        )
 
     async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:
         """
