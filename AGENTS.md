@@ -2,6 +2,8 @@
 
 This repo ships curated architectural context for coding agents.
 
+### Cursor Context System
+
 Start with `.cursor/context/INDEX.md` for routing, critical invariants,
 cross-module coupling, architecture overview, and the module table.
 
@@ -13,7 +15,7 @@ Cursor behavior is guided by `.cursor/rules/`, including context routing,
 test harness selection, and repository tooling guardrails. Bugbot review
 guidance lives in `.cursor/BUGBOT.md`.
 
----
+### Developer Guide
 
 > **Modifying this repo?** Read on — dev setup, test commands, and repo-specific traps below.
 >
