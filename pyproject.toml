@@ -54,7 +54,7 @@ chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
 chia_rs = ">=0.53.0,<0.54.0"
-chiavdf = ">=1.1.10"  # timelord and vdf verification
+chiavdf = ">=1.2.0"  # timelord and vdf verification
 click = ">=8.4.0"  # For the CLI
 clvm = ">=0.9.14"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
