@@ -1501,10 +1501,6 @@ class FullNode:
             nonlocal first_batch, blockchain, fork_info
             peer, blocks = item
 
-            # Keep the augmented chain's MMR snapshot aligned with the
-            # underlying blockchain before validating each fetched batch.
-            blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
-
             # skip_blocks is only relevant at the start of the sync,
             # to skip blocks we already have in the database (and have
             # been validated). Once we start validating blocks, we
@@ -1718,9 +1714,22 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
-        # Keep the augmented chain's MMR snapshot aligned with the underlying
-        # blockchain between batches.
-        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
+        # callers keep fork_info across batches but release the chain lock
+        # between them, so a reorg may have replaced the fork point. fail
+        # rather than roll back to a stale fork height
+        if fork_info.fork_height >= 0:
+            if len(fork_info.block_hashes) == 0:
+                fork_hash = fork_info.peak_hash
+            else:
+                first_fork_block = await self.blockchain.get_block_record_from_db(fork_info.block_hashes[0])
+                assert first_fork_block is not None
+                fork_hash = first_fork_block.prev_hash
+            if self.blockchain.height_to_hash(uint32(fork_info.fork_height)) != fork_hash:
+                self.log.warning(
+                    f"fork point {fork_hash.hex()} at height {fork_info.fork_height} is no longer canonical, "
+                    f"failing batch from {peer_info}"
+                )
+                return False, None
 
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)

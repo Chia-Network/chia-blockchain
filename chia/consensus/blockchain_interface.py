@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint128
+
+if TYPE_CHECKING:
+    from chia.consensus.block_body_validation import ForkInfo
 
 
 class MMRManagerProtocol(Protocol):
@@ -15,13 +18,14 @@ class MMRManagerProtocol(Protocol):
         prev_header_hash: bytes32,
         sp_total_iters: uint128,
         blocks: BlockRecordsProtocol,
-        fork_height: uint32 | None = None,
+        fork_info: ForkInfo | None = None,
     ) -> bytes32 | None: ...
     def compute_current_mmr_root(self) -> bytes32 | None: ...
-    def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None: ...
+    def add_block_to_mmr(
+        self, header_hash: bytes32, prev_hash: bytes32, height: uint32, coin_commitments_root: bytes32 | None
+    ) -> None: ...
     def rollback_to_height(self, target_height: int, blocks: BlockRecordsProtocol) -> None: ...
     def get_aggrtegate_from(self) -> uint32: ...
-    def copy(self) -> MMRManagerProtocol: ...
 
 
 class BlockRecordsProtocol(Protocol):

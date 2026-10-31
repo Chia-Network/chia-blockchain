@@ -127,7 +127,6 @@ class WalletBlockchain:
             False,
             expected_vs,
             check_sub_epoch_summary=False,
-            skip_commitment_validation=True,
         )
         if error is not None:
             return AddBlockResult.INVALID_BLOCK, error.code
@@ -249,7 +248,7 @@ class WalletBlockchain:
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._block_records[block_record.header_hash] = block_record
         # Update MMR with the new block (even though WalletBlockchain uses StubMMRManager)
-        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height, None)
 
     async def clean_block_records(self) -> None:
         """

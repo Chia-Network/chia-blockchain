@@ -19,7 +19,7 @@ from chia_rs import (
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_generator_info import (
@@ -35,6 +35,7 @@ from chia.consensus.generator_validation import (
     validate_tx_generator,
 )
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -90,6 +91,8 @@ class ForkInfo:
     # i.e. the header hash of fork_height + 1 is stored in block_hashes[0]
     # followed by fork_height + 2, and so on.
     block_hashes: list[bytes32] = field(default_factory=list)
+    # coin commitments root of each block in block_hashes; None below the MMR's aggregate_from
+    commitment_roots: list[bytes32 | None] = field(default_factory=list)
 
     def reset(self, fork_height: int, header_hash: bytes32) -> None:
         self.fork_height = fork_height
@@ -98,13 +101,15 @@ class ForkInfo:
         self.additions_since_fork = {}
         self.removals_since_fork = {}
         self.block_hashes = []
+        self.commitment_roots = []
 
-    def update_fork_peak(self, block: FullBlock, header_hash: bytes32) -> None:
-        """Updates `self` with `block`'s height and `header_hash`."""
+    def update_fork_peak(self, block: FullBlock, header_hash: bytes32, coin_commitments_root: bytes32 | None) -> None:
+        """Updates `self` with `block`'s height, `header_hash` and coin commitments root."""
         assert self.peak_height == block.height - 1
         assert len(self.block_hashes) == self.peak_height - self.fork_height
         assert block.height == self.fork_height + 1 + len(self.block_hashes)
         self.block_hashes.append(header_hash)
+        self.commitment_roots.append(coin_commitments_root)
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
 
@@ -119,8 +124,14 @@ class ForkInfo:
                 coin, block.height, timestamp, hint=None, is_coinbase=True, same_as_parent=False
             )
 
-    def include_spends(self, conds: SpendBundleConditions | None, block: FullBlock, header_hash: bytes32) -> None:
-        self.update_fork_peak(block, header_hash)
+    def include_spends(
+        self,
+        conds: SpendBundleConditions | None,
+        block: FullBlock,
+        header_hash: bytes32,
+        coin_commitments_root: bytes32 | None,
+    ) -> None:
+        self.update_fork_peak(block, header_hash, coin_commitments_root)
         if conds is not None:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
@@ -141,8 +152,9 @@ class ForkInfo:
         removals: list[tuple[bytes32, Coin]],
         block: FullBlock,
         header_hash: bytes32,
+        coin_commitments_root: bytes32 | None,
     ) -> None:
-        self.update_fork_peak(block, header_hash)
+        self.update_fork_peak(block, header_hash, coin_commitments_root)
         if block.foliage_transaction_block is not None:
             timestamp = block.foliage_transaction_block.timestamp
             spent_coins: dict[bytes32, Coin] = {}
@@ -208,6 +220,8 @@ async def validate_block_body(
     fork_info: ForkInfo,
     *,
     finished_sub_slots: int,
+    required_iters: uint64 | None,
+    sub_slot_iters: uint64 | None,
     log_coins: bool = False,
 ) -> Err | None:
     """
@@ -223,6 +237,8 @@ async def validate_block_body(
         of the main chain, the fork info is mandatory in order to validate the block.
     finished_sub_slots is the number of sub-slots crossed since the previous block's infusion. An unfinished
         overflow block may omit the last one (see unfinished_block_sub_slots).
+    required_iters and sub_slot_iters locate the signage point for the header MMR root check.
+        They are None for unfinished blocks, which have no header MMR root.
     """
     if isinstance(block, FullBlock):
         assert height == block.height
@@ -236,6 +252,24 @@ async def validate_block_body(
         sp_index=block.reward_chain_block.signage_point_index,
         finished_sub_slots=finished_sub_slots,
     )
+
+    # The header MMR root commits to the blocks infused before the signage point
+    if isinstance(block, FullBlock) and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+        assert required_iters is not None and sub_slot_iters is not None
+        sp_index = block.reward_chain_block.signage_point_index
+        ip_iters = calculate_ip_iters(constants, sub_slot_iters, sp_index, required_iters)
+        sp_iters = calculate_sp_iters(constants, sub_slot_iters, sp_index)
+        sp_total_iters = uint128(
+            block.reward_chain_block.total_iters - ip_iters + sp_iters - (sub_slot_iters if sp_iters > ip_iters else 0)
+        )
+        expected_mmr_root = records.mmr_manager.get_mmr_root_for_block(
+            block.prev_header_hash, sp_total_iters, records, fork_info
+        )
+        mmr_root = block.reward_chain_block.header_mmr_root
+        if mmr_root != expected_mmr_root:
+            expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
+            log.error(f"Invalid header MMR root at height {block.height}. Expected: {expected_hash}, Got: {mmr_root}")
+            return Err.INVALID_HEADER_MMR_ROOT
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are

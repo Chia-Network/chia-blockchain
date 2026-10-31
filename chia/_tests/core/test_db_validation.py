@@ -8,15 +8,13 @@ from typing import Any
 import pytest
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
-from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper2
@@ -143,15 +141,8 @@ async def make_db(db_file: Path, blocks: list[FullBlock], constants: ConsensusCo
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
         bc = await Blockchain.create(coin_store, block_store, height_map, constants, InlineExecutor())
-        sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
-            if block.height != 0 and len(block.finished_sub_slots) > 0:
-                if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-                    sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-            results = PreValidationResult(None, None, uint64(1), None, uint32(0))
-            fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-            _, err, _ = await bc.add_block(block, results, sub_slot_iters=sub_slot_iters, fork_info=fork_info)
-            assert err is None
+            await _validate_and_add_block(bc, block)
 
 
 @pytest.mark.anyio
