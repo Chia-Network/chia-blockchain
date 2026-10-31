@@ -334,6 +334,115 @@ async def test_fork_ancestry_populated_on_first_add(default_10000_blocks: list[F
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="save time")
+async def test_extra_chain_from_genesis_has_no_shared_prefix(default_10000_blocks: list[FullBlock]) -> None:
+    """Extra blocks starting at genesis share nothing with the underlying
+    chain: the fork height is -1, so the MMR builder reuses no canonical
+    prefix for them, even where their heights overlap the underlying chain."""
+    blocks = default_10000_blocks
+
+    underlying = InMemoryBlockchain()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    abc = AugmentedBlockchain(underlying)
+    assert abc._fork_height is None
+    abc.add_extra_block(blocks[0], BR(blocks[0]))
+    assert abc._fork_height == -1
+    abc.add_extra_block(blocks[1], BR(blocks[1]))
+    assert abc._fork_height == -1
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_stored_fork_record_sets_fork_height(default_10000_blocks: list[FullBlock]) -> None:
+    """add_block_record() overlays already-stored blocks onto the view (the
+    full node's skip_blocks()). Overlaying a stored orphan turns the view into
+    a fork view, so the fork height must be recorded for the header MMR
+    builder; canonical records leave it alone."""
+    blocks = default_10000_blocks
+
+    underlying = InMemoryBlockchain()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    # stored orphans at heights 3-4 branching from canonical height 2: in the
+    # record cache, not on the canonical height map
+    fork_h3 = blocks[10].header_hash
+    fork_h4 = blocks[11].header_hash
+    fork_rec3 = FakeBlockRecord(uint32(3), fork_h3, blocks[2].header_hash)
+    fork_rec4 = FakeBlockRecord(uint32(4), fork_h4, fork_h3)
+    underlying._block_records[fork_h3] = fork_rec3  # type: ignore[assignment]
+    underlying._block_records[fork_h4] = fork_rec4  # type: ignore[assignment]
+
+    abc = AugmentedBlockchain(underlying)
+    for block in blocks[:3]:
+        abc.add_block_record(BR(block))
+    assert abc._fork_height is None
+
+    abc.add_block_record(fork_rec3)  # type: ignore[arg-type]
+    assert abc._fork_height == 2
+    abc.add_block_record(fork_rec4)  # type: ignore[arg-type]
+    assert abc._fork_height == 2
+    assert abc.height_to_hash(uint32(3)) == fork_h3
+    assert abc.height_to_hash(uint32(4)) == fork_h4
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_fork_ancestry_to_foreign_genesis_has_no_shared_prefix(default_10000_blocks: list[FullBlock]) -> None:
+    """A first extra block whose stored ancestry runs back to a genesis the
+    underlying chain does not have shares nothing with it, just like an extra
+    chain that starts at genesis itself."""
+    blocks = default_10000_blocks
+
+    underlying = InMemoryBlockchain()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    foreign_genesis = blocks[10].header_hash
+    underlying._block_records[foreign_genesis] = FakeBlockRecord(  # type: ignore[assignment]
+        uint32(0), foreign_genesis, blocks[0].prev_header_hash
+    )
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(
+        blocks[11],
+        FakeBlockRecord(uint32(1), blocks[11].header_hash, foreign_genesis),  # type: ignore[arg-type]
+    )
+    assert abc._fork_height == -1
+    assert abc.height_to_hash(uint32(0)) == foreign_genesis
+    assert abc.height_to_hash(uint32(1)) == blocks[11].header_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_extra_block_after_canonical_overlay_sets_fork_height(default_10000_blocks: list[FullBlock]) -> None:
+    """A batch may start with stored canonical blocks (overlaid through
+    add_block_record()) and continue with new blocks forking off them. The
+    first new block then still has to record the fork height, even though the
+    overlay map is no longer empty."""
+    blocks = default_10000_blocks
+
+    underlying = InMemoryBlockchain()
+    for block in blocks[:5]:
+        underlying.add_block_record(BR(block))
+
+    abc = AugmentedBlockchain(underlying)
+    for block in blocks[:3]:
+        abc.add_block_record(BR(block))
+    assert abc._fork_height is None
+
+    fork_hash = blocks[10].header_hash
+    abc.add_extra_block(
+        blocks[10],
+        FakeBlockRecord(uint32(3), fork_hash, blocks[2].header_hash),  # type: ignore[arg-type]
+    )
+    assert abc._fork_height == 2
+    assert abc.height_to_hash(uint32(3)) == fork_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
 async def test_read_only_snapshot_rejects_mutation(default_10000_blocks: list[FullBlock]) -> None:
     blocks = default_10000_blocks
     underlying = InMemoryBlockchain()

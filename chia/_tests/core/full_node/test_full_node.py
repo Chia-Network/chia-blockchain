@@ -145,11 +145,11 @@ def find_reward_coin(b: FullBlock, puzzle_hash: bytes32) -> Coin:
 
 def test_pre_validation_result() -> None:
     conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
-    results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
+    results = PreValidationResult(None, None, uint64(1), conds, uint32(0), None)
     assert results.validated_signature is True
 
     conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0, 0, 0, 0)
-    results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
+    results = PreValidationResult(None, None, uint64(1), conds, uint32(0), None)
     assert results.validated_signature is False
 
 
@@ -513,6 +513,10 @@ async def test_block_compression(
                             blockchain.pool,
                             None,
                             vs,
+                            # parallel workers can't check header MMR commitments:
+                            # a block's commitment covers earlier batch blocks whose
+                            # composite leaves only exist after their generators ran
+                            skip_commitment_validation=True,
                         )
                     )
                 results: list[PreValidationResult] = list(await asyncio.gather(*futures))
@@ -529,7 +533,15 @@ async def test_block_compression(
                 futures = []
                 for block in all_blocks[:i]:
                     futures.append(
-                        await pre_validate_block(blockchain.constants, chain, block, blockchain.pool, None, vs)
+                        await pre_validate_block(
+                            blockchain.constants,
+                            chain,
+                            block,
+                            blockchain.pool,
+                            None,
+                            vs,
+                            skip_commitment_validation=True,
+                        )
                     )
                 results = list(await asyncio.gather(*futures))
                 for result in results:
@@ -4458,6 +4470,8 @@ async def declare_pos_unfinished_block_pos_request(
         challenge_chain_sp,
         height=block.reward_chain_block.height,
         prev_transaction_block_height=tx_peak.height,
+        filter_challenge=full_node_store.get_filter_challenge(challenge, block.reward_chain_block.signage_point_index),
+        signage_point_index=block.reward_chain_block.signage_point_index,
     )
     assert q_str is not None
     unfinised_block = None

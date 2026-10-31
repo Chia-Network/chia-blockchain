@@ -29,10 +29,11 @@ from chia.consensus.block_generator_info import (
 )
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.generator_validation import validate_generator_ref_list, validate_generator_root
+from chia.consensus.generator_validation import validate_committed_generator, validate_generator_ref_list
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
@@ -61,6 +62,9 @@ class PreValidationResult(Streamable):
     required_iters: uint64 | None  # Iff error is None
     conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
+    # Iff error is None and block height >= HARD_FORK2_HEIGHT. Derived from the
+    # already-validated conds so generator execution remains single-pass.
+    coin_commitments_root: bytes32 | None
 
     @property
     def validated_signature(self) -> bool:
@@ -132,7 +136,7 @@ def _pre_validate_block(
 
     def error_result(error: Err, error_msg: str | None = None) -> PreValidationResult:
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(error.value), error_msg, None, None, uint32(validation_time * 1000))
+        return PreValidationResult(uint16(error.value), error_msg, None, None, uint32(validation_time * 1000), None)
 
     try:
         removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
@@ -147,23 +151,15 @@ def _pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 return error_result(Err.BLOCK_COST_EXCEEDS_MAX)
 
-            if block.foliage_transaction_block is None:
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
-
             # Fast-fail: prove the generator is the committed one before
             # executing it. A peer can keep all farmed/signed header fields
             # intact and swap only transactions_generator; these cheap hash
             # checks reject that before the expensive CLVM run.
+            generator_error = validate_committed_generator(block, constants, prev_tx_height)
+            if generator_error is not None:
+                return error_result(generator_error)
             generator_bytes = get_transactions_generator_bytes(block)
             assert generator_bytes is not None
-            if not validate_generator_root(
-                generator_bytes, block.transactions_info.generator_root, constants, prev_tx_height
-            ):
-                return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
-            if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
-                return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
-            if block.foliage.foliage_transaction_block_hash != block.foliage_transaction_block.get_hash():
-                return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
             # a serde_2026 generator (INTERNED_SPEND_LIST) has no classic
             # canonical form; chia_rs bounds its size when parsing it instead
@@ -200,6 +196,18 @@ def _pre_validate_block(
         )
         error_int = None if error is None else uint16(error.code.value)
 
+        # Derive the coin commitments root only after successful generator
+        # execution and header validation; invalid blocks must not have their
+        # data registered or appended anywhere.
+        coin_commitments_root: bytes32 | None = None
+        if error is None and block.height >= constants.HARD_FORK2_HEIGHT:
+            if removals_and_additions is None:
+                # a non-transaction block
+                coin_commitments_root = EMPTY_MERKLE_SET_ROOT
+            else:
+                # transaction spends only; reward coins are not in these lists
+                coin_commitments_root = compute_coin_commitments_root(*removals_and_additions)
+
         validation_time = time.monotonic() - validation_start
         return PreValidationResult(
             error_int,
@@ -207,6 +215,7 @@ def _pre_validate_block(
             required_iters,
             conds,
             uint32(validation_time * 1000),
+            coin_commitments_root,
         )
     except Exception:
         error_stack = traceback.format_exc()
@@ -256,7 +265,7 @@ async def pre_validate_block(
     prev_b: BlockRecord | None = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
-        return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0))
+        return PreValidationResult(uint16(error_code.value), None, None, None, uint32(0), None)
 
     if block.height == 0:
         if block.prev_header_hash != constants.GENESIS_CHALLENGE:
