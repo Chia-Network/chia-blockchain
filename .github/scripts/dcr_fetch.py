@@ -227,6 +227,20 @@ def _action_status(update: Update, diff: str) -> Update | None:
     return replace(update, prev_commit=commits[0], new_commit=commits[1])
 
 
+def _poetry_previous_version(update: Update, diff: str) -> str:
+    """Recover an omitted pip version only from a matching Poetry package change."""
+    versions: set[str] = set()
+    pattern = re.compile(r'(?m)^ name = "([^"]+)"\n-version = "([^"]+)"\n\+version = "([^"]+)"$')
+    wanted = PurePosixPath(update.directory.lstrip("/")) / "poetry.lock"
+    for section in diff.split("diff --git ")[1:]:
+        if f"\n+++ b/{wanted}\n" not in section:
+            continue
+        for name, old, new in pattern.findall(section):
+            if _norm(name) == _norm(update.name) and new == update.new_version:
+                versions.add(old)
+    return next(iter(versions)) if len(versions) == 1 else ""
+
+
 def _status(update: Update, diff: str) -> Update:
     if update.ecosystem not in FETCHERS:
         return replace(update, status="not_reviewed", note="ecosystem is not reviewed")
@@ -234,6 +248,8 @@ def _status(update: Update, diff: str) -> Update:
         update = _action_status(update, diff) or update
         if update.status != "reviewed":
             return update
+    if update.ecosystem == "pip" and not update.prev_version:
+        update = replace(update, prev_version=_poetry_previous_version(update, diff))
     if not update.prev_version:
         return replace(update, status="unverified", note="previous version is missing")
     if not all(SAFE.fullmatch(value) for value in (update.name, update.prev_version, update.new_version)):
