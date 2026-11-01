@@ -54,6 +54,7 @@ from chia.consensus.block_generator_info import (
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -3634,6 +3635,69 @@ class TestReorgs:
         peak = b.get_peak()
         assert peak is not None
         assert peak.height == 16
+
+    @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_3_0],
+        reason="requires active header MMR commitments",
+    )
+    async def test_reorg_with_evicted_fork_point(self, bt: BlockTools) -> None:
+        constants = bt.constants.replace(BLOCKS_CACHE_SIZE=uint32(64))
+        blocks = bt.get_consecutive_blocks(80)
+        fork_block = blocks[4]
+        assert constants.HARD_FORK2_HEIGHT <= fork_block.height
+        reorg_blocks = bt.get_consecutive_blocks(77, blocks[:5], seed=b"reorg")
+        original_peak = blocks[-1]
+        first_winning_index = next(
+            i
+            for i, block in enumerate(reorg_blocks)
+            if block.weight > original_peak.weight
+            or (block.weight == original_peak.weight and block.total_iters < original_peak.total_iters)
+        )
+
+        async with make_empty_blockchain(constants) as b:
+            for block in blocks:
+                await _validate_and_add_block(b, block)
+
+            fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+            aug_chain = AugmentedBlockchain(b)
+            for block in reorg_blocks[: fork_block.height + 1]:
+                await _validate_and_add_block(
+                    b,
+                    block,
+                    expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                    augmented_blockchain=aug_chain,
+                )
+            for block in reorg_blocks[fork_block.height + 1 : first_winning_index]:
+                await _validate_and_add_block(
+                    b,
+                    block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
+                )
+
+            # Keep validation ancestry in the batch overlay while pruning the canonical cache.
+            b.clean_block_records()
+            assert b.try_block_record(fork_block.header_hash) is None
+            assert b.height_to_hash(fork_block.height) == fork_block.header_hash
+
+            for block in reorg_blocks[first_winning_index:]:
+                await _validate_and_add_block(
+                    b,
+                    block,
+                    expected_result=AddBlockResult.NEW_PEAK,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
+                )
+
+            peak = b.get_peak()
+            assert peak is not None
+            assert peak.header_hash == reorg_blocks[-1].header_hash
+            rebuilt_mmr = BlockchainMMRManager(constants.GENESIS_CHALLENGE, aggregate_from=constants.HARD_FORK2_HEIGHT)
+            for block in reorg_blocks:
+                rebuilt_mmr.add_block_to_mmr(block.header_hash, block.prev_header_hash, block.height)
+            assert b.mmr_manager.compute_current_mmr_root() == rebuilt_mmr.compute_current_mmr_root()
 
     @pytest.mark.anyio
     async def test_get_tx_peak_reorg(

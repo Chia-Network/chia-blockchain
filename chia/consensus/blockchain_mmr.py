@@ -178,7 +178,6 @@ class BlockchainMMRManager:
         for _ in range(blocks_to_pop):
             self._mmr.pop()
 
-        target_block = blocks.height_to_block_record(uint32(target_height))
-        self._last_header_hash = target_block.header_hash
+        self._last_header_hash = blocks.height_to_hash(uint32(target_height))
         self._last_height = uint32(target_height)
         log.debug(f"MMR rolled back to height {self._last_height}")
