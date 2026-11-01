@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import copy
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -30,8 +29,8 @@ class BlockchainMMRManager:
         return f"BlockchainMMRManager(height={self._last_height}, root={self.compute_current_mmr_root()!r})"
 
     def copy(self) -> BlockchainMMRManager:
-        """Create a deep copy of this MMR manager."""
-        return copy.deepcopy(self)
+        """Create an independent copy of this MMR manager."""
+        return replace(self, _mmr=self._mmr.copy())
 
     def get_aggrtegate_from(self) -> uint32:
         return self.aggregate_from
@@ -103,7 +102,7 @@ class BlockchainMMRManager:
             mmr = MerkleMountainRange()
             common_height = uint32(self.aggregate_from - 1)
         else:
-            mmr = copy.deepcopy(self._mmr)
+            mmr = self._mmr.copy()
             if self._last_height > common_height:
                 for _ in range(self._last_height - common_height):
                     mmr.pop()
