@@ -61,7 +61,7 @@ clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 chialisp = ">=0.4.1"  # Rust implementation of ChiaLisp compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
 colorlog = ">=6.9.0"  # Adds color to logs
-concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs
+concurrent_log_handler = ">=0.9.31"  # Concurrently log and rotate logs
 # 50.x dropped official macOS Intel wheels; pull those from the Chia index.
 cryptography = [
     {version = ">=50.0.1", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'", source = "chia"},
