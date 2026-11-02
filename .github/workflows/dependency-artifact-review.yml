@@ -12,7 +12,7 @@ on:
         type: number
       updated_dependencies_json:
         description: "fetch-metadata updated-dependencies-json for the PR"
-        required: false
+        required: true
         type: string
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number || github.event.pull_request.number }}
@@ -123,7 +123,7 @@ jobs:
         with:
           name: dcr-review-${{ github.run_id }}
           retention-days: 1
-          if-no-files-found: error
+          if-no-files-found: warn
           path: |
             ${{ runner.temp }}/dcr-review/meta.json
             ${{ runner.temp }}/dcr-review/agent_output.txt
