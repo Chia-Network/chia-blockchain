@@ -292,7 +292,6 @@ def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstant
 
 
 def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, plot_strength: int) -> int:
-    # TODO: todo_v2_plots MIN_PLOT_STRENGTH is fixed for now; a height-based
     # min-strength schedule would change the zero point here.
     if plot_strength < constants.MIN_PLOT_STRENGTH:
         raise ValueError(f"Plot strength ({plot_strength}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
