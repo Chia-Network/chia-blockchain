@@ -898,7 +898,7 @@ async def _expected_canonical_mmr_root(blockchain: Blockchain) -> bytes32 | None
     mmr = MerkleMountainRange()
     peak = blockchain.get_peak()
     assert peak is not None
-    aggregate_from = blockchain.mmr_manager.get_aggrtegate_from()
+    aggregate_from = blockchain.mmr_manager.get_aggregate_from()
     for height in range(int(aggregate_from), peak.height + 1):
         header_hash = blockchain.height_to_hash(uint32(height))
         assert header_hash is not None

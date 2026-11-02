@@ -22,6 +22,7 @@ from typing import Any, Self
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
     INTERNED_SPEND_LIST,
     AugSchemeMPL,
     BlockRecord,
@@ -40,10 +41,10 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
-    additions_and_removals,
     generator_interned_vbytes_trusted,
     get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
+    run_block_generator2,
     solution_generator,
     solve_proof,
 )
@@ -59,7 +60,11 @@ from chia.consensus.block_creation import (
 from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
-from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_coin_commitments_root
+from chia.consensus.coin_commitments import (
+    EMPTY_MERKLE_SET_ROOT,
+    coin_commitments_root_from_conds,
+    compute_coin_commitments_root,
+)
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -455,9 +460,9 @@ class BlockTools:
             return cached
 
         generator_bytes = get_transactions_generator_bytes(full_block)
-        if generator_bytes is None:
-            root = EMPTY_MERKLE_SET_ROOT
-        else:
+        conds = None
+        if generator_bytes is not None:
+            assert full_block.transactions_info is not None
             generator_refs: list[bytes] = []
             for ref_height in full_block.transactions_generator_ref_list:
                 ref_block = block_list_by_height[ref_height]
@@ -471,9 +476,18 @@ class BlockTools:
                 sp_index=full_block.reward_chain_block.signage_point_index,
                 finished_sub_slots=len(full_block.finished_sub_slots),
             )
-            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
-            additions, removals = additions_and_removals(generator_bytes, generator_refs, flags, self.constants)
-            root = compute_coin_commitments_root([coin_id for coin_id, _ in removals], [coin for coin, _ in additions])
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants) | DONT_VALIDATE_SIGNATURE
+            err, _, conds = run_block_generator2(
+                generator_bytes,
+                generator_refs,
+                full_block.transactions_info.cost,
+                flags,
+                full_block.transactions_info.aggregated_signature,
+                None,
+                self.constants,
+            )
+            assert err is None
+        root = coin_commitments_root_from_conds(conds)
 
         self._block_commitment_roots[full_block.header_hash] = root
         return root
@@ -483,7 +497,7 @@ class BlockTools:
         None below aggregate_from. new_gen's additions and removals are the
         ones consensus derives from the generator's conditions.
         """
-        if full_block.height < self.mmr_manager.get_aggrtegate_from():
+        if full_block.height < self.mmr_manager.get_aggregate_from():
             return None
         if block_has_transactions_generator(full_block):
             assert new_gen is not None
@@ -1035,7 +1049,7 @@ class BlockTools:
         for full_block in block_list:
             block_record = blocks[full_block.header_hash]
             root = None
-            if full_block.height >= self.mmr_manager.get_aggrtegate_from():
+            if full_block.height >= self.mmr_manager.get_aggregate_from():
                 root = self._commitment_root_for_block(full_block, blocks, block_list_by_height)
             self.mmr_manager.add_block_to_mmr(
                 block_record.header_hash, block_record.prev_hash, block_record.height, root

@@ -190,7 +190,7 @@ class Blockchain:
         # Build MMR from canonical chain (height_map), starting from aggregate_from
         # Each height costs two indexed coin-store queries for its coin commitments root
         # todo WPv2: persist MMR state to avoid rebuilding on startup
-        for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
+        for height in range(self.mmr_manager.get_aggregate_from(), self._peak_height + 1):
             header_hash = self.__height_map.get_hash(uint32(height))
             block_record = await self.get_block_record_from_db(header_hash)
             assert block_record is not None
@@ -304,7 +304,7 @@ class Blockchain:
             )
 
         coin_commitments_root: bytes32 | None = None
-        if block.height >= self.mmr_manager.get_aggrtegate_from():
+        if block.height >= self.mmr_manager.get_aggregate_from():
             coin_commitments_root = compute_coin_commitments_root(
                 [coin_id for coin_id, _ in removals], [coin for coin, _ in additions]
             )
@@ -394,7 +394,7 @@ class Blockchain:
         # also on the ALREADY_HAVE_BLOCK path: later fork blocks' header MMR
         # checks and the canonical append take this block's leaf from fork_info
         coin_commitments_root: bytes32 | None = None
-        if block.height >= self.mmr_manager.get_aggrtegate_from():
+        if block.height >= self.mmr_manager.get_aggregate_from():
             coin_commitments_root = coin_commitments_root_from_conds(pre_validation_result.conds)
 
         block_rec_from_db = await self.get_block_record_from_db(header_hash)

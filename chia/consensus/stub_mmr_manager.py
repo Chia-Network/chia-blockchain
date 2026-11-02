@@ -41,6 +41,6 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
-    def get_aggrtegate_from(self) -> uint32:
+    def get_aggregate_from(self) -> uint32:
         # Stub returns 0 (aggregate from genesis)
         return uint32(0)

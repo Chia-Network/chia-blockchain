@@ -34,7 +34,7 @@ class BlockchainMMRManager:
     def __repr__(self) -> str:
         return f"BlockchainMMRManager(height={self._last_height}, root={self.compute_current_mmr_root()!r})"
 
-    def get_aggrtegate_from(self) -> uint32:
+    def get_aggregate_from(self) -> uint32:
         return self.aggregate_from
 
     def add_block_to_mmr(

@@ -110,6 +110,7 @@ class ForkInfo:
         assert block.height == self.fork_height + 1 + len(self.block_hashes)
         self.block_hashes.append(header_hash)
         self.commitment_roots.append(coin_commitments_root)
+        assert len(self.block_hashes) == len(self.commitment_roots)
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
 

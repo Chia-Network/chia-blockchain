@@ -294,7 +294,7 @@ async def snapshot(node: FullNode) -> CommitmentSnapshot:
     blockchain = node.blockchain
     peak = blockchain.get_peak()
     assert peak is not None
-    aggregate_from = blockchain.mmr_manager.get_aggrtegate_from()
+    aggregate_from = blockchain.mmr_manager.get_aggregate_from()
     return CommitmentSnapshot(
         peak_height=peak.height,
         peak_hash=peak.header_hash,

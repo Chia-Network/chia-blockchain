@@ -29,8 +29,9 @@ def compute_coin_commitments_root(
 
     leaves: list[bytes32] = []
     for spent_coin_id in spent_coin_ids:
-        outputs_root = bytes32(compute_merkle_set_root(outputs_by_spent.get(spent_coin_id, [])))
+        outputs_root = bytes32(compute_merkle_set_root(outputs_by_spent.pop(spent_coin_id, [])))
         leaves.append(std_hash(spent_coin_id + outputs_root))
+    assert len(outputs_by_spent) == 0, "created coins whose parent is not a spent coin"
 
     return bytes32(compute_merkle_set_root(leaves))
 
