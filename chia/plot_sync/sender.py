@@ -48,6 +48,7 @@ def _plot_fields(plot_info: PlotInfo) -> tuple[uint8, uint16, uint8]:
         return param.size_v1, uint16(0), uint8(0)
 
     assert isinstance(plot_info.prover, V2Prover)
+    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
     return uint8(0x80 | plot_info.prover.get_strength()), uint16(0), plot_info.prover.get_meta_group()
 
 
