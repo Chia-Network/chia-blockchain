@@ -193,6 +193,7 @@ class Harvester:
                     assert isinstance(prover, V2Prover)
                     k = uint8(0x80 | prover.get_strength())
                     plot_id = prover.get_id()
+                    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
                     plot_index = uint16(0)
                     meta_group = prover.get_meta_group()
                     group_size = prover.get_group_size()
