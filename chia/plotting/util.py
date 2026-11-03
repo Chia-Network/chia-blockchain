@@ -119,7 +119,7 @@ def get_plot_filenames(root_path: Path) -> dict[Path, list[Path]]:
     return all_files
 
 
-def remove_plot(path: Path):
+def remove_plot(path: Path) -> None:
     log.debug(f"remove_plot {path!s}")
     # Remove absolute and relative paths
     if path.exists():
@@ -162,7 +162,7 @@ def update_harvester_config(
     decompressor_thread_count: int | None = None,
     recursive_plot_scan: bool | None = None,
     refresh_parameter: PlotsRefreshParameter | None = None,
-):
+) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         if use_gpu_harvesting is not None:
             config["harvester"]["use_gpu_harvesting"] = use_gpu_harvesting
@@ -243,7 +243,7 @@ def stream_plot_info_pk(
     pool_public_key: G1Element,
     farmer_public_key: G1Element,
     local_master_sk: PrivateKey,
-):
+) -> bytes:
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the public key, into bytes
     data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(local_master_sk)
@@ -255,7 +255,7 @@ def stream_plot_info_ph(
     pool_contract_puzzle_hash: bytes32,
     farmer_public_key: G1Element,
     local_master_sk: PrivateKey,
-):
+) -> bytes:
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the pool contract puzzle hash, into bytes
     data = pool_contract_puzzle_hash + bytes(farmer_public_key) + bytes(local_master_sk)
@@ -263,7 +263,7 @@ def stream_plot_info_ph(
     return data
 
 
-def find_duplicate_plot_IDs(all_filenames=None) -> None:
+def find_duplicate_plot_IDs(all_filenames: list[Path] | None = None) -> None:
     if all_filenames is None:
         all_filenames = []
     plot_ids_set = set()
