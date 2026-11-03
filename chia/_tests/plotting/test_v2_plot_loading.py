@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -23,8 +22,8 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 @pytest.fixture(scope="module", params=[False, True], ids=["pool-key", "pool-contract"])
-def v2_plot(
-    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+async def v2_plot(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory, anyio_backend: str
 ) -> tuple[Path, PlotKeys, PrivateKey]:
     master = AugSchemeMPL.key_gen(b"1" * 32)
     farmer = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
@@ -34,15 +33,16 @@ def v2_plot(
         None if request.param else pool,
         encode_puzzle_hash(bytes32(b"4" * 32), "xch") if request.param else None,
     )
-    created, existing = asyncio.run(
-        create_v2_plots(tmp_path_factory.mktemp("v2-plots"), keys, size=18, test_private_keys=[master])
+    created, existing = await create_v2_plots(
+        tmp_path_factory.mktemp("v2-plots"), keys, size=18, test_private_keys=[master]
     )
     assert not existing
     assert len(created) == 1
     return next(iter(created.values())), keys, master
 
 
-def test_v2_creation_and_keys(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> None:
+@pytest.mark.anyio
+async def test_v2_creation_and_keys(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> None:
     path, keys, master = v2_plot
     prover = V2Prover.from_filename(str(path))
     entry = CacheEntry.from_prover(prover)
@@ -58,7 +58,8 @@ def test_v2_creation_and_keys(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> Non
     )
 
 
-def test_v2_proof_uses_plot_size(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> None:
+@pytest.mark.anyio
+async def test_v2_proof_uses_plot_size(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> None:
     path, _, _ = v2_plot
     prover = V2Prover.from_filename(str(path))
     assert prover.get_size() == 18
@@ -103,7 +104,8 @@ def test_v2_proof_uses_plot_size(v2_plot: tuple[Path, PlotKeys, PrivateKey]) -> 
     )
 
 
-def test_check_plots_reports_unsupported_network_size(
+@pytest.mark.anyio
+async def test_check_plots_reports_unsupported_network_size(
     v2_plot: tuple[Path, PlotKeys, PrivateKey],
     root_path_populated_with_config: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -131,13 +133,12 @@ def test_check_plots_reports_unsupported_network_size(
     assert "Quality doesn't match with proof" not in caplog.text
 
 
-def test_v2_multi_file_group(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.anyio
+async def test_v2_multi_file_group(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     master = AugSchemeMPL.key_gen(b"1" * 32)
     keys = PlotKeys(AugSchemeMPL.key_gen(b"2" * 32).get_g1(), AugSchemeMPL.key_gen(b"3" * 32).get_g1(), None)
 
-    created, existing = asyncio.run(
-        create_v2_plots(tmp_path, keys, size=18, plots_per_group=2, test_private_keys=[master])
-    )
+    created, existing = await create_v2_plots(tmp_path, keys, size=18, plots_per_group=2, test_private_keys=[master])
     assert "Multiple plots per file are not supported yet; creating each plot in an individual file" in caplog.text
     assert len(created) == 1
     assert not existing
@@ -148,14 +149,15 @@ def test_v2_multi_file_group(tmp_path: Path, caplog: pytest.LogCaptureFixture) -
     assert provers[0].plot_id_for_index(uint16(0)) != provers[1].plot_id_for_index(uint16(1))
     assert paths[0].read_bytes() != paths[1].read_bytes()
 
-    created_again, existing_again = asyncio.run(
-        create_v2_plots(tmp_path, keys, size=18, plots_per_group=2, test_private_keys=[master])
+    created_again, existing_again = await create_v2_plots(
+        tmp_path, keys, size=18, plots_per_group=2, test_private_keys=[master]
     )
     assert not created_again
     assert len(existing_again) == 1
 
 
-def test_check_plots_uses_returned_indices_for_group_proofs(
+@pytest.mark.anyio
+async def test_check_plots_uses_returned_indices_for_group_proofs(
     v2_plot: tuple[Path, PlotKeys, PrivateKey],
     root_path_populated_with_config: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -217,7 +219,8 @@ def test_v1_cache_keys_unchanged(portable: bool) -> None:
         assert entry.plot_public_key == local + farmer
 
 
-def test_v2_cache_reload(v2_plot: tuple[Path, PlotKeys, PrivateKey], tmp_path: Path) -> None:
+@pytest.mark.anyio
+async def test_v2_cache_reload(v2_plot: tuple[Path, PlotKeys, PrivateKey], tmp_path: Path) -> None:
     path, _, _ = v2_plot
     entry = CacheEntry.from_prover(V2Prover.from_filename(str(path)))
     cache = Cache(tmp_path / "cache.dat")
