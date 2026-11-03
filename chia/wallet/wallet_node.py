@@ -1893,6 +1893,15 @@ class WalletNode:
                     break
             else:
                 # Validate that the block is committed to by the weight proof
+                # Reject a v2 (version == 1) proof-of-space whose quality string cannot be computed
+                # before hashing the reward-chain block: ProofOfSpace.get_hash() raises on such a proof.
+                # Mirrors the early checks added to the full-node and weight-proof paths in #20685, which
+                # did not cover this wallet call site.
+                block_to_hash = block if idx == 0 else blocks[idx - 1]
+                pos = block_to_hash.reward_chain_block.proof_of_space
+                if pos.version == 1 and pos.quality_string() is None:
+                    self.log.error("Failed validation: invalid v2 proof of space in header block")
+                    return False
                 if idx == 0:
                     prev_block_rc_hash: bytes32 = block.reward_chain_block.get_hash()
                     prev_hash = block.header_hash
