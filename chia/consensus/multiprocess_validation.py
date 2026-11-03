@@ -109,7 +109,6 @@ def _pre_validate_block(
     prev_tx_height: uint32,
     expected_vs: ValidationState,
     *,
-    skip_commitment_validation: bool = False,
     validate_signatures: bool = True,
 ) -> PreValidationResult:
     """
@@ -122,8 +121,6 @@ def _pre_validate_block(
         prev_tx_height:
         expected_vs: The validation state that we calculate for the next block
             if it's validated.
-        skip_commitment_validation: If True, skips validation of MMR roots (for weight proofs without full history).
-            Challenge merkle tree validation is gated by HARD_FORK2_HEIGHT, not this flag.
         validate_signatures: If False, skip aggregate BLS signature verification.
             conds.validated_signature will be False when skipped.
     """
@@ -196,7 +193,6 @@ def _pre_validate_block(
             get_block_header(block, removals_and_additions),
             True,  # check_filter
             expected_vs,
-            skip_commitment_validation=skip_commitment_validation,
         )
         error_int = None if error is None else uint16(error.code.value)
 
@@ -223,7 +219,6 @@ async def pre_validate_block(
     vs: ValidationState,
     *,
     wp_summaries: list[SubEpochSummary] | None = None,
-    skip_commitment_validation: bool = False,
     validate_signatures: bool = True,
     nice: _SupportsLessThan = (0,),
     dedicated: bool = True,
@@ -367,7 +362,6 @@ async def pre_validate_block(
         conds,
         prev_tx_height,
         expected_vs,
-        skip_commitment_validation=skip_commitment_validation,
         validate_signatures=validate_signatures,
         nice=nice,
         dedicated=dedicated,

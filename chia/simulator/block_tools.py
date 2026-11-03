@@ -22,6 +22,7 @@ from typing import Any, Self
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
     INTERNED_SPEND_LIST,
     AugSchemeMPL,
     BlockRecord,
@@ -43,6 +44,7 @@ from chia_rs import (
     generator_interned_vbytes_trusted,
     get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
+    run_block_generator2,
     solution_generator,
     solve_proof,
 )
@@ -55,9 +57,14 @@ from chia.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block_with_mmr,
 )
-from chia.consensus.block_generator_info import block_has_transactions_generator
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import (
+    EMPTY_MERKLE_SET_ROOT,
+    coin_commitments_root_from_conds,
+    compute_coin_commitments_root,
+)
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -364,6 +371,8 @@ class BlockTools:
         self.mmr_manager = BlockchainMMRManager(
             self.constants.GENESIS_CHALLENGE, aggregate_from=updated_constants.HARD_FORK2_HEIGHT
         )
+        # roots of blocks this instance created, so reloading them doesn't replay their generators
+        self._block_commitment_roots: dict[bytes32, bytes32] = {}
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -435,6 +444,70 @@ class BlockTools:
     ) -> None:
         if self._tempdir is not None:
             self._tempdir.cleanup()
+
+    def _commitment_root_for_block(
+        self,
+        full_block: FullBlock,
+        blocks: dict[bytes32, BlockRecord],
+        block_list_by_height: dict[uint32, FullBlock],
+    ) -> bytes32:
+        """
+        Roots of blocks this instance created are cached; other blocks'
+        generators are replayed.
+        """
+        cached = self._block_commitment_roots.get(full_block.header_hash)
+        if cached is not None:
+            return cached
+
+        generator_bytes = get_transactions_generator_bytes(full_block)
+        conds = None
+        if generator_bytes is not None:
+            assert full_block.transactions_info is not None
+            generator_refs: list[bytes] = []
+            for ref_height in full_block.transactions_generator_ref_list:
+                ref_block = block_list_by_height[ref_height]
+                ref_bytes = get_transactions_generator_bytes(ref_block)
+                assert ref_bytes is not None
+                generator_refs.append(ref_bytes)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=BlockCache(blocks, self.mmr_manager),
+                prev_b_hash=full_block.prev_header_hash,
+                sp_index=full_block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(full_block.finished_sub_slots),
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants) | DONT_VALIDATE_SIGNATURE
+            err, _, conds = run_block_generator2(
+                generator_bytes,
+                generator_refs,
+                full_block.transactions_info.cost,
+                flags,
+                full_block.transactions_info.aggregated_signature,
+                None,
+                self.constants,
+            )
+            assert err is None
+        root = coin_commitments_root_from_conds(conds)
+
+        self._block_commitment_roots[full_block.header_hash] = root
+        return root
+
+    def _new_block_commitment_root(self, full_block: FullBlock, new_gen: NewBlockGenerator | None) -> bytes32 | None:
+        """
+        None below aggregate_from. new_gen's additions and removals are the
+        ones consensus derives from the generator's conditions.
+        """
+        if full_block.height < self.mmr_manager.get_aggregate_from():
+            return None
+        if block_has_transactions_generator(full_block):
+            assert new_gen is not None
+            commitment_root = compute_coin_commitments_root(
+                [coin.name() for coin in new_gen.removals], new_gen.additions
+            )
+        else:
+            commitment_root = EMPTY_MERKLE_SET_ROOT
+        self._block_commitment_roots[full_block.header_hash] = commitment_root
+        return commitment_root
 
     def setup_new_gen(
         self,
@@ -972,9 +1045,15 @@ class BlockTools:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         # Populate MMR from existing BlockRecords
+        block_list_by_height = {full_block.height: full_block for full_block in block_list}
         for full_block in block_list:
             block_record = blocks[full_block.header_hash]
-            self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
+            root = None
+            if full_block.height >= self.mmr_manager.get_aggregate_from():
+                root = self._commitment_root_for_block(full_block, blocks, block_list_by_height)
+            self.mmr_manager.add_block_to_mmr(
+                block_record.header_hash, block_record.prev_hash, block_record.height, root
+            )
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -1210,7 +1289,10 @@ class BlockTools:
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
-                            block_record.header_hash, block_record.prev_hash, block_record.height
+                            block_record.header_hash,
+                            block_record.prev_hash,
+                            block_record.height,
+                            self._new_block_commitment_root(full_block, new_gen),
                         )
                         self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
@@ -1531,7 +1613,10 @@ class BlockTools:
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
-                            block_record.header_hash, block_record.prev_hash, block_record.height
+                            block_record.header_hash,
+                            block_record.prev_hash,
+                            block_record.height,
+                            self._new_block_commitment_root(full_block, new_gen),
                         )
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1

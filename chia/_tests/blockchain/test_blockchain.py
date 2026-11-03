@@ -4846,12 +4846,17 @@ async def test_include_spends_same_as_parent(
         0,
     )
     # Now let's run the test
-    test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)
+    coin_commitments_root = bytes32([1] * 32)
+    test_setup.fork_info.include_spends(
+        conds, test_setup.test_block, test_setup.test_block.header_hash, coin_commitments_root
+    )
     # Let's make sure the results are as expected
     expected_same_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [coin_commitments_root]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4865,6 +4870,8 @@ async def test_include_spends_same_as_parent(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []
 
 
 @pytest.mark.parametrize("same_ph_as_parent", [True, False])
@@ -4888,12 +4895,15 @@ async def test_include_block_same_as_parent_coins(
         [(test_setup.coin.name(), test_setup.coin)],
         test_setup.test_block,
         test_setup.test_block.header_hash,
+        None,
     )
     # Let's make sure the results are as expected
     expected_same_as_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_as_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [None]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4904,3 +4914,5 @@ async def test_include_block_same_as_parent_coins(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []
