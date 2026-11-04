@@ -2407,6 +2407,8 @@ class CancelOffers(TransactionEndpointRequest):
     batch_size: uint16 = uint16(5)
     cancel_all: bool = False
     asset_id: str = "xch"
+    # When False, offers are only cancelled internally (coins freed) and no cancellation spend is made
+    spending_cancel: bool = True
 
     @property
     def query_key(self) -> bytes32 | None:

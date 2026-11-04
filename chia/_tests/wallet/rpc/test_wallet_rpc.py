@@ -2141,6 +2141,57 @@ async def test_offer_endpoints(
         == 0
     )
 
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "cat": {
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
+    # Internal-only cancellation: no spend is made and the offered coins are freed immediately
+    internal_cancel_offer = (
+        await env_1.rpc_client.create_offer_for_ids(
+            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict),
+            tx_config=wallet_environments.tx_config,
+        )
+    ).offer
+    cancel_res = await env_1.rpc_client.cancel_offers(
+        CancelOffers(secure=True, cancel_all=True, spending_cancel=False, push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert cancel_res.transactions == []
+    cancelled_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=internal_cancel_offer.name()))).trade_record
+    assert TradeStatus(cancelled_record.status) == TradeStatus.CANCELLED
+    assert (
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
+    )
+
     with pytest.raises(ValueError, match="not currently supported"):
         await env_1.rpc_client.create_offer_for_ids(
             CreateOfferForIDs(

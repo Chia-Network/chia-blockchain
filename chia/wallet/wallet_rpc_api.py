@@ -2177,7 +2177,7 @@ class WalletRpcApi:
                     list(records.keys()),
                     action_scope,
                     request.batch_fee,
-                    request.secure,
+                    request.secure and request.spending_cancel,
                     records,
                     extra_conditions=extra_conditions,
                 )
