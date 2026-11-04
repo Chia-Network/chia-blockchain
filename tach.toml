@@ -224,7 +224,6 @@ depends_on = [
     "chia.init",
     "chia.util",
     { path = "chia.server", deprecated = false },
-    { path = "chia.cmds", deprecated = false },
     { path = "chia.wallet", deprecated = false },
     { path = "chia.plotters", deprecated = false },
 ]
