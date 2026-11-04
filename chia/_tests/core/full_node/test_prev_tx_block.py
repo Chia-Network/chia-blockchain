@@ -5,6 +5,7 @@ from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint8, uint32
 
 import chia.consensus.get_block_challenge as get_block_challenge_module
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import (
     is_infused_before_sp,
@@ -15,7 +16,6 @@ from chia.consensus.get_block_challenge import (
 )
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
-from chia.util.block_cache import BlockCache
 
 
 @pytest.mark.parametrize(

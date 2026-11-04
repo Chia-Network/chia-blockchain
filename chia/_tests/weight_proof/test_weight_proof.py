@@ -21,6 +21,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 import chia.full_node.weight_proof as weight_proof_module
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain_mock import BlockchainMock
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
@@ -37,7 +38,6 @@ from chia.full_node.weight_proof import (
     __validate_pospace as _validate_pospace_impl,
 )
 from chia.simulator.block_tools import BlockTools
-from chia.util.block_cache import BlockCache
 
 
 def test_max_sub_epoch_segments_mainnet() -> None:

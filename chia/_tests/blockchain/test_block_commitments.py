@@ -21,6 +21,7 @@ from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import Blockchain
@@ -50,7 +51,6 @@ from chia.simulator.block_tools import (
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.keychain import Keychain
 
