@@ -27,6 +27,7 @@ from chia_rs.sized_bytes import bytes32, bytes100
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -40,7 +41,6 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import BlockGenerator
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(

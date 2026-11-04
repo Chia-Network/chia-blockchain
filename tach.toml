@@ -242,6 +242,7 @@ depends_on = ["chia.util"]
 
 [[modules]]
 path = "chia.util"
+depends_on = []
 
 [[modules]]
 path = "chia.clvm"

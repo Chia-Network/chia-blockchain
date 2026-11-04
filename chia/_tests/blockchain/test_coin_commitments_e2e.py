@@ -34,6 +34,7 @@ from chia._tests.util.setup_nodes import setup_n_nodes, setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.coin_commitments import compute_coin_commitments_root
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -62,7 +63,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout

@@ -11,6 +11,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.wallet.wallet_block_tools import load_block_list
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_commitments import EMPTY_MERKLE_SET_ROOT, compute_mmr_leaf
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -22,7 +23,6 @@ from chia.consensus.mmr import (
     verify_mmr_inclusion,
 )
 from chia.simulator.block_tools import BlockTools
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
 

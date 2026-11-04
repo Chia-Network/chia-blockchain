@@ -52,6 +52,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
 
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_creation import (
     calculate_infusion_point_total_iters,
     create_unfinished_block,
@@ -131,7 +132,6 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import NewBlockGenerator
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.block_cache import BlockCache
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,

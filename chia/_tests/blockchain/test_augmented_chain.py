@@ -12,11 +12,11 @@ from chia_rs.sized_ints import uint32, uint128
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.augmented_chain import AugmentedBlockchain, AugmentedBlockchainValidationError
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.simulator.block_tools import BlockTools
-from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 
 
