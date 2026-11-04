@@ -14,7 +14,7 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import Service, async_run
+from chia.service.start_service import Service, async_run
 from chia.solver.solver import Solver
 from chia.solver.solver_api import SolverAPI
 from chia.solver.solver_rpc_api import SolverRpcApi

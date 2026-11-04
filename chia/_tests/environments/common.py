@@ -6,7 +6,7 @@ from typing import ClassVar, Protocol, TypeVar
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol
 from chia.server.api_protocol import ApiProtocol
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
+from chia.service.start_service import Service
 
 T_Node = TypeVar("T_Node", bound=RpcServiceProtocol)
 T_RpcApi = TypeVar("T_RpcApi", bound=RpcApiProtocol)
