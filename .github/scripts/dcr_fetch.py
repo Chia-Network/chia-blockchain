@@ -58,6 +58,8 @@ def literal_ok(update: Update, added: list[str]) -> bool:
 
 
 def _parse_updates(raw: str) -> list[Update]:
+    if not raw.strip():
+        raise SystemExit("updated-dependencies-json is empty; fetch-metadata did not run or no input was given")
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -227,6 +229,20 @@ def _action_status(update: Update, diff: str) -> Update | None:
     return replace(update, prev_commit=commits[0], new_commit=commits[1])
 
 
+def _poetry_previous_version(update: Update, diff: str) -> str:
+    """Recover an omitted pip version only from a matching Poetry package change."""
+    versions: set[str] = set()
+    pattern = re.compile(r'(?m)^ name = "([^"]+)"\n-version = "([^"]+)"\n\+version = "([^"]+)"$')
+    wanted = PurePosixPath(update.directory.lstrip("/")) / "poetry.lock"
+    for section in diff.split("diff --git ")[1:]:
+        if f"\n+++ b/{wanted}\n" not in section:
+            continue
+        for name, old, new in pattern.findall(section):
+            if _norm(name) == _norm(update.name) and new == update.new_version:
+                versions.add(old)
+    return next(iter(versions)) if len(versions) == 1 else ""
+
+
 def _status(update: Update, diff: str) -> Update:
     if update.ecosystem not in FETCHERS:
         return replace(update, status="not_reviewed", note="ecosystem is not reviewed")
@@ -234,6 +250,8 @@ def _status(update: Update, diff: str) -> Update:
         update = _action_status(update, diff) or update
         if update.status != "reviewed":
             return update
+    if update.ecosystem == "pip" and not update.prev_version:
+        update = replace(update, prev_version=_poetry_previous_version(update, diff))
     if not update.prev_version:
         return replace(update, status="unverified", note="previous version is missing")
     if not all(SAFE.fullmatch(value) for value in (update.name, update.prev_version, update.new_version)):
@@ -377,8 +395,9 @@ def _diff_header_path(paths: str) -> str:
         parts = []
     if len(parts) == 2:
         return parts[1]
-    # Unquoted "old/P new/P" where P contains spaces: both halves are the same length.
-    return paths[len(paths) - (len(paths) - 9) // 2 :]
+    # Unquoted "old/P new/P" where P contains spaces: both halves have the same
+    # length plus one separating space, so the new-side path starts at the midpoint.
+    return paths[(len(paths) + 1) // 2 :]
 
 
 def _capped(title: str, entries: list[str]) -> list[str]:
