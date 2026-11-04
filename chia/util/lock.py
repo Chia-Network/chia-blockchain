@@ -44,3 +44,11 @@ class Lockfile:
 
     def release(self) -> None:
         self._lock.release()
+
+
+def service_launch_lock_path(root_path: Path, service: str) -> Path:
+    """
+    A path that is locked when a service is running.
+    """
+    service_name = service.replace(" ", "-").replace("/", "-")
+    return root_path / "run" / service_name

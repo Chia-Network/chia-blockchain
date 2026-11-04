@@ -32,7 +32,6 @@ depends_on = [
     "chia.util",
     { path = "chia.ssl", deprecated = false },
     { path = "chia.rpc", deprecated = false },
-    { path = "chia.daemon", deprecated = false },
 ]
 
 [[modules]]

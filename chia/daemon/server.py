@@ -40,7 +40,7 @@ from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.harvester_config import add_plot_directory
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
-from chia.util.lock import Lockfile, LockfileError
+from chia.util.lock import Lockfile, LockfileError, service_launch_lock_path
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -1400,14 +1400,6 @@ def daemon_launch_lock_path(root_path: Path) -> Path:
     This prevents multiple instances from launching.
     """
     return service_launch_lock_path(root_path, "daemon")
-
-
-def service_launch_lock_path(root_path: Path, service: str) -> Path:
-    """
-    A path that is locked when a service is running.
-    """
-    service_name = service.replace(" ", "-").replace("/", "-")
-    return root_path / "run" / service_name
 
 
 def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
