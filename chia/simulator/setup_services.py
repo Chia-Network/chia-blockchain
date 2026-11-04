@@ -15,7 +15,6 @@ from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
-from chia.cmds.init_funcs import init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.farmer.farmer_service import FarmerService
@@ -24,6 +23,7 @@ from chia.full_node.full_node_service import FullNodeService
 from chia.full_node.start_full_node import create_full_node_service
 from chia.harvester.harvester_service import HarvesterService
 from chia.harvester.start_harvester import create_harvester_service
+from chia.init.init_funcs import init
 from chia.introducer.introducer_service import IntroducerService
 from chia.introducer.start_introducer import create_introducer_service
 from chia.protocols.outbound_message import NodeType

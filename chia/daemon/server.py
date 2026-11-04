@@ -25,10 +25,10 @@ from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
+from chia.init.init_funcs import check_keys, chia_init
 from chia.plotters.plotters import get_available_plotters
 from chia.server.server import ssl_context_for_server
 from chia.server.signal_handlers import SignalHandlers
