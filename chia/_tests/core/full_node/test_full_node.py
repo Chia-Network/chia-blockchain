@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import logging
 import os
@@ -4776,6 +4777,30 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
         # but there are coins in the coin store
         async with full_node.manage():
             pass  # pragma: no cover
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize(
+    "configured, expected",
+    [
+        (None, 4_000_000),
+        (0, 0),
+        (1_000_000, 1_000_000),
+    ],
+)
+async def test_minimum_block_fee_per_cost_config(
+    bt: BlockTools, tmp_path: Path, configured: int | None, expected: int
+) -> None:
+    config = copy.deepcopy(bt.config["full_node"])
+    config["database_path"] = str(tmp_path / "blockchain.sqlite")
+    del config["minimum_block_fee_per_cost"]
+    if configured is not None:
+        config["minimum_block_fee_per_cost"] = configured
+
+    full_node = await FullNode.create(config, root_path=bt.root_path, consensus_constants=bt.constants)
+    async with full_node.manage():
+        assert full_node.mempool_manager.minimum_block_fee_per_cost == expected
 
 
 @pytest.mark.anyio
