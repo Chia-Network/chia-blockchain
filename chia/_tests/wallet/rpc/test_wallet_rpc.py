@@ -2167,20 +2167,27 @@ async def test_offer_endpoints(
         ]
     )
 
-    # Internal-only cancellation: no spend is made and the offered coins are freed immediately
-    internal_cancel_offer = (
-        await env_1.rpc_client.create_offer_for_ids(
-            CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict),
-            tx_config=wallet_environments.tx_config,
-        )
-    ).offer
+    # Internal-only cancellation: no spend is made and the offered coins are freed immediately.
+    # Use more offers than batch_size to make sure every page gets cancelled.
+    internal_cancel_offers = [
+        (
+            await env_1.rpc_client.create_offer_for_ids(
+                CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict),
+                tx_config=wallet_environments.tx_config,
+            )
+        ).offer
+        for _ in range(2)
+    ]
     cancel_res = await env_1.rpc_client.cancel_offers(
-        CancelOffers(secure=True, cancel_all=True, spending_cancel=False, push=True),
+        CancelOffers(secure=True, cancel_all=True, spending_cancel=False, batch_size=uint16(1), push=True),
         tx_config=wallet_environments.tx_config,
     )
     assert cancel_res.transactions == []
-    cancelled_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=internal_cancel_offer.name()))).trade_record
-    assert TradeStatus(cancelled_record.status) == TradeStatus.CANCELLED
+    for internal_cancel_offer in internal_cancel_offers:
+        cancelled_record = (
+            await env_1.rpc_client.get_offer(GetOffer(trade_id=internal_cancel_offer.name()))
+        ).trade_record
+        assert TradeStatus(cancelled_record.status) == TradeStatus.CANCELLED
     assert (
         len(
             [

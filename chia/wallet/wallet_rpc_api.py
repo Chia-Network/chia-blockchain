@@ -5,7 +5,6 @@ import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
-from itertools import count
 from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -2153,36 +2152,43 @@ class WalletRpcApi:
     ) -> CancelOffersResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
         log.info(f"Start cancelling offers for  {'all' if request.cancel_all else 'asset_id: ' + request.asset_id} ...")
+        spending_cancel = request.secure and request.spending_cancel
         # Traverse offers page by page
-        for start in count(0, request.batch_size):
+        start = 0
+        while True:
+            page = await trade_mgr.trade_store.get_trades_between(
+                start,
+                start + request.batch_size,
+                reverse=True,
+                exclude_my_offers=False,
+                exclude_taken_offers=True,
+                include_completed=False,
+            )
+            if len(page) == 0:
+                break
+
             records = {
                 record.trade_id: record
-                for record in await trade_mgr.trade_store.get_trades_between(
-                    start,
-                    start + request.batch_size,
-                    reverse=True,
-                    exclude_my_offers=False,
-                    exclude_taken_offers=True,
-                    include_completed=False,
-                )
+                for record in page
                 if request.cancel_all
                 or (record.offer != b"" and request.query_key in Offer.from_bytes(record.offer).arbitrage())
             }
 
-            if records == {}:
-                break
+            if records != {}:
+                async with self.service.wallet_state_manager.lock:
+                    await trade_mgr.cancel_pending_offers(
+                        list(records.keys()),
+                        action_scope,
+                        request.batch_fee,
+                        spending_cancel,
+                        records,
+                        extra_conditions=extra_conditions,
+                    )
+                log.info(f"Created offer cancellations for {start} to {start + request.batch_size} ...")
 
-            async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offers(
-                    list(records.keys()),
-                    action_scope,
-                    request.batch_fee,
-                    request.secure and request.spending_cancel,
-                    records,
-                    extra_conditions=extra_conditions,
-                )
-
-            log.info(f"Created offer cancellations for {start} to {start + request.batch_size} ...")
+            # Non-spending cancels mark trades CANCELLED immediately, which removes them from the
+            # pending results, so only skip past the trades that remain in the result set.
+            start += len(page) - (0 if spending_cancel else len(records))
 
         # tx_endpoint will fill in default values here
         return CancelOffersResponse(unsigned_transactions=[], transactions=[])
