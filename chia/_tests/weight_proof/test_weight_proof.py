@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
+import logging
 import random
+from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -99,6 +102,53 @@ class FakeWeightProof:
     def __init__(self) -> None:
         self.sub_epochs: list[object] = [object()]
         self.recent_chain_data: list[Any] = []
+
+
+def _reorg_height_on_next_call(
+    monkeypatch: pytest.MonkeyPatch,
+    blockchain: BlockchainMock,
+    method_name: str,
+    height_to_hash: dict[uint32, bytes32],
+    height: uint32,
+) -> None:
+    """Simulate a reorg at `height` the first time `blockchain.<method_name>` is awaited.
+
+    The block at `height` is replaced in the height map, so any ChainView pinned at
+    that block goes stale while the weight proof code is suspended at that await.
+    """
+    original: Callable[..., Awaitable[Any]] = getattr(blockchain, method_name)
+
+    async def reorging(*args: Any, **kwargs: Any) -> Any:
+        height_to_hash[height] = bytes32(b"\x01" * 32)
+        monkeypatch.setattr(blockchain, method_name, original)
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(blockchain, method_name, reorging)
+
+
+def _reorg_and_fail_header_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+    blockchain: BlockchainMock,
+    height_to_hash: dict[uint32, bytes32],
+    height: uint32,
+    raise_value_error: bool,
+) -> None:
+    """Simulate a reorg at `height` during the next `get_header_blocks_in_range` call.
+
+    Like the real Blockchain, the fetch then either raises ValueError (a fetched
+    block left the main chain) or returns headers from the new chain, which here
+    means none of the expected ones.
+    """
+    original = blockchain.get_header_blocks_in_range
+
+    async def reorging(*args: Any, **kwargs: Any) -> dict[bytes32, HeaderBlock]:
+        height_to_hash[height] = bytes32(b"\x01" * 32)
+        monkeypatch.setattr(blockchain, "get_header_blocks_in_range", original)
+        if raise_value_error:
+            raise ValueError("Block is no longer in the blockchain (it's in a fork)")
+        return {}
+
+    monkeypatch.setattr(blockchain, "get_header_blocks_in_range", reorging)
 
 
 async def load_blocks_dont_validate(
@@ -826,3 +876,217 @@ class TestWeightProof:
         )
         valid, _fork_point = wpf_verify.validate_weight_proof_single_proc(modified_wp)
         assert not valid
+
+    @pytest.mark.anyio
+    async def test_weight_proof_tip_not_on_main_chain(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        # the tip is a known block, but no longer the main-chain block at its height
+        height_to_hash[blocks[-1].height] = bytes32(b"\x01" * 32)
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
+        with caplog.at_level(logging.ERROR):
+            wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is None
+        assert wpf.proof is None
+        assert "is not on the main chain" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_weight_proof_aborts_when_tip_reorged_mid_creation(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        _reorg_height_on_next_call(
+            monkeypatch, blockchain, "get_header_blocks_in_range", height_to_hash, blocks[-1].height
+        )
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.WARNING):
+            wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is None
+        assert wpf.proof is None
+        assert "peak changed while creating weight proof" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_weight_proof_aborts_when_header_fetch_raises_on_reorg(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        _reorg_and_fail_header_fetch(monkeypatch, blockchain, height_to_hash, blocks[-1].height, True)
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.WARNING):
+            wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is None
+        assert wpf.proof is None
+        assert "peak changed while creating weight proof" in caplog.text
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("raise_value_error", [True, False])
+    async def test_create_prev_sub_epoch_segments_aborts_when_header_fetch_sees_reorg(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+        raise_value_error: bool,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        ses_heights = blockchain.get_ses_heights()
+        assert len(ses_heights) >= 3
+        # the view is pinned at the most recent sub-epoch summary block
+        _reorg_and_fail_header_fetch(monkeypatch, blockchain, height_to_hash, ses_heights[-1], raise_value_error)
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.INFO):
+            await wpf.create_prev_sub_epoch_segments()
+        assert "peak changed while creating prev sub epoch segments" in caplog.text
+        assert await blockchain.get_sub_epoch_challenge_segments(height_to_hash[ses_heights[-2]]) is None
+
+    @pytest.mark.anyio
+    async def test_create_prev_sub_epoch_segments_aborts_on_reorg(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        ses_heights = blockchain.get_ses_heights()
+        assert len(ses_heights) >= 3
+        # the view is pinned at the most recent sub-epoch summary block
+        _reorg_height_on_next_call(
+            monkeypatch, blockchain, "get_block_records_in_range", height_to_hash, ses_heights[-1]
+        )
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.INFO):
+            await wpf.create_prev_sub_epoch_segments()
+        assert "peak changed while creating prev sub epoch segments" in caplog.text
+        assert await blockchain.get_sub_epoch_challenge_segments(height_to_hash[ses_heights[-2]]) is None
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("reorg", [False, True])
+    async def test_create_sub_epoch_segments(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+        reorg: bool,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        peak_height = blocks[-1].height
+        monkeypatch.setattr(blockchain, "get_peak_height", lambda: peak_height)
+        original_sleep = asyncio.sleep
+
+        async def no_sleep(_delay: float, *args: Any, **kwargs: Any) -> Any:
+            return await original_sleep(0, *args, **kwargs)
+
+        # create_sub_epoch_segments sleeps 2s between sub epochs
+        monkeypatch.setattr(asyncio, "sleep", no_sleep)
+        if reorg:
+            # the view is pinned at the peak
+            _reorg_height_on_next_call(
+                monkeypatch, blockchain, "get_block_records_in_range", height_to_hash, peak_height
+            )
+        ses_hashes = [height_to_hash[h] for h in blockchain.get_ses_heights()]
+        assert len(ses_hashes) > 0
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.INFO):
+            await wpf.create_sub_epoch_segments()
+        persisted = [await blockchain.get_sub_epoch_challenge_segments(h) is not None for h in ses_hashes]
+        if reorg:
+            assert "peak changed while creating sub epoch segments" in caplog.text
+            assert not any(persisted)
+        else:
+            assert all(persisted)
+
+    @pytest.mark.anyio
+    async def test_create_sub_epoch_segments_ses_block_without_summary(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        monkeypatch.setattr(blockchain, "get_peak_height", lambda: blocks[-1].height)
+        original_get_block_records_at = blockchain.get_block_records_at
+
+        async def records_without_summary(heights: list[uint32]) -> list[BlockRecord]:
+            records = await original_get_block_records_at(heights)
+            return [r.replace(sub_epoch_summary_included=None) for r in records]
+
+        monkeypatch.setattr(blockchain, "get_block_records_at", records_without_summary)
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.ERROR):
+            await wpf.create_sub_epoch_segments()
+        assert "error while building proof" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_create_sub_epoch_segments_aborts_on_reorg_during_genesis_read(
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        peak_height = blocks[-1].height
+        monkeypatch.setattr(blockchain, "get_peak_height", lambda: peak_height)
+        ses_heights = blockchain.get_ses_heights()
+        original = blockchain.get_block_record_from_db
+
+        async def reorging(header_hash: bytes32) -> BlockRecord | None:
+            # a deep reorg replaces the peak and the last sub-epoch summary block
+            height_to_hash[peak_height] = bytes32(b"\x01" * 32)
+            height_to_hash[ses_heights[-1]] = bytes32(b"\x02" * 32)
+            monkeypatch.setattr(blockchain, "get_block_record_from_db", original)
+            return await original(header_hash)
+
+        monkeypatch.setattr(blockchain, "get_block_record_from_db", reorging)
+        wpf = WeightProofHandler(blockchain_constants, blockchain)
+        with caplog.at_level(logging.INFO):
+            await wpf.create_sub_epoch_segments()
+        assert "peak changed while creating sub epoch segments" in caplog.text

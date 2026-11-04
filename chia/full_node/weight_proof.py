@@ -61,6 +61,10 @@ def _create_shutdown_file() -> IO[bytes]:
     return tempfile.NamedTemporaryFile(prefix="chia_full_node_weight_proof_handler_executor_shutdown_trigger")
 
 
+class StaleChainError(Exception):
+    """The block a weight proof walk is anchored to is no longer on the main chain."""
+
+
 class WeightProofHandler:
     LAMBDA_L = 100
     C = 0.5
@@ -94,7 +98,11 @@ class WeightProofHandler:
             if self.proof is not None:
                 if self.proof.recent_chain_data[-1].header_hash == tip:
                     return self.proof
-            wp = await self._create_proof_of_weight(tip)
+            try:
+                wp = await self._create_proof_of_weight(tip)
+            except StaleChainError:
+                log.warning(f"peak changed while creating weight proof for tip {tip}, aborting")
+                return None
             if wp is None:
                 return None
             self.proof = wp
@@ -111,6 +119,25 @@ class WeightProofHandler:
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
+    def _check_anchor(self, anchor: BlockRecord) -> None:
+        """Raise StaleChainError if `anchor` is no longer on the main chain.
+
+        Called after each await whose result is consumed through by-height reads, so a
+        walk anchored at `anchor` never mixes in blocks from a different chain.
+        """
+        if self.blockchain.height_to_hash(anchor.height) != anchor.header_hash:
+            raise StaleChainError(f"block {anchor.header_hash.hex()} at height {anchor.height} left the main chain")
+
+    async def _get_header_blocks_in_range(
+        self, anchor: BlockRecord, start: int, stop: int
+    ) -> dict[bytes32, HeaderBlock]:
+        try:
+            return await self.blockchain.get_header_blocks_in_range(start, stop, tx_filter=False)
+        except ValueError:
+            # a fetched block left the main chain mid-fetch
+            self._check_anchor(anchor)
+            raise
+
     async def _create_proof_of_weight(self, tip: bytes32) -> WeightProof | None:
         """
         Creates a weight proof object
@@ -122,7 +149,10 @@ class WeightProofHandler:
             log.error("failed not tip in cache")
             return None
         log.info(f"create weight proof peak {tip} {tip_rec.height}")
-        recent_chain = await self._get_recent_chain(tip_rec.height)
+        if self.blockchain.height_to_hash(tip_rec.height) != tip:
+            log.error(f"weight proof tip {tip} is not on the main chain")
+            return None
+        recent_chain = await self._get_recent_chain(tip_rec)
         if recent_chain is None:
             return None
 
@@ -136,6 +166,7 @@ class WeightProofHandler:
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
         if prev_ses_block is None:
             return None
+        self._check_anchor(tip_rec)
         sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
         # use second to last ses as seed
         seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
@@ -165,7 +196,9 @@ class WeightProofHandler:
                 sample_n += 1
                 segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
                 if segments is None:
-                    segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
+                    segments = await self.__create_sub_epoch_segments(
+                        tip_rec, ses_block, prev_ses_block, uint32(sub_epoch_n)
+                    )
                     if segments is None:
                         log.error(
                             f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} "
@@ -190,8 +223,9 @@ class WeightProofHandler:
         seed = ses.get_hash()
         return seed
 
-    async def _get_recent_chain(self, tip_height: uint32) -> list[HeaderBlock] | None:
+    async def _get_recent_chain(self, tip_rec: BlockRecord) -> list[HeaderBlock] | None:
         recent_chain: list[HeaderBlock] = []
+        tip_height = tip_rec.height
         ses_heights = self.blockchain.get_ses_heights()
         min_height = 0
         count_ses = 0
@@ -202,8 +236,9 @@ class WeightProofHandler:
                 min_height = ses_height - 1
                 break
         log.debug(f"start {min_height} end {tip_height}")
-        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
+        headers = await self._get_header_blocks_in_range(tip_rec, min_height, tip_height)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
+        self._check_anchor(tip_rec)
         ses_count = 0
         curr_height = tip_height
         blocks_n = 0
@@ -242,10 +277,16 @@ class WeightProofHandler:
         if len(heights) < 3:
             return None
         count = len(heights) - 2
+        # anchor at the most recent sub-epoch summary block, which covers the walk
+        anchor = self.blockchain.height_to_block_record(heights[-1])
         ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
         prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
-        segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
+        try:
+            segments = await self.__create_sub_epoch_segments(anchor, ses_sub_block, prev_ses_sub_block, uint32(count))
+        except StaleChainError:
+            log.info("peak changed while creating prev sub epoch segments, aborting")
+            return None
         assert segments is not None
         await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
         log.debug("sub_epoch_segments done")
@@ -262,6 +303,7 @@ class WeightProofHandler:
             log.error("no peak yet")
             return None
 
+        peak = self.blockchain.height_to_block_record(peak_height)
         summary_heights = self.blockchain.get_ses_heights()
         h_hash: bytes32 | None = self.blockchain.height_to_hash(uint32(0))
         if h_hash is None:
@@ -270,47 +312,59 @@ class WeightProofHandler:
         if prev_ses_block is None:
             return None
 
-        ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
-        if ses_blocks is None:
-            return None
-
-        for sub_epoch_n, ses_height in enumerate(summary_heights):
-            log.debug(f"check db for sub epoch {sub_epoch_n}")
-            if ses_height > peak_height:
-                break
-            ses_block = ses_blocks[sub_epoch_n]
-            if ses_block.sub_epoch_summary_included is None:
-                log.error("error while building proof")
+        try:
+            self._check_anchor(peak)
+            ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
+            if ses_blocks is None:
                 return None
-            await self.__create_persist_segment(prev_ses_block, ses_block, ses_height, sub_epoch_n)
-            prev_ses_block = ses_block
-            await asyncio.sleep(2)
+
+            for sub_epoch_n, ses_height in enumerate(summary_heights):
+                log.debug(f"check db for sub epoch {sub_epoch_n}")
+                if ses_height > peak_height:
+                    break
+                ses_block = ses_blocks[sub_epoch_n]
+                if ses_block.sub_epoch_summary_included is None:
+                    log.error("error while building proof")
+                    return None
+                await self.__create_persist_segment(peak, prev_ses_block, ses_block, ses_height, sub_epoch_n)
+                prev_ses_block = ses_block
+                await asyncio.sleep(2)
+        except StaleChainError:
+            log.info("peak changed while creating sub epoch segments, aborting")
+            return None
         log.debug("done checking segments")
         return None
 
     async def __create_persist_segment(
-        self, prev_ses_block: BlockRecord, ses_block: BlockRecord, ses_height: uint32, sub_epoch_n: int
+        self,
+        anchor: BlockRecord,
+        prev_ses_block: BlockRecord,
+        ses_block: BlockRecord,
+        ses_height: uint32,
+        sub_epoch_n: int,
     ) -> None:
         segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
         if segments is None:
-            segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
+            segments = await self.__create_sub_epoch_segments(anchor, ses_block, prev_ses_block, uint32(sub_epoch_n))
             if segments is None:
                 log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
                 return None
             await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
 
     async def __create_sub_epoch_segments(
-        self, ses_block: BlockRecord, se_start: BlockRecord, sub_epoch_n: uint32
+        self, anchor: BlockRecord, ses_block: BlockRecord, se_start: BlockRecord, sub_epoch_n: uint32
     ) -> list[SubEpochChallengeSegment] | None:
         segments: list[SubEpochChallengeSegment] = []
-        start_height = await self.get_prev_two_slots_height(se_start)
+        start_height = await self.get_prev_two_slots_height(anchor, se_start)
 
         blocks = await self.blockchain.get_block_records_in_range(
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
-        header_blocks = await self.blockchain.get_header_blocks_in_range(
-            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS, tx_filter=False
+        header_blocks = await self._get_header_blocks_in_range(
+            anchor, start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
+        # the rest of this walk has no suspension points
+        self._check_anchor(anchor)
         curr: HeaderBlock | None = header_blocks[se_start.header_hash]
         height = se_start.height
         assert curr is not None
@@ -336,18 +390,20 @@ class WeightProofHandler:
         log.debug(f"next sub epoch starts at {height}")
         return segments
 
-    async def get_prev_two_slots_height(self, se_start: BlockRecord) -> uint32:
+    async def get_prev_two_slots_height(self, anchor: BlockRecord, se_start: BlockRecord) -> uint32:
         # find prev 2 slots height
         slot = 0
         batch_size = 50
         curr_rec = se_start
         blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
+        self._check_anchor(anchor)
         end = curr_rec.height
         while slot < 2 and curr_rec.height > 0:
             if curr_rec.first_in_sub_slot:
                 slot += 1
             if end - curr_rec.height == batch_size - 1:
                 blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
+                self._check_anchor(anchor)
                 end = curr_rec.height
             header_hash = self.blockchain.height_to_hash(uint32(curr_rec.height - 1))
             assert header_hash is not None
