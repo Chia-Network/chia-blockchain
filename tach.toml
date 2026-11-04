@@ -168,7 +168,6 @@ depends_on = [
     "chia.util",
     { path = "chia.server", deprecated = false },
     { path = "chia.protocols", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
 ]
 
 [[modules]]
