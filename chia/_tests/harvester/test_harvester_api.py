@@ -11,12 +11,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
 
 from chia._tests.conftest import ConsensusMode, HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plotting.prover import V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo
@@ -110,6 +111,35 @@ def create_test_setup(
     new_challenge = signage_point_from_block(block, blockchain_constants)
     mock_peer = MagicMock(spec=WSChiaConnection)
     return env, new_challenge, mock_peer
+
+
+@pytest.mark.parametrize(
+    "relative_height,strength,expected",
+    [
+        (0, 8, True),
+        (0, 9, False),
+        (10_101_000, 9, True),
+        (10_101_000, 10, False),
+    ],
+)
+def test_v2_plot_strength_gate(relative_height: int, strength: int, expected: bool) -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    api = HarvesterAPI(MagicMock())
+    api.harvester.constants = constants
+    plot_info = MagicMock(spec=PlotInfo)
+    inner_prover = MagicMock()
+    inner_prover.get_strength.return_value = uint8(strength)
+    inner_prover.get_meta_group.return_value = uint8(0)
+    inner_prover.plot_group_id.return_value = bytes32.zeros
+    plot_info.prover = V2Prover(inner_prover)
+    challenge = MagicMock(spec=harvester_protocol.NewSignagePointHarvester2)
+    challenge.last_tx_height = uint32(constants.HARD_FORK2_HEIGHT + relative_height)
+    challenge.filter_challenge = bytes32.zeros
+    challenge.signage_point_index = uint8(0)
+
+    with patch("chia.harvester.harvester_api.passes_plot_filter_v2", return_value=True) as plot_filter:
+        assert api._plot_passes_filter(plot_info, challenge) == expected
+        assert plot_filter.called == expected
 
 
 @contextmanager
