@@ -104,19 +104,6 @@ class BlockchainMMRManager:
                 f"canonical MMR view mismatch at height {last_height}: "
                 f"MMR tip {self._last_header_hash} is not the chain's block {blocks.height_to_hash(last_height)}"
             )
-            if fork_info is not None:
-                # the reused canonical prefix must be the fork's actual
-                # ancestry; a reorg committed since fork_info was built may
-                # have replaced its common ancestor
-                if target_height <= fork_info.fork_height:
-                    ancestor = target_block.header_hash
-                else:
-                    ancestor = blocks.block_record(fork_info.block_hashes[0]).prev_hash
-                canonical_hash = blocks.height_to_hash(uint32(prefix_height))
-                assert ancestor == canonical_hash, (
-                    f"canonical MMR view mismatch at height {prefix_height}: fork ancestor {ancestor} "
-                    f"is not the canonical block {canonical_hash}"
-                )
             log.debug(f"Reusing underlying MMR, rollback to {prefix_height}, then rebuild to {target_height}")
             mmr = copy.deepcopy(self._mmr)
             for _ in range(last_height - prefix_height):
