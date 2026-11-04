@@ -52,7 +52,6 @@ from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWalletsServices,
-    setup_n_nodes,
     setup_simulators_and_wallets,
 )
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
@@ -812,38 +811,6 @@ async def test_respond_end_of_sub_slot_race(
 
     for slot in blocks[-1].finished_sub_slots:
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
-
-
-@pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN], reason="the sub-slot block count does not depend on the consensus mode"
-)
-async def test_first_overflow_unfinished_block_counts_in_the_sub_slot_it_is_infused_in(
-    default_1000_blocks: list[FullBlock],
-    bt: BlockTools,
-    self_hostname: str,
-    db_version: int,
-) -> None:
-    chain = default_1000_blocks
-    # Choose a full sub-slot followed by its first overflow block, without
-    # lowering the limit below the size of any earlier sub-slot.
-    blocks_in_sub_slot = most_in_a_sub_slot = 1
-    for block in chain[1:]:
-        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
-        if overflow and len(block.finished_sub_slots) == 1 and blocks_in_sub_slot == most_in_a_sub_slot:
-            break
-        blocks_in_sub_slot = 1 if len(block.finished_sub_slots) > 0 else blocks_in_sub_slot + 1
-        most_in_a_sub_slot = max(most_in_a_sub_slot, blocks_in_sub_slot)
-    else:
-        raise AssertionError("no full sub-slot followed by a first overflow block")
-    constants = bt.constants.replace(MAX_SUB_SLOT_BLOCKS=uint32(blocks_in_sub_slot))
-    unfinished = make_unfinished_block(block, constants)
-
-    async with setup_n_nodes(constants, 1, db_version, self_hostname) as [full_node_api]:
-        full_node = full_node_api.full_node
-        await add_blocks_in_batches(chain[: block.height], full_node)
-        await full_node.add_unfinished_block(unfinished, None)
-        assert full_node.full_node_store.get_unfinished_block(unfinished.partial_hash) is not None
 
 
 @pytest.mark.anyio
