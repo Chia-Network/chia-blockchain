@@ -43,8 +43,7 @@ def coin_commitments_root_from_conds(conds: SpendBundleConditions | None) -> byt
     # conds is None for non-transaction blocks
     if conds is None:
         return EMPTY_MERKLE_SET_ROOT
-    # conds already groups each spend's outputs, so unlike compute_coin_commitments_root
-    # there is no regrouping by parent
+    # conds already groups the outputs by spend
     leaves = [
         _commitment_leaf(
             spend.coin_id,
