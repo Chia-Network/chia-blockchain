@@ -5,6 +5,7 @@ import logging
 import random
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any, ClassVar
 
 import pytest
@@ -41,7 +42,9 @@ from chia.full_node.eligible_coin_spends import (
 )
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
+    DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
     MEMPOOL_MIN_FEE_INCREASE,
+    MINIMUM_BLOCK_FEE_EXPIRATION,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -264,6 +267,7 @@ async def instantiate_mempool_manager(
     block_timestamp: uint64 = TEST_TIMESTAMP,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     max_tx_clvm_cost: uint64 | None = None,
+    minimum_block_fee_per_cost: uint64 = uint64(0),
 ) -> AsyncGenerator[MempoolManager, None]:
     async with MempoolManager.managed(
         get_coin_records,
@@ -272,6 +276,7 @@ async def instantiate_mempool_manager(
         InlineExecutor(),
         max_tx_clvm_cost=max_tx_clvm_cost,
         validation_timeout=10,
+        minimum_block_fee_per_cost=minimum_block_fee_per_cost,
     ) as mempool_manager:
         test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
         await mempool_manager.new_peak(test_block_record, None)
@@ -1599,6 +1604,47 @@ def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
 
 def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
     assert mempool_manager.get_spendbundle(sb.name()) is None
+
+
+@pytest.mark.anyio
+async def test_minimum_block_fee_does_not_reject_from_mempool() -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        minimum_block_fee_per_cost=uint64(1_000_000),
+    ) as mempool_manager:
+        spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.parametrize(
+    "peak_timestamp, included",
+    [
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION - 1), False),
+        (MINIMUM_BLOCK_FEE_EXPIRATION, True),
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION + 1), True),
+    ],
+)
+async def test_minimum_block_fee_expires(old: bool, peak_timestamp: uint64, included: bool) -> None:
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        block_timestamp=peak_timestamp,
+        minimum_block_fee_per_cost=DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
+    ) as mempool_manager:
+        spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+        assert mempool_manager.peak is not None
+        create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+        generator = create_block(mempool_manager.peak.header_hash, 30.0)
+        assert (generator is not None and TEST_COIN in generator.removals) == included
+        assert_sb_in_pool(mempool_manager, spend_bundle)
+
+
+def test_minimum_block_fee_expiration_date() -> None:
+    expiration = datetime.fromtimestamp(MINIMUM_BLOCK_FEE_EXPIRATION, tz=timezone.utc)
+    assert expiration == datetime(2027, 11, 3, tzinfo=timezone.utc)
 
 
 @pytest.mark.anyio

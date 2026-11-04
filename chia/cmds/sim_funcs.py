@@ -63,6 +63,7 @@ def create_chia_directory(
         config["full_node"]["target_uncompact_proofs"] = 30
         config["full_node"]["peer_connect_interval"] = 50
         config["full_node"]["sanitize_weight_proof_only"] = False
+        config["full_node"]["minimum_block_fee_per_cost"] = 0
         config["logging"]["log_level"] = "INFO"  # extra logs for easier development
         # make sure we don't try to connect to other nodes.
         config["full_node"]["introducer_peer"] = None
