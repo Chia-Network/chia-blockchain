@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
-from collections.abc import Iterator
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from queue import Queue
 from typing import Literal
@@ -28,7 +28,7 @@ class UPnP:
     _upnp: miniupnpc.UPnP | None = None
 
     @contextlib.contextmanager
-    def manage(self, ports: list[int]) -> Iterator[None]:
+    def manage(self, ports: list[int]) -> Generator[None, None, None]:
         self.setup()
         try:
             for port in ports:

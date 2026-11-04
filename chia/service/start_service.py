@@ -5,7 +5,7 @@ import contextlib
 import logging
 import os
 import signal
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine
 from pathlib import Path
 from types import FrameType
 from typing import Any, Generic, TypeVar, cast
@@ -191,7 +191,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             raise ValueError(f"{self._service_name}: already running") from e
 
     @contextlib.asynccontextmanager
-    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+    async def manage(self, *, start: bool = True) -> AsyncGenerator[None, None]:
         # NOTE: avoid start=False, this is presently used for corner case setup type tests
         async with contextlib.AsyncExitStack() as async_exit_stack:
             try:

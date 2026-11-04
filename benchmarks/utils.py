@@ -4,14 +4,14 @@ import contextlib
 import os
 import subprocess
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from chia.util.db_wrapper import DBWrapper2
 
 
 @contextlib.asynccontextmanager
-async def setup_db(name: str | os.PathLike[str], db_version: int) -> AsyncIterator[DBWrapper2]:
+async def setup_db(name: str | os.PathLike[str], db_version: int) -> AsyncGenerator[DBWrapper2, None]:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)

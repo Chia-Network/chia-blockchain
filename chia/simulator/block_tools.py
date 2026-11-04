@@ -10,7 +10,7 @@ import ssl
 import sys
 import tempfile
 import time
-from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -2560,7 +2560,7 @@ async def create_block_tools_async(
     num_non_keychain_plots: int = 3,
     num_v2_plots: int = 40,
     testrun_uid: str | None = None,
-) -> AsyncIterator[BlockTools]:
+) -> AsyncGenerator[BlockTools, None]:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
@@ -2584,7 +2584,7 @@ def create_block_tools(
     root_path: Path | None = None,
     keychain: Keychain | None = None,
     config_overrides: dict[str, Any] | None = None,
-) -> Iterator[BlockTools]:
+) -> Generator[BlockTools, None, None]:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")

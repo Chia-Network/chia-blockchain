@@ -5,7 +5,7 @@ import collections
 import contextlib
 import dataclasses
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from enum import IntEnum
 from typing import Generic, TypeVar, final
 
@@ -58,7 +58,7 @@ class PriorityMutex(Generic[_T_Priority]):
     async def acquire(
         self,
         priority: _T_Priority,
-    ) -> AsyncIterator[None]:
+    ) -> AsyncGenerator[None, None]:
         task = asyncio.current_task()
         if task is None:
             raise Exception(f"unable to check current task, got: {task!r}")

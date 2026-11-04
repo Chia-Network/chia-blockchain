@@ -7,7 +7,7 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
@@ -102,7 +102,7 @@ class DataStore:
         sql_log_path: Path | None = None,
         cache_capacity: int = 1,
         prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length,
-    ) -> AsyncIterator[DataStore]:
+    ) -> AsyncGenerator[DataStore, None]:
         async with DBWrapper2.managed(
             database=database,
             uri=uri,
@@ -200,7 +200,7 @@ class DataStore:
             yield self
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
+    async def transaction(self) -> AsyncGenerator[None, None]:
         async with self.db_wrapper.writer():
             yield
 
@@ -699,7 +699,7 @@ class DataStore:
         del self.unconfirmed_keys_values[store_id]
 
     @contextmanager
-    def manage_kv_files(self, store_id: bytes32) -> Iterator[None]:
+    def manage_kv_files(self, store_id: bytes32) -> Generator[None, None, None]:
         if store_id not in self.unconfirmed_keys_values:
             self.unconfirmed_keys_values[store_id] = []
         else:

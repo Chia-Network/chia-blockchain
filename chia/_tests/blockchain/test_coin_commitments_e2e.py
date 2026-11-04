@@ -12,7 +12,7 @@ a dummy timelord connection rather than by patching the server.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from itertools import pairwise
@@ -251,7 +251,7 @@ async def infuse_in_order(
 
 
 @asynccontextmanager
-async def node_home(constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
+async def node_home(constants: ConsensusConstants) -> AsyncGenerator[BlockTools, None]:
     """A root path and config for a node whose DB outlives restarts."""
     with TempKeyring(populate=True) as keychain:
         async with create_block_tools_async(
@@ -261,7 +261,7 @@ async def node_home(constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
 
 
 @asynccontextmanager
-async def restartable_node(home: BlockTools, db_version: int, self_hostname: str) -> AsyncIterator[FullNodeAPI]:
+async def restartable_node(home: BlockTools, db_version: int, self_hostname: str) -> AsyncGenerator[FullNodeAPI, None]:
     """One run of a node on `home`'s on-disk DB; the next run reopens it."""
     async with setup_full_node(
         home.constants,

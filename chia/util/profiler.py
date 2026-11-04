@@ -5,7 +5,7 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -181,7 +181,7 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
 
 
 @asynccontextmanager
-async def enable_profiler(profile: bool) -> AsyncIterator[cProfile.Profile | None]:
+async def enable_profiler(profile: bool) -> AsyncGenerator[cProfile.Profile | None, None]:
     if not profile:
         yield None
         return

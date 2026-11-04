@@ -6,7 +6,7 @@ import math
 import random
 import time
 import traceback
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
@@ -512,7 +512,7 @@ class FullNodePeers(FullNodeDiscovery):
         super().__post_init__()
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         try:
             self.log.info("Initialising Full Node peers discovery.")
             await self.initialize_address_manager()

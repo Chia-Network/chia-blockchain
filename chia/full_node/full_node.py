@@ -10,7 +10,7 @@ import random
 import sqlite3
 import time
 import traceback
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TextIO, cast, final
@@ -258,7 +258,7 @@ class FullNode:
         )
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 

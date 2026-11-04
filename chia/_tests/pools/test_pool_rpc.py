@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import logging
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
@@ -83,7 +83,7 @@ class TemporaryPoolPlot:
 async def manage_temporary_pool_plot(
     bt: BlockTools,
     p2_singleton_puzzle_hash: bytes32,
-) -> AsyncIterator[TemporaryPoolPlot]:
+) -> AsyncGenerator[TemporaryPoolPlot, None]:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path: Path = Path(tmpdir)
         bt.add_plot_directory(tmp_path)

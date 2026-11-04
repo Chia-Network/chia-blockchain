@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -113,7 +113,7 @@ def create_test_setup(
 
 
 @contextmanager
-def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
+def mock_successful_proof(plot_info: PlotInfo) -> Generator[None, None, None]:
     if isinstance(plot_info.prover, V1Prover):
         with patch.object(plot_info.prover, "get_full_proof") as mock_get_proof:
             mock_proof = MagicMock(spec=ProofOfSpace)

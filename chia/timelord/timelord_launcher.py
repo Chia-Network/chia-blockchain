@@ -7,7 +7,7 @@ import pathlib
 import signal
 import sys
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from types import FrameType
@@ -56,7 +56,7 @@ class VDFClientProcessMgr:
             self.active_processes.clear()
 
     @asynccontextmanager
-    async def manage_proc(self, proc: asyncio.subprocess.Process) -> AsyncIterator[None]:
+    async def manage_proc(self, proc: asyncio.subprocess.Process) -> AsyncGenerator[None, None]:
         await self.add_process(proc)
         try:
             yield

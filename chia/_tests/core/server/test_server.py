@@ -486,11 +486,14 @@ async def test_garbage_collect_connections_tolerates_stale_closed_connections(
         elif my_test_server.all_connections.get(stale_connection.peer_node_id) is stale_wsc:
             my_test_server.all_connections[stale_connection.peer_node_id] = replacement_wsc
 
-    monkeypatch.setattr(asyncio, "sleep", sleep_one_iteration)
-    monkeypatch.setattr(my_test_server.log, "debug", change_stale_connections)
+    with monkeypatch.context() as patch:
+        # Intentionally patches the shared asyncio.sleep within a bounded context;
+        # this test needs to control the GC loop iteration count.
+        patch.setattr(asyncio, "sleep", sleep_one_iteration)
+        patch.setattr(my_test_server.log, "debug", change_stale_connections)
 
-    with pytest.raises(asyncio.CancelledError):
-        await my_test_server.garbage_collect_connections_task()
+        with pytest.raises(asyncio.CancelledError):
+            await my_test_server.garbage_collect_connections_task()
 
     assert missing_connection.peer_node_id not in my_test_server.all_connections
     assert my_test_server.all_connections[stale_connection.peer_node_id] is replacement_wsc

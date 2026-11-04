@@ -6,7 +6,7 @@ import logging
 import sys
 import time
 import traceback
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from math import floor
@@ -256,7 +256,7 @@ class Farmer:
         perform_migration_from_old_config(self._root_path)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         async def start_task() -> None:
             # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
             # succeeds or until we need to shut down.

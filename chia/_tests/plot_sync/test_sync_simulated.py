@@ -6,7 +6,7 @@ import functools
 import logging
 import random
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -247,7 +247,7 @@ async def create_test_runner(
     harvester_services: list[HarvesterService],
     farmer_service: FarmerService,
     event_loop: asyncio.events.AbstractEventLoop,
-) -> AsyncIterator[TestRunner]:
+) -> AsyncGenerator[TestRunner, None]:
     async with farmer_service.manage():
         farmer: Farmer = farmer_service._node
         assert len(farmer.plot_sync_receivers) == 0
