@@ -3117,7 +3117,7 @@ async def test_create_block_generator(
         err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            new_block_gen.cost,
             DEFAULT_FLAGS,
             new_block_gen.signature,
             None,
@@ -3184,7 +3184,7 @@ async def test_create_block_generator_real_bundles(seed: int, old: bool, test_bu
         err, _err_msg, conds = run_block_generator2(
             bytes(new_block_gen.program),
             new_block_gen.generator_refs,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            new_block_gen.cost,
             DEFAULT_FLAGS,
             new_block_gen.signature,
             None,
@@ -3578,7 +3578,7 @@ async def test_create_block_generator_custom_spend(
             err, _err_msg, conds = run_block_generator2(
                 bytes(generator.program),
                 generator.generator_refs,
-                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                generator.cost,
                 0,
                 generator.signature,
                 None,
