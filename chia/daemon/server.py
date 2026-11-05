@@ -25,7 +25,6 @@ from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.init.init_funcs import check_keys, chia_init
@@ -39,7 +38,14 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.harvester_config import add_plot_directory
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
+from chia.util.keychain import (
+    Keychain,
+    KeyData,
+    default_passphrase,
+    passphrase_requirements,
+    supports_os_passphrase_storage,
+    using_default_passphrase,
+)
 from chia.util.lock import Lockfile, LockfileError, service_launch_lock_path
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
