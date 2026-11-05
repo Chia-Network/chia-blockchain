@@ -3417,7 +3417,7 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
     err, _err_msg, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
-        test_constants.MAX_BLOCK_COST_CLVM,
+        generator.cost,
         flags,
         generator.signature,
         None,
@@ -3464,7 +3464,7 @@ def test_create_block_generator(old: bool) -> None:
     err, _err_msg, conds = run_block_generator2(
         bytes(generator.program),
         generator.generator_refs,
-        test_constants.MAX_BLOCK_COST_CLVM,
+        generator.cost,
         0,
         generator.signature,
         None,
