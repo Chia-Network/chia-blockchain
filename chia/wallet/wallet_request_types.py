@@ -621,6 +621,7 @@ class GetCoinRecordsByNames(Streamable):
 @dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
+    missing_coins: list[bytes32]
 
 
 @streamable

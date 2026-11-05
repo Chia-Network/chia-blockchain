@@ -1656,14 +1656,11 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+            missing_coins = [coin_id for coin_id in request.names if coin_id not in [cr.name for cr in coin_records]]
+            if len(missing_coins) > 0:
+                log.warning(f"Coin IDs not found yet: {['0x' + coin_id.hex() for coin_id in missing_coins]}")
 
-            missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
-            ]
-            if missed_coins:
-                raise ValueError(f"Coin ID's: {missed_coins} not found.")
-
-        return GetCoinRecordsByNamesResponse(coin_records=coin_records)
+        return GetCoinRecordsByNamesResponse(coin_records=coin_records, missing_coins=missing_coins)
 
     async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
         coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)
