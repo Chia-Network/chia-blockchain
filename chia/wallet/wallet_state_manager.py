@@ -666,7 +666,7 @@ class WalletStateManager:
                     raise ValueError(f"Missing derivation '{unused}' for wallet id '{wallet_id}' (hardened={hardened})")
 
                 # Set this key to used so we never use it again
-                await self.puzzle_store.set_used_up_to(record.index)
+                await self.puzzle_store.mark_used(record.index)
 
                 # Create more puzzle hashes / keys
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
@@ -675,7 +675,11 @@ class WalletStateManager:
                     _commit_previous_result=False,
                 )
                 await create_more_puzzle_hashes_result.commit(self)
-                raise PurposefulAbort(GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result))
+                used_indices = [] if previous_result is None else list(previous_result.used_indices)
+                used_indices.append(record.index)
+                raise PurposefulAbort(
+                    GetUnusedDerivationRecordResult(record, create_more_puzzle_hashes_result, used_indices)
+                )
         except PurposefulAbort as e:
             return cast(GetUnusedDerivationRecordResult, e.obj)
 
@@ -1199,9 +1203,8 @@ class WalletStateManager:
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
         if derivation_index is not None:
             ph_to_index_cache.put(coin_state.coin.puzzle_hash, derivation_index)
-            if derivation_index > used_up_to:
-                await self.puzzle_store.set_used_up_to(derivation_index)
-                used_up_to = derivation_index
+            await self.puzzle_store.mark_used(derivation_index)
+            used_up_to = derivation_index
 
         if coin_state.created_height is None:
             # A CoinState with created_height=None means this coin was

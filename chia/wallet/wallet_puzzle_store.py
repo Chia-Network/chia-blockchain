@@ -241,14 +241,14 @@ class WalletPuzzleStore:
 
         return None
 
-    async def set_used_up_to(self, index: uint32) -> None:
+    async def mark_used(self, index: uint32) -> None:
         """
         Sets a derivation path to used so we don't use it again.
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
+                "UPDATE derivation_paths SET used=1 WHERE derivation_index=?",
                 (index,),
             )
 

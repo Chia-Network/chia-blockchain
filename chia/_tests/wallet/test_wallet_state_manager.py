@@ -511,7 +511,7 @@ async def test_puzzle_hash_requests(
     assert await get_puzzle_hash_state() == expected_state
 
     # Ensure the window continues to expand
-    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.used_up_to_index + 1))
+    await wsm.puzzle_store.mark_used(uint32(expected_state.used_up_to_index + 1))
     result = await wsm.create_more_puzzle_hashes()
     await result.commit(wsm)
     expected_state = PuzzleHashState(expected_state.highest_index + 1, expected_state.used_up_to_index + 1)
@@ -526,7 +526,7 @@ async def test_puzzle_hash_requests(
     assert await get_puzzle_hash_state() == expected_state
 
     # Make sure window doesn't expand on next use
-    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.used_up_to_index + 1))
+    await wsm.puzzle_store.mark_used(uint32(expected_state.used_up_to_index + 1))
     result = await wsm.create_more_puzzle_hashes()
     await result.commit(wsm)
     expected_state = PuzzleHashState(expected_state.highest_index, expected_state.used_up_to_index + 1)
@@ -592,7 +592,8 @@ async def test_puzzle_hash_requests(
     assert await get_puzzle_hash_state() == expected_state
 
     # Assert more puzzle hashes get made
-    await wsm.puzzle_store.set_used_up_to(uint32(expected_state.highest_index))
+    for i in range(expected_state.highest_index + 1):
+        await wsm.puzzle_store.mark_used(uint32(i))
     await wsm.get_unused_derivation_record(wsm.main_wallet.id())
     expected_state = PuzzleHashState(
         expected_state.highest_index + wsm.initial_num_public_keys + 1, expected_state.highest_index + 1

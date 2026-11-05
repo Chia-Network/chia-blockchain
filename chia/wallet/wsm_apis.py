@@ -77,9 +77,11 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
         )
 
     def to_standard(self) -> GetUnusedDerivationRecordResult:
+        record = self.record.to_standard()
         return GetUnusedDerivationRecordResult(
-            self.record.to_standard(),
+            record,
             self.create_more_puzzle_hashes_result.to_standard(),
+            used_indices=[record.index],
         )
 
 
@@ -87,7 +89,9 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
 class GetUnusedDerivationRecordResult:
     record: DerivationRecord
     create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult
+    used_indices: list[uint32] = dataclasses.field(default_factory=list)
 
     async def commit(self, wallet_state_manager: WalletStateManager) -> None:
         await self.create_more_puzzle_hashes_result.commit(wallet_state_manager)
-        await wallet_state_manager.puzzle_store.set_used_up_to(self.record.index)
+        for index in self.used_indices:
+            await wallet_state_manager.puzzle_store.mark_used(index)
