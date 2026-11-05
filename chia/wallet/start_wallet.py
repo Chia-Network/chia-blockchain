@@ -84,20 +84,9 @@ async def async_main(root_path: pathlib.Path) -> int:
     service_config = apply_config_cli_overrides(config[SERVICE_NAME])
     config[SERVICE_NAME] = service_config
 
-    # This is simulator
-    local_test = service_config.get("testing", False)
-    if local_test is True:
-        from chia.simulator.block_tools import test_constants
-
-        constants = test_constants
-        current = service_config["database_path"]
-        service_config["database_path"] = f"{current}_simulation"
-        service_config["selected_network"] = "testnet0"
-    else:
-        constants = DEFAULT_CONSTANTS
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = create_wallet_service(root_path, config, constants)
+    service = create_wallet_service(root_path, config, DEFAULT_CONSTANTS)  # pragma: no cover
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()

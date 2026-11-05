@@ -250,7 +250,6 @@ path = "chia.wallet"
 depends_on = [
     "chia.service",
     "chia.apis",
-    "chia.simulator",
     "chia.types",
     "chia.util",
     { path = "chia.server", deprecated = false },
