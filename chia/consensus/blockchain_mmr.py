@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import logging
 from dataclasses import dataclass, field
 
@@ -118,7 +117,7 @@ class BlockchainMMRManager:
                     f"is not the canonical block {canonical_hash}"
                 )
             log.debug(f"Reusing underlying MMR, rollback to {prefix_height}, then rebuild to {target_height}")
-            mmr = copy.deepcopy(self._mmr)
+            mmr = self._mmr.copy()
             for _ in range(last_height - prefix_height):
                 mmr.pop()
 
