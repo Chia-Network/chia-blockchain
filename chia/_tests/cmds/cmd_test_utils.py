@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -372,7 +372,7 @@ def create_service_and_wallet_client_generators(
         rpc_port: int | None = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
-    ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
+    ) -> AsyncGenerator[tuple[_T_RpcClient, dict[str, Any]], None]:
         if root_path is None:
             root_path = default_root
 
@@ -397,7 +397,7 @@ def create_service_and_wallet_client_generators(
         root_path: Path = default_root,
         wallet_rpc_port: int | None = None,
         fingerprint: int | None = None,
-    ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
+    ) -> AsyncGenerator[tuple[WalletRpcClient, int, dict[str, Any]], None]:
         async with test_get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore[attr-defined]
             assert fingerprint is not None

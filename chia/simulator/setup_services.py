@@ -5,7 +5,7 @@ import gc
 import logging
 import signal
 import sqlite3
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from types import FrameType
@@ -58,7 +58,7 @@ log = logging.getLogger(__name__)
 
 
 @contextmanager
-def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[dict[str, Any]]:
+def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Generator[dict[str, Any], None, None]:
     init(None, root_path)
     init(certs_path, root_path)
     path = config_path_for_filename(root_path=root_path, filename="config.yaml")
@@ -439,7 +439,7 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Introduc
 
 
 @asynccontextmanager
-async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
+async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[None, None]:
     find_vdf_client()  # raises FileNotFoundError if not found
     process_mgr = VDFClientProcessMgr()
     vdf_task_1 = create_referenced_task(
@@ -468,7 +468,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
 
 
 @asynccontextmanager
-async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
+async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[None, None]:
     find_vdf_client()  # raises FileNotFoundError if not found
 
     process_mgr = VDFClientProcessMgr()

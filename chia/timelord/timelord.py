@@ -11,7 +11,7 @@ import random
 import tempfile
 import time
 import traceback
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, cast
@@ -151,7 +151,7 @@ class Timelord:
         self.bluebox_pool: ThreadPoolExecutor | None = None
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,

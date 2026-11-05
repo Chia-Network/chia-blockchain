@@ -4,7 +4,7 @@ import contextlib
 import dataclasses
 import logging
 import traceback
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, TypeVar
@@ -107,7 +107,7 @@ async def get_any_service_client(
     rpc_port: int | None = None,
     consume_errors: bool = True,
     use_ssl: bool = True,
-) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
+) -> AsyncGenerator[tuple[_T_RpcClient, dict[str, Any]], None]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
@@ -265,7 +265,7 @@ async def get_wallet_client(
     wallet_rpc_port: int | None = None,
     fingerprint: int | None = None,
     consume_errors: bool = True,
-) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
+) -> AsyncGenerator[tuple[WalletRpcClient, int, dict[str, Any]], None]:
     async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port, consume_errors) as (
         wallet_client,
         config,

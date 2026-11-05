@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Self, cast, final
 
@@ -222,7 +222,7 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
         config_override: TXConfig | None = None,
         child_seed: ChildSeed = ChildSeed(),
         parent_absorb: ParentAbsorb = ParentAbsorb(),
-    ) -> AsyncIterator[Self]:
+    ) -> AsyncGenerator[Self, None]:
         # Build child side effects object
         child_side_effects = WalletSideEffects()
         # Hold the parent so only the sandbox is active
@@ -276,7 +276,7 @@ async def new_wallet_action_scope(
     extra_spends: list[WalletSpendBundle] = [],
     puzzle_for_pk: Callable[[G1Element], Program] | None = None,
     _initial_side_effects: WalletSideEffects = WalletSideEffects(),
-) -> AsyncIterator[WalletActionScope]:
+) -> AsyncGenerator[WalletActionScope, None]:
     if puzzle_for_pk is None:
         puzzle_for_pk = wallet_state_manager.main_wallet.puzzle_for_pk
     assert puzzle_for_pk is not None

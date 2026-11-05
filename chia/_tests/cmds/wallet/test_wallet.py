@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import os
 from pathlib import Path
 
@@ -1114,14 +1114,14 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         FINGERPRINT_ARG,
         "--summaries",
     ]
-    tzinfo = datetime.datetime.now(datetime.UTC).astimezone().tzinfo
+    tzinfo = dt.datetime.now(dt.UTC).astimezone().tzinfo
     # these are various things that should be in the output
     assert_list = [
         "Timelock information:",
         "  - Not valid until ",
         "  - Expires at ",
-        f"{datetime.datetime.fromtimestamp(0, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
-        f"{datetime.datetime.fromtimestamp(100, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
+        f"{dt.datetime.fromtimestamp(0, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
+        f"{dt.datetime.fromtimestamp(100, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
         "height 0",
         "height 100",
     ]

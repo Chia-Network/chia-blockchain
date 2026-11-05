@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import final
 
@@ -29,7 +29,7 @@ class LimitedSemaphore:
         return self._semaphore.locked()
 
     @contextlib.asynccontextmanager
-    async def acquire(self) -> AsyncIterator[int]:
+    async def acquire(self) -> AsyncGenerator[int, None]:
         if self._available_count < 1:
             raise LimitedSemaphoreFullError
 

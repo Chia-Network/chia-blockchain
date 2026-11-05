@@ -7,7 +7,7 @@ import platform
 import random
 import re
 import time
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncGenerator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from typing import cast
@@ -106,7 +106,7 @@ async def get_coin_record(b: Blockchain, coin_id: bytes32) -> CoinRecord | None:
 
 
 @asynccontextmanager
-async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
+async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncGenerator[Blockchain, None]:
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """

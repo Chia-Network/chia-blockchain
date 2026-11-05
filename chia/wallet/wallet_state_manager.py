@@ -9,7 +9,7 @@ import logging
 import multiprocessing.context
 import time
 import traceback
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, Callable, Sequence
 from contextlib import asynccontextmanager
 from enum import IntEnum
 from pathlib import Path
@@ -449,7 +449,7 @@ class WalletStateManager:
         return None
 
     @asynccontextmanager
-    async def puzzle_hash_db_writer(self) -> AsyncIterator[None]:
+    async def puzzle_hash_db_writer(self) -> AsyncGenerator[None, None]:
         async with self.db_wrapper.writer():
             old_cache = self.puzzle_store.last_wallet_derivation_index.copy()
             try:
@@ -793,7 +793,7 @@ class WalletStateManager:
         return self._sync_target
 
     @asynccontextmanager
-    async def set_sync_mode(self, target_height: uint32) -> AsyncIterator[uint32]:
+    async def set_sync_mode(self, target_height: uint32) -> AsyncGenerator[uint32, None]:
         if self.log.level == logging.DEBUG:
             self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
         async with self.lock:
@@ -2218,7 +2218,7 @@ class WalletStateManager:
         additional_signing_responses: list[SigningResponse] = [],
         extra_spends: list[WalletSpendBundle] = [],
         puzzle_for_pk: Callable[[G1Element], Program] | None = None,
-    ) -> AsyncIterator[WalletActionScope]:
+    ) -> AsyncGenerator[WalletActionScope, None]:
         async with new_wallet_action_scope(
             self,
             tx_config,
@@ -2232,7 +2232,7 @@ class WalletStateManager:
             yield action_scope
 
     @contextlib.asynccontextmanager
-    async def new_sync_scope(self) -> AsyncIterator[WalletSyncScope]:
+    async def new_sync_scope(self) -> AsyncGenerator[WalletSyncScope, None]:
         async with new_wallet_sync_scope(self) as sync_scope:
             yield sync_scope
 

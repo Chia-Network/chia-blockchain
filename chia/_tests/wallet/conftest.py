@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import replace
 from typing import Any
@@ -159,7 +159,9 @@ def tx_config(request: Any) -> TXConfig:
 
 def new_action_scope_wrapper(func: Any) -> Any:
     @contextlib.asynccontextmanager
-    async def wrapped_new_action_scope(self: WalletStateManager, *args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+    async def wrapped_new_action_scope(
+        self: WalletStateManager, *args: Any, **kwargs: Any
+    ) -> AsyncGenerator[Any, None]:
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         ph_indexes: dict[uint32, int] = {}
         for wallet_id in self.wallets:

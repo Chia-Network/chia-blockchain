@@ -8,7 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import cast
@@ -48,7 +48,7 @@ class ExitOnError(logging.Handler):
 
 
 @contextmanager
-def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
+def enable_profiler(profile: bool, counter: int) -> Generator[None, None, None]:
     if not profile:
         yield
         return

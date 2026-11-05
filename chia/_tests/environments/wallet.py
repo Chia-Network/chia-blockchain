@@ -4,7 +4,7 @@ import contextlib
 import json
 import operator
 import unittest.mock
-from collections.abc import Iterator
+from collections.abc import Generator
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -345,7 +345,7 @@ class WalletTestFramework:
 
     @staticmethod
     @contextlib.contextmanager
-    def new_puzzle_hashes_allowed() -> Iterator[None]:
+    def new_puzzle_hashes_allowed() -> Generator[None, None, None]:
         with unittest.mock.patch(
             "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
             catch_puzzle_hash_errors(WalletStateManager.new_action_scope),

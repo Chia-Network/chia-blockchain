@@ -6,7 +6,7 @@ import inspect
 import os
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from types import FrameType
 from typing import Any
 
@@ -333,7 +333,7 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
 
 
 @contextlib.contextmanager
-def manage_task_instrumentation() -> Iterator[None]:
+def manage_task_instrumentation() -> Generator[None, None, None]:
     start_task_instrumentation()
     try:
         yield
@@ -342,7 +342,7 @@ def manage_task_instrumentation() -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def maybe_manage_task_instrumentation(enable: bool) -> Iterator[None]:
+def maybe_manage_task_instrumentation(enable: bool) -> Generator[None, None, None]:
     if enable:
         with manage_task_instrumentation():
             yield

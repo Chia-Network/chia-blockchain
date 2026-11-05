@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 import uuid
-from collections.abc import AsyncIterator, Collection
+from collections.abc import AsyncGenerator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -214,7 +214,7 @@ class WebSocketServer:
         self.state_changed_task: asyncio.Task[None] | None = None
 
     @asynccontextmanager
-    async def run(self) -> AsyncIterator[None]:
+    async def run(self) -> AsyncGenerator[None, None]:
         self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
         # Note: the minimum_version has been already set to TLSv1_3

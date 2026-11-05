@@ -5,7 +5,7 @@ import contextlib
 import logging
 import random
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import dns.asyncresolver
@@ -46,7 +46,7 @@ class Introducer:
         self.log = logging.getLogger(__name__)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self._vetting_task = create_referenced_task(self._vetting_loop())
         try:
             yield

@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from collections.abc import AsyncIterator, Collection
+from collections.abc import AsyncGenerator, Collection
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -314,7 +314,7 @@ class CoinStore:
                 return coins
 
     @asynccontextmanager
-    async def snapshot(self) -> AsyncIterator[_CoinStoreSnapshot]:
+    async def snapshot(self) -> AsyncGenerator[_CoinStoreSnapshot, None]:
         """
         Acquire a consistent read view of the coin store.
 
