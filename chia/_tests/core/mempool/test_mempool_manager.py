@@ -10,8 +10,10 @@ from typing import Any, ClassVar
 
 import pytest
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
+    INTERNED_SPEND_LIST,
     AugSchemeMPL,
     CoinRecord,
     CoinSpend,
@@ -22,6 +24,7 @@ from chia_rs import (
     SpendConditions,
     check_time_locks,
     get_conditions_from_spendbundle,
+    get_flags_for_height_and_constants,
     run_block_generator2,
     supports_fast_forward,
 )
@@ -3791,3 +3794,65 @@ async def test_multiple_ff_same_sb(melt: bool) -> None:
         assert status == MempoolInclusionStatus.FAILED
         assert error == Err.INVALID_SPEND_BUNDLE
         assert_sb_not_in_pool(mempool_manager, sb)
+
+
+def shared_pairs_solution(num_base: int, length: int) -> SerializedProgram:
+    """A list of `length` distinct pairs whose children are both one of
+    `num_base` shared (atom_i . nil) pairs. Interned, each item is one cons
+    plus a 3-byte back-reference against a 3-vbyte charge."""
+
+    def atom(b: bytes) -> bytes:
+        return bytes([0x80 | len(b)]) + b
+
+    base = [b"\xff" + atom(i.to_bytes(2, "big")) + b"\x80" for i in range(num_base)]
+    out = b"\x80"
+    for k in reversed(range(length)):
+        out = b"\xff" + b"\xff" + base[k % num_base] + base[(k // num_base + k) % num_base] + out
+    return SerializedProgram.from_bytes(out)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("num_base, length", [(9000, 60_000), (20_000, 50_000)])
+async def test_interned_block_valid_at_declared_cost(num_base: int, length: int) -> None:
+    # mempool -> create_block_generator2 -> consensus at the block's declared
+    # cost, the way block validation runs it. The serde_2026 size cap derives
+    # from that cost, so this shape (interned encoding above `v + 11`) failed
+    # with err 117 on chia_rs 0.52.1.
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(0))
+    quote_nil = SerializedProgram.fromhex("ff0180")  # (q): no conditions
+    coin = Coin(bytes32.random(), quote_nil.get_tree_hash(), uint64(1))
+    records = {coin.name(): CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))}
+
+    async def get_coin_records(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        return [records[c] for c in coin_ids if c in records]
+
+    # the spend is cheap to run but slow to parse; a long validation_timeout
+    # keeps the per-cost timeout check from rejecting it on a slow machine
+    async with instantiate_mempool_manager(
+        get_coin_records, constants=constants, validation_timeout=1000
+    ) as mempool_manager:
+        flags = get_flags_for_height_and_constants(TEST_HEIGHT, constants)
+        assert flags & INTERNED_SPEND_LIST
+
+        sb = SpendBundle([make_spend(coin, quote_nil, shared_pairs_solution(num_base, length))], G2Element())
+        _, status, err = await add_spendbundle(mempool_manager, sb, sb.name())
+        assert err is None
+        assert status == MempoolInclusionStatus.SUCCESS
+
+        assert mempool_manager.peak is not None
+        block = mempool_manager.create_block_generator2(mempool_manager.peak.header_hash, 10.0)
+        assert block is not None
+        assert block.removals == [coin]
+
+        block_err, _, conds = run_block_generator2(
+            bytes(block.program),
+            block.generator_refs,
+            block.cost,
+            flags | DONT_VALIDATE_SIGNATURE,
+            block.signature,
+            None,
+            constants,
+        )
+        assert block_err is None
+        assert conds is not None
+        assert conds.cost == block.cost
