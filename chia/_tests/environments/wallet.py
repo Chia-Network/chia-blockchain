@@ -17,7 +17,7 @@ from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
+from chia.service.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.wallet.transaction_record import LightTransactionRecord

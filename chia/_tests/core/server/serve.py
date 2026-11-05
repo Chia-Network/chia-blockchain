@@ -11,7 +11,7 @@ from typing import final, overload
 
 from chia._tests.util.misc import create_logger
 from chia.server.chia_policy import ChiaPolicy
-from chia.server.start_service import async_run
+from chia.service.start_service import async_run
 from chia.util.task_referencer import create_referenced_task
 
 if sys.platform == "win32":
