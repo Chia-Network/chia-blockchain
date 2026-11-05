@@ -147,9 +147,12 @@ class TestCondsIntegration:
 
     def test_conds_matches_direct_computation(self) -> None:
         spent = _coin_id(1)
-        conds = _make_conds([(spent, [(_ph(1), 100, None), (_ph(2), 200, b"hint")])])
+        spent_no_outputs = _coin_id(2)
+        conds = _make_conds([(spent, [(_ph(1), 100, None), (_ph(2), 200, b"hint")]), (spent_no_outputs, [])])
         created = [Coin(spent, _ph(1), uint64(100)), Coin(spent, _ph(2), uint64(200))]
-        assert coin_commitments_root_from_conds(conds) == compute_coin_commitments_root([spent], created)
+        assert coin_commitments_root_from_conds(conds) == compute_coin_commitments_root(
+            [spent, spent_no_outputs], created
+        )
 
     def test_no_conds_is_empty_root(self) -> None:
         # non-transaction blocks and reward-only transaction blocks commit the empty root
