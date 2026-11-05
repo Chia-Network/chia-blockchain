@@ -86,7 +86,7 @@ async def async_main(root_path: pathlib.Path) -> int:
 
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = create_wallet_service(root_path, config, DEFAULT_CONSTANTS)
+    service = create_wallet_service(root_path, config, DEFAULT_CONSTANTS)  # pragma: no cover
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
