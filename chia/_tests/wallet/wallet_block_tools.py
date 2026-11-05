@@ -303,7 +303,7 @@ def get_full_block_and_block_record(
 
     generator_hash = bytes32.zeros
     if block_generator is not None:
-        generator_hash = compute_generator_root(block_generator.program, flags)
+        generator_hash = compute_generator_root(block_generator.program, flags, constants)
 
     foliage_data = FoliageBlockData(
         bytes32.zeros,
