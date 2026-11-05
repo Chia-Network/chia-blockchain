@@ -101,17 +101,22 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
 async def test_window_statistics_wallet_gaps(seeded_random: random.Random) -> None:
     async with DBConnection(1) as wrapper:
         db = await WalletPuzzleStore.create(wrapper)
-        assert await db.get_window_statistics() is None
+        assert await db.get_window_statistics(1) is None
 
         records = [get_dummy_record(i, 1, seeded_random) for i in range(6)]
         records.extend(get_dummy_record(i, 2, seeded_random) for i in range(4))
         await db.add_derivation_paths(records)
 
-        window = await db.get_window_statistics()
+        window = await db.get_window_statistics(1)
         assert window is not None
-        assert window.wallet_gaps == {}
+        assert window.gaps == []
         assert window.maximum_generated_index == 5
         assert window.minimum_unused_index == 0
+
+        window_2 = await db.get_window_statistics(2)
+        assert window_2 is not None
+        assert window_2.gaps == []
+        assert window_2.maximum_generated_index == 3
 
         async with db.db_wrapper.writer() as conn:
             await conn.execute(
@@ -119,10 +124,13 @@ async def test_window_statistics_wallet_gaps(seeded_random: random.Random) -> No
                 (1, 0, 3),
             )
 
-        window = await db.get_window_statistics()
+        window = await db.get_window_statistics(1)
         assert window is not None
-        assert window.wallet_gaps == {1: [0, 3]}
-        assert 2 not in window.wallet_gaps
+        assert window.gaps == [0, 3]
+
+        window_2 = await db.get_window_statistics(2)
+        assert window_2 is not None
+        assert window_2.gaps == []
 
 
 @pytest.mark.anyio

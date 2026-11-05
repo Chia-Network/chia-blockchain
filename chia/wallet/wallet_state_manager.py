@@ -137,7 +137,7 @@ from chia.wallet.wallet_protocol import (
     MaxSendQuantityWallet,
     WalletProtocol,
 )
-from chia.wallet.wallet_puzzle_store import PuzzleHashWindowTarget, WalletPuzzleStore
+from chia.wallet.wallet_puzzle_store import PuzzleHashWindow, PuzzleHashWindowTarget, WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_signer import WalletSigner
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -471,41 +471,47 @@ class WalletStateManager:
         """
         try:
             async with self.puzzle_hash_db_writer():
-                current_window = await self.puzzle_store.get_window_statistics()
                 if previous_result is not None:
                     if _commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
                 self.log.debug("Target wallets to generate puzzle hashes for: %r", targets)
-                generate_to = (
-                    target.total_generated
-                    if target.total_generated is not None
-                    else (
-                        current_window.maximum_used_index
-                        if current_window is not None and current_window.maximum_used_index is not None
-                        else 0
-                    )
-                )
-                self.log.debug(f"Requested to generate puzzle hashes to at least index {generate_to}")
                 start_t = time.time()
-                cushion = (
-                    target.unused_after_maximum_used
-                    if target.unused_after_maximum_used is not None
-                    else self.initial_num_public_keys
-                )
-
-                # iterate all wallets that need derived keys and establish the start
-                # indexes for all of them
-                indexes_by_wallet: dict[uint32, list[int]] = {}
-                last_index = generate_to + cushion
+                windows: dict[uint32, PuzzleHashWindow | None] = {}
                 for wallet_id in targets:
                     target_wallet = self.wallets[wallet_id]
                     if not target_wallet.require_derivation_paths():
                         self.log.debug("Skipping wallet %s as no derivation paths required", wallet_id)
                         continue
+                    windows[wallet_id] = await self.puzzle_store.get_window_statistics(wallet_id)
+                cushion = (
+                    target.unused_after_maximum_used
+                    if target.unused_after_maximum_used is not None
+                    else self.initial_num_public_keys
+                )
+                # We use the highest maximum used index across all wallets primarily for backwards compatibility reasons
+                # Whether or not we actually have to do this is unclear, but it's the safest path at not much cost
+                used_indexes = [
+                    window.maximum_used_index
+                    for window in windows.values()
+                    if window is not None and window.maximum_used_index is not None
+                ]
+                generate_to = (
+                    target.total_generated
+                    if target.total_generated is not None
+                    else (max(used_indexes) if used_indexes else 0)
+                )
+                last_index = generate_to + cushion
+
+                indexes_by_wallet: dict[uint32, list[int]] = {}
+                for wallet_id, current_window in windows.items():
+                    self.log.debug(
+                        f"Requested to generate puzzle hashes to at least index {generate_to} "
+                        f"for wallet_id: {wallet_id}"
+                    )
                     indexes_by_wallet[wallet_id] = []
                     if current_window is not None:
-                        indexes_by_wallet[wallet_id].extend(current_window.wallet_gaps.get(wallet_id, []))
+                        indexes_by_wallet[wallet_id].extend(current_window.gaps)
                     last: uint32 | None = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
                     if last is not None:
                         if last >= last_index:
