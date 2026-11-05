@@ -63,7 +63,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mempool_manager import DEFAULT_MINIMUM_BLOCK_FEE_PER_COST, MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
@@ -349,6 +349,9 @@ class FullNode:
                 consensus_constants=self.constants,
                 pool=self.pool,
                 validation_timeout=self.config.get("block_creation_timeout", 2.0),
+                minimum_block_fee_per_cost=uint64(
+                    self.config.get("minimum_block_fee_per_cost", DEFAULT_MINIMUM_BLOCK_FEE_PER_COST)
+                ),
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
                 self._transaction_queue = TransactionQueue(

@@ -49,6 +49,12 @@ log = logging.getLogger(__name__)
 # mempool items replacing existing ones must increase the total fee at least by
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
+# The minimum block fee used when the full_node config doesn't specify one, in
+# mojos per million CLVM cost. This is 4 mojos per cost.
+DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4_000_000)
+# The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
+# UTC). Once the peak has reached it, the configured minimum is ignored.
+MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
 
 
 @dataclass
@@ -328,6 +334,7 @@ class MempoolManager:
     _worker_queue_size: int
     max_block_clvm_cost: uint64
     max_tx_clvm_cost: uint64
+    minimum_block_fee_per_cost: uint64
     validation_timeout: float
 
     def __init__(
@@ -339,6 +346,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        minimum_block_fee_per_cost: uint64 = uint64(0),
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -356,6 +364,7 @@ class MempoolManager:
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
         # spends.
         self.nonzero_fee_minimum_fpc = 5
+        self.minimum_block_fee_per_cost = minimum_block_fee_per_cost
 
         # We need to deduct the block overhead, which consists of the wrapping
         # quote opcode's bytes cost as well as its execution cost.
@@ -396,6 +405,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
+        minimum_block_fee_per_cost: uint64 = uint64(0),
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
@@ -403,6 +413,7 @@ class MempoolManager:
             consensus_constants,
             pool,
             max_tx_clvm_cost=max_tx_clvm_cost,
+            minimum_block_fee_per_cost=minimum_block_fee_per_cost,
             validation_timeout=validation_timeout,
         )
         try:
@@ -424,6 +435,17 @@ class MempoolManager:
     ) -> None:
         self.shut_down()
 
+    def effective_minimum_block_fee_per_cost(self) -> uint64:
+        """
+        Returns the minimum fee, in mojos per million CLVM cost, for selecting
+        transactions into a block on top of the current peak
+        """
+        assert self.peak is not None
+        assert self.peak.timestamp is not None
+        if self.peak.timestamp >= MINIMUM_BLOCK_FEE_EXPIRATION:
+            return uint64(0)
+        return self.minimum_block_fee_per_cost
+
     # TODO: remove this, use create_generator() instead
     def create_bundle_from_mempool(self, last_tb_header_hash: bytes32) -> tuple[SpendBundle, list[Coin]] | None:
         """
@@ -432,7 +454,11 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_bundle_from_mempool_items(self.constants, self.peak.height)
+        return self.mempool.create_bundle_from_mempool_items(
+            self.constants,
+            self.peak.height,
+            minimum_fee_per_cost=self.effective_minimum_block_fee_per_cost(),
+        )
 
     def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
         """
@@ -440,7 +466,12 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_block_generator(self.constants, self.peak.height, timeout)
+        return self.mempool.create_block_generator(
+            self.constants,
+            self.peak.height,
+            timeout,
+            self.effective_minimum_block_fee_per_cost(),
+        )
 
     def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
         """
@@ -448,7 +479,12 @@ class MempoolManager:
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
-        return self.mempool.create_block_generator2(self.constants, self.peak.height, timeout)
+        return self.mempool.create_block_generator2(
+            self.constants,
+            self.peak.height,
+            timeout,
+            self.effective_minimum_block_fee_per_cost(),
+        )
 
     def get_filter(self) -> bytes:
         all_transactions: set[bytes32] = set()
