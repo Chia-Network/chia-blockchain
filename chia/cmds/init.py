@@ -48,8 +48,8 @@ def init_cmd(
     """
     from pathlib import Path
 
-    from chia.cmds.init_funcs import init
     from chia.cmds.passphrase_funcs import initialize_passphrase
+    from chia.init.init_funcs import init
 
     if set_passphrase:
         initialize_passphrase()
