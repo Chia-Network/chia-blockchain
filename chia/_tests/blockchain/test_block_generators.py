@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import INTERNED_SPEND_LIST, FullBlock, get_flags_for_height_and_constants, tree_hash_2026
+from chia_rs import (
+    INTERNED_SPEND_LIST,
+    FullBlock,
+    get_flags_for_height_and_constants,
+    max_canonical_blob_size,
+    tree_hash_2026,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from pytest_mock import MockerFixture
@@ -167,9 +173,11 @@ def test_generator_root_activation() -> None:
     constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(10))
     legacy = solution_generator([])
     interned = solution_generator_2026([])
-    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants)) == std_hash(legacy)
+    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants), constants) == std_hash(
+        legacy
+    )
     root = tree_hash_2026(interned)
-    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants)) == root
+    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants), constants) == root
     assert root != std_hash(interned)
     assert validate_generator_root(interned, root, constants, uint32(10))
     assert not validate_generator_root(interned, std_hash(interned), constants, uint32(10))
@@ -181,8 +189,41 @@ def test_generator_root_ignores_interned_encoding() -> None:
     canonical = bytes.fromhex("fdff32303236 01 01 41 03 00 02 01")
     overlong = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
     assert std_hash(canonical) != std_hash(overlong)
-    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants))
+    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants), constants)
     assert validate_generator_root(overlong, root, constants, uint32(0))
+
+
+def test_generator_root_rejects_oversized_generator(mocker: MockerFixture) -> None:
+    from chia_rs import Coin, solution_generator_2026
+
+    import chia.consensus.generator_validation as generator_validation_module
+
+    # a well-formed interned generator and its correct root: only the size
+    # gate can reject it
+    coin = Coin(bytes32.zeros, bytes32.zeros, uint64(1))
+    blob = solution_generator_2026([(coin, bytes.fromhex("ff0180"), bytes.fromhex("80"))])
+    root = tree_hash_2026(blob)
+
+    # the largest block cost whose cap is below len(blob), and the smallest
+    # whose cap admits it
+    cpb = test_constants.COST_PER_BYTE
+    vbytes = max(v for v in range(len(blob)) if max_canonical_blob_size(v * cpb, cpb) < len(blob))
+    too_small = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0), MAX_BLOCK_COST_CLVM=uint64(vbytes * cpb))
+    just_fits = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0), MAX_BLOCK_COST_CLVM=uint64((vbytes + 1) * cpb))
+    assert max_canonical_blob_size(just_fits.MAX_BLOCK_COST_CLVM, cpb) >= len(blob)
+
+    assert validate_generator_root(blob, root, just_fits, uint32(0))
+
+    hash_spy = mocker.spy(generator_validation_module, "tree_hash_2026")
+    with pytest.raises(ValueError, match="max_canonical_blob_size"):
+        compute_generator_root(blob, get_flags_for_height_and_constants(0, too_small), too_small)
+    assert not validate_generator_root(blob, root, too_small, uint32(0))
+    hash_spy.assert_not_called()
+
+    # before activation the generator root is the plain hash, with no size gate
+    pre_hf2 = too_small.replace(HARD_FORK2_HEIGHT=uint32(10))
+    assert compute_generator_root(blob, get_flags_for_height_and_constants(0, pre_hf2), pre_hf2) == std_hash(blob)
+    assert validate_generator_root(blob, std_hash(blob), pre_hf2, uint32(0))
 
 
 @pytest.mark.parametrize(
