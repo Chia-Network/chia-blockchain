@@ -27,7 +27,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import pickle  # ruff: ignore[suspicious-pickle-import]
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -48,7 +48,7 @@ CacheData = tuple[dict[Any, Any], dict[Any, Any], dict[Any, Any]]
 
 
 @contextmanager
-def record_test() -> Iterator[CacheData]:
+def record_test() -> Generator[CacheData, None, None]:
     global _test_lookups
     previous = _test_lookups
     lookups: CacheData = ({}, {}, {})
@@ -60,7 +60,7 @@ def record_test() -> Iterator[CacheData]:
 
 
 @contextmanager
-def ignore_recording() -> Iterator[None]:
+def ignore_recording() -> Generator[None, None, None]:
     """Keep fixture-chain generation out of the enclosing test's recording."""
     global _test_lookups
     previous = _test_lookups

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import os
 from pathlib import Path
 from typing import Any
@@ -66,7 +66,7 @@ def ensure_ssl_dirs(dirs: list[Path]):
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
-    one_day = datetime.timedelta(1, 0, 0)
+    one_day = dt.timedelta(1, 0, 0)
     root_cert = x509.load_pem_x509_certificate(ca_crt, default_backend())
     root_key = load_pem_private_key(ca_key, None, default_backend())
 
@@ -85,8 +85,8 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
         .issuer_name(root_cert.issuer)
         .public_key(cert_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.today() - one_day)
-        .not_valid_after(datetime.datetime(2100, 8, 2))
+        .not_valid_before(dt.datetime.today() - one_day)
+        .not_valid_after(dt.datetime(2100, 8, 2))
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
             critical=False,
@@ -119,8 +119,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
         .issuer_name(issuer)
         .public_key(root_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=3650))
+        .not_valid_before(dt.datetime.now(dt.UTC))
+        .not_valid_after(dt.datetime.now(dt.UTC) + dt.timedelta(days=3650))
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
         .sign(root_key, hashes.SHA256(), default_backend())
     )

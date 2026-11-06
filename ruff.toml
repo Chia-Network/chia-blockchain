@@ -6,70 +6,70 @@ select = ["ALL"]
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
-    "PLC0415", # import-outside-top-level
-    "PLC1901", # compare-to-empty-string
+    "import-outside-top-level", # import-outside-top-level
+    "compare-to-empty-string", # compare-to-empty-string
     # Should probably fix these
-    "PLC2801", # unnecessary-dunder-call
-    "PLC2701", # import-private-name
+    "unnecessary-dunder-call", # unnecessary-dunder-call
+    "import-private-name", # import-private-name
 
     # Pylint refactor
-    "PLR0915", # too-many-statements
-    "PLR0914", # too-many-locals
-    "PLR0913", # too-many-arguments
-    "PLR0912", # too-many-branches
-    "PLR1702", # too-many-nested-blocks
-    "PLR0904", # too-many-public-methods
-    "PLR0917", # too-many-positional-arguments
-    "PLR0916", # too-many-boolean-expressions
-    "PLR0911", # too-many-return-statements
-    "PLW0717", # too-many-statements-in-try-clause
+    "too-many-statements", # too-many-statements
+    "too-many-locals", # too-many-locals
+    "too-many-arguments", # too-many-arguments
+    "too-many-branches", # too-many-branches
+    "too-many-nested-blocks", # too-many-nested-blocks
+    "too-many-public-methods", # too-many-public-methods
+    "too-many-positional-arguments", # too-many-positional-arguments
+    "too-many-boolean-expressions", # too-many-boolean-expressions
+    "too-many-return-statements", # too-many-return-statements
+    "too-many-statements-in-try-clause", # too-many-statements-in-try-clause
     # Should probably fix these
-    "PLR6301", # no-self-use
-    "PLR2004", # magic-value-comparison
+    "no-self-use", # no-self-use
+    "magic-value-comparison", # magic-value-comparison
 
     # Pylint warning
-    "PLW1641", # eq-without-hash
+    "eq-without-hash", # eq-without-hash
     # Should probably fix these
-    "PLW1514", # unspecified-encoding
-    "PLW0603", # global-statement
+    "unspecified-encoding", # unspecified-encoding
+    "global-statement", # global-statement
 
     # Flake8 async
     # Should probably fix these
-    "ASYNC230", # blocking-open-call-in-async-function
-    "ASYNC240", # pathlib for async operations
+    "blocking-open-call-in-async-function", # blocking-open-call-in-async-function
+    "blocking-path-method-in-async-function", # pathlib for async operations
     # Should probably fix these after dealing with shielding for anyio
-    "ASYNC109", # async-function-with-timeout
+    "async-function-with-timeout", # async-function-with-timeout
 
     # flake8-implicit-str-concat
-    "ISC003", # explicit-string-concatenation
+    "explicit-string-concatenation", # explicit-string-concatenation
 
     # pyupgrade
     # `StrEnum` changes `str()` and `format()` output.  The remaining `(str, Enum)` classes
     # cross the daemon websocket protocol, RPC error payloads and benchmark CLI parsing.
     # TODO: convert these to `enum.StrEnum`
-    "UP042", # replace-str-enum
+    "replace-str-enum", # replace-str-enum
 
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
     # Its purpose is to prevent accidentally assigning mutable defaults. However, this is a bit overkill for that.
     # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
-    "RUF009", # function-call-in-dataclass-default-argument
-    "RUF056", # falsy-dict-get-fallback
+    "function-call-in-dataclass-default-argument", # function-call-in-dataclass-default-argument
+    "falsy-dict-get-fallback", # falsy-dict-get-fallback
     # Should probably fix this
-    "RUF029", # unused-async
+    "unused-async", # unused-async
 
     # Security linter
-    "S603", # subprocess-without-shell-equals-true
+    "subprocess-without-shell-equals-true", # subprocess-without-shell-equals-true
     # Should probably fix this
-    "S104", # hardcoded-bind-all-interfaces
-    "S110", # try-except-pass
-    "S311", # suspicious-non-cryptographic-random-usage
-    "S608", # hardcoded-sql-expression
+    "hardcoded-bind-all-interfaces", # hardcoded-bind-all-interfaces
+    "try-except-pass", # try-except-pass
+    "suspicious-non-cryptographic-random-usage", # suspicious-non-cryptographic-random-usage
+    "hardcoded-sql-expression", # hardcoded-sql-expression
     # Need review on which of these we can/should fix
-    "S101", # assert
-    "S404", # suspicious-subprocess-import
-    "S607", # start-process-with-partial-path
+    "assert", # assert
+    "suspicious-subprocess-import", # suspicious-subprocess-import
+    "start-process-with-partial-path", # start-process-with-partial-path
 
     # Should fix
     "FBT",  # boolean positional usage: ~2100 errors
@@ -83,7 +83,7 @@ ignore = [
     "A",  # bad behavior relative to builtins: ~200 errors
     "PTH",  # pathlib linting: ~200 errors
     # Might be nice, might be annoying
-    "BLE001",  # blind exceptions: ~300 errors
+    "blind-except",  # blind exceptions: ~300 errors
     "D",  # docstrings: ~9000 errors,
     "TRY",  # proper exception behavior: ~1300 errors
     "EM",  # exception messages: ~1000 errors
@@ -93,8 +93,8 @@ ignore = [
     "PERF",  # anti-pattern linting: ~200 errors
     "N",  # pep8 naming: ~200 errors
     # Probably fine for our purposes
-    "COM812",  # trailing commas: ~5000 errors
-    "CPY001",  # copyright notices: ~900 errors
+    "missing-trailing-comma",  # trailing commas: ~5000 errors
+    "missing-copyright-notice",  # copyright notices: ~900 errors
     "TC",  # type checking linting: ~1700 errors  # Too much reliance on runtime types to enable this
     "T20",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
     "TD",  # formatting of TODOs: ~800 errors
@@ -106,8 +106,8 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"chia/_tests/*" = ["S106"]
-"chia/__init__.py" = ["RUF067"]
+"chia/_tests/*" = ["hardcoded-password-func-arg"]
+"chia/__init__.py" = ["non-empty-init-module"]
 
 [lint.flake8-implicit-str-concat]
 # Found 3279 errors.

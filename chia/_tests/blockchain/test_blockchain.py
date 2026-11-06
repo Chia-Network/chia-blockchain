@@ -7,7 +7,7 @@ import platform
 import random
 import re
 import time
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncGenerator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from typing import cast
@@ -106,7 +106,7 @@ async def get_coin_record(b: Blockchain, coin_id: bytes32) -> CoinRecord | None:
 
 
 @asynccontextmanager
-async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
+async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncGenerator[Blockchain, None]:
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
@@ -878,31 +878,12 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, block)
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    # This can probably be fixed by:
-    # index d0f7daa91b..b6c5a27d13 100644
-    # --- a/chia/consensus/multiprocess_validation.py
-    # +++ b/chia/consensus/multiprocess_validation.py
-    # @@ -246,7 +246,7 @@ async def pre_validate_block(
-    #              sub_slot_iters=vs.ssi,
-    #              prev_ses_block=vs.prev_ses_block,
-    #          )
-    # -    except ValueError:
-    # +    except Exception as e:
-    #          log.exception("block_to_block_record()")
-    #          return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="In the 3.0 hard fork scenario, the last check fails with an exception "
-        "(KeyError) instead of an error code. All passing tests fail because the "
-        "proof-of-space is invalid (mismatching challenge). The test suggests that "
-        "the specific error isn't important, but it still doesn't like exceptions",
-    )
     async def test_empty_slot_no_ses(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2l
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(1)
-        await _validate_and_add_block(blockchain, blocks[0])
+        blocks = bt.get_consecutive_blocks(2)
+        for block in blocks:
+            await _validate_and_add_block(blockchain, block)
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=4)
 
         new_finished_ss = recursive_replace(
@@ -4846,12 +4827,17 @@ async def test_include_spends_same_as_parent(
         0,
     )
     # Now let's run the test
-    test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)
+    coin_commitments_root = bytes32([1] * 32)
+    test_setup.fork_info.include_spends(
+        conds, test_setup.test_block, test_setup.test_block.header_hash, coin_commitments_root
+    )
     # Let's make sure the results are as expected
     expected_same_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [coin_commitments_root]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4865,6 +4851,8 @@ async def test_include_spends_same_as_parent(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []
 
 
 @pytest.mark.parametrize("same_ph_as_parent", [True, False])
@@ -4888,12 +4876,15 @@ async def test_include_block_same_as_parent_coins(
         [(test_setup.coin.name(), test_setup.coin)],
         test_setup.test_block,
         test_setup.test_block.header_hash,
+        None,
     )
     # Let's make sure the results are as expected
     expected_same_as_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_as_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [None]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4904,3 +4895,5 @@ async def test_include_block_same_as_parent_coins(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []

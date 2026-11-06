@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,7 +15,7 @@ async def DBConnection(
     db_version: int,
     foreign_keys: bool | None = None,
     row_factory: type[aiosqlite.Row] | None = None,
-) -> AsyncIterator[DBWrapper2]:
+) -> AsyncGenerator[DBWrapper2, None]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(
         database=db_uri,
@@ -29,7 +29,7 @@ async def DBConnection(
 
 
 @asynccontextmanager
-async def PathDBConnection(db_version: int) -> AsyncIterator[DBWrapper2]:
+async def PathDBConnection(db_version: int) -> AsyncGenerator[DBWrapper2, None]:
     with tempfile.TemporaryDirectory() as directory:
         db_path = Path(directory).joinpath("db.sqlite")
         async with DBWrapper2.managed(database=db_path, reader_count=4, db_version=db_version) as db_wrapper:

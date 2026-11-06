@@ -19,6 +19,7 @@ from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.coin_commitments import compute_coin_commitments_root
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -1048,6 +1049,30 @@ async def test_new_block_tx_additions() -> None:
             assert await get_spent_index(conn, normal_coin_id) == 0
             # Potential ff singleton should have spent_index -1
             assert await get_spent_index(conn, same_as_parent_coin_id) == -1
+
+
+@pytest.mark.anyio
+async def test_get_coin_commitments_root() -> None:
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        rewards = [Coin(bytes32([i] * 32), bytes32([9] * 32), uint64(250)) for i in range(4)]
+        parent = Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1000))
+        await coin_store.new_block(uint32(1), uint64(1), rewards[:2], [(parent.name(), parent, False)], [])
+        child = Coin(parent.name(), bytes32([3] * 32), uint64(600))
+        ephemeral = Coin(parent.name(), bytes32([4] * 32), uint64(400))
+        grandchild = Coin(ephemeral.name(), bytes32([5] * 32), uint64(400))
+        await coin_store.new_block(
+            uint32(2),
+            uint64(2),
+            rewards[2:],
+            [(coin.name(), coin, False) for coin in (child, ephemeral, grandchild)],
+            [parent.name(), ephemeral.name()],
+        )
+
+        # reward coins and the parent confirmed at height 1 are not part of height 2's root
+        assert await coin_store.get_coin_commitments_root(uint32(2)) == compute_coin_commitments_root(
+            [parent.name(), ephemeral.name()], [child, ephemeral, grandchild]
+        )
 
 
 @pytest.mark.anyio

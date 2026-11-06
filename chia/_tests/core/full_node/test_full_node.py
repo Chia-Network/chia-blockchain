@@ -9,7 +9,7 @@ import platform
 import random
 import sqlite3
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
@@ -1103,7 +1103,7 @@ async def test_new_peak_admission_gate(
         pass
 
     @contextlib.asynccontextmanager
-    async def hold_sem(sem: LimitedSemaphore, n: int = 1) -> AsyncIterator[None]:
+    async def hold_sem(sem: LimitedSemaphore, n: int = 1) -> AsyncGenerator[None, None]:
         """Acquire *n* slots on *sem*, wait for them to be held, then yield."""
         event = asyncio.Event()
 

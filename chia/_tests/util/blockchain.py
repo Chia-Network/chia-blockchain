@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import os
 import pickle  # ruff: ignore[suspicious-pickle-import]  # TODO: use explicit serialization instead of pickle
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from chia_rs import ConsensusConstants, FullBlock
@@ -24,7 +24,7 @@ from chia.util.inline_executor import InlineExecutor
 @contextlib.asynccontextmanager
 async def create_blockchain(
     constants: ConsensusConstants, db_version: int
-) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
+) -> AsyncGenerator[tuple[Blockchain, DBWrapper2], None]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)

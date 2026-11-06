@@ -12,7 +12,7 @@ import shutil
 import sqlite3
 import sys
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
@@ -119,7 +119,7 @@ async def init_data_layer_service(
     maximum_full_file_count: int | None = None,
     enable_batch_autoinsert: bool = True,
     group_files_by_store: bool = False,
-) -> AsyncIterator[DataLayerService]:
+) -> AsyncGenerator[DataLayerService, None]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
@@ -152,7 +152,7 @@ async def init_data_layer(
     maximum_full_file_count: int | None = None,
     group_files_by_store: bool = False,
     enable_batch_autoinsert: bool = True,
-) -> AsyncIterator[DataLayer]:
+) -> AsyncGenerator[DataLayer, None]:
     async with init_data_layer_service(
         wallet_rpc_port,
         bt,

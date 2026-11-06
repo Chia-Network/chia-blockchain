@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+import datetime as dt
 import functools
 import json
 import logging
@@ -185,7 +185,7 @@ def node_name_for_file_fixture(request: SubRequest) -> str:
 
 @pytest.fixture(name="test_time_for_file")
 def test_time_for_file_fixture(request: SubRequest) -> str:
-    return datetime.datetime.now().isoformat().replace(":", "_")
+    return dt.datetime.now().isoformat().replace(":", "_")
 
 
 @pytest.fixture(name="task_instrumentation")

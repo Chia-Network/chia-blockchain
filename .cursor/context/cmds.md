@@ -158,6 +158,6 @@ Read this for CLI command parsing, Click/dataclass command wiring, config/keycha
 ## Source Pointers
 
 - Root CLI and command context: `chia/cmds/chia.py`, `chia/cmds/cmd_classes.py`, `chia/cmds/cmd_helpers.py`.
-- Common RPC/config/keychain helpers: `chia/cmds/cmds_util.py`, `chia/cmds/init_funcs.py`, `chia/cmds/configure.py`.
+- Common RPC/config/keychain helpers: `chia/cmds/cmds_util.py`, `chia/cmds/configure.py`; root init and config editing live in `chia/init/init_funcs.py`, `chia/init/configure.py`.
 - Wallet and transaction command surfaces: `chia/cmds/wallet.py`, `chia/cmds/wallet_funcs.py`, `chia/cmds/coin_funcs.py`, `chia/cmds/param_types.py`.
 - Service control commands: `chia/cmds/start_funcs.py`, `chia/cmds/stop.py`, `chia/cmds/rpc.py`.

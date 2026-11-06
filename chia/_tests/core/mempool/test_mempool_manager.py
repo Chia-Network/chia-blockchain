@@ -812,8 +812,11 @@ async def test_validate_spend_bundle_timeout(monkeypatch: pytest.MonkeyPatch) ->
         # validate_spend_bundle only times Python-side work after pre_validate; on
         # platforms with coarse monotonic() resolution duration can be 0, so force
         # a non-zero elapsed time to test the timeout check deterministically.
-        monkeypatch.setattr("chia.full_node.mempool_manager.time.monotonic", fake_monotonic)
-        info = await mempool_manager.add_spend_bundle(sb, sbc, sb.name(), TEST_HEIGHT)
+        with monkeypatch.context() as patch:
+            # Intentionally patches the shared time.monotonic within a bounded context;
+            # this test needs deterministic elapsed time for the timeout check.
+            patch.setattr("chia.full_node.mempool_manager.time.monotonic", fake_monotonic)
+            info = await mempool_manager.add_spend_bundle(sb, sbc, sb.name(), TEST_HEIGHT)
         assert info.status == MempoolInclusionStatus.FAILED
         assert info.error == Err.INVALID_SPEND_BUNDLE
 

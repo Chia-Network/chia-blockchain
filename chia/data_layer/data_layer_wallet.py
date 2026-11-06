@@ -1065,9 +1065,7 @@ class DataLayerWallet:
                 this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
             new_ph: bytes32 = await action_scope.get_puzzle_hash(wallet_state_manager)
-            async with wallet_state_manager.new_action_scope(
-                action_scope.config.tx_config, push=False
-            ) as inner_action_scope:
+            async with action_scope.sandbox(wallet_state_manager=wallet_state_manager) as inner_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [uint64(1)],
                     [new_ph],
@@ -1085,7 +1083,7 @@ class DataLayerWallet:
                     dl_spend: CoinSpend = next(
                         cs
                         for tx in interface.side_effects.transactions
-                        for cs in tx.spend_bundle.coin_spends
+                        for cs in tx.spend_bundle.coin_spends  # type: ignore[union-attr]
                         if tx.spend_bundle is not None and match_dl_singleton(cs.puzzle_reveal)[0]
                     )
                 dl_solution = Program.from_serialized(dl_spend.solution)
@@ -1109,7 +1107,7 @@ class DataLayerWallet:
                         [
                             *(
                                 cs
-                                for cs in interface.side_effects.transactions[i].spend_bundle.coin_spends
+                                for cs in interface.side_effects.transactions[i].spend_bundle.coin_spends  # type: ignore[union-attr]
                                 if cs != dl_spend
                             ),
                             new_spend,
@@ -1128,9 +1126,6 @@ class DataLayerWallet:
             for k, v in offer_dict.items()
             if v > 0
         }
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(all_transactions)
 
         return Offer(
             requested_payments,

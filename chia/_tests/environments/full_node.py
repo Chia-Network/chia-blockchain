@@ -7,7 +7,7 @@ from chia._tests.environments.common import ServiceEnvironment
 from chia.full_node.full_node import FullNode
 from chia.rpc.rpc_server import RpcServer
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
+from chia.service.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 

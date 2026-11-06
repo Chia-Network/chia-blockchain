@@ -13,7 +13,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_o
 from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.service.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_rpc_api import TimelordRpcApi

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from time import time
@@ -1611,7 +1611,7 @@ async def test_farmer_to_pool_protocol(
             ).to_json_dict()
 
     @asynccontextmanager
-    async def client_session_request(method: str, url: str, **kwargs: Any) -> AsyncIterator[Any]:
+    async def client_session_request(method: str, url: str, **kwargs: Any) -> AsyncGenerator[Any, None]:
         path = str(URL(url).path).rstrip("/")
         if path.endswith("/auth"):
             assert method == "GET"
@@ -1625,15 +1625,15 @@ async def test_farmer_to_pool_protocol(
                 yield DummyGetFarmerResponse(ok=True)
 
     @asynccontextmanager
-    async def client_session_error(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+    async def client_session_error(*args: Any, **kwargs: Any) -> AsyncGenerator[Any, None]:
         yield DummyErrorResponse(ok=True)
 
     @asynccontextmanager
-    async def client_session_error_not_ok(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+    async def client_session_error_not_ok(*args: Any, **kwargs: Any) -> AsyncGenerator[Any, None]:
         yield DummyErrorResponse(ok=False, status=404)
 
     @asynccontextmanager
-    async def client_session_exception(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+    async def client_session_exception(*args: Any, **kwargs: Any) -> AsyncGenerator[Any, None]:
         raise Exception("foo bar")
         yield  # pragma: no cover
 

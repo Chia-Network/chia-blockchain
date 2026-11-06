@@ -27,7 +27,7 @@ from chia.util.errors import (
 )
 from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
-from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.streamable import Streamable, streamable
 
 CURRENT_KEY_VERSION = "1.8"
@@ -668,3 +668,14 @@ class Keychain:
         passphrase, as the passphrase hint is written as part of a passphrase update.
         """
         Keychain.set_master_passphrase(current_passphrase, current_passphrase, passphrase_hint=passphrase_hint)
+
+
+def default_passphrase() -> str:
+    return DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+
+
+def using_default_passphrase() -> bool:
+    if not Keychain.has_master_passphrase():
+        return False
+
+    return Keychain.master_passphrase_is_valid(default_passphrase())

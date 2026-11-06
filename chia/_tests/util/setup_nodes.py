@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -87,7 +87,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def setup_two_nodes(
     consensus_constants: ConsensusConstants, db_version: int, self_hostname: str
-) -> AsyncIterator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
+) -> AsyncGenerator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], None]:
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -133,7 +133,7 @@ async def setup_two_nodes(
 @asynccontextmanager
 async def setup_n_nodes(
     consensus_constants: ConsensusConstants, n: int, db_version: int, self_hostname: str
-) -> AsyncIterator[list[FullNodeAPI]]:
+) -> AsyncGenerator[list[FullNodeAPI], None]:
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
@@ -179,7 +179,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 2,
     config_overrides: dict[str, int] | None = None,
     disable_capabilities: list[Capability] | None = None,
-) -> AsyncIterator[SimulatorsAndWallets]:
+) -> AsyncGenerator[SimulatorsAndWallets, None]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
             config_overrides = {}
@@ -232,7 +232,7 @@ async def setup_simulators_and_wallets_service(
     db_version: int = 2,
     config_overrides: dict[str, int] | None = None,
     disable_capabilities: list[Capability] | None = None,
-) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
+) -> AsyncGenerator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools], None]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
             db_version,
@@ -265,7 +265,7 @@ async def setup_simulators_and_wallets_inner(
     xch_spam_amount: int,
     config_overrides: dict[str, int] | None,
     disable_capabilities: list[Capability] | None,
-) -> AsyncIterator[tuple[list[BlockTools], list[SimulatorFullNodeService], list[WalletService]]]:
+) -> AsyncGenerator[tuple[list[BlockTools], list[SimulatorFullNodeService], list[WalletService]], None]:
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
         config_overrides["full_node.log_coins"] = True
@@ -331,7 +331,7 @@ async def setup_farmer_solver_multi_harvester(
     *,
     start_services: bool,
     solver_peer: UnresolvedPeerInfo | None = None,
-) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
+) -> AsyncGenerator[tuple[list[HarvesterService], FarmerService, BlockTools], None]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(
@@ -384,7 +384,7 @@ async def setup_full_system(
     b_tools: BlockTools | None = None,
     b_tools_1: BlockTools | None = None,
     db_version: int = 2,
-) -> AsyncIterator[FullSystem]:
+) -> AsyncGenerator[FullSystem, None]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
             b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
@@ -402,7 +402,7 @@ async def setup_full_system_inner(
     keychain1: Keychain,
     keychain2: Keychain,
     shared_b_tools: BlockTools,
-) -> AsyncIterator[FullSystem]:
+) -> AsyncGenerator[FullSystem, None]:
     config_overrides = {
         "full_node.max_sync_wait": 0,
         "full_node.log_coins": True,

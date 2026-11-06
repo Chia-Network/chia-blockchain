@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,7 +92,7 @@ class RpcClient:
         port: uint16,
         root_path: Path | None = None,
         net_config: dict[str, Any] | None = None,
-    ) -> AsyncIterator[Self]:
+    ) -> AsyncGenerator[Self, None]:
         self = await cls.create(
             self_hostname=self_hostname,
             port=port,
