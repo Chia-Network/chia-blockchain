@@ -269,6 +269,19 @@ def puzzle_for_singleton(
     )
 
 
+def puzzle_hash_for_singleton(
+    launcher_id: bytes32,
+    inner_puz_hash: bytes32,
+    launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
+    singleton_mod: Program = SINGLETON_MOD,
+    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
+) -> bytes32:
+    return singleton_mod.curry(
+        (singleton_mod_hash, (launcher_id, launcher_hash)),
+        inner_puz_hash,
+    ).get_tree_hash_precalc(inner_puz_hash)
+
+
 # Return a solution to spend a singleton
 def solution_for_singleton(
     lineage_proof: LineageProof,
