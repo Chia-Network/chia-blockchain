@@ -615,6 +615,7 @@ class GetCoinRecordsByNames(Streamable):
     end_height: uint32 | None = None
     include_spent_coins: bool = True
     allow_unsynced: bool = False
+    allow_missing: bool = False
 
 
 @streamable
