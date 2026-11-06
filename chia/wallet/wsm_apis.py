@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(frozen=True)
 class StreamableCreateMorePuzzleHashesResult(Streamable):
     derivation_paths: list[StreamableDerivationRecord]
-    mark_existing_as_used: bool
     unused: uint32
     new_unhardened_keys: bool
     last_index: uint32
@@ -27,7 +26,6 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
     def from_standard(cls, result: CreateMorePuzzleHashesResult) -> StreamableCreateMorePuzzleHashesResult:
         return cls(
             [StreamableDerivationRecord.from_standard(path) for path in result.derivation_paths],
-            result.mark_existing_as_used,
             uint32(result.unused),
             result.new_unhardened_keys,
             uint32(result.last_index),
@@ -36,7 +34,6 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
     def to_standard(self) -> CreateMorePuzzleHashesResult:
         return CreateMorePuzzleHashesResult(
             [path.to_standard() for path in self.derivation_paths],
-            self.mark_existing_as_used,
             self.unused,
             self.new_unhardened_keys,
             self.last_index,
@@ -46,7 +43,6 @@ class StreamableCreateMorePuzzleHashesResult(Streamable):
 @dataclasses.dataclass
 class CreateMorePuzzleHashesResult:
     derivation_paths: list[DerivationRecord]
-    mark_existing_as_used: bool
     unused: int  # The first unused puzzle hash
     new_unhardened_keys: bool
     last_index: int  # The index we derived up to
@@ -65,10 +61,6 @@ class CreateMorePuzzleHashesResult:
             wallet_state_manager._dispatch_websocket_event(
                 WebSocketEvent(name="new_derivation_index", data={"index": self.last_index - 1})
             )
-        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
-        if self.mark_existing_as_used and self.unused > 0 and self.new_unhardened_keys:
-            wallet_state_manager.log.info(f"Updating last used derivation index: {self.unused - 1}")
-            await wallet_state_manager.puzzle_store.set_used_up_to(uint32(self.unused - 1))
 
 
 @streamable
@@ -85,9 +77,11 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
         )
 
     def to_standard(self) -> GetUnusedDerivationRecordResult:
+        record = self.record.to_standard()
         return GetUnusedDerivationRecordResult(
-            self.record.to_standard(),
+            record,
             self.create_more_puzzle_hashes_result.to_standard(),
+            used_indices=[record.index],
         )
 
 
@@ -95,7 +89,9 @@ class StreambleGetUnusedDerivationRecordResult(Streamable):
 class GetUnusedDerivationRecordResult:
     record: DerivationRecord
     create_more_puzzle_hashes_result: CreateMorePuzzleHashesResult
+    used_indices: list[uint32] = dataclasses.field(default_factory=list)
 
     async def commit(self, wallet_state_manager: WalletStateManager) -> None:
         await self.create_more_puzzle_hashes_result.commit(wallet_state_manager)
-        await wallet_state_manager.puzzle_store.set_used_up_to(self.record.index)
+        for index in self.used_indices:
+            await wallet_state_manager.puzzle_store.mark_used(index)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass, field
 from sqlite3 import Row
 
 from chia_rs import G1Element
@@ -14,6 +15,24 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, kw_only=True)
+class PuzzleHashWindowTarget:
+    total_generated: int | None = None
+    unused_after_maximum_used: int | None = None
+
+
+@dataclass(kw_only=True)
+class PuzzleHashWindow:
+    # min/maxes might be `None` if no values match the criteria
+    minimum_unused_index: int | None
+    maximum_used_index: int | None
+    maximum_generated_index: int | None
+    usused_after_maximum_used: int
+    total_unused: int
+    total_generated: int
+    gaps: list[int] = field(default_factory=list)
 
 
 class WalletPuzzleStore:
@@ -67,6 +86,80 @@ class WalletPuzzleStore:
         self.last_derivation_index = None
         self.last_wallet_derivation_index = {}
         return self
+
+    async def get_window_statistics(self, wallet_id: int) -> PuzzleHashWindow | None:
+        """
+        Returns a PuzzleHashWindow for ``wallet_id``, or ``None`` if that wallet has no derivation paths.
+
+        ``gaps`` is the list of missing derivation indices in ``0..max`` for this wallet.
+        Contiguity is probed cheaply via ``COUNT(DISTINCT index) < MAX(index) + 1``; missing indices
+        are only enumerated when that probe finds holes.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "WITH bounds AS ("
+                "SELECT MAX(CASE WHEN used=1 AND hardened=0 THEN derivation_index END) AS maximum_used_index, "
+                "MAX(derivation_index) AS max_idx, "
+                "COUNT(DISTINCT derivation_index) AS n_idx "
+                "FROM derivation_paths "
+                "WHERE wallet_id=?"
+                "), "
+                "stats AS ("
+                "SELECT "
+                "MIN(CASE WHEN used=0 AND hardened=0 THEN derivation_index END) AS minimum_unused_index, "
+                "COUNT("
+                "CASE WHEN used=0 AND hardened=0 "
+                "AND derivation_index > COALESCE((SELECT maximum_used_index FROM bounds), -1) "
+                "THEN 1 END"
+                ") AS unused_after_maximum_used, "
+                "COUNT(CASE WHEN used=0 AND hardened=0 THEN 1 END) AS total_unused, "
+                "COUNT(*) AS total_generated "
+                "FROM derivation_paths "
+                "WHERE wallet_id=?"
+                ") "
+                "SELECT "
+                "stats.minimum_unused_index, "
+                "bounds.maximum_used_index, "
+                "bounds.max_idx, "
+                "stats.unused_after_maximum_used, "
+                "stats.total_unused, "
+                "stats.total_generated, "
+                "CASE WHEN bounds.n_idx < bounds.max_idx + 1 THEN 1 ELSE 0 END "
+                "FROM bounds "
+                "CROSS JOIN stats",
+                (wallet_id, wallet_id),
+            )
+
+            assert row is not None  # not semantically possible, so this is for mypy
+            if row[5] == 0:  # total_generated (COUNT(*))
+                return None
+
+            gaps: list[int] = []
+            if row[6] > 0:
+                # Only hit this path when the wallet has holes under its max index.
+                # Fetch present indices and compute missing indices in Python to avoid
+                # SQLite recursive-CTE depth limits on large derivation windows.
+                max_idx = row[2]
+                present_rows = await conn.execute_fetchall(
+                    "SELECT DISTINCT derivation_index "
+                    "FROM derivation_paths "
+                    "WHERE wallet_id=? "
+                    "ORDER BY derivation_index",
+                    (wallet_id,),
+                )
+                present = {derivation_index for (derivation_index,) in present_rows}
+                gaps = [i for i in range(max_idx + 1) if i not in present]
+
+        return PuzzleHashWindow(
+            minimum_unused_index=row[0],
+            maximum_used_index=row[1],
+            maximum_generated_index=row[2],
+            usused_after_maximum_used=row[3],
+            total_unused=row[4],
+            total_generated=row[5],
+            gaps=gaps,
+        )
 
     async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:
         """
@@ -148,14 +241,14 @@ class WalletPuzzleStore:
 
         return None
 
-    async def set_used_up_to(self, index: uint32) -> None:
+    async def mark_used(self, index: uint32) -> None:
         """
         Sets a derivation path to used so we don't use it again.
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
+                "UPDATE derivation_paths SET used=1 WHERE derivation_index=?",
                 (index,),
             )
 
@@ -207,25 +300,6 @@ class WalletPuzzleStore:
                 conn, "SELECT derivation_index FROM derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
             )
         return None if row is None else uint32(row[0])
-
-    async def record_for_puzzle_hash(self, puzzle_hash: bytes32) -> DerivationRecord | None:
-        """
-        Returns the derivation path for the puzzle_hash.
-        Returns None if not present.
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened "
-                "FROM derivation_paths "
-                "WHERE puzzle_hash=?",
-                (puzzle_hash.hex(),),
-            )
-
-        if row is not None and row[0] is not None:
-            return self.row_to_record(row)
-
-        return None
 
     async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> WalletIdentifier | None:
         """
