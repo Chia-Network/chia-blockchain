@@ -75,9 +75,11 @@ def find_vdf_client() -> pathlib.Path:
         raise Exception("Cannot find chiavdf package location")
 
     location = pathlib.Path(file_string).parent
-    p = location.joinpath("vdf_client")
-    if p.is_file():
-        return p
+    # vdf_client may be installed inside the chiavdf package or at the site-packages root.
+    for candidate in (location, location.parent):
+        p = candidate.joinpath("vdf_client")
+        if p.is_file():
+            return p
     raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh")
 
 
