@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -618,3 +619,100 @@ class TestFileKeyringWriteFailures:
 
         # Expect: failing to obtain the passphrase didn't update the cached file content
         assert keyring.cached_file_content.passphrase_hint is None
+
+
+class TestMasterPassphraseWriteFailures:
+    @pytest.mark.parametrize("remove_passphrase", [False, True])
+    @pytest.mark.parametrize("validated", [False, True])
+    @pytest.mark.parametrize("pending_hint", [None, "previously staged hint"])
+    def test_failed_change_isnt_committed_by_later_write(
+        self,
+        populated_temp_file_keyring: TempKeyring,
+        monkeypatch: pytest.MonkeyPatch,
+        remove_passphrase: bool,
+        validated: bool,
+        pending_hint: str | None,
+    ) -> None:
+        wrapper = KeyringWrapper.get_shared_instance()
+        keyring = wrapper.keyring
+        credential_store = Mock()
+        monkeypatch.setattr("chia.util.keychain.supports_os_passphrase_storage", lambda: True)
+        monkeypatch.setattr(wrapper, "save_master_passphrase_to_credential_store", credential_store.save)
+        monkeypatch.setattr(wrapper, "remove_master_passphrase_from_credential_store", credential_store.remove)
+        current_passphrase = "original master passphrase"
+        wrapper.set_master_passphrase(
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
+            current_passphrase,
+            passphrase_hint="original hint",
+        )
+        keyring.set_key("service-abc", "existing-user", Key(b"existing key"))
+        wrapper.set_cached_master_passphrase(current_passphrase, validated=validated)
+        if pending_hint is not None:
+            keyring.set_passphrase_hint(pending_hint)
+        cached_passphrase = wrapper.get_cached_master_passphrase()
+        staged_properties = keyring.file_content_properties_for_next_write.copy()
+        original_file = keyring.keyring_path.read_bytes()
+        credential_store.reset_mock()
+        new_passphrase = (
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE if remove_passphrase else "replacement master passphrase"
+        )
+
+        with monkeypatch.context() as patch:
+            patch.setattr(FileKeyringContent, "write_to_path", fail_write_to_path)
+            with pytest.raises(PermissionError, match="failed to write keyring"):
+                if remove_passphrase:
+                    wrapper.remove_master_passphrase(current_passphrase)
+                else:
+                    wrapper.set_master_passphrase(
+                        current_passphrase, new_passphrase, passphrase_hint="rejected hint", save_passphrase=True
+                    )
+
+        assert wrapper.get_cached_master_passphrase() == cached_passphrase
+        assert keyring.file_content_properties_for_next_write == staged_properties
+        assert keyring.keyring_path.read_bytes() == original_file
+        assert credential_store.mock_calls == []
+
+        # A later unrelated write must preserve the old passphrase and existing secrets.
+        keyring.set_key("service-abc", "another-user", Key(b"another key"))
+        file_content = FileKeyringContent.create_from_path(keyring.keyring_path)
+        assert file_content.get_decrypted_data_dict(current_passphrase)["keys"] == {
+            "service-abc": {
+                "existing-user": Key(b"existing key").to_data(),
+                "another-user": Key(b"another key").to_data(),
+            }
+        }
+        assert file_content.passphrase_hint == (pending_hint if pending_hint is not None else "original hint")
+        assert wrapper.master_passphrase_is_valid(new_passphrase) is False
+
+    def test_failed_load_preserves_passphrase_and_staged_hint(
+        self, populated_temp_file_keyring: TempKeyring, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        wrapper = KeyringWrapper.get_shared_instance()
+        keyring = wrapper.keyring
+        keyring.set_passphrase_hint("previously staged hint")
+        cached_passphrase = wrapper.get_cached_master_passphrase()
+        original_file = keyring.keyring_path.read_bytes()
+        failed_load = Mock(side_effect=PermissionError("failed to load keyring"))
+
+        with monkeypatch.context() as patch:
+            patch.setattr(keyring, "load_keyring", failed_load)
+            with pytest.raises(PermissionError, match="failed to load keyring"):
+                wrapper.set_master_passphrase(
+                    DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
+                    "replacement master passphrase",
+                    passphrase_hint="rejected hint",
+                )
+
+        assert wrapper.get_cached_master_passphrase() == cached_passphrase
+        assert keyring.file_content_properties_for_next_write == {"passphrase_hint": "previously staged hint"}
+        assert keyring.keyring_path.read_bytes() == original_file
+
+    def test_change_loads_using_current_cached_passphrase(self, populated_temp_file_keyring: TempKeyring) -> None:
+        wrapper = KeyringWrapper.get_shared_instance()
+        wrapper.keyring.set_key("service-abc", "existing-user", Key(b"existing key"))
+        wrapper.set_master_passphrase(None, "replacement master passphrase")
+
+        file_content = FileKeyringContent.create_from_path(wrapper.keyring.keyring_path)
+        assert file_content.get_decrypted_data_dict("replacement master passphrase")["keys"] == {
+            "service-abc": {"existing-user": Key(b"existing key").to_data()}
+        }
