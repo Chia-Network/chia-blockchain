@@ -255,15 +255,24 @@ class KeyringWrapper:
         ):
             raise KeychainCurrentPassphraseIsInvalid
 
-        self.set_cached_master_passphrase(new_passphrase, validated=True)
+        cached_passphrase, cached_passphrase_is_validated = self.get_cached_master_passphrase()
+        staged_properties = self.keyring.file_content_properties_for_next_write.copy()
 
-        self.keyring.set_passphrase_hint(passphrase_hint)
+        try:
+            if write_to_keyring:
+                # Decrypt with the current passphrase before caching the new one.
+                self.keyring.load_keyring(passphrase=current_passphrase)
 
-        if write_to_keyring:
-            # We're reencrypting the keyring contents using the new passphrase. Ensure that the
-            # payload has been decrypted by calling load_keyring with the current passphrase.
-            self.keyring.load_keyring(passphrase=current_passphrase)
-            self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
+            self.set_cached_master_passphrase(new_passphrase, validated=True)
+            self.keyring.set_passphrase_hint(passphrase_hint)
+
+            if write_to_keyring:
+                self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
+        except Exception:
+            # A failed change must not affect the passphrase or hint used by a later write.
+            self.set_cached_master_passphrase(cached_passphrase, validated=cached_passphrase_is_validated)
+            self.keyring.file_content_properties_for_next_write = staged_properties
+            raise
 
         if supports_os_passphrase_storage():
             if save_passphrase:
