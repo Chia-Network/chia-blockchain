@@ -1714,9 +1714,13 @@ async def test_offer_endpoints(
         assert cr.coin in spend_bundle.additions()
     assert test_crs_response.missing_coins == []
     test_names = [a.name() for a in spend_bundle.additions() if a.amount == 4]
+    with pytest.raises(ValueError, match="not found"):
+        await env_1.rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=test_names))
     caplog.clear()
     with caplog.at_level(logging.WARNING):
-        missing_response = await env_1.rpc_client.get_coin_records_by_names(GetCoinRecordsByNames(names=test_names))
+        missing_response = await env_1.rpc_client.get_coin_records_by_names(
+            GetCoinRecordsByNames(names=test_names, allow_missing=True)
+        )
     assert f"Coin IDs not found yet: {['0x' + name.hex() for name in test_names]}" in caplog.text
     assert missing_response.coin_records == []
     assert len(missing_response.missing_coins) == len(test_names)
@@ -2222,11 +2226,19 @@ async def test_get_coin_records_by_names(
         GetCoinRecordsByNames(names=filter_coin_ids, start_height=min_height, end_height=max_height)
     )
     assert {record.coin for record in rpc_result.coin_records} == filter_coins
-    # 8. Test the failure case
+    # 8. Missing records raise by default; partial results require opting in.
+    missing_coin_ids = set(coin_ids) - set(coin_ids_unspent)
+    assert missing_coin_ids
+    expected_error = f"Coin ID's: {['0x' + c_id.hex() for c_id in coin_ids if c_id in missing_coin_ids]} not found."
+    for options in ({}, {"allow_missing": False}):
+        with pytest.raises(ValueError, match=re.escape(expected_error)):
+            await client.get_coin_records_by_names(
+                GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, **options)
+            )
     caplog.clear()
     with caplog.at_level(logging.WARNING):
         rpc_result = await client.get_coin_records_by_names(
-            GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False)
+            GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, allow_missing=True)
         )
     assert "Coin IDs not found yet" in caplog.text
     assert {record.coin for record in rpc_result.coin_records} == coins_unspent
