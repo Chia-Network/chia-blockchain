@@ -9,6 +9,7 @@ depends_on = ["chia.types", "chia.util"]
 [[modules]]
 path = "chia.pools"
 depends_on = [
+    "chia.wallet.util.curry_and_treehash",
     "chia.types",
     "chia.util",
     { path = "chia.wallet", deprecated = false },
@@ -46,6 +47,9 @@ depends_on = [
 [[modules]]
 path = "chia.simulator"
 depends_on = [
+    "chia.daemon.server",
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
     "chia.init",
     "chia.types",
     "chia.util",
@@ -129,6 +133,8 @@ depends_on = [
 [[modules]]
 path = "chia.farmer"
 depends_on = [
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
     "chia.service",
     "chia.apis",
     "chia.types",
@@ -187,6 +193,7 @@ depends_on = [
 [[modules]]
 path = "chia.harvester"
 depends_on = [
+    "chia.wallet.derive_keys",
     "chia.service",
     "chia.apis",
     "chia.types",
@@ -194,7 +201,6 @@ depends_on = [
     { path = "chia.protocols", deprecated = false },
     { path = "chia.consensus", deprecated = false },
     { path = "chia.plotting", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
     { path = "chia.rpc", deprecated = false },
     { path = "chia.server", deprecated = false },
     { path = "chia.plot_sync", deprecated = false },
@@ -203,6 +209,9 @@ depends_on = [
 [[modules]]
 path = "chia.cmds"
 depends_on = [
+    "chia.daemon.server",
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
     "chia.init",
     "chia.types",
     "chia.util",
@@ -227,11 +236,12 @@ depends_on = [
 [[modules]]
 path = "chia.init"
 depends_on = [
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
     "chia.protocols",
     "chia.server",
     "chia.ssl",
     "chia.util",
-    "chia.wallet",
 ]
 
 [[modules]]
@@ -240,13 +250,15 @@ depends_on = [
     "chia.init",
     "chia.util",
     { path = "chia.server", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
-    { path = "chia.plotters", deprecated = false },
 ]
 
 [[modules]]
 path = "chia.wallet"
 depends_on = [
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_conditions",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
+    "chia.wallet.util.curry_and_treehash",
     "chia.service",
     "chia.apis",
     "chia.types",
@@ -276,11 +288,11 @@ depends_on = []
 [[modules]]
 path = "chia.plotting"
 depends_on = [
+    "chia.wallet.derive_keys",
     "chia.types",
     "chia.util",
     "chia.consensus",
     { path = "chia.daemon", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
 ]
 
 [[modules]]
@@ -308,4 +320,43 @@ depends_on = [
     { path = "chia.server", deprecated = false },
     { path = "chia.apis", deprecated = false },
     { path = "chia.consensus", deprecated = false },
+]
+
+[[modules]]
+path = "chia.daemon.server"
+depends_on = [
+    "chia.daemon",
+    "chia.init",
+    "chia.plotters",
+    "chia.server",
+    "chia.util",
+    "chia.wallet.derive_keys",
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
+]
+
+[[modules]]
+path = "chia.wallet.derive_keys"
+depends_on = [
+    "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle",
+]
+
+[[modules]]
+path = "chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle"
+depends_on = [
+    "chia.types",
+    "chia.util",
+    "chia.wallet.puzzles.p2_conditions",
+    "chia.wallet.util.curry_and_treehash",
+]
+
+[[modules]]
+path = "chia.wallet.puzzles.p2_conditions"
+depends_on = [
+    "chia.types",
+]
+
+[[modules]]
+path = "chia.wallet.util.curry_and_treehash"
+depends_on = [
+    "chia.util",
 ]
