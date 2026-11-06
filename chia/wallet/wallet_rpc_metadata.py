@@ -330,6 +330,13 @@ WALLET_RPC_ENDPOINT_METADATA: list[WalletRpcMetadata] = [
         tx_endpoint=True,
     ),
     WalletRpcMetadata(
+        endpoint_name="create_spendbundle_for_ids",
+        request_type=wallet_request_types.CreateOfferForIDs,
+        response_type=wallet_request_types.CreateOfferForIDsResponse,
+        tx_endpoint=True,
+        auto_push=False,
+    ),
+    WalletRpcMetadata(
         endpoint_name="get_offer_summary",
         request_type=wallet_request_types.GetOfferSummary,
         response_type=wallet_request_types.GetOfferSummaryResponse,
