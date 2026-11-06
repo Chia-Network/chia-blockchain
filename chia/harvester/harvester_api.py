@@ -32,6 +32,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     is_v1_phased_out,
     make_pos,
+    max_plot_strength,
     passes_plot_filter,
     passes_plot_filter_v2,
     v1_cut_off_height,
@@ -65,20 +66,24 @@ class HarvesterAPI:
     ) -> bool:
         if plot_info.prover.get_version() == PlotVersion.V2:
             assert isinstance(plot_info.prover, V2Prover)
+            strength = plot_info.prover.get_strength()
+            constants = self.harvester.constants
+            if strength < constants.MIN_PLOT_STRENGTH or strength > max_plot_strength(
+                challenge.last_tx_height, constants
+            ):
+                return False
             # V2 plots always use predictable filter — no fallback
             filter_challenge = getattr(challenge, "filter_challenge", None)
             if filter_challenge is None:
                 return False
-            group_strength = calculate_plot_filter_bits(
-                challenge.last_tx_height, self.harvester.constants, plot_info.prover.get_strength()
-            )
+            group_strength = calculate_plot_filter_bits(challenge.last_tx_height, constants, strength)
             return passes_plot_filter_v2(
                 plot_info.prover.get_id(),
                 plot_info.prover.get_meta_group(),
                 group_strength,
                 filter_challenge,
                 challenge.signage_point_index,
-                self.harvester.constants.FILTER_WINDOW_SIZE,
+                constants.FILTER_WINDOW_SIZE,
             )
 
         # V1 plots use original prefix-bits filter

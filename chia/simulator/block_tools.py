@@ -123,6 +123,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
+    max_plot_strength,
     num_phase_out_epochs,
     passes_plot_filter,
     passes_plot_filter_v2,
@@ -1885,10 +1886,11 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-                if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
+                max_strength = max_plot_strength(prev_tx_height, constants)
+                if plot_info.prover.get_strength() > max_strength:
                     self.log.warn(
                         f"Plot strength ({plot_info.prover.get_strength()}) exceeds max "
-                        f"({constants.MAX_PLOT_STRENGTH}): {plot_info.prover.get_filename()}"
+                        f"({max_strength}): {plot_info.prover.get_filename()}"
                     )
                     continue
                 if filter_challenge is None or signage_point_index is None:
