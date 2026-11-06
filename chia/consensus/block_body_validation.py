@@ -83,6 +83,8 @@ class ForkInfo:
     peak_height: int
     # the header hash of the peak block of this fork
     peak_hash: bytes32
+    # the header hash of the block at fork_height
+    fork_hash: bytes32 = field(init=False)
     # The additions include coinbase additions
     additions_since_fork: dict[bytes32, ForkAdd] = field(default_factory=dict)
     # coin-id, ForkRem
@@ -94,10 +96,16 @@ class ForkInfo:
     # coin commitments root of each block in block_hashes; None below the MMR's aggregate_from
     commitment_roots: list[bytes32 | None] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        # a new ForkInfo has no fork blocks yet, so its peak is the fork point
+        assert self.peak_height == self.fork_height
+        self.fork_hash = self.peak_hash
+
     def reset(self, fork_height: int, header_hash: bytes32) -> None:
         self.fork_height = fork_height
         self.peak_height = fork_height
         self.peak_hash = header_hash
+        self.fork_hash = header_hash
         self.additions_since_fork = {}
         self.removals_since_fork = {}
         self.block_hashes = []
