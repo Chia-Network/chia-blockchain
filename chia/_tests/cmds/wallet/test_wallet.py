@@ -10,7 +10,13 @@ from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
-from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
+from chia._tests.cmds.cmd_test_utils import (
+    TestRpcClients,
+    TestWalletRpcClient,
+    logType,
+    run_cli_command,
+    run_cli_command_and_assert,
+)
 from chia._tests.cmds.wallet.test_consts import (
     CAT_FINGERPRINT_ARG,
     FINGERPRINT,
@@ -24,13 +30,17 @@ from chia._tests.cmds.wallet.test_consts import (
 )
 from chia.cmds.cmds_util import TransactionBundle
 from chia.protocols.outbound_message import NodeType
+from chia.types.blockchain_format.program import Program
+from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.conditions import Condition, ConditionValidTimes
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.outer_puzzles import construct_puzzle, solve_puzzle
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import OFFER_MOD_HASH, NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -1187,14 +1197,14 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     assert_list = [
         (
             "  OFFERED:\n"
-            f"    - {nft_offered_id.hex()}: 0.001 (1 mojo)\n"
+            f"    - singleton {nft_offered_id.hex()}: 1 mojo\n"
             f"    - offered cat (Wallet ID: 2): 100.0 (100000 mojos)\n"
         ),
         (
             "  REQUESTED:\n"
             "    - XCH (Wallet ID: 1): 2.0 (2000000000000 mojos)\n"
-            f"    - {nft_requested_id_1.hex()}: 0.001 (1 mojo)\n"
-            f"    - {nft_requested_id_2.hex()}: 0.001 (1 mojo)\n"
+            f"    - singleton {nft_requested_id_1.hex()}: 1 mojo\n"
+            f"    - singleton {nft_requested_id_2.hex()}: 1 mojo\n"
         ),
         "    - requested cat (Wallet ID: 3): 100.0 (100000 mojos)\n",
         (
@@ -1225,10 +1235,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     expected_calls: logType = {
         "cat_asset_id_to_name": [
-            (nft_offered_id,),
             (cat_offered_id,),
-            (nft_requested_id_1,),
-            (nft_requested_id_2,),
             (cat_requested_id,),
             (cat_requested_id,),
         ],
@@ -1244,6 +1251,44 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+@pytest.mark.parametrize("asset_type", ["metadata", "revocation layer"])
+def test_take_offer_non_cat_asset(
+    capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path], asset_type: str
+) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+    asset_id = bytes32.from_hexstr(next(iter(DEFAULT_CATS)))
+    cat_name = DEFAULT_CATS[asset_id.hex()]["name"]
+
+    class NonCATOfferRpcClient(TestWalletRpcClient):
+        async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+            self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
+            return CATAssetIDToNameResponse(wallet_id=None, name=cat_name)
+
+    test_rpc_clients.wallet_rpc_client = NonCATOfferRpcClient()
+    driver = PuzzleInfo(
+        {"type": "metadata", "metadata": "()", "updater_hash": "0x" + asset_id.hex()}
+        if asset_type == "metadata"
+        else {"type": "revocation layer", "hidden_puzzle_hash": "0x" + asset_id.hex()}
+    )
+    inner_puzzle = Program.to(1)
+    puzzle = construct_puzzle(driver, inner_puzzle)
+    solution = solve_puzzle(driver, Solver({}), inner_puzzle, Program.to([[51, OFFER_MOD_HASH, 1_000_001]]))
+    coin = Coin(get_bytes32(1), puzzle.get_tree_hash(), uint64(1_000_001))
+    offer = Offer(
+        {asset_id: [NotarizedPayment(get_bytes32(2), uint64(1))]},
+        WalletSpendBundle([make_spend(coin, puzzle, solution)], G2Element()),
+        {asset_id: driver},
+    )
+    # Exercise real puzzle matching and offer parsing, mocking only the RPC boundary.
+    output = run_cli_command(
+        capsys, root_dir, ["wallet", "take_offer", offer.to_bech32(), FINGERPRINT_ARG, "--examine-only"]
+    )
+    assert f"    - {asset_type} {asset_id.hex()}: 1000001 mojos" in output
+    assert f"    - {asset_type} {asset_id.hex()}: 1 mojo" in output
+    assert cat_name not in output
+    test_rpc_clients.wallet_rpc_client.check_log({})
 
 
 def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
@@ -1299,11 +1344,8 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
         "150",
     ]
     # these are various things that should be in the output
-    nft_offered_id = bytes32.from_hexstr("6bc2c2a27c0f04b9e1e57933d2efe08f5b9e156652a374436b70c067b03c444c")
     cat_offered_id = bytes32.from_hexstr("06e4136cb7295cec5265c5e49cc32fa69aede779532f2b7542a2456589a53f2f")
     cat_requested_id = bytes32.from_hexstr("13a52e5efb1ee80a24c94b36bbda2b473094353614ced1c2938ba5ef6097431e")
-    nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
-    nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
     assert_list = [
         "Cancelled offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",
     ]
@@ -1314,12 +1356,8 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times)
         ],
         "cat_asset_id_to_name": [
-            (nft_offered_id,),
             (cat_offered_id,),
-            (nft_requested_id_1,),
-            (nft_requested_id_2,),
             (cat_requested_id,),
-            (nft_offered_id,),
             (cat_offered_id,),
         ],
     }
