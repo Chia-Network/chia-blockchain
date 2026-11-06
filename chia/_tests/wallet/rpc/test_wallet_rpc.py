@@ -2230,11 +2230,12 @@ async def test_get_coin_records_by_names(
     missing_coin_ids = set(coin_ids) - set(coin_ids_unspent)
     assert missing_coin_ids
     expected_error = f"Coin ID's: {['0x' + c_id.hex() for c_id in coin_ids if c_id in missing_coin_ids]} not found."
-    for options in ({}, {"allow_missing": False}):
+    for request in (
+        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False),
+        GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, allow_missing=False),
+    ):
         with pytest.raises(ValueError, match=re.escape(expected_error)):
-            await client.get_coin_records_by_names(
-                GetCoinRecordsByNames(names=coin_ids, include_spent_coins=False, **options)
-            )
+            await client.get_coin_records_by_names(request)
     caplog.clear()
     with caplog.at_level(logging.WARNING):
         rpc_result = await client.get_coin_records_by_names(
