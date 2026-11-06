@@ -52,8 +52,12 @@ def validate_decimal_xch(
         fail_func("Value must be decimal dotted value in XCH (e.g. 0.00005)", param, ctx)
     if d_value.is_signed():
         fail_func("Value can not be negative", param, ctx)
-    if d_value % one_decimal_mojo != Decimal(0):  # if there is a remainder, it contains a value smaller than one mojo
-        fail_func("Invalid amount of mojos, Partial mojos (Fractions of a mojo).", param, ctx)
+    try:
+        # if there is a remainder, it contains a value smaller than one mojo
+        if d_value % one_decimal_mojo != Decimal(0):
+            fail_func("Invalid amount of mojos, Partial mojos (Fractions of a mojo).", param, ctx)
+    except InvalidOperation:
+        fail_func("Value is too large", param, ctx)
     return d_value
 
 
