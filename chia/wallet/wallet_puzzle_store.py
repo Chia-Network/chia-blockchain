@@ -164,16 +164,17 @@ class WalletPuzzleStore:
     async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:
         """
         Insert many derivation paths into the database.
+
+        ``used`` is treated as a property of the derivation index. Newly inserted
+        rows inherit ``used=1`` when any existing row at that index is already used,
+        so wallets added later stay aligned with the shared used frontier.
         """
         if len(records) == 0:
             return
         sql_records = []
         for record in records:
             log.debug("Adding derivation record: %s", record)
-            if record.hardened:
-                hardened = 1
-            else:
-                hardened = 0
+            hardened = 1 if record.hardened else 0
             sql_records.append(
                 (
                     record.index,
@@ -181,7 +182,7 @@ class WalletPuzzleStore:
                     record.puzzle_hash.hex(),
                     record.wallet_type,
                     record.wallet_id,
-                    0,
+                    record.index,
                     hardened,
                 ),
             )
@@ -198,7 +199,10 @@ class WalletPuzzleStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
                 await conn.executemany(
-                    "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT OR REPLACE INTO derivation_paths VALUES("
+                    "?, ?, ?, ?, ?, "
+                    "COALESCE((SELECT MAX(used) FROM derivation_paths WHERE derivation_index=?), 0), "
+                    "?)",
                     sql_records,
                 )
             ).close()

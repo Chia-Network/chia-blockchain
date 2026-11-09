@@ -95,6 +95,37 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert (await db.get_window_statistics(1)).maximum_used_index == 249  # type: ignore[union-attr]
 
 
+def get_derivation_record(index: int, wallet_id: int) -> DerivationRecord:
+    seed = bytes32(index.to_bytes(16, "big") + wallet_id.to_bytes(16, "big"))
+    return DerivationRecord(
+        uint32(index),
+        seed,
+        AugSchemeMPL.key_gen(seed).get_g1(),
+        WalletType.STANDARD_WALLET,
+        uint32(wallet_id),
+        False,
+    )
+
+
+@pytest.mark.anyio
+async def test_add_derivation_paths_inherits_used() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletPuzzleStore.create(wrapper)
+        await db.add_derivation_paths([get_derivation_record(i, 1) for i in range(5)])
+        await db.mark_used(uint32(0))
+        await db.mark_used(uint32(2))
+
+        assert await db.get_unused_derivation_path() == 1
+        assert await db.get_used_count(uint32(1)) == 2
+
+        await db.add_derivation_paths([get_derivation_record(i, 2) for i in range(5)])
+
+        assert await db.get_unused_derivation_path() == 1
+        assert await db.get_used_count(uint32(2)) == 2
+        assert (await db.get_window_statistics(2)).maximum_used_index == 2  # type: ignore[union-attr]
+        assert (await db.get_window_statistics(2)).minimum_unused_index == 1  # type: ignore[union-attr]
+
+
 @pytest.mark.anyio
 async def test_window_statistics_wallet_gaps(seeded_random: random.Random) -> None:
     async with DBConnection(1) as wrapper:

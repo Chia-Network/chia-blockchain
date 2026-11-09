@@ -1401,6 +1401,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "reuse_puzhash": False,  # the manual derivation record entry makes this awkward
             "config_overrides": {"automatically_add_unknown_cats": True},
         },
     ],
@@ -1769,14 +1770,13 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework, walle
     assert next_derivation_index is not None
     assert current_derivation_index.index < next_derivation_index.index
 
-    # Test a weird edge case where a new puzzle hash needs to get generated
-    # First, we reset the used status of all puzzle hashes by re-adding them
-    for puzhash in await env.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
-        dr = await env.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
-        assert dr is not None
-        await env.wallet_state_manager.puzzle_store.add_derivation_paths([dr])
+    # When no derivation is marked used, get_cat_puzzle_hash(new=False) should still allocate one
+    async with env.wallet_state_manager.puzzle_store.db_wrapper.writer() as conn:
+        await conn.execute(
+            "UPDATE derivation_paths SET used=0 WHERE wallet_id=?",
+            (env.wallet_aliases["cat"],),
+        )
 
-    # Then we make sure that even though we asked for a used puzzle hash, it still gives us an unused one
-    unused_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
+    used_count = await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
     await cat_wallet.get_cat_puzzle_hash(new=False)
-    assert unused_count < await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
+    assert used_count < await env.wallet_state_manager.puzzle_store.get_used_count(uint32(env.wallet_aliases["cat"]))
