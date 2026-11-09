@@ -5,7 +5,7 @@ import pathlib
 import platform
 import sysconfig
 
-from PyInstaller.utils.hooks import collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules, copy_metadata
 
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
 THIS_IS_MAC = platform.system().lower().startswith("darwin")
@@ -113,6 +113,13 @@ if THIS_IS_WINDOWS:
             "bladebit"
         ),
     ]
+    binaries.extend(collect_dynamic_libs("chiavdf"))
+    # chiavdf's Windows wheel uses delvewheel to bundle MPIR under
+    # site-packages/chiavdf.libs, which is outside the chiavdf package and
+    # therefore isn't found by collect_dynamic_libs(). Place those DLLs beside
+    # _chiavdf.pyd so Windows can load them in the frozen application.
+    chiavdf_dlls = pathlib.Path(sysconfig.get_path("platlib")) / "chiavdf.libs" / "*.dll"
+    binaries.append((chiavdf_dlls, "chiavdf"))
 
 
 datas = []
