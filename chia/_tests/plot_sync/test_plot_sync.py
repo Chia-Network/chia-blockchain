@@ -28,7 +28,7 @@ from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
-from chia.protocols.harvester_protocol import Plot
+from chia.protocols.harvester_protocol import Plot, Plot3
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
@@ -200,8 +200,10 @@ class Environment:
             assert plot is not None
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert equal_param(plot.prover.get_param(), delta.valid.additions[path].param())
-            assert plot.prover.get_id() == delta.valid.additions[path].plot_id
-            assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
+            synced_plot = delta.valid.additions[path]
+            assert plot.prover.get_id() == getattr(synced_plot, "plot_group_id", getattr(synced_plot, "plot_id", None))
+            if not isinstance(synced_plot, Plot3):
+                assert plot.prover.get_compression_level() == synced_plot.compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
             assert plot.pool_contract_puzzle_hash == delta.valid.additions[path].pool_contract_puzzle_hash
             assert plot.plot_public_key == delta.valid.additions[path].plot_public_key
@@ -259,15 +261,21 @@ class Environment:
             assert expected.duplicates_delta.empty()
             for path, plot_info in plot_manager.plots.items():
                 assert str(path) in receiver.plots()
-                assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
-                assert equal_param(plot_info.prover.get_param(), receiver.plots()[str(path)].param())
-                assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
-                assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
-                assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
-                assert plot_info.pool_contract_puzzle_hash == receiver.plots()[str(path)].pool_contract_puzzle_hash
-                assert plot_info.plot_public_key == receiver.plots()[str(path)].plot_public_key
-                assert plot_info.file_size == receiver.plots()[str(path)].file_size
-                assert int(plot_info.time_modified) == receiver.plots()[str(path)].time_modified
+                synced_plot = receiver.plots()[str(path)]
+                assert plot_info.prover.get_filename() == synced_plot.filename
+                assert equal_param(plot_info.prover.get_param(), synced_plot.param())
+                assert plot_info.prover.get_id() == getattr(
+                    synced_plot,
+                    "plot_group_id",
+                    getattr(synced_plot, "plot_id", None),
+                )
+                if not isinstance(synced_plot, Plot3):
+                    assert plot_info.prover.get_compression_level() == synced_plot.compression_level
+                assert plot_info.pool_public_key == synced_plot.pool_public_key
+                assert plot_info.pool_contract_puzzle_hash == synced_plot.pool_contract_puzzle_hash
+                assert plot_info.plot_public_key == synced_plot.plot_public_key
+                assert plot_info.file_size == synced_plot.file_size
+                assert int(plot_info.time_modified) == synced_plot.time_modified
             for path in plot_manager.failed_to_open_filenames:
                 assert str(path) in receiver.invalid()
             for path in plot_manager.no_key_filenames:

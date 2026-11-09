@@ -2433,15 +2433,13 @@ respond_plots2_json: dict[str, Any] = {
 
 plot3_json: dict[str, Any] = {
     "filename": "plot_1",
-    "size": 124,
-    "plot_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
+    "strength": 3,
+    "plot_group_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "file_size": 3368414292564311420,
     "time_modified": 2573238947935295522,
-    "compression_level": 0,
-    "plot_index": 3145,
     "meta_group": 5,
     "group_size": 8,
 }
@@ -2458,7 +2456,18 @@ respond_plots3_json: dict[str, Any] = {
             "file_size": 3368414292564311420,
             "time_modified": 2573238947935295522,
             "compression_level": 0,
-            "plot_index": 3145,
+        }
+    ],
+    "plots2": [
+        {
+            "filename": "plot_1",
+            "strength": 3,
+            "plot_group_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
+            "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+            "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",
+            "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+            "file_size": 3368414292564311420,
+            "time_modified": 2573238947935295522,
             "meta_group": 5,
             "group_size": 8,
         }

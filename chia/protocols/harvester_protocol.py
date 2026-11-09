@@ -179,6 +179,12 @@ class Plot(Streamable):
         else:
             return PlotParam.make_v1(self.size)
 
+    @property
+    def strength(self) -> uint8 | None:
+        if (self.size & 0x80) != 0:
+            return uint8(self.size & 0x7F)
+        return None
+
 
 @streamable
 @dataclass(frozen=True)
@@ -202,25 +208,43 @@ class Plot2(Streamable):
         else:
             return PlotParam.make_v1(self.size)
 
+    @property
+    def strength(self) -> uint8 | None:
+        if (self.size & 0x80) != 0:
+            return uint8(self.size & 0x7F)
+        return None
+
 
 @streamable
 @dataclass(frozen=True)
-class Plot3(Plot2):
-    # Plot2 is the released 0.0.38 layout. Group metadata uses new messages.
+class Plot3(Streamable):
+    # 0.0.39 v2 plot record. V1 plots use Plot in the same inventory message.
+    filename: str
+    strength: uint8
+    plot_group_id: bytes32
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
+    plot_public_key: G1Element
+    file_size: uint64
+    time_modified: uint64
+    meta_group: uint8
     group_size: uint16
+
+    def param(self) -> PlotParam:
+        return PlotParam.make_v2(0, self.meta_group, self.strength)
 
     def to_plot2(self) -> Plot2:
         return Plot2(
             self.filename,
-            self.size,
-            self.plot_id,
+            uint8(0x80 | self.strength),
+            self.plot_group_id,
             self.pool_public_key,
             self.pool_contract_puzzle_hash,
             self.plot_public_key,
             self.file_size,
             self.time_modified,
-            self.compression_level,
-            self.plot_index,
+            None,
+            uint16(0),
             self.meta_group,
         )
 
@@ -250,7 +274,8 @@ class RespondPlots2(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPlots3(Streamable):
-    plots: list[Plot3]
+    plots: list[Plot]
+    plots2: list[Plot3]
     failed_to_open_filenames: list[str]
     no_key_filenames: list[str]
 
@@ -317,11 +342,15 @@ class PlotSyncPlotList2(Streamable):
 @dataclass(frozen=True)
 class PlotSyncPlotList3(Streamable):
     identifier: PlotSyncIdentifier
-    data: list[Plot3]
+    data: list[Plot]
+    data2: list[Plot3]
     final: bool
 
     def __str__(self) -> str:
-        return f"PlotSyncPlotList3: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+        return (
+            f"PlotSyncPlotList3: identifier {self.identifier}, count {len(self.data) + len(self.data2)}, "
+            f"final {self.final}"
+        )
 
 
 @streamable

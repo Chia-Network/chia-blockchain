@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint16, uint32
 from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
@@ -73,8 +73,32 @@ def paginated_plot_request(source: list[Any], request: PaginatedRequestData) -> 
     }
 
 
-def plot_matches_filter(plot: Plot | Plot2 | Plot3, filter_item: FilterItem) -> bool:
-    plot_attribute = getattr(plot, filter_item.key)
+def plot_inventory_field(plot: dict[str, Any], field: str) -> object | None:
+    return plot.get("plot_id" if field == "plot_group_id" else field)
+
+
+def plot_to_harvester_inventory_record(plot: Plot | Plot2 | Plot3) -> dict[str, Any]:
+    strength = plot.strength
+    is_v2 = strength is not None
+    return {
+        "filename": plot.filename,
+        "size": None if is_v2 else getattr(plot, "size", None),
+        "strength": strength,
+        "plot_id": plot.plot_group_id if isinstance(plot, Plot3) else plot.plot_id,
+        "pool_public_key": plot.pool_public_key,
+        "pool_contract_puzzle_hash": plot.pool_contract_puzzle_hash,
+        "plot_public_key": plot.plot_public_key,
+        "file_size": plot.file_size,
+        "time_modified": plot.time_modified,
+        "compression_level": getattr(plot, "compression_level", uint8(0)),
+        "meta_group": (plot.meta_group if is_v2 and isinstance(plot, (Plot2, Plot3)) else uint8(0)),
+        "group_size": plot.group_size if isinstance(plot, Plot3) else uint16(1),
+    }
+
+
+def plot_matches_filter(plot: dict[str, Any], filter_item: FilterItem) -> bool:
+    plot_attribute: object | None
+    plot_attribute = plot_inventory_field(plot, filter_item.key)
     if filter_item.value is None:
         return plot_attribute is None
     else:
@@ -302,7 +326,7 @@ class FarmerRpcApi:
         plot_count: int = 0
         for receiver in self.service.plot_sync_receivers.values():
             plot_count += sum(
-                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
+                plot.group_size if isinstance(plot, Plot3) else 1
                 for plot in receiver.plots().values()
                 if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash
             )
@@ -330,7 +354,10 @@ class FarmerRpcApi:
     async def get_harvester_plots_valid(self, request_dict: dict[str, object]) -> EndpointResult:
         # TODO: Consider having a extra list[PlotInfo] in Receiver to avoid rebuilding the list for each call
         request = PlotInfoRequestData.from_json_dict(request_dict)
-        plot_list = list(self.service.get_receiver(request.node_id).plots().values())
+        plot_list = [
+            plot_to_harvester_inventory_record(plot)
+            for plot in self.service.get_receiver(request.node_id).plots().values()
+        ]
         # Apply filter
         plot_list = [
             plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
@@ -340,7 +367,19 @@ class FarmerRpcApi:
         if request.sort_key in restricted_sort_keys:
             raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
         # Sort by plot_id also by default since its unique
-        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+        sort_field = "plot_id" if request.sort_key == "plot_group_id" else request.sort_key
+        sort_fields = (
+            operator.itemgetter(sort_field, "plot_id")
+            if plot_list and sort_field in plot_list[0]
+            else operator.itemgetter("plot_id")
+        )
+        plots_with_value = [plot for plot in plot_list if plot.get(sort_field) is not None]
+        plots_without_value = [plot for plot in plot_list if plot.get(sort_field) is None]
+        plots_with_value.sort(key=sort_fields, reverse=request.reverse)
+        plots_without_value.sort(key=operator.itemgetter("plot_id"), reverse=request.reverse)
+        plot_list = (
+            [*plots_without_value, *plots_with_value] if request.reverse else [*plots_with_value, *plots_without_value]
+        )
         return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(

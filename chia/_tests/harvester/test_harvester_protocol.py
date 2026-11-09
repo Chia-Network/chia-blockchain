@@ -12,7 +12,9 @@ from chia.protocols.harvester_protocol import (
     Plot3,
     PlotSyncIdentifier,
     PlotSyncPlotList2,
+    PlotSyncPlotList3,
     RespondPlots2,
+    RespondPlots3,
     supports_new_plot_serialization,
     supports_plot_groups,
 )
@@ -41,18 +43,16 @@ def test_old_v2_plot_param_uses_legacy_zero_index_and_meta_group() -> None:
     assert param.meta_group == 0
 
 
-def test_v2_plot3_param_preserves_index_and_meta_group() -> None:
+def test_v2_plot3_param_uses_group_metadata_without_single_index() -> None:
     plot = Plot3(
         filename="v2.gplot",
-        size=uint8(0x80 | 3),
-        plot_id=bytes32.zeros,
+        plot_group_id=bytes32.zeros,
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=None,
         plot_public_key=G1Element(),
         file_size=uint64(0),
         time_modified=uint64(0),
-        compression_level=uint8(0),
-        plot_index=uint16(1234),
+        strength=uint8(3),
         meta_group=uint8(56),
         group_size=uint16(8),
     )
@@ -61,8 +61,9 @@ def test_v2_plot3_param_preserves_index_and_meta_group() -> None:
 
     assert param.size_v1 is None
     assert param.strength_v2 == 3
-    assert param.plot_index == 1234
+    assert param.plot_index == 0
     assert param.meta_group == 56
+    assert plot.strength == 3
 
 
 def test_new_plot_serialization_starts_at_0_0_38() -> None:
@@ -110,15 +111,13 @@ def test_released_0_0_38_inventory_wire_layout(size: int) -> None:
 def test_plot_group_serialization_preserves_plot2_layout() -> None:
     plot = Plot3(
         "group.gplot",
-        uint8(0x83),
+        uint8(3),
         bytes32.zeros,
         None,
         None,
         G1Element(),
         uint64(100),
         uint64(200),
-        uint8(0),
-        uint16(1234),
         uint8(56),
         uint16(8),
     )
@@ -129,12 +128,29 @@ def test_plot_group_serialization_preserves_plot2_layout() -> None:
         + b"\x00\x00"
         + bytes(G1Element())
         + b"\x00\x00\x00\x00\x00\x00\x00\x64"
-        + b"\x00\x00\x00\x00\x00\x00\x00\xc8\x01\x00\x04\xd2\x38"
+        + b"\x00\x00\x00\x00\x00\x00\x00\xc8\x00\x00\x00\x38"
     )
     assert bytes(legacy) == expected
     assert Plot2.from_bytes(expected) == legacy
-    assert legacy.param().plot_index == 1234
+    assert legacy.param().plot_index == 0
     assert legacy.param().meta_group == 56
     assert legacy.param().strength_v2 == 3
-    assert bytes(plot) == expected + b"\x00\x08"
     assert Plot3.from_bytes(bytes(plot)) == plot
+
+    v1_plot = Plot(
+        "v1.plot",
+        uint8(32),
+        bytes32.zeros,
+        None,
+        None,
+        G1Element(),
+        uint64(100),
+        uint64(200),
+        uint8(0),
+    )
+    inventory = RespondPlots3([v1_plot], [plot], [], [])
+    assert RespondPlots3.from_bytes(bytes(inventory)) == inventory
+
+    identifier = PlotSyncIdentifier(uint64(1), uint64(2), uint64(3))
+    loaded = PlotSyncPlotList3(identifier, [v1_plot], [plot], True)
+    assert PlotSyncPlotList3.from_bytes(bytes(loaded)) == loaded

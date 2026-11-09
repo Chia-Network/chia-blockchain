@@ -52,9 +52,9 @@ Public farmer/RPC docs expose harvester plot lists as if they are current invent
 
 ## Data Contracts
 
-- Inventory has three wire layouts: legacy `Plot`, the released `0.0.38` `Plot2`, and `0.0.39` `Plot3` with `group_size`. The sender selects loaded-message types from the farmer's advertised version; the receiver accepts all three. Keep `Plot2` and its message IDs unchanged when extending group metadata.
+- Inventory has three wire layouts: legacy `Plot`, the released `0.0.38` `Plot2`, and `0.0.39` `Plot3` with `group_size` and no single `plot_index`. In `0.0.39`, `RespondPlots3` and `PlotSyncPlotList3` carry separate v1 `Plot` and v2 `Plot3` lists. `Plot3` represents only v2 plots, so the v1 list can be removed after v1 plot phase-out. The sender selects loaded-message types from the farmer's advertised version; the receiver accepts all three. Keep `Plot2` and its message IDs unchanged when extending group metadata.
 - `Plot.filename` is the dictionary key on the farmer side. Path normalization changes affect duplicate detection, removals, RPC sorting/filtering, and signature/proof correlation elsewhere in farmer-harvester code.
-- `Plot.size` is compatibility-packed: v1 plots use k-size; v2 plots set the high bit and store strength in the low bits. `Plot.param()` reconstructs `PlotParam` from the source-owned v2 plot index/meta group policy.
+- Legacy `Plot.size` and released `Plot2.size` are compatibility-packed: v1 plots use k-size; v2 plots set the high bit and store strength in the low bits. `Plot3` carries v2 `strength`, `plot_group_id`, `meta_group`, and `group_size` directly; it omits v1 compression metadata. `Plot.param()` reconstructs `PlotParam` from the source-owned v2 plot index/meta group policy.
 - Effective plot size is recomputed by the receiver with `_expected_plot_size(plot.param(), constants)` and `UI_ACTUAL_SPACE_CONSTANT_FACTOR`, so `Receiver` needs consensus constants even though plot sync itself is not consensus validation.
 - `Delta` is a reporting/commit artifact, not a standalone operation log. For path lists, removals are computed by comparing the previous committed list against the new synced list at `done`.
 

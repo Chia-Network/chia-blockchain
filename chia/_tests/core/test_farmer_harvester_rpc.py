@@ -30,6 +30,7 @@ from chia.farmer.farmer_rpc_api import (
     PlotInfoRequestData,
     PlotPathRequestData,
     plot_matches_filter,
+    plot_to_harvester_inventory_record,
 )
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.farmer.farmer_service import FarmerService
@@ -325,7 +326,19 @@ async def test_pool_state_counts_v2_group_members() -> None:
     other_pool_hash = bytes32.random()
     group = Plot3(
         filename="group.gplot",
-        size=uint8(0x83),
+        plot_group_id=bytes32.random(),
+        pool_public_key=None,
+        pool_contract_puzzle_hash=pool_hash,
+        plot_public_key=G1Element(),
+        file_size=uint64(0),
+        time_modified=uint64(0),
+        strength=uint8(3),
+        meta_group=uint8(0),
+        group_size=uint16(8),
+    )
+    v1_plot = Plot(
+        filename="v1.plot",
+        size=uint8(32),
         plot_id=bytes32.random(),
         pool_public_key=None,
         pool_contract_puzzle_hash=pool_hash,
@@ -333,11 +346,7 @@ async def test_pool_state_counts_v2_group_members() -> None:
         file_size=uint64(0),
         time_modified=uint64(0),
         compression_level=uint8(0),
-        plot_index=uint16(0),
-        meta_group=uint8(0),
-        group_size=uint16(8),
     )
-    v1_plot = dataclasses.replace(group, filename="v1.plot", size=uint8(32))
     receiver = Mock(spec=Receiver)
     receiver.plots.return_value = {
         "group.gplot": group,
@@ -368,7 +377,8 @@ async def test_pool_state_counts_v2_group_members() -> None:
     ],
 )
 def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
-    assert plot_matches_filter(dummy_plot("123"), filter_item) == match
+    plot = plot_to_harvester_inventory_record(dummy_plot("123"))
+    assert plot_matches_filter(plot, filter_item) == match
 
 
 @pytest.mark.parametrize(
@@ -392,8 +402,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
         ),
         (
             FarmerRpcClient.get_harvester_plots_valid,
-            [FilterItem("size", "130")],  # 127 means v2 plot, 2 means strength
-            "size",
+            [FilterItem("strength", "2")],
+            "strength",
             True,
             23,
         ),
@@ -479,8 +489,12 @@ async def test_farmer_get_harvester_plots_endpoints(
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
             assert isinstance(filter_item, FilterItem)
-            plots = [plot for plot in plots if plot_matches_filter(Plot.from_json_dict(plot), filter_item)]
-        plots.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
+            plots = [plot for plot in plots if plot_matches_filter(plot, filter_item)]
+        plots_with_value = [plot for plot in plots if plot[sort_key] is not None]
+        plots_without_value = [plot for plot in plots if plot[sort_key] is None]
+        plots_with_value.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
+        plots_without_value.sort(key=operator.itemgetter("plot_id"), reverse=reverse)
+        plots = [*plots_without_value, *plots_with_value] if reverse else [*plots_with_value, *plots_without_value]
     else:
         for filter_item in filtering:
             plots = [plot for plot in plots if filter_item in plot]

@@ -184,23 +184,23 @@ class Harvester:
                 if isinstance(prover, V1Prover):
                     param = prover.get_param()
                     assert param.size_v1 is not None
-                    k = uint8(param.size_v1)
+                    size = uint8(param.size_v1)
                     plot_id = prover.get_id()
-                    plot_index = uint16(0)
+                    strength = None
                     meta_group = uint8(0)
                     group_size = uint16(1)
                 else:
                     assert isinstance(prover, V2Prover)
-                    k = uint8(0x80 | prover.get_strength())
+                    size = None
                     plot_id = prover.get_id()
-                    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
-                    plot_index = uint16(0)
+                    strength = prover.get_strength()
                     meta_group = prover.get_meta_group()
                     group_size = prover.get_group_size()
                 response_plots.append(
                     {
                         "filename": str(path),
-                        "size": k,
+                        "size": size,
+                        "strength": strength,
                         "plot_id": plot_id,
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
@@ -208,7 +208,6 @@ class Harvester:
                         "file_size": plot_info.file_size,
                         "time_modified": int(plot_info.time_modified),
                         "compression_level": prover.get_compression_level(),
-                        "plot_index": plot_index,
                         "meta_group": meta_group,
                         "group_size": group_size,
                     }

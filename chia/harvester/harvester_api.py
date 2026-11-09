@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
@@ -20,7 +20,7 @@ from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot3, PlotSyncResponse
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, Plot2, Plot3, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -573,12 +573,49 @@ class HarvesterAPI:
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
-            plots_response3: list[Plot3] = []
+            plots_response3_v1: list[Plot] = []
+            plots_response3_v2: list[Plot3] = []
             for plot in plots:
-                plots_response3.append(
-                    Plot3(
+                if plot["strength"] is None:
+                    assert plot["size"] is not None
+                    plots_response3_v1.append(
+                        Plot(
+                            plot["filename"],
+                            plot["size"],
+                            plot["plot_id"],
+                            plot["pool_public_key"],
+                            plot["pool_contract_puzzle_hash"],
+                            plot["plot_public_key"],
+                            plot["file_size"],
+                            plot["time_modified"],
+                            plot["compression_level"],
+                        )
+                    )
+                else:
+                    plots_response3_v2.append(
+                        Plot3(
+                            plot["filename"],
+                            plot["strength"],
+                            plot["plot_id"],
+                            plot["pool_public_key"],
+                            plot["pool_contract_puzzle_hash"],
+                            plot["plot_public_key"],
+                            plot["file_size"],
+                            plot["time_modified"],
+                            plot["meta_group"],
+                            plot["group_size"],
+                        )
+                    )
+            if harvester_protocol.supports_plot_groups(peer.protocol_version):
+                response3 = harvester_protocol.RespondPlots3(
+                    plots_response3_v1, plots_response3_v2, failed_to_open_filenames, no_key_filenames
+                )
+                return make_msg(ProtocolMessageTypes.respond_plots3, response3)
+            response2 = harvester_protocol.RespondPlots2(
+                [
+                    Plot2(
                         plot["filename"],
-                        plot["size"],
+                        plot["size"] if plot["strength"] is None else uint8(0x80 | plot["strength"]),
                         plot["plot_id"],
                         plot["pool_public_key"],
                         plot["pool_contract_puzzle_hash"],
@@ -586,27 +623,26 @@ class HarvesterAPI:
                         plot["file_size"],
                         plot["time_modified"],
                         plot["compression_level"],
-                        plot["plot_index"],
+                        uint16(0),
                         plot["meta_group"],
-                        plot["group_size"],
                     )
-                )
-            if harvester_protocol.supports_plot_groups(peer.protocol_version):
-                response3 = harvester_protocol.RespondPlots3(
-                    plots_response3, failed_to_open_filenames, no_key_filenames
-                )
-                return make_msg(ProtocolMessageTypes.respond_plots3, response3)
-            response2 = harvester_protocol.RespondPlots2(
-                [plot.to_plot2() for plot in plots_response3], failed_to_open_filenames, no_key_filenames
+                    for plot in plots
+                ],
+                failed_to_open_filenames,
+                no_key_filenames,
             )
             return make_msg(ProtocolMessageTypes.respond_plots2, response2)
 
         plots_response: list[Plot] = []
         for plot in plots:
+            size = plot["size"]
+            if plot["strength"] is not None:
+                size = uint8(0x80 | plot["strength"])
+            assert size is not None
             plots_response.append(
                 Plot(
                     plot["filename"],
-                    plot["size"],
+                    size,
                     plot["plot_id"],
                     plot["pool_public_key"],
                     plot["pool_contract_puzzle_hash"],

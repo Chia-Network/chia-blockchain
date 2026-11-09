@@ -231,7 +231,13 @@ class Receiver:
     async def _process_loaded(self, plot_infos: PlotSyncPlotList | PlotSyncPlotList2 | PlotSyncPlotList3) -> None:
         self._validate_identifier(plot_infos.identifier)
 
-        for plot_info in plot_infos.data:
+        loaded_plots: Sequence[Plot | Plot2 | Plot3]
+        if isinstance(plot_infos, PlotSyncPlotList3):
+            loaded_plots = (*plot_infos.data, *plot_infos.data2)
+        else:
+            loaded_plots = plot_infos.data
+
+        for plot_info in loaded_plots:
             if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
                 raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
             self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
@@ -366,7 +372,7 @@ class Receiver:
         def effective_plot_size(plot: Plot | Plot2 | Plot3) -> float:
             plot_param = plot.param()
             size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
-            if isinstance(plot, Plot3) and plot_param.strength_v2 is not None:
+            if isinstance(plot, Plot3):
                 size *= plot.group_size
             return size
 
@@ -395,10 +401,7 @@ class Receiver:
                 "port": self._connection.peer_info.port,
             },
             "plots": get_list_or_len(list(self._plots.values()), counts_only),
-            "plot_count": sum(
-                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
-                for plot in self._plots.values()
-            ),
+            "plot_count": sum(plot.group_size if isinstance(plot, Plot3) else 1 for plot in self._plots.values()),
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),

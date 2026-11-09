@@ -24,7 +24,13 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
-from chia.plot_sync.sender import Sender, _convert_plot_info_list, _convert_plot_info_list2, _convert_plot_info_list3
+from chia.plot_sync.sender import (
+    Sender,
+    _convert_plot_info_list,
+    _convert_plot_info_list2,
+    _convert_plot_info_list3,
+    _convert_plot_info_list3_v1,
+)
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
@@ -100,9 +106,13 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     response = await HarvesterAPI(harvester).request_plots(RequestPlots(), peer)
     inventory: RespondPlots | RespondPlots2 | RespondPlots3
     synced_plots: Sequence[Plot | Plot2 | Plot3]
+    synced_v1_plots: list[Plot] = []
+    synced_v2_plots: list[Plot3] = []
     if version == "0.0.39":
         inventory = RespondPlots3.from_bytes(response.data)
-        synced_plots = _convert_plot_info_list3(plot_infos)
+        synced_v1_plots = _convert_plot_info_list3_v1(plot_infos)
+        synced_v2_plots = _convert_plot_info_list3(plot_infos)
+        synced_plots = [*synced_v1_plots, *synced_v2_plots]
         expected_response_type = ProtocolMessageTypes.respond_plots3
         expected_sync_type = ProtocolMessageTypes.plot_sync_loaded3
     elif version == "0.0.38":
@@ -116,7 +126,12 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
         expected_response_type = ProtocolMessageTypes.respond_plots
         expected_sync_type = ProtocolMessageTypes.plot_sync_loaded
     assert response.type == expected_response_type.value
-    assert inventory.plots == synced_plots
+    if version == "0.0.39":
+        assert isinstance(inventory, RespondPlots3)
+        assert inventory.plots == synced_v1_plots
+        assert inventory.plots2 == synced_v2_plots
+    else:
+        assert inventory.plots == synced_plots
     decoder = FarmerApiStub.metadata.message_type_to_request[expected_response_type].message_class
     assert decoder.from_bytes(response.data) == inventory
 
@@ -161,7 +176,10 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
         * (group_size if version == "0.0.39" else 1)
     )
     if version == "0.0.39":
-        assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [1, group_size]
+        assert [plot.group_size if isinstance(plot, Plot3) else 1 for plot in receiver.to_dict()["plots"]] == [
+            1,
+            group_size,
+        ]
 
 
 class SyncStepData:

@@ -41,26 +41,27 @@ from chia.util.task_referencer import create_referenced_task
 log = logging.getLogger(__name__)
 
 
-def _plot_fields(plot_info: PlotInfo) -> tuple[uint8, uint16, uint8]:
+def _plot_fields(plot_info: PlotInfo) -> tuple[uint8 | None, uint8 | None, uint8]:
     if isinstance(plot_info.prover, V1Prover):
         param = plot_info.prover.get_param()
         assert param.size_v1 is not None
-        return param.size_v1, uint16(0), uint8(0)
+        return param.size_v1, None, uint8(0)
 
     assert isinstance(plot_info.prover, V2Prover)
-    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
-    return uint8(0x80 | plot_info.prover.get_strength()), uint16(0), plot_info.prover.get_meta_group()
+    return None, plot_info.prover.get_strength(), plot_info.prover.get_meta_group()
 
 
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
-        k, _plot_index, _meta_group = _plot_fields(plot_info)
+        size, strength, _meta_group = _plot_fields(plot_info)
+        legacy_size = size if strength is None else uint8(0x80 | strength)
+        assert legacy_size is not None
 
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=uint8(k),
+                size=legacy_size,
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
@@ -74,23 +75,15 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
 
 
 def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
-    return [plot.to_plot2() for plot in _convert_plot_info_list3(plot_infos)]
-
-
-def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
-    converted: list[Plot3] = []
+    converted: list[Plot2] = []
     for plot_info in plot_infos:
-        k, plot_index, meta_group = _plot_fields(plot_info)
-        group_size: uint16
-        if isinstance(plot_info.prover, V2Prover):
-            group_size = plot_info.prover.get_group_size()
-        else:
-            group_size = uint16(1)
-
+        size, strength, meta_group = _plot_fields(plot_info)
+        legacy_size = size if strength is None else uint8(0x80 | strength)
+        assert legacy_size is not None
         converted.append(
-            Plot3(
+            Plot2(
                 filename=plot_info.prover.get_filename(),
-                size=k,
+                size=legacy_size,
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
@@ -98,9 +91,37 @@ def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(plot_info.time_modified),
                 compression_level=plot_info.prover.get_compression_level(),
-                plot_index=plot_index,
+                plot_index=uint16(0),
                 meta_group=meta_group,
-                group_size=group_size,
+            )
+        )
+    return converted
+
+
+def _convert_plot_info_list3_v1(plot_infos: list[PlotInfo]) -> list[Plot]:
+    return _convert_plot_info_list([plot_info for plot_info in plot_infos if isinstance(plot_info.prover, V1Prover)])
+
+
+def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
+    converted: list[Plot3] = []
+    for plot_info in plot_infos:
+        if not isinstance(plot_info.prover, V2Prover):
+            continue
+        size, strength, meta_group = _plot_fields(plot_info)
+        assert size is None and strength is not None
+
+        converted.append(
+            Plot3(
+                filename=plot_info.prover.get_filename(),
+                strength=strength,
+                plot_group_id=plot_info.prover.get_id(),
+                pool_public_key=plot_info.pool_public_key,
+                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                plot_public_key=plot_info.plot_public_key,
+                file_size=uint64(plot_info.file_size),
+                time_modified=uint64(plot_info.time_modified),
+                meta_group=meta_group,
+                group_size=plot_info.prover.get_group_size(),
             )
         )
     return converted
@@ -338,8 +359,15 @@ class Sender:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
             if self._connection is not None and supports_plot_groups(self._connection.protocol_version):
-                converted3 = _convert_plot_info_list3(loaded)
-                self._add_message(ProtocolMessageTypes.plot_sync_loaded3, PlotSyncPlotList3, converted3, remaining == 0)
+                converted3_v1 = _convert_plot_info_list3_v1(loaded)
+                converted3_v2 = _convert_plot_info_list3(loaded)
+                self._add_message(
+                    ProtocolMessageTypes.plot_sync_loaded3,
+                    PlotSyncPlotList3,
+                    converted3_v1,
+                    converted3_v2,
+                    remaining == 0,
+                )
             elif self._connection is not None and supports_new_plot_serialization(self._connection.protocol_version):
                 converted2 = _convert_plot_info_list2(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded2, PlotSyncPlotList2, converted2, remaining == 0)
