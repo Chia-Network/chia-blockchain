@@ -12,7 +12,7 @@ import pathlib
 import ssl
 import subprocess
 import sys
-from collections.abc import Awaitable, Callable, Collection, Iterator
+from collections.abc import Awaitable, Callable, Collection, Generator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
@@ -56,7 +56,7 @@ class GcMode(enum.Enum):
 
 
 @contextlib.contextmanager
-def manage_gc(mode: GcMode) -> Iterator[None]:
+def manage_gc(mode: GcMode) -> Generator[None, None, None]:
     if mode == GcMode.nothing:
         yield
     elif mode == GcMode.precollect:
@@ -184,7 +184,7 @@ def measure_runtime(
     gc_mode: GcMode = GcMode.disable,
     overhead: float | None = None,
     print_results: bool = True,
-) -> Iterator[Future[RuntimeResults]]:
+) -> Generator[Future[RuntimeResults], None, None]:
     entry_file, entry_line = caller_file_and_line(
         relative_to=(
             pathlib.Path(chia.__file__).parent.parent,
@@ -375,14 +375,14 @@ class BenchmarkRunner:
 
 
 @contextlib.contextmanager
-def assert_rpc_error(error: str) -> Iterator[None]:
+def assert_rpc_error(error: str) -> Generator[None, None, None]:
     with pytest.raises(ValueError) as exception_info:
         yield
     assert error in exception_info.value.args[0]["error"]
 
 
 @contextlib.contextmanager
-def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Iterator[subprocess.Popen[Any]]:
+def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Generator[subprocess.Popen[Any], None, None]:
     environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
 
     with subprocess.Popen(args=args, env=environment) as process:
@@ -662,7 +662,7 @@ def patch_request_handler(
     api: ApiProtocol | type[ApiProtocol],
     handler: Callable[..., Awaitable[Message | None]],
     request_type: ProtocolMessageTypes | None = None,
-) -> Iterator[None]:
+) -> Generator[None, None, None]:
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]
 

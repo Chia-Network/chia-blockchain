@@ -5,7 +5,7 @@ import logging
 import signal
 import sys
 import traceback
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
@@ -338,7 +338,7 @@ class DNSServer:
             log.exception("Error initializing asyncresolver for dns_server")
 
     @asynccontextmanager
-    async def run(self) -> AsyncIterator[None]:
+    async def run(self) -> AsyncGenerator[None, None]:
         log.warning("Starting DNS server.")
         # Get a reference to the event loop as we plan to use low-level APIs.
         loop = asyncio.get_running_loop()

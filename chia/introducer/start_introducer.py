@@ -11,7 +11,7 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.introducer.introducer_service import IntroducerService
 from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import Service, async_run
+from chia.service.start_service import Service, async_run
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path

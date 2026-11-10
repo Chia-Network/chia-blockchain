@@ -5,7 +5,7 @@ import contextlib
 import signal
 import sys
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, cast
 
@@ -43,7 +43,7 @@ class CreateServiceProtocol(Protocol):
         port: uint16,
         root_path: Path,
         net_config: dict[str, Any],
-    ) -> AsyncIterator[RpcClient]:
+    ) -> AsyncGenerator[RpcClient, None]:
         yield cast(RpcClient, None)  # pragma: no cover
 
 

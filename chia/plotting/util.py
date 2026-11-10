@@ -198,7 +198,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
             import glob
 
             v1_file_strs = glob.glob(str(directory / "**" / "*.plot"), recursive=True)
-            v2_file_strs = glob.glob(str(directory / "**" / "*.plot2"), recursive=True)
+            v2_file_strs = glob.glob(str(directory / "**" / "*.gplot"), recursive=True)
 
             for file in v1_file_strs + v2_file_strs:
                 filepath = Path(file).resolve()
@@ -210,7 +210,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                 child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")
             ]
             v2_files: list[Path] = [
-                child for child in glob_function("*.plot2") if child.is_file() and not child.name.startswith("._")
+                child for child in glob_function("*.gplot") if child.is_file() and not child.name.startswith("._")
             ]
             all_files = v1_files + v2_files
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
@@ -263,35 +263,21 @@ def stream_plot_info_ph(
     return data
 
 
-def find_duplicate_plot_IDs(all_filenames=None) -> None:
-    if all_filenames is None:
-        all_filenames = []
-    plot_ids_set = set()
-    duplicate_plot_ids = set()
-    all_filenames_str: list[str] = []
+def find_duplicate_plot_IDs(all_filenames: list[Path]) -> None:
+    """Report files with the same embedded V1 plot ID or V2 group ID."""
+    from chia.plotting.prover import get_prover_from_file
 
+    plots_by_id: dict[bytes32, list[Path]] = {}
     for filename in all_filenames:
-        filename_str: str = str(filename)
-        all_filenames_str.append(filename_str)
-        filename_parts: list[str] = filename_str.split("-")
-        plot_id: str = filename_parts[-1]
-        # Skipped parsing and verifying plot ID for faster performance
-        # Skipped checking K size for faster performance
-        # Only checks end of filenames: 64 char plot ID + .plot = 69 characters
-        if len(plot_id) == 69:
-            if plot_id in plot_ids_set:
-                duplicate_plot_ids.add(plot_id)
-            else:
-                plot_ids_set.add(plot_id)
-        else:
-            log.warning(f"{filename} does not end with -[64 char plot ID].plot")
+        try:
+            prover = get_prover_from_file(str(filename))
+            plots_by_id.setdefault(prover.get_id(), []).append(filename)
+        except Exception as e:
+            log.warning(f"Unable to inspect plot {filename} for duplicates: {e}")
 
-    for plot_id in duplicate_plot_ids:
-        log_message: str = plot_id + " found in multiple files:\n"
-        duplicate_filenames: list[str] = [filename_str for filename_str in all_filenames_str if plot_id in filename_str]
-        for filename_str in duplicate_filenames:
-            log_message += "\t" + filename_str + "\n"
-        log.warning(f"{log_message}")
+    for plot_id, paths in plots_by_id.items():
+        if len(paths) > 1:
+            log.warning("%s found in multiple files:\n%s", plot_id, "\n".join(f"\t{path}" for path in paths))
 
 
 def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
@@ -304,3 +290,15 @@ def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
         )
     elif k < 25 and override_k:
         raise ValueError("Error: The minimum k size allowed from the cli is k=25.")
+
+
+def validate_v2_plot_params(
+    *,
+    strength: int,
+    min_strength: int,
+    max_strength: int,
+) -> None:
+    if strength < min_strength or strength > max_strength:
+        raise ValueError(
+            f"Plot strength must be between {min_strength} and {max_strength} (inclusive), got {strength}."
+        )

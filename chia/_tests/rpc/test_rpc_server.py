@@ -6,7 +6,7 @@ import dataclasses
 import json
 import logging
 import ssl
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from unittest.mock import AsyncMock, MagicMock
@@ -101,7 +101,7 @@ class Client:
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def managed(cls, ssl_context: ssl.SSLContext, url: str) -> AsyncIterator[Client]:
+    async def managed(cls, ssl_context: ssl.SSLContext, url: str) -> AsyncGenerator[Client, None]:
         async with aiohttp.ClientSession() as session:
             yield cls(session=session, ssl_context=ssl_context, url=url)
 

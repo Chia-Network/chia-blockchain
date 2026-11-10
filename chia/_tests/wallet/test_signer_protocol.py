@@ -26,7 +26,6 @@ from chia.cmds.signer import (
     SPIn,
     SPOut,
 )
-from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -70,6 +69,7 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
+from chia.wallet.util.rpc_marshal import ALL_TRANSLATION_LAYERS
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_request_types import (
     ApplySignatures,

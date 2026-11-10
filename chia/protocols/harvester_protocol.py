@@ -16,10 +16,15 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 NEW_PLOT_SERIALIZATION_VERSION = Version("0.0.38")
+PLOT_GROUP_SERIALIZATION_VERSION = Version("0.0.39")
 
 
 def supports_new_plot_serialization(version: Version) -> bool:
     return version >= NEW_PLOT_SERIALIZATION_VERSION
+
+
+def supports_plot_groups(version: Version) -> bool:
+    return version >= PLOT_GROUP_SERIALIZATION_VERSION
 
 
 @streamable
@@ -99,7 +104,7 @@ class PartialProofsData(Streamable):
     plot_index: uint16
     meta_group: uint8
     strength: uint8
-    plot_id: bytes32
+    plot_group_id: bytes32
     pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
@@ -200,6 +205,28 @@ class Plot2(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class Plot3(Plot2):
+    # Plot2 is the released 0.0.38 layout. Group metadata uses new messages.
+    group_size: uint16
+
+    def to_plot2(self) -> Plot2:
+        return Plot2(
+            self.filename,
+            self.size,
+            self.plot_id,
+            self.pool_public_key,
+            self.pool_contract_puzzle_hash,
+            self.plot_public_key,
+            self.file_size,
+            self.time_modified,
+            self.compression_level,
+            self.plot_index,
+            self.meta_group,
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class RequestPlots(Streamable):
     pass
 
@@ -216,6 +243,14 @@ class RespondPlots(Streamable):
 @dataclass(frozen=True)
 class RespondPlots2(Streamable):
     plots: list[Plot2]
+    failed_to_open_filenames: list[str]
+    no_key_filenames: list[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondPlots3(Streamable):
+    plots: list[Plot3]
     failed_to_open_filenames: list[str]
     no_key_filenames: list[str]
 
@@ -276,6 +311,17 @@ class PlotSyncPlotList2(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncPlotList2: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+
+
+@streamable
+@dataclass(frozen=True)
+class PlotSyncPlotList3(Streamable):
+    identifier: PlotSyncIdentifier
+    data: list[Plot3]
+    final: bool
+
+    def __str__(self) -> str:
+        return f"PlotSyncPlotList3: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
 @streamable

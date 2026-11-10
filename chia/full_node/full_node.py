@@ -10,7 +10,7 @@ import random
 import sqlite3
 import time
 import traceback
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TextIO, cast, final
@@ -50,6 +50,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.generator_validation import validate_generator_root
 from chia.consensus.get_block_challenge import (
     post_hard_fork2,
     post_hard_fork2_block_record,
@@ -101,7 +102,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -258,7 +258,7 @@ class FullNode:
         )
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
@@ -1501,10 +1501,6 @@ class FullNode:
             nonlocal first_batch, blockchain, fork_info
             peer, blocks = item
 
-            # Keep the augmented chain's MMR snapshot aligned with the
-            # underlying blockchain before validating each fetched batch.
-            blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
-
             # skip_blocks is only relevant at the start of the sync,
             # to skip blocks we already have in the database (and have
             # been validated). Once we start validating blocks, we
@@ -1718,9 +1714,22 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
-        # Keep the augmented chain's MMR snapshot aligned with the underlying
-        # blockchain between batches.
-        blockchain.mmr_manager = self.blockchain.mmr_manager.copy()
+        # callers keep fork_info across batches but release the chain lock
+        # between them, so a reorg may have replaced the fork point. fail
+        # rather than roll back to a stale fork height
+        if fork_info.fork_height >= 0:
+            if len(fork_info.block_hashes) == 0:
+                fork_hash = fork_info.peak_hash
+            else:
+                first_fork_block = await self.blockchain.get_block_record_from_db(fork_info.block_hashes[0])
+                assert first_fork_block is not None
+                fork_hash = first_fork_block.prev_hash
+            if self.blockchain.height_to_hash(uint32(fork_info.fork_height)) != fork_hash:
+                self.log.warning(
+                    f"fork point {fork_hash.hex()} at height {fork_info.fork_height} is no longer canonical, "
+                    f"failing batch from {peer_info}"
+                )
+                return False, None
 
         pre_validate_start = time.monotonic()
         blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
@@ -2336,9 +2345,17 @@ class FullNode:
                 # If the block arrived with a generator, reject it if it doesn't match generator_root
                 # before replacing it with the cached one.
                 incoming_generator = get_transactions_generator_bytes(block)
-                if (
-                    incoming_generator is not None
-                    and std_hash(incoming_generator) != block.transactions_info.generator_root
+                if incoming_generator is not None and not validate_generator_root(
+                    incoming_generator,
+                    block.transactions_info.generator_root,
+                    self.constants,
+                    pre_sp_tx_block_height(
+                        constants=self.constants,
+                        blocks=self.blockchain,
+                        prev_b_hash=block.prev_header_hash,
+                        sp_index=block.reward_chain_block.signage_point_index,
+                        finished_sub_slots=len(block.finished_sub_slots),
+                    ),
                 ):
                     raise ConsensusError(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
                 block = block.replace(
@@ -2643,7 +2660,7 @@ class FullNode:
         finished_sub_slots = unfinished_block_sub_slots(self.constants, self.blockchain, block, sub_slot_iters)
 
         # Count the blocks in sub slot, and check if it's a new epoch
-        if len(block.finished_sub_slots) > 0:
+        if finished_sub_slots > 0:
             num_blocks_in_ss = 1  # Curr
         else:
             curr = self.blockchain.try_block_record(block.prev_header_hash)
@@ -2653,7 +2670,6 @@ class FullNode:
                 num_blocks_in_ss += 1
 
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
-            # TODO: potentially allow overflow blocks here, which count for the next slot
             self.log.warning("Too many blocks added, not adding block")
             return None
 

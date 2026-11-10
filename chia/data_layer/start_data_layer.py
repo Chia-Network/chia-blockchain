@@ -17,7 +17,7 @@ from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
 from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.service.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import apply_config_cli_overrides, load_config

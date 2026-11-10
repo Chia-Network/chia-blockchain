@@ -12,6 +12,7 @@ from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     SlotChallengeData,
@@ -23,7 +24,6 @@ from chia.consensus.challenge_tree import (
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 
 

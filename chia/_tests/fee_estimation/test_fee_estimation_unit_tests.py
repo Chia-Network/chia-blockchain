@@ -7,9 +7,10 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolItemInfo
-from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP
+from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP, STORED_FEE_RATE_SCALE
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.fee_tracker import get_bucket_index, init_buckets
+from chia.full_node.fee_tracker import BucketResult, EstimateResult, get_bucket_index, init_buckets
+from chia.protocols.fee_estimate import fee_rate_v2_to_v1
 from chia.types.fee_rate import FeeRateV2
 from chia.util.math import make_monotonically_decreasing
 
@@ -83,6 +84,57 @@ def test_steady_fee_pressure() -> None:
     for idx, es_after in enumerate(estimates_after):
         assert abs(es_after.mojos_per_clvm_cost - estimates_during[idx].mojos_per_clvm_cost) < 0.001
         assert es_after.mojos_per_clvm_cost == block_estimates[idx].mojos_per_clvm_cost
+    # Index 10 asks about 400 seconds ahead. These blocks paid 2 mojos per cost.
+    true_rate = fee / cost
+    assert estimates_after[10].mojos_per_clvm_cost == pytest.approx(true_rate, rel=0.05)
+
+
+def test_quote_uses_one_division() -> None:
+    """A stored rate is mojos per STORED_FEE_RATE_SCALE cost. Publishing divides once."""
+    assert STORED_FEE_RATE_SCALE == 1000
+    estimator = create_bitcoin_fee_estimator(uint64(1_000_000))
+    smart = estimator.fee_rate_estimator
+    buckets = smart.fee_tracker.buckets
+    empty = BucketResult(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+    # A real rate of 5 is stored as 5,000. Five is also the full-mempool minimum.
+    median_result = EstimateResult(uint64(40), empty, empty, 5 * STORED_FEE_RATE_SCALE)
+    published = smart.estimate_result_to_fee_estimate(median_result)
+    assert published.error is None
+    assert published.estimated_fee_rate.mojos_per_clvm_cost == pytest.approx(5.0)
+    send_xch_cost = 9_401_710
+    # 47,008,550 mojos is 5 per cost times the desktop send cost, 9,401,710.
+    assert int(published.estimated_fee_rate.mojos_per_clvm_cost * send_xch_cost) == 47_008_550
+    assert fee_rate_v2_to_v1(published.estimated_fee_rate).mojos_per_clvm_cost == 5
+
+    # The wallet protocol still rounds a positive fraction up to 1 mojo per cost.
+    fraction = smart.estimate_result_to_fee_estimate(
+        EstimateResult(uint64(40), empty, empty, 0.2 * STORED_FEE_RATE_SCALE)
+    )
+    assert fraction.error is None
+    assert fraction.estimated_fee_rate.mojos_per_clvm_cost == pytest.approx(0.2)
+    assert fee_rate_v2_to_v1(fraction.estimated_fee_rate).mojos_per_clvm_cost == 1
+
+    # The tracker records the edge below the failing bucket. The suggestion is one above it.
+    failing_index = 5
+    assert get_bucket_index(buckets, buckets[failing_index - 1]) + 3 == failing_index + 1
+    fail_result = EstimateResult(
+        uint64(40),
+        empty,
+        BucketResult(buckets[failing_index - 1], buckets[failing_index], 0.0, 0.0, 0.0, 0.0),
+        -1.0,
+    )
+    published_fail = smart.estimate_result_to_fee_estimate(fail_result)
+    assert published_fail.error is None
+    assert published_fail.estimated_fee_rate.mojos_per_clvm_cost == pytest.approx(
+        buckets[failing_index + 1] / STORED_FEE_RATE_SCALE
+    )
+
+    # start 0 is what the tracker writes when the first bucket fails.
+    no_data = EstimateResult(uint64(40), empty, empty, -1.0)
+    published_none = smart.estimate_result_to_fee_estimate(no_data)
+    assert published_none.error == "Not enough data"
+    assert published_none.estimated_fee_rate.mojos_per_clvm_cost == 0
 
 
 def test_init_buckets() -> None:

@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Generator
 from typing import Any
 
 
@@ -148,7 +148,7 @@ class TaskPipeline:
                 await fail_task
 
     @contextlib.contextmanager
-    def _put_stall(self, hop: int) -> Iterator[None]:
+    def _put_stall(self, hop: int) -> Generator[None, None, None]:
         """Mark ``hop`` as stalled for the duration of the block; clear on exit.
 
         Also coordinates cascade suppression with neighboring hops.

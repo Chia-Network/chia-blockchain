@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import random
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, PartialProof, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
 
 from chia._tests.conftest import ConsensusMode, HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plotting.prover import V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo
@@ -57,6 +59,7 @@ async def harvester_environment(
     [
         (Version("0.0.37"), ProtocolMessageTypes.respond_plots),
         (Version("0.0.38"), ProtocolMessageTypes.respond_plots2),
+        (Version("0.0.39"), ProtocolMessageTypes.respond_plots3),
     ],
 )
 @pytest.mark.anyio
@@ -110,8 +113,37 @@ def create_test_setup(
     return env, new_challenge, mock_peer
 
 
+@pytest.mark.parametrize(
+    "relative_height,strength,expected",
+    [
+        (0, 8, True),
+        (0, 9, False),
+        (10_101_000, 9, True),
+        (10_101_000, 10, False),
+    ],
+)
+def test_v2_plot_strength_gate(relative_height: int, strength: int, expected: bool) -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    api = HarvesterAPI(MagicMock())
+    api.harvester.constants = constants
+    plot_info = MagicMock(spec=PlotInfo)
+    inner_prover = MagicMock()
+    inner_prover.get_strength.return_value = uint8(strength)
+    inner_prover.get_meta_group.return_value = uint8(0)
+    inner_prover.plot_group_id.return_value = bytes32.zeros
+    plot_info.prover = V2Prover(inner_prover)
+    challenge = MagicMock(spec=harvester_protocol.NewSignagePointHarvester2)
+    challenge.last_tx_height = uint32(constants.HARD_FORK2_HEIGHT + relative_height)
+    challenge.filter_challenge = bytes32.zeros
+    challenge.signage_point_index = uint8(0)
+
+    with patch("chia.harvester.harvester_api.passes_plot_filter_v2", return_value=True) as plot_filter:
+        assert api._plot_passes_filter(plot_info, challenge) == expected
+        assert plot_filter.called == expected
+
+
 @contextmanager
-def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
+def mock_successful_proof(plot_info: PlotInfo) -> Generator[None, None, None]:
     if isinstance(plot_info.prover, V1Prover):
         with patch.object(plot_info.prover, "get_full_proof") as mock_get_proof:
             mock_proof = MagicMock(spec=ProofOfSpace)
@@ -119,7 +151,7 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             yield
     elif isinstance(plot_info.prover, V2Prover):
         with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
-            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint8(2))]
+            mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint16(0), uint8(2))]
             yield
 
 
@@ -162,12 +194,13 @@ async def test_v2_partial_proof_path_supports_per_quality_signature_identifier(
         plot_info = plot_manager.plots[env.plot_path]
         original_prover = plot_info.prover
     inner_prover = MagicMock()
-    inner_prover.plot_id.return_value = plot_id
-    inner_prover.get_plot_index.return_value = uint16(0)
+    inner_prover.plot_group_id.return_value = plot_id
     inner_prover.get_meta_group.return_value = uint8(0)
     inner_prover.get_strength.return_value = uint8(2)
     inner_prover.get_memo.return_value = original_prover.get_memo()
-    inner_prover.get_qualities_for_challenge.return_value = [PartialProof([uint64(1)] * 16)]
+    inner_prover.get_qualities_for_challenge.return_value = [
+        SimpleNamespace(chain=PartialProof([uint64(1)] * 16), plot_index=uint16(0))
+    ]
     plot_info.prover = V2Prover(inner_prover)
     with plot_manager:
         plot_manager.plots.clear()

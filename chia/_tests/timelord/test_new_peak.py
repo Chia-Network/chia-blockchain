@@ -708,7 +708,7 @@ async def get_rc_prev(blockchain: Blockchain, block: FullBlock) -> bytes32:
         # find first in slot and find slot challenge
         blk = blockchain.block_record(block.header_hash)
         while blk.first_in_sub_slot is False:
-            blk = blockchain.block_record(block.prev_header_hash)
+            blk = blockchain.block_record(blk.prev_hash)
         full_blk = await blockchain.get_full_block(blk.header_hash)
         assert full_blk is not None
         sub_slot = None

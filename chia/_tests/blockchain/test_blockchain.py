@@ -7,7 +7,7 @@ import platform
 import random
 import re
 import time
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncGenerator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from typing import cast
@@ -28,6 +28,7 @@ from chia_rs import (
     SpendConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
@@ -58,6 +59,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.generator_validation import compute_generator_root
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -104,7 +106,7 @@ async def get_coin_record(b: Blockchain, coin_id: bytes32) -> CoinRecord | None:
 
 
 @asynccontextmanager
-async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
+async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncGenerator[Blockchain, None]:
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
@@ -876,31 +878,12 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, block)
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    # This can probably be fixed by:
-    # index d0f7daa91b..b6c5a27d13 100644
-    # --- a/chia/consensus/multiprocess_validation.py
-    # +++ b/chia/consensus/multiprocess_validation.py
-    # @@ -246,7 +246,7 @@ async def pre_validate_block(
-    #              sub_slot_iters=vs.ssi,
-    #              prev_ses_block=vs.prev_ses_block,
-    #          )
-    # -    except ValueError:
-    # +    except Exception as e:
-    #          log.exception("block_to_block_record()")
-    #          return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="In the 3.0 hard fork scenario, the last check fails with an exception "
-        "(KeyError) instead of an error code. All passing tests fail because the "
-        "proof-of-space is invalid (mismatching challenge). The test suggests that "
-        "the specific error isn't important, but it still doesn't like exceptions",
-    )
     async def test_empty_slot_no_ses(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2l
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(1)
-        await _validate_and_add_block(blockchain, blocks[0])
+        blocks = bt.get_consecutive_blocks(2)
+        for block in blocks:
+            await _validate_and_add_block(blockchain, block)
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=4)
 
         new_finished_ss = recursive_replace(
@@ -4098,14 +4081,35 @@ class TestReorgs:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        # Overlong atom encoding. Program/SerializedProgram can no longer load
-        # non-canonical CLVM, so inject raw bytes via the generator buffer.
-        generator_bytes = bytes.fromhex("c00101")
-        assert not is_canonical_serialization(generator_bytes)
+        interned = consensus_mode >= ConsensusMode.HARD_FORK_3_0
+        if interned:
+            # serde_2026 encoding of (() . A): one atom group, atom length 1
+            # encoded overlong as 80 01, payload A, then nil/atom/cons.
+            generator_bytes = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
+        else:
+            # Program/SerializedProgram cannot load non-canonical CLVM, so
+            # inject the overlong atom directly via the generator buffer.
+            generator_bytes = bytes.fromhex("c00101")
+            assert not is_canonical_serialization(generator_bytes)
 
         block = recursive_replace(original_block, "transactions_generator", None)
+        if interned:
+            # The interned tree has 8 virtual bytes, independent of varint size.
+            block = recursive_replace(block, "transactions_info.cost", uint64(8 * bt.constants.COST_PER_BYTE))
         block = recursive_replace(block, "transactions_generator_buffer", generator_bytes)
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(generator_bytes))
+        pre_sp_tx_height = pre_sp_tx_block_height(
+            bt.constants,
+            empty_blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
+        flags = get_flags_for_height_and_constants(pre_sp_tx_height, bt.constants)
+        block = recursive_replace(
+            block,
+            "transactions_info.generator_root",
+            compute_generator_root(generator_bytes, flags),
+        )
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )
@@ -4113,13 +4117,29 @@ class TestReorgs:
             block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
         )
 
-        # overlong encoding became invalid in the 2.7 soft fork
-        if consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
+        # HF2 permits overlong varints: identity and cost come from the tree.
+        # Exercise decoding as well as body validation in this case.
+        skip_prevalidation = not interned
+        if interned:
+            assert block.foliage.foliage_transaction_block_hash is not None
+            block = recursive_replace(
+                block,
+                "foliage.foliage_transaction_block_signature",
+                bt.get_plot_signature(
+                    block.foliage.foliage_transaction_block_hash,
+                    block.reward_chain_block.proof_of_space.plot_public_key,
+                ),
+            )
+            # TODO: Make overlong serde_2026 atom encodings an error.
+            expected_error = None
+        elif consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
 
-        await _validate_and_add_block(empty_blockchain, block, expected_error=expected_error, skip_prevalidation=True)
+        await _validate_and_add_block(
+            empty_blockchain, block, expected_error=expected_error, skip_prevalidation=skip_prevalidation
+        )
 
 
 @pytest.mark.anyio
@@ -4807,12 +4827,17 @@ async def test_include_spends_same_as_parent(
         0,
     )
     # Now let's run the test
-    test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)
+    coin_commitments_root = bytes32([1] * 32)
+    test_setup.fork_info.include_spends(
+        conds, test_setup.test_block, test_setup.test_block.header_hash, coin_commitments_root
+    )
     # Let's make sure the results are as expected
     expected_same_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [coin_commitments_root]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4826,6 +4851,8 @@ async def test_include_spends_same_as_parent(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []
 
 
 @pytest.mark.parametrize("same_ph_as_parent", [True, False])
@@ -4849,12 +4876,15 @@ async def test_include_block_same_as_parent_coins(
         [(test_setup.coin.name(), test_setup.coin)],
         test_setup.test_block,
         test_setup.test_block.header_hash,
+        None,
     )
     # Let's make sure the results are as expected
     expected_same_as_parent_additions = (
         {test_setup.child_coin.name()} if same_ph_as_parent and same_amount_as_parent else set()
     )
     test_setup.check_additions(expected_same_as_parent_additions)
+    assert test_setup.fork_info.block_hashes == [test_setup.test_block.header_hash]
+    assert test_setup.fork_info.commitment_roots == [None]
     if rollback:
         # Now we rollback before the spend that belongs to the test conditions
         test_setup.fork_info.rollback(test_setup.test_block.prev_header_hash, test_setup.test_block.height - 1)
@@ -4865,3 +4895,5 @@ async def test_include_block_same_as_parent_coins(
         test_setup.fork_info.reset(1, bytes32([0] * 32))
         # That should leave this empty
         assert test_setup.fork_info.additions_since_fork == {}
+        assert test_setup.fork_info.block_hashes == []
+        assert test_setup.fork_info.commitment_roots == []

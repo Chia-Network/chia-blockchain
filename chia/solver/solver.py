@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -55,7 +55,7 @@ class Solver:
         self.log.info("Solver initialization complete")
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         try:
             self.log.info("Starting solver service")
             self.started = True
@@ -70,7 +70,7 @@ class Solver:
     def solve(self, partial_proof: PartialProof, plot_id: bytes32, strength: int, size: int) -> bytes | None:
         self.log.info(f"Solve request: partial={partial_proof.fragments[:5]} plot-id: {plot_id} k: {size}")
         try:
-            return solve_proof(partial_proof, plot_id, strength, size, self.constants.TESTNET)
+            return solve_proof(partial_proof, plot_id, strength, size)
         except Exception:
             self.log.exception("solve_proof()")
         return None

@@ -79,6 +79,7 @@ Difficulty and SSI transitions must flow through a validated sub-epoch summary. 
 
 Body validation relies on header validation already being complete. It checks:
 
+- a full block's header MMR root, from HF2 (see Hard Fork Commitments);
 - transaction-block vs non-transaction-block field presence;
 - reward claim exactness for skipped non-transaction blocks since the previous transaction block;
 - generator root/ref roots, ref count limits, and post-SF9 generator-ref ban;
@@ -108,7 +109,7 @@ Do not simplify this into “query coin store and check spent”. That loses for
 - height-to-hash lookups prefer the overlay;
 - fork ancestry is populated when the batch starts on a non-canonical branch;
 - generator references first walk overlay blocks, then delegate to the underlying chain;
-- the MMR manager is deep-copied so speculative MMR roots do not mutate canonical MMR state;
+- the MMR manager is the underlying chain's (not copied);
 - worker jobs receive `read_only_snapshot()` to prevent mutation from the executor path.
 
 After a block successfully commits, full-node batch code removes it from the overlay. If the overlay and canonical chain disagree about height mapping, pre-validation can validate against a different ancestor path than `add_block()` later commits.
@@ -132,18 +133,18 @@ Overflow block handling changes both challenge selection and the “previous tra
 The hard-fork commitment rules introduce two commitments in this module:
 
 - sub-epoch summary `challenge_root` via `make_sub_epoch_summary(..., make_challenge_root=True)`;
-- `reward_chain_block.header_mmr_root`, validated in finished-header validation.
+- `reward_chain_block.header_mmr_root`, validated first in `validate_block_body()` for full blocks, which `Blockchain.add_block()` calls after `advance_fork_info()` with the block's `required_iters` and `sub_slot_iters`; a mismatch is `INVALID_BLOCK` / `INVALID_HEADER_MMR_ROOT`.
 
-Both are gated by pre-signage-point transaction height. `block_creation.unfinished_block_to_full_block_with_mmr()` and `validate_finished_header_block()` must compute the same MMR root for the same candidate context, including overflow/new-slot behavior.
+Both are gated by pre-signage-point transaction height. `block_creation.unfinished_block_to_full_block_with_mmr()` and `validate_block_body()` must compute the same MMR root for the same candidate context, including overflow/new-slot behavior.
 
 MMR root semantics:
 
 - genesis has no MMR root;
 - at a new slot, all blocks through previous block are finalized;
 - within a slot, only prior blocks with earlier signage point, or blocks before the crossed slot boundary, are included;
-- fork validation may rebuild an MMR root by rolling back to a fork height and walking the candidate branch.
+- for a fork block, the root is the canonical MMR's leaves up to the fork height plus leaves built from the `ForkInfo`'s `block_hashes` and `commitment_roots` (kept in lockstep); post-HF2 leaves are `H(header_hash || coin_commitments_root)`.
 
-`BlockchainMMRManager.add_block_to_mmr()` requires sequential canonical insertion. Reorgs must roll the manager back before appending new canonical records. The current MMR implementation is in-memory and rebuilt on startup from canonical `height_map` starting at `HARD_FORK2_HEIGHT`.
+`BlockchainMMRManager.add_block_to_mmr()` requires sequential canonical insertion. Reorgs must roll the manager back before appending new canonical records. The current MMR implementation is in-memory and rebuilt on startup from canonical `height_map` starting at `HARD_FORK2_HEIGHT`, with each leaf's coin commitments root read from the coin store.
 
 ## Block Creation Mirrors Validation
 
@@ -188,7 +189,7 @@ Failure mode expectations:
 - Any change that touches `ForkInfo`, `advance_fork_info()`, `include_spends()`, or `_reconsider_peak()` can corrupt reorg coin-state replay.
 - Any change that moves `_peak_height` earlier, flushes height map/MMR before DB commit, or catches commit exceptions differently can expose inconsistent peak state.
 - Any change to `pre_sp_tx_block_height()`, overflow detection, or finished-sub-slot counting can shift hard-fork gates, generator flags, challenge roots, and MMR roots.
-- Any change to `AugmentedBlockchain` height mapping, read-only snapshots, or MMR copying can make sync batch validation disagree with sequential commit validation.
+- Any change to `AugmentedBlockchain` height mapping or read-only snapshots can make sync batch validation disagree with sequential commit validation.
 - Any change to body validation that treats DB coin records as canonical without considering `fork_info` can reject valid fork spends or accept invalid branch spends.
 - Any change to MMR bagging, pop logic, finalized-block cutoff, or fork rebuild must be checked against block creation and validation together.
 - Any change to sub-epoch summary generation must preserve the relationship between `prev_ses_block`, challenge root gating, and difficulty/SSI boundary computation.

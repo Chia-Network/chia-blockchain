@@ -35,12 +35,13 @@ from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import coin_commitments_root_from_conds, compute_coin_commitments_root
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.generator_validation import validate_tx_generator
+from chia.consensus.generator_validation import validate_generator_root, validate_tx_generator
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height, unfinished_block_sub_slots
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -50,7 +51,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.priority_thread_pool_executor import Executor
 
@@ -188,12 +188,16 @@ class Blockchain:
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
         # Build MMR from canonical chain (height_map), starting from aggregate_from
+        # Each height costs two indexed coin-store queries for its coin commitments root
         # todo WPv2: persist MMR state to avoid rebuilding on startup
-        for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
+        for height in range(self.mmr_manager.get_aggregate_from(), self._peak_height + 1):
             header_hash = self.__height_map.get_hash(uint32(height))
             block_record = await self.get_block_record_from_db(header_hash)
             assert block_record is not None
-            self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
+            coin_commitments_root = await self.coin_store.get_coin_commitments_root(uint32(height))
+            self.mmr_manager.add_block_to_mmr(
+                header_hash, block_record.prev_hash, block_record.height, coin_commitments_root
+            )
 
     def get_peak(self) -> BlockRecord | None:
         """
@@ -299,7 +303,13 @@ class Blockchain:
                 self.constants,
             )
 
-        fork_info.include_block(additions, removals, block, block.header_hash)
+        coin_commitments_root: bytes32 | None = None
+        if block.height >= self.mmr_manager.get_aggregate_from():
+            coin_commitments_root = compute_coin_commitments_root(
+                [coin_id for coin_id, _ in removals], [coin for coin, _ in additions]
+            )
+
+        fork_info.include_block(additions, removals, block, block.header_hash, coin_commitments_root)
 
     async def add_block(
         self,
@@ -381,13 +391,19 @@ class Blockchain:
 
         # we dont consider block_record passed in here since it might be from
         # a current sync process and not yet fully validated and committed to the DB
+        # also on the ALREADY_HAVE_BLOCK path: later fork blocks' header MMR
+        # checks and the canonical append take this block's leaf from fork_info
+        coin_commitments_root: bytes32 | None = None
+        if block.height >= self.mmr_manager.get_aggregate_from():
+            coin_commitments_root = coin_commitments_root_from_conds(pre_validation_result.conds)
+
         block_rec_from_db = await self.get_block_record_from_db(header_hash)
         if block_rec_from_db is not None:
             # We have already validated the block, but if it's not part of the
             # main chain, we still need to re-run it to update the additions and
             # removals in fork_info.
             await self.advance_fork_info(block, fork_info)
-            fork_info.include_spends(pre_validation_result.conds, block, header_hash)
+            fork_info.include_spends(pre_validation_result.conds, block, header_hash, coin_commitments_root)
             self.add_block_record(block_rec_from_db)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -414,6 +430,8 @@ class Blockchain:
             pre_validation_result.conds,
             fork_info,
             finished_sub_slots=len(block.finished_sub_slots),
+            required_iters=required_iters,
+            sub_slot_iters=sub_slot_iters,
             log_coins=self._log_coins,
         )
         if error_code is not None:
@@ -423,7 +441,7 @@ class Blockchain:
         # case we're validating blocks on a fork, the next block validation will
         # need to know of these additions and removals. Also, _reconsider_peak()
         # will need these results
-        fork_info.include_spends(pre_validation_result.conds, block, header_hash)
+        fork_info.include_spends(pre_validation_result.conds, block, header_hash, coin_commitments_root)
 
         # block_to_block_record() require the previous block in the cache
         if not genesis and prev_block is not None:
@@ -467,14 +485,18 @@ class Blockchain:
                 # pre-allocate memory for height to hash map. We don't want it
                 # to fail once the DB transaction is committed.
                 self.__height_map.ensure_capacity(records[-1].height)
-            for fetched_block_record in records:
+            for i, fetched_block_record in enumerate(records):
                 self.__height_map.update_height(
                     fetched_block_record.height,
                     fetched_block_record.header_hash,
                     fetched_block_record.sub_epoch_summary_included,
                 )
+                assert fetched_block_record.header_hash == fork_info.block_hashes[i]
                 self.mmr_manager.add_block_to_mmr(
-                    fetched_block_record.header_hash, fetched_block_record.prev_hash, fetched_block_record.height
+                    fetched_block_record.header_hash,
+                    fetched_block_record.prev_hash,
+                    fetched_block_record.height,
+                    fork_info.commitment_roots[i],
                 )
 
             if state_change_summary is not None:
@@ -763,7 +785,9 @@ class Blockchain:
         if block.transactions_info is not None:
             generator_bytes = get_transactions_generator_bytes(block)
             if generator_bytes is not None:
-                if std_hash(generator_bytes) != block.transactions_info.generator_root:
+                if not validate_generator_root(
+                    generator_bytes, block.transactions_info.generator_root, self.constants, prev_tx_height
+                ):
                     return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
             elif block.transactions_info.generator_root != bytes([0] * 32):
                 return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -834,6 +858,8 @@ class Blockchain:
             conds,
             fork_info,
             finished_sub_slots=finished_sub_slots,
+            required_iters=None,
+            sub_slot_iters=None,
             log_coins=self._log_coins,
         )
 
@@ -1133,6 +1159,3 @@ class Blockchain:
 
     def compute_current_mmr_root(self) -> bytes32 | None:
         return self.mmr_manager.compute_current_mmr_root()
-
-    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
-        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)

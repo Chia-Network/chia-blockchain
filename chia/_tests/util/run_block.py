@@ -5,12 +5,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
-from chia_rs import Coin, ConsensusConstants
+from chia_rs import (
+    ConsensusConstants,
+    get_flags_for_height_and_constants,
+    get_spends_for_trusted_block,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.program import Program, run_with_cost
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -18,8 +21,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
-
-DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
 
 @dataclass
@@ -59,17 +60,17 @@ def npc_to_dict(npc: NPC) -> dict[str, Any]:
     }
 
 
-def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> list[CAT]:
-    block_args = block_generator.generator_refs
-    _cost, block_result = run_with_cost(
-        Program.from_bytes(block_generator.program), max_cost, [DESERIALIZE_MOD, block_args]
-    )
-
-    coin_spends = block_result.first()
-
+def run_generator(
+    block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int, flags: int = 0
+) -> list[CAT]:
+    """Extract CAT spends and retirement memos from a block generator."""
+    spends = get_spends_for_trusted_block(constants, block_generator.program, block_generator.generator_refs, flags)[
+        "block_spends"
+    ]
     cat_list: list[CAT] = []
-    for spend in coin_spends.as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
+    for spend in spends:
+        puzzle = Program.from_serialized(spend.puzzle_reveal)
+        solution = Program.from_serialized(spend.solution)
         args = match_cat_puzzle(UnknownPuzzle(known_program=puzzle))
 
         if args is None:
@@ -78,7 +79,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
         _, asset_id, _ = args
         memo = ""
 
-        puzzle_result = puzzle.run(solution)
+        _, puzzle_result = puzzle.run_with_cost(max_cost, solution, flags)
 
         conds: dict[ConditionOpcode, list[ConditionWithArgs]] = {}
 
@@ -114,8 +115,8 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
             # so leaving it for the future
             break
 
-        puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(bytes32(parent.as_atom()), puzzle_hash, uint64(amount.as_int()))
+        coin = spend.coin
+        puzzle_hash = coin.puzzle_hash
         cat_list.append(
             CAT(
                 asset_id=bytes(asset_id).hex()[2:],
@@ -143,21 +144,27 @@ def run_generator_with_args(
     generator_args: list[bytes],
     constants: ConsensusConstants,
     cost: uint64,
+    flags: int = 0,
 ) -> list[CAT]:
     if not generator_program_hex:
         return []
     block_generator = BlockGenerator(hexstr_to_bytes(generator_program_hex), generator_args)
-    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost), flags)
 
 
 def run_json_block(full_block: dict[str, Any], parent: Path, constants: ConsensusConstants) -> list[CAT]:
     ref_list = full_block["block"]["transactions_generator_ref_list"]
     tx_info: dict[str, Any] = full_block["block"]["transactions_info"]
-    generator_program_hex: str = full_block["block"]["transactions_generator"]
+    # Version 1 is gated on pre-signage-point transaction height, so the
+    # version identifies the encoding even at the activation boundary.
+    interned = full_block["block"].get("version", 0) == 1
+    generator_field = "transactions_generator_buffer" if interned else "transactions_generator"
+    generator_program_hex: str | None = full_block["block"][generator_field]
+    flags = get_flags_for_height_and_constants(constants.HARD_FORK2_HEIGHT, constants) if interned else 0
     cat_list: list[CAT] = []
     if tx_info and generator_program_hex:
         cost = tx_info["cost"]
         args = ref_list_to_args(ref_list, parent)
-        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost)
+        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost, flags)
 
     return cat_list

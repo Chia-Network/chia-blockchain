@@ -21,10 +21,11 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 import chia.full_node.weight_proof as weight_proof_module
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain_mock import BlockchainMock
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
+from chia.consensus.pot_iterations import is_overflow_block, validate_pospace_and_get_required_iters
 from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.full_node import weight_proof
 from chia.full_node.weight_proof import (
@@ -37,7 +38,6 @@ from chia.full_node.weight_proof import (
     __validate_pospace as _validate_pospace_impl,
 )
 from chia.simulator.block_tools import BlockTools
-from chia.util.block_cache import BlockCache
 
 
 def test_max_sub_epoch_segments_mainnet() -> None:
@@ -335,14 +335,18 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test fails for HARD_FORK_3_0. possibly because
-    # of force_overflow=True. Investigate, fix and remove this limit_consensus_modes()
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
-        reason="investigate test failure",
-    )
     async def test_weight_proof_edge_cases(self, bt: BlockTools, default_400_blocks: list[FullBlock]) -> None:
-        blocks = default_400_blocks
+        # Exercise overflow blocks after empty slots, with both ordinary and
+        # normalized VDF proofs. Start just after a summary has been included:
+        # the fixture's tip can be awaiting a summary, which BlockTools cannot
+        # include while force_overflow=True, causing block generation to loop.
+        summary_index = max(
+            i
+            for i, block in enumerate(default_400_blocks)
+            if any(slot.challenge_chain.subepoch_summary_hash is not None for slot in block.finished_sub_slots)
+        )
+        blocks = default_400_blocks[: summary_index + 1]
+        overflow_start = len(blocks)
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
@@ -414,6 +418,11 @@ class TestWeightProof:
 
         blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True)
 
+        assert all(
+            is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
+            for block in blocks[overflow_start:]
+        )
+
         blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=False)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, bt.constants)
@@ -466,21 +475,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test is failing for HARD_FORK_3_0. It fails with
-    # chia.types.blockchain_format.proof_of_space: ERROR Calculated pos
-    # challenge doesn't match the provided one
-    # a6f067fd914acb3e9e437887f3e7c8d906f43920f21ae4719012e6a4692e02c9
-    # Investigate, fix and remove this limit_consensus_modes()
-    @pytest.mark.limit_consensus_modes(
-        allowed=[
-            ConsensusMode.PLAIN,
-            ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK_2_7,
-            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
-        ],
-        reason="investigate test failure",
-    )
-    async def test_weight_proof10000__blocks_compact(
+    async def test_weight_proof10000_blocks_compact(
         self, default_10000_blocks_compact: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_10000_blocks_compact
@@ -521,12 +516,6 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test is failing for HARD_FORK_3_0 for some reason.
-    # Investigate, fix and remove this limit_consensus_modes()
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
-        reason="investigate test failure",
-    )
     async def test_weight_proof10000(
         self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:

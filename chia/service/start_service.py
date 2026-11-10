@@ -5,14 +5,13 @@ import contextlib
 import logging
 import os
 import signal
-from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
+from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine
 from pathlib import Path
 from types import FrameType
 from typing import Any, Generic, TypeVar, cast
 
 from chia_rs.sized_ints import uint16
 
-from chia.daemon.server import service_launch_lock_path
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import _rate_limits_v3, default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
@@ -25,7 +24,7 @@ from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.chia_version import chia_short_version
-from chia.util.lock import Lockfile, LockfileError
+from chia.util.lock import Lockfile, LockfileError, service_launch_lock_path
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
@@ -192,7 +191,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             raise ValueError(f"{self._service_name}: already running") from e
 
     @contextlib.asynccontextmanager
-    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+    async def manage(self, *, start: bool = True) -> AsyncGenerator[None, None]:
         # NOTE: avoid start=False, this is presently used for corner case setup type tests
         async with contextlib.AsyncExitStack() as async_exit_stack:
             try:

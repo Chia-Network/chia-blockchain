@@ -6,7 +6,7 @@ import functools
 import logging
 import secrets
 import sqlite3
-from collections.abc import AsyncIterator, Iterable, Iterator
+from collections.abc import AsyncGenerator, Generator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -56,7 +56,7 @@ def _log_sqlite_error(error: sqlite3.Error, where: str) -> None:
 
 
 @contextlib.asynccontextmanager
-async def _log_sqlite_errors(where: str) -> AsyncIterator[None]:
+async def _log_sqlite_errors(where: str) -> AsyncGenerator[None, None]:
     try:
         yield
     except sqlite3.Error as error:
@@ -133,7 +133,7 @@ async def manage_connection(
     uri: bool = False,
     log_file: TextIO | None = None,
     name: str | None = None,
-) -> AsyncIterator[aiosqlite.Connection]:
+) -> AsyncGenerator[aiosqlite.Connection, None]:
     connection: aiosqlite.Connection
     connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
 
@@ -163,7 +163,7 @@ def get_host_parameter_limit() -> int:
 
 
 @contextlib.contextmanager
-def _suppress_task_cancellation() -> Iterator[None]:
+def _suppress_task_cancellation() -> Generator[None, None, None]:
     """Suppress task cancellations for the duration of a critical await.
 
     Provides two layers of protection:
@@ -234,7 +234,7 @@ class DBWrapper2:
         synchronous: str | None = None,
         foreign_keys: bool | None = None,
         row_factory: type[aiosqlite.Row] | None = None,
-    ) -> AsyncIterator[DBWrapper2]:
+    ) -> AsyncGenerator[DBWrapper2, None]:
         if foreign_keys is None:
             foreign_keys = False
 
@@ -338,7 +338,7 @@ class DBWrapper2:
         return name
 
     @contextlib.asynccontextmanager
-    async def _savepoint_ctx(self) -> AsyncIterator[None]:
+    async def _savepoint_ctx(self) -> AsyncGenerator[None, None]:
         name = self._next_savepoint()
         # The SAVEPOINT creation is inside the try block to prevent orphan
         # SAVEPOINTs. An orphan SAVEPOINT (created but never released) causes
@@ -392,7 +392,7 @@ class DBWrapper2:
     async def writer(
         self,
         foreign_key_enforcement_enabled: bool | None = None,
-    ) -> AsyncIterator[aiosqlite.Connection]:
+    ) -> AsyncGenerator[aiosqlite.Connection, None]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -437,7 +437,7 @@ class DBWrapper2:
                         self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def _set_foreign_key_enforcement(self, enabled: bool) -> AsyncIterator[None]:
+    async def _set_foreign_key_enforcement(self, enabled: bool) -> AsyncGenerator[None, None]:
         if self._current_writer is not None:
             raise InternalError("Unable to set foreign key enforcement state while a writer is held")
 
@@ -466,7 +466,7 @@ class DBWrapper2:
             raise ForeignKeyError(violations=violations)
 
     @contextlib.asynccontextmanager
-    async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer_maybe_transaction(self) -> AsyncGenerator[aiosqlite.Connection, None]:
         """
         Initiates a write to the database. If this task is already in a write
         transaction with the DB, this is a no-op. Any changes made to the
@@ -490,7 +490,7 @@ class DBWrapper2:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def reader(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader(self) -> AsyncGenerator[aiosqlite.Connection, None]:
         async with self.reader_no_transaction() as connection:
             if connection.in_transaction:
                 yield connection
@@ -508,7 +508,7 @@ class DBWrapper2:
                         raise
 
     @contextlib.asynccontextmanager
-    async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def reader_no_transaction(self) -> AsyncGenerator[aiosqlite.Connection, None]:
         # there should have been read connections added
         assert self._num_read_connections > 0
 

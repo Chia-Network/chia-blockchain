@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 import uuid
-from collections.abc import AsyncIterator, Collection
+from collections.abc import AsyncGenerator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -25,10 +25,9 @@ from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init
-from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
+from chia.init.init_funcs import check_keys, chia_init
 from chia.plotters.plotters import get_available_plotters
 from chia.server.server import ssl_context_for_server
 from chia.server.signal_handlers import SignalHandlers
@@ -39,8 +38,15 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.harvester_config import add_plot_directory
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
-from chia.util.lock import Lockfile, LockfileError
+from chia.util.keychain import (
+    Keychain,
+    KeyData,
+    default_passphrase,
+    passphrase_requirements,
+    supports_os_passphrase_storage,
+    using_default_passphrase,
+)
+from chia.util.lock import Lockfile, LockfileError, service_launch_lock_path
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -208,7 +214,7 @@ class WebSocketServer:
         self.state_changed_task: asyncio.Task[None] | None = None
 
     @asynccontextmanager
-    async def run(self) -> AsyncIterator[None]:
+    async def run(self) -> AsyncGenerator[None, None]:
         self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
         # Note: the minimum_version has been already set to TLSv1_3
@@ -1400,14 +1406,6 @@ def daemon_launch_lock_path(root_path: Path) -> Path:
     This prevents multiple instances from launching.
     """
     return service_launch_lock_path(root_path, "daemon")
-
-
-def service_launch_lock_path(root_path: Path, service: str) -> Path:
-    """
-    A path that is locked when a service is running.
-    """
-    service_name = service.replace(" ", "-").replace("/", "-")
-    return root_path / "run" / service_name
 
 
 def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:

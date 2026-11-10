@@ -45,7 +45,7 @@ Public docs describe harvesters as checking plots for a farmer, but source corre
 
 ## Plot Discovery And State
 
-- Plot discovery is driven by `PlotManager.start_refreshing()`, which loads the plot cache and starts a thread that periodically scans configured directories for `*.plot` and `*.plot2` files.
+- Plot discovery is driven by `PlotManager.start_refreshing()`, which loads the plot cache and starts a thread that periodically scans configured directories for `*.plot` and `*.gplot` files.
 - Refresh emits `started`, `batch_processed`, and `done` callbacks. `Harvester._plot_refresh_callback()` converts those into plot-sync start, loaded batches, and final removed/invalid/no-key/duplicate lists.
 - `PlotManager` rejects or quarantines plots when keys do not match the farmer handshake, files fail to open, duplicates are found by filename, compression exceeds configured limits, compressed plots lack decompressor contexts, or uncompressed V1 files look too small to be complete.
 - `plot_manager.plots` is protected by `PlotManager`'s lock. Code that enumerates plots for RPC, signage-point lookup, or signature lookup must use `with self.harvester.plot_manager:` to avoid racing the refresh thread.
@@ -66,7 +66,7 @@ Public docs describe harvesters as checking plots for a farmer, but source corre
 - Pool-specific difficulty overrides are keyed by `pool_contract_puzzle_hash`. If no matching `PoolDifficulty` exists, the global signage-point difficulty/sub-slot iters remain in force.
 - V1 full proof retrieval can fail for decompressor timeouts, line point compression (`GRResult_NoProof received`), plot I/O/prover errors, or fork phase-out checks. These failures are logged and dropped per plot rather than aborting the whole challenge.
 - V2 partial proof lookup returns only partial proofs that pass the same required-iterations threshold. It must carry plot id, plot index, `meta_group`, strength, plot public key, and pool identifiers because the farmer/solver path needs those fields to build the final `ProofOfSpace`.
-- V2 filter eligibility uses the same `calculate_prefix_bits()` → `passes_plot_filter()` path as V1, but with `NUMBER_ZERO_BITS_PLOT_FILTER_V2` and height-based adjustments (`PLOT_FILTER_V2_FIRST/SECOND/THIRD_ADJUSTMENT_HEIGHT`). Plots with `strength_v2` below `MIN_PLOT_STRENGTH` or above `MAX_PLOT_STRENGTH` are rejected by `check_plot_param()`; harvester-side and validation-side filter math must stay identical or farmers produce proofs full nodes reject. See `chia/types/blockchain_format/proof_of_space.py` for exact constants.
+- V2 filter eligibility uses `calculate_plot_filter_bits()` and `passes_plot_filter_v2()` with the pre-signage-point transaction height. The base filter follows `PLOT_FILTER_V2_RELATIVE_HEIGHT`, and the effective filter also depends on plot strength. The allowed strength range is `MIN_PLOT_STRENGTH` through `MAX_PLOT_STRENGTH` minus the current base filter bits. When the pre-signage-point transaction height is unavailable during height-agnostic weight-proof validation, `check_plot_param()` uses the relaxed absolute `MAX_PLOT_STRENGTH` bound. Harvester-side and validation-side rules must stay aligned or farmers may produce proofs full nodes reject. See `chia/types/blockchain_format/proof_of_space.py` for exact constants and calculations.
 - The lookup warning threshold is operationally important: late proof lookup risks missed rewards. Avoid adding synchronous work, unbounded logging, RPC calls, or long lock holds to the signage-point path.
 
 ## Signature Authority

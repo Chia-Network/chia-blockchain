@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from pathlib import Path
 
 
 @contextlib.contextmanager
-def TempFile() -> Iterator[Path]:
+def TempFile() -> Generator[Path, None, None]:
     t = tempfile.NamedTemporaryFile(delete=False)
     path = Path(t.name)
     t.close()

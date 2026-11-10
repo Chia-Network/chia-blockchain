@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 
@@ -15,7 +15,7 @@ def log_exceptions(
     level: int = logging.ERROR,
     show_traceback: bool = True,
     exceptions_to_process: type[BaseException] | tuple[type[BaseException], ...] = Exception,
-) -> Iterator[None]:
+) -> Generator[None, None, None]:
     try:
         yield
     except exceptions_to_process as e:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import random
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from chia_rs import ConsensusConstants
@@ -18,7 +18,7 @@ from chia.util.inline_executor import InlineExecutor
 @contextlib.asynccontextmanager
 async def create_ram_blockchain(
     consensus_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[DBWrapper2, Blockchain]]:
+) -> AsyncGenerator[tuple[DBWrapper2, Blockchain], None]:
     uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
     async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as db_wrapper:
         block_store = await BlockStore.create(db_wrapper)
