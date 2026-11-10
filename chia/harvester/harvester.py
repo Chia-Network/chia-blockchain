@@ -4,7 +4,7 @@ import asyncio
 import concurrent
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
@@ -125,7 +125,7 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
         try:
@@ -193,6 +193,7 @@ class Harvester:
                     assert isinstance(prover, V2Prover)
                     k = uint8(0x80 | prover.get_strength())
                     plot_id = prover.get_id()
+                    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
                     plot_index = uint16(0)
                     meta_group = prover.get_meta_group()
                     group_size = prover.get_group_size()

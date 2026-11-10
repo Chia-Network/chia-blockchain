@@ -89,6 +89,6 @@ Public RPC docs present HTTP and websocket access as one API surface. In source,
 
 - Shared server lifecycle and common routes: `chia/rpc/rpc_server.py`.
 - Common client behavior: `chia/rpc/rpc_client.py`.
-- Typed marshalling and CLVM streamable handling: `chia/rpc/util.py`.
+- Typed marshalling and CLVM streamable handling: `chia/wallet/util/rpc_marshal.py`.
 - Structured errors: `chia/rpc/rpc_errors.py`.
 - Daemon websocket envelope/routing: `chia/util/ws_message.py`, `chia/daemon/server.py`.

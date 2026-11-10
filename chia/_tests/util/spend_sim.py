@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import random
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,7 +59,7 @@ and is designed so that you could test with it and then swap in a real rpc clien
 @asynccontextmanager
 async def sim_and_client(
     db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
-) -> AsyncIterator[tuple[SpendSim, SimClient]]:
+) -> AsyncGenerator[tuple[SpendSim, SimClient], None]:
     async with SpendSim.managed(db_path, defaults) as sim:
         client: SimClient = SimClient(sim)
         if pass_prefarm:
@@ -156,7 +156,7 @@ class SpendSim:
     @contextlib.asynccontextmanager
     async def managed(
         cls, db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
-    ) -> AsyncIterator[Self]:
+    ) -> AsyncGenerator[Self, None]:
         self = cls()
         if db_path is None:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"

@@ -9,7 +9,7 @@ import subprocess
 import sys
 import threading
 import warnings
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 
 import anyio
@@ -32,7 +32,7 @@ NUM_CLIENTS = 500
 @contextlib.asynccontextmanager
 async def serve_in_thread(
     out_path: pathlib.Path, ip: str, port: int, connection_limit: int
-) -> AsyncIterator[ServeInThread]:
+) -> AsyncGenerator[ServeInThread, None]:
     server = ServeInThread(out_path=out_path, ip=ip, requested_port=port, connection_limit=connection_limit)
     server.start()
     # TODO: can we check when it has really started?  just make a connection?
@@ -59,7 +59,7 @@ class Client:
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def open_several(cls, count: int, ip: str, port: int) -> AsyncIterator[list[Client]]:
+    async def open_several(cls, count: int, ip: str, port: int) -> AsyncGenerator[list[Client], None]:
         clients: list[Client] = await asyncio.gather(*(cls.open(ip=ip, port=port) for _ in range(count)))
         try:
             yield [*clients]

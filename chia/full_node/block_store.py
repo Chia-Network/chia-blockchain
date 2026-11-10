@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -201,7 +201,7 @@ class BlockStore:
         return None
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
+    async def transaction(self) -> AsyncGenerator[None, None]:
         # the database connection is deliberately not exposed: callers only
         # get an atomic scope, not access to the underlying database
         async with self.db_wrapper.writer():

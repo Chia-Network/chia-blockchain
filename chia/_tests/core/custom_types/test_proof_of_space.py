@@ -14,12 +14,14 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_base_plot_filter_bits,
     calculate_plot_filter_bits,
+    calculate_pos_challenge,
     calculate_prefix_bits,
     check_plot_param,
     compute_plot_group_id,
     is_v1_phased_out,
     is_v2_plot,
     make_pos,
+    max_plot_strength,
     num_phase_out_epochs,
     passes_plot_filter,
     passes_plot_filter_v2,
@@ -225,10 +227,16 @@ def test_is_v2_plot(plot_param: PlotParam, expected: bool) -> None:
         expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
+        id="v2 plot above height-dependent maximum strength",
+        plot_size=PlotParam.make_v2(0, 0, 9),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        expected_error="Plot strength (9) is too high (max is 8)",
+    ),
+    ProofOfSpaceCase(
         id="v2 plot strength 18",
         plot_size=PlotParam.make_v2(0, 0, 18),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
-        expected_error="Plot strength (18) is too high (max is 17)",
+        expected_error="Plot strength (18) is too high (max is 8)",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2 missing filter_challenge",
@@ -425,12 +433,65 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
         (PlotParam.make_v2(0, 0, 1), False),  # strength too low
         (PlotParam.make_v2(0, 0, 2), True),
         (PlotParam.make_v2(0, 0, 3), True),
-        (PlotParam.make_v2(0, 0, 17), True),
-        (PlotParam.make_v2(0, 0, 18), False),  # strength too high
+        (PlotParam.make_v2(0, 0, 8), True),
+        (PlotParam.make_v2(0, 0, 9), False),  # strength too high at the initial base filter
+        (PlotParam.make_v2(0, 0, 17), False),
+        (PlotParam.make_v2(0, 0, 18), False),
     ],
 )
 def test_check_plot_param(plot_param: PlotParam, valid: bool) -> None:
-    assert check_plot_param(DEFAULT_CONSTANTS, plot_param) == valid
+    assert check_plot_param(DEFAULT_CONSTANTS, plot_param, DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT) == valid
+
+
+def test_height_agnostic_v2_strength_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    pool_hash = bytes32(b"1" * 32)
+    plot_public_key = _test_pk()
+    original_challenge = bytes32(b"2" * 32)
+    signage_point = bytes32(b"3" * 32)
+
+    monkeypatch.setattr("chia.types.blockchain_format.proof_of_space.validate_proof_v2", lambda *args: bytes32.zeros)
+
+    for strength, expected_valid in [(9, True), (17, True), (18, False)]:
+        param = PlotParam.make_v2(0, 0, strength)
+        assert check_plot_param(constants, param, None) == expected_valid
+        assert not check_plot_param(constants, param, constants.HARD_FORK2_HEIGHT)
+        group_id = compute_plot_group_id(strength, plot_public_key, pool_hash)
+        pos = make_pos(
+            calculate_pos_challenge(group_id, original_challenge, signage_point),
+            None,
+            pool_hash,
+            plot_public_key,
+            param,
+            b"proof",
+        )
+        quality = verify_and_get_quality_string(
+            pos,
+            constants,
+            original_challenge,
+            signage_point,
+            height=constants.HARD_FORK2_HEIGHT,
+            prev_transaction_block_height=uint32(0),
+            height_agnostic=True,
+        )
+        assert (quality is not None) == expected_valid
+
+
+@pytest.mark.parametrize(
+    "relative_height,expected_maximum",
+    [
+        (10_100_999, 8),
+        (10_101_000, 9),
+        (50_493_999, 16),
+        (50_494_000, 17),
+    ],
+)
+def test_max_plot_strength_follows_base_filter(relative_height: int, expected_maximum: int) -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(1_000_000))
+    height = uint32(constants.HARD_FORK2_HEIGHT + relative_height)
+    assert max_plot_strength(height, constants) == expected_maximum
+    assert check_plot_param(constants, PlotParam.make_v2(0, 0, expected_maximum), height)
+    assert not check_plot_param(constants, PlotParam.make_v2(0, 0, expected_maximum + 1), height)
 
 
 class TestProofOfSpace:

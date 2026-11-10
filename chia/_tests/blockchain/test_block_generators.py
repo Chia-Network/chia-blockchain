@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 import chia.simulator.block_tools as block_tools_module
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.generator_validation import compute_generator_root, validate_generator_root
@@ -16,7 +17,6 @@ from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.multiprocess_validation import _run_block
 from chia.full_node.hard_fork_utils import get_flags
 from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinished_block, test_constants
-from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import cProfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from chia._tests.util.misc import BenchmarkRunner
@@ -14,7 +14,7 @@ with_profile = False
 
 
 @contextmanager
-def enable_profiler(name: str) -> Iterator[None]:
+def enable_profiler(name: str) -> Generator[None, None, None]:
     if not with_profile:
         yield
         return

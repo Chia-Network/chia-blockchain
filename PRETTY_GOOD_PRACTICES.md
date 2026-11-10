@@ -67,6 +67,7 @@ T = TypeVar("T")
 
 # just manually do it without any re-usability
 
+
 def manual(path: Path):
     file = open(path)
     try:
@@ -76,6 +77,7 @@ def manual(path: Path):
 
 
 # use a function that takes a callback
+
 
 def callbacker(path: Path, callback: Callable[[TextIO], T]) -> T:
     file = open(path)
@@ -95,6 +97,7 @@ def use_callbacker(path: Path) -> str:
 
 # the preferred form for this example with a context manager
 
+
 @contextmanager
 def manager(path: Path):
     file = open(path)
@@ -103,12 +106,14 @@ def manager(path: Path):
     finally:
         file.close()
 
+
 def use_managed(path: Path):
     with manager(path=path) as file:
         return file.read()
 
 
 # the real form for this since files are already context managers
+
 
 def use_open_directly(path: Path):
     with open(path) as file:
@@ -202,6 +207,7 @@ from typing import TypeVar
 
 _T_Coin = TypeVar("_T_Coin", bound="Coin")
 
+
 @dataclass(frozen=True)
 class Coin:
     hash: bytes
@@ -281,7 +287,6 @@ If it is hard to deal with the knock on complaints from mypy triggered by the hi
 ### Basic hints
 
 ```python
-
 def sum_bigger_values(values: List[int], minimum: int) -> int:
     return sum(value for value in values if value > minimum)
 ```
@@ -304,6 +309,7 @@ The term 'optional' is used to express this.
 
 ```python
 from typing import Optional
+
 
 def print_name(first: str, last: Optional[str] = None) -> None:
     if last is None:
@@ -364,8 +370,7 @@ from typing_extensions import Protocol
 class WaterfowlProtocol(Protocol):
     species: str
 
-    def vocalize(self, count: int) -> str:
-        ...
+    def vocalize(self, count: int) -> str: ...
 
 
 def bother_waterfowl(fowl: WaterfowlProtocol, aggressiveness: int):
@@ -411,8 +416,7 @@ class AProtocol(Protocol):
     a_writable_attribute: bool
 
     @property
-    def a_read_only_attribute(self) -> Union[str, int]:
-        ...
+    def a_read_only_attribute(self) -> Union[str, int]: ...
 ```
 
 Aside from identifying attributes on a class, `Protocol` can be used for more expressive hinting of callables than you can do with `Callable`.
@@ -426,8 +430,7 @@ from typing_extensions import Protocol
 
 
 class ThreeIntAdder(Protocol):
-    def __call__(self, first: int, second: int, third: int) -> int:
-        ...
+    def __call__(self, first: int, second: int, third: int) -> int: ...
 ```
 
 Another option for additional expressivity around hinting a callable with a protocol is to use overloads to narrow the possible combinations of calls.
@@ -501,15 +504,14 @@ from typing import Generic, Optional, TypeVar
 KT = TypeVar("KT")
 VT = TypeVar("VT")
 
+
 @dataclass
 class Cache(Generic[KT, VT]):
     _mapping: Dict[KT, VT] = field(default_factory=dict)
 
-    def get(self, key: KT, default: Optional[VT] = None) -> Optional[VT]:
-        ...
+    def get(self, key: KT, default: Optional[VT] = None) -> Optional[VT]: ...
 
-    def set(self, key: KT, value: VT) -> None:
-        ...
+    def set(self, key: KT, value: VT) -> None: ...
 
 
 c = Cache[int, str]()
@@ -678,6 +680,7 @@ def maybe_add_two(x: int) -> int:
 
     return x + y
 
+
 value = 0
 for value in range(5):
     try:
@@ -704,6 +707,7 @@ def maybe_add_two(x: int) -> int:
         raise ValueError(f"{y} is too big!")
 
     return x + y
+
 
 value = 0
 for value in range(5):
@@ -769,7 +773,6 @@ def maybe_add_two(x: int) -> int:
         raise TooBigError(f"{y} is too big!")
 
     return x + y
-
 ```
 
 On occasions where it is desired to handle a broad swath of exceptions, there are some specific considerations.
@@ -782,6 +785,7 @@ To provide broad exception handling while not accidentally catching cancellation
 
 ```python
 import asyncio
+
 
 async def main():
     try:

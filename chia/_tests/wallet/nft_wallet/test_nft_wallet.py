@@ -4,9 +4,10 @@ import asyncio
 import time
 from collections.abc import Callable
 from typing import Any
+from unittest.mock import patch
 
 import pytest
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -33,7 +34,9 @@ from chia.cmds.wallet import (
     TransferNftCMD,
 )
 from chia.rpc.rpc_client import ResponseFailureError
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import ReorgProtocol
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -1916,6 +1919,37 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     assert "http://metadata" == coins[0].metadata_uris[0]
     assert len(coins[0].license_uris) == 1
     assert "http://license" == coins[0].license_uris[0]
+
+    # Cover get_minter_did bulk-mint lineage path (DIDRecoveryPuzzle.match on DID parent spend).
+    # Normal DID mints set owner DID in the eve solution; bulk mint left it unset and walked
+    # launcher → intermediate → DID spend instead.
+    peer = env.node.get_full_node_peer()
+    launcher_states = await env.node.get_coin_state([coins[0].launcher_id], peer=peer)
+    assert len(launcher_states) == 1
+    launcher_coin = launcher_states[0].coin
+
+    did_coin = await did_wallet.get_coin()
+    did_parent_states = await env.node.get_coin_state([did_coin.parent_coin_info], peer=peer)
+    assert len(did_parent_states) == 1 and did_parent_states[0].spent_height is not None
+    did_parent = did_parent_states[0]
+
+    intermediate = Coin(did_parent.coin.name(), bytes32(b"\xab" * 32), uint64(1))
+    real_get_coin_state = env.node.get_coin_state
+
+    async def fake_get_coin_state(
+        coin_ids: list[bytes32], peer: WSChiaConnection, fork_height: uint32 | None = None
+    ) -> list[CoinState]:
+        if coin_ids == [launcher_coin.parent_coin_info]:
+            return [CoinState(intermediate, did_parent.spent_height, did_parent.spent_height)]
+        return await real_get_coin_state(coin_ids, peer=peer, fork_height=fork_height)
+
+    with (
+        patch("chia.wallet.wallet_state_manager.get_new_owner_did", return_value=None),
+        patch.object(env.node, "get_coin_state", side_effect=fake_get_coin_state),
+    ):
+        minter_did = await env.wallet_state_manager.get_minter_did(launcher_coin, peer)
+    assert minter_did is not None
+    assert minter_did.hex() == hex_did_id
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")

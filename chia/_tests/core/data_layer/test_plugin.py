@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -112,7 +112,7 @@ def _make_mock_response(status: int = 200, json_data: dict[str, Any] | None = No
 
 
 @asynccontextmanager
-async def _mock_session_post(response: MagicMock) -> AsyncIterator[MagicMock]:
+async def _mock_session_post(response: MagicMock) -> AsyncGenerator[MagicMock, None]:
     """Yields a mock that replaces aiohttp.ClientSession as an async context manager."""
     post_cm = MagicMock()
     post_cm.__aenter__ = AsyncMock(return_value=response)
@@ -128,7 +128,7 @@ async def _mock_session_post(response: MagicMock) -> AsyncIterator[MagicMock]:
 
 
 @asynccontextmanager
-async def _mock_session_post_download(response: MagicMock) -> AsyncIterator[MagicMock]:
+async def _mock_session_post_download(response: MagicMock) -> AsyncGenerator[MagicMock, None]:
     """Same as above but patches the download_data module."""
     post_cm = MagicMock()
     post_cm.__aenter__ = AsyncMock(return_value=response)

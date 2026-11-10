@@ -6,7 +6,7 @@ import dataclasses
 import itertools
 import logging
 import traceback
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, Iterator
 from typing import Generic, Protocol, TypeVar, final
 
 import anyio
@@ -72,7 +72,7 @@ class QueuedAsyncPool(Generic[J, R]):
         target_worker_count: int,
         result_queue: ResultQueueProtocol[R] | None = None,
         log: logging.Logger = logging.getLogger(__name__),
-    ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
+    ) -> AsyncGenerator[QueuedAsyncPool[J, R], None]:
         self = cls(
             name=name,
             job_queue=job_queue,
@@ -143,7 +143,7 @@ class AsyncPool:
         worker_async_callable: WorkerCallable,
         target_worker_count: int,
         log: logging.Logger = logging.getLogger(__name__),
-    ) -> AsyncIterator[AsyncPool]:
+    ) -> AsyncGenerator[AsyncPool, None]:
         self = cls(
             name=name,
             log=log,

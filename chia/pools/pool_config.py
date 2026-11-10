@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,7 +49,7 @@ class PoolingShareState:
 
     @classmethod
     @contextmanager
-    def _get_raw_content(cls, *, root_path: Path, read_only: bool = False) -> Iterator[list[_PoolConfig]]:
+    def _get_raw_content(cls, *, root_path: Path, read_only: bool = False) -> Generator[list[_PoolConfig], None, None]:
         if not cls.state_path(root_path).parent.exists():
             cls.state_path(root_path).parent.mkdir(exist_ok=True)
         if not cls.state_path(root_path).exists():
@@ -93,7 +93,9 @@ class PoolingShareState:
 
     @classmethod
     @contextmanager
-    def acquire(cls, *, root_path: Path, p2_singleton_puzzle_hash: bytes32, read_only: bool = False) -> Iterator[Self]:
+    def acquire(
+        cls, *, root_path: Path, p2_singleton_puzzle_hash: bytes32, read_only: bool = False
+    ) -> Generator[Self, None, None]:
         with cls._get_raw_content(root_path=root_path, read_only=read_only) as loaded_list:
             if p2_singleton_puzzle_hash not in cls._p2_singleton_puzzle_hashes_from_list(loaded_list):
                 raise ValueError(f"Attempting to load non-existent pooling state for {p2_singleton_puzzle_hash.hex()}")
