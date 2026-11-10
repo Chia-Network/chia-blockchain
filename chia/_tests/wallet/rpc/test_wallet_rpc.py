@@ -2130,6 +2130,7 @@ async def test_offer_endpoints(
     await env_1.rpc_client.cancel_offers(
         CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
     )
+    await wallet_environments.full_node.wait_for_wallet_synced(env_1.node)
     assert (
         len(
             [
@@ -4025,6 +4026,7 @@ async def test_get_balances(wallet_environments: WalletTestFramework) -> None:
         ),
         tx_config=wallet_environments.tx_config,
     )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
     await client.create_new_wallet(
         CreateNewWallet(
             wallet_type=CreateNewWalletType.CAT_WALLET,

@@ -98,26 +98,38 @@ class WalletPuzzleStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
+                # First pass: figure out the high-water marks for this wallet.
                 "WITH bounds AS ("
+                # Last unhardened index we've actually spent from (may be NULL).
                 "SELECT MAX(CASE WHEN used=1 AND hardened=0 THEN derivation_index END) AS maximum_used_index, "
+                # Highest index we've generated at all.
                 "MAX(derivation_index) AS max_idx, "
+                # How many distinct indices exist. If this is less than max_idx+1,
+                # some indices in 0..max_idx are missing (gaps).
                 "COUNT(DISTINCT derivation_index) AS n_idx "
                 "FROM derivation_paths "
                 "WHERE wallet_id=?"
                 "), "
+                # Second pass: count unused / generated addresses.
                 "stats AS ("
                 "SELECT "
+                # First unhardened unused index (may be NULL).
                 "MIN(CASE WHEN used=0 AND hardened=0 THEN derivation_index END) AS minimum_unused_index, "
+                # How many unused unhardened addresses sit past the last used one.
+                # If nothing is used yet, treat the cutoff as -1 so everything counts.
                 "COUNT("
                 "CASE WHEN used=0 AND hardened=0 "
                 "AND derivation_index > COALESCE((SELECT maximum_used_index FROM bounds), -1) "
                 "THEN 1 END"
                 ") AS unused_after_maximum_used, "
+                # All unused unhardened addresses, anywhere in the range.
                 "COUNT(CASE WHEN used=0 AND hardened=0 THEN 1 END) AS total_unused, "
+                # Every derivation row we have for this wallet.
                 "COUNT(*) AS total_generated "
                 "FROM derivation_paths "
                 "WHERE wallet_id=?"
                 ") "
+                # Glue the two passes together into one result row.
                 "SELECT "
                 "stats.minimum_unused_index, "
                 "bounds.maximum_used_index, "
@@ -125,6 +137,7 @@ class WalletPuzzleStore:
                 "stats.unused_after_maximum_used, "
                 "stats.total_unused, "
                 "stats.total_generated, "
+                # 1 if there are missing indices under max_idx; Python fills them in below.
                 "CASE WHEN bounds.n_idx < bounds.max_idx + 1 THEN 1 ELSE 0 END "
                 "FROM bounds "
                 "CROSS JOIN stats",
@@ -148,7 +161,7 @@ class WalletPuzzleStore:
                     "ORDER BY derivation_index",
                     (wallet_id,),
                 )
-                present = {derivation_index for (derivation_index,) in present_rows}
+                present = {derivation_index[0] for derivation_index in present_rows}
                 gaps = [i for i in range(max_idx + 1) if i not in present]
 
         return PuzzleHashWindow(
