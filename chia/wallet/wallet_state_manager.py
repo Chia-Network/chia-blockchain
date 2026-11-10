@@ -667,7 +667,6 @@ class WalletStateManager:
                 # Create more puzzle hashes / keys
                 create_more_puzzle_hashes_result = await self.create_more_puzzle_hashes(
                     previous_result=create_more_puzzle_hashes_result,
-                    target=PuzzleHashWindowTarget(total_generated=record.index),
                     _commit_previous_result=False,
                 )
                 await create_more_puzzle_hashes_result.commit(self)
