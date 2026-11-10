@@ -1845,6 +1845,8 @@ async def test_offer_endpoints(
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(trade_id=offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_1.node)
+
     offer_file_2 = tmp_path / "second.offer"
     await MakeOfferCMD(
         rpc_info=wallet_environments.cmd_tx_endpoint_args(env_1)["rpc_info"],
