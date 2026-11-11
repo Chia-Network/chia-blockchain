@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import operator
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -79,6 +78,14 @@ def plot_matches_filter(plot: Plot | Plot2 | Plot3, filter_item: FilterItem) -> 
         return plot_attribute is None
     else:
         return filter_item.value in str(plot_attribute)
+
+
+def plot_identifier(plot: Plot | Plot2 | Plot3) -> bytes32:
+    if isinstance(plot, Plot3):
+        identifier = plot.plot_id if plot.plot_id is not None else plot.group_plot_id
+        assert identifier is not None
+        return identifier
+    return plot.plot_id
 
 
 class FarmerRpcApi:
@@ -302,7 +309,9 @@ class FarmerRpcApi:
         plot_count: int = 0
         for receiver in self.service.plot_sync_receivers.values():
             plot_count += sum(
-                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
+                plot.group_size
+                if isinstance(plot, Plot3) and plot.param().strength_v2 is not None and plot.group_size is not None
+                else 1
                 for plot in receiver.plots().values()
                 if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash
             )
@@ -339,8 +348,17 @@ class FarmerRpcApi:
         # Apply sort_key and reverse if sort_key is not restricted
         if request.sort_key in restricted_sort_keys:
             raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
-        # Sort by plot_id also by default since its unique
-        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+
+        # Sort by the V1 plot id or V2 group plot id as a stable tie-breaker.
+        def sort_value(plot: Plot | Plot2 | Plot3) -> tuple[bool, Any]:
+            value = plot_identifier(plot) if request.sort_key == "plot_id" else getattr(plot, request.sort_key)
+            return value is None, value
+
+        plot_list = sorted(
+            plot_list,
+            key=lambda plot: (sort_value(plot), plot_identifier(plot)),
+            reverse=request.reverse,
+        )
         return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(

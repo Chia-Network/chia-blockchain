@@ -94,7 +94,7 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     harvester.plot_manager.no_key_filenames = set()
     harvester.get_plots.side_effect = lambda: Harvester.get_plots(harvester)
     plots, _, _ = harvester.get_plots()
-    assert [plot["group_size"] for plot in plots] == [1, group_size]
+    assert [plot["group_size"] for plot in plots] == [None, group_size]
 
     peer = Mock(protocol_version=Version(version), connection_type=NodeType.FARMER)
     response = await HarvesterAPI(harvester).request_plots(RequestPlots(), peer)
@@ -161,7 +161,7 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
         * (group_size if version == "0.0.39" else 1)
     )
     if version == "0.0.39":
-        assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [1, group_size]
+        assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [None, group_size]
 
 
 class SyncStepData:

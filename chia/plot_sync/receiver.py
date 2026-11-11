@@ -367,6 +367,7 @@ class Receiver:
             plot_param = plot.param()
             size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
             if isinstance(plot, Plot3) and plot_param.strength_v2 is not None:
+                assert plot.group_size is not None
                 size *= plot.group_size
             return size
 
@@ -396,7 +397,9 @@ class Receiver:
             },
             "plots": get_list_or_len(list(self._plots.values()), counts_only),
             "plot_count": sum(
-                plot.group_size if isinstance(plot, Plot3) and plot.param().strength_v2 is not None else 1
+                plot.group_size
+                if isinstance(plot, Plot3) and plot.param().strength_v2 is not None and plot.group_size is not None
+                else 1
                 for plot in self._plots.values()
             ),
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),

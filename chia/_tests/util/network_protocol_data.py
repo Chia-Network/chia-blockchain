@@ -975,7 +975,21 @@ plot2 = harvester_protocol.Plot2(
     uint8(5),
 )
 
-plot3 = harvester_protocol.Plot3(**plot2.__dict__, group_size=uint16(8))
+plot3 = harvester_protocol.Plot3(
+    filename=plot2.filename,
+    size=None,
+    plot_id=None,
+    pool_public_key=plot2.pool_public_key,
+    pool_contract_puzzle_hash=plot2.pool_contract_puzzle_hash,
+    plot_public_key=plot2.plot_public_key,
+    file_size=plot2.file_size,
+    time_modified=plot2.time_modified,
+    compression_level=None,
+    meta_group=plot2.meta_group,
+    group_plot_id=plot2.plot_id,
+    strength=uint8(3),
+    group_size=uint16(8),
+)
 
 request_plots = harvester_protocol.RequestPlots()
 

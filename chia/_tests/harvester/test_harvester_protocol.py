@@ -41,19 +41,21 @@ def test_old_v2_plot_param_uses_legacy_zero_index_and_meta_group() -> None:
     assert param.meta_group == 0
 
 
-def test_v2_plot3_param_preserves_index_and_meta_group() -> None:
+def test_v2_plot3_param_uses_group_metadata_without_plot_index() -> None:
+    group_plot_id = bytes32.random()
     plot = Plot3(
         filename="v2.gplot",
-        size=uint8(0x80 | 3),
-        plot_id=bytes32.zeros,
+        size=None,
+        plot_id=None,
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=None,
         plot_public_key=G1Element(),
         file_size=uint64(0),
         time_modified=uint64(0),
-        compression_level=uint8(0),
-        plot_index=uint16(1234),
+        compression_level=None,
         meta_group=uint8(56),
+        group_plot_id=group_plot_id,
+        strength=uint8(3),
         group_size=uint16(8),
     )
 
@@ -61,8 +63,36 @@ def test_v2_plot3_param_preserves_index_and_meta_group() -> None:
 
     assert param.size_v1 is None
     assert param.strength_v2 == 3
-    assert param.plot_index == 1234
+    assert param.plot_index == 0
     assert param.meta_group == 56
+    assert plot.group_plot_id == group_plot_id
+    assert plot.size is None
+    assert plot.plot_id is None
+    assert plot.compression_level is None
+
+
+def test_v1_plot3_keeps_size_plot_id_and_compression_fields() -> None:
+    plot_id = bytes32.random()
+    plot = Plot3(
+        filename="v1.plot",
+        size=uint8(32),
+        plot_id=plot_id,
+        pool_public_key=None,
+        pool_contract_puzzle_hash=None,
+        plot_public_key=G1Element(),
+        file_size=uint64(100),
+        time_modified=uint64(200),
+        compression_level=uint8(5),
+        group_plot_id=None,
+        strength=None,
+        meta_group=None,
+        group_size=None,
+    )
+
+    assert plot.param().size_v1 == 32
+    assert plot.to_plot2().size == 32
+    assert plot.to_plot2().plot_id == plot_id
+    assert plot.to_plot2().compression_level == 5
 
 
 def test_new_plot_serialization_starts_at_0_0_38() -> None:
@@ -70,7 +100,7 @@ def test_new_plot_serialization_starts_at_0_0_38() -> None:
     assert supports_new_plot_serialization(Version("0.0.38"))
 
 
-def test_plot_group_serialization_starts_at_0_0_39() -> None:
+def test_plot3_serialization_starts_at_0_0_39() -> None:
     assert not supports_plot_groups(Version("0.0.38"))
     assert supports_plot_groups(Version("0.0.39"))
     assert protocol_version[NodeType.FARMER] == protocol_version[NodeType.HARVESTER] == "0.0.39"
@@ -108,24 +138,26 @@ def test_released_0_0_38_inventory_wire_layout(size: int) -> None:
 
 
 def test_plot_group_serialization_preserves_plot2_layout() -> None:
+    group_plot_id = bytes32.zeros
     plot = Plot3(
-        "group.gplot",
-        uint8(0x83),
-        bytes32.zeros,
-        None,
-        None,
-        G1Element(),
-        uint64(100),
-        uint64(200),
-        uint8(0),
-        uint16(1234),
-        uint8(56),
-        uint16(8),
+        filename="group.gplot",
+        size=None,
+        plot_id=None,
+        pool_public_key=None,
+        pool_contract_puzzle_hash=None,
+        plot_public_key=G1Element(),
+        file_size=uint64(100),
+        time_modified=uint64(200),
+        compression_level=None,
+        meta_group=uint8(56),
+        group_plot_id=group_plot_id,
+        strength=uint8(3),
+        group_size=uint16(8),
     )
     legacy = plot.to_plot2()
     expected = (
         b"\x00\x00\x00\x0bgroup.gplot\x83"
-        + bytes32.zeros
+        + group_plot_id
         + b"\x00\x00"
         + bytes(G1Element())
         + b"\x00\x00\x00\x00\x00\x00\x00\x64"
@@ -133,8 +165,8 @@ def test_plot_group_serialization_preserves_plot2_layout() -> None:
     )
     assert bytes(legacy) == expected
     assert Plot2.from_bytes(expected) == legacy
-    assert legacy.param().plot_index == 1234
+    assert legacy.param().plot_index == 0
     assert legacy.param().meta_group == 56
     assert legacy.param().strength_v2 == 3
-    assert bytes(plot) == expected + b"\x00\x08"
-    assert Plot3.from_bytes(bytes(plot)) == plot
+    serialized = bytes(plot)
+    assert Plot3.from_bytes(serialized) == plot

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import BinaryIO, Self
 
 from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
@@ -205,23 +206,91 @@ class Plot2(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class Plot3(Plot2):
-    # Plot2 is the released 0.0.38 layout. Group metadata uses new messages.
-    group_size: uint16
+class Plot3(Streamable):
+    # Plot2 is the released 0.0.38 layout. Plot3 represents V1 plots and V2
+    # plot groups with separate fields instead of the compatibility encoding.
+    filename: str
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
+    plot_public_key: G1Element
+    file_size: uint64
+    time_modified: uint64
+
+    # V1 plot fields
+    size: uint8 | None
+    plot_id: bytes32 | None
+    compression_level: uint8 | None
+
+    # V2 plot group fields
+    group_plot_id: bytes32 | None
+    strength: uint8 | None
+    meta_group: uint8 | None
+    group_size: uint16 | None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.validate()
+
+    @classmethod
+    def parse(cls, f: BinaryIO, list_limits: dict[str, int] | None = None) -> Self:
+        plot = super().parse(f, list_limits=list_limits)
+        plot.validate()
+        return plot
+
+    def validate(self) -> None:
+        v1_fields = (self.size, self.plot_id, self.compression_level)
+        v2_fields = (self.group_plot_id, self.strength, self.meta_group, self.group_size)
+        if self.strength is None:
+            if any(field is None for field in v1_fields) or any(field is not None for field in v2_fields):
+                raise ValueError("V1 Plot3 entries require size, plot_id, and compression_level only")
+        elif (
+            any(field is not None for field in v1_fields)
+            or any(field is None for field in v2_fields)
+            or self.group_size == 0
+        ):
+            raise ValueError("V2 Plot3 entries require group_plot_id, strength, meta_group, and positive group_size")
+
+    def param(self) -> PlotParam:
+        self.validate()
+        if self.strength is not None:
+            assert self.meta_group is not None
+            return PlotParam.make_v2(0, self.meta_group, self.strength)
+
+        assert self.size is not None
+        return PlotParam.make_v1(self.size)
 
     def to_plot2(self) -> Plot2:
+        self.validate()
+        is_v2 = self.strength is not None
+        assert (self.group_plot_id is not None) == is_v2
+        assert (self.plot_id is not None) != is_v2
+        legacy_compression_level: uint8 | None
+        if is_v2:
+            assert self.strength is not None
+            assert self.group_plot_id is not None
+            legacy_size = uint8(0x80 | self.strength)
+            legacy_plot_id = self.group_plot_id
+            legacy_compression_level = uint8(0)
+        else:
+            assert self.size is not None
+            assert self.plot_id is not None
+            assert self.compression_level is not None
+            legacy_size = self.size
+            legacy_plot_id = self.plot_id
+            legacy_compression_level = self.compression_level
+
         return Plot2(
             self.filename,
-            self.size,
-            self.plot_id,
+            legacy_size,
+            legacy_plot_id,
             self.pool_public_key,
             self.pool_contract_puzzle_hash,
             self.plot_public_key,
             self.file_size,
             self.time_modified,
-            self.compression_level,
-            self.plot_index,
-            self.meta_group,
+            legacy_compression_level,
+            uint16(0),
+            uint8(0) if self.meta_group is None else self.meta_group,
         )
 
 

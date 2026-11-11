@@ -577,18 +577,19 @@ class HarvesterAPI:
             for plot in plots:
                 plots_response3.append(
                     Plot3(
-                        plot["filename"],
-                        plot["size"],
-                        plot["plot_id"],
-                        plot["pool_public_key"],
-                        plot["pool_contract_puzzle_hash"],
-                        plot["plot_public_key"],
-                        plot["file_size"],
-                        plot["time_modified"],
-                        plot["compression_level"],
-                        plot["plot_index"],
-                        plot["meta_group"],
-                        plot["group_size"],
+                        filename=plot["filename"],
+                        size=plot["size_v1"],
+                        plot_id=plot["v1_plot_id"],
+                        pool_public_key=plot["pool_public_key"],
+                        pool_contract_puzzle_hash=plot["pool_contract_puzzle_hash"],
+                        plot_public_key=plot["plot_public_key"],
+                        file_size=plot["file_size"],
+                        time_modified=plot["time_modified"],
+                        compression_level=plot["compression_level"],
+                        meta_group=plot["meta_group"],
+                        group_plot_id=plot["group_plot_id"],
+                        strength=plot["strength"],
+                        group_size=plot["group_size"],
                     )
                 )
             if harvester_protocol.supports_plot_groups(peer.protocol_version):

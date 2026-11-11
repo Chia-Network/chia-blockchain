@@ -325,19 +325,30 @@ async def test_pool_state_counts_v2_group_members() -> None:
     other_pool_hash = bytes32.random()
     group = Plot3(
         filename="group.gplot",
-        size=uint8(0x83),
-        plot_id=bytes32.random(),
+        size=None,
+        plot_id=None,
         pool_public_key=None,
         pool_contract_puzzle_hash=pool_hash,
         plot_public_key=G1Element(),
         file_size=uint64(0),
         time_modified=uint64(0),
-        compression_level=uint8(0),
-        plot_index=uint16(0),
+        compression_level=None,
+        group_plot_id=bytes32.random(),
+        strength=uint8(3),
         meta_group=uint8(0),
         group_size=uint16(8),
     )
-    v1_plot = dataclasses.replace(group, filename="v1.plot", size=uint8(32))
+    v1_plot = dataclasses.replace(
+        group,
+        filename="v1.plot",
+        size=uint8(32),
+        plot_id=bytes32.random(),
+        compression_level=uint8(0),
+        group_plot_id=None,
+        strength=None,
+        meta_group=None,
+        group_size=None,
+    )
     receiver = Mock(spec=Receiver)
     receiver.plots.return_value = {
         "group.gplot": group,

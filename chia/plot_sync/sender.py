@@ -80,26 +80,40 @@ def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
 def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
     converted: list[Plot3] = []
     for plot_info in plot_infos:
-        k, plot_index, meta_group = _plot_fields(plot_info)
-        group_size: uint16
+        group_size: uint16 | None
         if isinstance(plot_info.prover, V2Prover):
             group_size = plot_info.prover.get_group_size()
+            size = None
+            plot_id = None
+            compression_level = None
+            meta_group = plot_info.prover.get_meta_group()
+            group_plot_id = plot_info.prover.get_id()
+            strength = plot_info.prover.get_strength()
         else:
-            group_size = uint16(1)
+            group_size = None
+            param = plot_info.prover.get_param()
+            assert param.size_v1 is not None
+            size = param.size_v1
+            plot_id = plot_info.prover.get_id()
+            compression_level = plot_info.prover.get_compression_level()
+            meta_group = None
+            group_plot_id = None
+            strength = None
 
         converted.append(
             Plot3(
                 filename=plot_info.prover.get_filename(),
-                size=k,
-                plot_id=plot_info.prover.get_id(),
+                size=size,
+                plot_id=plot_id,
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(plot_info.time_modified),
-                compression_level=plot_info.prover.get_compression_level(),
-                plot_index=plot_index,
+                compression_level=compression_level,
                 meta_group=meta_group,
+                group_plot_id=group_plot_id,
+                strength=strength,
                 group_size=group_size,
             )
         )
@@ -350,6 +364,9 @@ class Sender:
     def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
         removed_list = [str(x) for x in removed]
+        if self._connection is not None and supports_legacy_plot_serialization(self._connection.protocol_version):
+            # The loader selects V1 for .plot and V2 for .gplot, and legacy inventory only includes V1 plots.
+            removed_list = [str(path) for path in removed if path.suffix == ".plot"]
         self._add_list_batched(
             ProtocolMessageTypes.plot_sync_removed,
             PlotSyncPathList,
