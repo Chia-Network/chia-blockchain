@@ -427,9 +427,6 @@ class WalletNode:
         if key_information is None:
             self.log_out()
             return False
-        # override with key fetched in case it's different from what was passed
-        if fingerprint is None:
-            fingerprint = key_information.fingerprint
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -439,10 +436,10 @@ class WalletNode:
         if self.config.get("enable_memory_profiler", False):
             create_referenced_task(mem_profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
-        path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
+        path: Path = get_wallet_db_path(self.root_path, self.config, str(key_information.fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
-        if self.config.get("reset_sync_for_fingerprint") == fingerprint:
-            await self.reset_sync_db(path, fingerprint)
+        if self.config.get("reset_sync_for_fingerprint") == key_information.fingerprint:
+            await self.reset_sync_db(path, key_information.fingerprint)
 
         self._wallet_state_manager = await WalletStateManager.create(
             key_information.secret_key,
@@ -465,7 +462,7 @@ class WalletNode:
         self._retry_failed_states_task = create_referenced_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
-        self.log_in(fingerprint)
+        self.log_in(key_information.fingerprint)
         self.wallet_state_manager._dispatch_websocket_event(WebSocketEvent(name="sync_changed"))
 
         # Populate the balance caches for all wallets
