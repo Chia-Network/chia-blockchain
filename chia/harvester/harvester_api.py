@@ -578,8 +578,8 @@ class HarvesterAPI:
                 plots_response3.append(
                     Plot3(
                         filename=plot["filename"],
-                        size=plot["size_v1"],
-                        plot_id=plot["v1_plot_id"],
+                        size=plot["size"],
+                        plot_id=plot["plot_id"],
                         pool_public_key=plot["pool_public_key"],
                         pool_contract_puzzle_hash=plot["pool_contract_puzzle_hash"],
                         plot_public_key=plot["plot_public_key"],

@@ -184,18 +184,16 @@ class Harvester:
                 if isinstance(prover, V1Prover):
                     param = prover.get_param()
                     assert param.size_v1 is not None
-                    k = uint8(param.size_v1)
                     plot_id = prover.get_id()
-                    size = param.size_v1
+                    size = uint8(param.size_v1)
                     group_plot_id = None
                     strength = None
-                    meta_group = uint8(0)
+                    meta_group = None
                     group_size = None
                     compression_level = prover.get_compression_level()
                 else:
                     assert isinstance(prover, V2Prover)
-                    k = uint8(0x80 | prover.get_strength())
-                    plot_id = prover.get_id()
+                    plot_id = None
                     size = None
                     group_plot_id = prover.get_id()
                     strength = prover.get_strength()
@@ -205,12 +203,8 @@ class Harvester:
                 response_plots.append(
                     {
                         "filename": str(path),
-                        # Compatibility fields for the legacy Plot serialization.
-                        "size": k,
+                        "size": size,
                         "plot_id": plot_id,
-                        # Explicit fields used by Plot3.
-                        "size_v1": size,
-                        "v1_plot_id": plot_id if strength is None else None,
                         "group_plot_id": group_plot_id,
                         "strength": strength,
                         "pool_public_key": plot_info.pool_public_key,
@@ -219,7 +213,7 @@ class Harvester:
                         "file_size": plot_info.file_size,
                         "time_modified": int(plot_info.time_modified),
                         "compression_level": compression_level,
-                        "meta_group": meta_group if strength is not None else None,
+                        "meta_group": meta_group,
                         "group_size": group_size,
                     }
                 )
