@@ -10,7 +10,7 @@ from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
-from chia.protocols.harvester_protocol import Plot, Plot2, Plot3
+from chia.protocols.harvester_protocol import Plot, Plot3
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.peer_info import PeerInfo
@@ -72,15 +72,15 @@ def paginated_plot_request(source: list[Any], request: PaginatedRequestData) -> 
     }
 
 
-def plot_matches_filter(plot: Plot | Plot2 | Plot3, filter_item: FilterItem) -> bool:
-    plot_attribute = getattr(plot, filter_item.key)
+def plot_matches_filter(plot: Plot | Plot3, filter_item: FilterItem) -> bool:
+    plot_attribute = plot_identifier(plot) if filter_item.key == "plot_id" else getattr(plot, filter_item.key)
     if filter_item.value is None:
         return plot_attribute is None
     else:
         return filter_item.value in str(plot_attribute)
 
 
-def plot_identifier(plot: Plot | Plot2 | Plot3) -> bytes32:
+def plot_identifier(plot: Plot | Plot3) -> bytes32:
     if isinstance(plot, Plot3):
         identifier = plot.plot_id if plot.plot_id is not None else plot.group_plot_id
         assert identifier is not None
@@ -350,7 +350,7 @@ class FarmerRpcApi:
             raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
 
         # Sort by the V1 plot id or V2 group plot id as a stable tie-breaker.
-        def sort_value(plot: Plot | Plot2 | Plot3) -> tuple[bool, Any]:
+        def sort_value(plot: Plot | Plot3) -> tuple[bool, Any]:
             value = plot_identifier(plot) if request.sort_key == "plot_id" else getattr(plot, request.sort_key)
             return value is None, value
 

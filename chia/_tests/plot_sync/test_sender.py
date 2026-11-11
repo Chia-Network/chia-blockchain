@@ -55,7 +55,6 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     "protocol_version,expected_message_type",
     [
         (Version("0.0.37"), ProtocolMessageTypes.plot_sync_loaded),
-        (Version("0.0.38"), ProtocolMessageTypes.plot_sync_loaded2),
         (Version("0.0.39"), ProtocolMessageTypes.plot_sync_loaded3),
     ],
 )

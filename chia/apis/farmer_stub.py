@@ -10,11 +10,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotList2,
     PlotSyncPlotList3,
     PlotSyncStart,
     RespondPlots,
-    RespondPlots2,
     RespondPlots3,
     RespondSignatures,
 )
@@ -71,11 +69,6 @@ class FarmerApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(peer_required=True)
-    async def respond_plots2(self, _: RespondPlots2, peer: WSChiaConnection) -> None:
-        """Handle respond plots from harvester."""
-        ...
-
-    @metadata.request(peer_required=True)
     async def respond_plots3(self, _: RespondPlots3, peer: WSChiaConnection) -> None:
         """Handle group-aware respond plots from harvester."""
         ...
@@ -87,11 +80,6 @@ class FarmerApiStub(ApiProtocol, Protocol):
 
     @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
-        """Handle plot sync loaded."""
-        ...
-
-    @metadata.request(peer_required=True)
-    async def plot_sync_loaded2(self, message: PlotSyncPlotList2, peer: WSChiaConnection) -> None:
         """Handle plot sync loaded."""
         ...
 

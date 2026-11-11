@@ -73,8 +73,6 @@ def test_rl_v3_roundtrip(settings: dict[ProtocolMessageTypes, RLSettingsV3] | No
 @pytest.mark.parametrize(
     "message_type",
     [
-        ProtocolMessageTypes.respond_plots2,
-        ProtocolMessageTypes.plot_sync_loaded2,
         ProtocolMessageTypes.respond_plots3,
         ProtocolMessageTypes.plot_sync_loaded3,
     ],

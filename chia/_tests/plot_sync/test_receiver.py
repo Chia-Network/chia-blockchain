@@ -24,13 +24,12 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
-from chia.plot_sync.sender import Sender, _convert_plot_info_list, _convert_plot_info_list2, _convert_plot_info_list3
+from chia.plot_sync.sender import Sender, _convert_plot_info_list, _convert_plot_info_list3
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot2,
     Plot3,
     PlotSyncDone,
     PlotSyncIdentifier,
@@ -40,7 +39,6 @@ from chia.protocols.harvester_protocol import (
     PlotSyncStart,
     RequestPlots,
     RespondPlots,
-    RespondPlots2,
     RespondPlots3,
 )
 from chia.protocols.outbound_message import NodeType
@@ -70,7 +68,7 @@ async def dummy_callback(_: bytes32, __: Delta) -> None:
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("group_size", [1, 8])
-@pytest.mark.parametrize("version", ["0.0.37", "0.0.38", "0.0.39"])
+@pytest.mark.parametrize("version", ["0.0.37", "0.0.39"])
 async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: int, version: str) -> None:
     plot_infos: list[PlotInfo] = []
     for v2 in [False, True]:
@@ -98,18 +96,13 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
 
     peer = Mock(protocol_version=Version(version), connection_type=NodeType.FARMER)
     response = await HarvesterAPI(harvester).request_plots(RequestPlots(), peer)
-    inventory: RespondPlots | RespondPlots2 | RespondPlots3
-    synced_plots: Sequence[Plot | Plot2 | Plot3]
+    inventory: RespondPlots | RespondPlots3
+    synced_plots: Sequence[Plot | Plot3]
     if version == "0.0.39":
         inventory = RespondPlots3.from_bytes(response.data)
         synced_plots = _convert_plot_info_list3(plot_infos)
         expected_response_type = ProtocolMessageTypes.respond_plots3
         expected_sync_type = ProtocolMessageTypes.plot_sync_loaded3
-    elif version == "0.0.38":
-        inventory = RespondPlots2.from_bytes(response.data)
-        synced_plots = _convert_plot_info_list2(plot_infos)
-        expected_response_type = ProtocolMessageTypes.respond_plots2
-        expected_sync_type = ProtocolMessageTypes.plot_sync_loaded2
     else:
         inventory = RespondPlots.from_bytes(response.data)
         synced_plots = _convert_plot_info_list(plot_infos)
@@ -150,16 +143,20 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
         await process(PlotSyncPathList(plot_sync_identifier(sender._sync_id, uint64(message_id)), [], True))
     await receiver.sync_done(PlotSyncDone(plot_sync_identifier(sender._sync_id, uint64(6)), uint64(0)))
 
-    assert len(receiver.plots()) == 2
-    assert receiver.to_dict(True)["plots"] == 2
-    assert receiver.to_dict(True)["plot_count"] == 1 + (group_size if version == "0.0.39" else 1)
-    assert receiver.total_plot_size() == 200
-    assert receiver.total_effective_plot_size() == int(
-        UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(synced_plots[0].param(), DEFAULT_CONSTANTS)
-        + UI_ACTUAL_SPACE_CONSTANT_FACTOR
-        * _expected_plot_size(synced_plots[1].param(), DEFAULT_CONSTANTS)
-        * (group_size if version == "0.0.39" else 1)
-    )
+    expected_file_count = 2 if version == "0.0.39" else 1
+    assert len(receiver.plots()) == expected_file_count
+    assert receiver.to_dict(True)["plots"] == expected_file_count
+    expected_plot_count = 1 + group_size if version == "0.0.39" else 1
+    assert receiver.to_dict(True)["plot_count"] == expected_plot_count
+    assert receiver.total_plot_size() == 100 * expected_file_count
+    expected_effective_plot_size: float = 0
+    for plot in synced_plots:
+        plot_size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), DEFAULT_CONSTANTS)
+        if isinstance(plot, Plot3) and plot.param().strength_v2 is not None:
+            assert plot.group_size is not None
+            plot_size *= plot.group_size
+        expected_effective_plot_size += plot_size
+    assert receiver.total_effective_plot_size() == int(expected_effective_plot_size)
     if version == "0.0.39":
         assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [None, group_size]
 

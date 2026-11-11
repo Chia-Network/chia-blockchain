@@ -205,7 +205,7 @@ class Harvester:
                 response_plots.append(
                     {
                         "filename": str(path),
-                        # Compatibility fields for Plot and Plot2 serialization.
+                        # Compatibility fields for the legacy Plot serialization.
                         "size": k,
                         "plot_id": plot_id,
                         # Explicit fields used by Plot3.

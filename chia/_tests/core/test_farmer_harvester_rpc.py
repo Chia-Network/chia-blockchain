@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import operator
 import time
 from collections.abc import Awaitable, Callable
 from math import ceil
@@ -29,6 +28,7 @@ from chia.farmer.farmer_rpc_api import (
     PaginatedRequestData,
     PlotInfoRequestData,
     PlotPathRequestData,
+    plot_identifier,
     plot_matches_filter,
 )
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
@@ -349,11 +349,23 @@ async def test_pool_state_counts_v2_group_members() -> None:
         meta_group=None,
         group_size=None,
     )
+    assert group.group_plot_id is not None
+    legacy_group = Plot(
+        filename="legacy.gplot",
+        size=uint8(0x83),
+        plot_id=group.group_plot_id,
+        pool_public_key=None,
+        pool_contract_puzzle_hash=pool_hash,
+        plot_public_key=G1Element(),
+        file_size=uint64(0),
+        time_modified=uint64(0),
+        compression_level=uint8(0),
+    )
     receiver = Mock(spec=Receiver)
     receiver.plots.return_value = {
         "group.gplot": group,
         "v1.plot": v1_plot,
-        "legacy.gplot": group.to_plot2(),
+        "legacy.gplot": legacy_group,
         "other.gplot": dataclasses.replace(group, pool_contract_puzzle_hash=other_pool_hash),
     }
     farmer = Mock(spec=Farmer)
@@ -403,8 +415,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
         ),
         (
             FarmerRpcClient.get_harvester_plots_valid,
-            [FilterItem("size", "130")],  # 127 means v2 plot, 2 means strength
-            "size",
+            [FilterItem("strength", "2")],
+            "strength",
             True,
             23,
         ),
@@ -490,8 +502,14 @@ async def test_farmer_get_harvester_plots_endpoints(
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
             assert isinstance(filter_item, FilterItem)
-            plots = [plot for plot in plots if plot_matches_filter(Plot.from_json_dict(plot), filter_item)]
-        plots.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
+            plots = [plot for plot in plots if plot_matches_filter(Plot3.from_json_dict(plot), filter_item)]
+
+        def plot_sort_key(plot_data: dict[str, Any]) -> tuple[tuple[bool, Any], bytes32]:
+            plot = Plot3.from_json_dict(plot_data)
+            value = plot_identifier(plot) if sort_key == "plot_id" else getattr(plot, sort_key)
+            return (value is None, value), plot_identifier(plot)
+
+        plots.sort(key=plot_sort_key, reverse=reverse)
     else:
         for filter_item in filtering:
             plots = [plot for plot in plots if filter_item in plot]

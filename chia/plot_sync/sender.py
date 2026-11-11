@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 from chia_rs.sized_ints import int16, uint8, uint16, uint32, uint64
+from packaging.version import Version
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -19,17 +20,15 @@ from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot2,
     Plot3,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotList2,
     PlotSyncPlotList3,
     PlotSyncResponse,
     PlotSyncStart,
-    supports_new_plot_serialization,
+    supports_legacy_plot_serialization,
     supports_plot_groups,
 )
 from chia.protocols.outbound_message import NodeType, make_msg
@@ -41,26 +40,20 @@ from chia.util.task_referencer import create_referenced_task
 log = logging.getLogger(__name__)
 
 
-def _plot_fields(plot_info: PlotInfo) -> tuple[uint8, uint16, uint8]:
-    if isinstance(plot_info.prover, V1Prover):
-        param = plot_info.prover.get_param()
-        assert param.size_v1 is not None
-        return param.size_v1, uint16(0), uint8(0)
-
-    assert isinstance(plot_info.prover, V2Prover)
-    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
-    return uint8(0x80 | plot_info.prover.get_strength()), uint16(0), plot_info.prover.get_meta_group()
-
-
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
+    # The 0.0.37 Plot schema has no group size or group metadata, so only V1
+    # plots can be represented accurately in its inventory.
     converted: list[Plot] = []
     for plot_info in plot_infos:
-        k, _plot_index, _meta_group = _plot_fields(plot_info)
+        if not isinstance(plot_info.prover, V1Prover):
+            continue
+        param = plot_info.prover.get_param()
+        assert param.size_v1 is not None
 
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=uint8(k),
+                size=uint8(param.size_v1),
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
@@ -71,10 +64,6 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
             )
         )
     return converted
-
-
-def _convert_plot_info_list2(plot_infos: list[PlotInfo]) -> list[Plot2]:
-    return [plot.to_plot2() for plot in _convert_plot_info_list3(plot_infos)]
 
 
 def _convert_plot_info_list3(plot_infos: list[PlotInfo]) -> list[Plot3]:
@@ -160,6 +149,7 @@ class ExpectedResponse:
 class Sender:
     _plot_manager: PlotManager
     _connection: WSChiaConnection | None
+    _protocol_version: Version | None
     _sync_id: uint64
     _next_message_id: uint64
     _messages: list[MessageGenerator[PayloadType]]
@@ -172,6 +162,7 @@ class Sender:
     def __init__(self, plot_manager: PlotManager, harvesting_mode: HarvestingMode) -> None:
         self._plot_manager = plot_manager
         self._connection = None
+        self._protocol_version = None
         self._sync_id = uint64(0)
         self._next_message_id = uint64(0)
         self._messages = []
@@ -209,6 +200,7 @@ class Sender:
         if connection.connection_type != NodeType.FARMER:
             raise InvalidConnectionTypeError(connection.connection_type, NodeType.HARVESTER)
         self._connection = connection
+        self._protocol_version = connection.protocol_version
 
     def bump_next_message_id(self) -> None:
         self._next_message_id = uint64(self._next_message_id + 1)
@@ -351,22 +343,20 @@ class Sender:
     def process_batch(self, loaded: list[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            if self._connection is not None and supports_plot_groups(self._connection.protocol_version):
+            if self._protocol_version is None:
+                return
+            if supports_plot_groups(self._protocol_version):
                 converted3 = _convert_plot_info_list3(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded3, PlotSyncPlotList3, converted3, remaining == 0)
-            elif self._connection is not None and supports_new_plot_serialization(self._connection.protocol_version):
-                converted2 = _convert_plot_info_list2(loaded)
-                self._add_message(ProtocolMessageTypes.plot_sync_loaded2, PlotSyncPlotList2, converted2, remaining == 0)
-            else:
+            elif supports_legacy_plot_serialization(self._protocol_version):
                 converted = _convert_plot_info_list(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
+            else:
+                raise ValueError(f"Unsupported farmer protocol version: {self._protocol_version}")
 
     def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
         removed_list = [str(x) for x in removed]
-        if self._connection is not None and supports_legacy_plot_serialization(self._connection.protocol_version):
-            # The loader selects V1 for .plot and V2 for .gplot, and legacy inventory only includes V1 plots.
-            removed_list = [str(path) for path in removed if path.suffix == ".plot"]
         self._add_list_batched(
             ProtocolMessageTypes.plot_sync_removed,
             PlotSyncPathList,

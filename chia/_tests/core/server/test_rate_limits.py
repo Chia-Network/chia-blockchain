@@ -47,8 +47,6 @@ async def test_get_rate_limits_to_use() -> None:
 @pytest.mark.parametrize(
     "message_type",
     [
-        ProtocolMessageTypes.respond_plots2,
-        ProtocolMessageTypes.plot_sync_loaded2,
         ProtocolMessageTypes.respond_plots3,
         ProtocolMessageTypes.plot_sync_loaded3,
     ],

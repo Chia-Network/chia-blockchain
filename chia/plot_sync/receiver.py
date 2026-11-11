@@ -25,14 +25,12 @@ from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
     Plot,
-    Plot2,
     Plot3,
     PlotSyncDone,
     PlotSyncError,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotList2,
     PlotSyncPlotList3,
     PlotSyncResponse,
     PlotSyncStart,
@@ -88,7 +86,7 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: dict[str, Plot | Plot2 | Plot3]
+    _plots: dict[str, Plot | Plot3]
     _invalid: list[str]
     _keys_missing: list[str]
     _duplicates: list[str]
@@ -147,7 +145,7 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> dict[str, Plot | Plot2 | Plot3]:
+    def plots(self) -> dict[str, Plot | Plot3]:
         return self._plots
 
     def invalid(self) -> list[str]:
@@ -228,7 +226,7 @@ class Receiver:
     async def sync_started(self, data: PlotSyncStart) -> None:
         await self._process(self._sync_started, ProtocolMessageTypes.plot_sync_start, data)
 
-    async def _process_loaded(self, plot_infos: PlotSyncPlotList | PlotSyncPlotList2 | PlotSyncPlotList3) -> None:
+    async def _process_loaded(self, plot_infos: PlotSyncPlotList | PlotSyncPlotList3) -> None:
         self._validate_identifier(plot_infos.identifier)
 
         for plot_info in plot_infos.data:
@@ -247,9 +245,6 @@ class Receiver:
 
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
-
-    async def process_loaded2(self, plot_infos: PlotSyncPlotList2) -> None:
-        await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded2, plot_infos)
 
     async def process_loaded3(self, plot_infos: PlotSyncPlotList3) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded3, plot_infos)
@@ -363,7 +358,7 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
 
-        def effective_plot_size(plot: Plot | Plot2 | Plot3) -> float:
+        def effective_plot_size(plot: Plot | Plot3) -> float:
             plot_param = plot.param()
             size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
             if isinstance(plot, Plot3) and plot_param.strength_v2 is not None:

@@ -953,40 +953,28 @@ plot = harvester_protocol.Plot(
     uint8(0),
 )
 
-plot2 = harvester_protocol.Plot2(
-    "plot_1",
-    uint8(124),
-    bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
-    G1Element.from_bytes(
-        bytes.fromhex(
-            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
-        ),
-    ),
-    bytes32(bytes.fromhex("1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237")),
-    G1Element.from_bytes(
-        bytes.fromhex(
-            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
-        ),
-    ),
-    uint64(3368414292564311420),
-    uint64(2573238947935295522),
-    uint8(0),
-    uint16(3145),
-    uint8(5),
-)
-
 plot3 = harvester_protocol.Plot3(
-    filename=plot2.filename,
+    filename="plot_1",
     size=None,
     plot_id=None,
-    pool_public_key=plot2.pool_public_key,
-    pool_contract_puzzle_hash=plot2.pool_contract_puzzle_hash,
-    plot_public_key=plot2.plot_public_key,
-    file_size=plot2.file_size,
-    time_modified=plot2.time_modified,
+    pool_public_key=G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    pool_contract_puzzle_hash=bytes32(
+        bytes.fromhex("1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237")
+    ),
+    plot_public_key=G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    file_size=uint64(3368414292564311420),
+    time_modified=uint64(2573238947935295522),
     compression_level=None,
-    meta_group=plot2.meta_group,
-    group_plot_id=plot2.plot_id,
+    meta_group=uint8(5),
+    group_plot_id=bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
     strength=uint8(3),
     group_size=uint16(8),
 )
@@ -995,12 +983,6 @@ request_plots = harvester_protocol.RequestPlots()
 
 respond_plots = harvester_protocol.RespondPlots(
     [plot],
-    ["str"],
-    ["str"],
-)
-
-respond_plots2 = harvester_protocol.RespondPlots2(
-    [plot2],
     ["str"],
     ["str"],
 )

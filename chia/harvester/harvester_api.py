@@ -572,7 +572,7 @@ class HarvesterAPI:
     @metadata.request(peer_required=True)
     async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
-        if harvester_protocol.supports_new_plot_serialization(peer.protocol_version):
+        if harvester_protocol.supports_plot_groups(peer.protocol_version):
             plots_response3: list[Plot3] = []
             for plot in plots:
                 plots_response3.append(
@@ -592,18 +592,17 @@ class HarvesterAPI:
                         group_size=plot["group_size"],
                     )
                 )
-            if harvester_protocol.supports_plot_groups(peer.protocol_version):
-                response3 = harvester_protocol.RespondPlots3(
-                    plots_response3, failed_to_open_filenames, no_key_filenames
-                )
-                return make_msg(ProtocolMessageTypes.respond_plots3, response3)
-            response2 = harvester_protocol.RespondPlots2(
-                [plot.to_plot2() for plot in plots_response3], failed_to_open_filenames, no_key_filenames
-            )
-            return make_msg(ProtocolMessageTypes.respond_plots2, response2)
+            response3 = harvester_protocol.RespondPlots3(plots_response3, failed_to_open_filenames, no_key_filenames)
+            return make_msg(ProtocolMessageTypes.respond_plots3, response3)
+
+        if not harvester_protocol.supports_legacy_plot_serialization(peer.protocol_version):
+            raise ValueError(f"Unsupported farmer protocol version: {peer.protocol_version}")
 
         plots_response: list[Plot] = []
         for plot in plots:
+            # The 0.0.37 Plot schema cannot describe V2 plot groups.
+            if plot["strength"] is not None:
+                continue
             plots_response.append(
                 Plot(
                     plot["filename"],

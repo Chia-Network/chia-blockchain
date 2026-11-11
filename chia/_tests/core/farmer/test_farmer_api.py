@@ -100,7 +100,7 @@ async def test_farmer_does_not_send_v2_signage_point_to_037_harvester(
 
 
 @pytest.mark.anyio
-async def test_farmer_sends_filter_challenge_to_038_harvester(
+async def test_farmer_sends_filter_challenge_to_current_harvester(
     farmer_one_harvester: FarmerOneHarvester, self_hostname: str
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
@@ -114,7 +114,7 @@ async def test_farmer_sends_filter_challenge_to_038_harvester(
     response_type = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response_type).name == "harvester_handshake"
 
-    farmer_server.all_connections[peer_id].protocol_version = Version("0.0.38")
+    farmer_server.all_connections[peer_id].protocol_version = Version("0.0.39")
     filter_challenge = std_hash(b"filter")
     sp = farmer_protocol.NewSignagePoint(
         std_hash(b"1"),
