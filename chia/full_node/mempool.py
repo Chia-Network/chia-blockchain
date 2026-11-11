@@ -80,8 +80,8 @@ MAX_BLOCK_ATOMS = 60_000_000
 MAX_BLOCK_PAIRS = 60_000_000
 
 
-def minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64) -> int:
-    return (cost * fee_per_million_cost + 999_999) // 1_000_000
+def minimum_fee_for_cost(cost: int, fee_per_cost: uint64) -> int:
+    return cost * fee_per_cost
 
 
 @dataclass

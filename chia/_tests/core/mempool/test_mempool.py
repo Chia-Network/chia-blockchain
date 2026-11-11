@@ -3006,25 +3006,25 @@ def test_timeout(old: bool) -> None:
 
 
 @pytest.mark.parametrize(
-    "cost, fee_per_million_cost, expected_fee",
+    "cost, fee_per_cost, expected_fee",
     [
-        (0, uint64(1_818_182), 0),
+        (0, uint64(4), 0),
         (1, uint64(1), 1),
-        (1_000_000, uint64(1), 1),
-        (1_000_001, uint64(1), 2),
-        (5_500_000, uint64(1_818_182), 10_000_001),
+        (1_000_000, uint64(1), 1_000_000),
+        (1_000_001, uint64(4), 4_000_004),
+        (5_500_000, uint64(4), 22_000_000),
         (11_000_000_000, uint64(0), 0),
     ],
 )
-def test_minimum_fee_for_cost(cost: int, fee_per_million_cost: uint64, expected_fee: int) -> None:
-    assert minimum_fee_for_cost(cost, fee_per_million_cost) == expected_fee
+def test_minimum_fee_for_cost(cost: int, fee_per_cost: uint64, expected_fee: int) -> None:
+    assert minimum_fee_for_cost(cost, fee_per_cost) == expected_fee
 
 
 @pytest.mark.parametrize("old", [True, False])
 def test_minimum_fee_only_filters_block_inclusion(old: bool) -> None:
     mempool = construct_mempool()
-    below_floor = mk_item([coins[0]], cost=1_000_000, fee=9)
-    at_floor = mk_item([coins[1]], cost=1_000_000, fee=10)
+    below_floor = mk_item([coins[0]], cost=1_000_000, fee=9_999_999)
+    at_floor = mk_item([coins[1]], cost=1_000_000, fee=10_000_000)
 
     assert mempool.add_to_pool(below_floor).error is None
     assert mempool.add_to_pool(at_floor).error is None

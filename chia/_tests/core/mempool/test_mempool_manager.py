@@ -1610,7 +1610,7 @@ def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> N
 async def test_minimum_block_fee_does_not_reject_from_mempool() -> None:
     async with instantiate_mempool_manager(
         get_coin_records_for_test_coins,
-        minimum_block_fee_per_cost=uint64(1_000_000),
+        minimum_block_fee_per_cost=uint64(1),
     ) as mempool_manager:
         spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
         assert_sb_in_pool(mempool_manager, spend_bundle)

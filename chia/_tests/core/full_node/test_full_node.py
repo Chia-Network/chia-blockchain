@@ -4704,9 +4704,9 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
 @pytest.mark.parametrize(
     "configured, expected",
     [
-        (None, 4_000_000),
+        (None, 4),
         (0, 0),
-        (1_000_000, 1_000_000),
+        (1, 1),
     ],
 )
 async def test_minimum_block_fee_per_cost_config(

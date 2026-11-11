@@ -50,8 +50,8 @@ log = logging.getLogger(__name__)
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 # The minimum block fee used when the full_node config doesn't specify one, in
-# mojos per million CLVM cost. This is 4 mojos per cost.
-DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4_000_000)
+# mojos per CLVM cost.
+DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4)
 # The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
 # UTC). Once the peak has reached it, the configured minimum is ignored.
 MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
@@ -437,7 +437,7 @@ class MempoolManager:
 
     def effective_minimum_block_fee_per_cost(self) -> uint64:
         """
-        Returns the minimum fee, in mojos per million CLVM cost, for selecting
+        Returns the minimum fee, in mojos per CLVM cost, for selecting
         transactions into a block on top of the current peak
         """
         assert self.peak is not None
