@@ -14,7 +14,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc
 from chia._tests.util.coin_store import add_coin_records_to_db
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.explorer_store import ExplorerStore
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import MempoolRemoveReason
 from chia.protocols import wallet_protocol
@@ -225,13 +225,13 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     await simulator.farm_blocks_to_puzzlehash(1)
 
     # This is a safe limit for this test that will fit within the current maximum in `RequestPuzzleState`.
-    simulator.full_node.config["max_subscribe_items"] = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+    simulator.full_node.config["max_subscribe_items"] = ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE
 
     max_subs = simulator.max_subscriptions(peer)
     puzzle_hashes = [std_hash(i.to_bytes(4, byteorder="big", signed=False)) for i in range(max_subs + 100)]
 
     # Add puzzle subscriptions to the limit
-    first_batch = puzzle_hashes[: CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE]
+    first_batch = puzzle_hashes[: ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE]
     first_batch_set = set(first_batch)
 
     resp = await simulator.request_puzzle_state(
@@ -250,7 +250,7 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
     # Try to add the remaining subscriptions
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            puzzle_hashes[CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE :],
+            puzzle_hashes[ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE :],
             None,
             genesis_challenge,
             wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
@@ -646,8 +646,8 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             assert coin_record.confirmed_block_index <= 10
 
         # Exercise the Python-object guard by lowering MAX_PUZZLE_HASH_BATCH_SIZE.
-        saved = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
-        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
+        saved = ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE
+        ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE = 2
         oversized_phs = [bytes32(i.to_bytes(32, "big")) for i in range(5)]
         resp = await simulator.request_puzzle_state(
             wallet_protocol.RequestPuzzleState(
@@ -655,7 +655,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             ),
             peer,
         )
-        CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
+        ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE = saved
         assert resp is not None
 
 
@@ -674,7 +674,7 @@ async def sync_puzzle_hashes(
     initial_header_hash: bytes32,
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
-    max_hashes_in_request: int = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE,
+    max_hashes_in_request: int = ExplorerStore.MAX_PUZZLE_HASH_BATCH_SIZE,
     simulator: FullNodeSimulator,
     peer: WSChiaConnection,
 ) -> AsyncGenerator[PuzzleStateData, None]:
@@ -767,7 +767,7 @@ async def test_sync_puzzle_state(
                 hints.append((coin.name(), puzzle_hash))
 
     await add_coin_records_to_db(simulator.full_node.coin_store, list(coin_records.values()))
-    await simulator.full_node.hint_store.add_hints(hints)
+    await simulator.full_node.explorer_store.add_hints(hints)
 
     # Farm peak
     await simulator.farm_blocks_to_puzzlehash(30)
@@ -872,7 +872,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     await simulator.full_node.coin_store.new_block(
         uint32(2), uint64(10000), [reward_1, reward_2], [(coin.name(), coin, False) for coin, _ in new_coins], []
     )
-    await simulator.full_node.hint_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
+    await simulator.full_node.explorer_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
 
     for coin, hint in new_coins:
         solution = Program.to([[]])
@@ -900,7 +900,7 @@ async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
     await full_node.coin_store.new_block(
         uint32(height + 1), uint64(200000), [reward_1, reward_2], [(coin.name(), coin, False)], []
     )
-    await full_node.hint_store.add_hints([(coin.name(), hint)])
+    await full_node.explorer_store.add_hints([(coin.name(), hint)])
 
     return coin, hint
 

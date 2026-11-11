@@ -2192,7 +2192,7 @@ async def test_identical_spend_aggregation_e2e(
     await send_to_mempool(full_node_api, wallet_peer, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
     # Grab the coin we created and make an eligible coin out of it
-    coins_with_identity_ph = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+    coins_with_identity_ph = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(
         False, IDENTITY_PUZZLE_HASH
     )
     coin = coins_with_identity_ph[0].coin
@@ -2200,9 +2200,9 @@ async def test_identical_spend_aggregation_e2e(
     await send_to_mempool(full_node_api, wallet_peer, sb)
     await farm_a_block(full_node_api, wallet_node, ph)
     # Grab the eligible coin to spend as E in DE and EF transactions
-    e_coin = (await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, IDENTITY_PUZZLE_HASH))[
-        0
-    ].coin
+    e_coin = (
+        await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(False, IDENTITY_PUZZLE_HASH)
+    )[0].coin
     e_coin_id = e_coin.name()
     # Restrict spending E with an announcement to consume
     message = b"Identical spend aggregation test"
@@ -2284,7 +2284,7 @@ async def test_identical_spend_aggregation_e2e(
     coins_set = await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1)
     assert g_coin in (c.coin for c in coins_set)
     # Only the newly created eligible coin is left now
-    eligible_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+    eligible_coins = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(
         False, IDENTITY_PUZZLE_HASH
     )
     assert len(eligible_coins) == 1
@@ -2518,7 +2518,7 @@ async def test_fill_rate_block_validation(
             ph = puzzle.get_tree_hash()
             for _ in range(2):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+            coin_records = await full_node_api.full_node.explorer_store.get_coin_records_by_puzzle_hash(False, ph)
             coin = next(cr.coin for cr in coin_records if cr.coin.amount == 250_000_000_000)
             coins_and_puzzles.append((coin, puzzle))
         _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)

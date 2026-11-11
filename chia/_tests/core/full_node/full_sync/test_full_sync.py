@@ -332,12 +332,12 @@ async def test_short_sync_batch_post_processes_committed_prefix_before_failure(
             return full_node_protocol.RespondBlocks(request.start_height, request.end_height, [tx_block, bad_block])
 
     peer = cast(WSChiaConnection, DummyPeer())
-    assert await node.hint_store.get_coin_ids(hint) == []
+    assert await node.explorer_store.get_coin_ids(hint) == []
 
     with pytest.raises(ValueError, match="failed to validate blocks after height"):
         await node.short_sync_batch(peer, tx_block.height, bad_block.height)
 
-    assert await node.hint_store.get_coin_ids(hint) == [hinted_coin_id]
+    assert await node.explorer_store.get_coin_ids(hint) == [hinted_coin_id]
     peak = node.blockchain.get_peak()
     assert peak is not None
     assert peak.header_hash == tx_block.header_hash
