@@ -350,10 +350,10 @@ async def test_pool_state_counts_v2_group_members() -> None:
         group_size=None,
     )
     assert group.group_plot_id is not None
-    legacy_group = Plot(
-        filename="legacy.gplot",
-        size=uint8(0x83),
-        plot_id=group.group_plot_id,
+    legacy_v1_plot = Plot(
+        filename="legacy.plot",
+        size=uint8(32),
+        plot_id=bytes32.random(),
         pool_public_key=None,
         pool_contract_puzzle_hash=pool_hash,
         plot_public_key=G1Element(),
@@ -365,7 +365,7 @@ async def test_pool_state_counts_v2_group_members() -> None:
     receiver.plots.return_value = {
         "group.gplot": group,
         "v1.plot": v1_plot,
-        "legacy.gplot": legacy_group,
+        "legacy.plot": legacy_v1_plot.to_plot3(),
         "other.gplot": dataclasses.replace(group, pool_contract_puzzle_hash=other_pool_hash),
     }
     farmer = Mock(spec=Farmer)

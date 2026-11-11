@@ -160,11 +160,7 @@ class RespondSignatures(Streamable):
 class Plot(Streamable):
     # Field names are exposed by the farmer's get_harvester_plots_valid RPC; renaming them affects its API.
     filename: str
-    # for backwards compatibility with previous harvester (e.g. DrPlotter)
-    # this field is either k-size (for v1 plots) or strength (for v2 plots).
-    # the most significant bit is set for v2 plots
-    # TODO: after the phase-out, v1 harvester won't be relevant anymore and we
-    # can clean this up with a new protocol version
+    # Legacy peers support V1 plots only; this field is the V1 k-size.
     size: uint8
     plot_id: bytes32
     pool_public_key: G1Element | None
@@ -175,10 +171,28 @@ class Plot(Streamable):
     compression_level: uint8 | None
 
     def param(self) -> PlotParam:
-        if (self.size & 0x80) != 0:
-            return PlotParam.make_v2(0, 0, self.size & 0x7F)
-        else:
-            return PlotParam.make_v1(self.size)
+        if self.size & 0x80:
+            raise ValueError("Legacy Plot serialization only supports V1 plots")
+        return PlotParam.make_v1(self.size)
+
+    def to_plot3(self) -> Plot3:
+        self.param()
+        # Legacy peers without compression support report None for uncompressed plots.
+        return Plot3(
+            filename=self.filename,
+            pool_public_key=self.pool_public_key,
+            pool_contract_puzzle_hash=self.pool_contract_puzzle_hash,
+            plot_public_key=self.plot_public_key,
+            file_size=self.file_size,
+            time_modified=self.time_modified,
+            size=self.size,
+            plot_id=self.plot_id,
+            compression_level=self.compression_level if self.compression_level is not None else uint8(0),
+            group_plot_id=None,
+            strength=None,
+            meta_group=None,
+            group_size=None,
+        )
 
 
 @streamable

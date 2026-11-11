@@ -24,7 +24,6 @@ from chia.plot_sync.exceptions import (
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
-    Plot,
     Plot3,
     PlotSyncDone,
     PlotSyncError,
@@ -86,7 +85,7 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: dict[str, Plot | Plot3]
+    _plots: dict[str, Plot3]
     _invalid: list[str]
     _keys_missing: list[str]
     _duplicates: list[str]
@@ -145,7 +144,7 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> dict[str, Plot | Plot3]:
+    def plots(self) -> dict[str, Plot3]:
         return self._plots
 
     def invalid(self) -> list[str]:
@@ -230,9 +229,10 @@ class Receiver:
         self._validate_identifier(plot_infos.identifier)
 
         for plot_info in plot_infos.data:
-            if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
-                raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
-            self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
+            plot3 = plot_info if isinstance(plot_info, Plot3) else plot_info.to_plot3()
+            if plot3.filename in self._plots or plot3.filename in self._current_sync.delta.valid.additions:
+                raise PlotAlreadyAvailableError(State.loaded, plot3.filename)
+            self._current_sync.delta.valid.additions[plot3.filename] = plot3
             self._current_sync.bump_plots_processed()
 
         # Let the callback receiver know about the sync progress updates
@@ -358,10 +358,10 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
 
-        def effective_plot_size(plot: Plot | Plot3) -> float:
+        def effective_plot_size(plot: Plot3) -> float:
             plot_param = plot.param()
             size = UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot_param, self._constants)
-            if isinstance(plot, Plot3) and plot_param.strength_v2 is not None:
+            if plot.strength is not None:
                 assert plot.group_size is not None
                 size *= plot.group_size
             return size
@@ -392,9 +392,7 @@ class Receiver:
             },
             "plots": get_list_or_len(list(self._plots.values()), counts_only),
             "plot_count": sum(
-                plot.group_size
-                if isinstance(plot, Plot3) and plot.param().strength_v2 is not None and plot.group_size is not None
-                else 1
+                plot.group_size if plot.strength is not None and plot.group_size is not None else 1
                 for plot in self._plots.values()
             ),
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),

@@ -75,7 +75,7 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
         prover = Mock(spec=V2Prover if v2 else V1Prover)
         prover.get_filename.return_value = str(tmp_path / ("group.gplot" if v2 else "v1.plot"))
         prover.get_id.return_value = bytes32.zeros
-        prover.get_compression_level.return_value = uint8(0)
+        prover.get_compression_level.return_value = None if not v2 and version == "0.0.37" else uint8(0)
         if v2:
             prover.get_strength.return_value = uint8(3)
             prover.get_meta_group.return_value = uint8(5)
@@ -159,6 +159,8 @@ async def test_group_inventory_and_effective_space(tmp_path: Path, group_size: i
     assert receiver.total_effective_plot_size() == int(expected_effective_plot_size)
     if version == "0.0.39":
         assert [plot.group_size for plot in receiver.to_dict()["plots"]] == [None, group_size]
+    else:
+        assert next(iter(receiver.plots().values())).compression_level == 0
 
 
 class SyncStepData:
@@ -294,7 +296,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     ]
 
     # Manually add the plots we want to remove in tests
-    receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
+    receiver._plots = {plot_info.filename: plot_info.to_plot3() for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
     # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
@@ -423,7 +425,8 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
         assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
-    assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
+    loaded_plots = [plot.to_plot3() for plot in sync_steps[State.loaded].args[0]]
+    assert get_list_or_len(loaded_plots, counts_only) == plot_sync_dict_3["plots"]
     assert (
         get_list_or_len(sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]
     )

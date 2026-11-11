@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint64
@@ -14,25 +15,28 @@ from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import protocol_version
 
 
-def test_old_v2_plot_param_uses_legacy_zero_index_and_meta_group() -> None:
+@pytest.mark.parametrize("compression_level", [None, uint8(0), uint8(5)])
+def test_legacy_plot_param_is_v1(compression_level: uint8 | None) -> None:
     plot = Plot(
-        filename="v2.gplot",
-        size=uint8(0x80 | 3),
+        filename="v1.plot",
+        size=uint8(32),
         plot_id=bytes32.zeros,
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=None,
         plot_public_key=G1Element(),
         file_size=uint64(0),
         time_modified=uint64(0),
-        compression_level=uint8(0),
+        compression_level=compression_level,
     )
 
     param = plot.param()
 
-    assert param.size_v1 is None
-    assert param.strength_v2 == 3
-    assert param.plot_index == 0
-    assert param.meta_group == 0
+    assert param.size_v1 == 32
+    assert param.strength_v2 is None
+    plot3 = Plot.from_bytes(bytes(plot)).to_plot3()
+    assert plot3.compression_level == (compression_level if compression_level is not None else uint8(0))
+    assert plot3.param().size_v1 == 32
+    assert Plot3.from_bytes(bytes(plot3)) == plot3
 
 
 def test_v2_plot3_param_uses_group_metadata_without_plot_index() -> None:
