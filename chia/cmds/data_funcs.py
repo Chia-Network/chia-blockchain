@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,7 @@ from chia.util.default_root import resolve_root_path
 @contextlib.asynccontextmanager
 async def get_client(
     rpc_port: int | None, fingerprint: int | None = None, root_path: Path | None = None
-) -> AsyncIterator[tuple[DataLayerRpcClient, dict[str, Any]]]:
+) -> AsyncGenerator[tuple[DataLayerRpcClient, dict[str, Any]], None]:
     root_path = resolve_root_path(override=root_path)
 
     async with get_any_service_client(

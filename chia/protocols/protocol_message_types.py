@@ -143,7 +143,11 @@ class ProtocolMessageTypes(Enum):
 
     # solver protocol
     solve = 109
+
+    # farmer/harvester plot inventory
     respond_plots2 = 113
     plot_sync_loaded2 = 112
+    plot_sync_loaded3 = 114
+    respond_plots3 = 115
 
     error = 255

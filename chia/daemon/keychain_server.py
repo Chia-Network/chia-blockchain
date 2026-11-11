@@ -8,7 +8,7 @@ from typing import Any
 from chia_rs import PrivateKey
 from chia_rs.sized_ints import uint32
 
-from chia.cmds.init_funcs import check_keys
+from chia.init.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
 from chia.util.keychain import Keychain, KeyData
 from chia.util.streamable import Streamable, streamable

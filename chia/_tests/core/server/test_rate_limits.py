@@ -49,6 +49,8 @@ async def test_get_rate_limits_to_use() -> None:
     [
         ProtocolMessageTypes.respond_plots2,
         ProtocolMessageTypes.plot_sync_loaded2,
+        ProtocolMessageTypes.respond_plots3,
+        ProtocolMessageTypes.plot_sync_loaded3,
     ],
 )
 def test_new_plot_serialization_messages_have_time_based_rate_limits(message_type: ProtocolMessageTypes) -> None:

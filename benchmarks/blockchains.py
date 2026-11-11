@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import cProfile
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from subprocess import check_call
 
@@ -14,7 +14,7 @@ from chia.util.keyring_wrapper import KeyringWrapper
 
 
 @contextmanager
-def enable_profiler(profile: bool, name: str) -> Iterator[None]:
+def enable_profiler(profile: bool, name: str) -> Generator[None, None, None]:
     if not profile:
         yield
         return

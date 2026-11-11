@@ -170,7 +170,6 @@ for path, index in test_paths_with_index:
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
         "name": name,
-        "legacy_keyring_required": conf.get("legacy_keyring_required", False),
         "index": index,
         "index_string": index_string,
         "module_import_path": module_import_path,

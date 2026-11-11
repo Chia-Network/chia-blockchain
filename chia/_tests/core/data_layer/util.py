@@ -6,7 +6,7 @@ import os
 import pathlib
 import shutil
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Generator
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Literal, overload
 
@@ -181,7 +181,7 @@ class ChiaRoot:
             print(f"---- end of: {self.path}")
 
     @contextlib.contextmanager
-    def print_log_after(self) -> Iterator[None]:
+    def print_log_after(self) -> Generator[None, None, None]:
         try:
             yield
         finally:

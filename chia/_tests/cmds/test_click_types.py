@@ -95,6 +95,8 @@ def test_click_amount_type() -> None:
         AmountParamType().convert("-999999", None, None)
     with pytest.raises(BadParameter):
         AmountParamType().convert("-0.6", None, None)
+    with pytest.raises(BadParameter):
+        AmountParamType().convert("6397934938160025216288074", None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
         AmountParamType().convert(0.01, None, None)

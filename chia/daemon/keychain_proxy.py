@@ -10,7 +10,6 @@ from typing import Any, Literal, overload
 from aiohttp import ClientConnectorError, ClientSession
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_KEY_NOT_FOUND,
@@ -19,6 +18,7 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_MALFORMED_REQUEST,
     KEYCHAIN_ERR_NO_KEYS,
 )
+from chia.init.init_funcs import check_keys
 from chia.server.server import ssl_context_for_client
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config

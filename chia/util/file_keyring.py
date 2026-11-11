@@ -5,7 +5,7 @@ import contextlib
 import os
 import shutil
 import threading
-from collections.abc import Iterator
+from collections.abc import Generator
 from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
@@ -258,7 +258,7 @@ class FileKeyring(FileSystemEventHandler):
         return hash(self.keyring_path)
 
     @contextlib.contextmanager
-    def lock_and_reload_if_required(self) -> Iterator[None]:
+    def lock_and_reload_if_required(self) -> Generator[None, None, None]:
         with Lockfile.create(self.keyring_path, timeout=30, poll_interval=0.2):
             self.check_if_keyring_file_modified()
             with self.load_keyring_lock:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import datetime
+import datetime as dt
 import logging
 import os
 import sysconfig
@@ -51,7 +51,7 @@ def data_group() -> None:
 
 def print_date(*args: Any, **kwargs: Any) -> None:
     kwargs.setdefault("flush", True)
-    s = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+    s = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
     print(f"{s}:", *args, **kwargs)
 
 

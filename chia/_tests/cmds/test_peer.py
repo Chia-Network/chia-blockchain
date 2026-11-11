@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -110,7 +110,7 @@ async def test_peer_show_connections_missing_config_section(
         rpc_port: int | None = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
-    ) -> AsyncIterator[tuple[FakeRpcClient, dict[str, Any]]]:
+    ) -> AsyncGenerator[tuple[FakeRpcClient, dict[str, Any]], None]:
         del client_type, root_path, consume_errors, use_ssl
         yield FakeRpcClient(), config
 

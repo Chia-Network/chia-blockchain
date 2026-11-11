@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from chia.cmds.configure import configure
+from chia.init.configure import configure
 from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import (
     DEFAULT_PERMISSIONS_CERT_FILE,

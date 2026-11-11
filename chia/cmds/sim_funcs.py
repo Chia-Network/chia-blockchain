@@ -52,7 +52,7 @@ def create_chia_directory(
     This function creates a new chia directory and returns a heavily modified config,
     suitable for use in the simulator.
     """
-    from chia.cmds.init_funcs import chia_init
+    from chia.init.init_funcs import chia_init
 
     if not chia_root.is_dir() or not Path(chia_root / "config" / "config.yaml").exists():
         # create chia directories & load config

@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Awaitable, Callable, Sequence
-from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, replace
 
 from chia_rs import Coin, CoinSpend, CoinState, G2Element
@@ -28,11 +27,10 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVers
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import CoinSubscription, WalletActionScope
+from chia.wallet.wallet_action_scope import CoinSubscription, ParentAbsorb, WalletActionScope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -53,7 +51,6 @@ class ClawbackManager:
     auto_claim_batch_size: int
     timestamp_for_height: Callable[[uint32], Awaitable[uint64]]
     puzzle_hash_encoder: Callable[[bytes32], str]
-    action_scope_sandbox: Callable[[TXConfig, bool], AbstractAsyncContextManager[WalletActionScope]]
     _add_subscriptions: Callable[[Sequence[CoinSubscription]], Awaitable[None]]
 
     async def identify(
@@ -266,27 +263,26 @@ class ClawbackManager:
             return
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         if fee > 0:
-            async with self.action_scope_sandbox(action_scope.config.tx_config, False) as inner_action_scope:
-                async with action_scope.use() as interface:
-                    async with inner_action_scope.use() as inner_interface:
-                        inner_interface.side_effects.selected_coins = interface.side_effects.selected_coins
-                    await self.xch_wallet.create_tandem_xch_tx(
-                        fee,
-                        inner_action_scope,
-                        extra_conditions=(
-                            AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
-                        ),
-                    )
-                    async with inner_action_scope.use() as inner_interface:
-                        # This should not be looked to for best practice.
-                        # Ideally, the two spend bundles can exist separately on each tx record until they are pushed.
-                        # This is not very supported behavior at the moment
-                        # so to avoid any potential backwards compatibility issues,
-                        # we're moving the spend bundle from this TX to the main
-                        interface.side_effects.transactions.extend(
-                            [replace(tx, spend_bundle=None) for tx in inner_interface.side_effects.transactions]
-                        )
-                        interface.side_effects.selected_coins.extend(inner_interface.side_effects.selected_coins)
+            async with action_scope.sandbox(
+                wallet_state_manager=self.xch_wallet.wallet_state_manager,
+                parent_absorb=replace(ParentAbsorb.nothing(), selected_coins=True),
+            ) as inner_action_scope:
+                await self.xch_wallet.create_tandem_xch_tx(
+                    fee,
+                    inner_action_scope,
+                    extra_conditions=(
+                        AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
+                    ),
+                )
+            # This should not be looked to for best practice.
+            # Ideally, the two spend bundles can exist separately on each tx record until they are pushed.
+            # This is not very supported behavior at the moment
+            # so to avoid any potential backwards compatibility issues,
+            # we're moving the spend bundle from this TX to the main
+            async with action_scope.use() as interface:
+                interface.side_effects.transactions.extend(
+                    [replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
+                )
             spend_bundle = WalletSpendBundle.aggregate(
                 [
                     spend_bundle,

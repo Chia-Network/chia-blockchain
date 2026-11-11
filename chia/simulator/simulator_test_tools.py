@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
@@ -109,7 +109,7 @@ def create_config(
 
 
 @contextlib.asynccontextmanager
-async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncIterator[FullNodeSimulator]:
+async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
     service = started_simulator.service
@@ -124,7 +124,7 @@ async def get_full_chia_simulator(
     keychain: Keychain | None = None,
     automated_testing: bool = False,
     config: dict[str, Any] | None = None,
-) -> AsyncIterator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain]]:
+) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
     """
     A chia root Path is required.
     The chia root Path can be a temporary directory (tempfile.TemporaryDirectory)

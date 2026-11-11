@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from chia_rs import FullBlock, SpendBundleConditions
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_generator_info import block_has_transactions_generator
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
+from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
 from chia.full_node.block_store import BlockStore
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
@@ -82,7 +84,35 @@ async def _validate_and_add_block(
         else:
             # fake the signature validation. Just say True here.
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
-        results = PreValidationResult(None, None, uint64(1), conds, uint32(0))
+        # add_block needs the real required iterations to find the block's
+        # signage point for the header MMR root check
+        rc_block = block.reward_chain_block
+        cc_sp_hash = (
+            rc_block.pos_ss_cc_challenge_hash
+            if rc_block.challenge_chain_sp_vdf is None
+            else rc_block.challenge_chain_sp_vdf.output.get_hash()
+        )
+        prev_tx_height = uint32(0)
+        if block.height > 0:
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=blockchain.constants,
+                blocks=aug_blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=rc_block.signage_point_index,
+                finished_sub_slots=len(block.finished_sub_slots),
+            )
+        required_iters = validate_pospace_and_get_required_iters(
+            blockchain.constants,
+            rc_block.proof_of_space,
+            rc_block.pos_ss_cc_challenge_hash,
+            cc_sp_hash,
+            block.height,
+            diff,
+            prev_tx_height,
+            height_agnostic=True,
+        )
+        assert required_iters is not None
+        results = PreValidationResult(None, None, required_iters, conds, uint32(0))
     else:
         future = await pre_validate_block(
             blockchain.constants,

@@ -4,7 +4,7 @@ import contextlib
 import json
 import operator
 import unittest.mock
-from collections.abc import Iterator
+from collections.abc import Generator
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -17,7 +17,7 @@ from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
+from chia.service.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.wallet.transaction_record import LightTransactionRecord
@@ -345,7 +345,7 @@ class WalletTestFramework:
 
     @staticmethod
     @contextlib.contextmanager
-    def new_puzzle_hashes_allowed() -> Iterator[None]:
+    def new_puzzle_hashes_allowed() -> Generator[None, None, None]:
         with unittest.mock.patch(
             "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
             catch_puzzle_hash_errors(WalletStateManager.new_action_scope),

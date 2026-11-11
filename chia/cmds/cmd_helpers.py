@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
+from collections.abc import AsyncGenerator, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -48,7 +48,7 @@ class NeedsWalletRPC:
     )
 
     @asynccontextmanager
-    async def wallet_rpc(self, **kwargs: Any) -> AsyncIterator[WalletClientInfo]:
+    async def wallet_rpc(self, **kwargs: Any) -> AsyncGenerator[WalletClientInfo, None]:
         if self.client_info is not None:
             yield self.client_info
         else:

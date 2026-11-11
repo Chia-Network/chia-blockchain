@@ -9,7 +9,7 @@ import random
 import sys
 import time
 import traceback
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -185,7 +185,7 @@ class WalletNode:
     _tx_messages_in_progress: dict[bytes32, list[bytes32]] = dataclasses.field(default_factory=dict)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         await self._start()
         try:
             yield

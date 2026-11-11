@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Generator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
@@ -29,7 +29,7 @@ NUM_PEERS = 5
 
 
 @contextmanager
-def enable_profiler(profile: bool, name: str) -> Iterator[None]:
+def enable_profiler(profile: bool, name: str) -> Generator[None, None, None]:
     if not profile:
         yield
         return

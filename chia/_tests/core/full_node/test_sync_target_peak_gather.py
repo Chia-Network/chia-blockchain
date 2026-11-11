@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -66,7 +66,7 @@ async def test_sync_target_peak_gather_skips_deserialize_failure(
     blockchain = MagicMock()
 
     @asynccontextmanager
-    async def acquire_mutex(**kwargs: object) -> AsyncIterator[None]:
+    async def acquire_mutex(**kwargs: object) -> AsyncGenerator[None, None]:
         yield None
 
     blockchain.priority_mutex.acquire = acquire_mutex
@@ -157,7 +157,7 @@ async def test_sync_target_peak_gather_does_not_ban_on_timeout(
     blockchain = MagicMock()
 
     @asynccontextmanager
-    async def acquire_mutex(**kwargs: object) -> AsyncIterator[None]:
+    async def acquire_mutex(**kwargs: object) -> AsyncGenerator[None, None]:
         yield None
 
     blockchain.priority_mutex.acquire = acquire_mutex

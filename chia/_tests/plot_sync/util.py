@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 from chia_rs.sized_bytes import bytes32
@@ -44,7 +44,7 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
 @contextlib.asynccontextmanager
 async def start_harvester_service(
     harvester_service: HarvesterService, farmer_service: FarmerService
-) -> AsyncIterator[SplitAsyncManager[Harvester]]:
+) -> AsyncGenerator[SplitAsyncManager[Harvester], None]:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()

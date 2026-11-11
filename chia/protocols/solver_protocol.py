@@ -23,3 +23,4 @@ class SolverInfo(Streamable):
 class SolverResponse(Streamable):
     partial_proof: PartialProof
     proof: bytes
+    plot_id: bytes32

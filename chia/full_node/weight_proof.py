@@ -26,6 +26,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
@@ -49,7 +50,6 @@ from chia.types.weight_proof import (
     WeightProof,
 )
 from chia.util.batches import to_batches
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.task_referencer import create_referenced_task
@@ -1318,7 +1318,6 @@ def validate_recent_blocks(
                     False,
                     expected_vs,
                     check_sub_epoch_summary=ses_blocks > 2,
-                    skip_commitment_validation=True,
                     height_agnostic=is_v2_plot(block.reward_chain_block.proof_of_space),
                 )
                 if error is not None:

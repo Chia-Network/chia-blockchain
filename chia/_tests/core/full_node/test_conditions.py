@@ -142,7 +142,11 @@ class TestConditions:
 
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # the generator is a serde_2026 spend list (INTERNED_SPEND_LIST):
+            # it isn't run, and its size is charged by interned vbytes
+            block_base_cost = 984044 - 12000
+        elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 756064 - 12000
         else:
             block_base_cost = 761056 - 12000
@@ -171,6 +175,10 @@ class TestConditions:
 
         if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 737056 - 12000
+        elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            # the generator is a serde_2026 spend list (INTERNED_SPEND_LIST):
+            # it isn't run, and its size is charged by interned vbytes
+            block_base_cost = 972044 - 12000
         else:
             # once the hard fork activates, blocks no longer pay the cost of the ROM
             # generator (which includes hashing all puzzles).

@@ -10,7 +10,7 @@ import ssl
 import sys
 import tempfile
 import time
-from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -22,6 +22,8 @@ from typing import Any, Self
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    INTERNED_SPEND_LIST,
     AugSchemeMPL,
     BlockRecord,
     ChallengeChainSubSlot,
@@ -39,7 +41,10 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
+    generator_interned_vbytes_trusted,
     get_flags_for_height_and_constants,
+    get_spends_for_trusted_block,
+    run_block_generator2,
     solution_generator,
     solve_proof,
 )
@@ -47,15 +52,20 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
 
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.block_creation import (
     calculate_infusion_point_total_iters,
     create_unfinished_block,
     unfinished_block_to_full_block_with_mmr,
 )
-from chia.consensus.block_generator_info import block_has_transactions_generator
-from chia.consensus.block_record import BlockRecordProtocol
+from chia.consensus.block_generator_info import block_has_transactions_generator, get_transactions_generator_bytes
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.coin_commitments import (
+    EMPTY_MERKLE_SET_ROOT,
+    coin_commitments_root_from_conds,
+    compute_coin_commitments_root,
+)
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -109,11 +119,11 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_filter_bits,
     calculate_pos_challenge,
     calculate_prefix_bits,
-    compute_plot_group_id,
     generate_plot_public_key,
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
+    max_plot_strength,
     num_phase_out_epochs,
     passes_plot_filter,
     passes_plot_filter_v2,
@@ -123,7 +133,6 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import NewBlockGenerator
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.block_cache import BlockCache
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
@@ -199,7 +208,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
 
 
 def compute_block_cost(
-    generator: SerializedProgram, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
+    generator: bytes, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
 ) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
@@ -208,13 +217,28 @@ def compute_block_cost(
     condition_cost = 0
     clvm_cost = 0
     flags = int(get_flags_for_height_and_constants(prev_tx_height, constants))
+    interned = (flags & INTERNED_SPEND_LIST) != 0
+
+    if interned:
+        spends = get_spends_for_trusted_block(constants, generator, [], flags)["block_spends"]
+        for spend in spends:
+            puzzle = Program.from_bytes(bytes(spend.puzzle_reveal))
+            solution = Program.from_bytes(bytes(spend.solution))
+            cost, result = _run(puzzle, INFINITE_COST, flags, solution)
+            clvm_cost += cost
+            condition_cost += conditions_cost(result, charge_for_conditions=True)
+
+        size_cost = generator_interned_vbytes_trusted(generator) * constants.COST_PER_BYTE
+        return uint64(clvm_cost + condition_cost + size_cost)
 
     if height >= constants.HARD_FORK_HEIGHT:
         blocks: list[bytes] = []
-        cost, result = _run(generator, INFINITE_COST, flags, [DESERIALIZE_MOD, blocks])
+        cost, spend_list_wrapper = _run(
+            SerializedProgram.from_bytes(generator), INFINITE_COST, flags, [DESERIALIZE_MOD, blocks]
+        )
         clvm_cost += cost
 
-        for spend in result.first().as_iter():
+        for spend in spend_list_wrapper.first().as_iter():
             # each spend is a list of:
             # (parent-coin-id puzzle amount solution)
             puzzle = spend.at("rf")
@@ -228,7 +252,9 @@ def compute_block_cost(
 
     else:
         block_program_args = SerializedProgram.to([[]])
-        clvm_cost, result = _run(GENERATOR_MOD, INFINITE_COST, flags, [generator, block_program_args])
+        clvm_cost, result = _run(
+            GENERATOR_MOD, INFINITE_COST, flags, [SerializedProgram.from_bytes(generator), block_program_args]
+        )
 
         for res in result.first().as_iter():
             # each condition item is:
@@ -236,7 +262,7 @@ def compute_block_cost(
             conditions = res.at("rrrf")
             condition_cost += conditions_cost(conditions, charge_for_conditions=False)
 
-    size_cost = len(bytes(generator)) * constants.COST_PER_BYTE
+    size_cost = len(generator) * constants.COST_PER_BYTE
 
     return uint64(clvm_cost + size_cost + condition_cost)
 
@@ -346,6 +372,8 @@ class BlockTools:
         self.mmr_manager = BlockchainMMRManager(
             self.constants.GENESIS_CHALLENGE, aggregate_from=updated_constants.HARD_FORK2_HEIGHT
         )
+        # roots of blocks this instance created, so reloading them doesn't replay their generators
+        self._block_commitment_roots: dict[bytes32, bytes32] = {}
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -418,10 +446,74 @@ class BlockTools:
         if self._tempdir is not None:
             self._tempdir.cleanup()
 
+    def _commitment_root_for_block(
+        self,
+        full_block: FullBlock,
+        blocks: dict[bytes32, BlockRecord],
+        block_list_by_height: dict[uint32, FullBlock],
+    ) -> bytes32:
+        """
+        Roots of blocks this instance created are cached; other blocks'
+        generators are replayed.
+        """
+        cached = self._block_commitment_roots.get(full_block.header_hash)
+        if cached is not None:
+            return cached
+
+        generator_bytes = get_transactions_generator_bytes(full_block)
+        conds = None
+        if generator_bytes is not None:
+            assert full_block.transactions_info is not None
+            generator_refs: list[bytes] = []
+            for ref_height in full_block.transactions_generator_ref_list:
+                ref_block = block_list_by_height[ref_height]
+                ref_bytes = get_transactions_generator_bytes(ref_block)
+                assert ref_bytes is not None
+                generator_refs.append(ref_bytes)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=BlockCache(blocks, self.mmr_manager),
+                prev_b_hash=full_block.prev_header_hash,
+                sp_index=full_block.reward_chain_block.signage_point_index,
+                finished_sub_slots=len(full_block.finished_sub_slots),
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants) | DONT_VALIDATE_SIGNATURE
+            err, _, conds = run_block_generator2(
+                generator_bytes,
+                generator_refs,
+                full_block.transactions_info.cost,
+                flags,
+                full_block.transactions_info.aggregated_signature,
+                None,
+                self.constants,
+            )
+            assert err is None
+        root = coin_commitments_root_from_conds(conds)
+
+        self._block_commitment_roots[full_block.header_hash] = root
+        return root
+
+    def _new_block_commitment_root(self, full_block: FullBlock, new_gen: NewBlockGenerator | None) -> bytes32 | None:
+        """
+        None below aggregate_from. new_gen's additions and removals are the
+        ones consensus derives from the generator's conditions.
+        """
+        if full_block.height < self.mmr_manager.get_aggregate_from():
+            return None
+        if block_has_transactions_generator(full_block):
+            assert new_gen is not None
+            commitment_root = compute_coin_commitments_root(
+                [coin.name() for coin in new_gen.removals], new_gen.additions
+            )
+        else:
+            commitment_root = EMPTY_MERKLE_SET_ROOT
+        self._block_commitment_roots[full_block.header_hash] = commitment_root
+        return commitment_root
+
     def setup_new_gen(
         self,
         generator_block_heights: list[uint32],
-        curr: BlockRecordProtocol,
+        height: uint32,
         wallet: WalletTool | None,
         rng: random.Random | None,
         available_coins: list[Coin],
@@ -429,11 +521,15 @@ class BlockTools:
         prev_tx_height: uint32,
         dummy_block_references: bool,
         include_transactions: bool,
-        block_generator: NewBlockGenerator | None,
+        transaction_data: SpendBundle | None,
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
-        if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT:
-            assert block_refs == [], "block references are not allowed after hard fork 2"
+        flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
+        interned = bool(flags & INTERNED_SPEND_LIST)
+        # The interned format cannot carry generator references. SF9 also bans
+        # references in the legacy format.
+        if interned or prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT:
+            block_refs = []
             dummy_block_references = False
 
         # we don't know if the new block will be a transaction
@@ -451,40 +547,28 @@ class BlockTools:
         else:
             dummy_refs = []
 
-        if block_generator is not None:
-            # this means the caller passed in block_generator
-            # to be included in the block.
-            assert block_refs == [], "block references cannot be combined with block_generator"
-            assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
-            return block_generator
-
-        if include_transactions:
-            # if the caller did not pass in specific
-            # transactions, this parameter means we just want
-            # some transactions
-            assert wallet is not None
-            assert rng is not None
-            bundle, additions = make_spend_bundle(available_coins, wallet, rng)
+        if transaction_data is not None or include_transactions:
+            if transaction_data is not None:
+                assert not dummy_block_references, "(dummy) block references cannot be combined with transaction_data"
+                bundle = transaction_data
+                additions = compute_additions_unchecked(bundle)
+                refs = []
+            else:
+                assert wallet is not None
+                assert rng is not None
+                bundle, additions = make_spend_bundle(available_coins, wallet, rng)
+                refs = block_refs + dummy_refs
             removals = bundle.removals()
-            program_bytes = simple_solution_generator(bundle).program
-            cost = compute_block_cost(
-                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
-            )
-            return NewBlockGenerator(
-                program_bytes,
-                [],
-                block_refs + dummy_refs,
-                bundle.aggregated_signature,
-                additions,
-                removals,
-                cost,
-            )
+            if transaction_data is not None and height >= self.constants.HARD_FORK_HEIGHT and not interned:
+                program_bytes = simple_solution_generator_backrefs(bundle).program
+            else:
+                program_bytes = simple_solution_generator(bundle, flags).program
+            cost = compute_block_cost(program_bytes, self.constants, height, prev_tx_height)
+            return NewBlockGenerator(program_bytes, [], refs, bundle.aggregated_signature, additions, removals, cost)
 
         if dummy_block_references:
             program_bytes = solution_generator([])
-            cost = compute_block_cost(
-                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
-            )
+            cost = compute_block_cost(program_bytes, self.constants, height, prev_tx_height)
             return NewBlockGenerator(program_bytes, [], block_refs + dummy_refs, G2Element(), [], [], cost)
 
         return None
@@ -725,7 +809,6 @@ class BlockTools:
             size=plot_size,
             strength=strength,
             test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
-            testnet=True,
         )
         self.created_plots2 += 1
 
@@ -963,9 +1046,15 @@ class BlockTools:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         # Populate MMR from existing BlockRecords
+        block_list_by_height = {full_block.height: full_block for full_block in block_list}
         for full_block in block_list:
             block_record = blocks[full_block.header_hash]
-            self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
+            root = None
+            if full_block.height >= self.mmr_manager.get_aggregate_from():
+                root = self._commitment_root_for_block(full_block, blocks, block_list_by_height)
+            self.mmr_manager.add_block_to_mmr(
+                block_record.header_hash, block_record.prev_hash, block_record.height, root
+            )
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -991,27 +1080,33 @@ class BlockTools:
         # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
-        block_generator: NewBlockGenerator | None = None
-        if transaction_data is not None:
-            additions = compute_additions_unchecked(transaction_data)
-            removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
-                program_bytes = simple_solution_generator_backrefs(transaction_data).program
-            else:
-                program_bytes = simple_solution_generator(transaction_data).program
-            block_refs = []
-            cost = compute_block_cost(
-                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
+        # A generator can be tried in multiple candidates before it reaches a
+        # transaction block. Reuse generated spends too, but discard them after
+        # inclusion: their input coins have then been spent.
+        cached_generator: tuple[tuple[int, bool], NewBlockGenerator | None] | None = None
+
+        def get_transaction_generator(prev_tx_height: uint32, height: uint32) -> NewBlockGenerator | None:
+            nonlocal cached_generator
+            key = (
+                get_flags_for_height_and_constants(prev_tx_height, constants),
+                height >= constants.HARD_FORK_HEIGHT,
             )
-            block_generator = NewBlockGenerator(
-                program_bytes,
-                [],
-                block_refs,
-                transaction_data.aggregated_signature,
-                additions,
-                removals,
-                cost,
+            if cached_generator is not None and cached_generator[0] == key:
+                return cached_generator[1]
+            generator = self.setup_new_gen(
+                generator_block_heights,
+                height,
+                wallet,
+                rng,
+                available_coins,
+                prev_tx_height=prev_tx_height,
+                dummy_block_references=dummy_block_references,
+                transaction_data=transaction_data,
+                include_transactions=include_transactions,
+                block_refs=block_refs,
             )
+            cached_generator = (key, generator)
+            return generator
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -1117,18 +1212,7 @@ class BlockTools:
                         else:
                             pool_target = PoolTarget(self.pool_ph, uint32(0))
 
-                        new_gen = self.setup_new_gen(
-                            generator_block_heights,
-                            curr,
-                            wallet,
-                            rng,
-                            available_coins,
-                            prev_tx_height=prev_tx_height,
-                            dummy_block_references=dummy_block_references,
-                            block_generator=block_generator,
-                            include_transactions=include_transactions,
-                            block_refs=block_refs,
-                        )
+                        new_gen = get_transaction_generator(prev_tx_height, uint32(latest_block.height + 1))
 
                         (
                             full_block,
@@ -1165,7 +1249,8 @@ class BlockTools:
                             overflow_rc_challenge=None,
                         )
                         if block_record.is_transaction_block:
-                            block_generator = None
+                            cached_generator = None
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1205,7 +1290,10 @@ class BlockTools:
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
-                            block_record.header_hash, block_record.prev_hash, block_record.height
+                            block_record.header_hash,
+                            block_record.prev_hash,
+                            block_record.height,
+                            self._new_block_commitment_root(full_block, new_gen),
                         )
                         self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
@@ -1447,18 +1535,7 @@ class BlockTools:
                         else:
                             pool_target = PoolTarget(self.pool_ph, uint32(0))
 
-                        new_gen = self.setup_new_gen(
-                            generator_block_heights,
-                            curr,
-                            wallet,
-                            rng,
-                            available_coins,
-                            prev_tx_height=prev_tx_height,
-                            dummy_block_references=dummy_block_references,
-                            block_generator=block_generator,
-                            include_transactions=include_transactions,
-                            block_refs=block_refs,
-                        )
+                        new_gen = get_transaction_generator(prev_tx_height, uint32(latest_block.height + 1))
 
                         (
                             full_block,
@@ -1495,7 +1572,8 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
                         if block_record.is_transaction_block:
-                            block_generator = None
+                            cached_generator = None
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1536,7 +1614,10 @@ class BlockTools:
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
                         self.mmr_manager.add_block_to_mmr(
-                            block_record.header_hash, block_record.prev_hash, block_record.height
+                            block_record.header_hash,
+                            block_record.prev_hash,
+                            block_record.height,
+                            self._new_block_commitment_root(full_block, new_gen),
                         )
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
@@ -1794,6 +1875,7 @@ class BlockTools:
                 continue
 
             if plot_info.prover.get_version() == PlotVersion.V2:
+                assert isinstance(plot_info.prover, V2Prover)
                 # v2 plots aren't valid until after the hard fork
                 if prev_tx_height < constants.HARD_FORK2_HEIGHT:
                     continue
@@ -1804,29 +1886,20 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-                if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
+                max_strength = max_plot_strength(prev_tx_height, constants)
+                if plot_info.prover.get_strength() > max_strength:
                     self.log.warn(
                         f"Plot strength ({plot_info.prover.get_strength()}) exceeds max "
-                        f"({constants.MAX_PLOT_STRENGTH}): {plot_info.prover.get_filename()}"
+                        f"({max_strength}): {plot_info.prover.get_filename()}"
                     )
                     continue
                 if filter_challenge is None or signage_point_index is None:
                     continue
-                pool_info = (
-                    plot_info.pool_contract_puzzle_hash
-                    if plot_info.pool_contract_puzzle_hash is not None
-                    else plot_info.pool_public_key
-                )
-                assert pool_info is not None
-                plot_param = plot_info.prover.get_param()
-                assert plot_param.strength_v2 is not None
-                plot_group_id = compute_plot_group_id(
-                    plot_info.prover.get_strength(), plot_info.plot_public_key, pool_info
-                )
-                group_strength = calculate_plot_filter_bits(prev_tx_height, constants, plot_param.strength_v2)
+                plot_group_id = plot_info.prover.get_id()
+                group_strength = calculate_plot_filter_bits(prev_tx_height, constants, plot_info.prover.get_strength())
                 if not passes_plot_filter_v2(
                     plot_group_id,
-                    plot_param.meta_group,
+                    plot_info.prover.get_meta_group(),
                     group_strength,
                     filter_challenge,
                     signage_point_index,
@@ -1846,10 +1919,15 @@ class BlockTools:
             qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
             for idx, quality in enumerate(qualities):
+                if isinstance(plot_info.prover, V2Prover):
+                    assert isinstance(quality, V2Quality)
+                    plot_param = plot_info.prover.get_param_for_index(quality.get_plot_index())
+                else:
+                    plot_param = plot_info.prover.get_param()
                 required_iters = calculate_iterations_quality(
                     constants,
                     quality.get_string(),
-                    plot_info.prover.get_param(),
+                    plot_param,
                     difficulty,
                     signage_point,
                     height=prev_tx_height,
@@ -1865,9 +1943,8 @@ class BlockTools:
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(
-                        quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2, constants.TESTNET
-                    )
+                    member_plot_id = plot_info.prover.plot_id_for_index(quality.get_plot_index())
+                    proof = solve_proof(quality.get_partial_proof(), member_plot_id, strength, constants.PLOT_SIZE_V2)
                     assert proof != b""
 
                 # Look up local_sk from plot to save locked memory
@@ -1894,7 +1971,7 @@ class BlockTools:
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,
                     plot_pk,
-                    plot_info.prover.get_param(),
+                    plot_param,
                     proof,
                 )
                 found_proofs.append((required_iters, proof_of_space))
@@ -2485,7 +2562,7 @@ async def create_block_tools_async(
     num_non_keychain_plots: int = 3,
     num_v2_plots: int = 40,
     testrun_uid: str | None = None,
-) -> AsyncIterator[BlockTools]:
+) -> AsyncGenerator[BlockTools, None]:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
@@ -2509,7 +2586,7 @@ def create_block_tools(
     root_path: Path | None = None,
     keychain: Keychain | None = None,
     config_overrides: dict[str, Any] | None = None,
-) -> Iterator[BlockTools]:
+) -> Generator[BlockTools, None, None]:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")

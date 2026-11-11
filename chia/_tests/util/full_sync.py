@@ -8,7 +8,7 @@ import shutil
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import cast
@@ -20,13 +20,13 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
-from chia.cmds.init_funcs import chia_init
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
+from chia.init.init_funcs import chia_init
 from chia.protocols.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
@@ -48,7 +48,7 @@ class ExitOnError(logging.Handler):
 
 
 @contextmanager
-def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
+def enable_profiler(profile: bool, counter: int) -> Generator[None, None, None]:
     if not profile:
         yield
         return

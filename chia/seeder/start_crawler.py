@@ -17,7 +17,7 @@ from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler_service import CrawlerService
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.service.start_service import RpcInfo, Service, async_run
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import apply_config_cli_overrides, load_config
 from chia.util.default_root import resolve_root_path

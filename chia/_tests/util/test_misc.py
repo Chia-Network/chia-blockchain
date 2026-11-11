@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from typing import TypeVar, get_args, get_origin
 
 import aiohttp
@@ -156,7 +156,7 @@ def test_invalid_batch_sizes() -> None:
 
 
 @contextlib.contextmanager
-def sync_manager(y: list[str]) -> Iterator[None]:
+def sync_manager(y: list[str]) -> Generator[None, None, None]:
     y.append("entered")
     try:
         yield
@@ -246,7 +246,7 @@ def test_split_manager_raises_on_exit_without_entry() -> None:
 
 
 @contextlib.asynccontextmanager
-async def async_manager(y: list[str]) -> AsyncIterator[None]:
+async def async_manager(y: list[str]) -> AsyncGenerator[None, None]:
     y.append("entered")
     try:
         yield
