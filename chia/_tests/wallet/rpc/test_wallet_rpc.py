@@ -2850,6 +2850,7 @@ async def test_key_and_address_endpoints(
     show_config = env.node.config
     if "wallet" not in show_config:
         show_config = {**show_config, "wallet": show_config}
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     await ShowCMD(
         rpc_info=NeedsWalletRPC(
             client_info=WalletClientInfo(
