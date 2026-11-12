@@ -509,14 +509,6 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-# todo_v2_plots
-# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
-# so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
-# clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
-# this test expects a certine chain state
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
-)
 async def test_get_timestamp_for_height_from_peer(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -551,19 +543,28 @@ async def test_get_timestamp_for_height_from_peer(
     # After the clearing the cache it should fetch the actual timestamp again
     cache.clear_after_height(0)
     assert await get_timestamp(peak.height) == timestamp_at_peak
-    # Test block cache usage
+    # Start at a non-transaction block to check timestamp backtracking and cache use.
+    height = next(
+        (
+            h
+            for h in range(1, peak.height)
+            if not full_node_api.full_node.blockchain.height_to_block_record(uint32(h)).is_transaction_block
+        ),
+        None,
+    )
+    assert height is not None
     cache.clear_after_height(0)
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    block_1 = cache.get_block(uint32(1))
-    assert block_1 is not None
-    assert f"get_timestamp_for_height_from_peer cache miss for height {1}" in caplog.text
-    assert f"get_timestamp_for_height_from_peer add to cache for height {1}" in caplog.text
+        await get_timestamp(height)
+    block = cache.get_block(uint32(height))
+    assert block is not None
+    assert f"get_timestamp_for_height_from_peer cache miss for height {height}" in caplog.text
+    assert f"get_timestamp_for_height_from_peer add to cache for height {height}" in caplog.text
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
-        await get_timestamp(1)
-    assert f"get_timestamp_for_height_from_peer use cached block for height {0}" not in caplog.text
-    assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
+        await get_timestamp(height)
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height - 1}" not in caplog.text
+    assert f"get_timestamp_for_height_from_peer use cached block for height {height}" in caplog.text
 
 
 @pytest.mark.anyio

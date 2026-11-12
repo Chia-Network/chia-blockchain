@@ -299,7 +299,6 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
-    # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
         sum(
             UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
