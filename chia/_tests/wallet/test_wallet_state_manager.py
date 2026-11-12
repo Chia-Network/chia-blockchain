@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import cast
+from unittest import mock
 
 import anyio
 import pytest
@@ -779,7 +780,10 @@ async def test_rpc_disconnected_errors(wallet_environments: WalletTestFramework)
     await time_out_assert(5, lambda: len(wsm.wallet_node.server.get_connections(NodeType.FULL_NODE)), 0)
 
     # tx_endpoint decorator DISCONNECTED check (line 341)
-    with pytest.raises(ValueError, match="not connected"):
+    with (
+        mock.patch("chia.simulator.full_node_simulator.FullNodeSimulator.wallet_is_synced", return_value=True),
+        pytest.raises(ValueError, match="not connected"),
+    ):
         await rpc_client.push_transactions(
             PushTransactions(transactions=txs, sign=False),
             wallet_environments.tx_config,
