@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar, cast, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
@@ -645,10 +646,19 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         _protocol_check: ClassVar[Puzzle] = cast("VerifiedCredentialInnerPuzzle[_T_VCPuzzle]", None)
 
     eml_lineage_proof: VCLineageProof
-    self_launcher_id: bytes32
+    self_launcher_id: bytes32 | None = None
     custody_puzzle: _T_VCPuzzle
     proof_provider: bytes32
     proof_hash: bytes32 | None
+    initial_puzzle_hash_pre_calculated: bytes32 | None = None
+
+    @cached_property
+    def initial_puzzle_hash(self) -> bytes32:
+        if self.initial_puzzle_hash_pre_calculated is not None:
+            return self.initial_puzzle_hash_pre_calculated
+        if self.self_launcher_id is None:
+            raise ValueError("Cannot compute initial puzzle hash without a launcher ID")
+        return puzzle_for_singleton(self.self_launcher_id, OWNERSHIP_LAYER_LAUNCHER.program).get_tree_hash()
 
     @property
     def construction(
@@ -669,12 +679,19 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     ) -> TransferProgramCovenantAdapter[CovenantLayer[EmlCovenantMorpher[DidTransferProgram], DidTransferProgram]]:
         return TransferProgramCovenantAdapter(
             inner_puzzle=CovenantLayer(
-                initial_puzzle_hash=puzzle_for_singleton(
-                    self.self_launcher_id, OWNERSHIP_LAYER_LAUNCHER.program
-                ).get_tree_hash(),
+                initial_puzzle_hash=self.initial_puzzle_hash,
                 parent_morpher=EmlCovenantMorpher(transfer_program=DidTransferProgram()),
                 inner_puzzle=DidTransferProgram(),
             )
+        )
+
+    def has_launcher_id(self, launcher_id: bytes32) -> bool:
+        """Check the commitment to the initial singleton construction for this launcher."""
+        if self.self_launcher_id is not None:
+            return self.self_launcher_id == launcher_id
+        return (
+            self.initial_puzzle_hash
+            == puzzle_for_singleton(launcher_id, OWNERSHIP_LAYER_LAUNCHER.program).get_tree_hash()
         )
 
     @property
@@ -734,13 +751,18 @@ class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         ):
             return None
 
-        return VerifiedCredentialInnerPuzzle(
+        matched = VerifiedCredentialInnerPuzzle(
+            # Lineage is spend context supplied separately from the puzzle reveal.
             eml_lineage_proof=VCLineageProof(),
-            self_launcher_id=bytes32.zeros,
+            initial_puzzle_hash_pre_calculated=covenant.initial_puzzle_hash,
             custody_puzzle=revocation.inner_puzzle,
             proof_provider=proof_provider,
             proof_hash=proof_hash,
         )
+        # Fixed arguments in the standard VC stack must match the reconstructed puzzle.
+        if matched.tree_hash != unknown_puzzle.tree_hash:
+            return None
+        return matched
 
 
 @streamable
@@ -813,6 +835,7 @@ class VerifiedCredential(Streamable):
         target_vc_inner = VerifiedCredentialInnerPuzzle(
             eml_lineage_proof=VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
             self_launcher_id=launcher_coin.name(),
+            initial_puzzle_hash_pre_calculated=curried_eve_singleton_hash,
             custody_puzzle=UnknownPuzzle(known_tree_hash=new_inner_puzzle_hash),
             proof_provider=provider_id,
             proof_hash=None,
