@@ -69,6 +69,7 @@ async def test_fee_increase() -> None:
             test_constants,
             InlineExecutor(),
             validation_timeout=10,
+            minimum_block_fee_per_cost=uint64(0),
         ) as mempool_manager:
             assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
             btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore

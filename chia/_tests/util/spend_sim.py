@@ -175,6 +175,7 @@ class SpendSim:
                 defaults,
                 InlineExecutor(),
                 validation_timeout=10,
+                minimum_block_fee_per_cost=uint64(0),
             ) as self.mempool_manager:
                 # Load the next data if there is any
                 async with self.db_wrapper.writer_maybe_transaction() as conn:

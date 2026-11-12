@@ -346,7 +346,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
-        minimum_block_fee_per_cost: uint64 = uint64(0),
+        minimum_block_fee_per_cost: uint64,
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -405,7 +405,7 @@ class MempoolManager:
         *,
         validation_timeout: float,
         max_tx_clvm_cost: uint64 | None = None,
-        minimum_block_fee_per_cost: uint64 = uint64(0),
+        minimum_block_fee_per_cost: uint64,
     ) -> AsyncIterator[Self]:
         self = cls(
             get_coin_records,
