@@ -530,14 +530,17 @@ class Mempool:
         constants: ConsensusConstants,
         prev_tx_height: uint32,
         timeout: float,
-        minimum_fee_per_cost: uint64 = uint64(0),
+        *,
+        minimum_fee_per_cost: uint64,
     ) -> NewBlockGenerator | None:
         """
         prev_tx_height is needed in case we fast-forward a transaction and we
         need to re-run its puzzle.
         """
 
-        mempool_bundle = self.create_bundle_from_mempool_items(constants, prev_tx_height, timeout, minimum_fee_per_cost)
+        mempool_bundle = self.create_bundle_from_mempool_items(
+            constants, prev_tx_height, timeout, minimum_fee_per_cost=minimum_fee_per_cost
+        )
         if mempool_bundle is None:
             return None
 
@@ -598,7 +601,8 @@ class Mempool:
         constants: ConsensusConstants,
         prev_tx_height: uint32,
         timeout: float = 1.0,
-        minimum_fee_per_cost: uint64 = uint64(0),
+        *,
+        minimum_fee_per_cost: uint64,
     ) -> tuple[SpendBundle, list[Coin]] | None:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -764,7 +768,8 @@ class Mempool:
         constants: ConsensusConstants,
         prev_tx_height: uint32,
         timeout: float,
-        minimum_fee_per_cost: uint64 = uint64(0),
+        *,
+        minimum_fee_per_cost: uint64,
     ) -> NewBlockGenerator | None:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []

@@ -435,7 +435,7 @@ class MempoolManager:
     ) -> None:
         self.shut_down()
 
-    def effective_minimum_block_fee_per_cost(self) -> uint64:
+    def effective_minimum_fee_per_cost(self) -> uint64:
         """
         Returns the minimum fee, in mojos per CLVM cost, for selecting
         transactions into a block on top of the current peak
@@ -457,7 +457,7 @@ class MempoolManager:
         return self.mempool.create_bundle_from_mempool_items(
             self.constants,
             self.peak.height,
-            minimum_fee_per_cost=self.effective_minimum_block_fee_per_cost(),
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
         )
 
     def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
@@ -470,7 +470,7 @@ class MempoolManager:
             self.constants,
             self.peak.height,
             timeout,
-            self.effective_minimum_block_fee_per_cost(),
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
         )
 
     def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
@@ -483,7 +483,7 @@ class MempoolManager:
             self.constants,
             self.peak.height,
             timeout,
-            self.effective_minimum_block_fee_per_cost(),
+            minimum_fee_per_cost=self.effective_minimum_fee_per_cost(),
         )
 
     def get_filter(self) -> bytes:

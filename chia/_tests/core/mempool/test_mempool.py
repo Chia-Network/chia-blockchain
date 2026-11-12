@@ -3001,7 +3001,7 @@ def test_timeout(old: bool) -> None:
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
 
     # the timeout is set to 0, we should *always* fail with a timeout
-    generator = create_block(DEFAULT_CONSTANTS, uint32(10), 0.0)
+    generator = create_block(DEFAULT_CONSTANTS, uint32(10), 0.0, minimum_fee_per_cost=uint64(0))
     assert generator is None
 
 
@@ -3031,12 +3031,12 @@ def test_minimum_fee_only_filters_block_inclusion(old: bool) -> None:
     item_ids = set(mempool.all_item_ids())
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    filtered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0, uint64(10))
+    filtered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0, minimum_fee_per_cost=uint64(10))
     assert filtered is not None
     assert filtered.removals == [coins[1]]
     assert set(mempool.all_item_ids()) == item_ids
 
-    unfiltered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0)
+    unfiltered = create_block(DEFAULT_CONSTANTS, uint32(10), 30.0, minimum_fee_per_cost=uint64(0))
     assert unfiltered is not None
     assert set(unfiltered.removals) == {coins[0], coins[1]}
     assert set(mempool.all_item_ids()) == item_ids
@@ -3273,7 +3273,7 @@ def test_dedup_by_fee(old: bool) -> None:
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
     # validate that dedup happens at all for sb_A
-    result = create_block(test_constants, uint32(0), 5.0)
+    result = create_block(test_constants, uint32(0), 5.0, minimum_fee_per_cost=uint64(0))
     assert result is not None
     # Make sure both items would be processed
     assert result.removals == [DEDUP_COIN, COIN_A1, COIN_A2]
@@ -3286,7 +3286,7 @@ def test_dedup_by_fee(old: bool) -> None:
         sb_high_rate = make_test_spendbundle(make_coin(i), fee=10)
         add_spend_bundles([sb_B, sb_high_rate])
 
-    result = create_block(test_constants, uint32(0), 5.0)
+    result = create_block(test_constants, uint32(0), 5.0, minimum_fee_per_cost=uint64(0))
     assert result is not None
     # We ran with solution A and missed bigger savings on solution B
     # we've added 599 spend bundles now. 2 with solution A and 598 with solution B
@@ -3297,7 +3297,7 @@ def test_dedup_by_fee(old: bool) -> None:
     sb_high_rate = make_test_spendbundle(make_coin(600), fee=1_000_000_000)
     add_spend_bundles([sb_B, sb_high_rate])
 
-    result = create_block(test_constants, uint32(0), 5.0)
+    result = create_block(test_constants, uint32(0), 5.0, minimum_fee_per_cost=uint64(0))
     assert result is not None
     # The 3 items got skipped here
     # We ran with solution B
@@ -3391,7 +3391,7 @@ def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bo
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
     height = test_constants.HARD_FORK2_HEIGHT
-    generator = create_block(test_constants, height, 10.0)
+    generator = create_block(test_constants, height, 10.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
 
     assert generator.signature == G2Element()
@@ -3439,7 +3439,7 @@ def test_create_block_generator(old: bool) -> None:
         invariant_check_mempool(mempool)
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 10.0)
+    generator = create_block(test_constants, uint32(0), 10.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
 
     assert set(generator.additions) == expected_additions
@@ -3512,7 +3512,7 @@ def test_max_spends_per_block(old: bool) -> None:
     assert mempool.size() == total_items
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    generator = create_block(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
     # The 2-coin items were skipped but the final 1-coin item fits.
     assert len(generator.removals) == MAX_SPENDS_PER_BLOCK
@@ -3548,7 +3548,7 @@ def test_block_atom_and_pair_limits(old: bool, limit: str) -> None:
     assert mempool.size() == num_items
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    generator = create_block(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
     # 3 * per_item == block_limit, so 3 items fit and the rest are skipped.
     assert len(generator.removals) == 3
@@ -3585,7 +3585,7 @@ def test_block_atom_saturation_stops_scanning(monkeypatch: pytest.MonkeyPatch) -
 
     monkeypatch.setattr(IdenticalSpendDedup, "get_deduplication_info", counting_get_deduplication_info)
 
-    generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0)
+    generator = mempool.create_block_generator2(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
     # Only 3 items fit the atom budget.
     assert len(generator.removals) == 3
@@ -3630,7 +3630,7 @@ def test_block_atom_and_pair_limits_with_dedup(old: bool, limit: str) -> None:
     assert mempool.size() == num_items
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    generator = create_block(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
     assert len(generator.removals) > 4
 
@@ -3663,7 +3663,7 @@ def test_max_spends_per_block_with_dedup(old: bool) -> None:
     assert mempool.size() == num_items
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    generator = create_block(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
 
     # With dedup, the shared coin is only counted once. Each item contributes
@@ -3722,7 +3722,7 @@ def test_skipped_item_does_not_leak_dedup_state(old: bool) -> None:
     assert info.error is None
 
     create_block = mempool.create_block_generator if old else mempool.create_block_generator2
-    generator = create_block(test_constants, uint32(0), 30.0)
+    generator = create_block(test_constants, uint32(0), 30.0, minimum_fee_per_cost=uint64(0))
     assert generator is not None
 
     removals = set(generator.removals)
