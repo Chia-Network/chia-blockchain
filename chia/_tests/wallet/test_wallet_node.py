@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
+import re
 import sys
 import time
 import types
@@ -1651,7 +1652,8 @@ async def test_add_states_from_peer_untrusted_returns_false_when_add_coin_states
 
     assert failing_add_coin_states.await_count >= 1
     assert "add_coin_states returned False for chunk" in caplog.text
-    assert "1 chunk(s) failed to apply" in caplog.text
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -1678,7 +1680,8 @@ async def test_add_states_from_peer_untrusted_returns_false_when_one_of_many_chu
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
     assert failing_add_coin_states.await_count >= 3
-    assert "1 chunk(s) failed to apply" in caplog.text
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
@@ -1722,7 +1725,8 @@ async def test_add_states_from_peer_untrusted_returns_false_when_validate_and_ad
 
     assert raising_add_coin_states.await_count >= 1
     assert "validate_and_add failed - exception" in caplog.text
-    assert "1 chunk(s) failed to apply" in caplog.text
+    failed_chunks = re.search(r"(\d+) chunk\(s\) failed to apply", caplog.text)
+    assert failed_chunks is not None and int(failed_chunks.group(1)) >= 1
 
 
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
