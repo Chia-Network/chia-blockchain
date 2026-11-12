@@ -13,7 +13,6 @@ chia.simulator.wallet_tools
 chia.ssl.create_ssl
 chia.types.blockchain_format.program
 chia.wallet.util.new_peak_queue
-chia.wallet.wallet_transaction_store
 chia._tests.clvm.test_puzzles
 chia._tests.clvm.test_singletons
 chia._tests.clvm.test_spend_sim

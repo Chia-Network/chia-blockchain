@@ -49,7 +49,7 @@ class WalletTransactionStore:
     config: dict[str, Any]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, config: dict[str, Any]):
+    async def create(cls, db_wrapper: DBWrapper2, config: dict[str, Any]) -> WalletTransactionStore:
         self = cls()
 
         self.config = config
@@ -157,7 +157,7 @@ class WalletTransactionStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))).close()
 
-    async def set_confirmed(self, tx_id: bytes32, height: uint32):
+    async def set_confirmed(self, tx_id: bytes32, height: uint32) -> None:
         """
         Updates transaction to be confirmed.
         """
@@ -209,7 +209,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord):
+    async def tx_reorged(self, record: TransactionRecord) -> None:
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -237,7 +237,7 @@ class WalletTransactionStore:
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
     # also, the current time should be passed in as a parameter
-    async def get_not_sent(self, *, include_accepted_txs=False) -> list[TransactionRecord]:
+    async def get_not_sent(self, *, include_accepted_txs: bool = False) -> list[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
         """
@@ -311,10 +311,10 @@ class WalletTransactionStore:
     async def get_transactions_between(
         self,
         wallet_id: int,
-        start,
-        end,
-        sort_key=None,
-        reverse=False,
+        start: int,
+        end: int,
+        sort_key: str | None = None,
+        reverse: bool = False,
         confirmed: bool | None = None,
         to_puzzle_hash: bytes32 | None = None,
         type_filter: TransactionTypeFilter | None = None,
@@ -347,7 +347,7 @@ class WalletTransactionStore:
             type_filter_str = ""
         else:
             type_filter_str = (
-                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"AND type {'' if type_filter.mode == FilterMode.include.value else 'NOT'} "
                 f"IN ({','.join([str(x) for x in type_filter.values])})"
             )
 
@@ -375,7 +375,7 @@ class WalletTransactionStore:
             type_filter_str = ""
         else:
             type_filter_str = (
-                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"AND type {'' if type_filter.mode == FilterMode.include.value else 'NOT'} "
                 f"IN ({','.join([str(x) for x in type_filter.values])})"
             )
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -430,13 +430,13 @@ class WalletTransactionStore:
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def rollback_to_block(self, height: int):
+    async def rollback_to_block(self, height: int) -> None:
         # Delete from storage
         self.tx_submitted = {}
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))).close()
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int):
+    async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
                 await conn.execute(
