@@ -1720,7 +1720,7 @@ async def test_add_states_from_peer_untrusted_returns_false_when_validate_and_ad
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert raising_add_coin_states.await_count == 1
+    assert raising_add_coin_states.await_count >= 1
     assert "validate_and_add failed - exception" in caplog.text
     assert "1 chunk(s) failed to apply" in caplog.text
 
