@@ -77,6 +77,7 @@ def create_config(
     )
     # load config
     config = load_config(chia_root, "config.yaml")
+    config["full_node"]["minimum_block_fee_per_cost"] = 0
     config["full_node"]["send_uncompact_interval"] = 0
     config["full_node"]["target_uncompact_proofs"] = 30
     config["full_node"]["peer_connect_interval"] = 50

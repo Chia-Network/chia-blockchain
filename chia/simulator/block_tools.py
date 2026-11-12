@@ -317,6 +317,7 @@ class BlockTools:
                 config_overrides = {}
             config_overrides["logging.log_stdout"] = True
             config_overrides["selected_network"] = "testnet0"
+            config_overrides["full_node.minimum_block_fee_per_cost"] = 0
             for service in [
                 "harvester",
                 "farmer",

@@ -52,6 +52,12 @@ log = logging.getLogger(__name__)
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 
+DEFAULT_MINIMUM_BLOCK_FEE_PER_COST = uint64(4_000_000)
+# The minimum block fee policy expires at this timestamp (2027-11-03 00:00:00
+# UTC). Once the peak transaction block has reached it, the configured minimum
+# is ignored.
+MINIMUM_BLOCK_FEE_EXPIRATION = uint64(1_825_200_000)
+
 
 @dataclass
 class TimelockConditions:
@@ -433,6 +439,17 @@ class MempoolManager:
     def shut_down(self) -> None:
         self.mempool.close()
 
+    def effective_minimum_block_fee_per_cost(self) -> uint64:
+        """
+        Returns the minimum fee, in mojos per million CLVM cost, for selecting
+        transactions into a block on top of the current peak.
+        """
+        assert self.peak is not None
+        assert self.peak.timestamp is not None
+        if self.peak.timestamp >= MINIMUM_BLOCK_FEE_EXPIRATION:
+            return uint64(0)
+        return self.minimum_block_fee_per_cost
+
     def __enter__(self) -> Self:
         return self
 
@@ -455,7 +472,7 @@ class MempoolManager:
         return self.mempool.create_bundle_from_mempool_items(
             self.constants,
             self.peak.height,
-            minimum_fee_per_cost=self.minimum_block_fee_per_cost,
+            minimum_fee_per_cost=self.effective_minimum_block_fee_per_cost(),
         )
 
     def create_block_generator(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
@@ -468,7 +485,7 @@ class MempoolManager:
             self.constants,
             self.peak.height,
             timeout,
-            self.minimum_block_fee_per_cost,
+            self.effective_minimum_block_fee_per_cost(),
         )
 
     def create_block_generator2(self, last_tb_header_hash: bytes32, timeout: float) -> NewBlockGenerator | None:
@@ -481,7 +498,7 @@ class MempoolManager:
             self.constants,
             self.peak.height,
             timeout,
-            self.minimum_block_fee_per_cost,
+            self.effective_minimum_block_fee_per_cost(),
         )
 
     def get_filter(self) -> bytes:

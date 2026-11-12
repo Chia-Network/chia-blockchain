@@ -42,7 +42,9 @@ from chia.full_node.eligible_coin_spends import (
 )
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
+    DEFAULT_MINIMUM_BLOCK_FEE_PER_COST,
     MEMPOOL_MIN_FEE_INCREASE,
+    MINIMUM_BLOCK_FEE_EXPIRATION,
     LogMempoolMode,
     MempoolManager,
     TimelockConditions,
@@ -1675,6 +1677,50 @@ async def test_minimum_block_fee_does_not_reject_from_mempool() -> None:
     ) as mempool_manager:
         spend_bundle = await make_and_send_spendbundle(mempool_manager, TEST_COIN)
         assert_sb_in_pool(mempool_manager, spend_bundle)
+
+
+@pytest.mark.parametrize(
+    "block_timestamp, expected_fee_per_cost",
+    [
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION - 1), uint64(1_000_000)),
+        (MINIMUM_BLOCK_FEE_EXPIRATION, uint64(0)),
+        (uint64(MINIMUM_BLOCK_FEE_EXPIRATION + 1), uint64(0)),
+    ],
+)
+@pytest.mark.parametrize("generator_type", ["bundle", "generator", "generator2"])
+@pytest.mark.anyio
+async def test_minimum_block_fee_expiration(
+    block_timestamp: uint64,
+    expected_fee_per_cost: uint64,
+    generator_type: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert DEFAULT_MINIMUM_BLOCK_FEE_PER_COST == uint64(4_000_000)
+    async with instantiate_mempool_manager(
+        get_coin_records_for_test_coins,
+        block_timestamp=block_timestamp,
+        minimum_block_fee_per_cost=uint64(1_000_000),
+    ) as mempool_manager:
+        assert mempool_manager.effective_minimum_block_fee_per_cost() == expected_fee_per_cost
+        assert mempool_manager.peak is not None
+        applied_fees: list[uint64] = []
+
+        def capture_fee(*args: Any, **kwargs: Any) -> None:
+            applied_fee = kwargs.get("minimum_fee_per_cost", args[-1])
+            applied_fees.append(applied_fee)
+
+        monkeypatch.setattr(mempool_manager.mempool, "create_bundle_from_mempool_items", capture_fee)
+        monkeypatch.setattr(mempool_manager.mempool, "create_block_generator", capture_fee)
+        monkeypatch.setattr(mempool_manager.mempool, "create_block_generator2", capture_fee)
+
+        if generator_type == "bundle":
+            mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
+        elif generator_type == "generator":
+            mempool_manager.create_block_generator(mempool_manager.peak.header_hash, 30.0)
+        else:
+            mempool_manager.create_block_generator2(mempool_manager.peak.header_hash, 30.0)
+
+        assert applied_fees == [expected_fee_per_cost]
 
 
 @pytest.mark.anyio

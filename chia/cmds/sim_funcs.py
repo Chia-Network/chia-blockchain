@@ -59,6 +59,7 @@ def create_chia_directory(
         chia_init(chia_root, testnet=True, fix_ssl_permissions=True)
         config: dict[str, Any] = load_config(chia_root, "config.yaml")
         # apply standard block-tools config.
+        config["full_node"]["minimum_block_fee_per_cost"] = 0
         config["full_node"]["send_uncompact_interval"] = 0
         config["full_node"]["target_uncompact_proofs"] = 30
         config["full_node"]["peer_connect_interval"] = 50
@@ -108,6 +109,7 @@ def create_chia_directory(
             config["logging"]["log_stdout"] = True  # Log to console.
     else:
         config = load_config(chia_root, "config.yaml")
+    config["full_node"]["minimum_block_fee_per_cost"] = 0
     # simulator overrides
     sim_config = config["simulator"]
     sim_config["key_fingerprint"] = fingerprint
