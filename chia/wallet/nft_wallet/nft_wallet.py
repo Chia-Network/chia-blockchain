@@ -29,13 +29,14 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import (
+    DefaultMetadataUpdater,
+    DefaultTransferProgram,
+    OwnershipLayer,
     TransferProgramCondition,
     UpdateMetadataCondition,
-    create_ownership_layer_puzzle,
     get_metadata_and_phs,
     get_new_owner_did,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER_HASH
 from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -504,9 +505,17 @@ class NFTWallet:
             # eve coin DID can be set to whatever so we keep it empty
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
-            inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(), b"", p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
-            )
+            inner_puzzle: Program = OwnershipLayer(
+                current_owner=None,
+                inner_puzzle=UnknownPuzzle(known_program=p2_inner_puzzle),
+                transfer_program=DefaultTransferProgram(
+                    self_launcher_id=launcher_coin.name(),
+                    royalty_address=royalty_puzzle_hash
+                    if royalty_puzzle_hash is not None
+                    else p2_inner_puzzle.get_tree_hash(),
+                    royalty_basis_points=int(percentage),
+                ),
+            ).program
             self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
@@ -514,7 +523,10 @@ class NFTWallet:
 
         # singleton eve puzzle
         eve_fullpuz = nft_puzzle_utils.create_full_puzzle(
-            launcher_coin.name(), metadata, NFT_METADATA_UPDATER_HASH, inner_puzzle
+            launcher_coin.name(),
+            metadata,
+            DefaultMetadataUpdater().tree_hash,
+            inner_puzzle,
         )
         eve_fullpuz_hash = eve_fullpuz.get_tree_hash()
         # launcher announcement

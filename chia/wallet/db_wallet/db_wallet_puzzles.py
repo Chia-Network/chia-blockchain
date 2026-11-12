@@ -10,8 +10,9 @@ from chia_rs.sized_ints import uint64
 from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.wallet.nft_wallet.nft_puzzle_utils import create_nft_layer_puzzle_with_curry_params
-from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD
+from chia.wallet.nft_wallet.nft_puzzle_utils import MetadataLayer
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.puzzles.puzzle_drivers import UnknownPuzzle
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
     SINGLETON_TOP_LAYER_MOD,
@@ -32,12 +33,20 @@ def create_host_fullpuz(innerpuz: Program | bytes32, current_root: bytes32, gene
 
 def create_host_layer_puzzle(innerpuz: Program | bytes32, current_root: bytes32) -> Program:
     # some hard coded metadata formatting and metadata updater for now
-    return create_nft_layer_puzzle_with_curry_params(
-        Program.to((current_root, None)),
-        ACS_MU_PH,
-        # TODO: the nft driver doesn't like the Union yet, but changing that is out of scope for me rn - Quex
-        innerpuz,  # type: ignore[arg-type]
-    )
+    # Keep Program|bytes32 compatibility for get_tree_hash_precalc callers: when only a
+    # puzzle hash is known, curry it as an atom the same way the legacy helper did.
+    if isinstance(innerpuz, bytes32):
+        return NFT_STATE_LAYER_MOD.curry(
+            NFT_STATE_LAYER_MOD_HASH,
+            Program.to((current_root, None)),
+            ACS_MU_PH,
+            innerpuz,
+        )
+    return MetadataLayer(
+        metadata=Program.to((current_root, None)),
+        metadata_updater=UnknownPuzzle(known_program=ACS_MU, known_tree_hash=ACS_MU_PH),
+        inner_puzzle=UnknownPuzzle(known_program=innerpuz),
+    ).program
 
 
 def match_dl_singleton(puzzle: Program | SerializedProgram) -> tuple[bool, Iterator[Program]]:
