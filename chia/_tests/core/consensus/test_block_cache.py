@@ -8,8 +8,8 @@ from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_cache import BlockCache
 from chia.consensus.stub_mmr_manager import StubMMRManager
-from chia.util.block_cache import BlockCache
 
 
 @dataclass

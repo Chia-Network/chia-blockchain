@@ -7,7 +7,7 @@ import os
 import signal
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
 from typing import TextIO
@@ -18,7 +18,7 @@ from chia.util.task_referencer import create_referenced_task
 
 
 @contextlib.contextmanager
-def get_optional_beta_plot_log_file(root_path: Path, plotter: str) -> Iterator[TextIO | None]:
+def get_optional_beta_plot_log_file(root_path: Path, plotter: str) -> Generator[TextIO | None, None, None]:
     beta_log_path: Path | None = None
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):

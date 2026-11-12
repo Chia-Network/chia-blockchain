@@ -10,7 +10,7 @@ import os
 import random
 import time
 import traceback
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncGenerator, Awaitable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
@@ -235,7 +235,7 @@ class DataLayer:
         return self
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         sql_log_path: Path | None = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")

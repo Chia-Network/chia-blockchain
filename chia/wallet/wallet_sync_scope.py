@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast, final
 
@@ -36,7 +36,7 @@ class WalletSyncScope(ActionScope[SyncSideEffects, WalletSyncConfig]):
 
 
 @contextlib.asynccontextmanager
-async def new_wallet_sync_scope(wallet_state_manager: WalletStateManager) -> AsyncIterator[WalletSyncScope]:
+async def new_wallet_sync_scope(wallet_state_manager: WalletStateManager) -> AsyncGenerator[WalletSyncScope, None]:
     async with WalletSyncScope.new_scope(SyncSideEffects(), WalletSyncConfig()) as self:
         self = cast(WalletSyncScope, self)
         try:

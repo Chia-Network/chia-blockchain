@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    INTERNED_SPEND_LIST,
     BlockRecord,
     ConsensusConstants,
     FullBlock,
@@ -31,7 +32,7 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.generator_validation import validate_generator_ref_list
+from chia.consensus.generator_validation import validate_generator_ref_list, validate_generator_root
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
@@ -46,7 +47,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.priority_thread_pool_executor import Executor, _SupportsLessThan
 from chia.util.streamable import Streamable, streamable
 
@@ -109,7 +109,6 @@ def _pre_validate_block(
     prev_tx_height: uint32,
     expected_vs: ValidationState,
     *,
-    skip_commitment_validation: bool = False,
     validate_signatures: bool = True,
 ) -> PreValidationResult:
     """
@@ -122,8 +121,6 @@ def _pre_validate_block(
         prev_tx_height:
         expected_vs: The validation state that we calculate for the next block
             if it's validated.
-        skip_commitment_validation: If True, skips validation of MMR roots (for weight proofs without full history).
-            Challenge merkle tree validation is gated by HARD_FORK2_HEIGHT, not this flag.
         validate_signatures: If False, skip aggregate BLS signature verification.
             conds.validated_signature will be False when skipped.
     """
@@ -156,14 +153,19 @@ def _pre_validate_block(
             # checks reject that before the expensive CLVM run.
             generator_bytes = get_transactions_generator_bytes(block)
             assert generator_bytes is not None
-            if std_hash(generator_bytes) != block.transactions_info.generator_root:
+            if not validate_generator_root(
+                generator_bytes, block.transactions_info.generator_root, constants, prev_tx_height
+            ):
                 return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
             if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
                 return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
             if block.foliage.foliage_transaction_block_hash != block.foliage_transaction_block.get_hash():
                 return error_result(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
-            if prev_tx_height >= constants.SOFT_FORK9_HEIGHT:
+            # a serde_2026 generator (INTERNED_SPEND_LIST) has no classic
+            # canonical form; chia_rs bounds its size when parsing it instead
+            interned = (get_flags_for_height_and_constants(prev_tx_height, constants) & INTERNED_SPEND_LIST) != 0
+            if prev_tx_height >= constants.SOFT_FORK9_HEIGHT and not interned:
                 if not is_canonical_serialization(generator_bytes):
                     return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING)
 
@@ -191,7 +193,6 @@ def _pre_validate_block(
             get_block_header(block, removals_and_additions),
             True,  # check_filter
             expected_vs,
-            skip_commitment_validation=skip_commitment_validation,
         )
         error_int = None if error is None else uint16(error.code.value)
 
@@ -218,7 +219,6 @@ async def pre_validate_block(
     vs: ValidationState,
     *,
     wp_summaries: list[SubEpochSummary] | None = None,
-    skip_commitment_validation: bool = False,
     validate_signatures: bool = True,
     nice: _SupportsLessThan = (0,),
     dedicated: bool = True,
@@ -362,7 +362,6 @@ async def pre_validate_block(
         conds,
         prev_tx_height,
         expected_vs,
-        skip_commitment_validation=skip_commitment_validation,
         validate_signatures=validate_signatures,
         nice=nice,
         dedicated=dedicated,

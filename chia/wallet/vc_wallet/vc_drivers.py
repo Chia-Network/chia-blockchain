@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, final
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
@@ -667,7 +668,7 @@ _T_VCPuzzle = TypeVar("_T_VCPuzzle", bound=Puzzle)
 
 
 @dataclass(kw_only=True, frozen=True)
-class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
+class VerifiedCredentialInnerPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     """
     This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
@@ -675,10 +676,19 @@ class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     """
 
     eml_lineage_proof: VCLineageProof
-    self_launcher_id: bytes32
+    self_launcher_id: bytes32 | None = None
     custody_puzzle: _T_VCPuzzle
     proof_provider: bytes32
     proof_hash: bytes32 | None
+    initial_puzzle_hash_pre_calculated: bytes32 | None = None
+
+    @cached_property
+    def initial_puzzle_hash(self) -> bytes32:
+        if self.initial_puzzle_hash_pre_calculated is not None:
+            return self.initial_puzzle_hash_pre_calculated
+        if self.self_launcher_id is None:
+            raise ValueError("Cannot compute initial puzzle hash without a launcher ID")
+        return SingletonPuzzle(launcher_id=self.self_launcher_id, inner_puzzle=OWNERSHIP_LAYER_LAUNCHER).tree_hash
 
     @property
     def construction(
@@ -699,12 +709,19 @@ class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
     ) -> TransferProgramCovenantAdapter[CovenantLayer[EmlCovenantMorpher[DidTransferProgram], DidTransferProgram]]:
         return TransferProgramCovenantAdapter(
             inner_puzzle=CovenantLayer(
-                initial_puzzle_hash=SingletonPuzzle(
-                    launcher_id=self.self_launcher_id, inner_puzzle=OWNERSHIP_LAYER_LAUNCHER
-                ).tree_hash,
+                initial_puzzle_hash=self.initial_puzzle_hash,
                 parent_morpher=EmlCovenantMorpher(transfer_program=DidTransferProgram()),
                 inner_puzzle=DidTransferProgram(),
             )
+        )
+
+    def has_launcher_id(self, launcher_id: bytes32) -> bool:
+        """Check the commitment to the initial singleton construction for this launcher."""
+        if self.self_launcher_id is not None:
+            return self.self_launcher_id == launcher_id
+        return (
+            self.initial_puzzle_hash
+            == SingletonPuzzle(launcher_id=launcher_id, inner_puzzle=OWNERSHIP_LAYER_LAUNCHER).tree_hash
         )
 
     @property
@@ -723,7 +740,7 @@ class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         return self.construction.tree_hash
 
     @classmethod
-    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> VerifiedCredentialPuzzle[UnknownPuzzle] | None:
+    def match(cls, *, unknown_puzzle: UnknownPuzzle) -> VerifiedCredentialInnerPuzzle[UnknownPuzzle] | None:
         eml_match = ExigentMetadataLayer.match(unknown_puzzle=unknown_puzzle)
         if eml_match is None or eml_match.metadata is None:
             return None
@@ -764,13 +781,18 @@ class VerifiedCredentialPuzzle(PuzzleBase, Generic[_T_VCPuzzle]):
         ):
             return None
 
-        return VerifiedCredentialPuzzle(
+        matched = VerifiedCredentialInnerPuzzle(
+            # Lineage is spend context supplied separately from the puzzle reveal.
             eml_lineage_proof=VCLineageProof(),
-            self_launcher_id=bytes32.zeros,
+            initial_puzzle_hash_pre_calculated=covenant.initial_puzzle_hash,
             custody_puzzle=revocation.inner_puzzle,
             proof_provider=proof_provider,
             proof_hash=proof_hash,
         )
+        # Fixed arguments in the standard VC stack must match the reconstructed puzzle.
+        if matched.tree_hash != unknown_puzzle.tree_hash:
+            return None
+        return matched
 
 
 _T_LaunchPuzzle = TypeVar("_T_LaunchPuzzle", bound=Puzzle)
@@ -778,14 +800,14 @@ _T_LaunchPuzzle = TypeVar("_T_LaunchPuzzle", bound=Puzzle)
 
 @dataclass(kw_only=True, frozen=True)
 class VCLaunchResult(
-    SingletonLaunchResult[VerifiedCredentialPuzzle[_T_VCPuzzle]],
+    SingletonLaunchResult[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]],
     Generic[_T_VCPuzzle],
 ):
     launched_singleton: VerifiedCredential[_T_VCPuzzle]
 
 
 @dataclass(kw_only=True, frozen=True)
-class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Generic[_T_VCPuzzle]):
+class VerifiedCredential(Singleton[VerifiedCredentialInnerPuzzle[_T_VCPuzzle]], Generic[_T_VCPuzzle]):
     """
     This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
@@ -807,7 +829,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
         if singleton_match.inner_puzzle.program == OWNERSHIP_LAYER_LAUNCHER.program:
             return True
 
-        return VerifiedCredentialPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle) is not None
+        return VerifiedCredentialInnerPuzzle.match(unknown_puzzle=singleton_match.inner_puzzle) is not None
 
     @classmethod
     def launch_vc(
@@ -841,7 +863,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
         )
         target_vc_puzzle = SingletonPuzzle(
             launcher_id=launch_result.launched_singleton.launcher_id,
-            inner_puzzle=VerifiedCredentialPuzzle(
+            inner_puzzle=VerifiedCredentialInnerPuzzle(
                 eml_lineage_proof=eml_lineage_proof,
                 self_launcher_id=launch_result.launched_singleton.launcher_id,
                 custody_puzzle=new_inner_puzzle,
@@ -982,7 +1004,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
             coin=coin,
             lineage_proof=singleton_lineage_proof,
             launcher_id=launcher_id,
-            inner_puzzle=VerifiedCredentialPuzzle(
+            inner_puzzle=VerifiedCredentialInnerPuzzle(
                 eml_lineage_proof=eml_lineage_proof,
                 self_launcher_id=launcher_id,
                 custody_puzzle=UnknownPuzzle(known_tree_hash=inner_puzzle_hash),
@@ -1084,7 +1106,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
                 coin=next_singleton.coin,
                 launcher_id=next_singleton.launcher_id,
                 lineage_proof=next_singleton.lineage_proof,
-                inner_puzzle=VerifiedCredentialPuzzle(
+                inner_puzzle=VerifiedCredentialInnerPuzzle(
                     eml_lineage_proof=VCLineageProof(
                         self.coin.parent_coin_info,
                         self.inner_puzzle.revocation_layer.tree_hash,
@@ -1158,7 +1180,7 @@ class VerifiedCredential(Singleton[VerifiedCredentialPuzzle[_T_VCPuzzle]], Gener
             coin=streamable_object.coin,
             launcher_id=streamable_object.launcher_id,
             lineage_proof=streamable_object.singleton_lineage_proof,
-            inner_puzzle=VerifiedCredentialPuzzle(
+            inner_puzzle=VerifiedCredentialInnerPuzzle(
                 eml_lineage_proof=streamable_object.eml_lineage_proof,
                 self_launcher_id=streamable_object.launcher_id,
                 custody_puzzle=UnknownPuzzle(known_tree_hash=streamable_object.inner_puzzle_hash),

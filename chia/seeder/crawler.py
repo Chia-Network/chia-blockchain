@@ -7,7 +7,7 @@ import logging
 import time
 import traceback
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -73,7 +73,7 @@ class Crawler:
         return self._server
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         # We override the default peer_connect_timeout when running from the crawler
         crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
         self.server.config["peer_connect_timeout"] = crawler_peer_timeout

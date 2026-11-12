@@ -5,7 +5,7 @@ import random
 import sqlite3
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import closing, contextmanager
 from pathlib import Path
 
@@ -22,7 +22,7 @@ from chia.util.chia_logging import initialize_logging
 
 
 @contextmanager
-def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
+def enable_profiler(profile: bool, counter: int) -> Generator[None, None, None]:
     if not profile:
         yield
         return

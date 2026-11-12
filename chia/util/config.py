@@ -10,7 +10,7 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -50,7 +50,7 @@ def config_path_for_filename(root_path: Path, filename: str | Path) -> Path:
 
 
 @contextlib.contextmanager
-def lock_config(root_path: Path, filename: str | Path) -> Iterator[None]:
+def lock_config(root_path: Path, filename: str | Path) -> Generator[None, None, None]:
     # TODO: This is presently used in some tests to lock the saving of the
     #       configuration file without having loaded it right there.  This usage
     #       should probably be removed and this function made private.
@@ -64,7 +64,7 @@ def lock_and_load_config(
     root_path: Path,
     filename: str | Path,
     fill_missing_services: bool = False,
-) -> Iterator[dict[str, Any]]:
+) -> Generator[dict[str, Any], None, None]:
     with lock_config(root_path=root_path, filename=filename):
         yield _load_config_maybe_locked(
             root_path=root_path,

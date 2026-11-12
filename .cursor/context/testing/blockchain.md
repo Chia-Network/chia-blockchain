@@ -118,9 +118,7 @@ async def test_example(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     for block in blocks:
         await _validate_and_add_block(empty_blockchain, block)
 
-    fork_blocks = bt.get_consecutive_blocks(
-        3, block_list_input=blocks[:3], seed=b"fork"
-    )
+    fork_blocks = bt.get_consecutive_blocks(3, block_list_input=blocks[:3], seed=b"fork")
     # Add fork blocks and assert reorg results...
 ```
 

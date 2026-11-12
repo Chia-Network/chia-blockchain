@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import ssl
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -233,7 +233,7 @@ async def connect_to_daemon_and_validate(
 @asynccontextmanager
 async def acquire_connection_to_daemon(
     root_path: Path, config: dict[str, Any], quiet: bool = False
-) -> AsyncIterator[DaemonProxy | None]:
+) -> AsyncGenerator[DaemonProxy | None, None]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.
     The connection object (DaemonProxy) is yielded to the caller. After the caller's

@@ -6,7 +6,7 @@ import logging
 import sys
 import time
 import traceback
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from math import floor
@@ -214,7 +214,7 @@ class Farmer:
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
         self.quality_str_to_identifiers: dict[bytes32, tuple[str, bytes32, bytes32, bytes32]] = {}
 
-        # Track pending solver requests, keyed by partial proof
+        # Track pending solver requests, keyed by a concatenation of (partial proof + plot ID)
         self.pending_solver_requests: dict[bytes, dict[str, Any]] = {}
 
         # number of responses to each signage point
@@ -256,7 +256,7 @@ class Farmer:
         perform_migration_from_old_config(self._root_path)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         async def start_task() -> None:
             # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
             # succeeds or until we need to shut down.

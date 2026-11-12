@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -63,7 +63,9 @@ from chia.wallet.wallet_state_manager import SyncStatus, WalletStateManager
 
 
 @asynccontextmanager
-async def assert_sync_mode(wallet_state_manager: WalletStateManager, target_height: uint32) -> AsyncIterator[None]:
+async def assert_sync_mode(
+    wallet_state_manager: WalletStateManager, target_height: uint32
+) -> AsyncGenerator[None, None]:
     assert not wallet_state_manager.lock.locked()
     assert not wallet_state_manager.sync_mode
     assert wallet_state_manager.sync_target is None

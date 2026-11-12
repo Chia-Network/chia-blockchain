@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
+from chia_rs import (
+    INTERNED_SPEND_LIST,
+    ConsensusConstants,
+    FullBlock,
+    UnfinishedBlock,
+    get_flags_for_height_and_constants,
+    tree_hash_2026,
+)
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_generator_info import block_has_transactions_generator
@@ -55,3 +63,21 @@ def validate_tx_generator(
     else:
         return Err.INVALID_BLOCK_VERSION
     return None
+
+
+def compute_generator_root(generator: bytes, flags: int) -> bytes32:
+    """Commit to the interned tree after activation, or serialized bytes before it."""
+    if flags & INTERNED_SPEND_LIST:
+        return tree_hash_2026(generator)
+    return std_hash(generator)
+
+
+def validate_generator_root(
+    generator: bytes, root: bytes32, constants: ConsensusConstants, pre_sp_tx_height: uint32
+) -> bool:
+    try:
+        flags = get_flags_for_height_and_constants(pre_sp_tx_height, constants)
+        return compute_generator_root(generator, flags) == root
+    except ValueError:
+        # Malformed interned trees cannot match a generator commitment.
+        return False

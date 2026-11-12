@@ -5,7 +5,7 @@ import contextlib
 import json
 import logging
 import traceback
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from ssl import SSLContext
@@ -92,7 +92,7 @@ class RpcServiceProtocol(Protocol):
         ...
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         yield  # pragma: no cover
 
 

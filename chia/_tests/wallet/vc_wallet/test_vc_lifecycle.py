@@ -52,7 +52,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
     TransferProgramCovenantAdapter,
     VCLineageProof,
     VerifiedCredential,
-    VerifiedCredentialPuzzle,
+    VerifiedCredentialInnerPuzzle,
     construct_exigent_metadata_layer,
     create_did_tp,
 )
@@ -1075,7 +1075,7 @@ def test_vc_driver_match_edge_cases() -> None:
     with pytest.raises(NotImplementedError):
         MagicTPCondition.from_program(Program.to([]))
 
-    vc_puzzle = VerifiedCredentialPuzzle(
+    vc_puzzle = VerifiedCredentialInnerPuzzle(
         eml_lineage_proof=VCLineageProof(),
         self_launcher_id=bytes32.zeros,
         custody_puzzle=ACS,
@@ -1092,26 +1092,28 @@ def test_vc_driver_match_edge_cases() -> None:
         ).program
     )
 
-    # VerifiedCredentialPuzzle.match failure paths
-    assert VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS.program)) is None
+    # VerifiedCredentialInnerPuzzle.match failure paths
+    assert VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=ACS.program)) is None
     bad_meta_eml = ExigentMetadataLayer(
         metadata=Program.to("not a pair"),
         transfer_program=UnknownPuzzle(known_program=ACS.program),
         inner_puzzle=ACS,
     )
-    assert VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=bad_meta_eml.program)) is None
+    assert VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=bad_meta_eml.program)) is None
     wrong_tp_eml = ExigentMetadataLayer(
         metadata=Program.to((bytes32.zeros, None)),
         transfer_program=UnknownPuzzle(known_program=ACS.program),
         inner_puzzle=ACS,
     )
-    assert VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=wrong_tp_eml.program)) is None
+    assert VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=wrong_tp_eml.program)) is None
     wrong_covenant = ExigentMetadataLayer(
         metadata=Program.to((bytes32.zeros, None)),
         transfer_program=TransferProgramCovenantAdapter(inner_puzzle=ACS),
         inner_puzzle=ACS,
     )
-    assert VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=wrong_covenant.program)) is None
+    assert (
+        VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=wrong_covenant.program)) is None
+    )
     covenant_bad_morpher = ExigentMetadataLayer(
         metadata=Program.to((bytes32.zeros, None)),
         transfer_program=TransferProgramCovenantAdapter(
@@ -1122,7 +1124,8 @@ def test_vc_driver_match_edge_cases() -> None:
         inner_puzzle=ACS,
     )
     assert (
-        VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_morpher.program)) is None
+        VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_morpher.program))
+        is None
     )
     covenant_bad_did = ExigentMetadataLayer(
         metadata=Program.to((bytes32.zeros, None)),
@@ -1135,14 +1138,17 @@ def test_vc_driver_match_edge_cases() -> None:
         ),
         inner_puzzle=ACS,
     )
-    assert VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_did.program)) is None
+    assert (
+        VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_did.program))
+        is None
+    )
     covenant_bad_revocation = ExigentMetadataLayer(
         metadata=Program.to((bytes32.zeros, None)),
         transfer_program=vc_puzzle.transfer_program,
         inner_puzzle=ACS,
     )
     assert (
-        VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_revocation.program))
+        VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_revocation.program))
         is None
     )
     covenant_bad_brick = ExigentMetadataLayer(
@@ -1151,5 +1157,66 @@ def test_vc_driver_match_edge_cases() -> None:
         inner_puzzle=RevocationLayer(inner_puzzle=ACS, hidden_puzzle=ACS),
     )
     assert (
-        VerifiedCredentialPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_brick.program)) is None
+        VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=covenant_bad_brick.program))
+        is None
     )
+
+
+@pytest.mark.parametrize("proof_hash", [None, bytes32([4] * 32)])
+def test_vc_inner_puzzle_match_round_trip(proof_hash: bytes32 | None) -> None:
+    launcher_id = bytes32([1] * 32)
+    vc = VerifiedCredentialInnerPuzzle(
+        eml_lineage_proof=VCLineageProof(),
+        self_launcher_id=launcher_id,
+        custody_puzzle=ACS,
+        proof_provider=bytes32([3] * 32),
+        proof_hash=proof_hash,
+    )
+    puzzle = replace(vc, custody_puzzle=ACS)
+    matched = VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=puzzle.program))
+    assert matched is not None
+    assert matched.program == puzzle.program
+    assert matched.tree_hash == puzzle.tree_hash == vc.tree_hash
+    assert matched.has_launcher_id(launcher_id)
+    assert not matched.has_launcher_id(bytes32([2] * 32))
+
+
+@pytest.mark.parametrize("argument", range(12))
+def test_vc_inner_puzzle_match_fixed_arguments(argument: int) -> None:
+    puzzle = VerifiedCredentialInnerPuzzle(
+        eml_lineage_proof=VCLineageProof(),
+        self_launcher_id=bytes32([1] * 32),
+        custody_puzzle=ACS,
+        proof_provider=bytes32([3] * 32),
+        proof_hash=None,
+    )
+    covenant = puzzle.transfer_program.inner_puzzle
+    if argument < 7:
+        first_curry, _ = covenant.parent_morpher.program.uncurry()
+        mod, args = first_curry.uncurry()
+        changed_args = list(args.as_iter())
+        if argument < 6:
+            changed_args[argument] = Program.to(bytes32([9] * 32))
+        changed_first_curry = mod.curry(*changed_args)
+        changed_morpher = changed_first_curry.curry(
+            bytes32([9] * 32) if argument == 6 else changed_first_curry.get_tree_hash()
+        )
+        changed = replace(
+            puzzle.construction,
+            transfer_program=TransferProgramCovenantAdapter(
+                inner_puzzle=replace(covenant, parent_morpher=UnknownPuzzle(known_program=changed_morpher))  # type: ignore[arg-type]
+            ),
+        )
+    else:
+        mod, args = StandardBrickPuzzle().program.uncurry()
+        changed_args = list(args.as_iter())
+        changed_args[argument - 7] = Program.to(bytes32([9] * 32))
+        changed = replace(
+            puzzle.construction,
+            inner_puzzle=RevocationLayer(
+                inner_puzzle=ACS,
+                hidden_puzzle=UnknownPuzzle(known_program=mod.curry(*changed_args)),  # type: ignore[arg-type]
+            ),
+        )
+    assert changed.tree_hash != puzzle.tree_hash
+    assert VerifiedCredentialInnerPuzzle.match(unknown_puzzle=UnknownPuzzle(known_program=changed.program)) is None

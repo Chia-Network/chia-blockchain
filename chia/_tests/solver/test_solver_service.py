@@ -9,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from chia.protocols.outbound_message import Message
-from chia.protocols.solver_protocol import SolverInfo
+from chia.protocols.solver_protocol import SolverInfo, SolverResponse
 from chia.simulator.block_tools import create_block_tools_async
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_solver
@@ -36,3 +36,5 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
                 api_result = await solver_api.solve(test_info)
                 assert api_result is not None
                 assert isinstance(api_result, Message)
+                response = SolverResponse.from_bytes(api_result.data)
+                assert response == SolverResponse(test_info.partial_proof, expected_proof, test_info.plot_id)

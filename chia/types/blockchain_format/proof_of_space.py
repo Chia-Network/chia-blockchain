@@ -55,15 +55,24 @@ def make_pos(
     )
 
 
-def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
+def check_plot_param(
+    constants: ConsensusConstants,
+    ps: PlotParam,
+    pre_sp_tx_height: uint32 | None,
+) -> bool:
     size_v1 = ps.size_v1
     strength_v2 = ps.strength_v2
     if strength_v2 is not None:
         if strength_v2 < constants.MIN_PLOT_STRENGTH:
             log.error(f"Plot strength ({strength_v2}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
             return False
-        if strength_v2 > constants.MAX_PLOT_STRENGTH:
-            log.error(f"Plot strength ({strength_v2}) is too high (max is {constants.MAX_PLOT_STRENGTH})")
+        # A missing pre-SP transaction height makes this check height agnostic. Use the
+        # absolute maximum, a relaxed bound that accepts plots valid at later heights.
+        max_strength = (
+            constants.MAX_PLOT_STRENGTH if pre_sp_tx_height is None else max_plot_strength(pre_sp_tx_height, constants)
+        )
+        if strength_v2 > max_strength:
+            log.error(f"Plot strength ({strength_v2}) is too high (max is {max_strength})")
             return False
         return True
 
@@ -174,11 +183,13 @@ def verify_and_get_quality_string(
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
 
-    if not check_plot_param(constants, plot_param):
+    if not check_plot_param(constants, plot_param, None if height_agnostic else prev_transaction_block_height):
         return None
 
     plot_id: bytes32 = pos.compute_plot_id()
-    new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
+    plot_group_id = compute_plot_group_id_from_pos(pos) if plot_param.strength_v2 is not None else None
+    challenge_plot_id = plot_group_id if plot_group_id is not None else plot_id
+    new_challenge: bytes32 = calculate_pos_challenge(challenge_plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
         log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
@@ -186,7 +197,7 @@ def verify_and_get_quality_string(
 
     if plot_param.strength_v2 is not None:
         if filter_challenge is not None and signage_point_index is not None:
-            plot_group_id = compute_plot_group_id_from_pos(pos)
+            assert plot_group_id is not None
             group_strength = calculate_plot_filter_bits(
                 prev_transaction_block_height, constants, plot_param.strength_v2
             )
@@ -227,14 +238,16 @@ def verify_and_get_quality_string(
     else:
         # === V2 plots ===
         assert plot_param.strength_v2 is not None
+        assert plot_group_id is not None
 
         return validate_proof_v2(
-            plot_id,
+            plot_group_id,
+            pos.plot_index,
             constants.PLOT_SIZE_V2,
-            pos.challenge,
             plot_param.strength_v2,
+            pos.meta_group,
+            pos.challenge,
             pos.proof,
-            constants.TESTNET,
         )
 
 
@@ -275,9 +288,9 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
     return std_hash(plot_id + challenge_hash + signage_point)
 
 
-def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstants) -> int:
+def calculate_base_plot_filter_bits(pre_sp_tx_height: uint32, constants: ConsensusConstants) -> int:
     base_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
-    relative_height = int(height) - constants.HARD_FORK2_HEIGHT
+    relative_height = int(pre_sp_tx_height) - constants.HARD_FORK2_HEIGHT
     if relative_height <= 0:
         return base_bits
     for index, offset in enumerate(constants.PLOT_FILTER_V2_RELATIVE_HEIGHT):
@@ -287,14 +300,18 @@ def calculate_base_plot_filter_bits(height: uint32, constants: ConsensusConstant
     return base_bits
 
 
-def calculate_plot_filter_bits(height: uint32, constants: ConsensusConstants, plot_strength: int) -> int:
-    # TODO: todo_v2_plots MIN_PLOT_STRENGTH is fixed for now; a height-based
+def max_plot_strength(pre_sp_tx_height: uint32, constants: ConsensusConstants) -> int:
+    return int(constants.MAX_PLOT_STRENGTH) - calculate_base_plot_filter_bits(pre_sp_tx_height, constants)
+
+
+def calculate_plot_filter_bits(pre_sp_tx_height: uint32, constants: ConsensusConstants, plot_strength: int) -> int:
     # min-strength schedule would change the zero point here.
     if plot_strength < constants.MIN_PLOT_STRENGTH:
         raise ValueError(f"Plot strength ({plot_strength}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
     strength_delta = int(plot_strength) - constants.MIN_PLOT_STRENGTH
     return min(
-        calculate_base_plot_filter_bits(height, constants) + strength_delta, constants.MAX_EFFECTIVE_PLOT_FILTER_BITS
+        calculate_base_plot_filter_bits(pre_sp_tx_height, constants) + strength_delta,
+        constants.MAX_EFFECTIVE_PLOT_FILTER_BITS,
     )
 
 

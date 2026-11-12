@@ -6,7 +6,7 @@ import dataclasses
 import functools
 import signal
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from types import FrameType
 from typing import final
 
@@ -40,7 +40,7 @@ class SignalHandlers:
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def manage(cls) -> AsyncIterator[SignalHandlers]:
+    async def manage(cls) -> AsyncGenerator[SignalHandlers, None]:
         self = cls()
         try:
             yield self

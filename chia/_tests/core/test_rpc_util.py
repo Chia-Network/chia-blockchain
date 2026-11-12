@@ -5,9 +5,9 @@ from dataclasses import dataclass
 import pytest
 from chia_rs.sized_ints import uint32
 
-from chia.rpc.util import marshal
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
+from chia.wallet.util.rpc_marshal import marshal
 
 
 @streamable

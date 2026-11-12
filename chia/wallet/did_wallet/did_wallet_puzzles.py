@@ -27,9 +27,12 @@ class DIDMetadata(dict[str, str]):
 
     @classmethod
     def from_program(cls, program: Program) -> DIDMetadata:
-        return cls(
-            {str(item.first().as_atom(), "utf-8"): str(item.rest().as_atom(), "utf-8") for item in program.as_iter()}
-        )
+        dict_as_list_of_tuples = [
+            (str(item.first().as_atom(), "utf-8"), str(item.rest().as_atom(), "utf-8")) for item in program.as_iter()
+        ]
+        if len(dict_as_list_of_tuples) != len(set(k for k, _ in dict_as_list_of_tuples)):
+            raise ValueError("Duplicate keys found in DIDMetadata program")
+        return cls(dict(dict_as_list_of_tuples))
 
     @cached_property
     def tree_hash(self) -> bytes32:

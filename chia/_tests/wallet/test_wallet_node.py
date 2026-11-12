@@ -6,6 +6,7 @@ import logging
 import sys
 import time
 import types
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
@@ -23,23 +24,28 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.generator_tools import get_block_header
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.socket import find_available_listen_port
+from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.util.lock import Lockfile
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -47,12 +53,68 @@ from chia.wallet.wallet_node import Balance, WalletNode, request_and_validate_he
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
-@pytest.mark.anyio
-async def test_get_private_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
+def _attach_mock_server(node: WalletNode) -> None:
+    """Attach a minimal server so `_start_with_fingerprint` can call `initialize_wallet_peers`."""
+    mock_server = MagicMock()
+    mock_server.close_all_connections = AsyncMock()
+    node.set_server(cast(ChiaServer, mock_server))
+
+
+@pytest.fixture(scope="function", params=[True, False], ids=["local_keychain", "daemon_keychain"])
+async def wallet_node_and_keychain(
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
+    request: pytest.FixtureRequest,
+) -> AsyncIterator[tuple[WalletNode, Keychain]]:
+    """
+    Parametrize WalletNode key access via a local keychain vs connecting to the daemon keychain.
+    When request.param is True, a local keychain is passed to WalletNode.
+    When False, no keychain is passed and WalletNode connects to the daemon for keychain access.
+    """
     root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
     config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+    # Avoid starting WalletPeers during `_start_with_fingerprint` against the mock server.
+    config["testing"] = True
+
+    async def cleanup_node(node: WalletNode) -> None:
+        node._close()
+        if node._keychain_proxy is not None:
+            await node._keychain_proxy.close()
+            node._keychain_proxy = None
+        await node._await_closed()
+
+    if request.param:
+        node = WalletNode(config, root_path, test_constants, get_temp_keyring)
+        _attach_mock_server(node)
+        try:
+            yield node, get_temp_keyring
+        finally:
+            await cleanup_node(node)
+        return
+
+    create_all_ssl(root_path)
+    with lock_and_load_config(root_path, "config.yaml") as full_config:
+        full_config["daemon_port"] = find_available_listen_port(name="daemon")
+        save_config(root_path, "config.yaml", full_config)
+    crt_path = root_path / full_config["daemon_ssl"]["private_crt"]
+    key_path = root_path / full_config["daemon_ssl"]["private_key"]
+    ca_crt_path = root_path / full_config["private_ssl_ca"]["crt"]
+    ca_key_path = root_path / full_config["private_ssl_ca"]["key"]
+    with Lockfile.create(daemon_launch_lock_path(root_path)):
+        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with ws_server.run():
+            keychain = ws_server.keychain_server._default_keychain
+            node = WalletNode(config, root_path, test_constants)
+            _attach_mock_server(node)
+            try:
+                yield node, keychain
+            finally:
+                await cleanup_node(node)
+
+
+@pytest.mark.anyio
+async def test_get_private_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
@@ -64,11 +126,8 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
 
 
 @pytest.mark.anyio
-async def test_get_private_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_private_key_default_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
@@ -87,12 +146,9 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
+    wallet_node_and_keychain: tuple[WalletNode, Keychain], fingerprint: int | None
 ) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring  # empty keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+    node, _keychain = wallet_node_and_keychain  # empty keyring
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
     key = await node.get_key(fingerprint)
@@ -101,13 +157,8 @@ async def test_get_private_key_missing_key(
 
 
 @pytest.mark.anyio
-async def test_get_private_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
-) -> None:
-    root_path = root_path_populated_with_config
-    keychain = get_temp_keyring
-    config = load_config(root_path, "config.yaml", "wallet")
-    node = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_private_key_missing_key_use_default(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     sk = keychain.add_key(generate_mnemonic())
     fingerprint = sk.get_g1().get_fingerprint()
 
@@ -123,11 +174,8 @@ async def test_get_private_key_missing_key_use_default(
 
 
 @pytest.mark.anyio
-async def test_get_public_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,
@@ -143,11 +191,8 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
 
 
 @pytest.mark.anyio
-async def test_get_public_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key_default_key(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,
@@ -178,12 +223,9 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_public_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
+    wallet_node_and_keychain: tuple[WalletNode, Keychain], fingerprint: int | None
 ) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring  # empty keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+    node, _keychain = wallet_node_and_keychain  # empty keyring
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
     key = await node.get_key(fingerprint, private=False)
@@ -192,13 +234,8 @@ async def test_get_public_key_missing_key(
 
 
 @pytest.mark.anyio
-async def test_get_public_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
-) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
+async def test_get_public_key_missing_key_use_default(wallet_node_and_keychain: tuple[WalletNode, Keychain]) -> None:
+    node, keychain = wallet_node_and_keychain
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         None,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -81,7 +81,9 @@ class SplitAsyncManager(Generic[T]):
 
 
 @contextlib.contextmanager
-def split_manager(manager: contextlib.AbstractContextManager[object], object: T) -> Iterator[SplitManager[T]]:
+def split_manager(
+    manager: contextlib.AbstractContextManager[object], object: T
+) -> Generator[SplitManager[T], None, None]:
     # NOTE: only for transitional testing use, please avoid usage
     split = SplitManager(manager=manager, object=object)
     try:
@@ -93,7 +95,7 @@ def split_manager(manager: contextlib.AbstractContextManager[object], object: T)
 @contextlib.asynccontextmanager
 async def split_async_manager(
     manager: contextlib.AbstractAsyncContextManager[object], object: T
-) -> AsyncIterator[SplitAsyncManager[T]]:
+) -> AsyncGenerator[SplitAsyncManager[T], None]:
     # NOTE: only for transitional testing use, please avoid usage
     split = SplitAsyncManager(manager=manager, object=object)
     try:

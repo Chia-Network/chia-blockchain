@@ -33,11 +33,11 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.util import marshal as streamable_marshal
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import recurse_jsonify
 from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
+from chia.wallet.util.rpc_marshal import marshal as streamable_marshal
 
 if TYPE_CHECKING:
     from chia.data_layer.data_layer import DataLayer

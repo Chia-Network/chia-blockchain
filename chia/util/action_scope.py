@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Generic, Self, TypeVar
 
@@ -17,11 +17,11 @@ class ResourceManager(Generic[_T_SideEffects]):
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def managed(cls, initial_resource: _T_SideEffects) -> AsyncIterator[Self]:
+    async def managed(cls, initial_resource: _T_SideEffects) -> AsyncGenerator[Self, None]:
         yield cls(copy.deepcopy(initial_resource))
 
     @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[_T_SideEffects]:
+    async def use(self) -> AsyncGenerator[_T_SideEffects, None]:
         if self._active_writer:
             raise RuntimeError("ResourceManager cannot currently support nested transactions")
         self._active_writer = True
@@ -74,7 +74,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
         # I want a default here in case a use case doesn't want to take advantage of the config but no default seems to
         # satisfy the type hint _T_Config so we'll just ignore this.
         config: _T_Config = object(),  # type: ignore[assignment]
-    ) -> AsyncIterator[ActionScope[_T_SideEffects, _T_Config]]:
+    ) -> AsyncGenerator[ActionScope[_T_SideEffects, _T_Config], None]:
         async with ResourceManager.managed(initial_resource) as resource_manager:
             self = cls(_resource_manager=resource_manager, _config=config)
 
@@ -89,7 +89,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
                     self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
-    async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
+    async def use(self, _callbacks_allowed: bool = True) -> AsyncGenerator[StateInterface[_T_SideEffects], None]:
         async with self._resource_manager.use() as side_effects:
             interface = StateInterface(side_effects, _callbacks_allowed, self._callback)
 

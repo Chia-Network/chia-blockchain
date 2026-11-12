@@ -25,21 +25,26 @@ from chia.simulator.block_tools import BlockTools
 # capture the lookups needed by dynamically generated chains during tests.
 #
 # To populate ~/.chia/test-plots/plot_cache.pickle with broadly reused lookups
-# without running the whole suite, keep these targets' default parametrization:
+# without running the whole suite, run these targets across consensus modes:
 #
-# pytest \
+# tools/pytest \
 #   chia/_tests/core/full_node/test_prev_tx_block.py::test_post_hard_fork2_skips_slow_path_outside_fork_window \
 #   chia/_tests/core/test_full_node_rpc.py::test1 \
 #   chia/_tests/core/full_node/test_full_node.py::test_slot_catch_up_genesis \
-#   chia/_tests/core/full_node/stores/test_full_node_store.py::test_basic_store
+#   chia/_tests/core/full_node/stores/test_full_node_store.py::test_basic_store \
+#   chia/_tests/weight_proof/test_weight_proof.py::TestWeightProof::test_weight_proof_edge_cases \
+#   chia/_tests/weight_proof/test_weight_proof.py::TestWeightProof::test_weight_proof1000_partial_blocks_compact
 #
 # These cover default-seed transaction chains through a sub-epoch, simulator
 # farming and reorgs, skipped genesis slots, and custom-constant/normalized chains.
+# The weight-proof targets add custom-seed overflow/empty-slot chains and compact
+# chain extensions across all consensus modes.
 # Most wallet tests use WalletBlockTools and do not perform plot lookups, and
 # validating pre-built chains needs no plot cache. Specialized forks/seeds can
 # still add entries during later test runs.
-# Successful finalization merges the per-test recordings; existing recordings
-# for other tests are retained. Keep plot_cache_tests/ alongside the shared cache.
+# Session finalization merges the per-test recordings even if some tests failed;
+# existing recordings for other tests are retained. Keep plot_cache_tests/
+# alongside the shared cache.
 
 
 @pytest.mark.build_test_chains
@@ -141,9 +146,6 @@ def validate_chain(
     validation_length: int = 80,
 ) -> None:
     validate_coins(bt.constants, blocks)
-
-    # temporarily disable these checks while we update the test chains
-    return
 
     # make sure that the blocks we found on-disk are consistent with
     # the ones we would have generated

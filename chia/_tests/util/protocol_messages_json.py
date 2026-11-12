@@ -83,7 +83,7 @@ partial_proof_json: dict[str, Any] = {
     "plot_index": 3145,
     "meta_group": 5,
     "strength": 3,
-    "plot_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
+    "plot_group_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
@@ -2431,6 +2431,42 @@ respond_plots2_json: dict[str, Any] = {
     "no_key_filenames": ["str"],
 }
 
+plot3_json: dict[str, Any] = {
+    "filename": "plot_1",
+    "size": 124,
+    "plot_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
+    "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+    "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",
+    "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+    "file_size": 3368414292564311420,
+    "time_modified": 2573238947935295522,
+    "compression_level": 0,
+    "plot_index": 3145,
+    "meta_group": 5,
+    "group_size": 8,
+}
+
+respond_plots3_json: dict[str, Any] = {
+    "plots": [
+        {
+            "filename": "plot_1",
+            "size": 124,
+            "plot_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
+            "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+            "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",
+            "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+            "file_size": 3368414292564311420,
+            "time_modified": 2573238947935295522,
+            "compression_level": 0,
+            "plot_index": 3145,
+            "meta_group": 5,
+            "group_size": 8,
+        }
+    ],
+    "failed_to_open_filenames": ["str"],
+    "no_key_filenames": ["str"],
+}
+
 request_peers_introducer_json: dict[str, Any] = {}
 
 respond_peers_introducer_json: dict[str, Any] = {
@@ -2871,4 +2907,5 @@ solver_info_json: dict[str, Any] = {
 solver_response_json: dict[str, Any] = {
     "partial_proof": {"fragments": [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]},
     "proof": "0x66756c6c2d70726f6f66",
+    "plot_id": "0x071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442",
 }

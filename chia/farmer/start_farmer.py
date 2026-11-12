@@ -17,7 +17,7 @@ from chia.farmer.farmer_service import FarmerService
 from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.service.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import apply_config_cli_overrides, load_config

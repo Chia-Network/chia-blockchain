@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Collection
+from collections.abc import AsyncGenerator, Awaitable, Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
@@ -413,7 +413,7 @@ class MempoolManager:
         max_spends_per_item: int = DEFAULT_MAX_SPENDS_PER_ITEM,
         log_mempool: LogMempoolMode = "false",
         root_path: Path | None = None,
-    ) -> AsyncIterator[Self]:
+    ) -> AsyncGenerator[Self, None]:
         self = cls(
             get_coin_records,
             get_unspent_lineage_info_for_puzzle_hash,

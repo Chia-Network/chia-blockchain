@@ -4,7 +4,7 @@ import asyncio
 import concurrent
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
@@ -14,6 +14,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32
 
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import (
     DEFAULT_DECOMPRESSOR_THREAD_COUNT,
     DEFAULT_DECOMPRESSOR_TIMEOUT,
@@ -124,7 +125,7 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(self) -> AsyncGenerator[None, None]:
         self._refresh_lock = asyncio.Lock()
         self.event_loop = asyncio.get_running_loop()
         try:
@@ -180,21 +181,27 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
-                param = prover.get_param()
-                if param.size_v1 is not None:
+                if isinstance(prover, V1Prover):
+                    param = prover.get_param()
+                    assert param.size_v1 is not None
                     k = uint8(param.size_v1)
+                    plot_id = prover.get_id()
                     plot_index = uint16(0)
                     meta_group = uint8(0)
+                    group_size = uint16(1)
                 else:
-                    assert param.strength_v2 is not None
-                    k = uint8(0x80 | param.strength_v2)
-                    plot_index = param.plot_index
-                    meta_group = param.meta_group
+                    assert isinstance(prover, V2Prover)
+                    k = uint8(0x80 | prover.get_strength())
+                    plot_id = prover.get_id()
+                    # todo_v2_plots: Populate plot_index for group plots, or remove this single-index field.
+                    plot_index = uint16(0)
+                    meta_group = prover.get_meta_group()
+                    group_size = prover.get_group_size()
                 response_plots.append(
                     {
                         "filename": str(path),
                         "size": k,
-                        "plot_id": prover.get_id(),
+                        "plot_id": plot_id,
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
                         "plot_public_key": plot_info.plot_public_key,
@@ -203,6 +210,7 @@ class Harvester:
                         "compression_level": prover.get_compression_level(),
                         "plot_index": plot_index,
                         "meta_group": meta_group,
+                        "group_size": group_size,
                     }
                 )
             self.log.debug(

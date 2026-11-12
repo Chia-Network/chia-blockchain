@@ -28,7 +28,7 @@ from chia.pools.pool_wallet_info import (
 )
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServiceProtocol, default_get_connections
-from chia.rpc.util import ALL_TRANSLATION_LAYERS, MarshallableRpcEndpoint, RpcEndpoint, marshal
+from chia.rpc.util import MarshallableRpcEndpoint, RpcEndpoint
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
@@ -74,6 +74,7 @@ from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter
+from chia.wallet.util.rpc_marshal import ALL_TRANSLATION_LAYERS, marshal
 from chia.wallet.util.signing import sign_message, verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
@@ -1655,14 +1656,13 @@ class WalletRpcApi:
             coin_records: list[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
+            missing_coins = [coin_id for coin_id in request.names if coin_id not in [cr.name for cr in coin_records]]
+            if len(missing_coins) > 0:
+                if not request.allow_missing:
+                    raise ValueError(f"Coin ID's: {['0x' + coin_id.hex() for coin_id in missing_coins]} not found.")
+                log.warning(f"Coin IDs not found yet: {['0x' + coin_id.hex() for coin_id in missing_coins]}")
 
-            missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
-            ]
-            if missed_coins:
-                raise ValueError(f"Coin ID's: {missed_coins} not found.")
-
-        return GetCoinRecordsByNamesResponse(coin_records=coin_records)
+        return GetCoinRecordsByNamesResponse(coin_records=coin_records, missing_coins=missing_coins)
 
     async def get_puzzle_and_solution(self, request: GetPuzzleAndSolution) -> GetPuzzleAndSolutionResponse:
         coin_record = await self.service.wallet_state_manager.coin_store.get_coin_record(request.coin_name)

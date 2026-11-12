@@ -11,8 +11,8 @@ import click
 import colorama
 
 from chia.daemon.client import acquire_connection_to_daemon
-from chia.util.keychain import Keychain, supports_os_passphrase_storage
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, obtain_current_passphrase
+from chia.util.keychain import Keychain, default_passphrase, supports_os_passphrase_storage, using_default_passphrase
+from chia.util.keyring_wrapper import obtain_current_passphrase
 
 SAVE_MASTER_PASSPHRASE_WARNING = (
     colorama.Fore.YELLOW
@@ -217,17 +217,6 @@ def get_current_passphrase() -> str | None:
             raise
 
     return current_passphrase
-
-
-def default_passphrase() -> str:
-    return DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-
-
-def using_default_passphrase() -> bool:
-    if not Keychain.has_master_passphrase():
-        return False
-
-    return Keychain.master_passphrase_is_valid(default_passphrase())
 
 
 def display_passphrase_hint() -> None:

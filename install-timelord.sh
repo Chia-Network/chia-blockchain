@@ -49,7 +49,14 @@ else
 fi
 
 export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring speed
-THE_PATH=$(python -c 'import pathlib, chiavdf, importlib_resources; print(pathlib.Path(chiavdf.__file__).parent)')/vdf_client
+CHIAVDF_DIR=$(python -c 'import pathlib, chiavdf; print(pathlib.Path(chiavdf.__file__).parent)')
+THE_PATH=""
+for dir in "$CHIAVDF_DIR" "$(dirname "$CHIAVDF_DIR")"; do
+  if [ -f "$dir/vdf_client" ]; then
+    THE_PATH="$dir/vdf_client"
+    break
+  fi
+done
 # Note that this picks the version based on the requirement, not the presently
 # installed chiavdf.
 CHIAVDF_POETRY_INFO=$(.penv/bin/poetry show --no-ansi --no-interaction chiavdf)
@@ -89,7 +96,7 @@ elif [ "$(uname)" = "Darwin" ]; then
   echo "Found MacOS."
 fi
 
-if [ -e "$THE_PATH" ]; then
+if [ -n "$THE_PATH" ]; then
   echo "$THE_PATH"
   echo "vdf_client already exists, no action taken"
 else

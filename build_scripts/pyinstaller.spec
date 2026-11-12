@@ -82,11 +82,18 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit_cuda"):
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
     dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
+    # chiavdf wheels keep the CPU-specific mpir DLLs in chiavdf.libs. mpir loads
+    # them by name at runtime, so PyInstaller's dependency scan does not find them.
+    chiavdf_dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "chiavdf.libs" / "mpir_*.dll"
 
     binaries = [
         (
             dll_paths,
             ".",
+        ),
+        (
+            chiavdf_dll_paths,
+            "chiavdf.libs",
         ),
         (
             "C:\\Windows\\System32\\msvcp140.dll",

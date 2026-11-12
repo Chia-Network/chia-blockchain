@@ -27,8 +27,8 @@ def keys_cmd(ctx: click.Context) -> None:
 )
 @click.pass_context
 def generate_cmd(ctx: click.Context, label: str | None) -> None:
-    from chia.cmds.init_funcs import check_keys
     from chia.cmds.keys_funcs import generate_and_add
+    from chia.init.init_funcs import check_keys
 
     generate_and_add(label)
     check_keys(ChiaCliContext.set_default(ctx).root_path)
@@ -103,8 +103,8 @@ def show_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, filename: str, label: str | None) -> None:
-    from chia.cmds.init_funcs import check_keys
     from chia.cmds.keys_funcs import query_and_add_key_info
+    from chia.init.init_funcs import check_keys
 
     mnemonic_or_pk = None
     if filename:
@@ -155,8 +155,8 @@ def delete_label_cmd(fingerprint: int) -> None:
 @options.create_fingerprint(required=True)
 @click.pass_context
 def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
-    from chia.cmds.init_funcs import check_keys
     from chia.cmds.keys_funcs import delete
+    from chia.init.init_funcs import check_keys
 
     delete(fingerprint)
     check_keys(ChiaCliContext.set_default(ctx).root_path)

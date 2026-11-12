@@ -114,7 +114,7 @@ TEST_GENERATOR = BlockGenerator(
 
 def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
-        test_constants, SerializedProgram.from_bytes(TEST_GENERATOR.program), TEST_GENERATOR.generator_refs, 100
+        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
     assert conditions["block_spends"] == [
         CoinSpend(
@@ -131,7 +131,7 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block_with_conditions(
-        test_constants, SerializedProgram.from_bytes(TEST_GENERATOR.program), TEST_GENERATOR.generator_refs, 100
+        test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
     assert len(conditions) == 1
     assert conditions[0]["coin_spend"] == CoinSpend(

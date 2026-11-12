@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from chia_rs import PartialProof
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint8, uint16, uint64
 
 from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality, get_prover_from_bytes, get_prover_from_file
 
@@ -32,38 +33,38 @@ class TestProver:
 @pytest.mark.skip("we don't have v2 test plots yet")
 class TestV2Prover:
     def test_v2_prover_init_with_nonexistent_file(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         assert prover.get_version() == PlotVersion.V2
-        assert prover.get_filename() == "/nonexistent/path/test.plot2"
+        assert prover.get_filename() == "/nonexistent/path/test.gplot"
 
     def test_v2_prover_get_param_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_param()
 
     def test_v2_prover_get_memo_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_memo()
 
     def test_v2_prover_get_compression_level(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         assert prover.get_compression_level() == uint8(0)
 
     def test_v2_prover_get_id_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_id()
 
     def test_v2_prover_get_qualities_for_challenge_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         with pytest.raises(
             AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
         ):
             prover.get_qualities_for_challenge(bytes32(b"1" * 32))
 
     def test_v2_prover_bytes_raises_error(self) -> None:
-        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        prover = V2Prover.from_filename("/nonexistent/path/test.gplot")
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             bytes(prover)
 
@@ -72,7 +73,7 @@ class TestV2Prover:
             V2Prover.from_bytes(b"test_data")
 
     def test_get_prover_from_file(self) -> None:
-        prover = get_prover_from_file("/nonexistent/path/test.plot2")
+        prover = get_prover_from_file("/nonexistent/path/test.gplot")
         assert prover.get_version() == PlotVersion.V2
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_param()
@@ -91,15 +92,26 @@ class TestActiveV2Prover:
         duplicate = PartialProof([uint64(1)] * 16)
         distinct = PartialProof([uint64(2)] * 16)
         inner_prover = MagicMock()
-        inner_prover.plot_id.return_value = bytes32(b"4" * 32)
+        inner_prover.plot_group_id.return_value = bytes32(b"4" * 32)
         inner_prover.get_strength.return_value = 2
-        inner_prover.get_qualities_for_challenge.return_value = [duplicate, duplicate, distinct, duplicate]
+        duplicate_quality = SimpleNamespace(chain=duplicate, plot_index=uint16(0))
+        inner_prover.get_qualities_for_challenge.return_value = [
+            duplicate_quality,
+            duplicate_quality,
+            SimpleNamespace(chain=distinct, plot_index=uint16(0)),
+            duplicate_quality,
+            SimpleNamespace(chain=duplicate, plot_index=uint16(1)),
+        ]
         prover = V2Prover(inner_prover)
 
         with patch.dict("chia._tests.util.plot_cache._qualities", {}, clear=True):
             qualities = prover.get_qualities_for_challenge(bytes32(b"4" * 32))
 
-        assert qualities == [V2Quality(duplicate, uint8(2)), V2Quality(distinct, uint8(2))]
+        assert qualities == [
+            V2Quality(duplicate, uint16(0), uint8(2)),
+            V2Quality(distinct, uint16(0), uint8(2)),
+            V2Quality(duplicate, uint16(1), uint8(2)),
+        ]
 
 
 class TestGetProverFromBytes:

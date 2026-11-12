@@ -14,7 +14,7 @@ from chiapos import decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.prover import get_prover_from_file
+from chia.plotting.prover import V1Prover, V2Prover, get_prover_from_file
 from chia.plotting.util import (
     HarvestingMode,
     PlotInfo,
@@ -332,49 +332,48 @@ class PlotManager:
 
                     log.debug(f"process_file {file_path!s}")
 
-                    expected_size = (
-                        _expected_plot_size(prover.get_param(), self.constants) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
-                    )
-
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    param = prover.get_param()
-                    level = prover.get_compression_level()
-                    if (
-                        level == 0
-                        and stat_info.st_size < 0.98 * expected_size
-                        and param.size_v1 is not None
-                        and param.size_v1 >= 30
-                    ):
-                        log.warning(
-                            f"Not farming plot {file_path}. "
-                            f"Size is {stat_info.st_size / (1024**3)} GiB, "
-                            f"but expected at least: {expected_size / (1024**3)} GiB. "
-                            "We assume the file is being copied."
-                        )
-                        return None
+                    if isinstance(prover, V1Prover):
+                        level = prover.get_compression_level()
+                        param = prover.get_param()
+                        expected_size = _expected_plot_size(param, self.constants) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                        if (
+                            level == 0
+                            and stat_info.st_size < 0.98 * expected_size
+                            and param.size_v1 is not None
+                            and param.size_v1 >= 30
+                        ):
+                            log.warning(
+                                f"Not farming plot {file_path}. "
+                                f"Size is {stat_info.st_size / (1024**3)} GiB, "
+                                f"but expected at least: {expected_size / (1024**3)} GiB. "
+                                "We assume the file is being copied."
+                            )
+                            return None
 
                     cache_entry = CacheEntry.from_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
 
-                level = cache_entry.prover.get_compression_level()
-                if level > self.max_compression_level_allowed:
-                    log.warning(
-                        f"Not farming plot {file_path}. Plot compression level: {level}, "
-                        f"max compression level allowed: {self.max_compression_level_allowed}."
-                    )
-                    return None
+                if isinstance(cache_entry.prover, V1Prover):
+                    level = cache_entry.prover.get_compression_level()
+                    if level > self.max_compression_level_allowed:
+                        log.warning(
+                            f"Not farming plot {file_path}. Plot compression level: {level}, "
+                            f"max compression level allowed: {self.max_compression_level_allowed}."
+                        )
+                        return None
 
-                if level > 0 and self.context_count == 0:
-                    log.warning(
-                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
-                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
-                        " to start harvesting compressed plots."
-                    )
-                    return None
+                    if level > 0 and self.context_count == 0:
+                        log.warning(
+                            f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                            f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                            " to start harvesting compressed plots."
+                        )
+                        return None
 
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
@@ -426,7 +425,12 @@ class PlotManager:
                 log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_param()}, cache_hit: {cache_hit}")
+            if isinstance(new_plot_info.prover, V1Prover):
+                plot_description = f"size {new_plot_info.prover.get_param()}"
+            else:
+                assert isinstance(new_plot_info.prover, V2Prover)
+                plot_description = f"group size {new_plot_info.prover.get_group_size()}"
+            log.debug(f"Found plot {file_path} of {plot_description}, cache_hit: {cache_hit}")
 
             return new_plot_info
 
