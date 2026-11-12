@@ -521,7 +521,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, capsy
     coin_spend, coin_state = await env_0.wallet_state_manager.get_latest_singleton_coin_spend(
         peer, did_wallet.did_info.origin_coin.name()
     )
-    uncurried = UnknownPuzzle(known_program=coin_spend.puzzle_reveal)
+    uncurried = UnknownPuzzle(known_program=Program.from_serialized(coin_spend.puzzle_reveal))
     is_match, curried_args = match_singleton_puzzle(uncurried)
     assert is_match
     singleton_struct, inner_puzzle = curried_args
