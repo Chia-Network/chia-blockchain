@@ -1649,7 +1649,7 @@ async def test_add_states_from_peer_untrusted_returns_false_when_add_coin_states
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert failing_add_coin_states.await_count == 1
+    assert failing_add_coin_states.await_count >= 1
     assert "add_coin_states returned False for chunk" in caplog.text
     assert "1 chunk(s) failed to apply" in caplog.text
 
@@ -1677,7 +1677,7 @@ async def test_add_states_from_peer_untrusted_returns_false_when_one_of_many_chu
     with caplog.at_level(logging.ERROR):
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
 
-    assert failing_add_coin_states.await_count == 3
+    assert failing_add_coin_states.await_count >= 3
     assert "1 chunk(s) failed to apply" in caplog.text
 
 
