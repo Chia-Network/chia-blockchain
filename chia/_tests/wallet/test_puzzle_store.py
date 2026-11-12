@@ -90,11 +90,76 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
         assert await db.get_last_derivation_path() == 999
         assert await db.get_unused_derivation_path() == 0
         assert await db.get_derivation_record(uint32(0), uint32(2), False) == derivation_recs[1]
+        await db.mark_used(uint32(249))
+        assert await db.get_unused_derivation_path() == 0
+        assert (await db.get_window_statistics(1)).maximum_used_index == 249  # type: ignore[union-attr]
 
-        # Indices up to 250
-        await db.set_used_up_to(uint32(249))
 
-        assert await db.get_unused_derivation_path() == 250
+def get_derivation_record(index: int, wallet_id: int) -> DerivationRecord:
+    seed = bytes32(index.to_bytes(16, "big") + wallet_id.to_bytes(16, "big"))
+    return DerivationRecord(
+        uint32(index),
+        seed,
+        AugSchemeMPL.key_gen(seed).get_g1(),
+        WalletType.STANDARD_WALLET,
+        uint32(wallet_id),
+        False,
+    )
+
+
+@pytest.mark.anyio
+async def test_add_derivation_paths_inherits_used() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletPuzzleStore.create(wrapper)
+        await db.add_derivation_paths([get_derivation_record(i, 1) for i in range(5)])
+        await db.mark_used(uint32(0))
+        await db.mark_used(uint32(2))
+
+        assert await db.get_unused_derivation_path() == 1
+        assert await db.get_used_count(uint32(1)) == 2
+
+        await db.add_derivation_paths([get_derivation_record(i, 2) for i in range(5)])
+
+        assert await db.get_unused_derivation_path() == 1
+        assert await db.get_used_count(uint32(2)) == 2
+        assert (await db.get_window_statistics(2)).maximum_used_index == 2  # type: ignore[union-attr]
+        assert (await db.get_window_statistics(2)).minimum_unused_index == 1  # type: ignore[union-attr]
+
+
+@pytest.mark.anyio
+async def test_window_statistics_wallet_gaps(seeded_random: random.Random) -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletPuzzleStore.create(wrapper)
+        assert await db.get_window_statistics(1) is None
+
+        records = [get_dummy_record(i, 1, seeded_random) for i in range(6)]
+        records.extend(get_dummy_record(i, 2, seeded_random) for i in range(4))
+        await db.add_derivation_paths(records)
+
+        window = await db.get_window_statistics(1)
+        assert window is not None
+        assert window.gaps == []
+        assert window.maximum_generated_index == 5
+        assert window.minimum_unused_index == 0
+
+        window_2 = await db.get_window_statistics(2)
+        assert window_2 is not None
+        assert window_2.gaps == []
+        assert window_2.maximum_generated_index == 3
+
+        async with db.db_wrapper.writer() as conn:
+            await conn.execute(
+                "DELETE FROM derivation_paths WHERE wallet_id=? AND derivation_index IN (?, ?)",
+                (1, 0, 3),
+            )
+
+        window = await db.get_window_statistics(1)
+        assert window is not None
+        assert window.gaps == [0, 3]
+
+        window_2 = await db.get_window_statistics(2)
+        assert window_2 is not None
+        assert window_2.gaps == []
 
 
 @pytest.mark.anyio
