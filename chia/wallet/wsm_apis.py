@@ -5,39 +5,12 @@ from typing import TYPE_CHECKING
 
 from chia_rs.sized_ints import uint32
 
-from chia.util.streamable import Streamable, streamable
-from chia.wallet.derivation_record import DerivationRecord, StreamableDerivationRecord
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.wallet_sync_scope import WebSocketEvent
 
 if TYPE_CHECKING:
     # avoiding a circular import
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class StreamableCreateMorePuzzleHashesResult(Streamable):
-    derivation_paths: list[StreamableDerivationRecord]
-    unused: uint32
-    new_unhardened_keys: bool
-    last_index: uint32
-
-    @classmethod
-    def from_standard(cls, result: CreateMorePuzzleHashesResult) -> StreamableCreateMorePuzzleHashesResult:
-        return cls(
-            [StreamableDerivationRecord.from_standard(path) for path in result.derivation_paths],
-            uint32(result.unused),
-            result.new_unhardened_keys,
-            uint32(result.last_index),
-        )
-
-    def to_standard(self) -> CreateMorePuzzleHashesResult:
-        return CreateMorePuzzleHashesResult(
-            [path.to_standard() for path in self.derivation_paths],
-            self.unused,
-            self.new_unhardened_keys,
-            self.last_index,
-        )
 
 
 @dataclasses.dataclass
@@ -61,28 +34,6 @@ class CreateMorePuzzleHashesResult:
             wallet_state_manager._dispatch_websocket_event(
                 WebSocketEvent(name="new_derivation_index", data={"index": self.last_index - 1})
             )
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class StreambleGetUnusedDerivationRecordResult(Streamable):
-    record: StreamableDerivationRecord
-    create_more_puzzle_hashes_result: StreamableCreateMorePuzzleHashesResult
-
-    @classmethod
-    def from_standard(cls, result: GetUnusedDerivationRecordResult) -> StreambleGetUnusedDerivationRecordResult:
-        return cls(
-            StreamableDerivationRecord.from_standard(result.record),
-            StreamableCreateMorePuzzleHashesResult.from_standard(result.create_more_puzzle_hashes_result),
-        )
-
-    def to_standard(self) -> GetUnusedDerivationRecordResult:
-        record = self.record.to_standard()
-        return GetUnusedDerivationRecordResult(
-            record,
-            self.create_more_puzzle_hashes_result.to_standard(),
-            used_indices=[record.index],
-        )
 
 
 @dataclasses.dataclass
