@@ -65,10 +65,10 @@ class Introducer:
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
-    def set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer) -> None:
         self._server = server
 
-    async def _vetting_loop(self):
+    async def _vetting_loop(self) -> None:
         while True:
             if self._shut_down:
                 return None
@@ -78,9 +78,9 @@ class Introducer:
                         return None
                     await asyncio.sleep(1)
                 self.log.info("Vetting random peers.")
-                if self._server.introducer_peers is None:
+                if self._server is None or self._server.introducer_peers is None:
                     continue
-                raw_peers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
+                raw_peers = self._server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
 
                 if len(raw_peers) == 0:
                     continue
@@ -119,7 +119,8 @@ class Introducer:
 
                         # if we have failed 6 times in a row, remove the peer
                         if peer.vetted < -6:
-                            self.server.introducer_peers.remove(peer)
+                            assert self._server.introducer_peers is not None
+                            self._server.introducer_peers.remove(peer)
                         continue
 
                     self.log.info(f"Have vetted {peer} successfully!")
