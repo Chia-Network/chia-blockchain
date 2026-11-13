@@ -140,13 +140,15 @@ class TestClawbackLifecycle:
             clawback_coin = (await sim_client.get_coin_records_by_puzzle_hash(cb_puz_hash))[0].coin
             assert clawback_coin.amount == amount
             # Test match_clawback_puzzle
-            clawback_metadata = match_clawback_puzzle(UnknownPuzzle(known_program=sender_puz), sender_puz, sender_sol)
+            clawback_metadata = match_clawback_puzzle(
+                UnknownPuzzle(known_program=sender_puz), sender_puz, sender_sol, cb_puz_hash
+            )
             assert clawback_metadata is not None
             assert clawback_metadata.time_lock == timelock
             assert clawback_metadata.sender_puzzle_hash == sender_ph
             assert clawback_metadata.recipient_puzzle_hash == recipient_ph
             clawback_metadata = match_clawback_puzzle(
-                UnknownPuzzle(known_program=sender_puz), sender_puz, sender_invalid_sol
+                UnknownPuzzle(known_program=sender_puz), sender_puz, sender_invalid_sol, cb_puz_hash
             )
             assert clawback_metadata is None
             # Fail an early claim spend
@@ -291,3 +293,26 @@ class TestClawbackLifecycle:
         create_coins = conds[ConditionOpcode.CREATE_COIN]
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == recipient_ph
+
+
+def test_match_clawback_puzzle_only_matches_described_coin() -> None:
+    sender_puzzle = puzzle_for_pk(G1Element.from_bytes(public_key_for_index(1, KeyTool())))
+    sender_ph = sender_puzzle.get_tree_hash()
+    recipient_ph = bytes32.zeros
+    metadata = ClawbackMetadata(uint64(3600), sender_ph, recipient_ph)
+    described_ph = create_merkle_puzzle(metadata.time_lock, sender_ph, recipient_ph).get_tree_hash()
+    other_ph = create_merkle_puzzle(uint64(10), sender_ph, recipient_ph).get_tree_hash()
+    solution = solution_for_conditions(
+        [
+            [ConditionOpcode.CREATE_COIN, described_ph, 200000],
+            [ConditionOpcode.CREATE_COIN, other_ph, 300000],
+            [
+                ConditionOpcode.REMARK,
+                RemarkDataType.CLAWBACK,
+                bytes(VersionedBlob(ClawbackVersion.V1.value, bytes(metadata))),
+            ],
+        ]
+    )
+    parent = UnknownPuzzle(known_program=sender_puzzle)
+    assert match_clawback_puzzle(parent, sender_puzzle, solution, described_ph) == metadata
+    assert match_clawback_puzzle(parent, sender_puzzle, solution, other_ph) is None
